@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			"c:/projects/SecondPassLibrary/.venv/Scripts/python.exe": true
+		}
+	}
+}
