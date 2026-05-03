@@ -41,7 +41,17 @@ class BookFileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BookFile
-        fields = ['id', 'book', 'file', 'format', 'created_at', 'updated_at']
+        fields = [
+            'id',
+            'book',
+            'file',
+            'format',
+            'checksum',
+            'file_size',
+            'source_filename',
+            'created_at',
+            'updated_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 

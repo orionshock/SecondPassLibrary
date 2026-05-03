@@ -31,5 +31,5 @@ class BookMetadataAdmin(admin.ModelAdmin):
 
 @admin.register(BookFile)
 class BookFileAdmin(admin.ModelAdmin):
-    list_display = ['book', 'file', 'format', 'created_at']
-    search_fields = ['book__title', 'file']
+    list_display = ['book', 'format', 'checksum', 'file_size', 'source_filename', 'created_at']
+    search_fields = ['book__title', 'checksum', 'source_filename']

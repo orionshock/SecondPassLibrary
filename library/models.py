@@ -45,6 +45,12 @@ class Book(TimeStampedModel):
     def __str__(self):
         return self.title
 
+def book_file_upload_path(instance, filename):
+    if not instance.checksum:
+        raise ValueError("Checksum must be set before saving BookFile")
+    first2 = instance.checksum[:2]
+    next2 = instance.checksum[2:4]
+    return f'books/{first2}/{next2}/{instance.checksum}.epub'
 
 class BookMetadata(TimeStampedModel):
     book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name='metadata')
@@ -65,12 +71,14 @@ class BookFile(TimeStampedModel):
     ]
 
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='files')
-    file = models.FileField(upload_to='epubs/')
+    file = models.FileField(upload_to=book_file_upload_path)
     format = models.CharField(max_length=32, choices=FORMAT_CHOICES, default=FORMAT_EPUB)
     checksum = models.CharField(max_length=128, blank=True, null=True, help_text='SHA-256 hash for duplicate detection')
+    file_size = models.PositiveBigIntegerField(blank=True, null=True, help_text='File size in bytes')
+    source_filename = models.CharField(max_length=255, blank=True, help_text='Original filename for diagnostic purposes')
 
     class Meta:
         ordering = ['book', 'created_at']
 
     def __str__(self):
-        return f'{self.book.title} - {self.file.name}'
+        return f'{self.book.title} - {self.checksum[:8]}...'

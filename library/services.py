@@ -18,7 +18,7 @@ def import_epub(file_path):
         file_path (str): Path to the EPUB file.
 
     Returns:
-        BookFile: The created BookFile instance, or None if skipped.
+        tuple: (BookFile, is_duplicate) where is_duplicate is True if already existed.
 
     Raises:
         ValueError: If file doesn't exist, not .epub, or other issues.
@@ -33,13 +33,16 @@ def import_epub(file_path):
     if path.suffix.lower() != '.epub':
         raise ValueError(f"File must have .epub extension: {file_path}")
 
-    # Calculate SHA-256 checksum
+    # Calculate SHA-256 checksum and get file size
     with open(path, 'rb') as f:
-        checksum = hashlib.sha256(f.read()).hexdigest()
+        content = f.read()
+        checksum = hashlib.sha256(content).hexdigest()
+        file_size = len(content)
 
     # Check if BookFile with this checksum already exists
-    if BookFile.objects.filter(checksum=checksum).exists():
-        return None  # Skip importing
+    existing = BookFile.objects.filter(checksum=checksum).first()
+    if existing:
+        return existing, True  # Return existing, duplicate
 
     # Parse EPUB metadata
     book_epub = epub.read_epub(str(path))
@@ -53,7 +56,7 @@ def import_epub(file_path):
 
     # Create Book record
     book = Book.objects.create(
-        title=metadata.get('title', path.stem),  # Use filename if no title
+        title=metadata.get('title', path.stem),  # Use EPUB title or filename as fallback
         summary='',  # Leave empty for user to edit
     )
     if authors:
@@ -69,22 +72,18 @@ def import_epub(file_path):
             isbn=metadata.get('isbn', ''),
         )
 
-    # Copy EPUB to media storage
-    media_path = f'epubs/{path.name}'
-    full_media_path = Path('media') / media_path
-    full_media_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(str(path), str(full_media_path))
-
     # Create BookFile record
-    with open(full_media_path, 'rb') as f:
+    with open(path, 'rb') as f:
         book_file = BookFile.objects.create(
             book=book,
-            file=File(f, name=path.name),
+            file=File(f, name=f'{checksum}.epub'),  # Name doesn't matter, upload_to uses checksum
             format=BookFile.FORMAT_EPUB,
             checksum=checksum,
+            file_size=file_size,
+            source_filename=path.name,
         )
 
-    return book_file
+    return book_file, False
 
 
 def _extract_metadata(book_epub):

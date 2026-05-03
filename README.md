@@ -7,7 +7,7 @@ Your books, your notes, your reading history.
 This application stores all runtime and user-generated data in the `userdata/` directory:
 
 - `userdata/db/`: SQLite database files
-- `userdata/media/`: Uploaded files (EPUBs, etc.)
+- `userdata/media/books/`: EPUB files stored content-addressed (e.g., `ab/cd/abcdef...epub`)
 - `userdata/static/`: Collected static files
 - `userdata/logs/`: Application logs
 - `userdata/imports/`: Temporary import files
@@ -15,6 +15,8 @@ This application stores all runtime and user-generated data in the `userdata/` d
 ### Important Notes
 
 - The `userdata/` directory is intentionally ignored by Git and should be backed up separately.
+- EPUB files are stored using their SHA-256 checksum for deduplication and content addressing.
+- Human-readable filenames come from metadata, not stored filenames.
 - For Docker deployments, mount `userdata/` as a persistent volume to preserve data across container restarts.
 - The application automatically creates required subdirectories on startup.
 

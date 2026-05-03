@@ -39,8 +39,14 @@ class LibraryModelTest(TestCase):
 
     def test_book_file(self):
         # Note: In a real test, you'd use a test file
-        book_file = BookFile.objects.create(book=self.book, file='test.epub')
-        self.assertEqual(str(book_file), 'Test Book - test.epub')
+        book_file = BookFile.objects.create(
+            book=self.book,
+            file='test.epub',
+            checksum='dummy',
+            file_size=123,
+            source_filename='original.epub'
+        )
+        self.assertEqual(str(book_file), 'Test Book - dummy...')
 
 
 class LibraryAPITest(APITestCase):
@@ -105,11 +111,18 @@ class EPUBImportTest(TestCase):
 
         # Create a BookFile with the same checksum
         book = Book.objects.create(title='Existing Book')
-        BookFile.objects.create(book=book, file='existing.epub', checksum=checksum)
+        BookFile.objects.create(
+            book=book,
+            file='existing.epub',
+            checksum=checksum,
+            file_size=123,
+            source_filename='existing.epub'
+        )
 
-        # Try to import again - should skip
-        result = import_epub(self.epub_path)
-        self.assertIsNone(result)
+        # Try to import again - should return existing
+        result, is_duplicate = import_epub(self.epub_path)
+        self.assertTrue(is_duplicate)
+        self.assertEqual(result.book.title, 'Existing Book')
 
     @patch('library.services.epub.read_epub')
     def test_import_minimal_epub(self, mock_read_epub):
@@ -122,7 +135,13 @@ class EPUBImportTest(TestCase):
         }.get(name, [])
         mock_read_epub.return_value = mock_book
 
-        result = import_epub(self.epub_path)
-        self.assertIsNotNone(result)
+        result, is_duplicate = import_epub(self.epub_path)
+        self.assertFalse(is_duplicate)
         self.assertEqual(result.book.title, 'Test Title')
         self.assertEqual(result.book.authors.first().name, 'Test Author')
+        self.assertEqual(result.source_filename, 'test.epub')
+        self.assertIsNotNone(result.file_size)
+        self.assertIsNotNone(result.checksum)
+        # Check file path
+        expected_path = f'books/{result.checksum[:2]}/{result.checksum[2:4]}/{result.checksum}.epub'
+        self.assertTrue(result.file.name.endswith(expected_path))
