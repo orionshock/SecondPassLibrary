@@ -67,6 +67,7 @@ class BookFile(TimeStampedModel):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to='epubs/')
     format = models.CharField(max_length=32, choices=FORMAT_CHOICES, default=FORMAT_EPUB)
+    checksum = models.CharField(max_length=128, blank=True, null=True, help_text='SHA-256 hash for duplicate detection')
 
     class Meta:
         ordering = ['book', 'created_at']
