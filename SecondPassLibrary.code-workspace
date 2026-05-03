@@ -6,7 +6,10 @@
 	],
 	"settings": {
 		"chat.tools.terminal.autoApprove": {
-			"c:/projects/SecondPassLibrary/.venv/Scripts/python.exe": true
+			"c:/projects/SecondPassLibrary/.venv/Scripts/python.exe": true,
+			"mkdir": true,
+			"mv": true,
+			"true": true
 		}
 	}
 }

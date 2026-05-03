@@ -174,3 +174,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+#Test Files
+TestFiles/
+
+# User data directory
+userdata/

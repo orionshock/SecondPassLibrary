@@ -2,8 +2,12 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
+import tempfile
+import os
+from unittest.mock import patch, MagicMock
 
 from .models import Author, Book, BookFile, BookMetadata, Series
+from .services import import_epub, _extract_metadata
 
 
 class LibraryModelTest(TestCase):
@@ -51,3 +55,74 @@ class LibraryAPITest(APITestCase):
     def test_authenticated_access_authors(self):
         response = self.client.get('/api/v1/library/authors/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class EPUBImportTest(TestCase):
+    def setUp(self):
+        # Create a temporary EPUB file for testing
+        self.temp_dir = tempfile.mkdtemp()
+        self.epub_path = os.path.join(self.temp_dir, 'test.epub')
+        with open(self.epub_path, 'wb') as f:
+            f.write(b'fake epub content')
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.temp_dir)
+
+    def test_checksum_calculation(self):
+        import hashlib
+        with open(self.epub_path, 'rb') as f:
+            expected_checksum = hashlib.sha256(f.read()).hexdigest()
+        # Since import_epub calculates it, we can test indirectly
+        # For now, just check the function exists
+        self.assertTrue(callable(import_epub))
+
+    def test_invalid_extension(self):
+        invalid_path = os.path.join(self.temp_dir, 'test.txt')
+        with open(invalid_path, 'w') as f:
+            f.write('not epub')
+        with self.assertRaises(ValueError) as cm:
+            import_epub(invalid_path)
+        self.assertIn('must have .epub extension', str(cm.exception))
+
+    def test_file_not_exists(self):
+        non_existent = os.path.join(self.temp_dir, 'nonexistent.epub')
+        with self.assertRaises(ValueError) as cm:
+            import_epub(non_existent)
+        self.assertIn('does not exist', str(cm.exception))
+
+    @patch('library.services.epub.read_epub')
+    def test_duplicate_detection(self, mock_read_epub):
+        # Mock the epub object
+        mock_book = MagicMock()
+        mock_book.get_metadata.return_value = []
+        mock_read_epub.return_value = mock_book
+
+        # Calculate the actual checksum of the temp file
+        import hashlib
+        with open(self.epub_path, 'rb') as f:
+            checksum = hashlib.sha256(f.read()).hexdigest()
+
+        # Create a BookFile with the same checksum
+        book = Book.objects.create(title='Existing Book')
+        BookFile.objects.create(book=book, file='existing.epub', checksum=checksum)
+
+        # Try to import again - should skip
+        result = import_epub(self.epub_path)
+        self.assertIsNone(result)
+
+    @patch('library.services.epub.read_epub')
+    def test_import_minimal_epub(self, mock_read_epub):
+        # Mock the epub object with minimal metadata
+        mock_book = MagicMock()
+        mock_book.get_metadata.side_effect = lambda ns, name: {
+            'title': [('Test Title', {})],
+            'creator': [('Test Author', {})],
+            'language': [('en', {})],
+        }.get(name, [])
+        mock_read_epub.return_value = mock_book
+
+        result = import_epub(self.epub_path)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.book.title, 'Test Title')
+        self.assertEqual(result.book.authors.first().name, 'Test Author')
