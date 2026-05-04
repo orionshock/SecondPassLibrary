@@ -153,6 +153,61 @@ class LibraryAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
+class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+
+        self.author = Author.objects.create(name="A Author")
+        self.series = Series.objects.create(name="S Series")
+        self.book = Book.objects.create(title="T", series=self.series, series_index=1)
+        self.book.authors.add(self.author)
+        BookIdentifier.objects.create(
+            book=self.book,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780123456472",
+            source="epub",
+            is_primary=True,
+        )
+        uploaded = SimpleUploadedFile(
+            "ignored.epub",
+            b"epub-bytes",
+            content_type="application/epub+zip",
+        )
+        BookFile.objects.create(
+            book=self.book,
+            file=uploaded,
+            checksum="a" * 64,
+            file_size=9,
+            source_filename="SOURCE_NAME.epub",
+        )
+
+    def test_book_list_includes_nested_summaries_and_no_raw_file_paths(self):
+        response = cast(Response, self.client.get("/api/v1/library/books/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(list[dict[str, Any]], response.data)
+        self.assertEqual(len(data), 1)
+        book = data[0]
+
+        self.assertIsInstance(book["authors"], list)
+        self.assertEqual(book["authors"][0]["id"], str(self.author.id))
+        self.assertEqual(book["authors"][0]["name"], "A Author")
+
+        self.assertIsInstance(book["series"], dict)
+        self.assertEqual(book["series"]["id"], str(self.series.id))
+        self.assertEqual(book["series"]["name"], "S Series")
+
+        self.assertIsInstance(book["identifiers"], list)
+        self.assertEqual(book["identifiers"][0]["scheme"], "isbn_13")
+        self.assertEqual(book["identifiers"][0]["source"], "epub")
+
+        self.assertIsInstance(book["files"], list)
+        file0 = book["files"][0]
+        self.assertIn("download_url", file0)
+        self.assertNotIn("file", file0)
+        self.assertNotIn("books/", str(file0))
+
+
 class BaseBookFileDownloadAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")

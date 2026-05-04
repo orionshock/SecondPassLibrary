@@ -19,11 +19,25 @@ class AuthorSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
+class AuthorSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = ["id", "name"]
+        read_only_fields = fields
+
+
 class SeriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Series
         fields = ["id", "name", "summary", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class SeriesSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Series
+        fields = ["id", "name"]
+        read_only_fields = fields
 
 
 class BookFileSerializer(serializers.ModelSerializer):
@@ -58,6 +72,23 @@ class BookIdentifierSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class BookFileSummarySerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField(read_only=True)
+    checksum_short = serializers.SerializerMethodField(read_only=True)
+
+    def get_download_url(self, obj: BookFile) -> str:
+        request = self.context.get("request")
+        return reverse("library:bookfile-download", args=[obj.pk], request=request)
+
+    def get_checksum_short(self, obj: BookFile) -> str:
+        return obj.checksum_short() if obj.checksum else ""
+
+    class Meta:
+        model = BookFile
+        fields = ["id", "format", "file_size", "download_url", "checksum_short"]
+        read_only_fields = fields
+
+
 class BookSerializer(serializers.ModelSerializer):
     authors = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Author.objects.all()
@@ -69,8 +100,23 @@ class BookSerializer(serializers.ModelSerializer):
     identifiers = serializers.SerializerMethodField(read_only=True)
 
     def get_identifiers(self, obj: Book):
-        identifiers = obj.identifiers.order_by("scheme", "value").all()
+        identifiers = obj.identifiers.all()
         return BookIdentifierSerializer(identifiers, many=True).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["authors"] = AuthorSummarySerializer(
+            instance.authors.all(), many=True, context=self.context
+        ).data
+        data["series"] = (
+            SeriesSummarySerializer(instance.series, context=self.context).data
+            if instance.series is not None
+            else None
+        )
+        data["files"] = BookFileSummarySerializer(
+            instance.files.all(), many=True, context=self.context
+        ).data
+        return data
 
     class Meta:
         model = Book

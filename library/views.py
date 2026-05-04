@@ -1,4 +1,5 @@
 from django.http import FileResponse, Http404
+from django.db.models import Prefetch
 
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -7,7 +8,7 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
-from .models import Author, Book, BookFile, Series
+from .models import Author, Book, BookFile, Series, BookIdentifier
 from .serializers import (
     AuthorSerializer,
     BookFileSerializer,
@@ -36,8 +37,16 @@ class SeriesViewSet(viewsets.ModelViewSet):
 
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = Book.objects.prefetch_related("authors", "files", "identifiers").select_related(
-        "series"
+    queryset = (
+        Book.objects.select_related("series")
+        .prefetch_related(
+            Prefetch("authors", queryset=Author.objects.order_by("name")),
+            Prefetch("files", queryset=BookFile.objects.order_by("created_at")),
+            Prefetch(
+                "identifiers",
+                queryset=BookIdentifier.objects.order_by("scheme", "value"),
+            ),
+        )
     )
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
