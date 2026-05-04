@@ -37,7 +37,8 @@ class Device(TimeStampedModel):
         ordering = ["-updated_at", "name"]
 
     def __str__(self):
-        return f"{self.name} ({self.get_device_type_display()})"
+        # Django provides `get_<field>_display()` dynamically for choice fields.
+        return f"{self.name} ({self.get_device_type_display()})"  # type: ignore[attr-defined]
 
 
 class ReadingSession(TimeStampedModel):
@@ -140,4 +141,5 @@ class Annotation(TimeStampedModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_kind_display()} on {self.session}"
+        # Django provides `get_<field>_display()` dynamically for choice fields.
+        return f"{self.get_kind_display()} on {self.session}"  # type: ignore[attr-defined]

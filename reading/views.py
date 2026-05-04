@@ -1,7 +1,10 @@
+from typing import Any, cast
+
 from django.shortcuts import get_object_or_404
 
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -103,7 +106,7 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
             progress, data=request.data, partial=partial
         )
         serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
+        validated = cast(dict[str, Any], serializer.validated_data)
         locator = validated.get("locator", progress.locator)
         progression = validated.get("progression", progress.progression)
         device = validated.get("device", progress.device)
@@ -121,11 +124,12 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        request = cast(Request, self.request)
         queryset = Annotation.objects.select_related(
             "session", "session__book", "device"
         ).filter(session__user=self.request.user)
-        session_id = self.request.query_params.get("session_id")
-        book_id = self.request.query_params.get("book_id")
+        session_id = request.query_params.get("session_id")
+        book_id = request.query_params.get("book_id")
         if session_id:
             queryset = queryset.filter(session_id=session_id)
         if book_id:

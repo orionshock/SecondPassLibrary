@@ -1,7 +1,11 @@
+from collections.abc import Mapping
+from typing import Any, cast
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
+from rest_framework.response import Response
 
 from .models import UserProfile
 
@@ -12,12 +16,12 @@ class UserProfileModelTest(TestCase):
 
     def test_user_creation_creates_profile(self):
         self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
-        profile = self.user.profile
+        profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(profile.role, UserProfile.ROLE_USER)
         self.assertIsNone(profile.external_subject_id)
 
     def test_user_profile_role_helpers(self):
-        profile = self.user.profile
+        profile = UserProfile.objects.get(user=self.user)
         self.assertTrue(profile.is_regular_user)
         self.assertFalse(profile.is_app_admin)
         profile.role = UserProfile.ROLE_ADMIN
@@ -27,7 +31,7 @@ class UserProfileModelTest(TestCase):
         self.assertFalse(profile.is_regular_user)
 
     def test_user_profile_str(self):
-        profile = self.user.profile
+        profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(str(profile), "testuser (user)")
         profile.role = UserProfile.ROLE_ADMIN
         profile.save()
@@ -47,12 +51,14 @@ class UserProfileAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_authenticated_access_me(self):
-        response = self.client.get("/api/v1/accounts/me/")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["username"], "testuser")
-        self.assertEqual(response.data["email"], "test@example.com")
-        self.assertEqual(response.data["role"], UserProfile.ROLE_USER)
-        self.assertIn("profile_id", response.data)
+        self.assertIsNotNone(response.data)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertEqual(data["username"], "testuser")
+        self.assertEqual(data["email"], "test@example.com")
+        self.assertEqual(data["role"], UserProfile.ROLE_USER)
+        self.assertIn("profile_id", data)
 
     def test_anonymous_cannot_access_me(self):
         self.client.logout()

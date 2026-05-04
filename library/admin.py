@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
 from django.db.models import Count
 
-from .models import Author, Book, BookFile, BookMetadata, Series
+from .models import Author, Book, BookFile, Series
 
 
 @admin.register(Author)
@@ -39,10 +39,27 @@ class SeriesAdmin(admin.ModelAdmin):
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ["title", "author_list", "series", "series_index", "created_at"]
-    search_fields = ["title", "subtitle", "authors__name", "series__name"]
+    list_display = [
+        "title",
+        "author_list",
+        "series",
+        "series_index",
+        "publisher",
+        "language",
+        "published_date",
+        "created_at",
+    ]
+    search_fields = [
+        "title",
+        "subtitle",
+        "authors__name",
+        "series__name",
+        "publisher",
+        "isbn",
+    ]
     list_filter = [
         "series",
+        "language",
         ("created_at", DateFieldListFilter),
     ]
     filter_horizontal = ["authors"]
@@ -61,31 +78,16 @@ class BookAdmin(admin.ModelAdmin):
                 )
             },
         ),
+        (
+            "Bibliographic",
+            {"fields": ("publisher", "language", "published_date", "isbn", "subjects")},
+        ),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
     @admin.display(description="Authors")
     def author_list(self, obj):
         return obj.author_list()
-
-
-@admin.register(BookMetadata)
-class BookMetadataAdmin(admin.ModelAdmin):
-    list_display = ["book", "publisher", "language", "published_date", "isbn"]
-    search_fields = ["book__title", "book__authors__name", "isbn", "publisher"]
-    list_filter = [("created_at", DateFieldListFilter)]
-    raw_id_fields = ["book"]
-    readonly_fields = ["created_at", "updated_at"]
-
-    fieldsets = (
-        (None, {"fields": ("book",)}),
-        (
-            "Publication",
-            {"fields": ("publisher", "language", "published_date", "isbn")},
-        ),
-        ("Subjects", {"fields": ("subjects",)}),
-        ("Timestamps", {"fields": ("created_at", "updated_at")}),
-    )
 
 
 @admin.register(BookFile)

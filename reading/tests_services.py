@@ -64,8 +64,9 @@ class ReadingServicesTest(TestCase):
             progression=0.5,
             device=device,
         )
-        self.assertEqual(progress.session_id, session.id)
-        self.assertEqual(progress.device_id, device.id)
+        self.assertEqual(progress.session.id, session.id)
+        self.assertIsNotNone(progress.device)
+        self.assertEqual(progress.device.id, device.id) # type: ignore
         self.assertEqual(progress.locator["cfi"], "/6/4")
         self.assertEqual(progress.progression, 0.5)
 

@@ -1,8 +1,12 @@
+from collections.abc import Mapping
+from typing import Any, cast
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.utils import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
+from rest_framework.response import Response
 import os
 from unittest.mock import patch, MagicMock
 from pathlib import Path
@@ -11,7 +15,7 @@ import uuid
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from .models import Author, Book, BookFile, BookMetadata, Series
+from .models import Author, Book, BookFile, Series
 from .services import ImportStatus, import_epub
 
 
@@ -45,11 +49,18 @@ class LibraryModelTest(TestCase):
         self.book.authors.set([author_z, author_a])
         self.assertEqual(self.book.author_list(), "A Author, Z Author")
 
-    def test_book_metadata(self):
-        metadata = BookMetadata.objects.create(
-            book=self.book, publisher="Test Publisher"
-        )
-        self.assertEqual(str(metadata), "Metadata for Test Book")
+    def test_book_bibliographic_fields(self):
+        self.book.publisher = "Test Publisher"
+        self.book.language = "en"
+        self.book.isbn = "9781234567890"
+        cast(Any, self.book).subjects = ["Fiction"]
+        self.book.save()
+
+        reloaded = Book.objects.get(pk=self.book.pk)
+        self.assertEqual(reloaded.publisher, "Test Publisher")
+        self.assertEqual(reloaded.language, "en")
+        self.assertEqual(reloaded.isbn, "9781234567890")
+        self.assertEqual(reloaded.subjects, ["Fiction"])
 
     def test_book_file(self):
         # Note: In a real test, you'd use a test file
@@ -184,12 +195,17 @@ class BookFileSerializerAPITest(APITestCase):
 
     def test_book_file_api_output_hides_file_and_includes_download_url(self):
         self.client.login(username="testuser", password="testpass")
-        response = self.client.get(f"/api/v1/library/book-files/{self.book_file.id}/")
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/book-files/{self.book_file.id}/"),
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertNotIn("file", response.data)
-        self.assertIn("download_url", response.data)
+        self.assertIsNotNone(response.data)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertNotIn("file", data)
+        self.assertIn("download_url", data)
         self.assertEqual(
-            response.data["download_url"],
+            data["download_url"],
             f"http://testserver/api/v1/library/book-files/{self.book_file.id}/download/",
         )
 
@@ -266,9 +282,12 @@ class EPUBImportTest(TestCase):
         result = import_epub(self.epub_path)
         self.assertEqual(result.status, ImportStatus.DUPLICATE)
         self.assertEqual(result.checksum, checksum)
-        self.assertIsNotNone(result.book_file)
-        self.assertIsNotNone(result.book)
-        self.assertEqual(result.book.title, "Existing Book")
+        book_file = result.book_file
+        assert book_file is not None
+
+        book = result.book
+        assert book is not None
+        self.assertEqual(book.title, "Existing Book")
 
     @patch("library.services.epub.read_epub")
     def test_import_minimal_epub(self, mock_read_epub):
@@ -289,14 +308,23 @@ class EPUBImportTest(TestCase):
         result = import_epub(self.epub_path)
         self.assertEqual(result.status, ImportStatus.IMPORTED)
         self.assertEqual(result.checksum, expected_checksum)
-        self.assertIsNotNone(result.book_file)
-        self.assertIsNotNone(result.book)
-        self.assertEqual(result.book.title, "Test Title")
-        self.assertEqual(result.book.authors.first().name, "Test Author")
-        self.assertEqual(result.book_file.source_filename, "test.epub")
-        self.assertIsNotNone(result.book_file.file_size)
-        self.assertIsNotNone(result.book_file.checksum)
+        book_file = result.book_file
+        assert book_file is not None
+
+        book = result.book
+        assert book is not None
+        self.assertEqual(book.title, "Test Title")
+        self.assertEqual(book.language, "en")
+
+        author = book.authors.first()
+        assert author is not None
+        self.assertEqual(author.name, "Test Author")
+
+        self.assertEqual(book_file.source_filename, "test.epub")
+        self.assertIsNotNone(book_file.file_size)
+        self.assertIsNotNone(book_file.checksum)
+        checksum = cast(str, book_file.checksum)
         # Check file path
-        expected_path = f"books/{result.book_file.checksum[:2]}/{result.book_file.checksum[2:4]}/{result.book_file.checksum}.epub"
-        actual_name = result.book_file.file.name.replace("\\", "/")
+        expected_path = f"books/{checksum[:2]}/{checksum[2:4]}/{checksum}.epub"
+        actual_name = book_file.file.name.replace("\\", "/")
         self.assertTrue(actual_name.endswith(expected_path))

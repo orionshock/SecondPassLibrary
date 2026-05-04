@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from django.db import models
 
 from core.models import TimeStampedModel
@@ -30,6 +32,15 @@ class Book(TimeStampedModel):
     title = models.CharField(max_length=512)
     subtitle = models.CharField(max_length=512, blank=True)
     summary = models.TextField(blank=True)
+    publisher = models.CharField(max_length=255, blank=True)
+    language = models.CharField(max_length=64, blank=True)
+    published_date = models.DateField(null=True, blank=True)
+    isbn = models.CharField(max_length=64, blank=True)
+    subjects = models.JSONField(  # pyright: ignore[reportAssignmentType]
+        blank=True,
+        null=True,
+        default=list,
+    )
     authors = models.ManyToManyField(Author, related_name="books", blank=True)
     series = models.ForeignKey(
         Series,
@@ -61,18 +72,6 @@ def book_file_upload_path(instance, filename):
     first2 = instance.checksum[:2]
     next2 = instance.checksum[2:4]
     return f"books/{first2}/{next2}/{instance.checksum}.epub"
-
-
-class BookMetadata(TimeStampedModel):
-    book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name="metadata")
-    publisher = models.CharField(max_length=255, blank=True)
-    language = models.CharField(max_length=64, blank=True)
-    published_date = models.DateField(null=True, blank=True)
-    isbn = models.CharField(max_length=64, blank=True)
-    subjects = models.JSONField(blank=True, null=True, default=list)
-
-    def __str__(self):
-        return f"Metadata for {self.book.title}"
 
 
 class BookFile(TimeStampedModel):

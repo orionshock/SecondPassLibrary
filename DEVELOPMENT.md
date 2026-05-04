@@ -41,6 +41,10 @@ python manage.py test
 python manage.py import_epub "path\to\book.epub"
 ```
 
+## Library data model
+
+`Book` contains the canonical, user-facing bibliographic fields (title, authors, series, publisher, language, published date, ISBN, subjects). If we later need raw imported metadata/provenance, it should be modeled separately.
+
 ## API error responses
 
 Custom API errors (for places where views intentionally return a non-DRF error payload) should use:

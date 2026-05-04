@@ -4,11 +4,10 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 
-from .models import Author, Book, BookFile, BookMetadata, Series
+from .models import Author, Book, BookFile, Series
 from .serializers import (
     AuthorSerializer,
     BookFileSerializer,
-    BookMetadataSerializer,
     BookSerializer,
     SeriesSerializer,
 )
@@ -65,8 +64,3 @@ class BookFileViewSet(viewsets.ModelViewSet):
             content_type="application/epub+zip",
         )
 
-
-class BookMetadataViewSet(viewsets.ModelViewSet):
-    queryset = BookMetadata.objects.select_related("book").all()
-    serializer_class = BookMetadataSerializer
-    permission_classes = [IsAuthenticated]

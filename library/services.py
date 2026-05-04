@@ -8,7 +8,7 @@ from typing import Optional
 from ebooklib import epub
 from django.core.files import File
 
-from .models import Author, Book, BookFile, BookMetadata
+from .models import Author, Book, BookFile
 
 
 class ImportStatus(str, Enum):
@@ -121,21 +121,14 @@ def import_epub(file_path):
             "title", path.stem
         ),  # Use EPUB title or filename as fallback
         summary="",  # Leave empty for user to edit
+        publisher=metadata.get("publisher", ""),
+        language=metadata.get("language", ""),
+        published_date=metadata.get("published_date"),
+        isbn=metadata.get("isbn", ""),
+        subjects=metadata.get("subjects") or [],
     )
     if authors:
         book.authors.set(authors)
-
-    # Create BookMetadata if applicable
-    if any(
-        metadata.get(key) for key in ["publisher", "language", "published_date", "isbn"]
-    ):
-        BookMetadata.objects.create(
-            book=book,
-            publisher=metadata.get("publisher", ""),
-            language=metadata.get("language", ""),
-            published_date=metadata.get("published_date"),
-            isbn=metadata.get("isbn", ""),
-        )
 
     # Create BookFile record
     with open(path, "rb") as f:

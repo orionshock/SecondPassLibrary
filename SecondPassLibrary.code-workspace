@@ -1,15 +1,15 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-		"chat.tools.terminal.autoApprove": {
-			"c:/projects/SecondPassLibrary/.venv/Scripts/python.exe": true,
-			"mkdir": true,
-			"mv": true,
-			"true": true
-		}
-	}
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    "chat.tools.terminal.autoApprove": {
+      "c:/projects/SecondPassLibrary/.venv/Scripts/python.exe": true,
+      "mkdir": true,
+      "mv": true,
+      "true": true,
+    },
+  },
 }
