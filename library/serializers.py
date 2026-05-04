@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 
 from .models import Author, Book, BookFile, BookMetadata, Series
 
@@ -39,7 +40,12 @@ class BookMetadataSerializer(serializers.ModelSerializer):
 
 
 class BookFileSerializer(serializers.ModelSerializer):
-    file = serializers.FileField()
+    file = serializers.FileField(write_only=True, required=False)
+    download_url = serializers.SerializerMethodField(read_only=True)
+
+    def get_download_url(self, obj: BookFile) -> str:
+        request = self.context.get("request")
+        return reverse("library:bookfile-download", args=[obj.pk], request=request)
 
     class Meta:
         model = BookFile
@@ -47,6 +53,7 @@ class BookFileSerializer(serializers.ModelSerializer):
             "id",
             "book",
             "file",
+            "download_url",
             "format",
             "checksum",
             "file_size",

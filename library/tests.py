@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.test.utils import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 import os
@@ -8,6 +9,7 @@ from pathlib import Path
 import uuid
 
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import Author, Book, BookFile, BookMetadata, Series
 from .services import ImportStatus, import_epub
@@ -85,6 +87,101 @@ class LibraryAPITest(APITestCase):
     def test_authenticated_access_authors(self):
         response = self.client.get("/api/v1/library/authors/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class BookFileDownloadAPITest(APITestCase):
+    def setUp(self):
+        temp_root = Path(settings.BASE_DIR) / "TestFiles"
+        temp_root.mkdir(parents=True, exist_ok=True)
+        self._media_root = str(temp_root / f"tmp_media_{uuid.uuid4().hex}")
+        os.makedirs(self._media_root, exist_ok=True)
+
+        self._override = override_settings(MEDIA_ROOT=self._media_root)
+        self._override.enable()
+        self.addCleanup(self._override.disable)
+        self.addCleanup(
+            lambda: __import__("shutil").rmtree(self._media_root, ignore_errors=True)
+        )
+
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.author = Author.objects.create(name="Jane / Doe")
+        self.series = Series.objects.create(name="My * Series")
+        self.book = Book.objects.create(
+            title="The: Title",
+            series=self.series,
+            series_index=2,
+        )
+        self.book.authors.add(self.author)
+
+        uploaded = SimpleUploadedFile(
+            "ignored.epub",
+            b"epub-bytes",
+            content_type="application/epub+zip",
+        )
+        self.book_file = BookFile.objects.create(
+            book=self.book,
+            file=uploaded,
+            checksum="a" * 64,
+            file_size=9,
+            source_filename="SOURCE_NAME.epub",
+        )
+
+    def test_anonymous_user_cannot_download(self):
+        response = self.client.get(
+            f"/api/v1/library/book-files/{self.book_file.id}/download/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_authenticated_user_can_download_with_metadata_filename(self):
+        self.client.login(username="testuser", password="testpass")
+        response = self.client.get(
+            f"/api/v1/library/book-files/{self.book_file.id}/download/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        content_disposition = response.get("Content-Disposition", "")
+        self.assertTrue(content_disposition.startswith("attachment;"))
+        self.assertIn("Jane _ Doe", content_disposition)
+        self.assertIn("My _ Series 2", content_disposition)
+        self.assertIn("The_ Title", content_disposition)
+        self.assertNotIn("SOURCE_NAME", content_disposition)
+        self.assertNotIn(self.book_file.checksum, content_disposition)
+
+    def test_missing_stored_file_returns_404(self):
+        self.client.login(username="testuser", password="testpass")
+        storage = self.book_file.file.storage
+        storage.delete(self.book_file.file.name)
+
+        response = self.client.get(
+            f"/api/v1/library/book-files/{self.book_file.id}/download/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class BookFileSerializerAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.author = Author.objects.create(name="Test Author")
+        self.book = Book.objects.create(title="Test Title")
+        self.book.authors.add(self.author)
+        self.book_file = BookFile.objects.create(
+            book=self.book,
+            file="books/aa/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.epub",
+            checksum="a" * 64,
+            file_size=123,
+            source_filename="source.epub",
+        )
+
+    def test_book_file_api_output_hides_file_and_includes_download_url(self):
+        self.client.login(username="testuser", password="testpass")
+        response = self.client.get(f"/api/v1/library/book-files/{self.book_file.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("file", response.data)
+        self.assertIn("download_url", response.data)
+        self.assertEqual(
+            response.data["download_url"],
+            f"http://testserver/api/v1/library/book-files/{self.book_file.id}/download/",
+        )
 
 
 class EPUBImportTest(TestCase):

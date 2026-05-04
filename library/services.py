@@ -2,6 +2,7 @@ import hashlib
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+import re
 from typing import Optional
 
 from ebooklib import epub
@@ -24,6 +25,44 @@ class ImportResult:
     message: str = ""
     warnings: list[str] = field(default_factory=list)
     checksum: Optional[str] = None
+
+
+_FILENAME_SAFE_CHARS_RE = re.compile(r"[^A-Za-z0-9 .,_()\\-]+")
+_FILENAME_SPACES_RE = re.compile(r"\\s+")
+
+
+def _sanitize_filename_component(value: str) -> str:
+    value = (value or "").strip()
+    value = _FILENAME_SAFE_CHARS_RE.sub("_", value)
+    value = _FILENAME_SPACES_RE.sub(" ", value).strip()
+    value = value.strip(" .")
+    return value or "Unknown"
+
+
+def generate_epub_download_filename(*, book: Book) -> str:
+    """
+    Generate a human-readable, safe filename for downloading an EPUB.
+
+    Examples:
+      - "<Author> - <Title>.epub"
+      - "<Author> - <Series> <series_index> - <Title>.epub"
+    """
+    author = (
+        book.authors.order_by("name").values_list("name", flat=True).first()
+        or "Unknown Author"
+    )
+    parts: list[str] = [_sanitize_filename_component(author)]
+
+    if book.series is not None:
+        series_name = _sanitize_filename_component(book.series.name)
+        if book.series_index is not None:
+            parts.append(f"{series_name} {book.series_index}")
+        else:
+            parts.append(series_name)
+
+    parts.append(_sanitize_filename_component(book.title))
+    filename = " - ".join(parts)
+    return f"{filename}.epub"
 
 
 def import_epub(file_path):
