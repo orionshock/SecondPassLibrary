@@ -27,3 +27,11 @@ class UserProfile(TimeStampedModel):
 
     def __str__(self):
         return f'{self.user.get_username()} ({self.role})'
+
+    @property
+    def is_app_admin(self):
+        return self.role == self.ROLE_ADMIN
+
+    @property
+    def is_regular_user(self):
+        return self.role == self.ROLE_USER

@@ -95,7 +95,7 @@ class EPUBImportTest(TestCase):
         os.makedirs(self.temp_dir, exist_ok=True)
         self.epub_path = os.path.join(self.temp_dir, 'test.epub')
         with open(self.epub_path, 'wb') as f:
-            f.write(b'fake epub content')
+            f.write(uuid.uuid4().hex.encode('utf-8'))
 
     def tearDown(self):
         import shutil
@@ -170,4 +170,5 @@ class EPUBImportTest(TestCase):
         self.assertIsNotNone(result.checksum)
         # Check file path
         expected_path = f'books/{result.checksum[:2]}/{result.checksum[2:4]}/{result.checksum}.epub'
-        self.assertTrue(result.file.name.endswith(expected_path))
+        actual_name = result.file.name.replace('\\', '/')
+        self.assertTrue(actual_name.endswith(expected_path))
