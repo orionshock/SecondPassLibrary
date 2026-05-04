@@ -109,6 +109,17 @@ Helper lives in `core/errors.py` (`api_error_payload()` / `api_error_response()`
 
 All reading endpoints are under `/api/v1/reading/` and require authentication (session auth in dev).
 
+## Book API browse/search
+
+`GET /api/v1/library/books/` supports lightweight browse query params:
+
+- `q`: case-insensitive search across title, subtitle, author name, series name, `isbn`, and identifier values
+- `author`: filter by author UUID
+- `series`: filter by series UUID
+- `language`: filter by language code (case-insensitive)
+- `has_files`: `true`/`false` to filter books that have at least one `BookFile`
+- `ordering`: `title`, `created_at`, `updated_at`, or `published_date` (prefix with `-` for descending)
+
 ### Active session (lazy creation)
 
 Open/continue reading for a book:

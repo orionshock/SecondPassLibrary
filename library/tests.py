@@ -30,7 +30,9 @@ class IsolatedMediaRootMixin:
 
     @classmethod
     def setUpClass(cls):
-        super().setUpClass()
+        parent_set_up = getattr(super(), "setUpClass", None)
+        if callable(parent_set_up):
+            parent_set_up()
         temp_root = Path(settings.BASE_DIR) / "TestFiles"
         temp_root.mkdir(parents=True, exist_ok=True)
         cls._media_root = str(temp_root / f"tmp_media_{uuid.uuid4().hex}")
@@ -42,7 +44,9 @@ class IsolatedMediaRootMixin:
     def tearDownClass(cls):
         cls._media_override.disable()
         shutil.rmtree(cls._media_root, ignore_errors=True)
-        super().tearDownClass()
+        parent_tear_down = getattr(super(), "tearDownClass", None)
+        if callable(parent_tear_down):
+            parent_tear_down()
 
 
 class LibraryModelTest(TestCase):
@@ -206,6 +210,83 @@ class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertIn("download_url", file0)
         self.assertNotIn("file", file0)
         self.assertNotIn("books/", str(file0))
+
+
+class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+
+        self.author_a = Author.objects.create(name="Alice Author")
+        self.author_b = Author.objects.create(name="Bob Writer")
+        self.series_s = Series.objects.create(name="Saga Series")
+
+        self.book1 = Book.objects.create(title="Alpha", language="en", series=self.series_s)
+        self.book1.authors.add(self.author_a)
+        BookIdentifier.objects.create(book=self.book1, scheme="other", value="ID-XYZ", source="epub")
+
+        self.book2 = Book.objects.create(title="Beta", language="fr")
+        self.book2.authors.add(self.author_b)
+
+        uploaded = SimpleUploadedFile("ignored.epub", b"epub-bytes", content_type="application/epub+zip")
+        BookFile.objects.create(
+            book=self.book2,
+            file=uploaded,
+            checksum="b" * 64,
+            file_size=9,
+            source_filename="b.epub",
+        )
+
+    def _titles(self, response):
+        data = cast(list[dict[str, Any]], response.data)
+        return sorted([b["title"] for b in data])
+
+    def test_q_matches_title(self):
+        response = cast(Response, self.client.get("/api/v1/library/books/?q=Alp"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Alpha"])
+
+    def test_q_matches_author(self):
+        response = cast(Response, self.client.get("/api/v1/library/books/?q=bob"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Beta"])
+
+    def test_q_matches_identifier_value(self):
+        response = cast(Response, self.client.get("/api/v1/library/books/?q=xyz"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Alpha"])
+
+    def test_filter_by_author(self):
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/books/?author={self.author_a.id}"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Alpha"])
+
+    def test_filter_by_series(self):
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/books/?series={self.series_s.id}"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Alpha"])
+
+    def test_filter_by_language(self):
+        response = cast(Response, self.client.get("/api/v1/library/books/?language=en"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Alpha"])
+
+    def test_filter_has_files_true(self):
+        response = cast(Response, self.client.get("/api/v1/library/books/?has_files=true"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles(response), ["Beta"])
+        data = cast(list[dict[str, Any]], response.data)
+        files = data[0]["files"]
+        self.assertEqual(len(files), 1)
+        self.assertIn("download_url", files[0])
+        self.assertNotIn("file", files[0])
+        self.assertNotIn("books/", str(files[0]))
 
 
 class BaseBookFileDownloadAPITest(APITestCase):
@@ -449,7 +530,9 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
 
         # ISBNs and non-ISBN identifiers are preserved.
         identifiers = list(
-            book.identifiers.order_by("scheme", "value").values_list("scheme", "value")
+            cast(Any, book)
+            .identifiers.order_by("scheme", "value")
+            .values_list("scheme", "value")
         )
         self.assertIn((BookIdentifier.SCHEME_ISBN_10, "0123456479"), identifiers)
         self.assertIn((BookIdentifier.SCHEME_ISBN_13, "9780123456472"), identifiers)
@@ -466,5 +549,5 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
         self.assertIn((BookIdentifier.SCHEME_OTHER, "Some-Other-ID"), identifiers)
 
         # All identifiers derived from EPUB metadata should record provenance.
-        sources = set(book.identifiers.values_list("source", flat=True))
+        sources = set(cast(Any, book).identifiers.values_list("source", flat=True))
         self.assertEqual(sources, {"epub"})

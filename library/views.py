@@ -1,5 +1,6 @@
 from django.http import FileResponse, Http404
 from django.db.models import Prefetch
+from django.db.models import Q
 
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -50,6 +51,48 @@ class BookViewSet(viewsets.ModelViewSet):
     )
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
+    ordering_fields = ["title", "created_at", "updated_at", "published_date"]
+    ordering = ["title", "created_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        request = self.request
+
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            queryset = queryset.filter(
+                Q(title__icontains=q)
+                | Q(subtitle__icontains=q)
+                | Q(authors__name__icontains=q)
+                | Q(series__name__icontains=q)
+                | Q(isbn__icontains=q)
+                | Q(identifiers__value__icontains=q)
+            )
+
+        author_id = (request.query_params.get("author") or "").strip()
+        if author_id:
+            queryset = queryset.filter(authors__id=author_id)
+
+        series_id = (request.query_params.get("series") or "").strip()
+        if series_id:
+            queryset = queryset.filter(series__id=series_id)
+
+        language = (request.query_params.get("language") or "").strip()
+        if language:
+            queryset = queryset.filter(language__iexact=language)
+
+        has_files = (request.query_params.get("has_files") or "").strip().lower()
+        if has_files in {"true", "1", "yes", "y", "on"}:
+            queryset = queryset.filter(files__isnull=False)
+        elif has_files in {"false", "0", "no", "n", "off"}:
+            queryset = queryset.filter(files__isnull=True)
+
+        ordering = (request.query_params.get("ordering") or "").strip()
+        if ordering:
+            field = ordering.lstrip("-")
+            if field in set(self.ordering_fields):
+                queryset = queryset.order_by(ordering, "created_at")
+        return queryset.distinct()
 
 
 class BookFileViewSet(viewsets.ModelViewSet):
