@@ -393,11 +393,23 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(book.isbn, "9780123456472")
 
         # ISBNs and non-ISBN identifiers are preserved.
-        identifiers = list(book.identifiers.order_by("scheme", "value").values_list("scheme", "value"))
+        identifiers = list(
+            book.identifiers.order_by("scheme", "value").values_list("scheme", "value")
+        )
         self.assertIn((BookIdentifier.SCHEME_ISBN_10, "0123456479"), identifiers)
         self.assertIn((BookIdentifier.SCHEME_ISBN_13, "9780123456472"), identifiers)
         self.assertIn((BookIdentifier.SCHEME_DOI, "10.5555/123"), identifiers)
-        self.assertIn((BookIdentifier.SCHEME_UUID, "urn:uuid:123e4567-e89b-12d3-a456-426614174000"), identifiers)
+        self.assertIn(
+            (
+                BookIdentifier.SCHEME_UUID,
+                "urn:uuid:123e4567-e89b-12d3-a456-426614174000",
+            ),
+            identifiers,
+        )
         self.assertIn((BookIdentifier.SCHEME_OTHER, "B00TEST123"), identifiers)
         self.assertIn((BookIdentifier.SCHEME_ASIN, "B00TEST123"), identifiers)
         self.assertIn((BookIdentifier.SCHEME_OTHER, "Some-Other-ID"), identifiers)
+
+        # All identifiers derived from EPUB metadata should record provenance.
+        sources = set(book.identifiers.values_list("source", flat=True))
+        self.assertEqual(sources, {"epub"})

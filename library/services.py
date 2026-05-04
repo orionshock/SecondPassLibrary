@@ -280,12 +280,11 @@ def _extract_identifiers(book_epub) -> list[dict[str, Any]]:
         normalized_value = _normalize_identifier_value(scheme=scheme, value=value)
         if not normalized_value:
             continue
-        source = _clean_str(attrs.get("scheme") or attrs.get("id") or "")
         identifiers.append(
             {
                 "scheme": scheme,
                 "value": normalized_value,
-                "source": source,
+                "source": "epub",
                 "is_primary": False,
             }
         )

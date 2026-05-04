@@ -75,6 +75,7 @@ GET /api/v1/library/imports/<id>/
 
 - `Book.isbn` is a convenience/display field (prefer ISBN-13 when available), not the only identifier.
 - `BookIdentifier` stores external/source identifiers (ISBNs and non-ISBN identifiers like ASIN/DOI/OCLC/LCCN/Open Library IDs/Calibre IDs/EPUB unique identifiers/URI-URN/etc).
+- Identifiers imported from EPUB metadata use `source=epub`.
 - Duplicate EPUB detection is based on file checksum, not identifiers.
 
 ## Format Support Position
