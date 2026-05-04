@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'core',
     'accounts',
     'library',
+    'reading',
 ]
 
 MIDDLEWARE = [
