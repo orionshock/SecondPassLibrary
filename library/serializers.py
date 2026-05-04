@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework.reverse import reverse
+from typing import Any, cast
 
 from .models import (
     Author,
@@ -100,13 +101,13 @@ class BookSerializer(serializers.ModelSerializer):
     identifiers = serializers.SerializerMethodField(read_only=True)
 
     def get_identifiers(self, obj: Book):
-        identifiers = obj.identifiers.all()
+        identifiers = cast(Any, obj).identifiers.all()
         return BookIdentifierSerializer(identifiers, many=True).data
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["authors"] = AuthorSummarySerializer(
-            instance.authors.all(), many=True, context=self.context
+            cast(Any, instance).authors.all(), many=True, context=self.context
         ).data
         data["series"] = (
             SeriesSummarySerializer(instance.series, context=self.context).data
@@ -114,7 +115,7 @@ class BookSerializer(serializers.ModelSerializer):
             else None
         )
         data["files"] = BookFileSummarySerializer(
-            instance.files.all(), many=True, context=self.context
+            cast(Any, instance).files.all(), many=True, context=self.context
         ).data
         return data
 
