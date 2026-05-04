@@ -171,6 +171,12 @@ class BookFileAdmin(admin.ModelAdmin):
 
 @admin.register(ImportJob)
 class ImportJobAdmin(admin.ModelAdmin):
+    """
+    Import jobs are created by the import API/services.
+
+    Admin is intended for inspection and limited repair/debugging only.
+    """
+
     list_display = [
         "id",
         "user",
@@ -186,10 +192,10 @@ class ImportJobAdmin(admin.ModelAdmin):
     list_filter = ["status", "source_type", ("created_at", DateFieldListFilter)]
     search_fields = ["id", "source_filename", "user__username", "user__email"]
     readonly_fields = [
+        "admin_note",
         "created_at",
         "updated_at",
         "user",
-        "status",
         "source_type",
         "source_filename",
         "internal_staged_path",
@@ -197,15 +203,33 @@ class ImportJobAdmin(admin.ModelAdmin):
         "imported_count",
         "duplicate_count",
         "failed_count",
-        "message",
     ]
 
     fieldsets = (
-        (None, {"fields": ("user", "status", "source_type", "source_filename")}),
-        ("Counts", {"fields": ("total_found", "imported_count", "duplicate_count", "failed_count")}),
-        ("Diagnostics", {"fields": ("internal_staged_path", "message")}),
+        ("Note", {"fields": ("admin_note",)}),
+        (None, {"fields": ("user", "source_type", "source_filename")}),
+        ("Status", {"fields": ("status", "message")}),
+        (
+            "Counts",
+            {
+                "fields": (
+                    "total_found",
+                    "imported_count",
+                    "duplicate_count",
+                    "failed_count",
+                )
+            },
+        ),
+        ("Diagnostics", {"fields": ("internal_staged_path",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="")
+    def admin_note(self, obj: ImportJob) -> str:
+        return "Import jobs are created by the import API/upload workflow. Edit only for inspection or limited repair/debugging."
 
     @admin.display(description="Internal staged path")
     def internal_staged_path(self, obj: ImportJob) -> str:
@@ -214,6 +238,12 @@ class ImportJobAdmin(admin.ModelAdmin):
 
 @admin.register(ImportJobItem)
 class ImportJobItemAdmin(admin.ModelAdmin):
+    """
+    Import job items are created by the import API/services.
+
+    Admin is intended for inspection and limited repair/debugging only.
+    """
+
     list_display = [
         "id",
         "job",
@@ -225,14 +255,25 @@ class ImportJobItemAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", ("created_at", DateFieldListFilter)]
     search_fields = ["id", "job__id", "source_name", "book__title", "book_file__checksum"]
-    raw_id_fields = ["job", "book", "book_file"]
+    raw_id_fields = ["book", "book_file"]
     readonly_fields = [
+        "admin_note",
         "created_at",
         "updated_at",
         "job",
-        "status",
         "source_name",
-        "book",
-        "book_file",
-        "message",
     ]
+
+    fieldsets = (
+        ("Note", {"fields": ("admin_note",)}),
+        (None, {"fields": ("job", "source_name")}),
+        ("Repair", {"fields": ("status", "message", "book", "book_file")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="")
+    def admin_note(self, obj: ImportJobItem) -> str:
+        return "Import job items are created by the import API/upload workflow. Edit only for inspection or limited repair/debugging."
