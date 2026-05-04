@@ -1,4 +1,3 @@
-from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 
 from rest_framework import status, viewsets
@@ -9,6 +8,12 @@ from rest_framework.views import APIView
 from library.models import Book
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .services import (
+    get_or_create_active_session,
+    get_or_create_progress,
+    start_over_book,
+    update_progress,
+)
 from .serializers import (
     AnnotationSerializer,
     DeviceSerializer,
@@ -49,16 +54,7 @@ class ActiveSessionView(APIView):
 
     def get(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
-        try:
-            with transaction.atomic():
-                session, _created = ReadingSession.objects.get_or_create(
-                    user=request.user,
-                    book=book,
-                    is_active=True,
-                    defaults={'status': ReadingSession.STATUS_ACTIVE},
-                )
-        except IntegrityError:
-            session = ReadingSession.objects.get(user=request.user, book=book, is_active=True)
+        session = get_or_create_active_session(user=request.user, book=book)
         return Response(ReadingSessionSerializer(session).data)
 
 
@@ -68,21 +64,7 @@ class StartOverView(APIView):
     def post(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
         name = request.data.get('name', '')
-
-        with transaction.atomic():
-            (
-                ReadingSession.objects.filter(user=request.user, book=book, is_active=True)
-                .select_for_update()
-                .update(is_active=False, status=ReadingSession.STATUS_ARCHIVED)
-            )
-            session = ReadingSession.objects.create(
-                user=request.user,
-                book=book,
-                name=name or '',
-                status=ReadingSession.STATUS_ACTIVE,
-                is_active=True,
-            )
-
+        session = start_over_book(user=request.user, book=book, name=name or '')
         return Response(ReadingSessionSerializer(session).data, status=status.HTTP_201_CREATED)
 
 
@@ -99,7 +81,7 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
 
     def retrieve(self, request, session_id=None):
         session = self._get_session(session_id)
-        progress, _ = ReadingProgress.objects.get_or_create(session=session, defaults={'locator': {}})
+        progress = get_or_create_progress(session=session)
         return Response(ReadingProgressSerializer(progress).data)
 
     def partial_update(self, request, session_id=None):
@@ -110,11 +92,20 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
 
     def _update(self, request, session_id, partial):
         session = self._get_session(session_id)
-        progress, _ = ReadingProgress.objects.get_or_create(session=session, defaults={'locator': {}})
+        progress = get_or_create_progress(session=session)
         serializer = ReadingProgressSerializer(progress, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save(session=session)
-        return Response(serializer.data)
+        validated = serializer.validated_data
+        locator = validated.get('locator', progress.locator)
+        progression = validated.get('progression', progress.progression)
+        device = validated.get('device', progress.device)
+        progress = update_progress(
+            session=session,
+            locator=locator,
+            progression=progression,
+            device=device,
+        )
+        return Response(ReadingProgressSerializer(progress).data)
 
 
 class AnnotationViewSet(viewsets.ModelViewSet):
