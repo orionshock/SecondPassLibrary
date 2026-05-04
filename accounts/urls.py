@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 
 from .views import CurrentUserView, UserProfileViewSet
 
+app_name = 'accounts'
+
 router = DefaultRouter()
 router.register(r'profiles', UserProfileViewSet, basename='userprofile')
 

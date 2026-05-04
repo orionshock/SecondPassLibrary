@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 
 from .views import AuthorViewSet, BookFileViewSet, BookMetadataViewSet, BookViewSet, SeriesViewSet
 
+app_name = 'library'
+
 router = DefaultRouter()
 router.register(r'authors', AuthorViewSet, basename='author')
 router.register(r'series', SeriesViewSet, basename='series')

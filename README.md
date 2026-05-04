@@ -17,18 +17,19 @@ This application stores all runtime and user-generated data in the `userdata/` d
 - The `userdata/` directory is intentionally ignored by Git and should be backed up separately.
 - EPUB files are stored using their SHA-256 checksum for deduplication and content addressing.
 - Human-readable filenames come from metadata, not stored filenames.
-- For Docker deployments, mount `userdata/` as a persistent volume to preserve data across container restarts.
 - The application automatically creates required subdirectories on startup.
 
 ## Development Setup
 
 1. Clone the repository
 2. Create a virtual environment: `python -m venv .venv`
-3. Activate: `.venv\Scripts\activate` (Windows)
+3. Activate (PowerShell): `.\.venv\Scripts\Activate.ps1`
 4. Install dependencies: `pip install -r requirements.txt`
 5. Run migrations: `python manage.py migrate`
 6. Create superuser: `python manage.py createsuperuser`
 7. Run server: `python manage.py runserver`
+
+See `DEVELOPMENT.md` for the full development workflow (including checks/tests).
 
 ## Importing EPUBs
 
