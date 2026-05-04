@@ -34,6 +34,7 @@ os.makedirs(USERDATA_DIR / "media", exist_ok=True)
 os.makedirs(USERDATA_DIR / "static", exist_ok=True)
 os.makedirs(USERDATA_DIR / "logs", exist_ok=True)
 os.makedirs(USERDATA_DIR / "imports", exist_ok=True)
+IMPORTS_DIR = USERDATA_DIR / "imports"
 
 
 # Quick-start development settings - unsuitable for production

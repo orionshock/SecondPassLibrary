@@ -5,6 +5,7 @@ from .views import (
     AuthorViewSet,
     BookFileViewSet,
     BookViewSet,
+    ImportJobViewSet,
     SeriesViewSet,
 )
 
@@ -15,6 +16,7 @@ router.register(r"authors", AuthorViewSet, basename="author")
 router.register(r"series", SeriesViewSet, basename="series")
 router.register(r"books", BookViewSet, basename="book")
 router.register(r"book-files", BookFileViewSet, basename="bookfile")
+router.register(r"imports", ImportJobViewSet, basename="importjob")
 
 urlpatterns = [
     path("", include(router.urls)),

@@ -1,8 +1,11 @@
 from django.http import FileResponse, Http404
 
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
 
 from .models import Author, Book, BookFile, Series
 from .serializers import (
@@ -10,8 +13,14 @@ from .serializers import (
     BookFileSerializer,
     BookSerializer,
     SeriesSerializer,
+    ImportJobSerializer,
 )
-from .services import generate_epub_download_filename
+from .services import (
+    generate_epub_download_filename,
+    create_import_job_from_upload,
+    process_import_job,
+)
+from .models import ImportJob
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -64,3 +73,29 @@ class BookFileViewSet(viewsets.ModelViewSet):
             content_type="application/epub+zip",
         )
 
+
+class ImportJobViewSet(
+    mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    serializer_class = ImportJobSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        return ImportJob.objects.prefetch_related("items").filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        uploaded = request.FILES.get("file")
+        if uploaded is None:
+            return Response(
+                {"detail": 'Missing multipart upload field "file".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            job = create_import_job_from_upload(user=request.user, uploaded_file=uploaded)
+            job = process_import_job(job=job)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(job)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

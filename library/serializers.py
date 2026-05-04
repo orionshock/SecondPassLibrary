@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from .models import Author, Book, BookFile, Series
+from .models import Author, Book, BookFile, Series, ImportJob, ImportJobItem
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -89,3 +89,41 @@ class BookSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class ImportJobItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImportJobItem
+        fields = [
+            "id",
+            "status",
+            "source_name",
+            "book",
+            "book_file",
+            "message",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+
+class ImportJobSerializer(serializers.ModelSerializer):
+    items = ImportJobItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ImportJob
+        fields = [
+            "id",
+            "status",
+            "source_type",
+            "source_filename",
+            "total_found",
+            "imported_count",
+            "duplicate_count",
+            "failed_count",
+            "message",
+            "items",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields

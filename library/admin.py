@@ -4,7 +4,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Author, Book, BookFile, Series
+from .models import Author, Book, BookFile, Series, ImportJob, ImportJobItem
 
 
 @admin.register(Author)
@@ -167,3 +167,72 @@ class BookFileAdmin(admin.ModelAdmin):
     def download_epub_link(self, obj: BookFile) -> str:
         url = reverse("library:bookfile-download", args=[obj.pk])
         return format_html('<a href="{}">Download EPUB</a>', url)
+
+
+@admin.register(ImportJob)
+class ImportJobAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "user",
+        "status",
+        "source_type",
+        "source_filename",
+        "total_found",
+        "imported_count",
+        "duplicate_count",
+        "failed_count",
+        "created_at",
+    ]
+    list_filter = ["status", "source_type", ("created_at", DateFieldListFilter)]
+    search_fields = ["id", "source_filename", "user__username", "user__email"]
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "user",
+        "status",
+        "source_type",
+        "source_filename",
+        "internal_staged_path",
+        "total_found",
+        "imported_count",
+        "duplicate_count",
+        "failed_count",
+        "message",
+    ]
+
+    fieldsets = (
+        (None, {"fields": ("user", "status", "source_type", "source_filename")}),
+        ("Counts", {"fields": ("total_found", "imported_count", "duplicate_count", "failed_count")}),
+        ("Diagnostics", {"fields": ("internal_staged_path", "message")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+
+    @admin.display(description="Internal staged path")
+    def internal_staged_path(self, obj: ImportJob) -> str:
+        return obj.staged_path or ""
+
+
+@admin.register(ImportJobItem)
+class ImportJobItemAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "job",
+        "status",
+        "source_name",
+        "book",
+        "book_file",
+        "created_at",
+    ]
+    list_filter = ["status", ("created_at", DateFieldListFilter)]
+    search_fields = ["id", "job__id", "source_name", "book__title", "book_file__checksum"]
+    raw_id_fields = ["job", "book", "book_file"]
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "job",
+        "status",
+        "source_name",
+        "book",
+        "book_file",
+        "message",
+    ]

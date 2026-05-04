@@ -41,6 +41,32 @@ python manage.py test
 python manage.py import_epub "path\to\book.epub"
 ```
 
+Note: `import_epub` is a dev/admin utility (host-side). The intended product import path is the API upload endpoint below.
+
+## Import via API (staged uploads)
+
+Supported uploads:
+- A single `.epub`
+- A simple `.zip` containing `.epub` files (non-EPUB entries are ignored; Calibre/library backup ZIPs are not supported)
+
+Create an import job (multipart field name is `file`):
+
+```text
+POST /api/v1/library/imports/
+```
+
+List your import jobs:
+
+```text
+GET /api/v1/library/imports/
+```
+
+Get a specific job:
+
+```text
+GET /api/v1/library/imports/<id>/
+```
+
 ## Library data model
 
 `Book` contains the canonical, user-facing bibliographic fields (title, authors, series, publisher, language, published date, ISBN, subjects). If we later need raw imported metadata/provenance, it should be modeled separately.
