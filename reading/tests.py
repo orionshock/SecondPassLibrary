@@ -32,7 +32,20 @@ class ReadingModelsTest(TestCase):
             ReadingSession.objects.create(user=self.user, book=self.book)
 
     def test_completed_session_allowed(self):
-        ReadingSession.objects.create(user=self.user, book=self.book, status=ReadingSession.STATUS_COMPLETED)
+        ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+
+    def test_archived_session_allowed(self):
+        ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            status=ReadingSession.STATUS_ARCHIVED,
+            is_active=False,
+        )
 
     def test_create_progress_for_session(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)

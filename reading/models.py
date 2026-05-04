@@ -67,7 +67,7 @@ class ReadingSession(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'book'],
-                condition=Q(status='active', is_active=True),
+                condition=Q(is_active=True),
                 name='unique_active_reading_session_per_user_book',
             )
         ]
