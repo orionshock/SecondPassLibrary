@@ -13,14 +13,15 @@ class Command(BaseCommand):
         file_path = options["file_path"]
         try:
             result = import_epub(file_path)
+            book_title = result.book.title if result.book is not None else file_path
             if result.status == ImportStatus.DUPLICATE:
                 self.stdout.write(
-                    self.style.WARNING(f"EPUB already exists: {result.book.title}")
+                    self.style.WARNING(f"EPUB already exists: {book_title}")
                 )
             elif result.status == ImportStatus.IMPORTED:
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Successfully imported EPUB: {result.book.title}"
+                        f"Successfully imported EPUB: {book_title}"
                     )
                 )
             else:

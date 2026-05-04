@@ -64,6 +64,16 @@ class LibraryModelTest(TestCase):
         self.assertEqual(book_file.checksum_short(), "dummy")
         self.assertEqual(book_file.file_size_human(), "123 B")
 
+    def test_book_file_str_with_missing_checksum(self):
+        book_file = BookFile.objects.create(
+            book=self.book,
+            file="test.epub",
+            checksum=None,
+            file_size=123,
+            source_filename="original.epub",
+        )
+        self.assertEqual(str(book_file), "Test Book - no-checksum...")
+
     def test_book_file_file_size_human_units(self):
         book_file = BookFile.objects.create(
             book=self.book,

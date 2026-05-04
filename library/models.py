@@ -105,7 +105,8 @@ class BookFile(TimeStampedModel):
         ordering = ["book", "created_at"]
 
     def __str__(self):
-        return f"{self.book.title} - {self.checksum[:8]}..."
+        checksum_display = self.checksum_short(8) or "no-checksum"
+        return f"{self.book.title} - {checksum_display}..."
 
     def checksum_short(self, length=8):
         if not self.checksum:
