@@ -172,6 +172,12 @@ This includes:
 * bookmarks
 * devices
 
+### EPUB locators
+
+Reading locators are stored as flexible JSON for now. Prefer EPUB locators that include CFI and href when available, plus progression (0–1) and optional text quote context (exact/prefix/suffix) to help re-anchor highlights if a CFI fails.
+
+Do not add PDF locator support unless explicitly requested.
+
 Reading metadata should not be deleted just because a user starts over or loses current access to a book file.
 
 ### Sessions

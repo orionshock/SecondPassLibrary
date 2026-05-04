@@ -71,6 +71,16 @@ GET /api/v1/library/imports/<id>/
 
 `Book` contains the canonical, user-facing bibliographic fields (title, authors, series, publisher, language, published date, ISBN, subjects). If we later need raw imported metadata/provenance, it should be modeled separately.
 
+## Format Support Position
+
+Second Pass Library is EPUB-first and EPUB-only for the current implementation.
+
+Do not add PDF support unless explicitly requested. PDF annotation and reading support is intentionally out of scope.
+
+The architecture should remain format-aware rather than hardcoding EPUB assumptions into every model. Prefer fields such as `file_format` and flexible locator JSON over EPUB-specific database columns.
+
+Possible future formats, such as comic archives, should not require a major rewrite, but no code for them should be added now.
+
 ## API error responses
 
 Custom API errors (for places where views intentionally return a non-DRF error payload) should use:
@@ -127,6 +137,34 @@ Example payload:
 ```
 
 `locator` is stored as JSON and is intentionally flexible for now.
+
+### Locator conventions (preferred shape for EPUB)
+
+Locators are flexible JSON for now. For EPUB, prefer a shape like:
+
+```json
+{
+  "format": "epub",
+  "href": "Text/chapter01.xhtml",
+  "cfi": "epubcfi(...)",
+  "progression": 0.1234,
+  "position": 12345,
+  "text": {
+    "exact": "selected text",
+    "prefix": "text before selection",
+    "suffix": "text after selection"
+  }
+}
+```
+
+Notes:
+- `href` is the EPUB internal content document path when available.
+- `cfi` is preferred when the client can provide it.
+- `progression` is a float between 0 and 1 when available.
+- `position` is optional and client-defined for now.
+- `text` quote context helps re-anchor highlights if a CFI fails.
+- Do not require every field.
+- PDF locators are not supported.
 
 ### Annotations (highlights, notes, bookmarks)
 

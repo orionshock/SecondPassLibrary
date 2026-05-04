@@ -5,6 +5,7 @@ from django.db import IntegrityError, transaction
 from library.models import Book
 
 from .models import Device, ReadingProgress, ReadingSession
+from .locators import normalize_locator
 
 
 def get_or_create_active_session(*, user, book: Book) -> ReadingSession:
@@ -78,7 +79,7 @@ def update_progress(
     expected to enforce user scoping and device/session ownership validation.
     """
     progress = get_or_create_progress(session=session)
-    progress.locator = locator
+    progress.locator = normalize_locator(locator)
     progress.progression = progression
     progress.device = device
     progress.save(update_fields=["locator", "progression", "device", "updated_at"])

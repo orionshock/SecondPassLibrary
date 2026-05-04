@@ -24,3 +24,13 @@ Core principles:
 - External authentication eventually, not custom password logic
 - User reading state must be durable and exportable
 - The API should be boring, documented, and versioned
+
+## Format Support Position
+
+Second Pass Library is EPUB-first and EPUB-only for the current implementation.
+
+Do not add PDF support unless explicitly requested. PDF annotation and reading support is intentionally out of scope.
+
+The architecture should remain format-aware rather than hardcoding EPUB assumptions into every model. Prefer fields such as `file_format` and flexible locator JSON over EPUB-specific database columns.
+
+Possible future formats, such as comic archives, should not require a major rewrite, but no code for them should be added now.

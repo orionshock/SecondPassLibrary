@@ -3,6 +3,7 @@ from rest_framework import serializers
 from library.models import Book
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .locators import normalize_locator
 
 
 class DeviceSerializer(serializers.ModelSerializer):
@@ -87,6 +88,9 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["created_at", "updated_at"]
 
+    def validate_locator(self, locator):
+        return normalize_locator(locator)
+
 
 class AnnotationSerializer(serializers.ModelSerializer):
     def validate_session(self, session):
@@ -104,6 +108,9 @@ class AnnotationSerializer(serializers.ModelSerializer):
         if device.user_id != request.user.id:
             raise serializers.ValidationError("Invalid device.")
         return device
+
+    def validate_locator(self, locator):
+        return normalize_locator(locator)
 
     class Meta:
         model = Annotation

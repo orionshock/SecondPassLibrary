@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 from library.models import Book
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .tests_utils import IsolatedUserdataMixin
 
 
 User = get_user_model()
@@ -26,7 +27,7 @@ def _response_data_list(response: Response) -> list[Any]:
     return cast(list[Any], data)
 
 
-class ReadingAPITest(APITestCase):
+class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def setUp(self):
         self.user1 = User.objects.create_user(
             username="u1", password="pass1", email="u1@example.com"
@@ -133,6 +134,7 @@ class ReadingAPITest(APITestCase):
         data = _response_data_dict(response)
         self.assertEqual(data["session"], session.id)
         self.assertEqual(data["device"], device.id)
+        self.assertEqual(data["locator"]["format"], "epub")
         self.assertEqual(data["locator"]["cfi"], "/6/4")
         self.assertEqual(data["progression"], 0.5)
 
@@ -161,6 +163,9 @@ class ReadingAPITest(APITestCase):
             ),
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        create_data = _response_data_dict(create)
+        self.assertEqual(create_data["locator"]["format"], "epub")
+        self.assertEqual(create_data["locator"]["cfi"], "/6/6")
 
         response = cast(
             Response,

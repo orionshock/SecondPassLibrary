@@ -5,12 +5,13 @@ from django.test import TestCase
 from library.models import Book
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .tests_utils import IsolatedUserdataMixin
 
 
 User = get_user_model()
 
 
-class ReadingModelsTest(TestCase):
+class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="reader", password="testpass", email="reader@example.com"

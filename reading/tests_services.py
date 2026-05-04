@@ -10,12 +10,13 @@ from .services import (
     start_over_book,
     update_progress,
 )
+from .tests_utils import IsolatedUserdataMixin
 
 
 User = get_user_model()
 
 
-class ReadingServicesTest(TestCase):
+class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="reader", password="testpass", email="reader@example.com"
@@ -67,6 +68,7 @@ class ReadingServicesTest(TestCase):
         self.assertEqual(progress.session.id, session.id)
         self.assertIsNotNone(progress.device)
         self.assertEqual(progress.device.id, device.id) # type: ignore
+        self.assertEqual(progress.locator["format"], "epub")
         self.assertEqual(progress.locator["cfi"], "/6/4")
         self.assertEqual(progress.progression, 0.5)
 
@@ -79,5 +81,6 @@ class ReadingServicesTest(TestCase):
         )
         self.assertEqual(progress2.id, progress.id)
         self.assertIsNone(progress2.device)
+        self.assertEqual(progress2.locator["format"], "epub")
         self.assertEqual(progress2.locator["cfi"], "/6/6")
         self.assertEqual(progress2.progression, 0.75)
