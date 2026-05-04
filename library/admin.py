@@ -4,7 +4,15 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Author, Book, BookFile, Series, ImportJob, ImportJobItem
+from .models import (
+    Author,
+    Book,
+    BookFile,
+    Series,
+    BookIdentifier,
+    ImportJob,
+    ImportJobItem,
+)
 
 
 @admin.register(Author)
@@ -39,6 +47,13 @@ class SeriesAdmin(admin.ModelAdmin):
         return obj._book_count
 
 
+class BookIdentifierInline(admin.TabularInline):
+    model = BookIdentifier
+    extra = 0
+    fields = ["scheme", "value", "source", "is_primary", "created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     list_display = [
@@ -66,6 +81,7 @@ class BookAdmin(admin.ModelAdmin):
     ]
     filter_horizontal = ["authors"]
     readonly_fields = ["created_at", "updated_at"]
+    inlines = [BookIdentifierInline]
 
     fieldsets = (
         (

@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 import uuid
 import zipfile
-from typing import Optional
+from typing import Optional, Any
 import shutil
 
 from ebooklib import epub
@@ -14,6 +14,7 @@ from django.core.files import File
 from django.core.files.uploadedfile import UploadedFile
 
 from .models import Author, Book, BookFile
+from .models import BookIdentifier
 from .models import ImportJob, ImportJobItem
 
 
@@ -122,19 +123,22 @@ def import_epub(file_path):
         authors.append(author)
 
     # Create Book record
+    isbn = metadata.get("isbn") or ""
     book = Book.objects.create(
-        title=metadata.get(
-            "title", path.stem
-        ),  # Use EPUB title or filename as fallback
-        summary="",  # Leave empty for user to edit
+        title=metadata.get("title") or path.stem,  # fallback to filename stem
+        subtitle=metadata.get("subtitle", ""),
+        summary=metadata.get("summary", ""),
         publisher=metadata.get("publisher", ""),
         language=metadata.get("language", ""),
         published_date=metadata.get("published_date"),
-        isbn=metadata.get("isbn", ""),
+        isbn=isbn,
         subjects=metadata.get("subjects") or [],
     )
     if authors:
         book.authors.set(authors)
+
+    identifiers: list[dict[str, Any]] = metadata.get("identifiers") or []
+    _create_book_identifiers(book=book, identifiers=identifiers)
 
     # Create BookFile record
     with open(path, "rb") as f:
@@ -156,6 +160,199 @@ def import_epub(file_path):
         checksum=checksum,
         message="Successfully imported EPUB.",
     )
+
+
+def _clean_str(value: object) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return text
+
+
+def _normalize_language(value: str) -> str:
+    # Conservative normalization only.
+    return value.strip().lower()
+
+
+def _dedupe_nonblank(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in values:
+        v = _clean_str(raw)
+        if not v:
+            continue
+        key = v.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(v)
+    return out
+
+
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def _looks_like_doi(value: str) -> bool:
+    v = value.strip()
+    if v.lower().startswith("doi:"):
+        v = v[4:].strip()
+    return v.startswith("10.") and "/" in v
+
+
+def _parse_isbn(value: str) -> tuple[str, str] | None:
+    """
+    Return (scheme, normalized_value) if value looks like ISBN-10/ISBN-13.
+
+    Normalization removes spaces/hyphens and uppercases X for ISBN-10 check digit.
+    """
+    raw = value.strip()
+    if not raw:
+        return None
+
+    # Strip common prefixes.
+    lowered = raw.lower()
+    if lowered.startswith("urn:isbn:"):
+        raw = raw.split(":", 2)[-1]
+    if lowered.startswith("isbn:"):
+        raw = raw.split(":", 1)[-1]
+
+    cleaned = re.sub(r"[^0-9xX]", "", raw)
+    if len(cleaned) == 13 and cleaned.isdigit():
+        return (BookIdentifier.SCHEME_ISBN_13, cleaned)
+    if len(cleaned) == 10 and re.fullmatch(r"[0-9]{9}[0-9xX]", cleaned):
+        return (BookIdentifier.SCHEME_ISBN_10, cleaned.upper())
+    return None
+
+
+def _identifier_scheme_for(*, value: str, attrs: dict[str, Any]) -> str:
+    v = value.strip()
+    v_lower = v.lower()
+
+    isbn = _parse_isbn(v)
+    if isbn is not None:
+        return isbn[0]
+
+    if _looks_like_doi(v):
+        return BookIdentifier.SCHEME_DOI
+
+    if v_lower.startswith(("http://", "https://", "urn:")):
+        if v_lower.startswith("urn:uuid:"):
+            return BookIdentifier.SCHEME_UUID
+        return BookIdentifier.SCHEME_URI
+
+    if _UUID_RE.match(v):
+        return BookIdentifier.SCHEME_UUID
+
+    # ASIN only when hinted.
+    hinted = any(
+        "asin" in str(attrs.get(k, "")).lower() for k in ("scheme", "type", "id")
+    ) or v_lower.startswith(("asin:", "urn:asin:"))
+    if hinted and re.fullmatch(r"[A-Z0-9]{10}", v.upper()):
+        return BookIdentifier.SCHEME_ASIN
+
+    return BookIdentifier.SCHEME_OTHER
+
+
+def _normalize_identifier_value(*, scheme: str, value: str) -> str:
+    v = value.strip()
+    if scheme in {BookIdentifier.SCHEME_ISBN_10, BookIdentifier.SCHEME_ISBN_13}:
+        parsed = _parse_isbn(v)
+        if parsed is not None:
+            return parsed[1]
+    if scheme == BookIdentifier.SCHEME_DOI and v.lower().startswith("doi:"):
+        return v[4:].strip()
+    if scheme == BookIdentifier.SCHEME_ASIN and v.lower().startswith("asin:"):
+        return v.split(":", 1)[-1].strip().upper()
+    return v
+
+
+def _extract_identifiers(book_epub) -> list[dict[str, Any]]:
+    identifiers: list[dict[str, Any]] = []
+    raw_identifiers = book_epub.get_metadata("DC", "identifier") or []
+    for raw_value, raw_attrs in raw_identifiers:
+        value = _clean_str(raw_value)
+        if not value:
+            continue
+        attrs = raw_attrs or {}
+        scheme = _identifier_scheme_for(value=value, attrs=attrs)
+        normalized_value = _normalize_identifier_value(scheme=scheme, value=value)
+        if not normalized_value:
+            continue
+        source = _clean_str(attrs.get("scheme") or attrs.get("id") or "")
+        identifiers.append(
+            {
+                "scheme": scheme,
+                "value": normalized_value,
+                "source": source,
+                "is_primary": False,
+            }
+        )
+
+    # Mark a primary identifier if we can (prefer ISBN-13, then ISBN-10, else first).
+    primary_index: int | None = None
+    for idx, ident in enumerate(identifiers):
+        if ident["scheme"] == BookIdentifier.SCHEME_ISBN_13:
+            primary_index = idx
+            break
+    if primary_index is None:
+        for idx, ident in enumerate(identifiers):
+            if ident["scheme"] == BookIdentifier.SCHEME_ISBN_10:
+                primary_index = idx
+                break
+    if primary_index is None and identifiers:
+        primary_index = 0
+    if primary_index is not None:
+        identifiers[primary_index]["is_primary"] = True
+
+    # Dedupe (scheme,value) preserving order.
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    for ident in identifiers:
+        key = (ident["scheme"], ident["value"].lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(ident)
+    return out
+
+
+def _best_isbn_from_identifiers(identifiers: list[dict[str, Any]]) -> str:
+    isbn13 = next(
+        (i["value"] for i in identifiers if i["scheme"] == BookIdentifier.SCHEME_ISBN_13),
+        "",
+    )
+    if isbn13:
+        return isbn13
+    isbn10 = next(
+        (i["value"] for i in identifiers if i["scheme"] == BookIdentifier.SCHEME_ISBN_10),
+        "",
+    )
+    return isbn10 or ""
+
+
+def _create_book_identifiers(*, book: Book, identifiers: list[dict[str, Any]]) -> None:
+    for ident in identifiers:
+        scheme = _clean_str(ident.get("scheme"))
+        value = _clean_str(ident.get("value"))
+        if not scheme or not value:
+            continue
+        source = _clean_str(ident.get("source", ""))
+        is_primary = bool(ident.get("is_primary", False))
+        BookIdentifier.objects.get_or_create(
+            book=book,
+            scheme=scheme,
+            value=value,
+            defaults={"source": source, "is_primary": is_primary},
+        )
+
+    # Ensure the primary flag is consistent if multiple were marked.
+    primaries = list(BookIdentifier.objects.filter(book=book, is_primary=True).order_by("created_at"))
+    if len(primaries) > 1:
+        for extra in primaries[1:]:
+            extra.is_primary = False
+            extra.save(update_fields=["is_primary", "updated_at"])
 
 
 def _imports_dir() -> Path:
@@ -376,49 +573,61 @@ def process_import_job(*, job: ImportJob) -> ImportJob:
 
 def _extract_metadata(book_epub):
     """
-    Extract basic metadata from EPUB.
+    Extract and lightly clean metadata from EPUB.
 
     Returns:
         dict: Metadata dictionary.
     """
-    metadata = {}
+    metadata: dict[str, Any] = {}
 
     # Title
-    title = book_epub.get_metadata("DC", "title")
-    if title:
-        metadata["title"] = title[0][0]
+    titles = book_epub.get_metadata("DC", "title") or []
+    title_values = _dedupe_nonblank([t[0] for t in titles if t and t[0]])
+    if title_values:
+        metadata["title"] = title_values[0]
+        if len(title_values) > 1:
+            subtitle = title_values[1]
+            if subtitle and subtitle != title_values[0]:
+                metadata["subtitle"] = subtitle
 
     # Authors
-    authors = book_epub.get_metadata("DC", "creator")
-    if authors:
-        metadata["authors"] = [author[0] for author in authors]
+    creators = book_epub.get_metadata("DC", "creator") or []
+    metadata["authors"] = _dedupe_nonblank([c[0] for c in creators if c and c[0]])
 
     # Language
-    language = book_epub.get_metadata("DC", "language")
-    if language:
-        metadata["language"] = language[0][0]
+    language = book_epub.get_metadata("DC", "language") or []
+    if language and language[0] and language[0][0]:
+        lang = _clean_str(language[0][0])
+        if lang:
+            metadata["language"] = _normalize_language(lang)
 
     # Publisher
-    publisher = book_epub.get_metadata("DC", "publisher")
-    if publisher:
-        metadata["publisher"] = publisher[0][0]
+    publisher = book_epub.get_metadata("DC", "publisher") or []
+    if publisher and publisher[0] and publisher[0][0]:
+        pub = _clean_str(publisher[0][0])
+        if pub:
+            metadata["publisher"] = pub
+
+    # Description -> summary (only used if Book.summary is empty on create)
+    description = book_epub.get_metadata("DC", "description") or []
+    if description and description[0] and description[0][0]:
+        desc = _clean_str(description[0][0])
+        if desc:
+            metadata["summary"] = desc
 
     # Subjects
-    subjects = book_epub.get_metadata("DC", "subject")
-    if subjects:
-        metadata["subjects"] = [subject[0] for subject in subjects if subject and subject[0]]
+    subjects = book_epub.get_metadata("DC", "subject") or []
+    metadata["subjects"] = _dedupe_nonblank([s[0] for s in subjects if s and s[0]])
 
     # Publication date
-    date = book_epub.get_metadata("DC", "date")
-    if date:
-        # Assume YYYY-MM-DD format
-        metadata["published_date"] = date[0][0][:10] if len(date[0][0]) >= 10 else None
+    date = book_epub.get_metadata("DC", "date") or []
+    if date and date[0] and date[0][0]:
+        raw_date = _clean_str(date[0][0])
+        if len(raw_date) >= 10 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw_date[:10]):
+            metadata["published_date"] = raw_date[:10]
 
-    # ISBN (if available in identifier)
-    identifiers = book_epub.get_metadata("DC", "identifier")
-    for identifier in identifiers:
-        if "isbn" in identifier[0].lower():
-            metadata["isbn"] = identifier[0]
-            break
+    identifiers = _extract_identifiers(book_epub)
+    metadata["identifiers"] = identifiers
+    metadata["isbn"] = _best_isbn_from_identifiers(identifiers)
 
     return metadata

@@ -71,6 +71,12 @@ GET /api/v1/library/imports/<id>/
 
 `Book` contains the canonical, user-facing bibliographic fields (title, authors, series, publisher, language, published date, ISBN, subjects). If we later need raw imported metadata/provenance, it should be modeled separately.
 
+### Identifier Position
+
+- `Book.isbn` is a convenience/display field (prefer ISBN-13 when available), not the only identifier.
+- `BookIdentifier` stores external/source identifiers (ISBNs and non-ISBN identifiers like ASIN/DOI/OCLC/LCCN/Open Library IDs/Calibre IDs/EPUB unique identifiers/URI-URN/etc).
+- Duplicate EPUB detection is based on file checksum, not identifiers.
+
 ## Format Support Position
 
 Second Pass Library is EPUB-first and EPUB-only for the current implementation.

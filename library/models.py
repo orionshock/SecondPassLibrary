@@ -126,6 +126,61 @@ class BookFile(TimeStampedModel):
             size /= 1024
 
 
+class BookIdentifier(TimeStampedModel):
+    SCHEME_ISBN_10 = "isbn_10"
+    SCHEME_ISBN_13 = "isbn_13"
+    SCHEME_ASIN = "asin"
+    SCHEME_DOI = "doi"
+    SCHEME_OCLC = "oclc"
+    SCHEME_LCCN = "lccn"
+    SCHEME_OPENLIBRARY = "openlibrary"
+    SCHEME_CALIBRE = "calibre"
+    SCHEME_EPUB_UID = "epub_uid"
+    SCHEME_PUBLISHER = "publisher"
+    SCHEME_URI = "uri"
+    SCHEME_UUID = "uuid"
+    SCHEME_OTHER = "other"
+
+    SCHEME_CHOICES = [
+        (SCHEME_ISBN_10, "ISBN-10"),
+        (SCHEME_ISBN_13, "ISBN-13"),
+        (SCHEME_ASIN, "ASIN"),
+        (SCHEME_DOI, "DOI"),
+        (SCHEME_OCLC, "OCLC"),
+        (SCHEME_LCCN, "LCCN"),
+        (SCHEME_OPENLIBRARY, "Open Library"),
+        (SCHEME_CALIBRE, "Calibre"),
+        (SCHEME_EPUB_UID, "EPUB UID"),
+        (SCHEME_PUBLISHER, "Publisher"),
+        (SCHEME_URI, "URI/URN"),
+        (SCHEME_UUID, "UUID"),
+        (SCHEME_OTHER, "Other"),
+    ]
+
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="identifiers"
+    )
+    scheme = models.CharField(max_length=32, choices=SCHEME_CHOICES)
+    value = models.CharField(max_length=512)
+    source = models.CharField(max_length=255, blank=True)
+    is_primary = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["scheme", "value"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["book", "scheme", "value"],
+                name="unique_book_identifier_scheme_value",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["scheme", "value"], name="idx_identifier_scheme_value"),
+        ]
+
+    def __str__(self):
+        return f"{self.scheme}:{self.value}"
+
+
 class ImportJob(TimeStampedModel):
     STATUS_PENDING = "pending"
     STATUS_PROCESSING = "processing"

@@ -146,6 +146,13 @@ Do not create new apps unless there is a clear domain boundary.
 * Imported filenames are only fallback/diagnostic context.
 * Human-readable filenames should be generated from metadata when exporting or downloading.
 
+### Identifier Position
+
+* `Book.isbn` is a convenience/display field (prefer ISBN-13 when available), not the only identifier.
+* Future metadata/import work should preserve non-ISBN identifiers.
+* `BookIdentifier` stores external/source identifiers such as ISBN-10, ISBN-13, ASIN, DOI, OCLC, LCCN, Open Library IDs, Calibre IDs, EPUB unique identifiers, publisher IDs, URI/URN identifiers, and other source-specific identifiers.
+* Duplicate EPUB detection is based on file checksum, not identifiers.
+
 ## Library Access Model
 
 For now, the library is shared among authenticated users.

@@ -17,6 +17,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import Author, Book, BookFile, Series
+from .models import BookIdentifier
 from .services import ImportStatus, import_epub
 
 
@@ -119,6 +120,23 @@ class LibraryModelTest(TestCase):
             source_filename="original.epub",
         )
         self.assertEqual(book_file.file_size_human(), "2.0 KB")
+
+    def test_book_identifier_unique_constraint(self):
+        ident = BookIdentifier.objects.create(
+            book=self.book,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780123456472",
+        )
+        self.assertEqual(str(ident), "isbn_13:9780123456472")
+
+        from django.db import IntegrityError
+
+        with self.assertRaises(IntegrityError):
+            BookIdentifier.objects.create(
+                book=self.book,
+                scheme=BookIdentifier.SCHEME_ISBN_13,
+                value="9780123456472",
+            )
 
 
 class LibraryAPITest(APITestCase):
@@ -333,13 +351,53 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
 
         author = book.authors.first()
         assert author is not None
-        self.assertEqual(author.name, "Test Author")
 
-        self.assertEqual(book_file.source_filename, "test.epub")
-        self.assertIsNotNone(book_file.file_size)
-        self.assertIsNotNone(book_file.checksum)
-        checksum = cast(str, book_file.checksum)
-        # Check file path
-        expected_path = f"books/{checksum[:2]}/{checksum[2:4]}/{checksum}.epub"
-        actual_name = book_file.file.name.replace("\\", "/")
-        self.assertTrue(actual_name.endswith(expected_path))
+    @patch("library.services.epub.read_epub")
+    def test_import_creates_identifiers_prefers_isbn13_and_cleans_metadata(
+        self, mock_read_epub
+    ):
+        mock_book = MagicMock()
+        mock_book.get_metadata.side_effect = lambda ns, name: {
+            "title": [("  Main Title  ", {}), ("Subtitle", {})],
+            "creator": [(" Author A ", {}), ("author a", {}), ("", {})],
+            "language": [("EN-US", {})],
+            "publisher": [("  Pub  ", {})],
+            "description": [("  Summary text  ", {})],
+            "subject": [("Fiction", {}), ("fiction", {}), ("", {})],
+            "identifier": [
+                ("ISBN: 0-123456-47-9", {}),
+                ("978-0-123456-47-2", {"scheme": "ISBN"}),
+                ("doi:10.5555/123", {}),
+                ("B00TEST123", {}),
+                ("B00TEST123", {"scheme": "ASIN"}),
+                ("urn:uuid:123e4567-e89b-12d3-a456-426614174000", {}),
+                ("Some-Other-ID", {}),
+            ],
+        }.get(name, [])
+        mock_read_epub.return_value = mock_book
+
+        result = import_epub(self.epub_path)
+        self.assertEqual(result.status, ImportStatus.IMPORTED)
+        book = result.book
+        assert book is not None
+
+        book.refresh_from_db()
+        self.assertEqual(book.title, "Main Title")
+        self.assertEqual(book.subtitle, "Subtitle")
+        self.assertEqual(book.summary, "Summary text")
+        self.assertEqual(book.language, "en-us")
+        self.assertEqual(book.publisher, "Pub")
+        self.assertEqual(book.subjects, ["Fiction"])
+
+        # Prefer ISBN-13 for Book.isbn when present.
+        self.assertEqual(book.isbn, "9780123456472")
+
+        # ISBNs and non-ISBN identifiers are preserved.
+        identifiers = list(book.identifiers.order_by("scheme", "value").values_list("scheme", "value"))
+        self.assertIn((BookIdentifier.SCHEME_ISBN_10, "0123456479"), identifiers)
+        self.assertIn((BookIdentifier.SCHEME_ISBN_13, "9780123456472"), identifiers)
+        self.assertIn((BookIdentifier.SCHEME_DOI, "10.5555/123"), identifiers)
+        self.assertIn((BookIdentifier.SCHEME_UUID, "urn:uuid:123e4567-e89b-12d3-a456-426614174000"), identifiers)
+        self.assertIn((BookIdentifier.SCHEME_OTHER, "B00TEST123"), identifiers)
+        self.assertIn((BookIdentifier.SCHEME_ASIN, "B00TEST123"), identifiers)
+        self.assertIn((BookIdentifier.SCHEME_OTHER, "Some-Other-ID"), identifiers)

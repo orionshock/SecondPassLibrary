@@ -1,7 +1,15 @@
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from .models import Author, Book, BookFile, Series, ImportJob, ImportJobItem
+from .models import (
+    Author,
+    Book,
+    BookFile,
+    Series,
+    BookIdentifier,
+    ImportJob,
+    ImportJobItem,
+)
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -43,6 +51,13 @@ class BookFileSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
+class BookIdentifierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookIdentifier
+        fields = ["scheme", "value", "source", "is_primary"]
+        read_only_fields = fields
+
+
 class BookSerializer(serializers.ModelSerializer):
     authors = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Author.objects.all()
@@ -51,6 +66,11 @@ class BookSerializer(serializers.ModelSerializer):
         queryset=Series.objects.all(), required=False, allow_null=True
     )
     files = BookFileSerializer(many=True, read_only=True)
+    identifiers = serializers.SerializerMethodField(read_only=True)
+
+    def get_identifiers(self, obj: Book):
+        identifiers = obj.identifiers.order_by("scheme", "value").all()
+        return BookIdentifierSerializer(identifiers, many=True).data
 
     class Meta:
         model = Book
@@ -67,6 +87,7 @@ class BookSerializer(serializers.ModelSerializer):
             "authors",
             "series",
             "series_index",
+            "identifiers",
             "files",
             "created_at",
             "updated_at",

@@ -36,7 +36,7 @@ class SeriesViewSet(viewsets.ModelViewSet):
 
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = Book.objects.prefetch_related("authors", "files").select_related(
+    queryset = Book.objects.prefetch_related("authors", "files", "identifiers").select_related(
         "series"
     )
     serializer_class = BookSerializer
