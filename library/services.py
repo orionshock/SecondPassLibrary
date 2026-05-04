@@ -1,13 +1,32 @@
 import hashlib
 import os
 import shutil
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import ebooklib
 from ebooklib import epub
 from django.core.files import File
 
 from .models import Author, Book, BookFile, BookMetadata
+
+
+class ImportStatus(str, Enum):
+    IMPORTED = "imported"
+    DUPLICATE = "duplicate"
+    FAILED = "failed"
+
+
+@dataclass
+class ImportResult:
+    status: ImportStatus
+    book_file: Optional[BookFile] = None
+    book: Optional[Book] = None
+    message: str = ""
+    warnings: list[str] = field(default_factory=list)
+    checksum: Optional[str] = None
 
 
 def import_epub(file_path):
@@ -18,7 +37,7 @@ def import_epub(file_path):
         file_path (str): Path to the EPUB file.
 
     Returns:
-        tuple: (BookFile, is_duplicate) where is_duplicate is True if already existed.
+        ImportResult: Explicit result of the import.
 
     Raises:
         ValueError: If file doesn't exist, not .epub, or other issues.
@@ -42,7 +61,13 @@ def import_epub(file_path):
     # Check if BookFile with this checksum already exists
     existing = BookFile.objects.filter(checksum=checksum).first()
     if existing:
-        return existing, True  # Return existing, duplicate
+        return ImportResult(
+            status=ImportStatus.DUPLICATE,
+            book_file=existing,
+            book=existing.book,
+            checksum=checksum,
+            message="EPUB already exists.",
+        )
 
     # Parse EPUB metadata
     book_epub = epub.read_epub(str(path))
@@ -83,7 +108,13 @@ def import_epub(file_path):
             source_filename=path.name,
         )
 
-    return book_file, False
+    return ImportResult(
+        status=ImportStatus.IMPORTED,
+        book_file=book_file,
+        book=book,
+        checksum=checksum,
+        message="Successfully imported EPUB.",
+    )
 
 
 def _extract_metadata(book_epub):

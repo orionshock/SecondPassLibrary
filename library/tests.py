@@ -11,7 +11,7 @@ import uuid
 from django.conf import settings
 
 from .models import Author, Book, BookFile, BookMetadata, Series
-from .services import import_epub, _extract_metadata
+from .services import ImportStatus, import_epub
 
 
 class LibraryModelTest(TestCase):
@@ -101,13 +101,19 @@ class EPUBImportTest(TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
 
-    def test_checksum_calculation(self):
+    @patch('library.services.epub.read_epub')
+    def test_checksum_calculation(self, mock_read_epub):
+        mock_book = MagicMock()
+        mock_book.get_metadata.return_value = []
+        mock_read_epub.return_value = mock_book
+
         import hashlib
         with open(self.epub_path, 'rb') as f:
             expected_checksum = hashlib.sha256(f.read()).hexdigest()
-        # Since import_epub calculates it, we can test indirectly
-        # For now, just check the function exists
-        self.assertTrue(callable(import_epub))
+
+        result = import_epub(self.epub_path)
+        self.assertEqual(result.status, ImportStatus.IMPORTED)
+        self.assertEqual(result.checksum, expected_checksum)
 
     def test_invalid_extension(self):
         invalid_path = os.path.join(self.temp_dir, 'test.txt')
@@ -146,8 +152,11 @@ class EPUBImportTest(TestCase):
         )
 
         # Try to import again - should return existing
-        result, is_duplicate = import_epub(self.epub_path)
-        self.assertTrue(is_duplicate)
+        result = import_epub(self.epub_path)
+        self.assertEqual(result.status, ImportStatus.DUPLICATE)
+        self.assertEqual(result.checksum, checksum)
+        self.assertIsNotNone(result.book_file)
+        self.assertIsNotNone(result.book)
         self.assertEqual(result.book.title, 'Existing Book')
 
     @patch('library.services.epub.read_epub')
@@ -161,14 +170,23 @@ class EPUBImportTest(TestCase):
         }.get(name, [])
         mock_read_epub.return_value = mock_book
 
-        result, is_duplicate = import_epub(self.epub_path)
-        self.assertFalse(is_duplicate)
+        import hashlib
+        with open(self.epub_path, 'rb') as f:
+            expected_checksum = hashlib.sha256(f.read()).hexdigest()
+
+        result = import_epub(self.epub_path)
+        self.assertEqual(result.status, ImportStatus.IMPORTED)
+        self.assertEqual(result.checksum, expected_checksum)
+        self.assertIsNotNone(result.book_file)
+        self.assertIsNotNone(result.book)
         self.assertEqual(result.book.title, 'Test Title')
         self.assertEqual(result.book.authors.first().name, 'Test Author')
-        self.assertEqual(result.source_filename, 'test.epub')
-        self.assertIsNotNone(result.file_size)
-        self.assertIsNotNone(result.checksum)
+        self.assertEqual(result.book_file.source_filename, 'test.epub')
+        self.assertIsNotNone(result.book_file.file_size)
+        self.assertIsNotNone(result.book_file.checksum)
         # Check file path
-        expected_path = f'books/{result.checksum[:2]}/{result.checksum[2:4]}/{result.checksum}.epub'
-        actual_name = result.file.name.replace('\\', '/')
+        expected_path = (
+            f'books/{result.book_file.checksum[:2]}/{result.book_file.checksum[2:4]}/{result.book_file.checksum}.epub'
+        )
+        actual_name = result.book_file.file.name.replace('\\', '/')
         self.assertTrue(actual_name.endswith(expected_path))

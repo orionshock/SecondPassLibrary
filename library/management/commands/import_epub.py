@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from library.services import import_epub
+from library.services import ImportStatus, import_epub
 
 
 class Command(BaseCommand):
@@ -12,15 +12,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         file_path = options['file_path']
         try:
-            book_file, is_duplicate = import_epub(file_path)
-            if is_duplicate:
-                self.stdout.write(
-                    self.style.WARNING(f'EPUB already exists: {book_file.book.title}')
-                )
+            result = import_epub(file_path)
+            if result.status == ImportStatus.DUPLICATE:
+                self.stdout.write(self.style.WARNING(f'EPUB already exists: {result.book.title}'))
+            elif result.status == ImportStatus.IMPORTED:
+                self.stdout.write(self.style.SUCCESS(f'Successfully imported EPUB: {result.book.title}'))
             else:
-                self.stdout.write(
-                    self.style.SUCCESS(f'Successfully imported EPUB: {book_file.book.title}')
-                )
+                self.stdout.write(self.style.ERROR(f'Failed to import EPUB: {result.message or "Unknown error"}'))
         except ValueError as e:
             raise CommandError(str(e))
         except Exception as e:
