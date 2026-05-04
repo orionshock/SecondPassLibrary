@@ -5,6 +5,10 @@ from rest_framework import status
 import tempfile
 import os
 from unittest.mock import patch, MagicMock
+from pathlib import Path
+import uuid
+
+from django.conf import settings
 
 from .models import Author, Book, BookFile, BookMetadata, Series
 from .services import import_epub, _extract_metadata
@@ -17,6 +21,7 @@ class LibraryModelTest(TestCase):
         self.book = Book.objects.create(title='Test Book')
         self.book.authors.add(self.author)
         self.book.series = self.series
+        self.book.series_index = 1
         self.book.save()
 
     def test_author_str(self):
@@ -33,6 +38,12 @@ class LibraryModelTest(TestCase):
         self.book.authors.add(author2)
         self.assertEqual(self.book.authors.count(), 2)
 
+    def test_book_author_list(self):
+        author_a = Author.objects.create(name='A Author')
+        author_z = Author.objects.create(name='Z Author')
+        self.book.authors.set([author_z, author_a])
+        self.assertEqual(self.book.author_list(), 'A Author, Z Author')
+
     def test_book_metadata(self):
         metadata = BookMetadata.objects.create(book=self.book, publisher='Test Publisher')
         self.assertEqual(str(metadata), 'Metadata for Test Book')
@@ -47,6 +58,18 @@ class LibraryModelTest(TestCase):
             source_filename='original.epub'
         )
         self.assertEqual(str(book_file), 'Test Book - dummy...')
+        self.assertEqual(book_file.checksum_short(), 'dummy')
+        self.assertEqual(book_file.file_size_human(), '123 B')
+
+    def test_book_file_file_size_human_units(self):
+        book_file = BookFile.objects.create(
+            book=self.book,
+            file='test.epub',
+            checksum='a' * 64,
+            file_size=2048,
+            source_filename='original.epub',
+        )
+        self.assertEqual(book_file.file_size_human(), '2.0 KB')
 
 
 class LibraryAPITest(APITestCase):
@@ -66,7 +89,10 @@ class LibraryAPITest(APITestCase):
 class EPUBImportTest(TestCase):
     def setUp(self):
         # Create a temporary EPUB file for testing
-        self.temp_dir = tempfile.mkdtemp()
+        temp_root = Path(settings.BASE_DIR) / 'TestFiles'
+        temp_root.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = str(temp_root / f'tmp_epub_{uuid.uuid4().hex}')
+        os.makedirs(self.temp_dir, exist_ok=True)
         self.epub_path = os.path.join(self.temp_dir, 'test.epub')
         with open(self.epub_path, 'wb') as f:
             f.write(b'fake epub content')

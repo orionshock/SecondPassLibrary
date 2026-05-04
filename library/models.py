@@ -38,6 +38,11 @@ class Book(TimeStampedModel):
         blank=True,
         related_name='books',
     )
+    series_index = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text='Optional position within a series (e.g., 1 for book one).',
+    )
 
     class Meta:
         ordering = ['title']
@@ -45,12 +50,18 @@ class Book(TimeStampedModel):
     def __str__(self):
         return self.title
 
+    def author_list(self):
+        authors = self.authors.order_by('name').values_list('name', flat=True)
+        return ', '.join(authors)
+
+
 def book_file_upload_path(instance, filename):
     if not instance.checksum:
         raise ValueError("Checksum must be set before saving BookFile")
     first2 = instance.checksum[:2]
     next2 = instance.checksum[2:4]
     return f'books/{first2}/{next2}/{instance.checksum}.epub'
+
 
 class BookMetadata(TimeStampedModel):
     book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name='metadata')
@@ -82,3 +93,20 @@ class BookFile(TimeStampedModel):
 
     def __str__(self):
         return f'{self.book.title} - {self.checksum[:8]}...'
+
+    def checksum_short(self, length=8):
+        if not self.checksum:
+            return ''
+        return self.checksum[:length]
+
+    def file_size_human(self):
+        if self.file_size is None:
+            return ''
+
+        size = float(self.file_size)
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024 or unit == 'TB':
+                if unit == 'B':
+                    return f'{int(size)} {unit}'
+                return f'{size:.1f} {unit}'
+            size /= 1024
