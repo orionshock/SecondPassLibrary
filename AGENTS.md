@@ -328,6 +328,20 @@ Do not add these unless specifically requested:
 * complex permissions
 * multi-tenant SaaS features
 
+## Admin UI Position
+
+The Django `/admin` site is a technical service hatch for advanced administration, debugging, and recovery.
+
+It is not the primary product UI.
+
+Long-term, the product should have a separate UI (and potentially a separate simplified admin UI) that is not the Django admin.
+
+Do not remove Django admin.
+
+In the future, the project should support disabling Django admin by configuration. For development, Django admin should remain enabled.
+
+Do not build a frontend yet.
+
 ## Coding Style
 
 * Prefer simple Django conventions.
