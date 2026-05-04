@@ -152,7 +152,7 @@ For now, the library is shared among authenticated users.
 
 This means:
 
-- `Book`, `Author`, `Series`, `BookFile`, and `BookMetadata` APIs may expose shared library records to authenticated users.
+- `Book`, `Author`, `Series`, and `BookFile` APIs may expose shared library records to authenticated users.
 - Reading metadata remains user-owned and must be scoped to the authenticated user.
 - Future permissions may restrict book/file access, but existing reading metadata should remain recoverable/exportable by its owner.
 

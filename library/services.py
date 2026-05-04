@@ -181,6 +181,11 @@ def _extract_metadata(book_epub):
     if publisher:
         metadata["publisher"] = publisher[0][0]
 
+    # Subjects
+    subjects = book_epub.get_metadata("DC", "subject")
+    if subjects:
+        metadata["subjects"] = [subject[0] for subject in subjects if subject and subject[0]]
+
     # Publication date
     date = book_epub.get_metadata("DC", "date")
     if date:

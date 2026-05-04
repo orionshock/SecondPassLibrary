@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
 from django.db.models import Count
+from django.urls import reverse
+from django.utils.html import format_html
 
 from .models import Author, Book, BookFile, Series
 
@@ -116,14 +118,33 @@ class BookFileAdmin(admin.ModelAdmin):
         "updated_at",
         "checksum",
         "file_size",
+        "file_size_human",
         "source_filename",
+        "internal_stored_path",
+        "download_epub_link",
     ]
 
-    fieldsets = (
+    add_fieldsets = (
         (None, {"fields": ("book", "file", "format")}),
         ("File details", {"fields": ("checksum", "file_size", "source_filename")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
+
+    change_fieldsets = (
+        (None, {"fields": ("book", "format")}),
+        ("Download", {"fields": ("download_epub_link",)}),
+        (
+            "File details",
+            {"fields": ("checksum", "file_size", "file_size_human", "source_filename")},
+        ),
+        ("Diagnostics", {"fields": ("internal_stored_path",)}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+
+    def get_fieldsets(self, request, obj=None):
+        if obj is None:
+            return self.add_fieldsets
+        return self.change_fieldsets
 
     @admin.display(description="Format", ordering="format")
     def file_format(self, obj):
@@ -136,3 +157,13 @@ class BookFileAdmin(admin.ModelAdmin):
     @admin.display(description="Size", ordering="file_size")
     def file_size_human(self, obj):
         return obj.file_size_human()
+
+    @admin.display(description="Internal stored path")
+    def internal_stored_path(self, obj: BookFile) -> str:
+        # Storage-relative path (never an absolute filesystem path).
+        return obj.file.name if obj.file else ""
+
+    @admin.display(description="Download EPUB")
+    def download_epub_link(self, obj: BookFile) -> str:
+        url = reverse("library:bookfile-download", args=[obj.pk])
+        return format_html('<a href="{}">Download EPUB</a>', url)

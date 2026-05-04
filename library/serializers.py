@@ -66,6 +66,7 @@ class BookSerializer(serializers.ModelSerializer):
             "subjects",
             "authors",
             "series",
+            "series_index",
             "files",
             "created_at",
             "updated_at",

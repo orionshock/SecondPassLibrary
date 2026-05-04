@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+import shutil
 from typing import Any, cast
 
 from django.contrib.auth.models import User
@@ -17,6 +18,30 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import Author, Book, BookFile, Series
 from .services import ImportStatus, import_epub
+
+
+class IsolatedMediaRootMixin:
+    """
+    Ensure FileField writes during tests go to a temp MEDIA_ROOT.
+
+    Avoid polluting the real `userdata/media` directory during test runs.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        temp_root = Path(settings.BASE_DIR) / "TestFiles"
+        temp_root.mkdir(parents=True, exist_ok=True)
+        cls._media_root = str(temp_root / f"tmp_media_{uuid.uuid4().hex}")
+        os.makedirs(cls._media_root, exist_ok=True)
+        cls._media_override = override_settings(MEDIA_ROOT=cls._media_root)
+        cls._media_override.enable()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._media_override.disable()
+        shutil.rmtree(cls._media_root, ignore_errors=True)
+        super().tearDownClass()
 
 
 class LibraryModelTest(TestCase):
@@ -110,20 +135,8 @@ class LibraryAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class BookFileDownloadAPITest(APITestCase):
+class BaseBookFileDownloadAPITest(APITestCase):
     def setUp(self):
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self._media_root = str(temp_root / f"tmp_media_{uuid.uuid4().hex}")
-        os.makedirs(self._media_root, exist_ok=True)
-
-        self._override = override_settings(MEDIA_ROOT=self._media_root)
-        self._override.enable()
-        self.addCleanup(self._override.disable)
-        self.addCleanup(
-            lambda: __import__("shutil").rmtree(self._media_root, ignore_errors=True)
-        )
-
         self.user = User.objects.create_user(username="testuser", password="testpass")
         self.author = Author.objects.create(name="Jane / Doe")
         self.series = Series.objects.create(name="My * Series")
@@ -210,7 +223,11 @@ class BookFileSerializerAPITest(APITestCase):
         )
 
 
-class EPUBImportTest(TestCase):
+class BookFileDownloadAPITest(IsolatedMediaRootMixin, BaseBookFileDownloadAPITest):
+    pass
+
+
+class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         # Create a temporary EPUB file for testing
         temp_root = Path(settings.BASE_DIR) / "TestFiles"
@@ -222,9 +239,7 @@ class EPUBImportTest(TestCase):
             f.write(uuid.uuid4().hex.encode("utf-8"))
 
     def tearDown(self):
-        import shutil
-
-        shutil.rmtree(self.temp_dir)
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("library.services.epub.read_epub")
     def test_checksum_calculation(self, mock_read_epub):
