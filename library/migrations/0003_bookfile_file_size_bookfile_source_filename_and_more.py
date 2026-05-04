@@ -5,25 +5,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('library', '0002_bookfile_checksum'),
+        ("library", "0002_bookfile_checksum"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='bookfile',
-            name='file_size',
-            field=models.PositiveBigIntegerField(blank=True, help_text='File size in bytes', null=True),
+            model_name="bookfile",
+            name="file_size",
+            field=models.PositiveBigIntegerField(
+                blank=True, help_text="File size in bytes", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='bookfile',
-            name='source_filename',
-            field=models.CharField(blank=True, help_text='Original filename for diagnostic purposes', max_length=255),
+            model_name="bookfile",
+            name="source_filename",
+            field=models.CharField(
+                blank=True,
+                help_text="Original filename for diagnostic purposes",
+                max_length=255,
+            ),
         ),
         migrations.AlterField(
-            model_name='bookfile',
-            name='file',
+            model_name="bookfile",
+            name="file",
             field=models.FileField(upload_to=library.models.book_file_upload_path),
         ),
     ]

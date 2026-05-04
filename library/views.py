@@ -2,7 +2,13 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Author, Book, BookFile, BookMetadata, Series
-from .serializers import AuthorSerializer, BookFileSerializer, BookMetadataSerializer, BookSerializer, SeriesSerializer
+from .serializers import (
+    AuthorSerializer,
+    BookFileSerializer,
+    BookMetadataSerializer,
+    BookSerializer,
+    SeriesSerializer,
+)
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -18,18 +24,20 @@ class SeriesViewSet(viewsets.ModelViewSet):
 
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = Book.objects.prefetch_related('authors', 'files').select_related('series')
+    queryset = Book.objects.prefetch_related("authors", "files").select_related(
+        "series"
+    )
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
 
 
 class BookFileViewSet(viewsets.ModelViewSet):
-    queryset = BookFile.objects.select_related('book').all()
+    queryset = BookFile.objects.select_related("book").all()
     serializer_class = BookFileSerializer
     permission_classes = [IsAuthenticated]
 
 
 class BookMetadataViewSet(viewsets.ModelViewSet):
-    queryset = BookMetadata.objects.select_related('book').all()
+    queryset = BookMetadata.objects.select_related("book").all()
     serializer_class = BookMetadataSerializer
     permission_classes = [IsAuthenticated]

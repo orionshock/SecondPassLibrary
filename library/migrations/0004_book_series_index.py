@@ -4,20 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('library', '0003_bookfile_file_size_bookfile_source_filename_and_more'),
+        ("library", "0003_bookfile_file_size_bookfile_source_filename_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='book',
-            name='series_index',
+            model_name="book",
+            name="series_index",
             field=models.PositiveIntegerField(
                 blank=True,
-                help_text='Optional position within a series (e.g., 1 for book one).',
+                help_text="Optional position within a series (e.g., 1 for book one).",
                 null=True,
             ),
         ),
     ]
-

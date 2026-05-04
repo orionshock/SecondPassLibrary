@@ -41,6 +41,23 @@ python manage.py test
 python manage.py import_epub "path\to\book.epub"
 ```
 
+## API error responses
+
+Custom API errors (for places where views intentionally return a non-DRF error payload) should use:
+
+```json
+{
+  "error": {
+    "code": "SOME_CODE",
+    "message": "Short, user-facing summary.",
+    "detail": "Optional detail for debugging or display.",
+    "hint": "Optional next step for the user."
+  }
+}
+```
+
+Helper lives in `core/errors.py` (`api_error_payload()` / `api_error_response()`).
+
 ## Reading API basics
 
 All reading endpoints are under `/api/v1/reading/` and require authentication (session auth in dev).

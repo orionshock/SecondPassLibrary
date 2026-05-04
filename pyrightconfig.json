@@ -1,0 +1,13 @@
+{
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.13",
+  "venvPath": ".",
+  "venv": ".venv",
+  "exclude": [
+    "**/__pycache__",
+    ".venv",
+    "userdata",
+    "TestFiles", "**/node_modules", "**/.*"
+  ]
+}
+

@@ -1,0 +1,16 @@
+{
+  "python.analysis.typeCheckingMode": "standard",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.exclude": [
+    "**/__pycache__/**",
+    ".venv/**",
+    "userdata/**",
+    "TestFiles/**",
+    "**/node_modules", 
+    "**/__pycache__",
+    ".git", 
+    "**/build",
+    "env/**", "**/.*"
+  ]
+}
+

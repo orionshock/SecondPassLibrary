@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('library', '0001_initial'),
+        ("library", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='bookfile',
-            name='checksum',
-            field=models.CharField(blank=True, help_text='SHA-256 hash for duplicate detection', max_length=128, null=True),
+            model_name="bookfile",
+            name="checksum",
+            field=models.CharField(
+                blank=True,
+                help_text="SHA-256 hash for duplicate detection",
+                max_length=128,
+                null=True,
+            ),
         ),
     ]

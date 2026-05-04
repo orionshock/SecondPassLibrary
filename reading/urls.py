@@ -10,21 +10,28 @@ from .views import (
     StartOverView,
 )
 
-app_name = 'reading'
+app_name = "reading"
 
 router = DefaultRouter()
-router.register(r'devices', DeviceViewSet, basename='device')
-router.register(r'sessions', ReadingSessionViewSet, basename='readingsession')
-router.register(r'annotations', AnnotationViewSet, basename='annotation')
+router.register(r"devices", DeviceViewSet, basename="device")
+router.register(r"sessions", ReadingSessionViewSet, basename="readingsession")
+router.register(r"annotations", AnnotationViewSet, basename="annotation")
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('books/<uuid:book_id>/active-session/', ActiveSessionView.as_view(), name='active_session'),
-    path('books/<uuid:book_id>/start-over/', StartOverView.as_view(), name='start_over'),
+    path("", include(router.urls)),
     path(
-        'sessions/<uuid:session_id>/progress/',
-        ReadingProgressViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update'}),
-        name='session_progress',
+        "books/<uuid:book_id>/active-session/",
+        ActiveSessionView.as_view(),
+        name="active_session",
+    ),
+    path(
+        "books/<uuid:book_id>/start-over/", StartOverView.as_view(), name="start_over"
+    ),
+    path(
+        "sessions/<uuid:session_id>/progress/",
+        ReadingProgressViewSet.as_view(
+            {"get": "retrieve", "put": "update", "patch": "partial_update"}
+        ),
+        name="session_progress",
     ),
 ]
-

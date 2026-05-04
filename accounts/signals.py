@@ -12,4 +12,3 @@ User = get_user_model()
 def ensure_user_profile_exists(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.get_or_create(user=instance)
-

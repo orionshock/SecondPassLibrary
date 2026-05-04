@@ -12,7 +12,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return UserProfile.objects.select_related('user').filter(user=self.request.user)
+        return UserProfile.objects.select_related("user").filter(user=self.request.user)
 
 
 class CurrentUserView(APIView):
@@ -21,10 +21,10 @@ class CurrentUserView(APIView):
     def get(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
         payload = {
-            'username': request.user.get_username(),
-            'email': request.user.email or '',
-            'profile_id': profile.id,
-            'role': profile.role,
+            "username": request.user.get_username(),
+            "email": request.user.email or "",
+            "profile_id": profile.id,
+            "role": profile.role,
         }
         serializer = CurrentUserSerializer(payload)
         return Response(serializer.data)

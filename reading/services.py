@@ -49,14 +49,18 @@ def start_over_book(*, user, book: Book, name: str | None = None) -> ReadingSess
         )
 
 
-def get_or_create_progress(*, session: ReadingSession, device: Device | None = None) -> ReadingProgress:
+def get_or_create_progress(
+    *, session: ReadingSession, device: Device | None = None
+) -> ReadingProgress:
     """
     Get the ReadingProgress for a session, creating one if missing.
     """
     defaults: dict = {"locator": {}}
     if device is not None:
         defaults["device"] = device
-    progress, _created = ReadingProgress.objects.get_or_create(session=session, defaults=defaults)
+    progress, _created = ReadingProgress.objects.get_or_create(
+        session=session, defaults=defaults
+    )
     return progress
 
 

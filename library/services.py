@@ -1,12 +1,9 @@
 import hashlib
-import os
-import shutil
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-import ebooklib
 from ebooklib import epub
 from django.core.files import File
 
@@ -49,11 +46,11 @@ def import_epub(file_path):
         raise ValueError(f"File does not exist: {file_path}")
 
     # Verify .epub extension
-    if path.suffix.lower() != '.epub':
+    if path.suffix.lower() != ".epub":
         raise ValueError(f"File must have .epub extension: {file_path}")
 
     # Calculate SHA-256 checksum and get file size
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         content = f.read()
         checksum = hashlib.sha256(content).hexdigest()
         file_size = len(content)
@@ -75,33 +72,39 @@ def import_epub(file_path):
 
     # Create or reuse Author records
     authors = []
-    for author_name in metadata.get('authors', []):
+    for author_name in metadata.get("authors", []):
         author, _ = Author.objects.get_or_create(name=author_name.strip())
         authors.append(author)
 
     # Create Book record
     book = Book.objects.create(
-        title=metadata.get('title', path.stem),  # Use EPUB title or filename as fallback
-        summary='',  # Leave empty for user to edit
+        title=metadata.get(
+            "title", path.stem
+        ),  # Use EPUB title or filename as fallback
+        summary="",  # Leave empty for user to edit
     )
     if authors:
         book.authors.set(authors)
 
     # Create BookMetadata if applicable
-    if any(metadata.get(key) for key in ['publisher', 'language', 'published_date', 'isbn']):
+    if any(
+        metadata.get(key) for key in ["publisher", "language", "published_date", "isbn"]
+    ):
         BookMetadata.objects.create(
             book=book,
-            publisher=metadata.get('publisher', ''),
-            language=metadata.get('language', ''),
-            published_date=metadata.get('published_date'),
-            isbn=metadata.get('isbn', ''),
+            publisher=metadata.get("publisher", ""),
+            language=metadata.get("language", ""),
+            published_date=metadata.get("published_date"),
+            isbn=metadata.get("isbn", ""),
         )
 
     # Create BookFile record
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         book_file = BookFile.objects.create(
             book=book,
-            file=File(f, name=f'{checksum}.epub'),  # Name doesn't matter, upload_to uses checksum
+            file=File(
+                f, name=f"{checksum}.epub"
+            ),  # Name doesn't matter, upload_to uses checksum
             format=BookFile.FORMAT_EPUB,
             checksum=checksum,
             file_size=file_size,
@@ -127,36 +130,36 @@ def _extract_metadata(book_epub):
     metadata = {}
 
     # Title
-    title = book_epub.get_metadata('DC', 'title')
+    title = book_epub.get_metadata("DC", "title")
     if title:
-        metadata['title'] = title[0][0]
+        metadata["title"] = title[0][0]
 
     # Authors
-    authors = book_epub.get_metadata('DC', 'creator')
+    authors = book_epub.get_metadata("DC", "creator")
     if authors:
-        metadata['authors'] = [author[0] for author in authors]
+        metadata["authors"] = [author[0] for author in authors]
 
     # Language
-    language = book_epub.get_metadata('DC', 'language')
+    language = book_epub.get_metadata("DC", "language")
     if language:
-        metadata['language'] = language[0][0]
+        metadata["language"] = language[0][0]
 
     # Publisher
-    publisher = book_epub.get_metadata('DC', 'publisher')
+    publisher = book_epub.get_metadata("DC", "publisher")
     if publisher:
-        metadata['publisher'] = publisher[0][0]
+        metadata["publisher"] = publisher[0][0]
 
     # Publication date
-    date = book_epub.get_metadata('DC', 'date')
+    date = book_epub.get_metadata("DC", "date")
     if date:
         # Assume YYYY-MM-DD format
-        metadata['published_date'] = date[0][0][:10] if len(date[0][0]) >= 10 else None
+        metadata["published_date"] = date[0][0][:10] if len(date[0][0]) >= 10 else None
 
     # ISBN (if available in identifier)
-    identifiers = book_epub.get_metadata('DC', 'identifier')
+    identifiers = book_epub.get_metadata("DC", "identifier")
     for identifier in identifiers:
-        if 'isbn' in identifier[0].lower():
-            metadata['isbn'] = identifier[0]
+        if "isbn" in identifier[0].lower():
+            metadata["isbn"] = identifier[0]
             break
 
     return metadata

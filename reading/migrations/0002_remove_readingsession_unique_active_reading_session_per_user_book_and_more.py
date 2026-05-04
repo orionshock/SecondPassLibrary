@@ -5,20 +5,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('library', '0004_book_series_index'),
-        ('reading', '0001_initial'),
+        ("library", "0004_book_series_index"),
+        ("reading", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='readingsession',
-            name='unique_active_reading_session_per_user_book',
+            model_name="readingsession",
+            name="unique_active_reading_session_per_user_book",
         ),
         migrations.AddConstraint(
-            model_name='readingsession',
-            constraint=models.UniqueConstraint(condition=models.Q(('is_active', True)), fields=('user', 'book'), name='unique_active_reading_session_per_user_book'),
+            model_name="readingsession",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("is_active", True)),
+                fields=("user", "book"),
+                name="unique_active_reading_session_per_user_book",
+            ),
         ),
     ]

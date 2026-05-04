@@ -6,85 +6,156 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Author',
+            name="Author",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=255)),
-                ('biography', models.TextField(blank=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=255)),
+                ("biography", models.TextField(blank=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Series',
+            name="Series",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=255)),
-                ('summary', models.TextField(blank=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=255)),
+                ("summary", models.TextField(blank=True)),
             ],
             options={
-                'verbose_name_plural': 'series',
-                'ordering': ['name'],
+                "verbose_name_plural": "series",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Book',
+            name="Book",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('title', models.CharField(max_length=512)),
-                ('subtitle', models.CharField(blank=True, max_length=512)),
-                ('summary', models.TextField(blank=True)),
-                ('authors', models.ManyToManyField(blank=True, related_name='books', to='library.author')),
-                ('series', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='books', to='library.series')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("title", models.CharField(max_length=512)),
+                ("subtitle", models.CharField(blank=True, max_length=512)),
+                ("summary", models.TextField(blank=True)),
+                (
+                    "authors",
+                    models.ManyToManyField(
+                        blank=True, related_name="books", to="library.author"
+                    ),
+                ),
+                (
+                    "series",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="books",
+                        to="library.series",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['title'],
+                "ordering": ["title"],
             },
         ),
         migrations.CreateModel(
-            name='BookFile',
+            name="BookFile",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('file', models.FileField(upload_to='epubs/')),
-                ('format', models.CharField(choices=[('epub', 'EPUB')], default='epub', max_length=32)),
-                ('book', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='files', to='library.book')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("file", models.FileField(upload_to="epubs/")),
+                (
+                    "format",
+                    models.CharField(
+                        choices=[("epub", "EPUB")], default="epub", max_length=32
+                    ),
+                ),
+                (
+                    "book",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="files",
+                        to="library.book",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['book', 'created_at'],
+                "ordering": ["book", "created_at"],
             },
         ),
         migrations.CreateModel(
-            name='BookMetadata',
+            name="BookMetadata",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('publisher', models.CharField(blank=True, max_length=255)),
-                ('language', models.CharField(blank=True, max_length=64)),
-                ('published_date', models.DateField(blank=True, null=True)),
-                ('isbn', models.CharField(blank=True, max_length=64)),
-                ('subjects', models.JSONField(blank=True, default=list, null=True)),
-                ('book', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='metadata', to='library.book')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("publisher", models.CharField(blank=True, max_length=255)),
+                ("language", models.CharField(blank=True, max_length=64)),
+                ("published_date", models.DateField(blank=True, null=True)),
+                ("isbn", models.CharField(blank=True, max_length=64)),
+                ("subjects", models.JSONField(blank=True, default=list, null=True)),
+                (
+                    "book",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="metadata",
+                        to="library.book",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
     ]

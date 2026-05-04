@@ -38,10 +38,12 @@ class ReadingSessionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return ReadingSession.objects.select_related('book').filter(user=self.request.user)
+        return ReadingSession.objects.select_related("book").filter(
+            user=self.request.user
+        )
 
     def get_serializer_class(self):
-        if self.action in {'create', 'update', 'partial_update'}:
+        if self.action in {"create", "update", "partial_update"}:
             return ReadingSessionCreateSerializer
         return ReadingSessionSerializer
 
@@ -63,18 +65,22 @@ class StartOverView(APIView):
 
     def post(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
-        name = request.data.get('name', '')
-        session = start_over_book(user=request.user, book=book, name=name or '')
-        return Response(ReadingSessionSerializer(session).data, status=status.HTTP_201_CREATED)
+        name = request.data.get("name", "")
+        session = start_over_book(user=request.user, book=book, name=name or "")
+        return Response(
+            ReadingSessionSerializer(session).data, status=status.HTTP_201_CREATED
+        )
 
 
 class ReadingProgressViewSet(viewsets.GenericViewSet):
     serializer_class = ReadingProgressSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = 'session_id'
+    lookup_field = "session_id"
 
     def get_queryset(self):
-        return ReadingProgress.objects.select_related('session', 'device').filter(session__user=self.request.user)
+        return ReadingProgress.objects.select_related("session", "device").filter(
+            session__user=self.request.user
+        )
 
     def _get_session(self, session_id):
         return get_object_or_404(ReadingSession, id=session_id, user=self.request.user)
@@ -93,12 +99,14 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
     def _update(self, request, session_id, partial):
         session = self._get_session(session_id)
         progress = get_or_create_progress(session=session)
-        serializer = ReadingProgressSerializer(progress, data=request.data, partial=partial)
+        serializer = ReadingProgressSerializer(
+            progress, data=request.data, partial=partial
+        )
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
-        locator = validated.get('locator', progress.locator)
-        progression = validated.get('progression', progress.progression)
-        device = validated.get('device', progress.device)
+        locator = validated.get("locator", progress.locator)
+        progression = validated.get("progression", progress.progression)
+        device = validated.get("device", progress.device)
         progress = update_progress(
             session=session,
             locator=locator,
@@ -113,12 +121,11 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = (
-            Annotation.objects.select_related('session', 'session__book', 'device')
-            .filter(session__user=self.request.user)
-        )
-        session_id = self.request.query_params.get('session_id')
-        book_id = self.request.query_params.get('book_id')
+        queryset = Annotation.objects.select_related(
+            "session", "session__book", "device"
+        ).filter(session__user=self.request.user)
+        session_id = self.request.query_params.get("session_id")
+        book_id = self.request.query_params.get("book_id")
         if session_id:
             queryset = queryset.filter(session_id=session_id)
         if book_id:
@@ -131,5 +138,5 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         annotation = self.get_object()
         annotation.is_deleted = True
-        annotation.save(update_fields=['is_deleted', 'updated_at'])
+        annotation.save(update_fields=["is_deleted", "updated_at"])
         return Response(status=status.HTTP_204_NO_CONTENT)
