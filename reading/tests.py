@@ -70,3 +70,14 @@ class ReadingModelsTest(TestCase):
         )
         self.assertIn('Highlight', str(annotation))
         self.assertIn('Test Book', str(annotation))
+
+    def test_annotation_kind_choices(self):
+        session = ReadingSession.objects.create(user=self.user, book=self.book)
+
+        highlight = Annotation.objects.create(session=session, kind=Annotation.KIND_HIGHLIGHT, locator={'cfi': '/6/2'})
+        note = Annotation.objects.create(session=session, kind=Annotation.KIND_NOTE, locator={'cfi': '/6/4'}, note='n')
+        bookmark = Annotation.objects.create(session=session, kind=Annotation.KIND_BOOKMARK, locator={'cfi': '/6/6'})
+
+        self.assertEqual(highlight.kind, 'highlight')
+        self.assertEqual(note.kind, 'note')
+        self.assertEqual(bookmark.kind, 'bookmark')
