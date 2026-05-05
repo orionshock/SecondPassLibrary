@@ -355,6 +355,10 @@ In the future, the project should support disabling Django admin by configuratio
 
 Do not build a frontend yet.
 
+## Permissions Design (Future)
+
+Permission model documentation lives in `docs/permissions.md` (roles, groups, and policy direction). Treat it as design guidance; it does not reflect all current behavior yet.
+
 ## Coding Style
 
 * Prefer simple Django conventions.

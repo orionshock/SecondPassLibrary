@@ -35,6 +35,10 @@ python manage.py check
 python manage.py test
 ```
 
+## Permissions design (future)
+
+See `docs/permissions.md` for the intended future permission model (roles, groups, and policy direction). This is documentation-only and does not reflect all current behavior yet.
+
 ## Import an EPUB
 
 ```powershell
