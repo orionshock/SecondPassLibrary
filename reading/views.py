@@ -1,6 +1,7 @@
 from typing import Any, cast
 
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import NotFound
 
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from library.models import Book
+from core import policies
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
 from .services import (
@@ -58,7 +60,17 @@ class ActiveSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, book_id):
+        # If the user already has an active session for this book, return it even
+        # if they no longer have current library access (user-owned reading data).
+        existing = ReadingSession.objects.filter(
+            user=request.user, book_id=book_id, is_active=True
+        ).first()
+        if existing is not None:
+            return Response(ReadingSessionSerializer(existing).data)
+
         book = get_object_or_404(Book, id=book_id)
+        if not policies.can_view_book(user=request.user, book=book):
+            raise NotFound()
         session = get_or_create_active_session(user=request.user, book=book)
         return Response(ReadingSessionSerializer(session).data)
 
@@ -68,6 +80,8 @@ class StartOverView(APIView):
 
     def post(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
+        if not policies.can_view_book(user=request.user, book=book):
+            raise NotFound()
         name = request.data.get("name", "")
         session = start_over_book(user=request.user, book=book, name=name or "")
         return Response(

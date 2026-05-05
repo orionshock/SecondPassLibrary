@@ -6,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.models import Book
+from library.models import LibraryGroup, LibraryGroupMembership, BookGroupAssignment
+from library.group_services import ensure_user_public_membership, ensure_book_public_assignment
+from accounts.models import UserProfile
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
 from .tests_utils import IsolatedUserdataMixin
@@ -36,6 +39,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
             username="u2", password="pass2", email="u2@example.com"
         )
         self.book = Book.objects.create(title="Book 1")
+        ensure_book_public_assignment(book=self.book, added_by=None)
 
         self.device2 = Device.objects.create(
             user=self.user2, name="Other device", device_type=Device.TYPE_WEB
@@ -71,6 +75,54 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
         data2 = _response_data_dict(response2)
         self.assertEqual(data2["id"], data["id"])
+
+    def test_active_session_existing_returned_even_if_book_access_lost(self):
+        # Create user + session for a restricted book, then remove access; existing session should still be returned.
+        user = User.objects.create_user(username="u3", password="pass3", email="u3@example.com")
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        ensure_user_public_membership(user=user)
+
+        group = LibraryGroup.objects.create(name="Private", slug="private")
+        LibraryGroupMembership.objects.create(user=user, group=group, role=LibraryGroupMembership.ROLE_READER)
+
+        restricted = Book.objects.create(title="Restricted")
+        BookGroupAssignment.objects.create(book=restricted, group=group)
+
+        session = ReadingSession.objects.create(user=user, book=restricted, is_active=True)
+
+        # Remove membership (lose access). Existing session should still be returned.
+        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
+
+        self.client.login(username="u3", password="pass3")
+        url = f"/api/v1/reading/books/{restricted.id}/active-session/"
+        resp = cast(Response, self.client.get(url))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = _response_data_dict(resp)
+        self.assertEqual(data["id"], str(session.id))
+
+    def test_active_session_404_for_inaccessible_book_without_existing_session(self):
+        self.client.login(username="u1", password="pass1")
+        group = LibraryGroup.objects.create(name="Hidden", slug="hidden2")
+        restricted = Book.objects.create(title="Restricted2")
+        BookGroupAssignment.objects.create(book=restricted, group=group)
+
+        url = f"/api/v1/reading/books/{restricted.id}/active-session/"
+        resp = cast(Response, self.client.get(url))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(ReadingSession.objects.filter(user=self.user1, book=restricted).exists())
+
+    def test_start_over_404_for_inaccessible_book(self):
+        self.client.login(username="u1", password="pass1")
+        group = LibraryGroup.objects.create(name="Hidden3", slug="hidden3")
+        restricted = Book.objects.create(title="Restricted3")
+        BookGroupAssignment.objects.create(book=restricted, group=group)
+
+        url = f"/api/v1/reading/books/{restricted.id}/start-over/"
+        resp = cast(Response, self.client.post(url, data={"name": "x"}, format="json"))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(ReadingSession.objects.filter(user=self.user1, book=restricted).exists())
 
     def test_start_over_deactivates_old_and_creates_new(self):
         self.client.login(username="u1", password="pass1")

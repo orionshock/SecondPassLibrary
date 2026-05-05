@@ -420,6 +420,59 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
             self.assertEqual(titles, ["Group A Book", "Group B Book", "Public Book"])
 
 
+class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.reader = User.objects.create_user(username="reader", password="pw")
+        ensure_user_public_membership(user=self.reader)
+        self.client.login(username="reader", password="pw")
+
+        from .models import LibraryGroup, LibraryGroupMembership, BookGroupAssignment
+
+        self.group_x = LibraryGroup.objects.create(name="X", slug="x")
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.group_x, role=LibraryGroupMembership.ROLE_READER
+        )
+        self.group_y = LibraryGroup.objects.create(name="Y", slug="y")
+
+        self.author_public = Author.objects.create(name="Public Author")
+        self.series_public = Series.objects.create(name="Public Series")
+        self.book_public = Book.objects.create(title="PB", series=self.series_public)
+        self.book_public.authors.add(self.author_public)
+        ensure_book_public_assignment(book=self.book_public, added_by=None)
+
+        self.author_x = Author.objects.create(name="X Author")
+        self.series_x = Series.objects.create(name="X Series")
+        self.book_x = Book.objects.create(title="XB", series=self.series_x)
+        self.book_x.authors.add(self.author_x)
+        BookGroupAssignment.objects.create(book=self.book_x, group=self.group_x)
+
+        self.author_hidden = Author.objects.create(name="Hidden Author")
+        self.series_hidden = Series.objects.create(name="Hidden Series")
+        self.book_hidden = Book.objects.create(title="HB", series=self.series_hidden)
+        self.book_hidden.authors.add(self.author_hidden)
+        BookGroupAssignment.objects.create(book=self.book_hidden, group=self.group_y)
+
+    def test_reader_author_list_filtered(self):
+        response = cast(Response, self.client.get("/api/v1/library/authors/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = sorted([a["name"] for a in cast(list[dict[str, Any]], response.data)])
+        self.assertEqual(names, ["Public Author", "X Author"])
+
+    def test_reader_author_retrieve_404_for_inaccessible_only(self):
+        response = self.client.get(f"/api/v1/library/authors/{self.author_hidden.id}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_reader_series_list_filtered(self):
+        response = cast(Response, self.client.get("/api/v1/library/series/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = sorted([s["name"] for s in cast(list[dict[str, Any]], response.data)])
+        self.assertEqual(names, ["Public Series", "X Series"])
+
+    def test_reader_series_retrieve_404_for_inaccessible_only(self):
+        response = self.client.get(f"/api/v1/library/series/{self.series_hidden.id}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
 class BookGroupInvariantTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u", password="pw")

@@ -33,6 +33,12 @@ class AuthorViewSet(viewsets.ModelViewSet):
     serializer_class = AuthorSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if policies.can_manage_library(self.request.user):
+            return queryset
+        return queryset.filter(books__group_assignments__group__memberships__user=self.request.user).distinct()
+
     def perform_create(self, serializer):
         if not policies.can_manage_library(self.request.user):
             raise PermissionDenied("Not allowed.")
@@ -53,6 +59,12 @@ class SeriesViewSet(viewsets.ModelViewSet):
     queryset = Series.objects.all()
     serializer_class = SeriesSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if policies.can_manage_library(self.request.user):
+            return queryset
+        return queryset.filter(books__group_assignments__group__memberships__user=self.request.user).distinct()
 
     def perform_create(self, serializer):
         if not policies.can_manage_library(self.request.user):
@@ -212,6 +224,8 @@ class ImportJobViewSet(
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
         base = ImportJob.objects.prefetch_related("items")
         if policies.can_manage_library(self.request.user):
             return base.all()
