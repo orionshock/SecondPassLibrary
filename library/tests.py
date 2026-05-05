@@ -16,9 +16,11 @@ import uuid
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from accounts.models import UserProfile
 from .models import Author, Book, BookFile, Series
 from .models import BookIdentifier
 from .services import ImportStatus, import_epub
+from .group_services import ensure_book_public_assignment, ensure_user_public_membership
 
 
 class IsolatedMediaRootMixin:
@@ -160,12 +162,14 @@ class LibraryAPITest(APITestCase):
 class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
+        ensure_user_public_membership(user=self.user)
         self.client.login(username="testuser", password="testpass")
 
         self.author = Author.objects.create(name="A Author")
         self.series = Series.objects.create(name="S Series")
         self.book = Book.objects.create(title="T", series=self.series, series_index=1)
         self.book.authors.add(self.author)
+        ensure_book_public_assignment(book=self.book, added_by=None)
         BookIdentifier.objects.create(
             book=self.book,
             scheme=BookIdentifier.SCHEME_ISBN_13,
@@ -215,6 +219,7 @@ class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
 class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
+        ensure_user_public_membership(user=self.user)
         self.client.login(username="testuser", password="testpass")
 
         self.author_a = Author.objects.create(name="Alice Author")
@@ -223,10 +228,12 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.book1 = Book.objects.create(title="Alpha", language="en", series=self.series_s)
         self.book1.authors.add(self.author_a)
+        ensure_book_public_assignment(book=self.book1, added_by=None)
         BookIdentifier.objects.create(book=self.book1, scheme="other", value="ID-XYZ", source="epub")
 
         self.book2 = Book.objects.create(title="Beta", language="fr")
         self.book2.authors.add(self.author_b)
+        ensure_book_public_assignment(book=self.book2, added_by=None)
 
         uploaded = SimpleUploadedFile("ignored.epub", b"epub-bytes", content_type="application/epub+zip")
         BookFile.objects.create(
@@ -289,9 +296,45 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertNotIn("books/", str(files[0]))
 
 
+class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.reader = User.objects.create_user(username="reader", password="pw")
+        ensure_user_public_membership(user=self.reader)
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        ensure_user_public_membership(user=self.librarian)
+        profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+    def test_reader_cannot_create_book(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(
+            Response,
+            self.client.post(
+                "/api/v1/library/books/",
+                data={"title": "X", "authors": [], "subjects": []},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_librarian_can_create_book(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(
+            Response,
+            self.client.post(
+                "/api/v1/library/books/",
+                data={"title": "X", "authors": [], "subjects": []},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
 class BaseBookFileDownloadAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
+        ensure_user_public_membership(user=self.user)
         self.author = Author.objects.create(name="Jane / Doe")
         self.series = Series.objects.create(name="My * Series")
         self.book = Book.objects.create(
@@ -300,6 +343,7 @@ class BaseBookFileDownloadAPITest(APITestCase):
             series_index=2,
         )
         self.book.authors.add(self.author)
+        ensure_book_public_assignment(book=self.book, added_by=None)
 
         uploaded = SimpleUploadedFile(
             "ignored.epub",
@@ -349,9 +393,11 @@ class BaseBookFileDownloadAPITest(APITestCase):
 class BookFileSerializerAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
+        ensure_user_public_membership(user=self.user)
         self.author = Author.objects.create(name="Test Author")
         self.book = Book.objects.create(title="Test Title")
         self.book.authors.add(self.author)
+        ensure_book_public_assignment(book=self.book, added_by=None)
         self.book_file = BookFile.objects.create(
             book=self.book,
             file="books/aa/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.epub",

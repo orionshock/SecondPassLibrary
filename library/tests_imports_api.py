@@ -17,6 +17,8 @@ from rest_framework.test import APITestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import ImportJob
+from accounts.models import UserProfile
+from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 
 
 class IsolatedImportsMixin:
@@ -61,6 +63,8 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u1", password="pw")
         self.other = User.objects.create_user(username="u2", password="pw")
+        ensure_user_public_membership(user=self.user)
+        ensure_user_public_membership(user=self.other)
 
     def test_anonymous_cannot_create_or_list(self):
         epub = SimpleUploadedFile("book.epub", b"epub-bytes", content_type="application/epub+zip")
@@ -75,7 +79,23 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("library.services.epub.read_epub")
+    def test_librarian_can_upload_single_epub_and_job_created(self, mock_read_epub):
+        mock_read_epub.return_value = _mock_epub()
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+        self.client.login(username="u1", password="pw")
+        epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIsNotNone(response.data)
         data = response.data
@@ -95,6 +115,9 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
     @patch("library.services.epub.read_epub")
     def test_duplicate_epub_upload_creates_duplicate_item(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
 
         epub1 = SimpleUploadedFile("book.epub", b"dup-bytes", content_type="application/epub+zip")
@@ -112,6 +135,9 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
     @patch("library.services.epub.read_epub")
     def test_authenticated_can_upload_zip_with_multiple_epubs_ignores_non_epub_and_path_traversal(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
 
         buf = io.BytesIO()
@@ -133,6 +159,9 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
     @patch("library.services.epub.read_epub")
     def test_user_cannot_see_another_users_jobs(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
         created = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))

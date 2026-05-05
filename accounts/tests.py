@@ -17,26 +17,29 @@ class UserProfileModelTest(TestCase):
     def test_user_creation_creates_profile(self):
         self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
         profile = UserProfile.objects.get(user=self.user)
-        self.assertEqual(profile.role, UserProfile.ROLE_USER)
+        self.assertEqual(profile.role, UserProfile.ROLE_READER)
         self.assertIsNone(profile.external_subject_id)
 
     def test_user_profile_role_helpers(self):
         profile = UserProfile.objects.get(user=self.user)
-        self.assertTrue(profile.is_regular_user)
+        self.assertTrue(profile.is_reader)
+        self.assertFalse(profile.is_manager)
+        self.assertFalse(profile.is_librarian)
         self.assertFalse(profile.is_app_admin)
-        profile.role = UserProfile.ROLE_ADMIN
+        profile.role = UserProfile.ROLE_MANAGER
         profile.save()
         profile.refresh_from_db()
+        self.assertTrue(profile.is_manager)
         self.assertTrue(profile.is_app_admin)
-        self.assertFalse(profile.is_regular_user)
+        self.assertFalse(profile.is_reader)
 
     def test_user_profile_str(self):
         profile = UserProfile.objects.get(user=self.user)
-        self.assertEqual(str(profile), "testuser (user)")
-        profile.role = UserProfile.ROLE_ADMIN
+        self.assertEqual(str(profile), "testuser (reader)")
+        profile.role = UserProfile.ROLE_MANAGER
         profile.save()
         profile.refresh_from_db()
-        self.assertEqual(str(profile), "testuser (admin)")
+        self.assertEqual(str(profile), "testuser (manager)")
 
 
 class UserProfileAPITest(APITestCase):
@@ -57,7 +60,7 @@ class UserProfileAPITest(APITestCase):
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(data["username"], "testuser")
         self.assertEqual(data["email"], "test@example.com")
-        self.assertEqual(data["role"], UserProfile.ROLE_USER)
+        self.assertEqual(data["role"], UserProfile.ROLE_READER)
         self.assertIn("profile_id", data)
 
     def test_anonymous_cannot_access_me(self):

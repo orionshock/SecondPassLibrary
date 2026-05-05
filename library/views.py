@@ -1,6 +1,7 @@
 from django.http import FileResponse, Http404
 from django.db.models import Prefetch
 from django.db.models import Q
+from rest_framework.exceptions import PermissionDenied
 
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -23,6 +24,8 @@ from .services import (
     process_import_job,
 )
 from .models import ImportJob
+from .group_services import ensure_book_public_assignment
+from core import policies
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -30,11 +33,41 @@ class AuthorViewSet(viewsets.ModelViewSet):
     serializer_class = AuthorSerializer
     permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        instance.delete()
+
 
 class SeriesViewSet(viewsets.ModelViewSet):
     queryset = Series.objects.all()
     serializer_class = SeriesSerializer
     permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        instance.delete()
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -57,6 +90,11 @@ class BookViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         request = self.request
+
+        if not policies.can_manage_library(request.user):
+            queryset = queryset.filter(
+                group_assignments__group__memberships__user=request.user
+            )
 
         q = (request.query_params.get("q") or "").strip()
         if q:
@@ -94,6 +132,22 @@ class BookViewSet(viewsets.ModelViewSet):
                 queryset = queryset.order_by(ordering, "created_at")
         return queryset.distinct()
 
+    def perform_create(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        book = serializer.save()
+        ensure_book_public_assignment(book=book, added_by=self.request.user)
+
+    def perform_update(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        instance.delete()
+
 
 class BookFileViewSet(viewsets.ModelViewSet):
     queryset = (
@@ -104,9 +158,33 @@ class BookFileViewSet(viewsets.ModelViewSet):
     serializer_class = BookFileSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if policies.can_manage_library(self.request.user):
+            return queryset
+        return queryset.filter(book__group_assignments__group__memberships__user=self.request.user).distinct()
+
+    def perform_create(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not policies.can_manage_library(self.request.user):
+            raise PermissionDenied("Not allowed.")
+        instance.delete()
+
     @action(detail=True, methods=["get"], url_path="download")
     def download(self, request, *args, **kwargs):
         book_file: BookFile = self.get_object()
+
+        if not policies.can_download_book_file(user=request.user, book_file=book_file):
+            raise PermissionDenied("Not allowed.")
 
         if not book_file.file:
             raise Http404("Stored file missing.")
@@ -134,9 +212,14 @@ class ImportJobViewSet(
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        return ImportJob.objects.prefetch_related("items").filter(user=self.request.user)
+        base = ImportJob.objects.prefetch_related("items")
+        if policies.can_manage_library(self.request.user):
+            return base.all()
+        return base.filter(user=self.request.user)
 
     def create(self, request, *args, **kwargs):
+        if not policies.can_import_books(request.user):
+            raise PermissionDenied("Not allowed.")
         uploaded = request.FILES.get("file")
         if uploaded is None:
             return Response(

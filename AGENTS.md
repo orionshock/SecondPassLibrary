@@ -253,6 +253,10 @@ Django auth may remain as:
 - bootstrap admin auth
 - fallback self-hosted auth
 
+## Roles (Current Direction)
+
+Global in-app roles are `manager`, `librarian`, and `reader` (stored on `UserProfile.role`). System Owner is represented by Django `is_superuser` and is not a normal app role.
+
 ## Error Handling
 
 Prefer clear, stable, user-helpful errors.

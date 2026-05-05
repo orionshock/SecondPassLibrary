@@ -16,6 +16,7 @@ from django.core.files.uploadedfile import UploadedFile
 from .models import Author, Book, BookFile
 from .models import BookIdentifier
 from .models import ImportJob, ImportJobItem
+from .group_services import ensure_book_public_assignment
 
 
 class ImportStatus(str, Enum):
@@ -136,6 +137,8 @@ def import_epub(file_path):
     )
     if authors:
         book.authors.set(authors)
+
+    ensure_book_public_assignment(book=book, added_by=None)
 
     identifiers: list[dict[str, Any]] = metadata.get("identifiers") or []
     _create_book_identifiers(book=book, identifiers=identifiers)

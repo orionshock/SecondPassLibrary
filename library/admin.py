@@ -10,6 +10,9 @@ from .models import (
     BookFile,
     Series,
     BookIdentifier,
+    LibraryGroup,
+    LibraryGroupMembership,
+    BookGroupAssignment,
     ImportJob,
     ImportJobItem,
 )
@@ -54,6 +57,14 @@ class BookIdentifierInline(admin.TabularInline):
     readonly_fields = ["created_at", "updated_at"]
 
 
+class BookGroupAssignmentInline(admin.TabularInline):
+    model = BookGroupAssignment
+    extra = 0
+    raw_id_fields = ["group", "added_by"]
+    fields = ["group", "added_by", "created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     list_display = [
@@ -81,7 +92,7 @@ class BookAdmin(admin.ModelAdmin):
     ]
     filter_horizontal = ["authors"]
     readonly_fields = ["created_at", "updated_at"]
-    inlines = [BookIdentifierInline]
+    inlines = [BookIdentifierInline, BookGroupAssignmentInline]
 
     fieldsets = (
         (
@@ -293,3 +304,38 @@ class ImportJobItemAdmin(admin.ModelAdmin):
     @admin.display(description="")
     def admin_note(self, obj: ImportJobItem) -> str:
         return "Import job items are created by the import API/upload workflow. Edit only for inspection or limited repair/debugging."
+
+
+@admin.register(LibraryGroup)
+class LibraryGroupAdmin(admin.ModelAdmin):
+    list_display = ["name", "slug", "is_public", "is_system", "created_at"]
+    search_fields = ["name", "slug", "description"]
+    list_filter = ["is_public", "is_system", ("created_at", DateFieldListFilter)]
+    readonly_fields = ["created_at", "updated_at"]
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.slug == "public":
+            return False
+        return super().has_delete_permission(request, obj=obj)
+
+
+@admin.register(LibraryGroupMembership)
+class LibraryGroupMembershipAdmin(admin.ModelAdmin):
+    list_display = ["user", "group", "role", "created_at"]
+    search_fields = ["user__username", "user__email", "group__name", "group__slug"]
+    list_filter = ["role", ("created_at", DateFieldListFilter)]
+    raw_id_fields = ["user", "group"]
+    readonly_fields = ["created_at", "updated_at"]
+
+    def has_add_permission(self, request):
+        # Membership creation should be managed via services/policies later.
+        return super().has_add_permission(request)
+
+
+@admin.register(BookGroupAssignment)
+class BookGroupAssignmentAdmin(admin.ModelAdmin):
+    list_display = ["book", "group", "added_by", "created_at"]
+    search_fields = ["book__title", "group__name", "group__slug", "added_by__username"]
+    list_filter = [("created_at", DateFieldListFilter), "group"]
+    raw_id_fields = ["book", "group", "added_by"]
+    readonly_fields = ["created_at", "updated_at"]

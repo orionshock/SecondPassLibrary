@@ -5,12 +5,14 @@ from core.models import TimeStampedModel
 
 
 class UserProfile(TimeStampedModel):
-    ROLE_ADMIN = "admin"
-    ROLE_USER = "user"
+    ROLE_MANAGER = "manager"
+    ROLE_LIBRARIAN = "librarian"
+    ROLE_READER = "reader"
 
     ROLE_CHOICES = [
-        (ROLE_ADMIN, "Admin"),
-        (ROLE_USER, "User"),
+        (ROLE_MANAGER, "Manager"),
+        (ROLE_LIBRARIAN, "Librarian"),
+        (ROLE_READER, "Reader"),
     ]
 
     user = models.OneToOneField(
@@ -18,7 +20,7 @@ class UserProfile(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_USER)
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_READER)
     external_subject_id = models.CharField(
         max_length=255, blank=True, null=True, unique=True
     )
@@ -32,8 +34,21 @@ class UserProfile(TimeStampedModel):
 
     @property
     def is_app_admin(self):
-        return self.role == self.ROLE_ADMIN
+        # Compatibility alias: "app admin" means Manager in-app (Owner is is_superuser).
+        return self.role == self.ROLE_MANAGER
+
+    @property
+    def is_manager(self):
+        return self.role == self.ROLE_MANAGER
+
+    @property
+    def is_librarian(self):
+        return self.role == self.ROLE_LIBRARIAN
+
+    @property
+    def is_reader(self):
+        return self.role == self.ROLE_READER
 
     @property
     def is_regular_user(self):
-        return self.role == self.ROLE_USER
+        return self.is_reader

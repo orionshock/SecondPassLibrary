@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING
 
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 
 from core.models import TimeStampedModel
 
@@ -179,6 +181,89 @@ class BookIdentifier(TimeStampedModel):
 
     def __str__(self):
         return f"{self.scheme}:{self.value}"
+
+
+class LibraryGroup(TimeStampedModel):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=64, unique=True)
+    description = models.TextField(blank=True)
+    is_public = models.BooleanField(default=False)
+    is_system = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)[:64] or "group"
+        super().save(*args, **kwargs)
+
+
+class LibraryGroupMembership(TimeStampedModel):
+    ROLE_READER = "reader"
+    ROLE_CURATOR = "curator"
+
+    ROLE_CHOICES = [
+        (ROLE_READER, "Reader"),
+        (ROLE_CURATOR, "Curator"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_group_memberships"
+    )
+    group = models.ForeignKey(
+        LibraryGroup, on_delete=models.CASCADE, related_name="memberships"
+    )
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_READER)
+
+    class Meta:
+        ordering = ["group__name", "user__username"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "group"],
+                name="unique_user_library_group_membership",
+            )
+        ]
+
+    def clean(self):
+        if self.group_id and self.role == self.ROLE_CURATOR:
+            group = self.group
+            if group.is_public:
+                raise ValidationError({"role": "Public group cannot have curators."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.get_username()} in {self.group.slug} ({self.role})"
+
+
+class BookGroupAssignment(TimeStampedModel):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="group_assignments")
+    group = models.ForeignKey(LibraryGroup, on_delete=models.CASCADE, related_name="book_assignments")
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="book_group_assignments_added",
+    )
+
+    class Meta:
+        ordering = ["group__name", "book__title"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["book", "group"],
+                name="unique_book_library_group_assignment",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.book.title} -> {self.group.slug}"
 
 
 class ImportJob(TimeStampedModel):
