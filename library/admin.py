@@ -327,6 +327,11 @@ class LibraryGroupMembershipAdmin(admin.ModelAdmin):
     raw_id_fields = ["user", "group"]
     readonly_fields = ["created_at", "updated_at"]
 
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.group.slug == "public":
+            return False
+        return super().has_delete_permission(request, obj=obj)
+
     def has_add_permission(self, request):
         # Membership creation should be managed via services/policies later.
         return super().has_add_permission(request)

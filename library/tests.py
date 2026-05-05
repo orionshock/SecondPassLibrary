@@ -331,6 +331,126 @@ class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
+class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.reader = User.objects.create_user(username="reader", password="pw")
+        ensure_user_public_membership(user=self.reader)
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        ensure_user_public_membership(user=self.librarian)
+        librarian_profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        librarian_profile.role = UserProfile.ROLE_LIBRARIAN
+        librarian_profile.save(update_fields=["role", "updated_at"])
+
+        self.manager = User.objects.create_user(username="manager", password="pw")
+        ensure_user_public_membership(user=self.manager)
+        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        manager_profile.role = UserProfile.ROLE_MANAGER
+        manager_profile.save(update_fields=["role", "updated_at"])
+
+        self.owner = User.objects.create_superuser(username="owner", password="pw")
+        ensure_user_public_membership(user=self.owner)
+
+        from .models import LibraryGroup, LibraryGroupMembership, BookGroupAssignment
+        from .group_services import get_public_group
+
+        self.public = get_public_group()
+        self.group_a = LibraryGroup.objects.create(name="Group A", slug="group-a")
+        self.group_b = LibraryGroup.objects.create(name="Group B", slug="group-b")
+
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.group_a, role=LibraryGroupMembership.ROLE_READER
+        )
+
+        self.public_book = Book.objects.create(title="Public Book")
+        ensure_book_public_assignment(book=self.public_book, added_by=None)
+
+        self.group_a_book = Book.objects.create(title="Group A Book")
+        BookGroupAssignment.objects.create(book=self.group_a_book, group=self.group_a)
+
+        self.group_b_book = Book.objects.create(title="Group B Book")
+        BookGroupAssignment.objects.create(book=self.group_b_book, group=self.group_b)
+
+        uploaded = SimpleUploadedFile("b.epub", b"epub-bytes", content_type="application/epub+zip")
+        self.group_b_file = BookFile.objects.create(
+            book=self.group_b_book,
+            file=uploaded,
+            checksum="c" * 64,
+            file_size=9,
+            source_filename="c.epub",
+        )
+
+    def test_reader_can_list_public_books(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get("/api/v1/library/books/?q=Public"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [b["title"] for b in cast(list[dict[str, Any]], response.data)]
+        self.assertIn("Public Book", titles)
+
+    def test_reader_can_list_books_in_group_they_belong_to(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get("/api/v1/library/books/?q=Group A"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [b["title"] for b in cast(list[dict[str, Any]], response.data)]
+        self.assertIn("Group A Book", titles)
+
+    def test_reader_cannot_list_books_in_group_they_do_not_belong_to(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get("/api/v1/library/books/?q=Group B"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [b["title"] for b in cast(list[dict[str, Any]], response.data)]
+        self.assertNotIn("Group B Book", titles)
+
+    def test_reader_cannot_retrieve_inaccessible_book(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get(f"/api/v1/library/books/{self.group_b_book.id}/"))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_reader_cannot_download_inaccessible_book_file(self):
+        self.client.login(username="reader", password="pw")
+        response = self.client.get(f"/api/v1/library/book-files/{self.group_b_file.id}/download/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_librarian_manager_owner_can_see_all_books(self):
+        for username in ["librarian", "manager", "owner"]:
+            self.client.logout()
+            self.client.login(username=username, password="pw")
+            response = cast(Response, self.client.get("/api/v1/library/books/"))
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            titles = sorted([b["title"] for b in cast(list[dict[str, Any]], response.data)])
+            self.assertEqual(titles, ["Group A Book", "Group B Book", "Public Book"])
+
+
+class BookGroupInvariantTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="u", password="pw")
+        ensure_user_public_membership(user=self.user)
+        from .models import LibraryGroup, BookGroupAssignment
+        from .group_services import get_public_group
+
+        self.public = get_public_group()
+        self.group_a = LibraryGroup.objects.create(name="A", slug="a")
+        self.group_b = LibraryGroup.objects.create(name="B", slug="b")
+        self.book = Book.objects.create(title="B")
+
+        self.a1 = BookGroupAssignment.objects.create(book=self.book, group=self.group_a, added_by=self.user)
+        self.b1 = BookGroupAssignment.objects.create(book=self.book, group=self.group_b, added_by=self.user)
+
+    def test_deleting_one_of_multiple_assignments_does_not_force_public(self):
+        from .models import BookGroupAssignment
+
+        self.a1.delete()
+        groups = set(BookGroupAssignment.objects.filter(book=self.book).values_list("group__slug", flat=True))
+        self.assertEqual(groups, {"b"})
+
+    def test_deleting_last_assignment_reassigns_public(self):
+        from .models import BookGroupAssignment
+
+        self.a1.delete()
+        self.b1.delete()
+        groups = set(BookGroupAssignment.objects.filter(book=self.book).values_list("group__slug", flat=True))
+        self.assertEqual(groups, {"public"})
+
+
 class BaseBookFileDownloadAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")

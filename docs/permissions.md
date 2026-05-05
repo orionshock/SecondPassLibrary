@@ -100,6 +100,7 @@ This is a product concept and is **not** the same as Django auth `Group`.
 - **Public** is the default shared library group.
 - Every user belongs to Public.
 - Every book belongs to Public by default.
+  - In simple mode, a book should never remain without any group assignments; the safe fallback is Public.
 
 ### Future advanced rule (when Advanced Management is enabled)
 
@@ -159,6 +160,8 @@ Policy rules that should remain true:
 - Reader manages only their own reading metadata.
 - Reading metadata remains user-owned even if book access changes later.
 
+Note: Until a formal user-management UI/API exists, Owner-only Manager promotion/demotion is enforced in Django admin.
+
 ## Shelves Are Separate
 
 LibraryGroups are not shelves.
@@ -173,4 +176,3 @@ Shelves (if added later):
 - presentation/organization feature
 - may be personal, group-visible, or public
 - should be modeled separately from LibraryGroups
-
