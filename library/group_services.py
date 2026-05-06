@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 
+from core import policies
 from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from .models import PUBLIC_GROUP_SLUG, is_public_group
 
@@ -78,3 +80,65 @@ def bootstrap_public_group_membership_and_assignments() -> None:
             )
         for book in Book.objects.all():
             BookGroupAssignment.objects.get_or_create(book=book, group=public)
+
+
+def add_book_to_group(*, actor, book: Book, group: LibraryGroup) -> BookGroupAssignment:
+    """
+    Safe path for adding a book to a LibraryGroup.
+
+    Permission model:
+    - Owner/Manager/Librarian may add any book to any group.
+    - Curator may add a book only to their non-Public group, and only if they can already view the book.
+    """
+    if policies.can_manage_library(actor):
+        assignment, _created = BookGroupAssignment.objects.get_or_create(
+            book=book,
+            group=group,
+            defaults={"added_by": actor},
+        )
+        return assignment
+
+    if is_public_group(group):
+        raise PermissionDenied("Curators cannot add books to Public.")
+
+    if not policies.can_curate_group(user=actor, group=group):
+        raise PermissionDenied("Not allowed.")
+
+    if not policies.can_view_book(user=actor, book=book):
+        raise PermissionDenied("Curators can only add books they can already view.")
+
+    assignment, _created = BookGroupAssignment.objects.get_or_create(
+        book=book,
+        group=group,
+        defaults={"added_by": actor},
+    )
+    return assignment
+
+
+def remove_book_from_group(*, actor, book: Book, group: LibraryGroup) -> bool:
+    """
+    Safe path for removing a book from a LibraryGroup.
+
+    Returns True if an assignment was removed, False if it did not exist.
+
+    Invariant:
+    - A book should not remain without any group assignments; if the last assignment is removed,
+      the book is safely reassigned to Public.
+
+    Permission model:
+    - Owner/Manager/Librarian may remove from any group.
+    - Curator may remove only from their non-Public group.
+    """
+    if not policies.can_manage_library(actor):
+        if is_public_group(group):
+            raise PermissionDenied("Curators cannot remove books from Public.")
+        if not policies.can_curate_group(user=actor, group=group):
+            raise PermissionDenied("Not allowed.")
+
+    with transaction.atomic():
+        qs = BookGroupAssignment.objects.filter(book=book, group=group)
+        existed = qs.exists()
+        if existed:
+            qs.delete()
+        ensure_book_has_at_least_one_group(book=book, added_by=actor)
+    return existed

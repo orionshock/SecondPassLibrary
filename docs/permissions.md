@@ -1,4 +1,4 @@
-# Permissions Model (Future Design)
+﻿# Permissions Model (Future Design)
 
 This document describes the intended **future** permission model for Second Pass Library.
 
@@ -13,7 +13,7 @@ It is **documentation/design only**. It does not reflect current behavior in ful
 
 ## System Owner (is_superuser)
 
-- **Owner** is represented by Django’s built-in `is_superuser`.
+- **Owner** is represented by Djangoâ€™s built-in `is_superuser`.
 - Owner is a **system-level** role, not a normal in-app role.
 - Owner can do everything.
 - Owner should be rare (ideally only the initial bootstrap/admin account).
@@ -22,7 +22,7 @@ It is **documentation/design only**. It does not reflect current behavior in ful
 
 ## Global App Roles (Normal In-App Roles)
 
-These are the app’s normal global roles (not Django admin permissions).
+These are the app's normal global roles (not Django admin permissions).
 
 ### Manager
 
@@ -92,6 +92,7 @@ This is a product concept and is **not** the same as Django auth `Group`.
 #### BookGroupAssignment
 
 - Links a book to a LibraryGroup.
+- Safe changes to group assignments should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()` (avoid scattered direct `BookGroupAssignment` writes).
 
 ## Public Group Rules
 
@@ -112,6 +113,7 @@ This is a product concept and is **not** the same as Django auth `Group`.
 - Public cannot have Curators.
 - Managing Public is a Manager/Librarian responsibility.
 - If a book would otherwise have no group assignments, it should be safely assigned back to Public (avoid “orphaned” inaccessible books).
+  - Removing the final group assignment should fall back to Public.
 
 ## LibraryGroup Discoverability
 
