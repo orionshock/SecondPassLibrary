@@ -9,7 +9,7 @@ from library.group_services import (
     ensure_user_public_membership,
     get_public_group,
 )
-from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
 from django.core.exceptions import ValidationError
 
 from . import policies
@@ -21,6 +21,8 @@ User = get_user_model()
 class PolicyTest(TestCase):
     def setUp(self):
         self.public = get_public_group()
+        self.assertTrue(is_public_group(self.public))
+        self.assertEqual(self.public.discoverability, LibraryGroup.DISCOVERABILITY_LISTED)
 
         self.owner = User.objects.create_superuser(username="owner", email="owner@example.com", password="pw")
         self.manager = User.objects.create_user(username="manager", email="manager@example.com", password="pw")
@@ -90,6 +92,19 @@ class PolicyTest(TestCase):
         profile.save(update_fields=["role", "updated_at"])
         ensure_user_public_membership(user=other_reader)
         self.assertFalse(policies.can_view_book(user=other_reader, book=self.hidden_book))
+
+    def test_group_discoverability_does_not_grant_or_restrict_access(self):
+        unlisted = LibraryGroup.objects.create(
+            name="Unlisted",
+            slug="unlisted",
+            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
+        )
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=unlisted, role=LibraryGroupMembership.ROLE_READER
+        )
+        unlisted_book = Book.objects.create(title="Unlisted Book")
+        BookGroupAssignment.objects.create(book=unlisted_book, group=unlisted)
+        self.assertTrue(policies.can_view_book(user=self.reader, book=unlisted_book))
 
     def test_curator_rules(self):
         fantasy = LibraryGroup.objects.create(name="Fantasy", slug="fantasy")

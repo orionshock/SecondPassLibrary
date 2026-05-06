@@ -4,9 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-
-
-PUBLIC_GROUP_SLUG = "public"
+from .models import PUBLIC_GROUP_SLUG, is_public_group
 
 
 def get_public_group() -> LibraryGroup:
@@ -15,22 +13,21 @@ def get_public_group() -> LibraryGroup:
         defaults={
             "name": "Public",
             "description": "Default shared library group.",
-            "is_public": True,
-            "is_system": True,
+            "discoverability": LibraryGroup.DISCOVERABILITY_LISTED,
         },
     )
-    # If an existing group uses the slug, ensure flags are consistent.
+    # If an existing group uses the slug, ensure fields are consistent.
     updates = {}
-    if not group.is_public:
-        updates["is_public"] = True
-    if not group.is_system:
-        updates["is_system"] = True
+    if group.discoverability != LibraryGroup.DISCOVERABILITY_LISTED:
+        updates["discoverability"] = LibraryGroup.DISCOVERABILITY_LISTED
     if group.name != "Public":
         updates["name"] = "Public"
     if updates:
         for k, v in updates.items():
             setattr(group, k, v)
         group.save(update_fields=[*updates.keys(), "updated_at"])
+    if not is_public_group(group):
+        raise ValueError("Public group must have slug 'public'.")
     return group
 
 
@@ -81,4 +78,3 @@ def bootstrap_public_group_membership_and_assignments() -> None:
             )
         for book in Book.objects.all():
             BookGroupAssignment.objects.get_or_create(book=book, group=public)
-

@@ -165,6 +165,13 @@ This means:
 
 Do not implement per-user private libraries unless explicitly requested.
 
+### Public group and discoverability
+
+- The default shared group is the **Public** group, identified by canonical slug `public`.
+- Public is protected: it should not be deleted, and it must not allow Curator memberships.
+- `LibraryGroup.discoverability` (`listed` / `unlisted`) controls future UI discoverability only and must not grant book access.
+- Book access remains controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
+
 ### Reading metadata
 
 Reading metadata belongs to the user.

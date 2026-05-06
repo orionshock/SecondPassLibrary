@@ -7,6 +7,7 @@ from django.contrib.auth.models import AnonymousUser
 from accounts.models import UserProfile
 from library.models import Book, BookFile, ImportJob, LibraryGroup
 from library.models import LibraryGroupMembership
+from library.models import is_public_group
 
 
 def is_owner(user) -> bool:
@@ -94,7 +95,7 @@ def can_manage_import_job(*, user, import_job: ImportJob) -> bool:
 def can_curate_group(*, user, group: LibraryGroup) -> bool:
     if can_manage_library(user):
         return True
-    if group.is_public:
+    if is_public_group(group):
         return False
     return LibraryGroupMembership.objects.filter(
         user=user, group=group, role=LibraryGroupMembership.ROLE_CURATOR
@@ -104,7 +105,7 @@ def can_curate_group(*, user, group: LibraryGroup) -> bool:
 def can_add_book_to_group(*, user, book: Book, group: LibraryGroup) -> bool:
     if can_manage_library(user):
         return True
-    if group.is_public:
+    if is_public_group(group):
         return False
     if not can_curate_group(user=user, group=group):
         return False
@@ -115,7 +116,7 @@ def can_add_book_to_group(*, user, book: Book, group: LibraryGroup) -> bool:
 def can_remove_book_from_group(*, user, book: Book, group: LibraryGroup) -> bool:
     if can_manage_library(user):
         return True
-    if group.is_public:
+    if is_public_group(group):
         return False
     return can_curate_group(user=user, group=group)
 

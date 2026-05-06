@@ -8,6 +8,9 @@ from django.utils.text import slugify
 from core.models import TimeStampedModel
 
 
+PUBLIC_GROUP_SLUG = "public"
+
+
 class Author(TimeStampedModel):
     name = models.CharField(max_length=255)
     biography = models.TextField(blank=True)
@@ -184,11 +187,22 @@ class BookIdentifier(TimeStampedModel):
 
 
 class LibraryGroup(TimeStampedModel):
+    DISCOVERABILITY_LISTED = "listed"
+    DISCOVERABILITY_UNLISTED = "unlisted"
+
+    DISCOVERABILITY_CHOICES = [
+        (DISCOVERABILITY_LISTED, "Listed"),
+        (DISCOVERABILITY_UNLISTED, "Unlisted"),
+    ]
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=64, unique=True)
     description = models.TextField(blank=True)
-    is_public = models.BooleanField(default=False)
-    is_system = models.BooleanField(default=False)
+    discoverability = models.CharField(
+        max_length=16,
+        choices=DISCOVERABILITY_CHOICES,
+        default=DISCOVERABILITY_LISTED,
+    )
 
     class Meta:
         ordering = ["name"]
@@ -200,6 +214,12 @@ class LibraryGroup(TimeStampedModel):
         if not self.slug:
             self.slug = slugify(self.name)[:64] or "group"
         super().save(*args, **kwargs)
+
+
+def is_public_group(group: LibraryGroup | None) -> bool:
+    if group is None:
+        return False
+    return getattr(group, "slug", None) == PUBLIC_GROUP_SLUG
 
 
 class LibraryGroupMembership(TimeStampedModel):
@@ -232,7 +252,7 @@ class LibraryGroupMembership(TimeStampedModel):
         group_id = getattr(self, "group_id", None)
         if group_id and self.role == self.ROLE_CURATOR:
             group = self.group
-            if group.is_public:
+            if is_public_group(group):
                 raise ValidationError({"role": "Public group cannot have curators."})
 
     def save(self, *args, **kwargs):

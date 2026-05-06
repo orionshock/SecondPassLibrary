@@ -98,6 +98,7 @@ This is a product concept and is **not** the same as Django auth `Group`.
 ### Current/simple rule (today)
 
 - **Public** is the default shared library group.
+- Public is identified by canonical slug `public` (not by a broad boolean flag).
 - Every user belongs to Public.
 - Every book belongs to Public by default.
   - In simple mode, a book should never remain without any group assignments; the safe fallback is Public.
@@ -109,6 +110,18 @@ This is a product concept and is **not** the same as Django auth `Group`.
 - Public cannot have Curators.
 - Managing Public is a Manager/Librarian responsibility.
 - If a book would otherwise have no group assignments, it should be safely assigned back to Public (avoid “orphaned” inaccessible books).
+
+## LibraryGroup Discoverability
+
+LibraryGroups have a `discoverability` setting:
+
+- `listed`: may appear in future UI lists/directories
+- `unlisted`: hidden from future UI lists/directories (but still usable by direct link/admin)
+
+Discoverability controls UI discoverability only:
+
+- It does **not** grant access to books.
+- Access is still controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
 
 ## Curator Rules (Group-Scoped Role)
 
@@ -174,5 +187,17 @@ LibraryGroups:
 Shelves (if added later):
 
 - presentation/organization feature
-- may be personal, group-visible, or public
 - should be modeled separately from LibraryGroups
+
+### Shelves vs LibraryGroups (design note)
+
+- LibraryGroups are access scopes.
+- Shelves are future presentation/organization objects.
+- Shelves should have owners: user-owned or LibraryGroup-owned.
+- Shelf visibility/discoverability controls whether the shelf/list itself can be seen.
+- A shelf must never grant access to books.
+- When rendering a shelf, first check whether the viewer can see the shelf, then filter each shelf book through `can_view_book(user, book)`.
+- A listed shelf does not make its books public.
+- A group-owned shelf does not grant group membership.
+- A user-owned shelf does not grant book access.
+- Genres/tags are descriptive metadata and are separate from both LibraryGroups and shelves.

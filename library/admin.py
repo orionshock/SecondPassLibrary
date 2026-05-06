@@ -308,15 +308,21 @@ class ImportJobItemAdmin(admin.ModelAdmin):
 
 @admin.register(LibraryGroup)
 class LibraryGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "is_public", "is_system", "created_at"]
+    list_display = ["name", "slug", "discoverability", "created_at"]
     search_fields = ["name", "slug", "description"]
-    list_filter = ["is_public", "is_system", ("created_at", DateFieldListFilter)]
+    list_filter = ["discoverability", ("created_at", DateFieldListFilter)]
     readonly_fields = ["created_at", "updated_at"]
 
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.slug == "public":
             return False
         return super().has_delete_permission(request, obj=obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = list(super().get_readonly_fields(request, obj=obj))
+        if obj is not None and obj.slug == "public":
+            fields.extend(["name", "slug", "description", "discoverability"])
+        return fields
 
 
 @admin.register(LibraryGroupMembership)
