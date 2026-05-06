@@ -29,7 +29,7 @@ This application stores all runtime and user-generated data in the `userdata/` d
 6. Create superuser: `python manage.py createsuperuser`
 7. Run server: `python manage.py runserver`
 
-See `DEVELOPMENT.md` for the full development workflow (including checks/tests).
+See `docs/development.md` for the full development workflow (including checks/tests).
 
 ## Importing EPUBs
 
@@ -38,3 +38,7 @@ Use the management command:
 ```bash
 python manage.py import_epub "path/to/book.epub"
 ```
+
+Also see:
+- `docs/imports.md` (API-mediated imports)
+- `docs/api.md` (API index)

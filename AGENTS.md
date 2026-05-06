@@ -399,3 +399,14 @@ Then summarize:
 * whether migrations were created
 * verification results
 * any follow-up concerns
+
+## Documentation
+
+Prefer updating the focused docs under `docs/`:
+
+- `docs/architecture.md`
+- `docs/permissions.md`
+- `docs/imports.md`
+- `docs/reading.md`
+- `docs/metadata.md`
+- `docs/api.md`

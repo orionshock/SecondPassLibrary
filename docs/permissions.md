@@ -13,7 +13,7 @@ It is **documentation/design only**. It does not reflect current behavior in ful
 
 ## System Owner (is_superuser)
 
-- **Owner** is represented by Djangoâ€™s built-in `is_superuser`.
+- **Owner** is represented by Django’s built-in `is_superuser`.
 - Owner is a **system-level** role, not a normal in-app role.
 - Owner can do everything.
 - Owner should be rare (ideally only the initial bootstrap/admin account).
@@ -126,6 +126,14 @@ Discoverability controls UI discoverability only:
 
 - It does **not** grant access to books.
 - Access is still controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
+
+## LibraryGroup API and anti-leakage notes
+
+When exposing group data through the API:
+
+- Prefer returning `404 Not Found` for groups the user cannot view (avoid leaking group existence).
+- Group book listings must still filter each book through `can_view_book(user, book)`.
+- Curator group curation should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()`.
 
 ## Curator Rules (Group-Scoped Role)
 
