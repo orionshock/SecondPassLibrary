@@ -92,6 +92,22 @@ def can_manage_import_job(*, user, import_job: ImportJob) -> bool:
     return can_manage_library(user)
 
 
+def can_view_library_group(*, user, group: LibraryGroup) -> bool:
+    if can_manage_library(user):
+        return True
+    if getattr(user, "is_anonymous", False):
+        return False
+    if is_public_group(group):
+        return True
+    if group.discoverability == LibraryGroup.DISCOVERABILITY_LISTED:
+        return True
+    return LibraryGroupMembership.objects.filter(user=user, group=group).exists()
+
+
+def can_manage_library_group(*, user, group: LibraryGroup) -> bool:
+    return can_manage_library(user)
+
+
 def can_curate_group(*, user, group: LibraryGroup) -> bool:
     if can_manage_library(user):
         return True

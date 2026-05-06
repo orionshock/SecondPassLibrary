@@ -124,6 +124,31 @@ All reading endpoints are under `/api/v1/reading/` and require authentication (s
 - `has_files`: `true`/`false` to filter books that have at least one `BookFile`
 - `ordering`: `title`, `created_at`, `updated_at`, or `published_date` (prefix with `-` for descending)
 
+## LibraryGroup API (access scopes)
+
+LibraryGroups are **access scopes**, not shelves. Shelves are not implemented.
+
+Group visibility is policy-driven:
+
+- Managers/Librarians/Owner can see all groups.
+- Readers can see:
+  - groups they are a member of
+  - `listed` groups (discoverability only)
+- `unlisted` groups are only visible to members and Managers/Librarians/Owner.
+- Public (`slug="public"`) is visible to all authenticated users.
+
+Discoverability does not grant access. Group book lists still filter each book through `can_view_book(user, book)`.
+
+Endpoints:
+
+```text
+GET    /api/v1/library/groups/
+GET    /api/v1/library/groups/<group_id>/
+GET    /api/v1/library/groups/<group_id>/books/
+POST   /api/v1/library/groups/<group_id>/books/         {"book": "<book_id>"}
+DELETE /api/v1/library/groups/<group_id>/books/<book_id>/
+```
+
 ### Active session (lazy creation)
 
 Open/continue reading for a book:

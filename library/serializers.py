@@ -8,6 +8,10 @@ from .models import (
     BookFile,
     Series,
     BookIdentifier,
+    LibraryGroup,
+    LibraryGroupMembership,
+    BookGroupAssignment,
+    is_public_group,
     ImportJob,
     ImportJobItem,
 )
@@ -194,4 +198,52 @@ class ImportJobSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        read_only_fields = fields
+
+
+class LibraryGroupSerializer(serializers.ModelSerializer):
+    is_public_group = serializers.SerializerMethodField(read_only=True)
+    membership_role = serializers.SerializerMethodField(read_only=True)
+
+    def get_is_public_group(self, obj: LibraryGroup) -> bool:
+        return is_public_group(obj)
+
+    def get_membership_role(self, obj: LibraryGroup) -> str | None:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is None or getattr(user, "is_anonymous", False):
+            return None
+
+        cache = getattr(obj, "_prefetched_objects_cache", {})
+        if "memberships" in cache:
+            membership = obj.memberships.all().first()
+            return membership.role if membership is not None else None
+
+        role = (
+            LibraryGroupMembership.objects.filter(group=obj, user=user)
+            .values_list("role", flat=True)
+            .first()
+        )
+        return cast(str | None, role)
+
+    class Meta:
+        model = LibraryGroup
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "discoverability",
+            "is_public_group",
+            "membership_role",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+
+class BookGroupAssignmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookGroupAssignment
+        fields = ["id", "book", "group", "added_by", "created_at", "updated_at"]
         read_only_fields = fields

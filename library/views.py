@@ -10,13 +10,24 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
-from .models import Author, Book, BookFile, Series, BookIdentifier
+from .models import (
+    Author,
+    Book,
+    BookFile,
+    Series,
+    BookIdentifier,
+    LibraryGroup,
+    LibraryGroupMembership,
+    is_public_group,
+)
 from .serializers import (
     AuthorSerializer,
     BookFileSerializer,
     BookSerializer,
     SeriesSerializer,
     ImportJobSerializer,
+    LibraryGroupSerializer,
+    BookGroupAssignmentSerializer,
 )
 from .services import (
     generate_epub_download_filename,
@@ -24,7 +35,11 @@ from .services import (
     process_import_job,
 )
 from .models import ImportJob
-from .group_services import ensure_book_public_assignment
+from .group_services import (
+    add_book_to_group,
+    ensure_book_public_assignment,
+    remove_book_from_group,
+)
 from core import policies
 
 
@@ -248,3 +263,92 @@ class ImportJobViewSet(
 
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class LibraryGroupViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = LibraryGroup.objects.all()
+    serializer_class = LibraryGroupSerializer
+    permission_classes = [IsAuthenticated]
+    ordering = ["name", "created_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset().order_by(*self.ordering)
+        user = self.request.user
+
+        membership_qs = LibraryGroupMembership.objects.filter(user=user)
+        queryset = queryset.prefetch_related(Prefetch("memberships", queryset=membership_qs))
+
+        if policies.can_manage_library(user):
+            return queryset
+
+        return queryset.filter(
+            Q(slug="public")
+            | Q(discoverability=LibraryGroup.DISCOVERABILITY_LISTED)
+            | Q(memberships__user=user)
+        ).distinct()
+
+    @action(detail=True, methods=["get", "post"], url_path="books")
+    def books(self, request, *args, **kwargs):
+        group: LibraryGroup = self.get_object()
+
+        if request.method == "GET":
+            if not policies.can_view_library_group(user=request.user, group=group):
+                raise Http404()
+
+            queryset = Book.objects.filter(group_assignments__group=group).distinct()
+            if not policies.can_manage_library(request.user):
+                accessible_ids = Book.objects.filter(
+                    group_assignments__group__memberships__user=request.user
+                ).values("id")
+                queryset = queryset.filter(id__in=accessible_ids)
+
+            serializer = BookSerializer(queryset, many=True, context={"request": request})
+            return Response(serializer.data)
+
+        payload = request.data or {}
+        book_id = payload.get("book")
+        if not book_id:
+            return Response({"detail": "Missing 'book'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if policies.can_manage_library(request.user):
+            book_qs = Book.objects.all()
+        else:
+            if is_public_group(group):
+                raise PermissionDenied("Not allowed.")
+            if not policies.can_curate_group(user=request.user, group=group):
+                raise PermissionDenied("Not allowed.")
+            book_qs = Book.objects.filter(
+                group_assignments__group__memberships__user=request.user
+            ).distinct()
+
+        try:
+            book = book_qs.get(pk=book_id)
+        except Book.DoesNotExist as exc:
+            raise Http404() from exc
+
+        assignment = add_book_to_group(actor=request.user, book=book, group=group)
+        serializer = BookGroupAssignmentSerializer(assignment, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["delete"], url_path=r"books/(?P<book_id>[^/.]+)")
+    def remove_book(self, request, book_id: str | None = None, *args, **kwargs):
+        group: LibraryGroup = self.get_object()
+        if book_id is None:
+            raise Http404()
+
+        if policies.can_manage_library(request.user):
+            book_qs = Book.objects.all()
+        else:
+            if is_public_group(group):
+                raise PermissionDenied("Not allowed.")
+            if not policies.can_curate_group(user=request.user, group=group):
+                raise PermissionDenied("Not allowed.")
+            book_qs = Book.objects.filter(group_assignments__group=group).distinct()
+
+        try:
+            book = book_qs.get(pk=book_id)
+        except Book.DoesNotExist as exc:
+            raise Http404() from exc
+
+        remove_book_from_group(actor=request.user, book=book, group=group)
+        return Response(status=status.HTTP_204_NO_CONTENT)
