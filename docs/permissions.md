@@ -99,6 +99,8 @@ This is a product concept and is **not** the same as Django auth `Group`.
 
 - **Public** is the default shared library group.
 - Public is identified by canonical slug `public` (not by a broad boolean flag).
+- Public is the only special built-in `LibraryGroup` right now.
+- Public special behavior should be expressed via `PUBLIC_GROUP_SLUG` / `is_public_group()` / `get_public_group()`, not via a boolean model flag.
 - Every user belongs to Public.
 - Every book belongs to Public by default.
   - In simple mode, a book should never remain without any group assignments; the safe fallback is Public.
