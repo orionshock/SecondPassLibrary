@@ -229,7 +229,8 @@ class LibraryGroupMembership(TimeStampedModel):
         ]
 
     def clean(self):
-        if self.group_id and self.role == self.ROLE_CURATOR:
+        group_id = getattr(self, "group_id", None)
+        if group_id and self.role == self.ROLE_CURATOR:
             group = self.group
             if group.is_public:
                 raise ValidationError({"role": "Public group cannot have curators."})

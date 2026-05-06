@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from django.contrib.auth.models import AnonymousUser
 
@@ -72,7 +72,8 @@ def can_view_book(*, user, book: Book) -> bool:
         return True
     if getattr(user, "is_anonymous", False):
         return False
-    return book.group_assignments.filter(group__memberships__user=user).exists()
+    group_assignments = cast(Any, getattr(book, "group_assignments"))
+    return group_assignments.filter(group__memberships__user=user).exists()
 
 
 def can_download_book_file(*, user, book_file: BookFile) -> bool:
@@ -82,7 +83,8 @@ def can_download_book_file(*, user, book_file: BookFile) -> bool:
 def can_view_import_job(*, user, import_job: ImportJob) -> bool:
     if can_manage_library(user):
         return True
-    return bool(import_job.user_id == getattr(user, "id", None))
+    import_job_user_id = getattr(import_job, "user_id", None)
+    return bool(import_job_user_id == getattr(user, "id", None))
 
 
 def can_manage_import_job(*, user, import_job: ImportJob) -> bool:

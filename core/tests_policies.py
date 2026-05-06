@@ -22,10 +22,10 @@ class PolicyTest(TestCase):
     def setUp(self):
         self.public = get_public_group()
 
-        self.owner = User.objects.create_superuser(username="owner", password="pw")
-        self.manager = User.objects.create_user(username="manager", password="pw")
-        self.librarian = User.objects.create_user(username="librarian", password="pw")
-        self.reader = User.objects.create_user(username="reader", password="pw")
+        self.owner = User.objects.create_superuser(username="owner", email="owner@example.com", password="pw")
+        self.manager = User.objects.create_user(username="manager", email="manager@example.com", password="pw")
+        self.librarian = User.objects.create_user(username="librarian", email="librarian@example.com", password="pw")
+        self.reader = User.objects.create_user(username="reader", email="reader@example.com", password="pw")
 
         for user, role in (
             (self.manager, UserProfile.ROLE_MANAGER),
@@ -84,7 +84,7 @@ class PolicyTest(TestCase):
         # Hidden book is visible only if user is in Hidden.
         self.assertTrue(policies.can_view_book(user=self.reader, book=self.hidden_book))
 
-        other_reader = User.objects.create_user(username="other", password="pw")
+        other_reader = User.objects.create_user(username="other", email="other@example.com", password="pw")
         profile, _ = UserProfile.objects.get_or_create(user=other_reader)
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
