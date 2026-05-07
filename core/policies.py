@@ -23,18 +23,29 @@ def _get_profile(user) -> UserProfile | None:
         return None
 
 
+def _profile_role(user) -> str | None:
+    profile = _get_profile(user)
+    return profile.role if profile is not None else None
+
+
+def _is_manager_role(user) -> bool:
+    return _profile_role(user) == UserProfile.ROLE_MANAGER
+
+
+def _is_librarian_role(user) -> bool:
+    return _profile_role(user) == UserProfile.ROLE_LIBRARIAN
+
+
 def is_manager(user) -> bool:
     if is_owner(user):
         return True
-    profile = _get_profile(user)
-    return bool(profile and profile.role == UserProfile.ROLE_MANAGER)
+    return _is_manager_role(user)
 
 
 def is_librarian(user) -> bool:
     if is_owner(user):
         return True
-    profile = _get_profile(user)
-    return bool(profile and profile.role == UserProfile.ROLE_LIBRARIAN)
+    return _is_librarian_role(user)
 
 
 def is_reader(user) -> bool:
@@ -52,12 +63,45 @@ def can_manage_users(user) -> bool:
 
 
 def can_assign_global_role(*, actor, target_user, new_role: str) -> bool:
+    if new_role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
+        return False
+
     if is_owner(actor):
         return True
-    if not is_manager(actor):
+
+    if not _is_manager_role(actor):
         return False
-    # Manager can assign librarian/reader, but not manager.
-    return new_role in {UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}
+
+    # Managers cannot edit Owner accounts.
+    if is_owner(target_user):
+        return False
+
+    # Only Owner can promote to Manager.
+    if new_role == UserProfile.ROLE_MANAGER:
+        return False
+
+    # Only Owner can demote existing Managers.
+    if _is_manager_role(target_user):
+        return False
+
+    return True
+
+
+def can_manage_user(*, actor, target_user) -> bool:
+    if is_owner(actor):
+        return True
+
+    if not _is_manager_role(actor):
+        return False
+
+    if is_owner(target_user):
+        return False
+
+    # Managers cannot manage other Managers.
+    if _is_manager_role(target_user):
+        return False
+
+    return True
 
 
 def can_manage_library(user) -> bool:
@@ -92,6 +136,49 @@ def can_manage_import_job(*, user, import_job: ImportJob) -> bool:
     return can_manage_library(user)
 
 
+def can_create_library_group(user) -> bool:
+    return is_owner(user) or _is_manager_role(user)
+
+
+def can_manage_group_identity(*, user, group: LibraryGroup) -> bool:
+    if is_public_group(group):
+        return False
+    return is_owner(user) or _is_manager_role(user)
+
+
+def can_manage_group_membership(*, user, group: LibraryGroup) -> bool:
+    # Membership management is an app-admin operation, not a librarian/curator operation.
+    return is_owner(user) or _is_manager_role(user)
+
+
+def can_edit_group_presentation(*, user, group: LibraryGroup) -> bool:
+    # Presentation/configuration fields (description/discoverability) are editable for non-Public groups
+    # according to role policy. Public is handled by field-specific helpers.
+    if is_public_group(group):
+        return False
+    if is_owner(user) or _is_manager_role(user) or _is_librarian_role(user):
+        return True
+    return LibraryGroupMembership.objects.filter(
+        user=user, group=group, role=LibraryGroupMembership.ROLE_CURATOR
+    ).exists()
+
+
+def can_change_group_discoverability(*, user, group: LibraryGroup) -> bool:
+    if is_public_group(group):
+        return False
+    if is_owner(user) or _is_manager_role(user) or _is_librarian_role(user):
+        return True
+    return LibraryGroupMembership.objects.filter(
+        user=user, group=group, role=LibraryGroupMembership.ROLE_CURATOR
+    ).exists()
+
+
+def can_edit_group_description(*, user, group: LibraryGroup) -> bool:
+    if is_public_group(group):
+        return is_owner(user) or _is_manager_role(user) or _is_librarian_role(user)
+    return can_edit_group_presentation(user=user, group=group)
+
+
 def can_view_library_group(*, user, group: LibraryGroup) -> bool:
     if can_manage_library(user):
         return True
@@ -105,12 +192,11 @@ def can_view_library_group(*, user, group: LibraryGroup) -> bool:
 
 
 def can_manage_library_group(*, user, group: LibraryGroup) -> bool:
+    # Legacy helper retained for call sites; use more specific helpers for new code.
     return can_manage_library(user)
 
 
 def can_curate_group(*, user, group: LibraryGroup) -> bool:
-    if can_manage_library(user):
-        return True
     if is_public_group(group):
         return False
     return LibraryGroupMembership.objects.filter(
