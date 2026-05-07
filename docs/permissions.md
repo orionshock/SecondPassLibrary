@@ -191,6 +191,8 @@ When exposing groups through the API:
 - Prefer returning `404 Not Found` for groups the user cannot view (avoid leaking group existence).
 - Group book listings must still filter each book through `can_view_book(user, book)` (a listed/visible group must not leak inaccessible books).
 - Group curation endpoints should call the safe group curation services above.
+- Group presentation updates should be limited to `description` and `discoverability` via `PATCH /api/v1/library/groups/<group_id>/`.
+  - Public allows description-only edits by Owner/Manager/Librarian; Public discoverability is fixed.
 
 ## Shelves are separate (future)
 

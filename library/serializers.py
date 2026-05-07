@@ -1,7 +1,9 @@
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.reverse import reverse
 from typing import Any, cast
 
+from core import policies
 from .models import (
     Author,
     Book,
@@ -240,6 +242,45 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
+
+class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
+    """
+    Presentation-only update serializer.
+
+    Allowed fields:
+    - description
+    - discoverability
+
+    Identity fields (name/slug) are rejected if present in the request payload.
+    """
+
+    class Meta:
+        model = LibraryGroup
+        fields = ["description", "discoverability"]
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        if "name" in initial or "slug" in initial:
+            raise serializers.ValidationError({"detail": "Only 'description' and 'discoverability' can be updated."})
+        return super().validate(attrs)
+
+    def update(self, instance: LibraryGroup, validated_data: dict[str, Any]):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if "description" in validated_data:
+            if not policies.can_edit_group_description(user=user, group=instance):
+                raise PermissionDenied("Not allowed.")
+            instance.description = validated_data["description"]
+
+        if "discoverability" in validated_data:
+            if not policies.can_change_group_discoverability(user=user, group=instance):
+                raise PermissionDenied("Not allowed.")
+            instance.discoverability = validated_data["discoverability"]
+
+        instance.save(update_fields=["description", "discoverability", "updated_at"])
+        return instance
 
 
 class BookGroupAssignmentSerializer(serializers.ModelSerializer):

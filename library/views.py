@@ -27,6 +27,7 @@ from .serializers import (
     SeriesSerializer,
     ImportJobSerializer,
     LibraryGroupSerializer,
+    LibraryGroupPresentationUpdateSerializer,
     BookGroupAssignmentSerializer,
 )
 from .services import (
@@ -262,11 +263,20 @@ class ImportJobViewSet(
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class LibraryGroupViewSet(viewsets.ReadOnlyModelViewSet):
+class LibraryGroupViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = LibraryGroup.objects.all()
-    serializer_class = LibraryGroupSerializer
     permission_classes = [IsAuthenticated]
     ordering = ["name", "created_at"]
+
+    def get_serializer_class(self):
+        if self.action == "partial_update":
+            return LibraryGroupPresentationUpdateSerializer
+        return LibraryGroupSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset().order_by(*self.ordering)
@@ -283,6 +293,19 @@ class LibraryGroupViewSet(viewsets.ReadOnlyModelViewSet):
             | Q(discoverability=LibraryGroup.DISCOVERABILITY_LISTED)
             | Q(memberships__user=user)
         ).distinct()
+
+    def update(self, request, *args, **kwargs):
+        # Disallow full PUT updates; only PATCH is supported for presentation fields.
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        output = LibraryGroupSerializer(instance, context={"request": request})
+        return Response(output.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get", "post"], url_path="books")
     def books(self, request, *args, **kwargs):

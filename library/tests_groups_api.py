@@ -183,3 +183,133 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
 
         slugs = set(BookGroupAssignment.objects.filter(book=book).values_list("group__slug", flat=True))
         self.assertEqual(slugs, {"public"})
+
+
+class LibraryGroupPresentationPatchAPITest(APITestCase):
+    def setUp(self):
+        self.public = get_public_group()
+
+        self.manager = User.objects.create_user(username="manager", email="manager@example.com", password="pw")
+        ensure_user_public_membership(user=self.manager)
+        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        manager_profile.role = UserProfile.ROLE_MANAGER
+        manager_profile.save(update_fields=["role", "updated_at"])
+
+        self.librarian = User.objects.create_user(username="librarian", email="librarian@example.com", password="pw")
+        ensure_user_public_membership(user=self.librarian)
+        librarian_profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        librarian_profile.role = UserProfile.ROLE_LIBRARIAN
+        librarian_profile.save(update_fields=["role", "updated_at"])
+
+        self.reader = User.objects.create_user(username="reader", email="reader@example.com", password="pw")
+        ensure_user_public_membership(user=self.reader)
+        reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
+        reader_profile.role = UserProfile.ROLE_READER
+        reader_profile.save(update_fields=["role", "updated_at"])
+
+        self.curator = User.objects.create_user(username="curator", email="curator@example.com", password="pw")
+        ensure_user_public_membership(user=self.curator)
+        curator_profile, _ = UserProfile.objects.get_or_create(user=self.curator)
+        curator_profile.role = UserProfile.ROLE_READER
+        curator_profile.save(update_fields=["role", "updated_at"])
+
+        self.group = LibraryGroup.objects.create(
+            name="Group",
+            slug="group",
+            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
+            description="before",
+        )
+        self.other_group = LibraryGroup.objects.create(
+            name="Other",
+            slug="other",
+            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
+        )
+        LibraryGroupMembership.objects.create(
+            user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
+        )
+
+        self.book_in_group = Book.objects.create(title="InGroup")
+        BookGroupAssignment.objects.create(book=self.book_in_group, group=self.group, added_by=self.librarian)
+
+    def test_librarian_can_patch_public_description(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.public.id}/", data={"description": "x"}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.public.refresh_from_db()
+        self.assertEqual(self.public.description, "x")
+
+    def test_librarian_cannot_patch_public_discoverability(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.public.id}/", data={"discoverability": LibraryGroup.DISCOVERABILITY_UNLISTED}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.public.refresh_from_db()
+        self.assertEqual(self.public.discoverability, LibraryGroup.DISCOVERABILITY_LISTED)
+
+    def test_manager_can_patch_public_description(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.public.id}/", data={"description": "m"}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_reader_cannot_patch_public_description(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.public.id}/", data={"description": "no"}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_curator_cannot_patch_public_description(self):
+        self.client.login(username="curator", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.public.id}/", data={"description": "no"}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_librarian_can_patch_non_public_description_and_discoverability(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"description": "after", "discoverability": LibraryGroup.DISCOVERABILITY_LISTED}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.description, "after")
+        self.assertEqual(self.group.discoverability, LibraryGroup.DISCOVERABILITY_LISTED)
+
+    def test_curator_can_patch_description_and_discoverability_for_their_group_only(self):
+        self.client.login(username="curator", password="pw")
+        ok = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"description": "c", "discoverability": LibraryGroup.DISCOVERABILITY_LISTED}, format="json"))
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+
+        denied = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.other_group.id}/", data={"description": "c"}, format="json"))
+        self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_attempts_to_patch_name_or_slug_are_rejected(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"name": "NEW"}, format="json"))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.name, "Group")
+
+        response2 = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"slug": "new-slug"}, format="json"))
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.slug, "group")
+
+    def test_discoverability_update_does_not_grant_book_access(self):
+        book = Book.objects.create(title="HiddenBook")
+        hidden_group = LibraryGroup.objects.create(name="Hidden", slug="hidden", discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED)
+        other = User.objects.create_user(username="other", email="other@example.com", password="pw")
+        ensure_user_public_membership(user=other)
+        LibraryGroupMembership.objects.create(user=other, group=hidden_group, role=LibraryGroupMembership.ROLE_READER)
+        BookGroupAssignment.objects.create(book=book, group=hidden_group, added_by=self.librarian)
+
+        # Make the hidden group listed (so it's visible) but do not grant membership to reader.
+        self.client.login(username="librarian", password="pw")
+        patched = cast(Response, self.client.patch(f"/api/v1/library/groups/{hidden_group.id}/", data={"discoverability": LibraryGroup.DISCOVERABILITY_LISTED}, format="json"))
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+
+        # Reader can now see the group (listed), but still cannot see the book in the group's books listing.
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        listing = cast(Response, self.client.get("/api/v1/library/groups/"))
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        slugs = {g["slug"] for g in cast(list[dict[str, Any]], listing.data)}
+        self.assertIn("hidden", slugs)
+
+        books = cast(Response, self.client.get(f"/api/v1/library/groups/{hidden_group.id}/books/"))
+        self.assertEqual(books.status_code, status.HTTP_200_OK)
+        titles = {b["title"] for b in cast(list[dict[str, Any]], books.data)}
+        self.assertNotIn("HiddenBook", titles)

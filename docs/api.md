@@ -26,6 +26,7 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 
 - `GET /api/v1/library/groups/`
 - `GET /api/v1/library/groups/<group_id>/`
+- `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`, `discoverability`)
 - `GET /api/v1/library/groups/<group_id>/books/`
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
