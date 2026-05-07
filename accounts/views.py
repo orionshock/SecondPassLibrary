@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from typing import cast
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -67,13 +68,15 @@ class ManagedUserViewSet(
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def list(self, request, *args, **kwargs):
-        users = list(self.get_queryset())
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        users = list(page) if page is not None else list(queryset)
         payload = []
         for user in users:
             profile = get_or_create_profile(user=user)
             payload.append(
                 {
-                    "id": user.id,
+                    "id": cast(int, user.pk),
                     "username": user.get_username(),
                     "email": user.email or "",
                     "first_name": user.first_name or "",
@@ -87,13 +90,15 @@ class ManagedUserViewSet(
                 }
             )
         serializer = ManagedUserSerializer(payload, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         user = self.get_object()
         profile = get_or_create_profile(user=user)
         payload = {
-            "id": user.id,
+            "id": cast(int, user.pk),
             "username": user.get_username(),
             "email": user.email or "",
             "first_name": user.first_name or "",
@@ -127,7 +132,7 @@ class ManagedUserViewSet(
 
         profile = get_or_create_profile(user=target)
         payload = {
-            "id": target.id,
+            "id": cast(int, target.pk),
             "username": target.get_username(),
             "email": target.email or "",
             "first_name": target.first_name or "",

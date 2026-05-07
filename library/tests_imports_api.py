@@ -11,12 +11,12 @@ from unittest.mock import MagicMock, patch
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test.utils import override_settings
+import django.core.files.storage as storage
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.files.storage import default_storage, storages
 from django.utils.functional import empty
 
 from .models import ImportJob
@@ -47,9 +47,10 @@ class IsolatedImportsMixin:
         cls._override.enable()
 
         # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
-        storages._storages = {}
-        storages._backends = None
-        default_storage._wrapped = empty
+        handler = cast(Any, getattr(storage, "storages"))
+        handler._storages = {}
+        handler._backends = None
+        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
 
     @classmethod
     def tearDownClass(cls):
@@ -81,6 +82,10 @@ def _response_data_dict(response: Response) -> dict[str, Any]:
 def _response_data_list(response: Response) -> list[Any]:
     data = response.data
     assert data is not None
+    if isinstance(data, dict) and "results" in data:
+        results = data["results"]
+        assert isinstance(results, list)
+        return cast(list[Any], results)
     assert isinstance(data, list)
     return cast(list[Any], data)
 

@@ -26,6 +26,10 @@ def _response_data_dict(response: Response) -> dict[str, Any]:
 def _response_data_list(response: Response) -> list[Any]:
     data = response.data
     assert data is not None
+    if isinstance(data, dict) and "results" in data:
+        results = data["results"]
+        assert isinstance(results, list)
+        return cast(list[Any], results)
     assert isinstance(data, list)
     return cast(list[Any], data)
 
@@ -305,7 +309,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         # Default list excludes deleted.
         listing = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
         self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        data = cast(list[dict[str, Any]], listing.data)
+        data = cast(list[dict[str, Any]], _response_data_list(listing))
         ids = {row["id"] for row in data}
         self.assertIn(str(a1.id), ids)
         self.assertNotIn(str(a2.id), ids)
@@ -313,7 +317,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         # Opt-in includes deleted.
         listing2 = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&include_deleted=true"))
         self.assertEqual(listing2.status_code, status.HTTP_200_OK)
-        data2 = cast(list[dict[str, Any]], listing2.data)
+        data2 = cast(list[dict[str, Any]], _response_data_list(listing2))
         ids2 = {row["id"] for row in data2}
         self.assertIn(str(a1.id), ids2)
         self.assertIn(str(a2.id), ids2)
@@ -323,3 +327,25 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(get_deleted.status_code, status.HTTP_404_NOT_FOUND)
         get_deleted2 = cast(Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/?include_deleted=true"))
         self.assertEqual(get_deleted2.status_code, status.HTTP_200_OK)
+
+    def test_annotations_list_is_paginated(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        for i in range(51):
+            Annotation.objects.create(
+                session=session,
+                kind=Annotation.KIND_NOTE,
+                locator={"cfi": f"/6/{i}"},
+                note=str(i),
+            )
+
+        response = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data)
+        payload = cast(dict[str, Any], response.data)
+        self.assertIn("count", payload)
+        self.assertIn("next", payload)
+        self.assertIn("previous", payload)
+        self.assertIn("results", payload)
+        self.assertEqual(payload["count"], 51)
+        self.assertEqual(len(cast(list[Any], payload["results"])), 50)

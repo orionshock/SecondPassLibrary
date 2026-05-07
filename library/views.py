@@ -322,7 +322,14 @@ class LibraryGroupViewSet(
                 ).values("id")
                 queryset = queryset.filter(id__in=accessible_ids)
 
-            serializer = BookSerializer(queryset, many=True, context={"request": request})
+            page = self.paginate_queryset(queryset)
+            serializer = BookSerializer(
+                page if page is not None else queryset,
+                many=True,
+                context={"request": request},
+            )
+            if page is not None:
+                return self.get_paginated_response(serializer.data)
             return Response(serializer.data)
 
         payload = request.data or {}

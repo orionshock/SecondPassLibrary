@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
@@ -53,7 +54,9 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         self.client.login(username="reader", password="pw")
         response = cast(Response, self.client.get("/api/v1/library/groups/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(list[dict[str, Any]], response.data)
+        self.assertIsNotNone(response.data)
+        payload = cast(Mapping[str, Any], response.data)
+        data = cast(list[dict[str, Any]], payload["results"])
         slugs = {g["slug"] for g in data}
         self.assertIn("public", slugs)
         self.assertIn("listed", slugs)
@@ -72,7 +75,9 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         self.client.login(username="manager", password="pw")
         response = cast(Response, self.client.get("/api/v1/library/groups/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(list[dict[str, Any]], response.data)
+        self.assertIsNotNone(response.data)
+        payload = cast(Mapping[str, Any], response.data)
+        data = cast(list[dict[str, Any]], payload["results"])
         slugs = {g["slug"] for g in data}
         self.assertTrue({"public", "listed", "unlisted", "unlisted-member"}.issubset(slugs))
 
@@ -130,7 +135,11 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         self.client.login(username="reader", password="pw")
         response = cast(Response, self.client.get(f"/api/v1/library/groups/{self.listed_group.id}/books/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        titles = {b["title"] for b in cast(list[dict[str, Any]], response.data)}
+        self.assertIsNotNone(response.data)
+        payload = cast(Mapping[str, Any], response.data)
+        self.assertIn("count", payload)
+        self.assertIn("results", payload)
+        titles = {b["title"] for b in cast(list[dict[str, Any]], payload["results"])}
         self.assertIn("Public Book", titles)
         self.assertNotIn("Inaccessible", titles)
 
@@ -138,7 +147,9 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         self.client.login(username="librarian", password="pw")
         response = cast(Response, self.client.get(f"/api/v1/library/groups/{self.listed_group.id}/books/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        titles = {b["title"] for b in cast(list[dict[str, Any]], response.data)}
+        self.assertIsNotNone(response.data)
+        payload = cast(Mapping[str, Any], response.data)
+        titles = {b["title"] for b in cast(list[dict[str, Any]], payload["results"])}
         self.assertIn("Public Book", titles)
         self.assertIn("Inaccessible", titles)
 
@@ -306,10 +317,14 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         self.client.login(username="reader", password="pw")
         listing = cast(Response, self.client.get("/api/v1/library/groups/"))
         self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        slugs = {g["slug"] for g in cast(list[dict[str, Any]], listing.data)}
+        self.assertIsNotNone(listing.data)
+        listing_payload = cast(Mapping[str, Any], listing.data)
+        slugs = {g["slug"] for g in cast(list[dict[str, Any]], listing_payload["results"])}
         self.assertIn("hidden", slugs)
 
         books = cast(Response, self.client.get(f"/api/v1/library/groups/{hidden_group.id}/books/"))
         self.assertEqual(books.status_code, status.HTTP_200_OK)
-        titles = {b["title"] for b in cast(list[dict[str, Any]], books.data)}
+        self.assertIsNotNone(books.data)
+        books_payload = cast(Mapping[str, Any], books.data)
+        titles = {b["title"] for b in cast(list[dict[str, Any]], books_payload["results"])}
         self.assertNotIn("HiddenBook", titles)

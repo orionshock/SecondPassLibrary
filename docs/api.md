@@ -2,6 +2,26 @@
 
 All endpoints are under `/api/v1/` and require authentication unless stated otherwise.
 
+## Pagination
+
+List endpoints are paginated by default using page-number pagination.
+
+Query params:
+
+- `page` (1-based)
+- `page_size` (optional; default `50`, max `200`)
+
+Response shape:
+
+```json
+{
+  "count": 123,
+  "next": "http://.../?page=2",
+  "previous": null,
+  "results": []
+}
+```
+
 ## Accounts
 
 - `GET /api/v1/accounts/me/`
