@@ -15,6 +15,8 @@ import uuid
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import default_storage, storages
+from django.utils.functional import empty
 
 from accounts.models import UserProfile
 from .models import Author, Book, BookFile, Series
@@ -41,6 +43,12 @@ class IsolatedMediaRootMixin:
         os.makedirs(cls._media_root, exist_ok=True)
         cls._media_override = override_settings(MEDIA_ROOT=cls._media_root)
         cls._media_override.enable()
+
+        # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
+        # storages/default_storage can be initialized before this mixin runs.
+        storages._storages = {}
+        storages._backends = None
+        default_storage._wrapped = empty
 
     @classmethod
     def tearDownClass(cls):

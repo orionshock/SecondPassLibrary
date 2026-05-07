@@ -6,6 +6,8 @@ from pathlib import Path
 
 from django.conf import settings
 from django.test.utils import override_settings
+from django.core.files.storage import default_storage, storages
+from django.utils.functional import empty
 
 
 class IsolatedUserdataMixin:
@@ -43,6 +45,11 @@ class IsolatedUserdataMixin:
             STATIC_ROOT=static_root,
         )
         cls._override.enable()
+
+        # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
+        storages._storages = {}
+        storages._backends = None
+        default_storage._wrapped = empty
 
     @classmethod
     def tearDownClass(cls):

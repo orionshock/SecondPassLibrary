@@ -16,6 +16,8 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import default_storage, storages
+from django.utils.functional import empty
 
 from .models import ImportJob
 from accounts.models import UserProfile
@@ -43,6 +45,11 @@ class IsolatedImportsMixin:
             MEDIA_ROOT=cls._media_root,
         )
         cls._override.enable()
+
+        # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
+        storages._storages = {}
+        storages._backends = None
+        default_storage._wrapped = empty
 
     @classmethod
     def tearDownClass(cls):

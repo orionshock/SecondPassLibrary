@@ -314,6 +314,17 @@ Prefer focused tests for:
 * duplicate handling
 * non-destructive reading-session behavior
 
+## Testing strategy
+
+- Prefer focused tests during implementation:
+  - `py manage.py test <app>`
+  - `py manage.py test <module>`
+  - `py manage.py test <TestCase>`
+- Use `--keepdb` for repeated local runs when appropriate.
+- Run the full suite before finalizing broad changes, shared policy changes, migrations, or before committing.
+- Always run `python manage.py check` for meaningful code changes.
+- Do not skip tests entirely unless the user explicitly asks.
+
 ## Dependency Rules
 
 Do not add dependencies casually.
