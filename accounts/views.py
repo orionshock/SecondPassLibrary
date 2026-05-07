@@ -26,7 +26,12 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return UserProfile.objects.select_related("user").filter(user=self.request.user)
+        # Explicit ordering avoids DRF's UnorderedObjectListWarning under pagination.
+        return (
+            UserProfile.objects.select_related("user")
+            .filter(user=self.request.user)
+            .order_by("user__username", "id")
+        )
 
 
 class CurrentUserView(APIView):
