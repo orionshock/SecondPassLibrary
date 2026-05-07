@@ -241,10 +241,7 @@ class ImportJobViewSet(
     def get_queryset(self):
         if not policies.can_manage_library(self.request.user):
             raise PermissionDenied("Not allowed.")
-        base = ImportJob.objects.prefetch_related("items")
-        if policies.can_manage_library(self.request.user):
-            return base.all()
-        return base.filter(user=self.request.user)
+        return ImportJob.objects.prefetch_related("items").all()
 
     def create(self, request, *args, **kwargs):
         if not policies.can_import_books(request.user):
