@@ -5,6 +5,7 @@ All endpoints are under `/api/v1/` and require authentication unless stated othe
 ## Accounts
 
 - `GET /api/v1/accounts/me/`
+- Users (Owner/Manager only): `GET /api/v1/accounts/users/`, `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
 
 ## Library
 

@@ -45,6 +45,22 @@ Manager cannot (unless also Owner):
 - demote existing Managers
 - change Public’s fixed identity/discoverability
 
+## User management API (narrow)
+
+User management is intentionally limited:
+
+- `GET /api/v1/accounts/users/`
+- `GET /api/v1/accounts/users/<id>/`
+- `PATCH /api/v1/accounts/users/<id>/` (no create/delete/password endpoints)
+
+Rules:
+
+- Owner can manage all users, but cannot deactivate themselves via the API.
+- Manager can manage non-Owner, non-Manager users only.
+- Managers cannot promote/demote Managers.
+- Managers cannot change their own role.
+- No user can deactivate themselves via the API.
+
 ### Librarian
 
 Librarian is the global book/content manager.
