@@ -48,23 +48,30 @@ class ReadingSessionSerializer(serializers.ModelSerializer):
         ]
 
 
-class ReadingSessionCreateSerializer(serializers.ModelSerializer):
-    book = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all())
+class ReadingSessionPatchSerializer(serializers.ModelSerializer):
+    """
+    Client-safe session updates.
+
+    Sessions are created via the dedicated active-session and start-over endpoints.
+    This serializer supports editing only small user-controlled metadata fields.
+    """
 
     class Meta:
         model = ReadingSession
-        fields = [
-            "id",
-            "book",
-            "status",
-            "name",
-            "completed_at",
-            "is_active",
-            "notes",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        fields = ["name", "notes"]
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        allowed = {"name", "notes"}
+        present = set(initial.keys())
+        forbidden = present.difference(allowed)
+        if forbidden:
+            raise serializers.ValidationError(
+                {
+                    "detail": "Only 'name' and 'notes' can be updated via this endpoint."
+                }
+            )
+        return super().validate(attrs)
 
 
 class ReadingProgressSerializer(serializers.ModelSerializer):

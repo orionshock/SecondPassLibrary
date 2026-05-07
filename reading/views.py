@@ -3,7 +3,7 @@ from typing import Any, cast
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import NotFound
 
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -23,7 +23,7 @@ from .serializers import (
     AnnotationSerializer,
     DeviceSerializer,
     ReadingProgressSerializer,
-    ReadingSessionCreateSerializer,
+    ReadingSessionPatchSerializer,
     ReadingSessionSerializer,
 )
 
@@ -39,7 +39,12 @@ class DeviceViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class ReadingSessionViewSet(viewsets.ModelViewSet):
+class ReadingSessionViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -48,12 +53,18 @@ class ReadingSessionViewSet(viewsets.ModelViewSet):
         )
 
     def get_serializer_class(self):
-        if self.action in {"create", "update", "partial_update"}:
-            return ReadingSessionCreateSerializer
+        if self.action == "partial_update":
+            return ReadingSessionPatchSerializer
         return ReadingSessionSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def update(self, request, *args, **kwargs):
+        # Disallow full PUT updates; only PATCH is supported for name/notes.
+        if request.method.upper() == "PUT":
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
 
 
 class ActiveSessionView(APIView):
@@ -142,6 +153,16 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         queryset = Annotation.objects.select_related(
             "session", "session__book", "device"
         ).filter(session__user=self.request.user)
+
+        include_deleted = (
+            (request.query_params.get("include_deleted") or "")
+            .strip()
+            .lower()
+            in {"1", "true", "t", "yes", "y", "on"}
+        )
+        if not include_deleted:
+            queryset = queryset.filter(is_deleted=False)
+
         session_id = request.query_params.get("session_id")
         book_id = request.query_params.get("book_id")
         if session_id:

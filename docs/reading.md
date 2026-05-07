@@ -7,11 +7,17 @@ Reading metadata is user-owned and must remain durable/exportable.
 - “Open book for reading” uses lazy active-session creation.
 - “Start over” creates a new active session and preserves history.
 
+Sessions are created through the dedicated endpoints below (not via `POST /sessions/`).
+The `/sessions/` API exists for listing/retrieving and limited client-safe metadata edits.
+
 Endpoints:
 
 ```text
 GET  /api/v1/reading/books/<book_id>/active-session/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
+GET  /api/v1/reading/sessions/
+GET  /api/v1/reading/sessions/<session_id>/
+PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...", "notes": "..."})
 ```
 
 ## Progress
@@ -60,4 +66,5 @@ Annotations are stored as `Annotation` records:
 
 - List/create/update: `/api/v1/reading/annotations/`
 - Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`
+- Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.

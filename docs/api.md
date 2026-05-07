@@ -38,7 +38,8 @@ See `docs/permissions.md` for the visibility/curation rules.
 
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
+- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/`, `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
 - Progress: `GET/PATCH /api/v1/reading/sessions/<session_id>/progress/`
-- Annotations: `/api/v1/reading/annotations/`
+- Annotations: `/api/v1/reading/annotations/` (soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
 
 See `docs/reading.md` for details.

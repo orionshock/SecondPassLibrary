@@ -227,3 +227,99 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         data = _response_data_list(response)
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["session"], session.id)
+
+    def test_reading_sessions_post_is_not_allowed(self):
+        self.client.login(username="u1", password="pass1")
+        response = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/sessions/",
+                data={"book": str(self.book.id), "name": "x"},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_reading_sessions_patch_allows_only_name_and_notes(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book, name="a")
+
+        ok = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/",
+                data={"name": "New name", "notes": "n"},
+                format="json",
+            ),
+        )
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        session.refresh_from_db()
+        self.assertEqual(session.name, "New name")
+        self.assertEqual(session.notes, "n")
+
+        # Disallowed fields should be rejected (cannot bypass active-session/start-over invariants).
+        denied = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/",
+                data={"is_active": False},
+                format="json",
+            ),
+        )
+        self.assertEqual(denied.status_code, status.HTTP_400_BAD_REQUEST)
+
+        denied2 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/",
+                data={"book": str(self.book.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(denied2.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_soft_deleted_annotations_hidden_by_default_and_opt_in_include_deleted(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        device = Device.objects.create(user=self.user1, name="d", device_type=Device.TYPE_WEB)
+        a1 = Annotation.objects.create(
+            session=session,
+            device=device,
+            kind=Annotation.KIND_NOTE,
+            locator={"cfi": "/6/2"},
+            note="keep",
+        )
+        a2 = Annotation.objects.create(
+            session=session,
+            device=device,
+            kind=Annotation.KIND_NOTE,
+            locator={"cfi": "/6/4"},
+            note="delete",
+        )
+
+        deleted = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{a2.id}/"))
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
+        a2.refresh_from_db()
+        self.assertTrue(a2.is_deleted)
+
+        # Default list excludes deleted.
+        listing = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        data = cast(list[dict[str, Any]], listing.data)
+        ids = {row["id"] for row in data}
+        self.assertIn(str(a1.id), ids)
+        self.assertNotIn(str(a2.id), ids)
+
+        # Opt-in includes deleted.
+        listing2 = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&include_deleted=true"))
+        self.assertEqual(listing2.status_code, status.HTTP_200_OK)
+        data2 = cast(list[dict[str, Any]], listing2.data)
+        ids2 = {row["id"] for row in data2}
+        self.assertIn(str(a1.id), ids2)
+        self.assertIn(str(a2.id), ids2)
+
+        # Retrieve behaves similarly: deleted is hidden unless include_deleted is set.
+        get_deleted = cast(Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/"))
+        self.assertEqual(get_deleted.status_code, status.HTTP_404_NOT_FOUND)
+        get_deleted2 = cast(Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/?include_deleted=true"))
+        self.assertEqual(get_deleted2.status_code, status.HTTP_200_OK)
