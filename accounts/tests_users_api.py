@@ -50,7 +50,7 @@ class ManagedUsersAPITest(APITestCase):
         self.client.login(username="reader", password="pw")
         r1 = cast(Response, self.client.get("/api/v1/accounts/users/"))
         self.assertEqual(r1.status_code, status.HTTP_403_FORBIDDEN)
-        r2 = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.reader.id}/"))
+        r2 = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.reader.pk}/"))
         self.assertEqual(r2.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.logout()
@@ -81,12 +81,12 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_manager_cannot_retrieve_owner(self):
         self.client.login(username="manager", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.owner.id}/"))
+        response = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.owner.pk}/"))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_response_does_not_expose_sensitive_auth_fields(self):
         self.client.login(username="owner", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.reader.id}/"))
+        response = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.reader.pk}/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         self.assertNotIn("password", data)
@@ -99,42 +99,48 @@ class ManagedUsersAPITest(APITestCase):
         promote = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.reader.id}/",
+                f"/api/v1/accounts/users/{self.reader.pk}/",
                 data={"role": UserProfile.ROLE_MANAGER},
                 format="json",
             ),
         )
         self.assertEqual(promote.status_code, status.HTTP_200_OK)
-        self.assertEqual(promote.data["role"], UserProfile.ROLE_MANAGER)
+        self.assertIsNotNone(promote.data)
+        promote_data = cast(Mapping[str, Any], promote.data)
+        self.assertEqual(promote_data["role"], UserProfile.ROLE_MANAGER)
 
         demote = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager2.id}/",
+                f"/api/v1/accounts/users/{self.manager2.pk}/",
                 data={"role": UserProfile.ROLE_READER},
                 format="json",
             ),
         )
         self.assertEqual(demote.status_code, status.HTTP_200_OK)
-        self.assertEqual(demote.data["role"], UserProfile.ROLE_READER)
+        self.assertIsNotNone(demote.data)
+        demote_data = cast(Mapping[str, Any], demote.data)
+        self.assertEqual(demote_data["role"], UserProfile.ROLE_READER)
 
     def test_manager_can_assign_librarian_or_reader_but_not_manager(self):
         self.client.login(username="manager", password="pw")
         ok = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.reader.id}/",
+                f"/api/v1/accounts/users/{self.reader.pk}/",
                 data={"role": UserProfile.ROLE_LIBRARIAN},
                 format="json",
             ),
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
-        self.assertEqual(ok.data["role"], UserProfile.ROLE_LIBRARIAN)
+        self.assertIsNotNone(ok.data)
+        ok_data = cast(Mapping[str, Any], ok.data)
+        self.assertEqual(ok_data["role"], UserProfile.ROLE_LIBRARIAN)
 
         denied = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.librarian.id}/",
+                f"/api/v1/accounts/users/{self.librarian.pk}/",
                 data={"role": UserProfile.ROLE_MANAGER},
                 format="json",
             ),
@@ -146,7 +152,7 @@ class ManagedUsersAPITest(APITestCase):
         response = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager2.id}/",
+                f"/api/v1/accounts/users/{self.manager2.pk}/",
                 data={"role": UserProfile.ROLE_READER},
                 format="json",
             ),
@@ -158,7 +164,7 @@ class ManagedUsersAPITest(APITestCase):
         other = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager2.id}/",
+                f"/api/v1/accounts/users/{self.manager2.pk}/",
                 data={"email": "new@example.com"},
                 format="json",
             ),
@@ -168,7 +174,7 @@ class ManagedUsersAPITest(APITestCase):
         self_user = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager.id}/",
+                f"/api/v1/accounts/users/{self.manager.pk}/",
                 data={"role": UserProfile.ROLE_READER},
                 format="json",
             ),
@@ -180,7 +186,7 @@ class ManagedUsersAPITest(APITestCase):
         response = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager.id}/",
+                f"/api/v1/accounts/users/{self.manager.pk}/",
                 data={"is_active": False},
                 format="json",
             ),
@@ -192,7 +198,7 @@ class ManagedUsersAPITest(APITestCase):
         response2 = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.owner.id}/",
+                f"/api/v1/accounts/users/{self.owner.pk}/",
                 data={"is_active": False},
                 format="json",
             ),
@@ -204,7 +210,7 @@ class ManagedUsersAPITest(APITestCase):
         response = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.reader.id}/",
+                f"/api/v1/accounts/users/{self.reader.pk}/",
                 data={"is_active": False},
                 format="json",
             ),
@@ -218,7 +224,7 @@ class ManagedUsersAPITest(APITestCase):
         response = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager.id}/",
+                f"/api/v1/accounts/users/{self.manager.pk}/",
                 data={"is_active": False},
                 format="json",
             ),
@@ -232,10 +238,9 @@ class ManagedUsersAPITest(APITestCase):
         response = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.reader.id}/",
+                f"/api/v1/accounts/users/{self.reader.pk}/",
                 data={"role": "nope"},
                 format="json",
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
