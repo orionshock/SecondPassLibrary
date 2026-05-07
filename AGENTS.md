@@ -172,6 +172,7 @@ Do not implement per-user private libraries unless explicitly requested.
 - Public is the only special built-in `LibraryGroup` right now; special behavior is based on `PUBLIC_GROUP_SLUG` / `is_public_group()`, not a boolean flag.
 - `LibraryGroup.discoverability` (`listed` / `unlisted`) controls future UI discoverability only and must not grant book access.
 - Book access remains controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
+- Group assignment changes should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()` (avoid scattered `BookGroupAssignment` writes).
 
 ### Reading metadata
 
@@ -369,7 +370,7 @@ Do not build a frontend yet.
 
 ## Permissions Design (Future)
 
-Permission model documentation lives in `docs/permissions.md` (roles, groups, and policy direction). Treat it as design guidance; it does not reflect all current behavior yet.
+Permission model documentation lives in `docs/permissions.md` (roles, groups, and policy direction). Treat it as design guidance and keep it aligned with current behavior when possible.
 
 ## Coding Style
 

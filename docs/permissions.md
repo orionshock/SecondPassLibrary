@@ -1,123 +1,146 @@
-﻿# Permissions Model (Future Design)
+# Permissions and Roles
 
-This document describes the intended **future** permission model for Second Pass Library.
+This document describes the intended permission model for Second Pass Library.
 
-It is **documentation/design only**. It does not reflect current behavior in full, and it does not require implementation work by itself.
+Key principles:
 
-## Goals
+- Reading metadata is user-owned and durable.
+- LibraryGroups are **access scopes**, not shelves.
+- Access to a book is determined by `LibraryGroupMembership` + `BookGroupAssignment` (not by discoverability).
+- Business rules should be centralized in policy helpers and service modules (avoid scattered per-view logic).
 
-- Keep the current implementation simple (shared library for authenticated users).
-- Preserve a clear path to more advanced access control without a rewrite.
-- Keep reading metadata user-owned and durable even if future book access rules change.
-- Centralize permission policy in explicit helper functions (avoid scattered per-view logic).
+## Roles (global)
 
-## System Owner (is_superuser)
+Global roles live on `UserProfile.role`:
 
-- **Owner** is represented by Django’s built-in `is_superuser`.
-- Owner is a **system-level** role, not a normal in-app role.
+- `manager`
+- `librarian`
+- `reader`
+
+### Owner (Django `is_superuser`)
+
+- Owner is Django `is_superuser`.
+- Owner is a system/root authority, not a normal app role.
 - Owner can do everything.
-- Owner should be rare (ideally only the initial bootstrap/admin account).
-- Only Owner can **promote or demote Managers**.
-- Owner may eventually enable **Advanced Management** (a future mode/switch).
-
-## Global App Roles (Normal In-App Roles)
-
-These are the app's normal global roles (not Django admin permissions).
+- Only Owner can promote users to Manager or demote existing Managers.
+- Owner may use Django admin/service hatches for recovery.
 
 ### Manager
 
-- App-admin role.
-- Can manage users, books, imports, and library configuration.
-- Can assign users as **Librarian** or **Reader**.
-- Cannot promote users to Manager.
-- Cannot demote Managers.
-- Manager promotion/demotion is Owner-only.
+Manager is the app-level administrator.
+
+Manager can:
+
+- manage users
+- assign users as Librarian or Reader
+- manage LibraryGroup membership (add/remove users from groups)
+- assign group member roles such as reader/curator
+- create LibraryGroups
+- manage LibraryGroup identity, subject to Public restrictions
+- perform all Librarian-level book/library operations
+
+Manager cannot (unless also Owner):
+
+- promote users to Manager
+- demote existing Managers
+- change Public’s fixed identity/discoverability
 
 ### Librarian
 
-- Handles book mechanics.
-- Can import books.
-- Can edit book metadata.
-- Can manage book files.
-- Can assign books to groups (when Advanced Management exists).
-- Cannot manage users.
+Librarian is the global book/content manager.
+
+Librarian can:
+
+- import books
+- edit book metadata
+- manage book files
+- assign/remove books from existing LibraryGroups (via safe curation services)
+- edit group presentation fields where allowed
+- edit description/discoverability for non-Public LibraryGroups
+- later: manage group-owned shelves for all groups where applicable
+
+Librarian cannot:
+
+- create LibraryGroups
+- delete LibraryGroups
+- rename LibraryGroups
+- change LibraryGroup slugs
+- manage LibraryGroup membership
+- add/remove users from groups
+- assign Curators
+- manage global user roles
+- change Public discoverability
+
+Public-specific librarian rule:
+
+- Librarian may edit Public description only.
+- Librarian may not change Public name, slug, or discoverability.
 
 ### Reader
 
-- Default user.
-- Can browse/download books they have access to.
-- Can manage **their own** reading metadata:
-  - sessions
-  - progress
-  - annotations / highlights / notes / bookmarks
-  - devices
+Reader can:
 
-## Advanced Management (Future Mode/Switch)
+- browse/download books they have access to
+- manage their own reading metadata
+- manage their own future personal shelves (if implemented later)
 
-Advanced Management is a future mode controlled by Owner.
+Reader cannot:
 
-### When disabled (simple mode)
+- manage library inventory
+- import books
+- manage LibraryGroups
+- manage users
 
-- The app behaves like a simple shared library.
-- All users and books are effectively in **Public**.
-- Group/Curator concepts are hidden from normal UI.
+## Curator (group-scoped role)
 
-### When enabled (advanced mode)
+Curator is **not** a global role. It is a group-scoped role on `LibraryGroupMembership.role`.
 
-- `LibraryGroup`, membership, and group-scoped curation become visible/manageable.
-- Users may belong to multiple LibraryGroups.
-- Books may belong to multiple LibraryGroups.
-- Access can be scoped by LibraryGroup.
+Curator can, for their assigned **non-Public** LibraryGroup only:
 
-## LibraryGroup Concept (Future Product Model)
+- edit group description
+- edit group discoverability
+- add books they can already view/read to the group
+- remove books from the group
+- later: manage group-owned shelves for that group
 
-This is a product concept and is **not** the same as Django auth `Group`.
+Curator cannot:
 
-- Django `Group` may be used later for auth permission bundles, but `LibraryGroup` is the **product** access/curation concept.
+- curate Public
+- import books
+- delete books from the system
+- create/delete/rename LibraryGroups
+- change LibraryGroup slugs
+- manage group membership
+- add/remove users from groups
+- assign Curators
+- add books they cannot already view/read
 
-### Intended future models (conceptual, not implemented)
+## LibraryGroups
 
-#### LibraryGroup
+LibraryGroups are access scopes. They are not shelves and they do not exist to provide presentation/organization.
 
-- Product/library access scope.
-- Top-level visibility and curation boundary.
+### Identity vs presentation
 
-#### LibraryGroupMembership
+Identity fields:
 
-- Links a user to a LibraryGroup.
-- Has a group-scoped role:
-  - `reader`
-  - `curator`
+- `name`
+- `slug`
 
-#### BookGroupAssignment
+Presentation/configuration fields:
 
-- Links a book to a LibraryGroup.
-- Safe changes to group assignments should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()` (avoid scattered direct `BookGroupAssignment` writes).
+- `description`
+- `discoverability`
 
-## Public Group Rules
+Rules:
 
-### Current/simple rule (today)
+- Name and slug should be treated as immutable in normal product workflows after group creation.
+- Slug should never be changed through normal API/UI.
+- Public name/slug are fixed (see below).
+- Description and discoverability are presentation/configuration fields and may be editable according to role policy.
+- Discoverability controls future UI listing/discovery only.
+- Discoverability does **not** grant book access.
 
-- **Public** is the default shared library group.
-- Public is identified by canonical slug `public` (not by a broad boolean flag).
-- Public is the only special built-in `LibraryGroup` right now.
-- Public special behavior should be expressed via `PUBLIC_GROUP_SLUG` / `is_public_group()` / `get_public_group()`, not via a boolean model flag.
-- Every user belongs to Public.
-- Every book belongs to Public by default.
-  - In simple mode, a book should never remain without any group assignments; the safe fallback is Public.
-
-### Future advanced rule (when Advanced Management is enabled)
-
-- Users and books must belong to **at least one** LibraryGroup.
-- Public remains the default fallback group.
-- Public cannot have Curators.
-- Managing Public is a Manager/Librarian responsibility.
-- If a book would otherwise have no group assignments, it should be safely assigned back to Public (avoid “orphaned” inaccessible books).
-  - Removing the final group assignment should fall back to Public.
-
-## LibraryGroup Discoverability
-
-LibraryGroups have a `discoverability` setting:
+### Discoverability (`listed` / `unlisted`)
 
 - `listed`: may appear in future UI lists/directories
 - `unlisted`: hidden from future UI lists/directories (but still usable by direct link/admin)
@@ -127,89 +150,77 @@ Discoverability controls UI discoverability only:
 - It does **not** grant access to books.
 - Access is still controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
 
-## LibraryGroup API and anti-leakage notes
+## Public group
 
-When exposing group data through the API:
+Public is special.
+
+- Public is identified by canonical slug `public`.
+- Public is the only special built-in LibraryGroup.
+- Public behavior is based on `PUBLIC_GROUP_SLUG` / `is_public_group()` / `get_public_group()` (not boolean flags).
+- Public name is fixed.
+- Public slug is fixed.
+- Public discoverability is fixed: `listed`.
+- Public cannot be deleted.
+- Public cannot have Curators.
+
+Default/fallback behavior:
+
+- Public is the default group in simple mode.
+- For now, all users belong to Public.
+- For now, all books default to Public.
+- If a book or user would otherwise have no LibraryGroup assignments, it falls back to Public.
+
+Role constraints:
+
+- Librarian may edit Public description only.
+- Managers/Owner may manage Public only within the protected Public rules.
+
+## Safe group mutation (services)
+
+Safe changes to group assignments should go through:
+
+- `library.group_services.add_book_to_group()`
+- `library.group_services.remove_book_from_group()`
+
+This prevents scattered direct `BookGroupAssignment` writes and centralizes invariants (including the Public fallback invariant).
+
+## Group API and anti-existence-leakage rules
+
+When exposing groups through the API:
 
 - Prefer returning `404 Not Found` for groups the user cannot view (avoid leaking group existence).
-- Group book listings must still filter each book through `can_view_book(user, book)`.
-- Curator group curation should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()`.
+- Group book listings must still filter each book through `can_view_book(user, book)` (a listed/visible group must not leak inaccessible books).
+- Group curation endpoints should call the safe group curation services above.
 
-## Curator Rules (Group-Scoped Role)
+## Shelves are separate (future)
 
-Curator is not a global role.
+LibraryGroups are access scopes. Shelves are future presentation/organization objects.
 
-Curator:
+- A shelf never grants access to a book.
+- Shelf visibility controls whether the shelf/list itself can be seen.
+- Each book on a shelf must still pass `can_view_book(user, book)`.
+- User-owned shelves and group-owned shelves should be modeled separately later.
+- Librarians may manage group-owned shelves across groups later.
+- Curators may manage group-owned shelves only for groups where they are curator.
+- Readers may manage their own personal shelves later.
 
-- Exists only as a `LibraryGroupMembership` role.
-- Applies only to the specific group where the user is curator.
-- Cannot curate Public.
-- Cannot import books.
-- Cannot delete books from the system.
-- Can remove any book from their own group.
-- Can add a book to their group only if the curator personally already has read access to that book.
-  - This prevents a curator from pulling hidden/restricted books into their group.
+## Policy helper direction (recommended)
 
-Example:
+Centralize permission rules in explicit policy helpers. Recommended helpers include:
 
-- Alice global role: Reader
-- Public: reader
-- Fantasy Club: curator
-- Kids Books: reader
-
-Alice can curate Fantasy Club only. Alice cannot curate Kids Books or Public.
-
-## Permission Policy Direction (Implementation Guidance)
-
-Implementation should use centralized, explicit policy helpers (e.g. `permissions.py` or `policy.py`) rather than scattered permission logic.
-
-Possible future helpers:
-
-- `can_manage_users(user)`
+- `can_create_library_group(user)`
+- `can_manage_group_identity(user, group)`
+- `can_manage_group_membership(user, group)`
+- `can_edit_group_presentation(user, group)`
+- `can_change_group_discoverability(user, group)`
 - `can_assign_global_role(actor, target_user, new_role)`
-- `can_manage_library(user)`
-- `can_import_books(user)`
 - `can_view_book(user, book)`
 - `can_download_book_file(user, book_file)`
-- `can_curate_group(user, group)`
 - `can_add_book_to_group(user, book, group)`
 - `can_remove_book_from_group(user, book, group)`
-- `can_view_reading_metadata(user, obj)`
-- `can_edit_reading_metadata(user, obj)`
 
-Policy rules that should remain true:
+Notes:
 
-- Only Owner can assign or remove Manager role.
-- Manager can assign Librarian/Reader but not Manager.
-- Librarian manages books, not users.
-- Reader manages only their own reading metadata.
-- Reading metadata remains user-owned even if book access changes later.
-
-Note: Until a formal user-management UI/API exists, Owner-only Manager promotion/demotion is enforced in Django admin.
-
-## Shelves Are Separate
-
-LibraryGroups are not shelves.
-
-LibraryGroups:
-
-- access scopes
-- top-level visibility/curation boundaries
-
-Shelves (if added later):
-
-- presentation/organization feature
-- should be modeled separately from LibraryGroups
-
-### Shelves vs LibraryGroups (design note)
-
-- LibraryGroups are access scopes.
-- Shelves are future presentation/organization objects.
-- Shelves should have owners: user-owned or LibraryGroup-owned.
-- Shelf visibility/discoverability controls whether the shelf/list itself can be seen.
-- A shelf must never grant access to books.
-- When rendering a shelf, first check whether the viewer can see the shelf, then filter each shelf book through `can_view_book(user, book)`.
-- A listed shelf does not make its books public.
-- A group-owned shelf does not grant group membership.
-- A user-owned shelf does not grant book access.
-- Genres/tags are descriptive metadata and are separate from both LibraryGroups and shelves.
+- Group mutation should use `library.group_services.add_book_to_group()` / `remove_book_from_group()`.
+- Future group presentation APIs should enforce the role rules above.
+- Future user-management APIs should enforce Owner-only Manager promotion/demotion.
