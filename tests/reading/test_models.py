@@ -3,9 +3,8 @@ from django.db import IntegrityError
 from django.test import TestCase
 
 from library.models import Book
-
-from .models import Annotation, Device, ReadingProgress, ReadingSession
-from .tests_utils import IsolatedUserdataMixin
+from reading.models import Annotation, Device, ReadingProgress, ReadingSession
+from tests.reading.utils import IsolatedUserdataMixin
 
 
 User = get_user_model()
@@ -56,9 +55,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
 
     def test_create_progress_for_session(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        device = Device.objects.create(
-            user=self.user, name="Web", device_type=Device.TYPE_WEB
-        )
+        device = Device.objects.create(user=self.user, name="Web", device_type=Device.TYPE_WEB)
         progress = ReadingProgress.objects.create(
             session=session,
             device=device,
@@ -83,19 +80,11 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
     def test_annotation_kind_choices(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-        highlight = Annotation.objects.create(
-            session=session, kind=Annotation.KIND_HIGHLIGHT, locator={"cfi": "/6/2"}
-        )
-        note = Annotation.objects.create(
-            session=session,
-            kind=Annotation.KIND_NOTE,
-            locator={"cfi": "/6/4"},
-            note="n",
-        )
-        bookmark = Annotation.objects.create(
-            session=session, kind=Annotation.KIND_BOOKMARK, locator={"cfi": "/6/6"}
-        )
+        highlight = Annotation.objects.create(session=session, kind=Annotation.KIND_HIGHLIGHT, locator={"cfi": "/6/2"})
+        note = Annotation.objects.create(session=session, kind=Annotation.KIND_NOTE, locator={"cfi": "/6/4"}, note="n")
+        bookmark = Annotation.objects.create(session=session, kind=Annotation.KIND_BOOKMARK, locator={"cfi": "/6/6"})
 
         self.assertEqual(highlight.kind, "highlight")
         self.assertEqual(note.kind, "note")
         self.assertEqual(bookmark.kind, "bookmark")
+

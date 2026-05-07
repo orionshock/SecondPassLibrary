@@ -2,15 +2,14 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from library.models import Book
-
-from .models import Device, ReadingProgress, ReadingSession
-from .services import (
+from reading.models import Device, ReadingProgress, ReadingSession
+from reading.services import (
     get_or_create_active_session,
     get_or_create_progress,
     start_over_book,
     update_progress,
 )
-from .tests_utils import IsolatedUserdataMixin
+from tests.reading.utils import IsolatedUserdataMixin
 
 
 User = get_user_model()
@@ -55,9 +54,7 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
 
     def test_update_progress_creates_and_updates(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        device = Device.objects.create(
-            user=self.user, name="Web", device_type=Device.TYPE_WEB
-        )
+        device = Device.objects.create(user=self.user, name="Web", device_type=Device.TYPE_WEB)
 
         progress = update_progress(
             session=session,
@@ -67,12 +64,11 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
         )
         self.assertEqual(progress.session.id, session.id)
         self.assertIsNotNone(progress.device)
-        self.assertEqual(progress.device.id, device.id) # type: ignore
+        self.assertEqual(progress.device.id, device.id)  # type: ignore[union-attr]
         self.assertEqual(progress.locator["format"], "epub")
         self.assertEqual(progress.locator["cfi"], "/6/4")
         self.assertEqual(progress.progression, 0.5)
 
-        # Explicitly clearing device should be supported.
         progress2 = update_progress(
             session=session,
             locator={"cfi": "/6/6"},
@@ -84,3 +80,4 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
         self.assertEqual(progress2.locator["format"], "epub")
         self.assertEqual(progress2.locator["cfi"], "/6/6")
         self.assertEqual(progress2.progression, 0.75)
+

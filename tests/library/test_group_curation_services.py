@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
@@ -23,13 +25,25 @@ class GroupCurationServicesTest(TestCase):
     def setUp(self):
         self.public = get_public_group()
         self.assertTrue(is_public_group(self.public))
-        self.assertEqual(self.public.discoverability, LibraryGroup.DISCOVERABILITY_LISTED)
+        self.assertEqual(
+            self.public.discoverability, LibraryGroup.DISCOVERABILITY_LISTED
+        )
 
-        self.owner = User.objects.create_superuser(username="owner", email="owner@example.com", password="pw")
-        self.manager = User.objects.create_user(username="manager", email="manager@example.com", password="pw")
-        self.librarian = User.objects.create_user(username="librarian", email="librarian@example.com", password="pw")
-        self.reader = User.objects.create_user(username="reader", email="reader@example.com", password="pw")
-        self.curator = User.objects.create_user(username="curator", email="curator@example.com", password="pw")
+        self.owner = User.objects.create_superuser(
+            username="owner", email="owner@example.com", password="pw"
+        )
+        self.manager = User.objects.create_user(
+            username="manager", email="manager@example.com", password="pw"
+        )
+        self.librarian = User.objects.create_user(
+            username="librarian", email="librarian@example.com", password="pw"
+        )
+        self.reader = User.objects.create_user(
+            username="reader", email="reader@example.com", password="pw"
+        )
+        self.curator = User.objects.create_user(
+            username="curator", email="curator@example.com", password="pw"
+        )
 
         for user, role in (
             (self.manager, UserProfile.ROLE_MANAGER),
@@ -70,13 +84,13 @@ class GroupCurationServicesTest(TestCase):
 
     def test_manager_can_add_book_to_group(self):
         assignment = add_book_to_group(actor=self.manager, book=self.book_public, group=self.group)
-        self.assertEqual(assignment.book_id, self.book_public.id)
-        self.assertEqual(assignment.group_id, self.group.id)
+        self.assertEqual(cast(Any, assignment).book_id, self.book_public.id)
+        self.assertEqual(cast(Any, assignment).group_id, self.group.id)
 
     def test_librarian_can_add_book_to_group(self):
         assignment = add_book_to_group(actor=self.librarian, book=self.book_public, group=self.group)
-        self.assertEqual(assignment.book_id, self.book_public.id)
-        self.assertEqual(assignment.group_id, self.group.id)
+        self.assertEqual(cast(Any, assignment).book_id, self.book_public.id)
+        self.assertEqual(cast(Any, assignment).group_id, self.group.id)
 
     def test_reader_cannot_add_book_to_group(self):
         with self.assertRaises(PermissionDenied):
@@ -85,8 +99,8 @@ class GroupCurationServicesTest(TestCase):
     def test_curator_can_add_visible_book_to_their_non_public_group(self):
         self.assertTrue(policies.can_view_book(user=self.curator, book=self.book_public))
         assignment = add_book_to_group(actor=self.curator, book=self.book_public, group=self.group)
-        self.assertEqual(assignment.book_id, self.book_public.id)
-        self.assertEqual(assignment.group_id, self.group.id)
+        self.assertEqual(cast(Any, assignment).book_id, self.book_public.id)
+        self.assertEqual(cast(Any, assignment).group_id, self.group.id)
 
     def test_curator_cannot_add_inaccessible_book_to_their_group(self):
         self.assertFalse(policies.can_view_book(user=self.curator, book=self.book_hidden))

@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from .models import UserProfile
+from accounts.models import UserProfile
 
 
 User = get_user_model()
@@ -16,24 +16,34 @@ User = get_user_model()
 
 class ManagedUsersAPITest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_superuser(username="owner", email="owner@example.com", password="pw")
+        self.owner = User.objects.create_superuser(
+            username="owner", email="owner@example.com", password="pw"
+        )
 
-        self.manager = User.objects.create_user(username="manager", email="manager@example.com", password="pw")
+        self.manager = User.objects.create_user(
+            username="manager", email="manager@example.com", password="pw"
+        )
         manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.manager2 = User.objects.create_user(username="manager2", email="manager2@example.com", password="pw")
+        self.manager2 = User.objects.create_user(
+            username="manager2", email="manager2@example.com", password="pw"
+        )
         manager2_profile, _ = UserProfile.objects.get_or_create(user=self.manager2)
         manager2_profile.role = UserProfile.ROLE_MANAGER
         manager2_profile.save(update_fields=["role", "updated_at"])
 
-        self.librarian = User.objects.create_user(username="librarian", email="librarian@example.com", password="pw")
+        self.librarian = User.objects.create_user(
+            username="librarian", email="librarian@example.com", password="pw"
+        )
         librarian_profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
         librarian_profile.role = UserProfile.ROLE_LIBRARIAN
         librarian_profile.save(update_fields=["role", "updated_at"])
 
-        self.reader = User.objects.create_user(username="reader", email="reader@example.com", password="pw")
+        self.reader = User.objects.create_user(
+            username="reader", email="reader@example.com", password="pw"
+        )
         reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
         reader_profile.role = UserProfile.ROLE_READER
         reader_profile.save(update_fields=["role", "updated_at"])
@@ -89,12 +99,16 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_manager_cannot_retrieve_owner(self):
         self.client.login(username="manager", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.owner.pk}/"))
+        response = cast(
+            Response, self.client.get(f"/api/v1/accounts/users/{self.owner.pk}/")
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_response_does_not_expose_sensitive_auth_fields(self):
         self.client.login(username="owner", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.reader.pk}/"))
+        response = cast(
+            Response, self.client.get(f"/api/v1/accounts/users/{self.reader.pk}/")
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         self.assertNotIn("password", data)
@@ -113,7 +127,6 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(promote.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(promote.data)
         promote_data = cast(Mapping[str, Any], promote.data)
         self.assertEqual(promote_data["role"], UserProfile.ROLE_MANAGER)
 
@@ -126,7 +139,6 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(demote.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(demote.data)
         demote_data = cast(Mapping[str, Any], demote.data)
         self.assertEqual(demote_data["role"], UserProfile.ROLE_READER)
 
@@ -141,7 +153,6 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(ok.data)
         ok_data = cast(Mapping[str, Any], ok.data)
         self.assertEqual(ok_data["role"], UserProfile.ROLE_LIBRARIAN)
 
@@ -252,3 +263,4 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import os
-import uuid
 from pathlib import Path
+import uuid
+from typing import Any, cast
 
 from django.conf import settings
 from django.test.utils import override_settings
-from django.core.files.storage import default_storage, storages
+import django.core.files.storage as storage
 from django.utils.functional import empty
 
 
@@ -20,8 +21,6 @@ class IsolatedUserdataMixin:
 
     @classmethod
     def setUpClass(cls):
-        # Call into the next class in the MRO if it defines setUpClass()
-        # (Pylance can't statically prove this on a mixin).
         parent_set_up = getattr(super(), "setUpClass", None)
         if callable(parent_set_up):
             parent_set_up()
@@ -46,10 +45,10 @@ class IsolatedUserdataMixin:
         )
         cls._override.enable()
 
-        # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
-        storages._storages = {}
-        storages._backends = None
-        default_storage._wrapped = empty
+        handler = cast(Any, getattr(storage, "storages"))
+        handler._storages = {}
+        handler._backends = None
+        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
 
     @classmethod
     def tearDownClass(cls):
@@ -58,3 +57,4 @@ class IsolatedUserdataMixin:
         parent_tear_down = getattr(super(), "tearDownClass", None)
         if callable(parent_tear_down):
             parent_tear_down()
+

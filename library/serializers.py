@@ -218,7 +218,7 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
 
         cache = getattr(obj, "_prefetched_objects_cache", {})
         if "memberships" in cache:
-            membership = obj.memberships.all().first()
+            membership = cast(Any, obj).memberships.all().first()
             return membership.role if membership is not None else None
 
         role = (

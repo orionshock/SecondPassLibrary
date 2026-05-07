@@ -5,16 +5,15 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from library.models import Book
-from library.models import LibraryGroup, LibraryGroupMembership, BookGroupAssignment
-from library.group_services import ensure_user_public_membership, ensure_book_public_assignment
 from accounts.models import UserProfile
-
-from .models import Annotation, Device, ReadingProgress, ReadingSession
-from .tests_utils import IsolatedUserdataMixin
+from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from reading.models import Annotation, Device, ReadingProgress, ReadingSession
+from tests.reading.utils import IsolatedUserdataMixin
 
 
 User = get_user_model()
+
 
 def _response_data_dict(response: Response) -> dict[str, Any]:
     data = response.data
@@ -61,9 +60,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         response = self.client.get("/api/v1/reading/devices/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        response = self.client.get(
-            f"/api/v1/reading/books/{self.book.id}/active-session/"
-        )
+        response = self.client.get(f"/api/v1/reading/books/{self.book.id}/active-session/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_create_active_session(self):
@@ -81,7 +78,6 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(data2["id"], data["id"])
 
     def test_active_session_existing_returned_even_if_book_access_lost(self):
-        # Create user + session for a restricted book, then remove access; existing session should still be returned.
         user = User.objects.create_user(username="u3", password="pass3", email="u3@example.com")
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.role = UserProfile.ROLE_READER
@@ -96,7 +92,6 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
 
         session = ReadingSession.objects.create(user=user, book=restricted, is_active=True)
 
-        # Remove membership (lose access). Existing session should still be returned.
         LibraryGroupMembership.objects.filter(user=user, group=group).delete()
 
         self.client.login(username="u3", password="pass3")
@@ -134,12 +129,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         start_over_url = f"/api/v1/reading/books/{self.book.id}/start-over/"
 
         first = _response_data_dict(cast(Response, self.client.get(active_url)))
-        response = cast(
-            Response,
-            self.client.post(
-                start_over_url, data={"name": "Second pass"}, format="json"
-            ),
-        )
+        response = cast(Response, self.client.post(start_over_url, data={"name": "Second pass"}, format="json"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = _response_data_dict(response)
         self.assertNotEqual(data["id"], first["id"])
@@ -169,20 +159,14 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_user_can_update_progress_for_own_session(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        device = Device.objects.create(
-            user=self.user1, name="My device", device_type=Device.TYPE_WEB
-        )
+        device = Device.objects.create(user=self.user1, name="My device", device_type=Device.TYPE_WEB)
 
         url = f"/api/v1/reading/sessions/{session.id}/progress/"
         response = cast(
             Response,
             self.client.patch(
                 url,
-                data={
-                    "device": str(device.id),
-                    "locator": {"cfi": "/6/4"},
-                    "progression": 0.5,
-                },
+                data={"device": str(device.id), "locator": {"cfi": "/6/4"}, "progression": 0.5},
                 format="json",
             ),
         )
@@ -199,9 +183,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_user_can_create_and_list_annotations_for_own_session(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        device = Device.objects.create(
-            user=self.user1, name="My device", device_type=Device.TYPE_WEB
-        )
+        device = Device.objects.create(user=self.user1, name="My device", device_type=Device.TYPE_WEB)
 
         create = cast(
             Response,
@@ -223,10 +205,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(create_data["locator"]["format"], "epub")
         self.assertEqual(create_data["locator"]["cfi"], "/6/6")
 
-        response = cast(
-            Response,
-            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"),
-        )
+        response = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = _response_data_list(response)
         self.assertEqual(len(data), 1)
@@ -261,7 +240,6 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(session.name, "New name")
         self.assertEqual(session.notes, "n")
 
-        # Disallowed fields should be rejected (cannot bypass active-session/start-over invariants).
         denied = cast(
             Response,
             self.client.patch(
@@ -286,27 +264,14 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         device = Device.objects.create(user=self.user1, name="d", device_type=Device.TYPE_WEB)
-        a1 = Annotation.objects.create(
-            session=session,
-            device=device,
-            kind=Annotation.KIND_NOTE,
-            locator={"cfi": "/6/2"},
-            note="keep",
-        )
-        a2 = Annotation.objects.create(
-            session=session,
-            device=device,
-            kind=Annotation.KIND_NOTE,
-            locator={"cfi": "/6/4"},
-            note="delete",
-        )
+        a1 = Annotation.objects.create(session=session, device=device, kind=Annotation.KIND_NOTE, locator={"cfi": "/6/2"}, note="keep")
+        a2 = Annotation.objects.create(session=session, device=device, kind=Annotation.KIND_NOTE, locator={"cfi": "/6/4"}, note="delete")
 
         deleted = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{a2.id}/"))
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
         a2.refresh_from_db()
         self.assertTrue(a2.is_deleted)
 
-        # Default list excludes deleted.
         listing = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
         self.assertEqual(listing.status_code, status.HTTP_200_OK)
         data = cast(list[dict[str, Any]], _response_data_list(listing))
@@ -314,7 +279,6 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertIn(str(a1.id), ids)
         self.assertNotIn(str(a2.id), ids)
 
-        # Opt-in includes deleted.
         listing2 = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&include_deleted=true"))
         self.assertEqual(listing2.status_code, status.HTTP_200_OK)
         data2 = cast(list[dict[str, Any]], _response_data_list(listing2))
@@ -322,7 +286,6 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertIn(str(a1.id), ids2)
         self.assertIn(str(a2.id), ids2)
 
-        # Retrieve behaves similarly: deleted is hidden unless include_deleted is set.
         get_deleted = cast(Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/"))
         self.assertEqual(get_deleted.status_code, status.HTTP_404_NOT_FOUND)
         get_deleted2 = cast(Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/?include_deleted=true"))
@@ -332,12 +295,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         for i in range(51):
-            Annotation.objects.create(
-                session=session,
-                kind=Annotation.KIND_NOTE,
-                locator={"cfi": f"/6/{i}"},
-                note=str(i),
-            )
+            Annotation.objects.create(session=session, kind=Annotation.KIND_NOTE, locator={"cfi": f"/6/{i}"}, note=str(i))
 
         response = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -349,3 +307,4 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertIn("results", payload)
         self.assertEqual(payload["count"], 51)
         self.assertEqual(len(cast(list[Any], payload["results"])), 50)
+

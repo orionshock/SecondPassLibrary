@@ -2,26 +2,25 @@ from __future__ import annotations
 
 import io
 import os
-import uuid
-import zipfile
 from pathlib import Path
 from typing import Any, cast
+import uuid
+import zipfile
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test.utils import override_settings
 import django.core.files.storage as storage
+from django.utils.functional import empty
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils.functional import empty
-
-from .models import ImportJob
 from accounts.models import UserProfile
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_user_public_membership
+from library.models import ImportJob
 
 
 class IsolatedImportsMixin:
@@ -46,7 +45,6 @@ class IsolatedImportsMixin:
         )
         cls._override.enable()
 
-        # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
         handler = cast(Any, getattr(storage, "storages"))
         handler._storages = {}
         handler._backends = None
@@ -98,8 +96,12 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         ensure_user_public_membership(user=self.other)
 
     def test_anonymous_cannot_create_or_list(self):
-        epub = SimpleUploadedFile("book.epub", b"epub-bytes", content_type="application/epub+zip")
-        create = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
+        epub = SimpleUploadedFile(
+            "book.epub", b"epub-bytes", content_type="application/epub+zip"
+        )
+        create = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+        )
         self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
         listing = cast_response(self.client.get("/api/v1/library/imports/"))
         self.assertEqual(listing.status_code, status.HTTP_403_FORBIDDEN)
@@ -112,9 +114,10 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         listing = cast_response(self.client.get("/api/v1/library/imports/"))
         self.assertEqual(listing.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Create is forbidden
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
-        created = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
+        created = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+        )
         self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch("library.services.epub.read_epub")
@@ -134,8 +137,8 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
-
         self.client.login(username="u1", password="pw")
+
         epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
         response = cast_response(
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
@@ -207,10 +210,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["total_found"], 2)
         self.assertEqual(len(cast(list[Any], data["items"])), 2)
         self.assertTrue(
-            all(
-                item["status"] in {"imported", "duplicate", "failed"}
-                for item in cast(list[dict[str, Any]], data["items"])
-            )
+            all(item["status"] in {"imported", "duplicate", "failed"} for item in cast(list[dict[str, Any]], data["items"]))
         )
 
     @patch("library.services.epub.read_epub")
@@ -236,3 +236,4 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
 
 def cast_response(resp) -> Response:
     return resp  # DRF test client returns Response already
+

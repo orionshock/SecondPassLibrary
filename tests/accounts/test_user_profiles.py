@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any, cast
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.test import APITestCase
 
-from .models import UserProfile
+from accounts.models import UserProfile
 
 
 class UserProfileModelTest(TestCase):
@@ -67,3 +69,4 @@ class UserProfileAPITest(APITestCase):
         self.client.logout()
         response = self.client.get("/api/v1/accounts/me/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+

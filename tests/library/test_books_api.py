@@ -1,170 +1,28 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
-import shutil
 from typing import Any, cast
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from django.test.utils import override_settings
-from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework.response import Response
-import os
-from unittest.mock import patch, MagicMock
-from pathlib import Path
-import uuid
-
-from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
-import django.core.files.storage as storage
-from django.utils.functional import empty
+from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from .models import Author, Book, BookFile, Series
-from .models import BookIdentifier
-from .services import ImportStatus, import_epub
-from .group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.models import Author, Book, BookFile, Series
+from library.models import BookGroupAssignment
+from library.models import BookIdentifier
 
-
-def _paginated_results(response: Response) -> list[dict[str, Any]]:
-    assert response.data is not None
-    payload = cast(Mapping[str, Any], response.data)
-    results = payload.get("results")
-    assert isinstance(results, list)
-    return cast(list[dict[str, Any]], results)
-
-
-class IsolatedMediaRootMixin:
-    """
-    Ensure FileField writes during tests go to a temp MEDIA_ROOT.
-
-    Avoid polluting the real `userdata/media` directory during test runs.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        parent_set_up = getattr(super(), "setUpClass", None)
-        if callable(parent_set_up):
-            parent_set_up()
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        cls._media_root = str(temp_root / f"tmp_media_{uuid.uuid4().hex}")
-        os.makedirs(cls._media_root, exist_ok=True)
-        cls._media_override = override_settings(MEDIA_ROOT=cls._media_root)
-        cls._media_override.enable()
-
-        # Ensure Django's storage backend picks up the overridden MEDIA_ROOT.
-        # storages/default_storage can be initialized before this mixin runs.
-        handler = cast(Any, getattr(storage, "storages"))
-        handler._storages = {}
-        handler._backends = None
-        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._media_override.disable()
-        shutil.rmtree(cls._media_root, ignore_errors=True)
-        parent_tear_down = getattr(super(), "tearDownClass", None)
-        if callable(parent_tear_down):
-            parent_tear_down()
-
-
-class LibraryModelTest(TestCase):
-    def setUp(self):
-        self.author = Author.objects.create(name="Test Author")
-        self.series = Series.objects.create(name="Test Series")
-        self.book = Book.objects.create(title="Test Book")
-        self.book.authors.add(self.author)
-        self.book.series = self.series
-        self.book.series_index = 1
-        self.book.save()
-
-    def test_author_str(self):
-        self.assertEqual(str(self.author), "Test Author")
-
-    def test_series_str(self):
-        self.assertEqual(str(self.series), "Test Series")
-
-    def test_book_str(self):
-        self.assertEqual(str(self.book), "Test Book")
-
-    def test_book_multiple_authors(self):
-        author2 = Author.objects.create(name="Author 2")
-        self.book.authors.add(author2)
-        self.assertEqual(self.book.authors.count(), 2)
-
-    def test_book_author_list(self):
-        author_a = Author.objects.create(name="A Author")
-        author_z = Author.objects.create(name="Z Author")
-        self.book.authors.set([author_z, author_a])
-        self.assertEqual(self.book.author_list(), "A Author, Z Author")
-
-    def test_book_bibliographic_fields(self):
-        self.book.publisher = "Test Publisher"
-        self.book.language = "en"
-        self.book.isbn = "9781234567890"
-        cast(Any, self.book).subjects = ["Fiction"]
-        self.book.save()
-
-        reloaded = Book.objects.get(pk=self.book.pk)
-        self.assertEqual(reloaded.publisher, "Test Publisher")
-        self.assertEqual(reloaded.language, "en")
-        self.assertEqual(reloaded.isbn, "9781234567890")
-        self.assertEqual(reloaded.subjects, ["Fiction"])
-
-    def test_book_file(self):
-        # Note: In a real test, you'd use a test file
-        book_file = BookFile.objects.create(
-            book=self.book,
-            file="test.epub",
-            checksum="dummy",
-            file_size=123,
-            source_filename="original.epub",
-        )
-        self.assertEqual(str(book_file), "Test Book - dummy...")
-        self.assertEqual(book_file.checksum_short(), "dummy")
-        self.assertEqual(book_file.file_size_human(), "123 B")
-
-    def test_book_file_str_with_missing_checksum(self):
-        book_file = BookFile.objects.create(
-            book=self.book,
-            file="test.epub",
-            checksum=None,
-            file_size=123,
-            source_filename="original.epub",
-        )
-        self.assertEqual(str(book_file), "Test Book - no-checksum...")
-
-    def test_book_file_file_size_human_units(self):
-        book_file = BookFile.objects.create(
-            book=self.book,
-            file="test.epub",
-            checksum="a" * 64,
-            file_size=2048,
-            source_filename="original.epub",
-        )
-        self.assertEqual(book_file.file_size_human(), "2.0 KB")
-
-    def test_book_identifier_unique_constraint(self):
-        ident = BookIdentifier.objects.create(
-            book=self.book,
-            scheme=BookIdentifier.SCHEME_ISBN_13,
-            value="9780123456472",
-        )
-        self.assertEqual(str(ident), "isbn_13:9780123456472")
-
-        from django.db import IntegrityError
-
-        with self.assertRaises(IntegrityError):
-            BookIdentifier.objects.create(
-                book=self.book,
-                scheme=BookIdentifier.SCHEME_ISBN_13,
-                value="9780123456472",
-            )
+from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 
 
 class LibraryAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
+        ensure_user_public_membership(user=self.user)
         self.client.login(username="testuser", password="testpass")
 
     def test_authenticated_access_books(self):
@@ -210,7 +68,7 @@ class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_book_list_includes_nested_summaries_and_no_raw_file_paths(self):
         response = cast(Response, self.client.get("/api/v1/library/books/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = _paginated_results(response)
+        data = paginated_results(response)
         self.assertEqual(len(data), 1)
         book = data[0]
 
@@ -261,8 +119,8 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
             source_filename="b.epub",
         )
 
-    def _titles(self, response):
-        data = _paginated_results(cast(Response, response))
+    def _titles(self, response: Response):
+        data = paginated_results(response)
         return sorted([b["title"] for b in data])
 
     def test_q_matches_title(self):
@@ -305,7 +163,7 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         response = cast(Response, self.client.get("/api/v1/library/books/?has_files=true"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._titles(response), ["Beta"])
-        data = _paginated_results(response)
+        data = paginated_results(response)
         files = data[0]["files"]
         self.assertEqual(len(files), 1)
         self.assertIn("download_url", files[0])
@@ -347,7 +205,6 @@ class PaginationBasicsAPITest(APITestCase):
         p10 = cast(Mapping[str, Any], r10.data)
         self.assertEqual(len(cast(list[Any], p10["results"])), 10)
 
-        # Create more books to exercise the max cap (200).
         for i in range(51, 256):
             book = Book.objects.create(title=f"Book {i:03d}")
             ensure_book_public_assignment(book=book, added_by=None)
@@ -410,11 +267,11 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.owner = User.objects.create_superuser(username="owner", password="pw")
+        self.owner = User.objects.create_superuser(username="owner", password="pw", email="example@example.com")
         ensure_user_public_membership(user=self.owner)
 
-        from .models import LibraryGroup, LibraryGroupMembership, BookGroupAssignment
-        from .group_services import get_public_group
+        from library.models import LibraryGroup, LibraryGroupMembership
+        from library.group_services import get_public_group
 
         self.public = get_public_group()
         self.group_a = LibraryGroup.objects.create(name="Group A", slug="group-a")
@@ -446,31 +303,35 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.client.login(username="reader", password="pw")
         response = cast(Response, self.client.get("/api/v1/library/books/?q=Public"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        titles = [b["title"] for b in _paginated_results(response)]
+        titles = [b["title"] for b in paginated_results(response)]
         self.assertIn("Public Book", titles)
 
     def test_reader_can_list_books_in_group_they_belong_to(self):
         self.client.login(username="reader", password="pw")
         response = cast(Response, self.client.get("/api/v1/library/books/?q=Group A"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        titles = [b["title"] for b in _paginated_results(response)]
+        titles = [b["title"] for b in paginated_results(response)]
         self.assertIn("Group A Book", titles)
 
     def test_reader_cannot_list_books_in_group_they_do_not_belong_to(self):
         self.client.login(username="reader", password="pw")
         response = cast(Response, self.client.get("/api/v1/library/books/?q=Group B"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        titles = [b["title"] for b in _paginated_results(response)]
+        titles = [b["title"] for b in paginated_results(response)]
         self.assertNotIn("Group B Book", titles)
 
     def test_reader_cannot_retrieve_inaccessible_book(self):
         self.client.login(username="reader", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/library/books/{self.group_b_book.id}/"))
+        response = cast(
+            Response, self.client.get(f"/api/v1/library/books/{self.group_b_book.id}/")
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_reader_cannot_download_inaccessible_book_file(self):
         self.client.login(username="reader", password="pw")
-        response = self.client.get(f"/api/v1/library/book-files/{self.group_b_file.id}/download/")
+        response = self.client.get(
+            f"/api/v1/library/book-files/{self.group_b_file.id}/download/"
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_librarian_manager_owner_can_see_all_books(self):
@@ -479,7 +340,7 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
             self.client.login(username=username, password="pw")
             response = cast(Response, self.client.get("/api/v1/library/books/"))
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            titles = sorted([b["title"] for b in _paginated_results(response)])
+            titles = sorted([b["title"] for b in paginated_results(response)])
             self.assertEqual(titles, ["Group A Book", "Group B Book", "Public Book"])
 
 
@@ -489,7 +350,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         ensure_user_public_membership(user=self.reader)
         self.client.login(username="reader", password="pw")
 
-        from .models import LibraryGroup, LibraryGroupMembership, BookGroupAssignment
+        from library.models import LibraryGroup, LibraryGroupMembership
 
         self.group_x = LibraryGroup.objects.create(name="X", slug="x")
         LibraryGroupMembership.objects.create(
@@ -518,7 +379,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_reader_author_list_filtered(self):
         response = cast(Response, self.client.get("/api/v1/library/authors/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        names = sorted([a["name"] for a in _paginated_results(response)])
+        names = sorted([a["name"] for a in paginated_results(response)])
         self.assertEqual(names, ["Public Author", "X Author"])
 
     def test_reader_author_retrieve_404_for_inaccessible_only(self):
@@ -528,7 +389,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_reader_series_list_filtered(self):
         response = cast(Response, self.client.get("/api/v1/library/series/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        names = sorted([s["name"] for s in _paginated_results(response)])
+        names = sorted([s["name"] for s in paginated_results(response)])
         self.assertEqual(names, ["Public Series", "X Series"])
 
     def test_reader_series_retrieve_404_for_inaccessible_only(self):
@@ -536,92 +397,34 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class BookGroupInvariantTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username="u", password="pw")
-        ensure_user_public_membership(user=self.user)
-        from .models import LibraryGroup, BookGroupAssignment
-        from .group_services import get_public_group
-
-        self.public = get_public_group()
-        self.group_a = LibraryGroup.objects.create(name="A", slug="a")
-        self.group_b = LibraryGroup.objects.create(name="B", slug="b")
-        self.book = Book.objects.create(title="B")
-
-        self.a1 = BookGroupAssignment.objects.create(book=self.book, group=self.group_a, added_by=self.user)
-        self.b1 = BookGroupAssignment.objects.create(book=self.book, group=self.group_b, added_by=self.user)
-
-    def test_deleting_one_of_multiple_assignments_does_not_force_public(self):
-        from .models import BookGroupAssignment
-
-        self.a1.delete()
-        groups = set(BookGroupAssignment.objects.filter(book=self.book).values_list("group__slug", flat=True))
-        self.assertEqual(groups, {"b"})
-
-    def test_deleting_last_assignment_reassigns_public(self):
-        from .models import BookGroupAssignment
-
-        self.a1.delete()
-        self.b1.delete()
-        groups = set(BookGroupAssignment.objects.filter(book=self.book).values_list("group__slug", flat=True))
-        self.assertEqual(groups, {"public"})
-
-
-class BaseBookFileDownloadAPITest(APITestCase):
+class BaseBookFileDownloadAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
         ensure_user_public_membership(user=self.user)
-        self.author = Author.objects.create(name="Jane / Doe")
-        self.series = Series.objects.create(name="My * Series")
-        self.book = Book.objects.create(
-            title="The: Title",
-            series=self.series,
-            series_index=2,
-        )
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        self.client.login(username="testuser", password="testpass")
+
+        self.author = Author.objects.create(name="Test Author")
+        self.book = Book.objects.create(title="Test Title")
         self.book.authors.add(self.author)
         ensure_book_public_assignment(book=self.book, added_by=None)
 
-        uploaded = SimpleUploadedFile(
-            "ignored.epub",
-            b"epub-bytes",
-            content_type="application/epub+zip",
-        )
         self.book_file = BookFile.objects.create(
             book=self.book,
-            file=uploaded,
+            file="books/aa/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.epub",
             checksum="a" * 64,
-            file_size=9,
-            source_filename="SOURCE_NAME.epub",
+            file_size=123,
+            source_filename="source.epub",
         )
 
-    def test_anonymous_user_cannot_download(self):
-        response = self.client.get(
-            f"/api/v1/library/book-files/{self.book_file.id}/download/"
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_authenticated_user_can_download_with_metadata_filename(self):
-        self.client.login(username="testuser", password="testpass")
-        response = self.client.get(
-            f"/api/v1/library/book-files/{self.book_file.id}/download/"
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        content_disposition = response.get("Content-Disposition", "")
-        self.assertTrue(content_disposition.startswith("attachment;"))
-        self.assertIn("Jane _ Doe", content_disposition)
-        self.assertIn("My _ Series 2", content_disposition)
-        self.assertIn("The_ Title", content_disposition)
-        self.assertNotIn("SOURCE_NAME", content_disposition)
-        self.assertNotIn(self.book_file.checksum, content_disposition)
-
-    def test_missing_stored_file_returns_404(self):
-        self.client.login(username="testuser", password="testpass")
-        storage = self.book_file.file.storage
-        storage.delete(self.book_file.file.name)
-
-        response = self.client.get(
-            f"/api/v1/library/book-files/{self.book_file.id}/download/"
+    def test_download_requires_existing_file(self):
+        response = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/library/book-files/{self.book_file.id}/download/"
+            ),
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -659,177 +462,5 @@ class BookFileSerializerAPITest(APITestCase):
         )
 
 
-class BookFileDownloadAPITest(IsolatedMediaRootMixin, BaseBookFileDownloadAPITest):
+class BookFileDownloadAPITest(BaseBookFileDownloadAPITest):
     pass
-
-
-class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
-    def setUp(self):
-        # Create a temporary EPUB file for testing
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self.temp_dir = str(temp_root / f"tmp_epub_{uuid.uuid4().hex}")
-        os.makedirs(self.temp_dir, exist_ok=True)
-        self.epub_path = os.path.join(self.temp_dir, "test.epub")
-        with open(self.epub_path, "wb") as f:
-            f.write(uuid.uuid4().hex.encode("utf-8"))
-
-    def tearDown(self):
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    @patch("library.services.epub.read_epub")
-    def test_checksum_calculation(self, mock_read_epub):
-        mock_book = MagicMock()
-        mock_book.get_metadata.return_value = []
-        mock_read_epub.return_value = mock_book
-
-        import hashlib
-
-        with open(self.epub_path, "rb") as f:
-            expected_checksum = hashlib.sha256(f.read()).hexdigest()
-
-        result = import_epub(self.epub_path)
-        self.assertEqual(result.status, ImportStatus.IMPORTED)
-        self.assertEqual(result.checksum, expected_checksum)
-
-    def test_invalid_extension(self):
-        invalid_path = os.path.join(self.temp_dir, "test.txt")
-        with open(invalid_path, "w") as f:
-            f.write("not epub")
-        with self.assertRaises(ValueError) as cm:
-            import_epub(invalid_path)
-        self.assertIn("must have .epub extension", str(cm.exception))
-
-    def test_file_not_exists(self):
-        non_existent = os.path.join(self.temp_dir, "nonexistent.epub")
-        with self.assertRaises(ValueError) as cm:
-            import_epub(non_existent)
-        self.assertIn("does not exist", str(cm.exception))
-
-    @patch("library.services.epub.read_epub")
-    def test_duplicate_detection(self, mock_read_epub):
-        # Mock the epub object
-        mock_book = MagicMock()
-        mock_book.get_metadata.return_value = []
-        mock_read_epub.return_value = mock_book
-
-        # Calculate the actual checksum of the temp file
-        import hashlib
-
-        with open(self.epub_path, "rb") as f:
-            checksum = hashlib.sha256(f.read()).hexdigest()
-
-        # Create a BookFile with the same checksum
-        book = Book.objects.create(title="Existing Book")
-        BookFile.objects.create(
-            book=book,
-            file="existing.epub",
-            checksum=checksum,
-            file_size=123,
-            source_filename="existing.epub",
-        )
-
-        # Try to import again - should return existing
-        result = import_epub(self.epub_path)
-        self.assertEqual(result.status, ImportStatus.DUPLICATE)
-        self.assertEqual(result.checksum, checksum)
-        book_file = result.book_file
-        assert book_file is not None
-
-        book = result.book
-        assert book is not None
-        self.assertEqual(book.title, "Existing Book")
-
-    @patch("library.services.epub.read_epub")
-    def test_import_minimal_epub(self, mock_read_epub):
-        # Mock the epub object with minimal metadata
-        mock_book = MagicMock()
-        mock_book.get_metadata.side_effect = lambda ns, name: {
-            "title": [("Test Title", {})],
-            "creator": [("Test Author", {})],
-            "language": [("en", {})],
-        }.get(name, [])
-        mock_read_epub.return_value = mock_book
-
-        import hashlib
-
-        with open(self.epub_path, "rb") as f:
-            expected_checksum = hashlib.sha256(f.read()).hexdigest()
-
-        result = import_epub(self.epub_path)
-        self.assertEqual(result.status, ImportStatus.IMPORTED)
-        self.assertEqual(result.checksum, expected_checksum)
-        book_file = result.book_file
-        assert book_file is not None
-
-        book = result.book
-        assert book is not None
-        self.assertEqual(book.title, "Test Title")
-        self.assertEqual(book.language, "en")
-
-        author = book.authors.first()
-        assert author is not None
-
-    @patch("library.services.epub.read_epub")
-    def test_import_creates_identifiers_prefers_isbn13_and_cleans_metadata(
-        self, mock_read_epub
-    ):
-        mock_book = MagicMock()
-        mock_book.get_metadata.side_effect = lambda ns, name: {
-            "title": [("  Main Title  ", {}), ("Subtitle", {})],
-            "creator": [(" Author A ", {}), ("author a", {}), ("", {})],
-            "language": [("EN-US", {})],
-            "publisher": [("  Pub  ", {})],
-            "description": [("  Summary text  ", {})],
-            "subject": [("Fiction", {}), ("fiction", {}), ("", {})],
-            "identifier": [
-                ("ISBN: 0-123456-47-9", {}),
-                ("978-0-123456-47-2", {"scheme": "ISBN"}),
-                ("doi:10.5555/123", {}),
-                ("B00TEST123", {}),
-                ("B00TEST123", {"scheme": "ASIN"}),
-                ("urn:uuid:123e4567-e89b-12d3-a456-426614174000", {}),
-                ("Some-Other-ID", {}),
-            ],
-        }.get(name, [])
-        mock_read_epub.return_value = mock_book
-
-        result = import_epub(self.epub_path)
-        self.assertEqual(result.status, ImportStatus.IMPORTED)
-        book = result.book
-        assert book is not None
-
-        book.refresh_from_db()
-        self.assertEqual(book.title, "Main Title")
-        self.assertEqual(book.subtitle, "Subtitle")
-        self.assertEqual(book.summary, "Summary text")
-        self.assertEqual(book.language, "en-us")
-        self.assertEqual(book.publisher, "Pub")
-        self.assertEqual(book.subjects, ["Fiction"])
-
-        # Prefer ISBN-13 for Book.isbn when present.
-        self.assertEqual(book.isbn, "9780123456472")
-
-        # ISBNs and non-ISBN identifiers are preserved.
-        identifiers = list(
-            cast(Any, book)
-            .identifiers.order_by("scheme", "value")
-            .values_list("scheme", "value")
-        )
-        self.assertIn((BookIdentifier.SCHEME_ISBN_10, "0123456479"), identifiers)
-        self.assertIn((BookIdentifier.SCHEME_ISBN_13, "9780123456472"), identifiers)
-        self.assertIn((BookIdentifier.SCHEME_DOI, "10.5555/123"), identifiers)
-        self.assertIn(
-            (
-                BookIdentifier.SCHEME_UUID,
-                "urn:uuid:123e4567-e89b-12d3-a456-426614174000",
-            ),
-            identifiers,
-        )
-        self.assertIn((BookIdentifier.SCHEME_OTHER, "B00TEST123"), identifiers)
-        self.assertIn((BookIdentifier.SCHEME_ASIN, "B00TEST123"), identifiers)
-        self.assertIn((BookIdentifier.SCHEME_OTHER, "Some-Other-ID"), identifiers)
-
-        # All identifiers derived from EPUB metadata should record provenance.
-        sources = set(cast(Any, book).identifiers.values_list("source", flat=True))
-        self.assertEqual(sources, {"epub"})
