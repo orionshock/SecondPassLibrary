@@ -11,10 +11,22 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class CurrentUserSerializer(serializers.Serializer):
+    class GroupSummarySerializer(serializers.Serializer):
+        id = serializers.UUIDField()
+        name = serializers.CharField()
+        slug = serializers.SlugField()
+        discoverability = serializers.ChoiceField(choices=["listed", "unlisted"])
+        membership_role = serializers.ChoiceField(choices=["reader", "curator"])
+        is_public_group = serializers.BooleanField()
+
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
     profile_id = serializers.UUIDField()
     role = serializers.CharField()
+    is_owner = serializers.BooleanField()
+    capabilities = serializers.DictField(child=serializers.BooleanField())
+    groups = GroupSummarySerializer(many=True)
+    curated_group_ids = serializers.ListField(child=serializers.UUIDField())
 
 
 class ManagedUserSerializer(serializers.Serializer):

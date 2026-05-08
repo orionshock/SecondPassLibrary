@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
+from library.models import LibraryGroup, LibraryGroupMembership, PUBLIC_GROUP_SLUG
 
 
 User = get_user_model()
@@ -55,6 +56,83 @@ class ManagedUsersAPITest(APITestCase):
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(data["username"], "reader")
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
+        self.assertFalse(data["is_owner"])
+        self.assertIn("capabilities", data)
+        capabilities = cast(Mapping[str, Any], data["capabilities"])
+        self.assertFalse(capabilities["can_manage_users"])
+        self.assertFalse(capabilities["can_manage_library"])
+        self.assertFalse(capabilities["can_import_books"])
+        self.assertFalse(capabilities["can_create_library_groups"])
+        self.assertFalse(capabilities["can_manage_group_memberships"])
+        self.assertFalse(capabilities["can_manage_group_identity"])
+        self.assertFalse(capabilities["can_edit_group_presentation"])
+        self.assertFalse(capabilities["can_access_imports"])
+
+        groups = cast(list[dict[str, Any]], data["groups"])
+        self.assertGreaterEqual(len(groups), 1)
+        public_groups = [g for g in groups if g["slug"] == PUBLIC_GROUP_SLUG]
+        self.assertEqual(len(public_groups), 1)
+        self.assertTrue(public_groups[0]["is_public_group"])
+        self.assertEqual(public_groups[0]["membership_role"], LibraryGroupMembership.ROLE_READER)
+        self.assertEqual(data["curated_group_ids"], [])
+
+    def test_me_capabilities_manager(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertFalse(data["is_owner"])
+        capabilities = cast(Mapping[str, Any], data["capabilities"])
+        self.assertTrue(capabilities["can_manage_users"])
+        self.assertTrue(capabilities["can_manage_library"])
+        self.assertTrue(capabilities["can_import_books"])
+        self.assertTrue(capabilities["can_create_library_groups"])
+        self.assertTrue(capabilities["can_manage_group_memberships"])
+        self.assertTrue(capabilities["can_manage_group_identity"])
+        self.assertTrue(capabilities["can_edit_group_presentation"])
+        self.assertTrue(capabilities["can_access_imports"])
+
+    def test_me_capabilities_owner(self):
+        self.client.login(username="owner", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertTrue(data["is_owner"])
+        capabilities = cast(Mapping[str, Any], data["capabilities"])
+        self.assertTrue(capabilities["can_manage_users"])
+        self.assertTrue(capabilities["can_manage_library"])
+        self.assertTrue(capabilities["can_import_books"])
+        self.assertTrue(capabilities["can_create_library_groups"])
+        self.assertTrue(capabilities["can_manage_group_memberships"])
+        self.assertTrue(capabilities["can_manage_group_identity"])
+        self.assertTrue(capabilities["can_edit_group_presentation"])
+        self.assertTrue(capabilities["can_access_imports"])
+
+    def test_me_curator_reader_has_scoped_group_presentation_power(self):
+        group = LibraryGroup.objects.create(
+            name="Fantasy Club",
+            slug="fantasy-club",
+            discoverability=LibraryGroup.DISCOVERABILITY_LISTED,
+        )
+        LibraryGroupMembership.objects.create(
+            user=self.reader,
+            group=group,
+            role=LibraryGroupMembership.ROLE_CURATOR,
+        )
+
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertEqual(data["role"], UserProfile.ROLE_READER)
+
+        capabilities = cast(Mapping[str, Any], data["capabilities"])
+        self.assertFalse(capabilities["can_manage_library"])
+        self.assertFalse(capabilities["can_manage_users"])
+        self.assertTrue(capabilities["can_edit_group_presentation"])
+
+        curated_group_ids = cast(list[str], data["curated_group_ids"])
+        self.assertIn(str(group.id), curated_group_ids)
 
     def test_reader_and_librarian_cannot_access_user_management_endpoints(self):
         self.client.login(username="reader", password="pw")
@@ -263,4 +341,3 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-

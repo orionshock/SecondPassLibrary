@@ -14,7 +14,11 @@ from .serializers import (
     ManagedUserSerializer,
     UserProfileSerializer,
 )
-from .services import get_or_create_profile, update_user_via_management_api
+from .services import (
+    build_current_user_me_payload,
+    get_or_create_profile,
+    update_user_via_management_api,
+)
 from core import policies
 
 
@@ -38,13 +42,7 @@ class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        payload = {
-            "username": request.user.get_username(),
-            "email": request.user.email or "",
-            "profile_id": profile.id,
-            "role": profile.role,
-        }
+        payload = build_current_user_me_payload(user=request.user)
         serializer = CurrentUserSerializer(payload)
         return Response(serializer.data)
 

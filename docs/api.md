@@ -42,6 +42,39 @@ Response shape:
 - `GET /api/v1/accounts/me/`
 - Users (Owner/Manager only): `GET /api/v1/accounts/users/`, `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
 
+### `GET /api/v1/accounts/me/` response
+
+`/accounts/me/` is intended to be the UI bootstrap endpoint for authenticated clients:
+
+- Who am I?
+- What global role do I have?
+- What broad capabilities do I have? (UI hints)
+- Which LibraryGroups am I a member of?
+- Which groups do I curate (if any)?
+
+The response includes a `capabilities` object that provides **high-level UI hints only**. Authorization is still enforced by the specific endpoint policies; clients must not assume that a `true` capability guarantees any particular request will succeed.
+
+Current `capabilities` keys:
+
+- `can_manage_users`
+- `can_manage_library`
+- `can_import_books`
+- `can_create_library_groups`
+- `can_manage_group_memberships` (broad, role-level)
+- `can_manage_group_identity` (broad, role-level; Public remains protected)
+- `can_edit_group_presentation` (broad; includes scoped curator power when applicable)
+- `can_access_imports`
+
+It also includes a `groups` array listing the caller’s `LibraryGroupMembership`s.
+
+Each `groups[]` item includes:
+
+- `id`, `name`, `slug`, `discoverability`
+- `membership_role` (`reader` / `curator`)
+- `is_public_group`
+
+If the user is a curator of any non-Public group, `curated_group_ids` lists the group IDs where they have scoped curator powers.
+
 ## Library
 
 - Books: `GET /api/v1/library/books/`, `GET /api/v1/library/books/<id>/`

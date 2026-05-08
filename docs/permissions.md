@@ -53,6 +53,12 @@ User management is intentionally limited:
 - `GET /api/v1/accounts/users/<id>/`
 - `PATCH /api/v1/accounts/users/<id>/` (no create/delete/password endpoints)
 
+### `/api/v1/accounts/me/` capability hints
+
+`GET /api/v1/accounts/me/` includes a `capabilities` object and the caller’s `groups` memberships to help future UIs decide what to show.
+
+These are **broad hints**, not a replacement for policy enforcement. Every endpoint still enforces authorization via the specific `core.policies` helpers.
+
 Rules:
 
 - Owner can manage all users, but cannot deactivate themselves via the API.

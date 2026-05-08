@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 
 from core import policies
+from library.models import LibraryGroupMembership, is_public_group
 
 from .models import UserProfile
 
@@ -96,3 +97,60 @@ def update_user_via_management_api(
 
     return UserUpdateResult(user=target_user, profile=profile)
 
+
+def build_current_user_me_payload(*, user) -> dict[str, Any]:
+    profile = get_or_create_profile(user=user)
+
+    memberships = list(
+        LibraryGroupMembership.objects.select_related("group")
+        .filter(user=user)
+        .order_by("group__name", "group__slug")
+    )
+
+    groups: list[dict[str, Any]] = []
+    curated_group_ids: list[Any] = []
+    for membership in memberships:
+        group = membership.group
+        public = is_public_group(group)
+        groups.append(
+            {
+                "id": group.id,
+                "name": group.name,
+                "slug": group.slug,
+                "discoverability": group.discoverability,
+                "membership_role": membership.role,
+                "is_public_group": public,
+            }
+        )
+        if (
+            membership.role == LibraryGroupMembership.ROLE_CURATOR
+            and not public
+        ):
+            curated_group_ids.append(group.id)
+
+    can_manage_users = policies.can_manage_users(user)
+    can_manage_library = policies.can_manage_library(user)
+    can_import_books = policies.can_import_books(user)
+    can_create_library_groups = policies.can_create_library_group(user)
+
+    capabilities = {
+        "can_manage_users": can_manage_users,
+        "can_manage_library": can_manage_library,
+        "can_import_books": can_import_books,
+        "can_create_library_groups": can_create_library_groups,
+        "can_manage_group_memberships": can_manage_users,
+        "can_manage_group_identity": can_manage_users,
+        "can_edit_group_presentation": bool(can_manage_library or curated_group_ids),
+        "can_access_imports": bool(can_import_books or can_manage_library),
+    }
+
+    return {
+        "username": user.get_username(),
+        "email": user.email or "",
+        "profile_id": profile.id,
+        "role": profile.role,
+        "is_owner": policies.is_owner(user),
+        "capabilities": capabilities,
+        "groups": groups,
+        "curated_group_ids": curated_group_ids,
+    }
