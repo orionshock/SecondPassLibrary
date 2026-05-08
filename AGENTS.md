@@ -252,7 +252,16 @@ For now, the project uses Django's built-in auth for local development, bootstra
 
 This is acceptable.
 
-Do not implement custom password handling.
+Current expectation:
+
+- DRF uses Django session authentication and DRF basic authentication for development/testing convenience.
+- `/api-auth/` exists for the DRF browsable API login/logout flow.
+- Django `/admin/` remains a service hatch (not the product UI).
+
+Guardrails:
+
+- Do not add, replace, or redesign authentication/authorization systems without explicit instruction.
+- Do not implement custom password handling.
 
 Long-term, the project may support external authentication such as OIDC, auth proxy, or trusted auth headers, but this is not required yet.
 

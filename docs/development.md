@@ -30,6 +30,24 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+## Authentication (current)
+
+Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
+
+- **Django session authentication** (browser-based development and the DRF browsable API)
+- **DRF basic authentication** (convenience for local development/testing)
+- **DRF browsable API login/logout** at `/api-auth/login/` and `/api-auth/logout/`
+- **Django admin authentication** at `/admin/` (a service hatch; not the product UI)
+
+Practical notes:
+
+- Use `/api-auth/login/` to authenticate in the browsable API.
+- Use `/admin/` to access the Django admin (requires an admin/superuser account).
+- For non-browser API clients in local development, Basic auth is often the simplest option.
+- If Basic auth remains enabled outside `localhost`, use HTTPS so credentials are not sent over plaintext.
+
+Basic auth should not be treated as the final production/client authentication strategy.
+
 ## Run checks and tests
 
 ```powershell

@@ -2,6 +2,21 @@
 
 All endpoints are under `/api/v1/` and require authentication unless stated otherwise.
 
+## Authentication
+
+All `/api/v1/` endpoints require authentication unless a specific endpoint explicitly documents anonymous access.
+
+Current supported (development) authentication methods:
+
+- Django session authentication (browser-based development + DRF browsable API)
+- DRF basic authentication (convenience for local development/testing)
+- DRF browsable API login/logout via `/api-auth/`
+- Django admin authentication via `/admin/` (service hatch; not the product UI)
+
+Basic auth is enabled for convenience and should not be treated as the final production/client authentication strategy.
+
+See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction.
+
 ## Pagination
 
 List endpoints are paginated by default using page-number pagination.
