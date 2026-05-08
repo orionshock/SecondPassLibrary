@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
+from core.errors import ErrorCode, api_error_payload
+
 from .models import UserProfile
+from core.errors import ErrorCode, api_error_payload
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -62,5 +65,12 @@ class ManagedUserPatchSerializer(serializers.Serializer):
         forbidden = {"password", "user_permissions", "groups", "is_superuser", "is_staff", "username"}
         present = forbidden.intersection(set(initial.keys()))
         if present:
-            raise serializers.ValidationError({"detail": "This endpoint only supports profile-safe fields."})
+            raise serializers.ValidationError(
+                api_error_payload(
+                    code=ErrorCode.UNSAFE_FIELD,
+                    message="This endpoint only supports profile-safe fields.",
+                    detail=f"Unsupported field(s): {', '.join(sorted(present))}.",
+                    hint="Use only: email, first_name, last_name, is_active, role.",
+                )
+            )
         return super().validate(attrs)

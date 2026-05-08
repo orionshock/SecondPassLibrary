@@ -17,6 +17,30 @@ Basic auth is enabled for convenience and should not be treated as the final pro
 
 See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction.
 
+## Error responses
+
+Second Pass Library uses two broad categories of error responses:
+
+1. **Project-specific custom errors** (hand-crafted responses from views/services) use a consistent envelope:
+
+```json
+{
+  "error": {
+    "code": "SOME_STABLE_CODE",
+    "message": "Human readable message.",
+    "detail": "Optional technical/context detail.",
+    "hint": "Optional user/admin hint."
+  }
+}
+```
+
+2. **Standard DRF serializer validation errors** generally keep DRF’s default field-error shape for now.
+
+Notes:
+
+- Some endpoints intentionally return `404 Not Found` for resources the user cannot access to avoid leaking existence. This is by design in a few places (see `docs/permissions.md`).
+- The `error` envelope is a UI hint for consistent messaging; it does not replace authorization checks on the actual endpoint being called.
+
 ## Pagination
 
 List endpoints are paginated by default using page-number pagination.

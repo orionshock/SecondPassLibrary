@@ -42,6 +42,7 @@ from .group_services import (
     remove_book_from_group,
 )
 from core import policies
+from core.errors import ErrorCode, api_error_response
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -249,15 +250,23 @@ class ImportJobViewSet(
             raise PermissionDenied("Not allowed.")
         uploaded = request.FILES.get("file")
         if uploaded is None:
-            return Response(
-                {"detail": 'Missing multipart upload field "file".'},
-                status=status.HTTP_400_BAD_REQUEST,
+            return api_error_response(
+                code=ErrorCode.MISSING_UPLOAD_FILE,
+                message='Missing multipart upload field "file".',
+                hint='Send a multipart/form-data request with a "file" field containing a .epub or .zip.',
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
         try:
             job = create_import_job_from_upload(user=request.user, uploaded_file=uploaded)
             job = process_import_job(job=job)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return api_error_response(
+                code=ErrorCode.INVALID_UPLOAD_TYPE,
+                message="Invalid upload type.",
+                detail=str(e),
+                hint="Upload must be a .epub or .zip file.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -335,7 +344,13 @@ class LibraryGroupViewSet(
         payload = request.data or {}
         book_id = payload.get("book")
         if not book_id:
-            return Response({"detail": "Missing 'book'."}, status=status.HTTP_400_BAD_REQUEST)
+            return api_error_response(
+                code=ErrorCode.INVALID_REQUEST,
+                message="Missing required field.",
+                detail="Missing 'book'.",
+                hint='POST JSON like {"book": "<book_id>"}',
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         if policies.can_manage_library(request.user):
             book_qs = Book.objects.all()

@@ -21,6 +21,7 @@ from rest_framework.test import APITestCase
 from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
 from library.models import ImportJob
+from core.errors import ErrorCode
 
 
 class IsolatedImportsMixin:
@@ -119,6 +120,35 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
         self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_missing_upload_file_returns_error_envelope(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        self.client.login(username="u1", password="pw")
+
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={}, format="multipart")
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = _response_data_dict(response)
+        self.assertIn("error", data)
+        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.MISSING_UPLOAD_FILE)
+
+    def test_invalid_upload_type_returns_error_envelope(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        self.client.login(username="u1", password="pw")
+
+        bad = SimpleUploadedFile("bad.txt", b"x", content_type="text/plain")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": bad}, format="multipart")
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = _response_data_dict(response)
+        self.assertIn("error", data)
+        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_UPLOAD_TYPE)
 
     @patch("library.services.epub.read_epub")
     def test_authenticated_can_upload_single_epub_and_stages_with_generated_name(self, mock_read_epub):
@@ -236,4 +266,3 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
 
 def cast_response(resp) -> Response:
     return resp  # DRF test client returns Response already
-

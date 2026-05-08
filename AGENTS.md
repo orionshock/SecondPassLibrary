@@ -279,6 +279,8 @@ Global in-app roles are `manager`, `librarian`, and `reader` (stored on `UserPro
 
 Prefer clear, stable, user-helpful errors.
 
+For custom API errors (where the view is hand-crafting a Response), prefer the helpers in `core/errors.py` (`api_error_payload`, `api_error_response`) so custom errors consistently use the `{"error": {...}}` envelope.
+
 Future direction:
 
 ```json

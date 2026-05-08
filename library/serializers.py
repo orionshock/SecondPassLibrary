@@ -4,6 +4,7 @@ from rest_framework.reverse import reverse
 from typing import Any, cast
 
 from core import policies
+from core.errors import ErrorCode, api_error_payload
 from .models import (
     Author,
     Book,
@@ -262,7 +263,14 @@ class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         initial = getattr(self, "initial_data", {}) or {}
         if "name" in initial or "slug" in initial:
-            raise serializers.ValidationError({"detail": "Only 'description' and 'discoverability' can be updated."})
+            raise serializers.ValidationError(
+                api_error_payload(
+                    code=ErrorCode.GROUP_IDENTITY_IMMUTABLE,
+                    message="Group identity fields cannot be updated via this endpoint.",
+                    detail="Only 'description' and 'discoverability' can be updated.",
+                    hint="Use PATCH with only 'description' and/or 'discoverability'.",
+                )
+            )
         return super().validate(attrs)
 
     def update(self, instance: LibraryGroup, validated_data: dict[str, Any]):

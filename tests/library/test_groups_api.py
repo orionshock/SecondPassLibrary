@@ -16,6 +16,7 @@ from library.group_services import (
     get_public_group,
 )
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from core.errors import ErrorCode
 
 
 User = get_user_model()
@@ -217,6 +218,18 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         )
         self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_group_books_post_missing_book_returns_error_envelope(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(
+            Response,
+            self.client.post(f"/api/v1/library/groups/{self.group.id}/books/", data={}, format="json"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIsNotNone(response.data)
+        payload = cast(dict[str, Any], response.data)
+        self.assertIn("error", payload)
+        self.assertEqual(cast(dict[str, Any], payload["error"])["code"], ErrorCode.INVALID_REQUEST)
+
     def test_curator_can_add_visible_book_to_their_non_public_group(self):
         self.client.login(username="curator", password="pw")
         response = cast(
@@ -337,11 +350,19 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         self.client.login(username="manager", password="pw")
         response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"name": "NEW"}, format="json"))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIsNotNone(response.data)
+        payload = cast(dict[str, Any], response.data)
+        self.assertIn("error", payload)
+        self.assertEqual(cast(dict[str, Any], payload["error"])["code"], ErrorCode.GROUP_IDENTITY_IMMUTABLE)
         self.group.refresh_from_db()
         self.assertEqual(self.group.name, "Group")
 
         response2 = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"slug": "new-slug"}, format="json"))
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIsNotNone(response2.data)
+        payload2 = cast(dict[str, Any], response2.data)
+        self.assertIn("error", payload2)
+        self.assertEqual(cast(dict[str, Any], payload2["error"])["code"], ErrorCode.GROUP_IDENTITY_IMMUTABLE)
         self.group.refresh_from_db()
         self.assertEqual(self.group.slug, "group")
 
