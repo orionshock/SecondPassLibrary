@@ -15,9 +15,9 @@ Keep business logic out of framework glue:
 
 ```text
 views.py / commands.py / admin.py
-  → call services.py
-  → services.py performs domain operation
-  → models.py stores state
+  -> call services.py
+  -> services.py performs domain operation
+  -> models.py stores state
 ```
 
 Avoid putting workflows in serializers, viewsets, `Model.save()`, admin classes, or signals (signals are reserved for small framework-adjacent behavior).

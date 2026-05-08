@@ -39,11 +39,16 @@ Manager can:
 - manage LibraryGroup identity, subject to Public restrictions
 - perform all Librarian-level book/library operations
 
+API note (current implementation):
+
+- Some of the above are capability/policy direction. The current public REST API does **not** yet expose LibraryGroup create/delete or membership-management endpoints.
+- For now, group creation and membership management are handled via the Django admin/service hatch for operators.
+
 Manager cannot (unless also Owner):
 
 - promote users to Manager
 - demote existing Managers
-- change Public’s fixed identity/discoverability
+- change Public's fixed identity/discoverability
 
 ## User management API (narrow)
 
@@ -55,7 +60,7 @@ User management is intentionally limited:
 
 ### `/api/v1/accounts/me/` capability hints
 
-`GET /api/v1/accounts/me/` includes a `capabilities` object and the caller’s `groups` memberships to help future UIs decide what to show.
+`GET /api/v1/accounts/me/` includes a `capabilities` object and the caller's `groups` memberships to help future UIs decide what to show.
 
 These are **broad hints**, not a replacement for policy enforcement. Every endpoint still enforces authorization via the specific `core.policies` helpers.
 
@@ -215,6 +220,11 @@ When exposing groups through the API:
 - Group curation endpoints should call the safe group curation services above.
 - Group presentation updates should be limited to `description` and `discoverability` via `PATCH /api/v1/library/groups/<group_id>/`.
   - Public allows description-only edits by Owner/Manager/Librarian; Public discoverability is fixed.
+
+Not implemented yet (by design, for now):
+
+- No public API for creating/deleting LibraryGroups.
+- No public API for managing group memberships (add/remove users, assign curator roles).
 
 ## Shelves are separate (future)
 

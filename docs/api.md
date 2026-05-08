@@ -34,7 +34,7 @@ Second Pass Library uses two broad categories of error responses:
 }
 ```
 
-2. **Standard DRF serializer validation errors** generally keep DRF’s default field-error shape for now.
+2. **Standard DRF serializer validation errors** generally keep DRF's default field-error shape for now.
 
 Notes:
 
@@ -64,7 +64,8 @@ Response shape:
 ## Accounts
 
 - `GET /api/v1/accounts/me/`
-- Users (Owner/Manager only): `GET /api/v1/accounts/users/`, `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
+- Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
+- Users (Owner/Manager only): `GET /api/v1/accounts/users/` (paginated), `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
 
 ### `GET /api/v1/accounts/me/` response
 
@@ -89,7 +90,7 @@ Current `capabilities` keys:
 - `can_edit_group_presentation` (broad; includes scoped curator power when applicable)
 - `can_access_imports`
 
-It also includes a `groups` array listing the caller’s `LibraryGroupMembership`s.
+It also includes a `groups` array listing the caller's `LibraryGroupMembership`s.
 
 Each `groups[]` item includes:
 
@@ -101,14 +102,16 @@ If the user is a curator of any non-Public group, `curated_group_ids` lists the 
 
 ## Library
 
-- Books: `GET /api/v1/library/books/`, `GET /api/v1/library/books/<id>/`
-- Book files: `GET /api/v1/library/book-files/`, `GET /api/v1/library/book-files/<id>/`
+- Authors: `GET /api/v1/library/authors/` (paginated), `GET /api/v1/library/authors/<id>/`
+- Series: `GET /api/v1/library/series/` (paginated), `GET /api/v1/library/series/<id>/`
+- Books: `GET /api/v1/library/books/` (paginated), `GET /api/v1/library/books/<id>/`
+- Book files: `GET /api/v1/library/book-files/` (paginated), `GET /api/v1/library/book-files/<id>/`
 - Download: `GET /api/v1/library/book-files/<id>/download/`
 
 ## Imports
 
 - `POST /api/v1/library/imports/`
-- `GET /api/v1/library/imports/`
+- `GET /api/v1/library/imports/` (paginated)
 - `GET /api/v1/library/imports/<id>/`
 
 See `docs/imports.md` for details.
@@ -117,10 +120,10 @@ See `docs/imports.md` for details.
 
 LibraryGroups are access scopes, not shelves. Group book lists still filter each book through `can_view_book(user, book)`.
 
-- `GET /api/v1/library/groups/`
+- `GET /api/v1/library/groups/` (paginated)
 - `GET /api/v1/library/groups/<group_id>/`
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`, `discoverability`)
-- `GET /api/v1/library/groups/<group_id>/books/`
+- `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 
@@ -130,8 +133,13 @@ See `docs/permissions.md` for the visibility/curation rules.
 
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
-- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/`, `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
-- Progress: `GET/PATCH /api/v1/reading/sessions/<session_id>/progress/`
-- Annotations: `/api/v1/reading/annotations/` (soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
+- Devices: `GET /api/v1/reading/devices/` (paginated), `GET /api/v1/reading/devices/<id>/`
+- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
+- Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
+- Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
+
+## Core
+
+- Health check: `GET /api/v1/health/`
 
 See `docs/reading.md` for details.

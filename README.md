@@ -33,7 +33,13 @@ See `docs/development.md` for the full development workflow (including checks/te
 
 ## Importing EPUBs
 
-Use the management command:
+Imports are intended to be API-mediated (product direction):
+
+- `POST /api/v1/library/imports/` (multipart field name: `file`)
+
+See `docs/imports.md` for details and supported upload types.
+
+The management command remains available as a dev/admin utility (host-side):
 
 ```bash
 python manage.py import_epub "path/to/book.epub"

@@ -1,4 +1,4 @@
-# Second Pass Library — Agent Coding Guidelines
+# Second Pass Library - Agent Coding Guidelines
 
 These guidelines exist to keep the codebase simple, maintainable, and aligned with the project goals.
 
@@ -54,9 +54,9 @@ Preferred pattern:
 
 ```text
 views.py / commands.py / admin.py
-  → call services.py
-  → services.py performs business operation
-  → models.py stores state
+  -> call services.py
+  -> services.py performs business operation
+  -> models.py stores state
 ```
 
 Examples:
@@ -128,10 +128,10 @@ Do not use signals for core workflows like importing books, creating reading ses
 Current apps:
 
 ```text
-core      → shared base models, health checks, utilities
-accounts  → user profile, roles, current-user API
-library   → books, authors, series, EPUB files, import
-reading   → devices, reading sessions, progress, annotations
+core      -> shared base models, health checks, utilities
+accounts  -> user profile, roles, current-user API
+library   -> books, authors, series, EPUB files, import
+reading   -> devices, reading sessions, progress, annotations
 ```
 
 Do not create new apps unless there is a clear domain boundary.
@@ -190,7 +190,7 @@ This includes:
 
 ### EPUB locators
 
-Reading locators are stored as flexible JSON for now. Prefer EPUB locators that include CFI and href when available, plus progression (0–1) and optional text quote context (exact/prefix/suffix) to help re-anchor highlights if a CFI fails.
+Reading locators are stored as flexible JSON for now. Prefer EPUB locators that include CFI and href when available, plus progression (0-1) and optional text quote context (exact/prefix/suffix) to help re-anchor highlights if a CFI fails.
 
 Do not add PDF locator support unless explicitly requested.
 
@@ -204,12 +204,12 @@ Expected behavior:
 
 ```text
 Open book for reading
-→ get or create active session
+-> get or create active session
 
 Start over
-→ deactivate old active session
-→ create new active session
-→ preserve old progress and annotations
+-> deactivate old active session
+-> create new active session
+-> preserve old progress and annotations
 ```
 
 `status` describes what happened to a session.

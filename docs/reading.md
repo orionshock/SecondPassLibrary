@@ -4,8 +4,8 @@ Reading metadata is user-owned and must remain durable/exportable.
 
 ## Sessions
 
-- “Open book for reading” uses lazy active-session creation.
-- “Start over” creates a new active session and preserves history.
+- "Open book for reading" uses lazy active-session creation.
+- "Start over" creates a new active session and preserves history.
 
 Sessions are created through the dedicated endpoints below (not via `POST /sessions/`).
 The `/sessions/` API exists for listing/retrieving and limited client-safe metadata edits.
@@ -15,10 +15,21 @@ Endpoints:
 ```text
 GET  /api/v1/reading/books/<book_id>/active-session/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
-GET  /api/v1/reading/sessions/
+GET  /api/v1/reading/sessions/                            (paginated)
 GET  /api/v1/reading/sessions/<session_id>/
 PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...", "notes": "..."})
 ```
+
+### Active session behavior
+
+- If the user already has an active session for the book, `active-session` returns it even if the user later loses current book access (reading data is user-owned and durable).
+- If no active session exists yet, `active-session` creates a new one only when the user can currently view the book.
+- If the user cannot view the book and there is no existing active session, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
+
+### Start-over behavior
+
+- `start-over` requires current book access (the user must be able to view the book).
+- If the user cannot view the book, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
 
 ## Progress
 
@@ -26,6 +37,7 @@ Progress is one-to-one per session (auto-created if missing):
 
 ```text
 GET   /api/v1/reading/sessions/<session_id>/progress/
+PUT   /api/v1/reading/sessions/<session_id>/progress/
 PATCH /api/v1/reading/sessions/<session_id>/progress/
 ```
 
@@ -50,7 +62,7 @@ Locators are flexible JSON. For EPUB, prefer:
   "cfi": "epubcfi(...)",
   "progression": 0.1234,
   "position": 12345,
-  "text": {"exact": "…", "prefix": "…", "suffix": "…"}
+  "text": {"exact": "...", "prefix": "...", "suffix": "..."}
 }
 ```
 
@@ -64,7 +76,21 @@ Notes:
 
 Annotations are stored as `Annotation` records:
 
-- List/create/update: `/api/v1/reading/annotations/`
+- List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
 - Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.
+
+## Devices
+
+Devices are user-scoped records intended for client progress attribution and debugging context.
+
+Endpoints:
+
+```text
+GET    /api/v1/reading/devices/                 (paginated)
+POST   /api/v1/reading/devices/
+GET    /api/v1/reading/devices/<device_id>/
+PATCH  /api/v1/reading/devices/<device_id>/
+DELETE /api/v1/reading/devices/<device_id>/
+```

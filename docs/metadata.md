@@ -14,4 +14,9 @@
 ## Import/cleanup philosophy
 
 - Keep `Book` user-facing fields clean and stable.
-- If raw imported metadata/provenance is needed later, model it separately (don’t overload `Book`).
+- If raw imported metadata/provenance is needed later, model it separately (don't overload `Book`).
+
+## Duplicate detection and filenames
+
+- Duplicate EPUB detection is checksum-driven (file SHA-256), not identifier-driven.
+- Human-readable download filenames are generated from `Book` metadata (not from the stored content-addressed filename).

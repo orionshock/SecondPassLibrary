@@ -10,10 +10,17 @@ Create an import job (multipart field name is `file`):
 POST /api/v1/library/imports/
 ```
 
+### Permissions
+
+Import jobs are currently intended for library managers only:
+
+- Owner / Manager / Librarian can create/list/retrieve import jobs.
+- Readers cannot create/list/retrieve import jobs (they receive `403 Forbidden`).
+
 List import jobs:
 
 ```text
-GET /api/v1/library/imports/
+GET /api/v1/library/imports/   (paginated)
 ```
 
 Get a specific job:
