@@ -1,5 +1,7 @@
 {% extends "web/base.html" %}
 
+{% block page_id %}app{% endblock %}
+
 {% block title %}App · Second Pass Library{% endblock %}
 
 {% block content %}
@@ -25,8 +27,4 @@
     <div id="me-sections" class="muted">Loading…</div>
   </section>
 
-  <script>
-    window.SecondPassUI?.initDashboard?.();
-  </script>
 {% endblock %}
-

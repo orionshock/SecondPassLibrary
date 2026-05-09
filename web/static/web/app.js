@@ -5,20 +5,64 @@
     return (root || document).querySelector(selector);
   }
 
+  function setGlobalError(message) {
+    const el = $("#ui-global-error");
+    if (!el) return;
+    el.textContent = message || "";
+    el.classList.toggle("is-hidden", !message);
+  }
+
+  function setGlobalErrorFromError(error, prefix) {
+    const message = error && error.message ? String(error.message) : "Unknown error.";
+    setGlobalError(prefix ? `${prefix} ${message}` : message);
+  }
+
   async function fetchJSON(url) {
     const response = await fetch(url, {
       method: "GET",
       headers: { Accept: "application/json" },
       credentials: "same-origin",
     });
+
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    const isJson = contentType.includes("application/json");
+
+    let bodyText = "";
+    let bodyJson = null;
+
+    if (isJson) {
+      try {
+        bodyJson = await response.json();
+      } catch (e) {
+        console.error("Failed to parse JSON response", { url, status: response.status, e });
+        throw new Error(`Invalid JSON response (${response.status}).`);
+      }
+    } else {
+      bodyText = await response.text().catch(() => "");
+    }
+
     if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      const error = new Error(`Request failed (${response.status})`);
+      const snippet = (bodyText || "").trim().slice(0, 160);
+      const error = new Error(
+        snippet
+          ? `Request failed (${response.status}): ${snippet}`
+          : `Request failed (${response.status}).`
+      );
       error.status = response.status;
-      error.body = text;
+      error.body = isJson ? bodyJson : bodyText;
       throw error;
     }
-    return await response.json();
+
+    if (!isJson) {
+      const snippet = (bodyText || "").trim().slice(0, 160);
+      throw new Error(
+        snippet
+          ? `Expected JSON but received: ${snippet}`
+          : "Expected JSON but received non-JSON response."
+      );
+    }
+
+    return bodyJson;
   }
 
   function setText(el, text) {
@@ -101,8 +145,10 @@
       setText($('[data-ui="username"]'), me.username || "User");
       updateNavVisibility(me);
       return me;
-    } catch (_e) {
+    } catch (e) {
+      console.error("Failed to load /api/v1/accounts/me/", e);
       setText($('[data-ui="username"]'), "Error");
+      setGlobalErrorFromError(e, "Failed to load identity:");
       return null;
     }
   }
@@ -268,8 +314,10 @@
         prevUrl = payload.previous || null;
         nextBtn.disabled = !nextUrl;
         prevBtn.disabled = !prevUrl;
-      } catch (_e) {
+      } catch (e) {
+        console.error("Failed to load books", { url, e });
         setStatus("Error loading data.", true);
+        setGlobalErrorFromError(e, "Failed to load library:");
         nextUrl = null;
         prevUrl = null;
       }
@@ -315,5 +363,24 @@
     initDashboard,
     initLibraryBrowse,
   };
-})();
 
+  document.addEventListener("DOMContentLoaded", () => {
+    const page = document.body && document.body.dataset ? document.body.dataset.page : "";
+    if (page === "app") {
+      initDashboard().catch((e) => {
+        console.error("initDashboard failed", e);
+        setGlobalErrorFromError(e, "App error:");
+      });
+    } else if (page === "library") {
+      initLibraryBrowse().catch((e) => {
+        console.error("initLibraryBrowse failed", e);
+        setGlobalErrorFromError(e, "Library error:");
+      });
+    } else {
+      loadMeAndInitShell().catch((e) => {
+        console.error("Shell init failed", e);
+        setGlobalErrorFromError(e, "UI error:");
+      });
+    }
+  });
+})();

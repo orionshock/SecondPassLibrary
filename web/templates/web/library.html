@@ -1,5 +1,7 @@
 {% extends "web/base.html" %}
 
+{% block page_id %}library{% endblock %}
+
 {% block title %}Library · Second Pass Library{% endblock %}
 
 {% block content %}
@@ -20,8 +22,4 @@
     <button id="next" class="button" type="button" disabled>Next</button>
   </div>
 
-  <script>
-    window.SecondPassUI?.initLibraryBrowse?.();
-  </script>
 {% endblock %}
-

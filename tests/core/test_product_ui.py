@@ -28,6 +28,10 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get("/app/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Second Pass Library")
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="me-summary"')
+        self.assertContains(response, 'id="ui-global-error"')
 
     def test_unauthenticated_library_redirects_to_login(self):
         response = self.client.get("/library/", follow=False)
@@ -39,6 +43,10 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get("/library/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Second Pass Library")
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="library-results"')
+        self.assertContains(response, 'id="ui-global-error"')
 
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)
@@ -50,4 +58,3 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.post("/api-auth/logout/", follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/")
-

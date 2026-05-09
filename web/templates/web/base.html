@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{% static 'web/app.css' %}" />
     <script defer src="{% static 'web/app.js' %}"></script>
   </head>
-  <body>
+  <body data-page="{% block page_id %}{% endblock %}">
     <header class="topbar">
       <div class="container topbar__inner">
         <a class="brand" href="/app/">Second Pass Library</a>
@@ -29,6 +29,10 @@
       </div>
     </header>
 
+    <div class="container">
+      <div id="ui-global-error" class="error is-hidden" role="alert"></div>
+    </div>
+
     <main class="container">
       {% block content %}{% endblock %}
     </main>
@@ -38,4 +42,3 @@
     </footer>
   </body>
 </html>
-
