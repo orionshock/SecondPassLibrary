@@ -316,7 +316,6 @@ class LibraryGroupViewSet(
 
         return queryset.filter(
             Q(slug="public")
-            | Q(discoverability=LibraryGroup.DISCOVERABILITY_LISTED)
             | Q(memberships__user=user)
         ).distinct()
 

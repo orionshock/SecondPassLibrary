@@ -25,9 +25,6 @@ class GroupCurationServicesTest(TestCase):
     def setUp(self):
         self.public = get_public_group()
         self.assertTrue(is_public_group(self.public))
-        self.assertEqual(
-            self.public.discoverability, LibraryGroup.DISCOVERABILITY_LISTED
-        )
 
         self.owner = User.objects.create_superuser(
             username="owner", email="owner@example.com", password="pw"
@@ -153,4 +150,3 @@ class GroupCurationServicesTest(TestCase):
         self.assertTrue(removed)
         groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group__slug", flat=True))
         self.assertEqual(groups, {"b"})
-

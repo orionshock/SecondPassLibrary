@@ -6,7 +6,7 @@ Key principles:
 
 - Reading metadata is user-owned and durable.
 - LibraryGroups are **access scopes**, not shelves.
-- Access to a book is determined by `LibraryGroupMembership` + `BookGroupAssignment` (not by discoverability).
+- Access to a book is determined by `LibraryGroupMembership` + `BookGroupAssignment`.
 - Business rules should be centralized in policy helpers and service modules (avoid scattered per-view logic).
 
 ## Roles (global)
@@ -48,7 +48,7 @@ Manager cannot (unless also Owner):
 
 - promote users to Manager
 - demote existing Managers
-- change Public's fixed identity/discoverability
+- change Public's fixed identity
 
 ## User management API (narrow)
 
@@ -83,7 +83,7 @@ Librarian can:
 - manage book files
 - assign/remove books from existing LibraryGroups (via safe curation services)
 - edit group presentation fields where allowed
-- edit description/discoverability for non-Public LibraryGroups
+- edit description for non-Public LibraryGroups
 - later: manage group-owned shelves for all groups where applicable
 
 Librarian cannot:
@@ -96,12 +96,11 @@ Librarian cannot:
 - add/remove users from groups
 - assign Curators
 - manage global user roles
-- change Public discoverability
 
 Public-specific librarian rule:
 
 - Librarian may edit Public description only.
-- Librarian may not change Public name, slug, or discoverability.
+- Librarian may not change Public name or slug.
 
 ### Reader
 
@@ -125,7 +124,6 @@ Curator is **not** a global role. It is a group-scoped role on `LibraryGroupMemb
 Curator can, for their assigned **non-Public** LibraryGroup only:
 
 - edit group description
-- edit group discoverability
 - add books they can already view/read to the group
 - remove books from the group
 - later: manage group-owned shelves for that group
@@ -156,26 +154,13 @@ Identity fields:
 Presentation/configuration fields:
 
 - `description`
-- `discoverability`
 
 Rules:
 
 - Name and slug should be treated as immutable in normal product workflows after group creation.
 - Slug should never be changed through normal API/UI.
 - Public name/slug are fixed (see below).
-- Description and discoverability are presentation/configuration fields and may be editable according to role policy.
-- Discoverability controls future UI listing/discovery only.
-- Discoverability does **not** grant book access.
-
-### Discoverability (`listed` / `unlisted`)
-
-- `listed`: may appear in future UI lists/directories
-- `unlisted`: hidden from future UI lists/directories (but still usable by direct link/admin)
-
-Discoverability controls UI discoverability only:
-
-- It does **not** grant access to books.
-- Access is still controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
+- Description is a presentation/configuration field and may be editable according to role policy.
 
 ## Public group
 
@@ -186,7 +171,6 @@ Public is special.
 - Public behavior is based on `PUBLIC_GROUP_SLUG` / `is_public_group()` / `get_public_group()` (not boolean flags).
 - Public name is fixed.
 - Public slug is fixed.
-- Public discoverability is fixed: `listed`.
 - Public cannot be deleted.
 - Public cannot have Curators.
 
@@ -225,15 +209,14 @@ This prevents scattered direct `BookGroupAssignment` writes and centralizes inva
 When exposing groups through the API:
 
 - Prefer returning `404 Not Found` for groups the user cannot view (avoid leaking group existence).
-- Group book listings must still filter each book through `can_view_book(user, book)` (a listed/visible group must not leak inaccessible books).
+- Group book listings must still filter each book through `can_view_book(user, book)` (a viewable group must not leak inaccessible books).
 - Group curation endpoints should call the safe group curation services above.
-- Group presentation updates should be limited to `description` and `discoverability` via `PATCH /api/v1/library/groups/<group_id>/`.
-  - Public allows description-only edits by Owner/Manager/Librarian; Public discoverability is fixed.
+- Group presentation updates should be limited to `description` via `PATCH /api/v1/library/groups/<group_id>/`.
 
 Not implemented yet (by design, for now):
 
 - No public API for creating/deleting LibraryGroups.
-- No public API for managing group memberships (add/remove users, assign curator roles).
+- No public API for creating/deleting LibraryGroups via the product UI yet.
 
 ## Shelves are separate (future)
 
@@ -255,7 +238,6 @@ Centralize permission rules in explicit policy helpers. Recommended helpers incl
 - `can_manage_group_identity(user, group)`
 - `can_manage_group_membership(user, group)`
 - `can_edit_group_presentation(user, group)`
-- `can_change_group_discoverability(user, group)`
 - `can_assign_global_role(actor, target_user, new_role)`
 - `can_view_book(user, book)`
 - `can_download_book_file(user, book_file)`

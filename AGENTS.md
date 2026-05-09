@@ -165,12 +165,11 @@ This means:
 
 Do not implement per-user private libraries unless explicitly requested.
 
-### Public group and discoverability
+### Public group
 
 - The default shared group is the **Public** group, identified by canonical slug `public`.
 - Public is protected: it should not be deleted, and it must not allow Curator memberships.
 - Public is the only special built-in `LibraryGroup` right now; special behavior is based on `PUBLIC_GROUP_SLUG` / `is_public_group()`, not a boolean flag.
-- `LibraryGroup.discoverability` (`listed` / `unlisted`) controls future UI discoverability only and must not grant book access.
 - Book access remains controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
 - Group assignment changes should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()` (avoid scattered `BookGroupAssignment` writes).
 

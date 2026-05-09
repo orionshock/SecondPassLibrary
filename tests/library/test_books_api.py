@@ -370,7 +370,6 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.hidden_group = LibraryGroup.objects.create(
             name="Hidden",
             slug="hidden",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
         )
 
         # Book is viewable via Public, but also assigned to an unlisted non-member group.

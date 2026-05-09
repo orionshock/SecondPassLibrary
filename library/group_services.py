@@ -15,13 +15,10 @@ def get_public_group() -> LibraryGroup:
         defaults={
             "name": "Public",
             "description": "Default shared library group.",
-            "discoverability": LibraryGroup.DISCOVERABILITY_LISTED,
         },
     )
     # If an existing group uses the slug, ensure fields are consistent.
     updates = {}
-    if group.discoverability != LibraryGroup.DISCOVERABILITY_LISTED:
-        updates["discoverability"] = LibraryGroup.DISCOVERABILITY_LISTED
     if group.name != "Public":
         updates["name"] = "Public"
     if updates:

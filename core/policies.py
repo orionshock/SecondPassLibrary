@@ -152,18 +152,8 @@ def can_manage_group_membership(*, user, group: LibraryGroup) -> bool:
 
 
 def can_edit_group_presentation(*, user, group: LibraryGroup) -> bool:
-    # Presentation/configuration fields (description/discoverability) are editable for non-Public groups
-    # according to role policy. Public is handled by field-specific helpers.
-    if is_public_group(group):
-        return False
-    if is_owner(user) or _is_manager_role(user) or _is_librarian_role(user):
-        return True
-    return LibraryGroupMembership.objects.filter(
-        user=user, group=group, role=LibraryGroupMembership.ROLE_CURATOR
-    ).exists()
-
-
-def can_change_group_discoverability(*, user, group: LibraryGroup) -> bool:
+    # Group presentation is limited to description only.
+    # Public is handled by field-specific helpers.
     if is_public_group(group):
         return False
     if is_owner(user) or _is_manager_role(user) or _is_librarian_role(user):
@@ -185,8 +175,6 @@ def can_view_library_group(*, user, group: LibraryGroup) -> bool:
     if getattr(user, "is_anonymous", False):
         return False
     if is_public_group(group):
-        return True
-    if group.discoverability == LibraryGroup.DISCOVERABILITY_LISTED:
         return True
     return LibraryGroupMembership.objects.filter(user=user, group=group).exists()
 

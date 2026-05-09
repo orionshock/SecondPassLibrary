@@ -187,22 +187,9 @@ class BookIdentifier(TimeStampedModel):
 
 
 class LibraryGroup(TimeStampedModel):
-    DISCOVERABILITY_LISTED = "listed"
-    DISCOVERABILITY_UNLISTED = "unlisted"
-
-    DISCOVERABILITY_CHOICES = [
-        (DISCOVERABILITY_LISTED, "Listed"),
-        (DISCOVERABILITY_UNLISTED, "Unlisted"),
-    ]
-
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=64, unique=True)
     description = models.TextField(blank=True)
-    discoverability = models.CharField(
-        max_length=16,
-        choices=DISCOVERABILITY_CHOICES,
-        default=DISCOVERABILITY_LISTED,
-    )
 
     class Meta:
         ordering = ["name"]

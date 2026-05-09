@@ -166,21 +166,19 @@ class Command(BaseCommand):
             slug="fantasy-club",
             defaults={
                 "name": "Fantasy Club",
-                "discoverability": LibraryGroup.DISCOVERABILITY_LISTED,
             },
         )
         kids, _kids_created = LibraryGroup.objects.update_or_create(
             slug="kids-books",
             defaults={
                 "name": "Kids Books",
-                "discoverability": LibraryGroup.DISCOVERABILITY_UNLISTED,
             },
         )
 
         self.stdout.write("")
         self.stdout.write("Groups:")
-        self.stdout.write(f"- {fantasy.name} ({fantasy.slug}) [{fantasy.discoverability}]")
-        self.stdout.write(f"- {kids.name} ({kids.slug}) [{kids.discoverability}]")
+        self.stdout.write(f"- {fantasy.name} ({fantasy.slug})")
+        self.stdout.write(f"- {kids.name} ({kids.slug})")
 
         memberships: list[str] = []
 
@@ -230,4 +228,3 @@ class Command(BaseCommand):
                 "Dev users use password changeme123. Do not use outside local development."
             )
         )
-

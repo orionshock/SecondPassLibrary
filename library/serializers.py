@@ -139,7 +139,6 @@ class BookSerializer(serializers.ModelSerializer):
                 "id": g.id,
                 "name": g.name,
                 "slug": g.slug,
-                "discoverability": g.discoverability,
                 "is_public_group": is_public_group(g),
             }
             for g in visible_groups
@@ -271,7 +270,6 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "description",
-            "discoverability",
             "is_public_group",
             "membership_role",
             "created_at",
@@ -286,14 +284,13 @@ class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
 
     Allowed fields:
     - description
-    - discoverability
 
     Identity fields (name/slug) are rejected if present in the request payload.
     """
 
     class Meta:
         model = LibraryGroup
-        fields = ["description", "discoverability"]
+        fields = ["description"]
 
     def validate(self, attrs):
         initial = getattr(self, "initial_data", {}) or {}
@@ -302,8 +299,17 @@ class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
                 api_error_payload(
                     code=ErrorCode.GROUP_IDENTITY_IMMUTABLE,
                     message="Group identity fields cannot be updated via this endpoint.",
-                    detail="Only 'description' and 'discoverability' can be updated.",
-                    hint="Use PATCH with only 'description' and/or 'discoverability'.",
+                    detail="Only 'description' can be updated.",
+                    hint="Use PATCH with only 'description'.",
+                )
+            )
+        if "discoverability" in initial:
+            raise serializers.ValidationError(
+                api_error_payload(
+                    code=ErrorCode.UNSAFE_FIELD,
+                    message="This endpoint only supports group description updates.",
+                    detail="Unsupported field: discoverability.",
+                    hint="Use PATCH with only 'description'.",
                 )
             )
         return super().validate(attrs)
@@ -317,12 +323,7 @@ class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
                 raise PermissionDenied("Not allowed.")
             instance.description = validated_data["description"]
 
-        if "discoverability" in validated_data:
-            if not policies.can_change_group_discoverability(user=user, group=instance):
-                raise PermissionDenied("Not allowed.")
-            instance.discoverability = validated_data["discoverability"]
-
-        instance.save(update_fields=["description", "discoverability", "updated_at"])
+        instance.save(update_fields=["description", "updated_at"])
         return instance
 
 

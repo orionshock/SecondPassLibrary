@@ -110,7 +110,6 @@ class ManagedUserViewSet(
                         "id": group.id,
                         "name": group.name,
                         "slug": group.slug,
-                        "discoverability": group.discoverability,
                         "membership_role": membership.role,
                         "is_public_group": is_public_group(group),
                     }
@@ -151,7 +150,6 @@ class ManagedUserViewSet(
                     "id": group.id,
                     "name": group.name,
                     "slug": group.slug,
-                    "discoverability": group.discoverability,
                     "membership_role": membership.role,
                     "is_public_group": is_public_group(group),
                 }
@@ -203,7 +201,6 @@ class ManagedUserViewSet(
                     "id": group.id,
                     "name": group.name,
                     "slug": group.slug,
-                    "discoverability": group.discoverability,
                     "membership_role": membership.role,
                     "is_public_group": is_public_group(group),
                 }

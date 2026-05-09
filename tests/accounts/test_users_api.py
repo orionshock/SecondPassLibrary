@@ -112,7 +112,6 @@ class ManagedUsersAPITest(APITestCase):
         group = LibraryGroup.objects.create(
             name="Fantasy Club",
             slug="fantasy-club",
-            discoverability=LibraryGroup.DISCOVERABILITY_LISTED,
         )
         LibraryGroupMembership.objects.create(
             user=self.reader,

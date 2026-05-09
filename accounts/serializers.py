@@ -18,7 +18,6 @@ class CurrentUserSerializer(serializers.Serializer):
         id = serializers.UUIDField()
         name = serializers.CharField()
         slug = serializers.SlugField()
-        discoverability = serializers.ChoiceField(choices=["listed", "unlisted"])
         membership_role = serializers.ChoiceField(choices=["reader", "curator"])
         is_public_group = serializers.BooleanField()
 
@@ -59,7 +58,6 @@ class ManagedUserSerializer(serializers.Serializer):
         id = serializers.UUIDField()
         name = serializers.CharField()
         slug = serializers.SlugField()
-        discoverability = serializers.ChoiceField(choices=["listed", "unlisted"])
         membership_role = serializers.ChoiceField(choices=["reader", "curator"])
         is_public_group = serializers.BooleanField()
 

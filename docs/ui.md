@@ -39,7 +39,7 @@ The groups UI is API-driven using:
 
 - `GET /api/v1/library/groups/` (paginated list)
 - `GET /api/v1/library/groups/<group_id>/` (detail)
-- `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description, discoverability)
+- `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` (add-by-UUID; temporary functional UI)
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
@@ -192,12 +192,12 @@ Primary endpoints:
   - `POST /api/v1/library/groups/<group_id>/books/` body `{"book": "<book_id>"}`
   - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 - Presentation-only updates:
-  - `PATCH /api/v1/library/groups/<group_id>/` (only `description`, `discoverability`)
+  - `PATCH /api/v1/library/groups/<group_id>/` (only `description`)
 
 UI behaviors:
 
-- Readers should only see groups they can view (Public, listed, or direct membership).
-- Group book listings must be treated as filtered by server policy; the UI must not assume "listed means all books are visible".
+- Readers should only see groups they can view (Public or direct membership).
+- Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
 - Presentation edits should be shown only when the user has broad capability (or scoped curator power for that group).
 - Curation controls (add/remove books) should be gated similarly.
 

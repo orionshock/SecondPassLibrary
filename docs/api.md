@@ -70,7 +70,7 @@ Response shape:
 
 User-management payload notes:
 
-- Managed users now include a read-only `groups[]` membership summary for that user (group id/name/slug/discoverability, membership_role, is_public_group).
+- Managed users now include a read-only `groups[]` membership summary for that user (group id/name/slug, membership_role, is_public_group).
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 
 ### `GET /api/v1/accounts/me/` response
@@ -100,7 +100,7 @@ It also includes a `groups` array listing the caller's `LibraryGroupMembership`s
 
 Each `groups[]` item includes:
 
-- `id`, `name`, `slug`, `discoverability`
+- `id`, `name`, `slug`
 - `membership_role` (`reader` / `curator`)
 - `is_public_group`
 
@@ -130,7 +130,7 @@ Book payload notes:
 
 - Books now include a read-only `groups[]` summary (assigned LibraryGroups).
 - For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
-- For Readers/Curators, `groups[]` includes only groups the caller can view (e.g., Public, listed, or direct membership).
+- For Readers/Curators, `groups[]` includes only groups the caller can view (Public or direct membership).
 
 ## Imports
 
@@ -146,7 +146,7 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 
 - `GET /api/v1/library/groups/` (paginated)
 - `GET /api/v1/library/groups/<group_id>/`
-- `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`, `discoverability`)
+- `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`

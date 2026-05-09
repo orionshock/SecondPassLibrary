@@ -606,7 +606,6 @@
           const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
           const badges = [
             g.is_public_group ? '<span class="pill pill--owner">Public</span>' : "",
-            g.discoverability ? `<span class="pill">${escapeHtml(g.discoverability)}</span>` : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -857,14 +856,12 @@
       .map((g) => {
         const name = g.name || "";
         const slug = g.slug || "";
-        const discoverability = g.discoverability || "";
         const membershipRole = g.membership_role || "";
         const isPublic = !!g.is_public_group;
         const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
 
         const badges = [
           isPublic ? '<span class="pill pill--owner">Public</span>' : "",
-          discoverability ? `<span class="pill">${escapeHtml(discoverability)}</span>` : "",
           membershipRole ? `<span class="pill">${escapeHtml(membershipRole)}</span>` : "",
         ]
           .filter(Boolean)
@@ -995,8 +992,8 @@
     const editForm = $("#group-edit-form");
     const editStatus = $("#group-edit-status");
     const descInput = $("#group-description");
-    const discSelect = $("#group-discoverability");
-    const discNote = $("#group-discoverability-note");
+    const discSelect = null;
+    const discNote = null;
 
     const booksSection = $("#group-books");
     const booksStatus = $("#group-books-status");
@@ -1029,8 +1026,6 @@
       !editForm ||
       !editStatus ||
       !descInput ||
-      !discSelect ||
-      !discNote ||
       !booksSection ||
       !booksStatus ||
       !booksResults ||
@@ -1202,7 +1197,6 @@
 
         const badges = [
           isPublicGroup ? '<span class="pill pill--owner">Public</span>' : "",
-          group.discoverability ? `<span class="pill">${escapeHtml(group.discoverability)}</span>` : "",
           membershipRole ? `<span class="pill">${escapeHtml(membershipRole)}</span>` : "",
         ]
           .filter(Boolean)
@@ -1218,14 +1212,7 @@
         `.trim();
 
         descInput.value = group.description || "";
-        discSelect.value = group.discoverability || "listed";
-        if (isPublicGroup) {
-          discSelect.disabled = true;
-          discNote.textContent = "Public discoverability cannot be changed.";
-        } else {
-          discSelect.disabled = false;
-          discNote.textContent = "";
-        }
+        // discoverability removed
 
         visible(summaryEl, true);
         visible(editSection, true);
@@ -1315,7 +1302,7 @@
       const payload = {
         description: descInput.value || "",
       };
-      if (!isPublicGroup) payload.discoverability = discSelect.value;
+      // discoverability removed
 
       try {
         const csrf = getCsrfToken();

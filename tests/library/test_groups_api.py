@@ -42,28 +42,15 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.listed = LibraryGroup.objects.create(
-            name="Listed",
-            slug="listed",
-            discoverability=LibraryGroup.DISCOVERABILITY_LISTED,
-        )
-        self.unlisted = LibraryGroup.objects.create(
-            name="Unlisted",
-            slug="unlisted",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-        )
-        self.unlisted_member = LibraryGroup.objects.create(
-            name="UnlistedMember",
-            slug="unlisted-member",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-        )
+        self.member_group = LibraryGroup.objects.create(name="MemberGroup", slug="member-group")
+        self.other_group = LibraryGroup.objects.create(name="OtherGroup", slug="other-group")
         LibraryGroupMembership.objects.create(
             user=self.reader,
-            group=self.unlisted_member,
+            group=self.member_group,
             role=LibraryGroupMembership.ROLE_READER,
         )
 
-    def test_reader_sees_public_and_listed_and_member_unlisted(self):
+    def test_reader_sees_public_and_member_groups_only(self):
         self.client.login(username="reader", password="pw")
         response = cast(Response, self.client.get("/api/v1/library/groups/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -72,17 +59,16 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         data = cast(list[dict[str, Any]], payload["results"])
         slugs = {g["slug"] for g in data}
         self.assertIn("public", slugs)
-        self.assertIn("listed", slugs)
-        self.assertIn("unlisted-member", slugs)
-        self.assertNotIn("unlisted", slugs)
+        self.assertIn("member-group", slugs)
+        self.assertNotIn("other-group", slugs)
 
         public = next(g for g in data if g["slug"] == "public")
         self.assertTrue(public["is_public_group"])
 
-    def test_reader_cannot_view_unlisted_group_they_are_not_member_of(self):
+    def test_reader_cannot_view_non_member_non_public_group(self):
         self.client.login(username="reader", password="pw")
         response = cast(
-            Response, self.client.get(f"/api/v1/library/groups/{self.unlisted.id}/")
+            Response, self.client.get(f"/api/v1/library/groups/{self.other_group.id}/")
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -94,7 +80,7 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         payload = cast(Mapping[str, Any], response.data)
         data = cast(list[dict[str, Any]], payload["results"])
         slugs = {g["slug"] for g in data}
-        self.assertTrue({"public", "listed", "unlisted", "unlisted-member"}.issubset(slugs))
+        self.assertTrue({"public", "member-group", "other-group"}.issubset(slugs))
 
 
 class LibraryGroupBooksAndCurationAPITest(APITestCase):
@@ -125,25 +111,16 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         librarian_profile.role = UserProfile.ROLE_LIBRARIAN
         librarian_profile.save(update_fields=["role", "updated_at"])
 
-        self.group = LibraryGroup.objects.create(
-            name="Group",
-            slug="group",
-            discoverability=LibraryGroup.DISCOVERABILITY_LISTED,
-        )
+        self.group = LibraryGroup.objects.create(name="Group", slug="group")
         LibraryGroupMembership.objects.create(
             user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
         )
 
-        self.other_group = LibraryGroup.objects.create(
-            name="Other",
-            slug="other",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-        )
+        self.other_group = LibraryGroup.objects.create(name="Other", slug="other")
 
-        self.listed_group = LibraryGroup.objects.create(
-            name="ListedGroup",
-            slug="listed-group",
-            discoverability=LibraryGroup.DISCOVERABILITY_LISTED,
+        self.visible_group = LibraryGroup.objects.create(name="VisibleGroup", slug="visible-group")
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.visible_group, role=LibraryGroupMembership.ROLE_READER
         )
 
         self.book_public = Book.objects.create(title="Public Book")
@@ -155,11 +132,7 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         )
 
         self.book_inaccessible = Book.objects.create(title="Inaccessible")
-        hidden = LibraryGroup.objects.create(
-            name="Hidden",
-            slug="hidden",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-        )
+        hidden = LibraryGroup.objects.create(name="Hidden", slug="hidden")
         other = User.objects.create_user(username="other", email="other@example.com", password="pw")
         ensure_user_public_membership(user=other)
         LibraryGroupMembership.objects.create(
@@ -167,14 +140,14 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         )
         BookGroupAssignment.objects.create(book=self.book_inaccessible, group=hidden, added_by=self.librarian)
 
-        BookGroupAssignment.objects.create(book=self.book_public, group=self.listed_group, added_by=self.librarian)
-        BookGroupAssignment.objects.create(book=self.book_inaccessible, group=self.listed_group, added_by=self.librarian)
+        BookGroupAssignment.objects.create(book=self.book_public, group=self.visible_group, added_by=self.librarian)
+        BookGroupAssignment.objects.create(book=self.book_inaccessible, group=self.visible_group, added_by=self.librarian)
 
-    def test_reader_group_books_filters_inaccessible_books(self):
+    def test_reader_group_books_shows_books_in_groups_they_belong_to(self):
         self.client.login(username="reader", password="pw")
         response = cast(
             Response,
-            self.client.get(f"/api/v1/library/groups/{self.listed_group.id}/books/"),
+            self.client.get(f"/api/v1/library/groups/{self.visible_group.id}/books/"),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data)
@@ -183,13 +156,13 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         self.assertIn("results", payload)
         titles = {b["title"] for b in cast(list[dict[str, Any]], payload["results"])}
         self.assertIn("Public Book", titles)
-        self.assertNotIn("Inaccessible", titles)
+        self.assertIn("Inaccessible", titles)
 
     def test_librarian_group_books_sees_all_books_in_group(self):
         self.client.login(username="librarian", password="pw")
         response = cast(
             Response,
-            self.client.get(f"/api/v1/library/groups/{self.listed_group.id}/books/"),
+            self.client.get(f"/api/v1/library/groups/{self.visible_group.id}/books/"),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data)
@@ -208,7 +181,7 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
                 format="json",
             ),
         )
-        self.assertEqual(add.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(add.status_code, status.HTTP_404_NOT_FOUND)
 
         delete = cast(
             Response,
@@ -216,7 +189,7 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
                 f"/api/v1/library/groups/{self.group.id}/books/{self.book_only_group.id}/"
             ),
         )
-        self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(delete.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_group_books_post_missing_book_returns_error_envelope(self):
         self.client.login(username="librarian", password="pw")
@@ -295,20 +268,10 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.group = LibraryGroup.objects.create(
-            name="Group",
-            slug="group",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-            description="before",
-        )
+        self.group = LibraryGroup.objects.create(name="Group", slug="group", description="before")
         LibraryGroupMembership.objects.create(user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR)
 
-        self.other_group = LibraryGroup.objects.create(
-            name="Other",
-            slug="other",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-            description="before",
-        )
+        self.other_group = LibraryGroup.objects.create(name="Other", slug="other", description="before")
 
     def test_reader_cannot_patch_group(self):
         self.client.login(username="reader", password="pw")
@@ -330,17 +293,16 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.public.id}/", data={"description": "no"}, format="json"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_librarian_can_patch_non_public_description_and_discoverability(self):
+    def test_librarian_can_patch_non_public_description(self):
         self.client.login(username="librarian", password="pw")
-        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"description": "after", "discoverability": LibraryGroup.DISCOVERABILITY_LISTED}, format="json"))
+        response = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"description": "after"}, format="json"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.group.refresh_from_db()
         self.assertEqual(self.group.description, "after")
-        self.assertEqual(self.group.discoverability, LibraryGroup.DISCOVERABILITY_LISTED)
 
-    def test_curator_can_patch_description_and_discoverability_for_their_group_only(self):
+    def test_curator_can_patch_description_for_their_group_only(self):
         self.client.login(username="curator", password="pw")
-        ok = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"description": "c", "discoverability": LibraryGroup.DISCOVERABILITY_LISTED}, format="json"))
+        ok = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.group.id}/", data={"description": "c"}, format="json"))
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
 
         denied = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.other_group.id}/", data={"description": "c"}, format="json"))
@@ -366,30 +328,17 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         self.group.refresh_from_db()
         self.assertEqual(self.group.slug, "group")
 
-    def test_discoverability_update_does_not_grant_book_access(self):
-        book = Book.objects.create(title="HiddenBook")
-        hidden_group = LibraryGroup.objects.create(name="Hidden", slug="hidden", discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED)
-        other = User.objects.create_user(username="other", email="other@example.com", password="pw")
-        ensure_user_public_membership(user=other)
-        LibraryGroupMembership.objects.create(user=other, group=hidden_group, role=LibraryGroupMembership.ROLE_READER)
-        BookGroupAssignment.objects.create(book=book, group=hidden_group, added_by=self.librarian)
-
+    def test_discoverability_patch_is_rejected(self):
         self.client.login(username="librarian", password="pw")
-        patched = cast(Response, self.client.patch(f"/api/v1/library/groups/{hidden_group.id}/", data={"discoverability": LibraryGroup.DISCOVERABILITY_LISTED}, format="json"))
-        self.assertEqual(patched.status_code, status.HTTP_200_OK)
-
-        self.client.logout()
-        self.client.login(username="reader", password="pw")
-        listing = cast(Response, self.client.get("/api/v1/library/groups/"))
-        self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(listing.data)
-        listing_payload = cast(Mapping[str, Any], listing.data)
-        slugs = {g["slug"] for g in cast(list[dict[str, Any]], listing_payload["results"])}
-        self.assertIn("hidden", slugs)
-
-        books = cast(Response, self.client.get(f"/api/v1/library/groups/{hidden_group.id}/books/"))
-        self.assertEqual(books.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(books.data)
-        books_payload = cast(Mapping[str, Any], books.data)
-        titles = {b["title"] for b in cast(list[dict[str, Any]], books_payload["results"])}
-        self.assertNotIn("HiddenBook", titles)
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/groups/{self.group.id}/",
+                data={"discoverability": "listed"},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIsNotNone(response.data)
+        payload = cast(dict[str, Any], response.data)
+        self.assertEqual(cast(dict[str, Any], payload["error"])["code"], ErrorCode.UNSAFE_FIELD)

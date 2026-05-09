@@ -53,7 +53,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         reader_profile.save(update_fields=["role", "updated_at"])
 
         self.group = LibraryGroup.objects.create(
-            name="Group", slug="group", discoverability=LibraryGroup.DISCOVERABILITY_LISTED
+            name="Group", slug="group"
         )
 
     def test_manager_and_owner_can_list_memberships(self):
@@ -86,7 +86,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
         )
-        self.assertEqual(response2.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(response2.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND})
 
     def test_manager_can_add_reader_and_curator_memberships_non_public(self):
         self.client.login(username="manager", password="pw")
@@ -189,4 +189,3 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         )
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(LibraryGroupMembership.objects.filter(pk=membership.id).exists())
-

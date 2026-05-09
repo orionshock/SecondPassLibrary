@@ -27,9 +27,6 @@ class PolicyTest(TestCase):
     def setUp(self):
         self.public = get_public_group()
         self.assertTrue(is_public_group(self.public))
-        self.assertEqual(
-            self.public.discoverability, LibraryGroup.DISCOVERABILITY_LISTED
-        )
 
         self.owner = User.objects.create_superuser(
             username="owner", email="owner@example.com", password="pw"
@@ -172,18 +169,11 @@ class PolicyTest(TestCase):
         ensure_user_public_membership(user=other_reader)
         self.assertFalse(policies.can_view_book(user=other_reader, book=self.hidden_book))
 
-    def test_group_discoverability_does_not_grant_or_restrict_access(self):
-        unlisted = LibraryGroup.objects.create(
-            name="Unlisted",
-            slug="unlisted",
-            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
-        )
-        LibraryGroupMembership.objects.create(
-            user=self.reader, group=unlisted, role=LibraryGroupMembership.ROLE_READER
-        )
-        unlisted_book = Book.objects.create(title="Unlisted Book")
-        BookGroupAssignment.objects.create(book=unlisted_book, group=unlisted)
-        self.assertTrue(policies.can_view_book(user=self.reader, book=unlisted_book))
+    def test_group_visibility_is_membership_based(self):
+        other = LibraryGroup.objects.create(name="Other", slug="other")
+        self.assertTrue(policies.can_view_library_group(user=self.reader, group=self.public))
+        self.assertTrue(policies.can_view_library_group(user=self.reader, group=self.hidden_group))
+        self.assertFalse(policies.can_view_library_group(user=self.reader, group=other))
 
     def test_group_management_helpers(self):
         group = LibraryGroup.objects.create(name="G", slug="g")
@@ -210,21 +200,12 @@ class PolicyTest(TestCase):
             policies.can_manage_group_membership(user=self.librarian, group=group)
         )
 
-        # Presentation/discoverability: Owner/Manager/Librarian, or Curator for their group; never for Public.
+        # Presentation (description): Owner/Manager/Librarian, or Curator for their group; never for Public.
         LibraryGroupMembership.objects.create(
             user=self.reader, group=group, role=LibraryGroupMembership.ROLE_CURATOR
         )
         self.assertTrue(policies.can_edit_group_presentation(user=self.librarian, group=group))
-        self.assertTrue(
-            policies.can_change_group_discoverability(user=self.librarian, group=group)
-        )
         self.assertTrue(policies.can_edit_group_presentation(user=self.reader, group=group))
-        self.assertTrue(
-            policies.can_change_group_discoverability(user=self.reader, group=group)
-        )
-        self.assertFalse(
-            policies.can_change_group_discoverability(user=self.owner, group=self.public)
-        )
 
         # Description: Public description is editable by Owner/Manager/Librarian, but not Reader/Curator.
         self.assertTrue(policies.can_edit_group_description(user=self.owner, group=self.public))
@@ -253,4 +234,3 @@ class PolicyTest(TestCase):
                 group=self.public,
                 role=LibraryGroupMembership.ROLE_CURATOR,
             )
-

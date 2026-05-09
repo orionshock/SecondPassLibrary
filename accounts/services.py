@@ -151,7 +151,6 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
                 "id": group.id,
                 "name": group.name,
                 "slug": group.slug,
-                "discoverability": group.discoverability,
                 "membership_role": membership.role,
                 "is_public_group": public,
             }

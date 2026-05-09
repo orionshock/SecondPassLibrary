@@ -41,8 +41,8 @@ class SeedDevUsersCommandTests(TestCase):
 
         fantasy = LibraryGroup.objects.get(slug="fantasy-club")
         kids = LibraryGroup.objects.get(slug="kids-books")
-        self.assertEqual(fantasy.discoverability, LibraryGroup.DISCOVERABILITY_LISTED)
-        self.assertEqual(kids.discoverability, LibraryGroup.DISCOVERABILITY_UNLISTED)
+        self.assertEqual(fantasy.slug, "fantasy-club")
+        self.assertEqual(kids.slug, "kids-books")
 
         curator = User.objects.get(username="curator")
         reader = User.objects.get(username="reader")
@@ -57,4 +57,3 @@ class SeedDevUsersCommandTests(TestCase):
             user = User.objects.get(username=username)
             role = LibraryGroupMembership.objects.get(user=user, group=public).role
             self.assertEqual(role, LibraryGroupMembership.ROLE_READER)
-
