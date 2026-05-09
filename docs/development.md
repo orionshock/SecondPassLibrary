@@ -30,6 +30,17 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+## Product UI (current)
+
+- App shell/dashboard: `/app/`
+- Library browse: `/library/`
+
+If you are not authenticated, these pages redirect to `/api-auth/login/?next=...`.
+
+Logout is POST-based via `/api-auth/logout/` (no GET logout links in the product UI).
+
+The product UI code lives in the Django app `web`.
+
 ## Authentication (current)
 
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:

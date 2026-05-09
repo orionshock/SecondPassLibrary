@@ -1,0 +1,27 @@
+{% extends "web/base.html" %}
+
+{% block title %}Library · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Library</h1>
+    <form id="library-search" class="search" autocomplete="off">
+      <label class="search__label" for="q">Search</label>
+      <input id="q" name="q" type="search" class="search__input" placeholder="Title, author, series, ISBN…" />
+      <button class="button" type="submit">Search</button>
+    </form>
+  </div>
+
+  <div id="library-status" class="muted">Loading…</div>
+  <div id="library-results" class="books"></div>
+
+  <div class="pager">
+    <button id="prev" class="button" type="button" disabled>Previous</button>
+    <button id="next" class="button" type="button" disabled>Next</button>
+  </div>
+
+  <script>
+    window.SecondPassUI?.initLibraryBrowse?.();
+  </script>
+{% endblock %}
+

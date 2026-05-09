@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Second Pass Library{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'web/app.css' %}" />
+    <script defer src="{% static 'web/app.js' %}"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container topbar__inner">
+        <a class="brand" href="/app/">Second Pass Library</a>
+        <nav class="nav" aria-label="Primary">
+          <a class="nav__item" href="/library/" data-nav="library">Library</a>
+          <a class="nav__item is-hidden" href="/groups/" data-nav="groups">Groups</a>
+          <a class="nav__item is-hidden" href="/imports/" data-nav="imports">Imports</a>
+          <a class="nav__item is-hidden" href="/users/" data-nav="users">Users</a>
+          <a class="nav__item is-hidden" href="/admin/" data-nav="admin">Service Hatch</a>
+        </nav>
+        <div class="userbox">
+          <span class="userbox__name" data-ui="username">Loading…</span>
+          <form class="userbox__logoutform" action="/api-auth/logout/" method="post">
+            {% csrf_token %}
+            <button class="linklike" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer container">
+      <small>Second Pass Library</small>
+    </footer>
+  </body>
+</html>
+

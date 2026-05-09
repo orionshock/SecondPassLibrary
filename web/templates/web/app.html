@@ -1,0 +1,32 @@
+{% extends "web/base.html" %}
+
+{% block title %}App · Second Pass Library{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">App</h1>
+
+  <section class="card">
+    <h2 class="card__title">You</h2>
+    <div id="me-summary" class="muted">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Groups</h2>
+    <div id="me-groups" class="muted">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Capabilities</h2>
+    <div id="me-capabilities" class="muted">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Sections</h2>
+    <div id="me-sections" class="muted">Loading…</div>
+  </section>
+
+  <script>
+    window.SecondPassUI?.initDashboard?.();
+  </script>
+{% endblock %}
+

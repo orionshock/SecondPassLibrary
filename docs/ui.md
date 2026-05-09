@@ -2,6 +2,22 @@
 
 This document sketches the first product web UI for Second Pass Library at a high level, before implementation.
 
+## Status (first UI shell)
+
+The first minimal product UI shell now exists:
+
+- `/` redirects to `/app/`
+- `/app/` is an authenticated dashboard shell
+- `/library/` is an authenticated library browse page
+
+Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
+
+Authentication for product UI pages is currently delegated to DRF's built-in login at `/api-auth/login/` (custom login is intentionally deferred).
+
+Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logout/`.
+
+The library browse screen is API-driven using vanilla JS fetch calls to `GET /api/v1/library/books/` (paginated), with basic loading/error/empty states.
+
 ## 1. UI philosophy
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
