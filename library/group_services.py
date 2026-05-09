@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 from core import policies
@@ -142,3 +142,88 @@ def remove_book_from_group(*, actor, book: Book, group: LibraryGroup) -> bool:
             qs.delete()
         ensure_book_has_at_least_one_group(book=book, added_by=actor)
     return existed
+
+
+def add_user_to_group(
+    *,
+    actor,
+    target_user,
+    group: LibraryGroup,
+    role: str = LibraryGroupMembership.ROLE_READER,
+) -> LibraryGroupMembership:
+    """
+    Safe path for adding (or updating) a user's membership in a LibraryGroup.
+
+    Rules:
+    - Only Owner/Manager may manage memberships.
+    - Public membership cannot be removed; Public cannot have Curators and role is forced to reader.
+    - Non-Public: role must be reader or curator.
+    - Idempotent: existing membership is updated to the requested role (subject to rules).
+    """
+    if not policies.can_manage_group_membership(user=actor, group=group):
+        raise PermissionDenied("Not allowed.")
+
+    if is_public_group(group):
+        if role != LibraryGroupMembership.ROLE_READER:
+            raise ValidationError({"role": "Public group cannot have curators."})
+        role = LibraryGroupMembership.ROLE_READER
+    else:
+        if role not in {LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR}:
+            raise ValidationError({"role": "Invalid membership role."})
+
+    membership, created = LibraryGroupMembership.objects.get_or_create(
+        user=target_user,
+        group=group,
+        defaults={"role": role},
+    )
+    if not created and membership.role != role:
+        membership.role = role
+        membership.save(update_fields=["role", "updated_at"])
+    return membership
+
+
+def update_user_group_membership(
+    *,
+    actor,
+    membership: LibraryGroupMembership,
+    role: str,
+) -> LibraryGroupMembership:
+    """
+    Safe path for updating an existing membership's role.
+    """
+    group = membership.group
+    if not policies.can_manage_group_membership(user=actor, group=group):
+        raise PermissionDenied("Not allowed.")
+
+    if is_public_group(group):
+        if role != LibraryGroupMembership.ROLE_READER:
+            raise ValidationError({"role": "Public group cannot have curators."})
+        role = LibraryGroupMembership.ROLE_READER
+    else:
+        if role not in {LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR}:
+            raise ValidationError({"role": "Invalid membership role."})
+
+    if membership.role != role:
+        membership.role = role
+        membership.save(update_fields=["role", "updated_at"])
+    return membership
+
+
+def remove_user_from_group(
+    *,
+    actor,
+    membership: LibraryGroupMembership,
+) -> None:
+    """
+    Safe path for removing a user's membership in a LibraryGroup.
+
+    Rules:
+    - Only Owner/Manager may manage memberships.
+    - Public membership is protected (cannot be removed).
+    """
+    group = membership.group
+    if not policies.can_manage_group_membership(user=actor, group=group):
+        raise PermissionDenied("Not allowed.")
+    if is_public_group(group):
+        raise PermissionDenied("Public membership cannot be removed.")
+    membership.delete()

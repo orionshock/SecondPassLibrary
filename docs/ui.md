@@ -13,6 +13,7 @@ The first minimal product UI shell now exists:
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/imports/` is an API-driven imports page (upload + job list/results)
 - `/groups/` and `/groups/<group_id>/` provide functional group list/detail screens
+- Group detail includes membership management for Manager/Owner (add/update/remove; add-by-dropdown; functional-first)
 - `/users/` provides functional user management for Manager/Owner only
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).

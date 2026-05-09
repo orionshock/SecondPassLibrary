@@ -139,6 +139,16 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
+- Memberships (Manager/Owner only):
+  - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated)
+  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user": "<user_id>", "role": "reader|curator"}`
+  - `PATCH /api/v1/library/groups/<group_id>/memberships/<membership_id>/` body: `{"role": "reader|curator"}`
+  - `DELETE /api/v1/library/groups/<group_id>/memberships/<membership_id>/`
+
+Public restrictions:
+
+- Public memberships cannot be removed via the API.
+- Public cannot have Curators; membership role remains `reader`.
 
 See `docs/permissions.md` for the visibility/curation rules.
 

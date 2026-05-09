@@ -296,3 +296,30 @@ class BookGroupAssignmentSerializer(serializers.ModelSerializer):
         model = BookGroupAssignment
         fields = ["id", "book", "group", "added_by", "created_at", "updated_at"]
         read_only_fields = fields
+
+
+class LibraryGroupMembershipSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    user_id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField(allow_blank=True)
+    role = serializers.ChoiceField(choices=[LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR])
+    is_owner = serializers.BooleanField()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+
+
+class LibraryGroupMembershipCreateSerializer(serializers.Serializer):
+    user = serializers.IntegerField()
+    role = serializers.ChoiceField(
+        required=False,
+        choices=[LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR],
+        default=LibraryGroupMembership.ROLE_READER,
+    )
+
+
+class LibraryGroupMembershipPatchSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(
+        required=True,
+        choices=[LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR],
+    )

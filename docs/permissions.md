@@ -41,8 +41,8 @@ Manager can:
 
 API note (current implementation):
 
-- Some of the above are capability/policy direction. The current public REST API does **not** yet expose LibraryGroup create/delete or membership-management endpoints.
-- For now, group creation and membership management are handled via the Django admin/service hatch for operators.
+- Some of the above are capability/policy direction. The current public REST API does **not** yet expose LibraryGroup create/delete endpoints.
+- Group membership management is now exposed via Manager/Owner-only group membership endpoints (see `docs/api.md`).
 
 Manager cannot (unless also Owner):
 
@@ -210,6 +210,15 @@ Safe changes to group assignments should go through:
 - `library.group_services.remove_book_from_group()`
 
 This prevents scattered direct `BookGroupAssignment` writes and centralizes invariants (including the Public fallback invariant).
+
+## Group membership management (current)
+
+- **Owner/Manager** can manage LibraryGroup memberships via the API (add/remove users and set membership role `reader` / `curator`).
+- **Librarian/Curator/Reader** cannot manage memberships via the API.
+- **Public protections**:
+  - Every user belongs to Public.
+  - Public memberships cannot be removed via normal API/UI.
+  - Public cannot have Curators; membership role remains `reader`.
 
 ## Group API and anti-existence-leakage rules
 

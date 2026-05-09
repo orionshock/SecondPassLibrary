@@ -113,6 +113,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="group-summary"')
         self.assertContains(response, f'data-group-id="{group_id}"')
+        self.assertContains(response, 'id="group-members"')
+        self.assertContains(response, 'id="group-members-results"')
 
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)

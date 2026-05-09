@@ -959,7 +959,7 @@
   }
 
   async function initGroupDetail() {
-    await loadMeAndInitShell();
+    const me = await loadMeAndInitShell();
     setGlobalError("");
 
     const summaryEl = $("#group-summary");
@@ -984,6 +984,18 @@
     const addBookInput = $("#group-book-id");
     const addBookStatus = $("#group-add-book-status");
 
+    const membersSection = $("#group-members");
+    const membersNote = $("#group-members-note");
+    const membersStatus = $("#group-members-status");
+    const membersResults = $("#group-members-results");
+    const membersNext = $("#group-members-next");
+    const membersPrev = $("#group-members-prev");
+
+    const addMemberForm = $("#group-add-member");
+    const addMemberUser = $("#group-member-user");
+    const addMemberRole = $("#group-member-role");
+    const addMemberStatus = $("#group-add-member-status");
+
     if (
       !summaryEl ||
       !statusEl ||
@@ -1002,7 +1014,17 @@
       !booksPrev ||
       !addBookForm ||
       !addBookInput ||
-      !addBookStatus
+      !addBookStatus ||
+      !membersSection ||
+      !membersNote ||
+      !membersStatus ||
+      !membersResults ||
+      !membersNext ||
+      !membersPrev ||
+      !addMemberForm ||
+      !addMemberUser ||
+      !addMemberRole ||
+      !addMemberStatus
     ) {
       return;
     }
@@ -1017,6 +1039,9 @@
     let isPublicGroup = false;
     let booksNextUrl = null;
     let booksPrevUrl = null;
+    let membersNextUrl = null;
+    let membersPrevUrl = null;
+    const canManageMemberships = !!(me && me.capabilities && me.capabilities.can_manage_group_memberships);
 
     function setStatus(text, isError) {
       statusEl.textContent = text;
@@ -1038,11 +1063,110 @@
       addBookStatus.classList.toggle("error", !!isError);
     }
 
+    function setMembersStatus(text, isError) {
+      membersStatus.textContent = text;
+      membersStatus.classList.toggle("error", !!isError);
+    }
+
+    function setAddMemberStatus(text, isError) {
+      addMemberStatus.textContent = text || "";
+      addMemberStatus.classList.toggle("error", !!isError);
+    }
+
+    function renderMemberships(payload) {
+      const results = Array.isArray(payload && payload.results) ? payload.results : [];
+      if (results.length === 0) return "";
+
+      return results
+        .map((m) => {
+          const isOwner = !!m.is_owner;
+          const role = m.role || "reader";
+          const removeDisabled = isPublicGroup ? "disabled" : "";
+          const curatorDisabled = isPublicGroup ? "disabled" : "";
+
+          const ownerBadge = isOwner ? ' <span class="pill pill--owner">Owner</span>' : "";
+          const note = isPublicGroup ? '<div class="muted">Public memberships cannot be removed; role remains reader.</div>' : "";
+
+          return `
+            <article class="book">
+              <h3 class="book__title">${escapeHtml(m.username || "")}${ownerBadge}</h3>
+              <div class="book__meta">
+                ${m.email ? `<div>${escapeHtml(m.email)}</div>` : ""}
+                <div>Role: <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}">
+                  <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
+                  <option value="curator" ${role === "curator" ? "selected" : ""} ${curatorDisabled}>curator</option>
+                </select></div>
+                ${note}
+              </div>
+              <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}">Save role</button>
+                <button class="button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" ${removeDisabled}>Remove</button>
+              </div>
+            </article>
+          `.trim();
+        })
+        .join("");
+    }
+
+    async function loadAllManageableUsers() {
+      // Uses Manager/Owner users endpoint; fetch a few pages to populate a dropdown.
+      const users = [];
+      let url = "/api/v1/accounts/users/";
+      for (let i = 0; i < 10 && url; i++) {
+        const payload = await fetchJSON(url);
+        const results = Array.isArray(payload && payload.results) ? payload.results : [];
+        for (const u of results) users.push(u);
+        url = payload.next || null;
+      }
+      return users;
+    }
+
+    async function loadMembers(url) {
+      setMembersStatus("Loading…", false);
+      membersResults.innerHTML = "";
+      membersNext.disabled = true;
+      membersPrev.disabled = true;
+
+      try {
+        const payload = await fetchJSON(url);
+        const results = Array.isArray(payload && payload.results) ? payload.results : [];
+        if (results.length === 0) {
+          setMembersStatus("No members.", false);
+          membersNextUrl = null;
+          membersPrevUrl = null;
+          return;
+        }
+
+        setMembersStatus(
+          payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "",
+          false
+        );
+        membersResults.innerHTML = renderMemberships(payload);
+        membersNextUrl = payload.next || null;
+        membersPrevUrl = payload.previous || null;
+        membersNext.disabled = !membersNextUrl;
+        membersPrev.disabled = !membersPrevUrl;
+      } catch (e) {
+        console.error("Failed to load memberships", { groupId, url, e });
+        if (e && e.status === 403) setMembersStatus("Permission denied.", true);
+        else if (e && e.status === 404) setMembersStatus("Not found.", true);
+        else setMembersStatus("Error loading members.", true);
+        setGlobalError(extractApiErrorMessage(e));
+        membersNextUrl = null;
+        membersPrevUrl = null;
+      }
+    }
+
+    async function refreshMembersFirstPage() {
+      await loadMembers(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`);
+    }
+
     async function loadGroup() {
       setStatus("Loading…", false);
       visible(summaryEl, false);
       visible(editSection, false);
       visible(booksSection, false);
+      visible(membersSection, false);
 
       try {
         const group = await fetchJSON(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/`);
@@ -1082,6 +1206,22 @@
         visible(summaryEl, true);
         visible(editSection, true);
         visible(booksSection, true);
+
+        // Membership management is Manager/Owner only.
+        if (canManageMemberships) {
+          visible(membersSection, true);
+          if (isPublicGroup) {
+            membersNote.textContent = "Public membership is required for all users. It cannot be removed, and cannot have curators.";
+            addMemberRole.value = "reader";
+            addMemberRole.querySelector('option[value="curator"]').disabled = true;
+          } else {
+            membersNote.textContent = "";
+            addMemberRole.querySelector('option[value="curator"]').disabled = false;
+          }
+        } else {
+          visible(membersSection, false);
+        }
+
         setStatus("", false);
       } catch (e) {
         console.error("Failed to load group", { groupId, e });
@@ -1134,6 +1274,13 @@
     });
     booksPrev.addEventListener("click", async () => {
       if (booksPrevUrl) await loadBooks(booksPrevUrl);
+    });
+
+    membersNext.addEventListener("click", async () => {
+      if (membersNextUrl) await loadMembers(membersNextUrl);
+    });
+    membersPrev.addEventListener("click", async () => {
+      if (membersPrevUrl) await loadMembers(membersPrevUrl);
     });
 
     editForm.addEventListener("submit", async (e) => {
@@ -1232,6 +1379,105 @@
 
     await loadGroup();
     await refreshBooksFirstPage();
+
+    if (canManageMemberships) {
+      // Populate add-member dropdown and load current memberships.
+      try {
+        const users = await loadAllManageableUsers();
+        addMemberUser.innerHTML = users
+          .map((u) => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.username)} (${escapeHtml(u.email || "")})</option>`)
+          .join("");
+        visible(addMemberForm, true);
+      } catch (e) {
+        console.error("Failed to load manageable users for membership add", e);
+        visible(addMemberForm, true);
+        addMemberUser.innerHTML = "";
+        setAddMemberStatus("Error loading user list.", true);
+      }
+
+      await refreshMembersFirstPage();
+
+      addMemberForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setAddMemberStatus("Adding…", false);
+        setGlobalError("");
+
+        const userId = addMemberUser.value;
+        const role = isPublicGroup ? "reader" : addMemberRole.value;
+        if (!userId) {
+          setAddMemberStatus("Choose a user.", true);
+          return;
+        }
+
+        try {
+          const csrf = getCsrfToken();
+          const headers = { Accept: "application/json", "Content-Type": "application/json" };
+          if (csrf) headers["X-CSRFToken"] = csrf;
+
+          await fetchJSONWithOptions(
+            `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`,
+            { method: "POST", headers, body: JSON.stringify({ user: Number(userId), role }) }
+          );
+
+          setAddMemberStatus("Added.", false);
+          await refreshMembersFirstPage();
+        } catch (e2) {
+          console.error("Failed to add member", { groupId, e2 });
+          setAddMemberStatus(extractApiErrorMessage(e2), true);
+          setGlobalError(extractApiErrorMessage(e2));
+        }
+      });
+
+      membersResults.addEventListener("click", async (e) => {
+        const target = e.target;
+        if (!target || target.nodeType !== 1) return;
+        const action = target.getAttribute("data-action");
+        const membershipId = target.getAttribute("data-membership-id");
+        if (!action || !membershipId) return;
+
+        if (action === "member-remove") {
+          setMembersStatus("Removing…", false);
+          try {
+            const csrf = getCsrfToken();
+            const headers = { Accept: "application/json" };
+            if (csrf) headers["X-CSRFToken"] = csrf;
+
+            await fetchJSONWithOptions(
+              `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
+              { method: "DELETE", headers }
+            );
+            await refreshMembersFirstPage();
+          } catch (e2) {
+            console.error("Failed to remove member", { groupId, membershipId, e2 });
+            setMembersStatus("Remove failed.", true);
+            setGlobalError(extractApiErrorMessage(e2));
+          }
+        }
+
+        if (action === "member-save") {
+          const select = membersResults.querySelector(
+            `select[data-action="member-role"][data-membership-id="${membershipId}"]`
+          );
+          const role = select ? select.value : "reader";
+          setMembersStatus("Saving…", false);
+          try {
+            const csrf = getCsrfToken();
+            const headers = { Accept: "application/json", "Content-Type": "application/json" };
+            if (csrf) headers["X-CSRFToken"] = csrf;
+
+            await fetchJSONWithOptions(
+              `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
+              { method: "PATCH", headers, body: JSON.stringify({ role }) }
+            );
+            await refreshMembersFirstPage();
+          } catch (e2) {
+            console.error("Failed to update member role", { groupId, membershipId, e2 });
+            setMembersStatus("Save failed.", true);
+            setGlobalError(extractApiErrorMessage(e2));
+          }
+        }
+      });
+    }
   }
 
   function renderUsersList(payload) {

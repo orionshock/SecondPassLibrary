@@ -1,0 +1,192 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, cast
+
+from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.test import APITestCase
+
+from accounts.models import UserProfile
+from library.group_services import ensure_user_public_membership, get_public_group
+from library.models import LibraryGroup, LibraryGroupMembership
+
+
+User = get_user_model()
+
+
+class LibraryGroupMembershipManagementAPITest(APITestCase):
+    def setUp(self):
+        self.public = get_public_group()
+
+        self.owner = User.objects.create_superuser(
+            username="owner", email="owner@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.owner)
+        owner_profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        owner_profile.role = UserProfile.ROLE_MANAGER
+        owner_profile.save(update_fields=["role", "updated_at"])
+
+        self.manager = User.objects.create_user(
+            username="manager", email="manager@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.manager)
+        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        manager_profile.role = UserProfile.ROLE_MANAGER
+        manager_profile.save(update_fields=["role", "updated_at"])
+
+        self.librarian = User.objects.create_user(
+            username="librarian", email="librarian@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.librarian)
+        librarian_profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        librarian_profile.role = UserProfile.ROLE_LIBRARIAN
+        librarian_profile.save(update_fields=["role", "updated_at"])
+
+        self.reader = User.objects.create_user(
+            username="reader", email="reader@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.reader)
+        reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
+        reader_profile.role = UserProfile.ROLE_READER
+        reader_profile.save(update_fields=["role", "updated_at"])
+
+        self.group = LibraryGroup.objects.create(
+            name="Group", slug="group", discoverability=LibraryGroup.DISCOVERABILITY_LISTED
+        )
+
+    def test_manager_and_owner_can_list_memberships(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.client.logout()
+        self.client.login(username="owner", password="pw")
+        response2 = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
+        )
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+
+    def test_librarian_and_reader_cannot_list_memberships(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        response2 = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
+        )
+        self.assertEqual(response2.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_manager_can_add_reader_and_curator_memberships_non_public(self):
+        self.client.login(username="manager", password="pw")
+        add_reader = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"user": self.reader.pk, "role": "reader"},
+                format="json",
+            ),
+        )
+        self.assertEqual(add_reader.status_code, status.HTTP_201_CREATED)
+
+        add_curator = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"user": self.reader.pk, "role": "curator"},
+                format="json",
+            ),
+        )
+        self.assertEqual(add_curator.status_code, status.HTTP_201_CREATED)
+        membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.group)
+        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+
+    def test_duplicate_add_is_idempotent_and_updates_role(self):
+        self.client.login(username="manager", password="pw")
+        first = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"user": self.reader.pk, "role": "reader"},
+                format="json",
+            ),
+        )
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+
+        second = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"user": self.reader.pk, "role": "curator"},
+                format="json",
+            ),
+        )
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).count(), 1)
+        membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.group)
+        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+
+    def test_manager_cannot_add_curator_membership_to_public(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.public.id}/memberships/",
+                data={"user": self.reader.pk, "role": "curator"},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.reader.refresh_from_db()
+        public_membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
+        self.assertEqual(public_membership.role, LibraryGroupMembership.ROLE_READER)
+
+    def test_manager_cannot_remove_public_membership(self):
+        self.client.login(username="manager", password="pw")
+        membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
+        response = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/library/groups/{self.public.id}/memberships/{membership.id}/"
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_manager_can_update_and_remove_non_public_membership(self):
+        self.client.login(username="manager", password="pw")
+        membership = LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER
+        )
+
+        patched = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/groups/{self.group.id}/memberships/{membership.id}/",
+                data={"role": "curator"},
+                format="json",
+            ),
+        )
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        membership.refresh_from_db()
+        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+
+        deleted = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/library/groups/{self.group.id}/memberships/{membership.id}/"
+            ),
+        )
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(LibraryGroupMembership.objects.filter(pk=membership.id).exists())
+

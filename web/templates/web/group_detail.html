@@ -63,5 +63,28 @@
       <button id="group-books-next" class="button" type="button" disabled>Next</button>
     </div>
   </section>
-{% endblock %}
 
+  <section id="group-members" class="card is-hidden">
+    <h2 class="card__title">Members</h2>
+    <div id="group-members-note" class="muted"></div>
+
+    <form id="group-add-member" class="search is-hidden" autocomplete="off" style="margin-top: 10px;">
+      <label class="search__label" for="group-member-user">Add member</label>
+      <select id="group-member-user"></select>
+      <select id="group-member-role">
+        <option value="reader">reader</option>
+        <option value="curator">curator</option>
+      </select>
+      <button class="button" type="submit">Add</button>
+      <span id="group-add-member-status" class="muted"></span>
+    </form>
+
+    <div id="group-members-status" class="muted" style="margin-top: 10px;">Loading…</div>
+    <div id="group-members-results" class="books"></div>
+
+    <div class="pager">
+      <button id="group-members-prev" class="button" type="button" disabled>Previous</button>
+      <button id="group-members-next" class="button" type="button" disabled>Next</button>
+    </div>
+  </section>
+{% endblock %}
