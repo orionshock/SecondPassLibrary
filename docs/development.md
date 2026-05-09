@@ -69,6 +69,23 @@ python manage.py check
 python manage.py test
 ```
 
+## Dev seed users (local only)
+
+Create predictable development users/groups for manual UI testing:
+
+```powershell
+python manage.py seed_dev_users
+```
+
+Credentials (DEV ONLY):
+
+- Users: `owner`, `manager`, `librarian`, `reader`, `curator`, `outsider`
+- Password: `changeme123`
+
+Safety:
+
+- The command refuses to run unless `DEBUG=True` (use `--force` only for local development).
+
 ## Common commands
 
 Import a single EPUB (dev/admin utility):
