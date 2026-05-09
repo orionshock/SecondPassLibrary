@@ -22,6 +22,7 @@ from .services import (
     update_user_via_management_api,
 )
 from core import policies
+from library.models import LibraryGroupMembership, is_public_group
 
 
 User = get_user_model()
@@ -78,7 +79,9 @@ class ManagedUserViewSet(
         if not policies.can_manage_users(user):
             raise PermissionDenied("Not allowed.")
 
-        qs = User.objects.all().order_by("username")
+        qs = User.objects.all().order_by("username").prefetch_related(
+            "library_group_memberships__group"
+        )
         if policies.is_owner(user):
             return qs
 
@@ -95,6 +98,23 @@ class ManagedUserViewSet(
         payload = []
         for user in users:
             profile = get_or_create_profile(user=user)
+            memberships = list(
+                getattr(user, "library_group_memberships", LibraryGroupMembership.objects.none())
+                .all()
+            )
+            groups = []
+            for membership in memberships:
+                group = membership.group
+                groups.append(
+                    {
+                        "id": group.id,
+                        "name": group.name,
+                        "slug": group.slug,
+                        "discoverability": group.discoverability,
+                        "membership_role": membership.role,
+                        "is_public_group": is_public_group(group),
+                    }
+                )
             payload.append(
                 {
                     "id": cast(int, user.pk),
@@ -108,6 +128,7 @@ class ManagedUserViewSet(
                     "is_owner": policies.is_owner(user),
                     "profile_id": profile.id,
                     "role": profile.role,
+                    "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
                 }
             )
         serializer = ManagedUserSerializer(payload, many=True)
@@ -118,6 +139,23 @@ class ManagedUserViewSet(
     def retrieve(self, request, *args, **kwargs):
         user = self.get_object()
         profile = get_or_create_profile(user=user)
+        memberships = list(
+            getattr(user, "library_group_memberships", LibraryGroupMembership.objects.none())
+            .all()
+        )
+        groups = []
+        for membership in memberships:
+            group = membership.group
+            groups.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "slug": group.slug,
+                    "discoverability": group.discoverability,
+                    "membership_role": membership.role,
+                    "is_public_group": is_public_group(group),
+                }
+            )
         payload = {
             "id": cast(int, user.pk),
             "username": user.get_username(),
@@ -130,6 +168,7 @@ class ManagedUserViewSet(
             "is_owner": policies.is_owner(user),
             "profile_id": profile.id,
             "role": profile.role,
+            "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
         }
         serializer = ManagedUserSerializer(payload)
         return Response(serializer.data)
@@ -152,6 +191,23 @@ class ManagedUserViewSet(
         )
 
         profile = get_or_create_profile(user=target)
+        memberships = list(
+            getattr(target, "library_group_memberships", LibraryGroupMembership.objects.none())
+            .all()
+        )
+        groups = []
+        for membership in memberships:
+            group = membership.group
+            groups.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "slug": group.slug,
+                    "discoverability": group.discoverability,
+                    "membership_role": membership.role,
+                    "is_public_group": is_public_group(group),
+                }
+            )
         payload = {
             "id": cast(int, target.pk),
             "username": target.get_username(),
@@ -164,6 +220,7 @@ class ManagedUserViewSet(
             "is_owner": policies.is_owner(target),
             "profile_id": profile.id,
             "role": profile.role,
+            "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
         }
         serializer = ManagedUserSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)

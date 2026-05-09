@@ -21,6 +21,7 @@ from .models import (
     LibraryGroup,
     LibraryGroupMembership,
     is_public_group,
+    BookGroupAssignment,
 )
 from .serializers import (
     AuthorSerializer,
@@ -118,6 +119,12 @@ class BookViewSet(viewsets.ModelViewSet):
             Prefetch(
                 "identifiers",
                 queryset=BookIdentifier.objects.order_by("scheme", "value"),
+            ),
+            Prefetch(
+                "group_assignments",
+                queryset=BookGroupAssignment.objects.select_related("group").order_by(
+                    "group__name", "group__slug"
+                ),
             ),
         )
     )

@@ -106,10 +106,44 @@ class BookSerializer(serializers.ModelSerializer):
     )
     files = BookFileSerializer(many=True, read_only=True)
     identifiers = serializers.SerializerMethodField(read_only=True)
+    groups = serializers.SerializerMethodField(read_only=True)
 
     def get_identifiers(self, obj: Book):
         identifiers = cast(Any, obj).identifiers.all()
         return BookIdentifierSerializer(identifiers, many=True).data
+
+    def get_groups(self, obj: Book):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        # group_assignments may be prefetched (preferred), but works without it.
+        try:
+            assignments = list(cast(Any, obj).group_assignments.all())
+        except Exception:
+            assignments = []
+        groups = [a.group for a in assignments if getattr(a, "group", None) is not None]
+
+        if user is None or getattr(user, "is_anonymous", False):
+            return []
+
+        # Managers/Librarians/Owner can see full group assignment context.
+        if policies.can_manage_library(user):
+            visible_groups = groups
+        else:
+            # Readers/Curators only see groups they can view (public, listed, or member).
+            visible_groups = [g for g in groups if policies.can_view_library_group(user=user, group=g)]
+
+        visible_groups = sorted(visible_groups, key=lambda g: (g.name, g.slug))
+        return [
+            {
+                "id": g.id,
+                "name": g.name,
+                "slug": g.slug,
+                "discoverability": g.discoverability,
+                "is_public_group": is_public_group(g),
+            }
+            for g in visible_groups
+        ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -142,6 +176,7 @@ class BookSerializer(serializers.ModelSerializer):
             "series",
             "series_index",
             "identifiers",
+            "groups",
             "files",
             "created_at",
             "updated_at",

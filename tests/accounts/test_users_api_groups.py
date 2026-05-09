@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, cast
+
+from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.test import APITestCase
+
+from accounts.models import UserProfile
+from library.group_services import ensure_user_public_membership, get_public_group
+from library.models import LibraryGroup, LibraryGroupMembership
+
+
+User = get_user_model()
+
+
+class ManagedUsersGroupsPayloadAPITest(APITestCase):
+    def setUp(self):
+        self.public = get_public_group()
+
+        self.manager = User.objects.create_user(
+            username="manager", email="manager@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.manager)
+        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        manager_profile.role = UserProfile.ROLE_MANAGER
+        manager_profile.save(update_fields=["role", "updated_at"])
+
+        self.reader = User.objects.create_user(
+            username="reader", email="reader@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.reader)
+        reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
+        reader_profile.role = UserProfile.ROLE_READER
+        reader_profile.save(update_fields=["role", "updated_at"])
+
+        self.group = LibraryGroup.objects.create(name="G", slug="g")
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
+        )
+
+    def test_manager_user_list_includes_groups_summary(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = cast(Mapping[str, Any], response.data)
+        results = cast(list[dict[str, Any]], payload["results"])
+        reader_row = next(u for u in results if u["username"] == "reader")
+        groups = cast(list[dict[str, Any]], reader_row["groups"])
+        self.assertGreaterEqual(len(groups), 1)
+
+        slugs = {g["slug"] for g in groups}
+        self.assertIn("public", slugs)
+        self.assertIn("g", slugs)
+
+        g_row = next(g for g in groups if g["slug"] == "g")
+        self.assertEqual(g_row["membership_role"], "curator")
+        self.assertFalse(g_row["is_public_group"])
+
+        public_row = next(g for g in groups if g["slug"] == "public")
+        self.assertEqual(public_row["membership_role"], "reader")
+        self.assertTrue(public_row["is_public_group"])
+
+        # Sanity: does not expose sensitive auth internals.
+        self.assertNotIn("is_superuser", reader_row)
+        self.assertNotIn("is_staff", reader_row)
+        self.assertNotIn("user_permissions", reader_row)

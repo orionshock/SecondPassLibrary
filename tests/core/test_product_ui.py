@@ -68,6 +68,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="book-detail"')
         self.assertContains(response, f'data-book-id="{book_id}"')
+        self.assertContains(response, 'id="book-groups"')
 
     def test_unauthenticated_imports_redirects_to_login(self):
         response = self.client.get("/imports/", follow=False)

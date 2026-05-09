@@ -26,6 +26,8 @@ The library browse screen is API-driven using vanilla JS fetch calls to `GET /ap
 
 The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and renders metadata, identifiers, and file download links (from `download_url`).
 
+The book detail page also shows the book's assigned LibraryGroups (filtered for Readers/Curators to only viewable groups) with links to the group pages.
+
 The imports page is API-driven using:
 
 - `GET /api/v1/library/imports/` (paginated job list)
@@ -50,6 +52,8 @@ The users UI is API-driven using:
 - `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no passwords/invites)
 
 User creation, deletion, invitations, and password management are intentionally not implemented yet.
+
+The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Detail page.
 
 ## 1. UI philosophy
 

@@ -574,8 +574,10 @@
     const idBody = $("#book-identifiers-body");
     const filesSection = $("#book-files");
     const filesBody = $("#book-files-body");
+    const groupsSection = $("#book-groups");
+    const groupsBody = $("#book-groups-body");
 
-    if (!statusEl || !detailEl || !metaEl || !idSection || !idBody || !filesSection || !filesBody) return;
+    if (!statusEl || !detailEl || !metaEl || !idSection || !idBody || !filesSection || !filesBody || !groupsSection || !groupsBody) return;
 
     const bookId = detailEl.dataset ? detailEl.dataset.bookId : "";
     if (!bookId) {
@@ -593,6 +595,26 @@
     visible(detailEl, false);
     visible(idSection, false);
     visible(filesSection, false);
+    visible(groupsSection, false);
+
+    function renderBookGroups(groups) {
+      if (!Array.isArray(groups) || groups.length === 0) {
+        return '<div class="muted">No visible groups.</div>';
+      }
+      const items = groups
+        .map((g) => {
+          const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
+          const badges = [
+            g.is_public_group ? '<span class="pill pill--owner">Public</span>' : "",
+            g.discoverability ? `<span class="pill">${escapeHtml(g.discoverability)}</span>` : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return `<li><a href="${escapeHtml(href)}">${escapeHtml(g.name || "")}</a> <span class="muted"><code>${escapeHtml(g.slug || "")}</code></span> ${badges}</li>`;
+        })
+        .join("");
+      return `<ul>${items}</ul>`;
+    }
 
     try {
       const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
@@ -625,10 +647,12 @@
 
       idBody.innerHTML = renderIdentifiers(book.identifiers);
       filesBody.innerHTML = renderFiles(book.files);
+      groupsBody.innerHTML = renderBookGroups(book.groups);
 
       visible(detailEl, true);
       visible(idSection, true);
       visible(filesSection, true);
+      visible(groupsSection, true);
       setStatus("", false);
     } catch (e) {
       console.error("Failed to load book detail", { bookId, e });
@@ -1484,6 +1508,18 @@
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
     if (results.length === 0) return "";
 
+    function renderUserGroups(groups) {
+      if (!Array.isArray(groups) || groups.length === 0) return "";
+      const pills = groups
+        .map((g) => {
+          const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
+          const publicBadge = g.is_public_group ? " Public" : "";
+          return `<a class="pill" href="${escapeHtml(href)}">${escapeHtml(g.name || g.slug || "")}${escapeHtml(publicBadge)}</a>`;
+        })
+        .join(" ");
+      return `<div>${pills}</div>`;
+    }
+
     return results
       .map((u) => {
         const id = u.id != null ? String(u.id) : "";
@@ -1504,12 +1540,15 @@
           .filter(Boolean)
           .join(" ");
 
+        const groupsHtml = renderUserGroups(u.groups);
+
         return `
           <article class="book">
             <h3 class="book__title">${escapeHtml(username)} ${badges}</h3>
             <div class="book__meta">
               ${email ? `<div>${escapeHtml(email)}</div>` : ""}
               ${(first || last) ? `<div>${escapeHtml([first, last].filter(Boolean).join(" "))}</div>` : ""}
+              ${groupsHtml ? `<div>Groups: ${groupsHtml}</div>` : ""}
               ${lastLogin ? `<div>Last login: <span class="muted">${escapeHtml(lastLogin)}</span></div>` : ""}
             </div>
             <div style="margin-top: 10px;">
@@ -1544,6 +1583,7 @@
     const editForm = $("#users-edit-form");
     const editId = $("#users-edit-id");
     const editUsername = $("#users-edit-username");
+    const editGroups = $("#users-edit-groups");
     const editEmail = $("#users-edit-email");
     const editFirst = $("#users-edit-first");
     const editLast = $("#users-edit-last");
@@ -1561,6 +1601,7 @@
       !editForm ||
       !editId ||
       !editUsername ||
+      !editGroups ||
       !editEmail ||
       !editFirst ||
       !editLast ||
@@ -1622,6 +1663,17 @@
 
       editId.value = user.id != null ? String(user.id) : "";
       editUsername.textContent = user.username || "";
+      if (Array.isArray(user.groups) && user.groups.length) {
+        editGroups.innerHTML = user.groups
+          .map((g) => {
+            const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
+            const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
+            return `<div><a href="${escapeHtml(href)}">${escapeHtml(g.name || g.slug || "")}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
+          })
+          .join("");
+      } else {
+        editGroups.innerHTML = '<div class="muted">No group memberships.</div>';
+      }
       editEmail.value = user.email || "";
       editFirst.value = user.first_name || "";
       editLast.value = user.last_name || "";

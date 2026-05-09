@@ -55,6 +55,14 @@ class CurrentUserPatchSerializer(serializers.Serializer):
 
 
 class ManagedUserSerializer(serializers.Serializer):
+    class ManagedUserGroupSummarySerializer(serializers.Serializer):
+        id = serializers.UUIDField()
+        name = serializers.CharField()
+        slug = serializers.SlugField()
+        discoverability = serializers.ChoiceField(choices=["listed", "unlisted"])
+        membership_role = serializers.ChoiceField(choices=["reader", "curator"])
+        is_public_group = serializers.BooleanField()
+
     id = serializers.IntegerField()
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
@@ -66,6 +74,7 @@ class ManagedUserSerializer(serializers.Serializer):
     is_owner = serializers.BooleanField()
     profile_id = serializers.UUIDField(allow_null=True)
     role = serializers.CharField(allow_blank=True)
+    groups = ManagedUserGroupSummarySerializer(many=True)
 
 
 class ManagedUserPatchSerializer(serializers.Serializer):

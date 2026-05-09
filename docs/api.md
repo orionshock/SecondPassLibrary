@@ -68,6 +68,11 @@ Response shape:
 - Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
 - Users (Owner/Manager only): `GET /api/v1/accounts/users/` (paginated), `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
 
+User-management payload notes:
+
+- Managed users now include a read-only `groups[]` membership summary for that user (group id/name/slug/discoverability, membership_role, is_public_group).
+- Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
+
 ### `GET /api/v1/accounts/me/` response
 
 `/accounts/me/` is intended to be the UI bootstrap endpoint for authenticated clients:
@@ -120,6 +125,12 @@ Any attempt to patch other fields is rejected (400) using the project error enve
 - Books: `GET /api/v1/library/books/` (paginated), `GET /api/v1/library/books/<id>/`
 - Book files: `GET /api/v1/library/book-files/` (paginated), `GET /api/v1/library/book-files/<id>/`
 - Download: `GET /api/v1/library/book-files/<id>/download/`
+
+Book payload notes:
+
+- Books now include a read-only `groups[]` summary (assigned LibraryGroups).
+- For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
+- For Readers/Curators, `groups[]` includes only groups the caller can view (e.g., Public, listed, or direct membership).
 
 ## Imports
 

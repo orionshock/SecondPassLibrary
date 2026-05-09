@@ -191,8 +191,8 @@ class ManagedUsersAPITest(APITestCase):
         data = cast(Mapping[str, Any], response.data)
         self.assertNotIn("password", data)
         self.assertNotIn("user_permissions", data)
-        self.assertNotIn("groups", data)
         self.assertNotIn("is_superuser", data)
+        self.assertNotIn("is_staff", data)
 
     def test_owner_can_assign_and_demote_manager_role(self):
         self.client.login(username="owner", password="pw")

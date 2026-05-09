@@ -344,6 +344,61 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
             self.assertEqual(titles, ["Group A Book", "Group B Book", "Public Book"])
 
 
+class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        from library.group_services import get_public_group
+        from library.models import LibraryGroup
+
+        self.public = get_public_group()
+
+        self.reader = User.objects.create_user(
+            username="reader", email="reader@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.reader)
+        reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
+        reader_profile.role = UserProfile.ROLE_READER
+        reader_profile.save(update_fields=["role", "updated_at"])
+
+        self.manager = User.objects.create_user(
+            username="manager", email="manager@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.manager)
+        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        manager_profile.role = UserProfile.ROLE_MANAGER
+        manager_profile.save(update_fields=["role", "updated_at"])
+
+        self.hidden_group = LibraryGroup.objects.create(
+            name="Hidden",
+            slug="hidden",
+            discoverability=LibraryGroup.DISCOVERABILITY_UNLISTED,
+        )
+
+        # Book is viewable via Public, but also assigned to an unlisted non-member group.
+        self.book = Book.objects.create(title="Public+Hidden")
+        ensure_book_public_assignment(book=self.book, added_by=None)
+        BookGroupAssignment.objects.create(book=self.book, group=self.hidden_group)
+
+    def test_manager_sees_all_assigned_groups(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(Response, self.client.get(f"/api/v1/library/books/{self.book.id}/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = cast(Mapping[str, Any], response.data)
+        groups = cast(list[dict[str, Any]], payload["groups"])
+        slugs = {g["slug"] for g in groups}
+        self.assertIn("public", slugs)
+        self.assertIn("hidden", slugs)
+
+    def test_reader_only_sees_viewable_groups(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get(f"/api/v1/library/books/{self.book.id}/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = cast(Mapping[str, Any], response.data)
+        groups = cast(list[dict[str, Any]], payload["groups"])
+        slugs = {g["slug"] for g in groups}
+        self.assertIn("public", slugs)
+        self.assertNotIn("hidden", slugs)
+
+
 class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.reader = User.objects.create_user(username="reader", password="pw")
