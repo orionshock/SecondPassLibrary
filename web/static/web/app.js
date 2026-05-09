@@ -269,6 +269,7 @@
     const me = await loadMeAndInitShell();
     if (!me) {
       setText($("#me-summary"), "Error loading identity.");
+      setText($("#me-edit-status"), "Error loading identity.");
       setText($("#me-groups"), "Error loading identity.");
       setText($("#me-capabilities"), "Error loading identity.");
       setText($("#me-sections"), "Error loading identity.");
@@ -280,7 +281,7 @@
       <div class="kv">
         <div class="kv__k">Username</div><div class="kv__v">${escapeHtml(me.username || "")}${ownerBadge}</div>
         <div class="kv__k">Role</div><div class="kv__v">${escapeHtml(formatRole(me.role))}</div>
-        <div class="kv__k">Email</div><div class="kv__v">${escapeHtml(me.email || "")}</div>
+        <div class="kv__k">Email</div><div class="kv__v" id="me-email">${escapeHtml(me.email || "")}</div>
       </div>
     `.trim();
 
@@ -291,6 +292,73 @@
       .map((s) => `<a class="button" href="${escapeHtml(s.href)}">${escapeHtml(s.label)}</a>`)
       .join(" ");
     $("#me-sections").innerHTML = sections || '<div class="muted">No sections.</div>';
+
+    const form = $("#me-edit-form");
+    const emailInput = $("#me-edit-email");
+    const firstInput = $("#me-edit-first");
+    const lastInput = $("#me-edit-last");
+    const statusEl = $("#me-edit-status");
+
+    if (form && emailInput && firstInput && lastInput && statusEl) {
+      // Email comes from /me/ payload; names are server-rendered in the template.
+      emailInput.value = me.email || "";
+      statusEl.textContent = "";
+      statusEl.classList.remove("error");
+
+      if (!form.dataset.bound) {
+        form.dataset.bound = "1";
+        form.dataset.baseEmail = emailInput.value || "";
+        form.dataset.baseFirst = firstInput.value || "";
+        form.dataset.baseLast = lastInput.value || "";
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          setGlobalError("");
+          statusEl.textContent = "Saving…";
+          statusEl.classList.remove("error");
+
+          const desired = {
+            email: (emailInput.value || "").trim(),
+            first_name: (firstInput.value || "").trim(),
+            last_name: (lastInput.value || "").trim(),
+          };
+
+          const patch = {};
+          if (String(desired.email) !== String(form.dataset.baseEmail || "")) patch.email = desired.email;
+          if (String(desired.first_name) !== String(form.dataset.baseFirst || "")) patch.first_name = desired.first_name;
+          if (String(desired.last_name) !== String(form.dataset.baseLast || "")) patch.last_name = desired.last_name;
+
+          if (Object.keys(patch).length === 0) {
+            statusEl.textContent = "No changes.";
+            return;
+          }
+
+          try {
+            const csrf = getCsrfToken();
+            const headers = { Accept: "application/json", "Content-Type": "application/json" };
+            if (csrf) headers["X-CSRFToken"] = csrf;
+
+            await fetchJSONWithOptions("/api/v1/accounts/me/", {
+              method: "PATCH",
+              headers,
+              body: JSON.stringify(patch),
+            });
+
+            statusEl.textContent = "Saved.";
+            form.dataset.baseEmail = desired.email;
+            form.dataset.baseFirst = desired.first_name;
+            form.dataset.baseLast = desired.last_name;
+            const emailEl = $("#me-email");
+            if (emailEl) emailEl.textContent = desired.email;
+          } catch (e2) {
+            console.error("Failed to save /api/v1/accounts/me/", e2);
+            const msg = extractApiErrorMessage(e2);
+            statusEl.textContent = msg;
+            statusEl.classList.add("error");
+            setGlobalError(msg);
+          }
+        });
+      }
+    }
   }
 
   function bookFilesHtml(files) {

@@ -64,6 +64,7 @@ Response shape:
 ## Accounts
 
 - `GET /api/v1/accounts/me/`
+- `PATCH /api/v1/accounts/me/` (self-profile fields only)
 - Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
 - Users (Owner/Manager only): `GET /api/v1/accounts/users/` (paginated), `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
 
@@ -99,6 +100,18 @@ Each `groups[]` item includes:
 - `is_public_group`
 
 If the user is a curator of any non-Public group, `curated_group_ids` lists the group IDs where they have scoped curator powers.
+
+### `PATCH /api/v1/accounts/me/`
+
+Self-profile update endpoint (no auth redesign; no password handling).
+
+Allowed fields:
+
+- `email`
+- `first_name`
+- `last_name`
+
+Any attempt to patch other fields is rejected (400) using the project error envelope (`UNSAFE_FIELD`).
 
 ## Library
 

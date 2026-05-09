@@ -32,6 +32,28 @@ class CurrentUserSerializer(serializers.Serializer):
     curated_group_ids = serializers.ListField(child=serializers.UUIDField())
 
 
+class CurrentUserPatchSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False, allow_blank=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        allowed = {"email", "first_name", "last_name"}
+        present = set(initial.keys())
+        forbidden = present.difference(allowed)
+        if forbidden:
+            raise serializers.ValidationError(
+                api_error_payload(
+                    code=ErrorCode.UNSAFE_FIELD,
+                    message="This endpoint only supports self-profile fields.",
+                    detail=f"Unsupported field(s): {', '.join(sorted(forbidden))}.",
+                    hint="Use only: email, first_name, last_name.",
+                )
+            )
+        return super().validate(attrs)
+
+
 class ManagedUserSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     username = serializers.CharField()

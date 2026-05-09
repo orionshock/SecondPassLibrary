@@ -8,6 +8,7 @@ The first minimal product UI shell now exists:
 
 - `/` redirects to `/app/`
 - `/app/` is an authenticated dashboard shell
+- `/app/` includes self-profile editing (email/first_name/last_name only)
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/imports/` is an API-driven imports page (upload + job list/results)

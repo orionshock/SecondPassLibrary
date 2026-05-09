@@ -33,6 +33,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="me-summary"')
         self.assertContains(response, 'id="ui-global-error"')
+        self.assertContains(response, 'id="me-edit-form"')
+        self.assertContains(response, 'id="me-edit-email"')
 
     def test_unauthenticated_library_redirects_to_login(self):
         response = self.client.get("/library/", follow=False)

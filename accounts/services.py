@@ -98,6 +98,40 @@ def update_user_via_management_api(
     return UserUpdateResult(user=target_user, profile=profile)
 
 
+def update_current_user_via_me_api(
+    *,
+    user,
+    email: str | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+) -> None:
+    """
+    Safe path for a user to update their own basic contact/profile fields via /accounts/me/.
+
+    Intentionally limited:
+    - Allows: email, first_name, last_name
+    - Disallows: username, role, is_active, password, and all auth internals
+    """
+    if getattr(user, "is_anonymous", False):
+        raise PermissionDenied("Not allowed.")
+
+    updates: dict[str, Any] = {}
+    if email is not None:
+        updates["email"] = email
+    if first_name is not None:
+        updates["first_name"] = first_name
+    if last_name is not None:
+        updates["last_name"] = last_name
+
+    if not updates:
+        return
+
+    for key, value in updates.items():
+        setattr(user, key, value)
+    user.full_clean()
+    user.save(update_fields=[*updates.keys()])
+
+
 def build_current_user_me_payload(*, user) -> dict[str, Any]:
     profile = get_or_create_profile(user=user)
 

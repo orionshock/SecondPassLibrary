@@ -10,6 +10,7 @@ from rest_framework.exceptions import PermissionDenied
 from .models import UserProfile
 from .serializers import (
     CurrentUserSerializer,
+    CurrentUserPatchSerializer,
     ManagedUserPatchSerializer,
     ManagedUserSerializer,
     UserProfileSerializer,
@@ -17,6 +18,7 @@ from .serializers import (
 from .services import (
     build_current_user_me_payload,
     get_or_create_profile,
+    update_current_user_via_me_api,
     update_user_via_management_api,
 )
 from core import policies
@@ -45,6 +47,22 @@ class CurrentUserView(APIView):
         payload = build_current_user_me_payload(user=request.user)
         serializer = CurrentUserSerializer(payload)
         return Response(serializer.data)
+
+    def patch(self, request):
+        patch = CurrentUserPatchSerializer(data=request.data or {})
+        patch.is_valid(raise_exception=True)
+        data = patch.validated_data
+
+        update_current_user_via_me_api(
+            user=request.user,
+            email=data.get("email"),
+            first_name=data.get("first_name"),
+            last_name=data.get("last_name"),
+        )
+
+        payload = build_current_user_me_payload(user=request.user)
+        serializer = CurrentUserSerializer(payload)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ManagedUserViewSet(
