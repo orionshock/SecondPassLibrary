@@ -112,6 +112,20 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="group-summary"')
         self.assertContains(response, f'data-group-id="{group_id}"')
 
+    def test_unauthenticated_users_redirects_to_login(self):
+        response = self.client.get("/users/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/users/")
+
+    def test_authenticated_users_returns_200_and_has_containers(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/users/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="users-results"')
+        self.assertContains(response, 'id="users-edit-form"')
+
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)
         response = self.client.get("/app/")

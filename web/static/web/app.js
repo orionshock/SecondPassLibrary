@@ -1166,6 +1166,308 @@
     await refreshBooksFirstPage();
   }
 
+  function renderUsersList(payload) {
+    const results = Array.isArray(payload && payload.results) ? payload.results : [];
+    if (results.length === 0) return "";
+
+    return results
+      .map((u) => {
+        const id = u.id != null ? String(u.id) : "";
+        const username = u.username || "";
+        const email = u.email || "";
+        const first = u.first_name || "";
+        const last = u.last_name || "";
+        const role = u.role || "";
+        const isOwner = !!u.is_owner;
+        const isActive = u.is_active !== false;
+        const lastLogin = u.last_login ? String(u.last_login) : "";
+
+        const badges = [
+          isOwner ? '<span class="pill pill--owner">Owner</span>' : "",
+          role ? `<span class="pill">${escapeHtml(role)}</span>` : "",
+          isActive ? "" : '<span class="pill">inactive</span>',
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        return `
+          <article class="book">
+            <h3 class="book__title">${escapeHtml(username)} ${badges}</h3>
+            <div class="book__meta">
+              ${email ? `<div>${escapeHtml(email)}</div>` : ""}
+              ${(first || last) ? `<div>${escapeHtml([first, last].filter(Boolean).join(" "))}</div>` : ""}
+              ${lastLogin ? `<div>Last login: <span class="muted">${escapeHtml(lastLogin)}</span></div>` : ""}
+            </div>
+            <div style="margin-top: 10px;">
+              <button class="button" type="button" data-action="edit-user" data-user-id="${escapeHtml(id)}">Edit</button>
+            </div>
+          </article>
+        `.trim();
+      })
+      .join("");
+  }
+
+  function summarizeFieldErrors(body) {
+    if (!body || typeof body !== "object") return "";
+    const entries = Object.entries(body)
+      .filter(([k]) => k !== "error" && k !== "detail")
+      .slice(0, 8)
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`);
+    return entries.length ? entries.join(" | ") : "";
+  }
+
+  async function initUsers() {
+    const me = await loadMeAndInitShell();
+    setGlobalError("");
+
+    const notAllowedEl = $("#users-not-allowed");
+    const statusEl = $("#users-status");
+    const resultsEl = $("#users-results");
+    const nextBtn = $("#users-next");
+    const prevBtn = $("#users-prev");
+
+    const editStatus = $("#users-edit-status");
+    const editForm = $("#users-edit-form");
+    const editId = $("#users-edit-id");
+    const editUsername = $("#users-edit-username");
+    const editEmail = $("#users-edit-email");
+    const editFirst = $("#users-edit-first");
+    const editLast = $("#users-edit-last");
+    const editRole = $("#users-edit-role");
+    const editActive = $("#users-edit-active");
+    const saveStatus = $("#users-save-status");
+
+    if (
+      !notAllowedEl ||
+      !statusEl ||
+      !resultsEl ||
+      !nextBtn ||
+      !prevBtn ||
+      !editStatus ||
+      !editForm ||
+      !editId ||
+      !editUsername ||
+      !editEmail ||
+      !editFirst ||
+      !editLast ||
+      !editRole ||
+      !editActive ||
+      !saveStatus
+    ) {
+      return;
+    }
+
+    const caps = me && me.capabilities ? me.capabilities : {};
+    const allowed = !!caps.can_manage_users;
+
+    visible(notAllowedEl, !allowed);
+
+    let nextUrl = null;
+    let prevUrl = null;
+    let currentUrl = "/api/v1/accounts/users/";
+    let currentResults = [];
+
+    function setStatus(text, isError) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    function setSaveStatus(text, isError) {
+      saveStatus.textContent = text || "";
+      saveStatus.classList.toggle("error", !!isError);
+    }
+
+    function setEditMessage(text, isError) {
+      editStatus.textContent = text;
+      editStatus.classList.toggle("error", !!isError);
+    }
+
+    function setFormEnabled(on, message) {
+      const disabled = !on;
+      editEmail.disabled = disabled;
+      editFirst.disabled = disabled;
+      editLast.disabled = disabled;
+      editRole.disabled = disabled;
+      editActive.disabled = disabled;
+      const button = editForm.querySelector('button[type="submit"]');
+      if (button) button.disabled = disabled;
+      if (message) setEditMessage(message, true);
+    }
+
+    function applyRoleOptions() {
+      const canSetManager = !!(me && me.is_owner);
+      const mgrOpt = editRole.querySelector('option[value="manager"]');
+      if (mgrOpt) mgrOpt.disabled = !canSetManager;
+      if (!canSetManager && editRole.value === "manager") {
+        editRole.value = "reader";
+      }
+    }
+
+    function selectUser(user) {
+      if (!user) return;
+
+      editId.value = user.id != null ? String(user.id) : "";
+      editUsername.textContent = user.username || "";
+      editEmail.value = user.email || "";
+      editFirst.value = user.first_name || "";
+      editLast.value = user.last_name || "";
+      editRole.value = user.role || "reader";
+      editActive.value = user.is_active === false ? "false" : "true";
+
+      visible(editForm, true);
+      setSaveStatus("", false);
+
+      applyRoleOptions();
+
+      if (user.is_owner) {
+        setFormEnabled(false, "Owner cannot be edited here.");
+      } else if (!me.is_owner && user.role === "manager") {
+        setFormEnabled(false, "Only Owner can edit Managers.");
+      } else {
+        setFormEnabled(true, "");
+        setEditMessage("Edit safe fields and save.", false);
+      }
+    }
+
+    async function load(url) {
+      setGlobalError("");
+      setStatus("Loading users…", false);
+      resultsEl.innerHTML = "";
+      nextBtn.disabled = true;
+      prevBtn.disabled = true;
+
+      currentUrl = url;
+
+      if (!allowed) {
+        setStatus("Not allowed.", true);
+        setEditMessage("Not allowed.", true);
+        visible(editForm, false);
+        return;
+      }
+
+      try {
+        const payload = await fetchJSON(url);
+        const results = Array.isArray(payload && payload.results) ? payload.results : [];
+        currentResults = results;
+        if (results.length === 0) {
+          setStatus("No users.", false);
+          nextUrl = null;
+          prevUrl = null;
+          return;
+        }
+
+        setStatus(payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "", false);
+        resultsEl.innerHTML = renderUsersList(payload);
+
+        nextUrl = payload.next || null;
+        prevUrl = payload.previous || null;
+        nextBtn.disabled = !nextUrl;
+        prevBtn.disabled = !prevUrl;
+      } catch (e) {
+        console.error("Failed to load users", { url, e });
+        setStatus("Error loading users.", true);
+        setGlobalError(extractApiErrorMessage(e));
+        nextUrl = null;
+        prevUrl = null;
+      }
+    }
+
+    await load(currentUrl);
+
+    nextBtn.addEventListener("click", async () => {
+      if (nextUrl) await load(nextUrl);
+    });
+    prevBtn.addEventListener("click", async () => {
+      if (prevUrl) await load(prevUrl);
+    });
+
+    resultsEl.addEventListener("click", (e) => {
+      const target = e.target;
+      if (!target || target.nodeType !== 1) return;
+      if (target.getAttribute("data-action") !== "edit-user") return;
+      const id = target.getAttribute("data-user-id");
+      if (!id) return;
+      const user = (currentResults || []).find((u) => String(u.id) === String(id));
+      selectUser(user);
+    });
+
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setSaveStatus("Saving…", false);
+      setGlobalError("");
+
+      const id = editId.value;
+      if (!id) {
+        setSaveStatus("No user selected.", true);
+        return;
+      }
+
+      const selected = (currentResults || []).find((u) => String(u.id) === String(id));
+      if (!selected) {
+        setSaveStatus("Selected user not in current list; refresh.", true);
+        return;
+      }
+
+      if (selected.is_owner) {
+        setSaveStatus("Owner cannot be edited here.", true);
+        return;
+      }
+      if (!me.is_owner && selected.role === "manager") {
+        setSaveStatus("Only Owner can edit Managers.", true);
+        return;
+      }
+
+      const desired = {
+        email: editEmail.value || "",
+        first_name: editFirst.value || "",
+        last_name: editLast.value || "",
+        role: editRole.value || "reader",
+        is_active: editActive.value === "true",
+      };
+
+      const patch = {};
+      for (const key of Object.keys(desired)) {
+        if (String(desired[key]) !== String(selected[key])) {
+          patch[key] = desired[key];
+        }
+      }
+
+      if (Object.keys(patch).length === 0) {
+        setSaveStatus("No changes.", false);
+        return;
+      }
+
+      if (!me.is_owner && patch.role === "manager") {
+        setSaveStatus("Only Owner can assign manager.", true);
+        return;
+      }
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        const updated = await fetchJSONWithOptions(`/api/v1/accounts/users/${encodeURIComponent(String(id))}/`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(patch),
+        });
+
+        setSaveStatus("Saved.", false);
+        await load(currentUrl);
+
+        const updatedInList = (currentResults || []).find((u) => String(u.id) === String(id));
+        selectUser(updatedInList || updated);
+      } catch (e2) {
+        console.error("Failed to save user", { id, e2 });
+        const msg = extractApiErrorMessage(e2);
+        const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
+        setSaveStatus(fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
+        setGlobalError(msg);
+      }
+    });
+  }
+
   window.SecondPassUI = {
     initDashboard,
     initLibraryBrowse,
@@ -1173,6 +1475,7 @@
     initImports,
     initGroupsList,
     initGroupDetail,
+    initUsers,
     getCsrfToken,
   };
 
@@ -1207,6 +1510,11 @@
       initGroupDetail().catch((e) => {
         console.error("initGroupDetail failed", e);
         setGlobalErrorFromError(e, "Group error:");
+      });
+    } else if (page === "users") {
+      initUsers().catch((e) => {
+        console.error("initUsers failed", e);
+        setGlobalErrorFromError(e, "Users error:");
       });
     } else {
       loadMeAndInitShell().catch((e) => {

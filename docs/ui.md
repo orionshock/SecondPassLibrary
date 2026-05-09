@@ -12,6 +12,7 @@ The first minimal product UI shell now exists:
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/imports/` is an API-driven imports page (upload + job list/results)
 - `/groups/` and `/groups/<group_id>/` provide functional group list/detail screens
+- `/users/` provides functional user management for Manager/Owner only
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -40,6 +41,13 @@ The groups UI is API-driven using:
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
 
 There is no group membership management UI yet.
+
+The users UI is API-driven using:
+
+- `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)
+- `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no passwords/invites)
+
+User creation, deletion, invitations, and password management are intentionally not implemented yet.
 
 ## 1. UI philosophy
 

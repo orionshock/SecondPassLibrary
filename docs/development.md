@@ -37,6 +37,7 @@ python manage.py runserver
 - Book detail: `/library/books/<book_id>/`
 - Imports: `/imports/`
 - Groups: `/groups/`
+- Users: `/users/` (Manager/Owner)
 
 If you are not authenticated, these pages redirect to `/api-auth/login/?next=...`.
 
