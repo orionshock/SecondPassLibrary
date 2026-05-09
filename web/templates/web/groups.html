@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}groups{% endblock %}
+
+{% block title %}Groups · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Groups</h1>
+  </div>
+
+  <div id="groups-status" class="muted">Loading…</div>
+  <div id="groups-results" class="books"></div>
+
+  <div class="pager">
+    <button id="groups-prev" class="button" type="button" disabled>Previous</button>
+    <button id="groups-next" class="button" type="button" disabled>Next</button>
+  </div>
+{% endblock %}
+

@@ -1,0 +1,67 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}group-detail{% endblock %}
+
+{% block title %}Group · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/groups/" class="pill">← Back to Groups</a>
+      <h1 class="page-title" id="group-title">Group</h1>
+    </div>
+  </div>
+
+  <div id="group-status" class="muted">Loading…</div>
+
+  <section id="group-summary" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+    <h2 class="card__title">Details</h2>
+    <div id="group-meta"></div>
+  </section>
+
+  <section id="group-edit" class="card is-hidden">
+    <h2 class="card__title">Presentation</h2>
+    <form id="group-edit-form">
+      <div class="kv">
+        <div class="kv__k"><label for="group-description">Description</label></div>
+        <div class="kv__v">
+          <textarea id="group-description" rows="3" style="width: 100%;"></textarea>
+        </div>
+
+        <div class="kv__k"><label for="group-discoverability">Discoverability</label></div>
+        <div class="kv__v">
+          <select id="group-discoverability">
+            <option value="listed">listed</option>
+            <option value="unlisted">unlisted</option>
+          </select>
+          <span id="group-discoverability-note" class="muted"></span>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <button class="button" type="submit">Save</button>
+        <span id="group-edit-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+
+  <section id="group-books" class="card is-hidden">
+    <h2 class="card__title">Books</h2>
+
+    <form id="group-add-book" class="search" autocomplete="off">
+      <label class="search__label" for="group-book-id">Add book by UUID</label>
+      <input id="group-book-id" class="search__input" placeholder="Book UUID" />
+      <button class="button" type="submit">Add</button>
+      <span id="group-add-book-status" class="muted"></span>
+    </form>
+
+    <div id="group-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
+    <div id="group-books-results" class="books"></div>
+
+    <div class="pager">
+      <button id="group-books-prev" class="button" type="button" disabled>Previous</button>
+      <button id="group-books-next" class="button" type="button" disabled>Next</button>
+    </div>
+  </section>
+{% endblock %}
+

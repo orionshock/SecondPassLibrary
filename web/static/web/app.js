@@ -757,11 +757,422 @@
     });
   }
 
+  function renderGroupsList(payload) {
+    const results = Array.isArray(payload && payload.results) ? payload.results : [];
+    if (results.length === 0) return "";
+
+    return results
+      .map((g) => {
+        const name = g.name || "";
+        const slug = g.slug || "";
+        const discoverability = g.discoverability || "";
+        const membershipRole = g.membership_role || "";
+        const isPublic = !!g.is_public_group;
+        const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
+
+        const badges = [
+          isPublic ? '<span class="pill pill--owner">Public</span>' : "",
+          discoverability ? `<span class="pill">${escapeHtml(discoverability)}</span>` : "",
+          membershipRole ? `<span class="pill">${escapeHtml(membershipRole)}</span>` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        return `
+          <article class="book">
+            <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
+            <div class="book__meta">
+              <div>Slug: <code>${escapeHtml(slug)}</code></div>
+              ${badges ? `<div>${badges}</div>` : ""}
+            </div>
+          </article>
+        `.trim();
+      })
+      .join("");
+  }
+
+  async function initGroupsList() {
+    await loadMeAndInitShell();
+    setGlobalError("");
+
+    const statusEl = $("#groups-status");
+    const resultsEl = $("#groups-results");
+    const nextBtn = $("#groups-next");
+    const prevBtn = $("#groups-prev");
+    if (!statusEl || !resultsEl || !nextBtn || !prevBtn) return;
+
+    let nextUrl = null;
+    let prevUrl = null;
+
+    function setStatus(text, isError) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    async function load(url) {
+      setStatus("Loading…", false);
+      resultsEl.innerHTML = "";
+      nextBtn.disabled = true;
+      prevBtn.disabled = true;
+
+      try {
+        const payload = await fetchJSON(url);
+        const results = Array.isArray(payload && payload.results) ? payload.results : [];
+        if (results.length === 0) {
+          setStatus("No groups.", false);
+          nextUrl = null;
+          prevUrl = null;
+          return;
+        }
+
+        setStatus(payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "", false);
+        resultsEl.innerHTML = renderGroupsList(payload);
+
+        nextUrl = payload.next || null;
+        prevUrl = payload.previous || null;
+        nextBtn.disabled = !nextUrl;
+        prevBtn.disabled = !prevUrl;
+      } catch (e) {
+        console.error("Failed to load groups", { url, e });
+        if (e && e.status === 403) {
+          setStatus("Permission denied.", true);
+        } else if (e && e.status === 404) {
+          setStatus("Not found.", true);
+        } else {
+          setStatus("Error loading groups.", true);
+        }
+        setGlobalError(extractApiErrorMessage(e));
+        nextUrl = null;
+        prevUrl = null;
+      }
+    }
+
+    await load("/api/v1/library/groups/");
+
+    nextBtn.addEventListener("click", async () => {
+      if (nextUrl) await load(nextUrl);
+    });
+    prevBtn.addEventListener("click", async () => {
+      if (prevUrl) await load(prevUrl);
+    });
+  }
+
+  function renderGroupBooks(payload, groupId) {
+    const results = Array.isArray(payload && payload.results) ? payload.results : [];
+    if (results.length === 0) return "";
+
+    return results
+      .map((b) => {
+        const title = b.title || "(Untitled)";
+        const subtitle = b.subtitle ? ` <span class="muted">— ${escapeHtml(b.subtitle)}</span>` : "";
+        const bookHref = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
+        const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
+
+        const removeBtn =
+          b.id && groupId
+            ? `<button class="button" type="button" data-action="remove-book" data-book-id="${escapeHtml(b.id)}">Remove from group</button>`
+            : "";
+
+        return `
+          <article class="book">
+            <h3 class="book__title">${
+              bookHref
+                ? `<a href="${escapeHtml(bookHref)}">${escapeHtml(title)}</a>${subtitle}`
+                : `${escapeHtml(title)}${subtitle}`
+            }</h3>
+            <div class="book__meta">
+              ${authors.length ? `<div>${escapeHtml(authors.join(", "))}</div>` : ""}
+            </div>
+            ${removeBtn ? `<div style="margin-top: 10px;">${removeBtn}</div>` : ""}
+          </article>
+        `.trim();
+      })
+      .join("");
+  }
+
+  async function initGroupDetail() {
+    await loadMeAndInitShell();
+    setGlobalError("");
+
+    const summaryEl = $("#group-summary");
+    const statusEl = $("#group-status");
+    const titleEl = $("#group-title");
+    const metaEl = $("#group-meta");
+
+    const editSection = $("#group-edit");
+    const editForm = $("#group-edit-form");
+    const editStatus = $("#group-edit-status");
+    const descInput = $("#group-description");
+    const discSelect = $("#group-discoverability");
+    const discNote = $("#group-discoverability-note");
+
+    const booksSection = $("#group-books");
+    const booksStatus = $("#group-books-status");
+    const booksResults = $("#group-books-results");
+    const booksNext = $("#group-books-next");
+    const booksPrev = $("#group-books-prev");
+
+    const addBookForm = $("#group-add-book");
+    const addBookInput = $("#group-book-id");
+    const addBookStatus = $("#group-add-book-status");
+
+    if (
+      !summaryEl ||
+      !statusEl ||
+      !titleEl ||
+      !metaEl ||
+      !editSection ||
+      !editForm ||
+      !editStatus ||
+      !descInput ||
+      !discSelect ||
+      !discNote ||
+      !booksSection ||
+      !booksStatus ||
+      !booksResults ||
+      !booksNext ||
+      !booksPrev ||
+      !addBookForm ||
+      !addBookInput ||
+      !addBookStatus
+    ) {
+      return;
+    }
+
+    const groupId = summaryEl.dataset ? summaryEl.dataset.groupId : "";
+    if (!groupId) {
+      statusEl.textContent = "Missing group id.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    let isPublicGroup = false;
+    let booksNextUrl = null;
+    let booksPrevUrl = null;
+
+    function setStatus(text, isError) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    function setBooksStatus(text, isError) {
+      booksStatus.textContent = text;
+      booksStatus.classList.toggle("error", !!isError);
+    }
+
+    function setEditStatus(text, isError) {
+      editStatus.textContent = text || "";
+      editStatus.classList.toggle("error", !!isError);
+    }
+
+    function setAddBookStatus(text, isError) {
+      addBookStatus.textContent = text || "";
+      addBookStatus.classList.toggle("error", !!isError);
+    }
+
+    async function loadGroup() {
+      setStatus("Loading…", false);
+      visible(summaryEl, false);
+      visible(editSection, false);
+      visible(booksSection, false);
+
+      try {
+        const group = await fetchJSON(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/`);
+        const name = group.name || "Group";
+        titleEl.textContent = name;
+
+        isPublicGroup = !!group.is_public_group;
+        const membershipRole = group.membership_role || "";
+
+        const badges = [
+          isPublicGroup ? '<span class="pill pill--owner">Public</span>' : "",
+          group.discoverability ? `<span class="pill">${escapeHtml(group.discoverability)}</span>` : "",
+          membershipRole ? `<span class="pill">${escapeHtml(membershipRole)}</span>` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        metaEl.innerHTML = `
+          <div class="kv">
+            <div class="kv__k">Name</div><div class="kv__v">${escapeHtml(name)}</div>
+            <div class="kv__k">Slug</div><div class="kv__v"><code>${escapeHtml(group.slug || "")}</code></div>
+            <div class="kv__k">Badges</div><div class="kv__v">${badges || ""}</div>
+            <div class="kv__k">Description</div><div class="kv__v">${escapeHtml(group.description || "")}</div>
+          </div>
+        `.trim();
+
+        descInput.value = group.description || "";
+        discSelect.value = group.discoverability || "listed";
+        if (isPublicGroup) {
+          discSelect.disabled = true;
+          discNote.textContent = "Public discoverability cannot be changed.";
+        } else {
+          discSelect.disabled = false;
+          discNote.textContent = "";
+        }
+
+        visible(summaryEl, true);
+        visible(editSection, true);
+        visible(booksSection, true);
+        setStatus("", false);
+      } catch (e) {
+        console.error("Failed to load group", { groupId, e });
+        if (e && e.status === 404) setStatus("Not found or not accessible.", true);
+        else if (e && e.status === 403) setStatus("Permission denied.", true);
+        else setStatus("Error loading group.", true);
+        setGlobalError(extractApiErrorMessage(e));
+      }
+    }
+
+    async function loadBooks(url) {
+      setBooksStatus("Loading…", false);
+      booksResults.innerHTML = "";
+      booksNext.disabled = true;
+      booksPrev.disabled = true;
+
+      try {
+        const payload = await fetchJSON(url);
+        const results = Array.isArray(payload && payload.results) ? payload.results : [];
+        if (results.length === 0) {
+          setBooksStatus("No books in this group.", false);
+          booksNextUrl = null;
+          booksPrevUrl = null;
+          return;
+        }
+
+        setBooksStatus(payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "", false);
+        booksResults.innerHTML = renderGroupBooks(payload, groupId);
+        booksNextUrl = payload.next || null;
+        booksPrevUrl = payload.previous || null;
+        booksNext.disabled = !booksNextUrl;
+        booksPrev.disabled = !booksPrevUrl;
+      } catch (e) {
+        console.error("Failed to load group books", { groupId, url, e });
+        if (e && e.status === 404) setBooksStatus("Not found.", true);
+        else if (e && e.status === 403) setBooksStatus("Permission denied.", true);
+        else setBooksStatus("Error loading group books.", true);
+        setGlobalError(extractApiErrorMessage(e));
+        booksNextUrl = null;
+        booksPrevUrl = null;
+      }
+    }
+
+    async function refreshBooksFirstPage() {
+      await loadBooks(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/`);
+    }
+
+    booksNext.addEventListener("click", async () => {
+      if (booksNextUrl) await loadBooks(booksNextUrl);
+    });
+    booksPrev.addEventListener("click", async () => {
+      if (booksPrevUrl) await loadBooks(booksPrevUrl);
+    });
+
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setEditStatus("Saving…", false);
+      setGlobalError("");
+
+      const payload = {
+        description: descInput.value || "",
+      };
+      if (!isPublicGroup) payload.discoverability = discSelect.value;
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        setEditStatus("Saved.", false);
+        await loadGroup();
+      } catch (e2) {
+        console.error("Failed to save group presentation", { groupId, e2 });
+        if (e2 && e2.status === 403) setEditStatus("Permission denied.", true);
+        else setEditStatus("Save failed.", true);
+        setGlobalError(extractApiErrorMessage(e2));
+      }
+    });
+
+    addBookForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setAddBookStatus("Adding…", false);
+      setGlobalError("");
+
+      const bookId = (addBookInput.value || "").trim();
+      if (!bookId) {
+        setAddBookStatus("Enter a book UUID.", true);
+        return;
+      }
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ book: bookId }),
+        });
+
+        setAddBookStatus("Added.", false);
+        addBookInput.value = "";
+        await refreshBooksFirstPage();
+      } catch (e2) {
+        console.error("Failed to add book to group", { groupId, bookId, e2 });
+        if (e2 && e2.status === 403) setAddBookStatus("Permission denied.", true);
+        else setAddBookStatus("Add failed.", true);
+        setGlobalError(extractApiErrorMessage(e2));
+      }
+    });
+
+    booksResults.addEventListener("click", async (e) => {
+      const target = e.target;
+      if (!target || target.nodeType !== 1) return;
+      if (target.getAttribute("data-action") !== "remove-book") return;
+
+      const bookId = target.getAttribute("data-book-id");
+      if (!bookId) return;
+
+      setGlobalError("");
+      setBooksStatus("Removing…", false);
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        await fetchJSONWithOptions(
+          `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/${encodeURIComponent(String(bookId))}/`,
+          { method: "DELETE", headers }
+        );
+
+        await refreshBooksFirstPage();
+      } catch (e2) {
+        console.error("Failed to remove book from group", { groupId, bookId, e2 });
+        if (e2 && e2.status === 403) setBooksStatus("Permission denied.", true);
+        else setBooksStatus("Remove failed.", true);
+        setGlobalError(extractApiErrorMessage(e2));
+      }
+    });
+
+    await loadGroup();
+    await refreshBooksFirstPage();
+  }
+
   window.SecondPassUI = {
     initDashboard,
     initLibraryBrowse,
     initBookDetail,
     initImports,
+    initGroupsList,
+    initGroupDetail,
     getCsrfToken,
   };
 
@@ -786,6 +1197,16 @@
       initImports().catch((e) => {
         console.error("initImports failed", e);
         setGlobalErrorFromError(e, "Imports error:");
+      });
+    } else if (page === "groups") {
+      initGroupsList().catch((e) => {
+        console.error("initGroupsList failed", e);
+        setGlobalErrorFromError(e, "Groups error:");
+      });
+    } else if (page === "group-detail") {
+      initGroupDetail().catch((e) => {
+        console.error("initGroupDetail failed", e);
+        setGlobalErrorFromError(e, "Group error:");
       });
     } else {
       loadMeAndInitShell().catch((e) => {

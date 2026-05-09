@@ -27,3 +27,13 @@ def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
 @login_required
 def imports(request: HttpRequest) -> HttpResponse:
     return render(request, "web/imports.html")
+
+
+@login_required
+def groups(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/groups.html")
+
+
+@login_required
+def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
+    return render(request, "web/group_detail.html", {"group_id": group_id})

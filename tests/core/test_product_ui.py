@@ -81,6 +81,37 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="imports-upload"')
         self.assertContains(response, 'id="imports-results"')
 
+    def test_unauthenticated_groups_redirects_to_login(self):
+        response = self.client.get("/groups/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/groups/")
+
+    def test_authenticated_groups_returns_200_and_has_containers(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/groups/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="groups-results"')
+
+    def test_unauthenticated_group_detail_redirects_to_login(self):
+        group_id = uuid4()
+        response = self.client.get(f"/groups/{group_id}/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], f"/api-auth/login/?next=/groups/{group_id}/"
+        )
+
+    def test_authenticated_group_detail_returns_200_and_has_container(self):
+        self.client.force_login(self.user)
+        group_id = uuid4()
+        response = self.client.get(f"/groups/{group_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="group-summary"')
+        self.assertContains(response, f'data-group-id="{group_id}"')
+
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)
         response = self.client.get("/app/")

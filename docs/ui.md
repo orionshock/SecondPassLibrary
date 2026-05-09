@@ -11,6 +11,7 @@ The first minimal product UI shell now exists:
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/imports/` is an API-driven imports page (upload + job list/results)
+- `/groups/` and `/groups/<group_id>/` provide functional group list/detail screens
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -28,6 +29,17 @@ The imports page is API-driven using:
 - `POST /api/v1/library/imports/` (multipart upload field `file`)
 
 It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre library imports, OPF sidecars, or PDF).
+
+The groups UI is API-driven using:
+
+- `GET /api/v1/library/groups/` (paginated list)
+- `GET /api/v1/library/groups/<group_id>/` (detail)
+- `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description, discoverability)
+- `GET /api/v1/library/groups/<group_id>/books/` (paginated)
+- `POST /api/v1/library/groups/<group_id>/books/` (add-by-UUID; temporary functional UI)
+- `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
+
+There is no group membership management UI yet.
 
 ## 1. UI philosophy
 
