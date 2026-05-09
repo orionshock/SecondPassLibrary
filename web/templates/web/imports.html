@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}imports{% endblock %}
+
+{% block title %}Imports · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Imports</h1>
+  </div>
+
+  <section class="card">
+    <h2 class="card__title">Upload</h2>
+    <p class="muted">
+      Supported: <code>.epub</code> and simple <code>.zip</code> of EPUBs.
+      Unsupported: Calibre library import, OPF sidecars, PDF.
+    </p>
+
+    <div id="imports-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
+
+    <form id="imports-upload" class="is-hidden" enctype="multipart/form-data">
+      <div class="search">
+        <label class="search__label" for="import-file">File</label>
+        <input id="import-file" name="file" type="file" accept=".epub,.zip" />
+        <button class="button" type="submit">Upload</button>
+      </div>
+      <div id="imports-upload-status" class="muted" style="margin-top: 8px;">&nbsp;</div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Jobs</h2>
+    <div id="imports-status" class="muted">Loading…</div>
+    <div id="imports-results"></div>
+    <div class="pager">
+      <button id="imports-prev" class="button" type="button" disabled>Previous</button>
+      <button id="imports-next" class="button" type="button" disabled>Next</button>
+    </div>
+  </section>
+{% endblock %}
+

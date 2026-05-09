@@ -10,6 +10,7 @@ The first minimal product UI shell now exists:
 - `/app/` is an authenticated dashboard shell
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
+- `/imports/` is an API-driven imports page (upload + job list/results)
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -20,6 +21,13 @@ Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logo
 The library browse screen is API-driven using vanilla JS fetch calls to `GET /api/v1/library/books/` (paginated), with basic loading/error/empty states.
 
 The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and renders metadata, identifiers, and file download links (from `download_url`).
+
+The imports page is API-driven using:
+
+- `GET /api/v1/library/imports/` (paginated job list)
+- `POST /api/v1/library/imports/` (multipart upload field `file`)
+
+It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre library imports, OPF sidecars, or PDF).
 
 ## 1. UI philosophy
 

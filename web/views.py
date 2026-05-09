@@ -22,3 +22,8 @@ def library_browse(request: HttpRequest) -> HttpResponse:
 @login_required
 def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
     return render(request, "web/book_detail.html", {"book_id": book_id})
+
+
+@login_required
+def imports(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/imports.html")

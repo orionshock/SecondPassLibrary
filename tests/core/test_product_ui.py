@@ -67,6 +67,20 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-detail"')
         self.assertContains(response, f'data-book-id="{book_id}"')
 
+    def test_unauthenticated_imports_redirects_to_login(self):
+        response = self.client.get("/imports/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/imports/")
+
+    def test_authenticated_imports_returns_200_and_has_upload_form(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/imports/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="imports-upload"')
+        self.assertContains(response, 'id="imports-results"')
+
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)
         response = self.client.get("/app/")
