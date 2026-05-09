@@ -18,3 +18,7 @@ def app_dashboard(request: HttpRequest) -> HttpResponse:
 def library_browse(request: HttpRequest) -> HttpResponse:
     return render(request, "web/library.html")
 
+
+@login_required
+def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
+    return render(request, "web/book_detail.html", {"book_id": book_id})

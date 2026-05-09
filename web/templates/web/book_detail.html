@@ -1,0 +1,32 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}book-detail{% endblock %}
+
+{% block title %}Book · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/library/" class="pill">← Back to Library</a>
+      <h1 class="page-title" id="book-title">Book</h1>
+    </div>
+  </div>
+
+  <div id="book-status" class="muted">Loading…</div>
+
+  <section id="book-detail" class="card is-hidden" data-book-id="{{ book_id|escape }}">
+    <h2 class="card__title">Details</h2>
+    <div id="book-meta"></div>
+  </section>
+
+  <section id="book-identifiers" class="card is-hidden">
+    <h2 class="card__title">Identifiers</h2>
+    <div id="book-identifiers-body" class="muted"></div>
+  </section>
+
+  <section id="book-files" class="card is-hidden">
+    <h2 class="card__title">Files</h2>
+    <div id="book-files-body" class="muted"></div>
+  </section>
+{% endblock %}
+

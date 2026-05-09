@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from uuid import uuid4
 
 
 User = get_user_model()
@@ -47,6 +48,24 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="library-results"')
         self.assertContains(response, 'id="ui-global-error"')
+
+    def test_unauthenticated_book_detail_redirects_to_login(self):
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], f"/api-auth/login/?next=/library/books/{book_id}/"
+        )
+
+    def test_authenticated_book_detail_returns_200_and_has_container(self):
+        self.client.force_login(self.user)
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="book-detail"')
+        self.assertContains(response, f'data-book-id="{book_id}"')
 
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)

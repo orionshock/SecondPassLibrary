@@ -34,6 +34,7 @@ python manage.py runserver
 
 - App shell/dashboard: `/app/`
 - Library browse: `/library/`
+- Book detail: `/library/books/<book_id>/`
 
 If you are not authenticated, these pages redirect to `/api-auth/login/?next=...`.
 

@@ -8,5 +8,5 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("app/", views.app_dashboard, name="app"),
     path("library/", views.library_browse, name="library"),
+    path("library/books/<str:book_id>/", views.book_detail, name="book_detail"),
 ]
-

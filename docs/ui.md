@@ -9,6 +9,7 @@ The first minimal product UI shell now exists:
 - `/` redirects to `/app/`
 - `/app/` is an authenticated dashboard shell
 - `/library/` is an authenticated library browse page
+- `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -17,6 +18,8 @@ Authentication for product UI pages is currently delegated to DRF's built-in log
 Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logout/`.
 
 The library browse screen is API-driven using vanilla JS fetch calls to `GET /api/v1/library/books/` (paginated), with basic loading/error/empty states.
+
+The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and renders metadata, identifiers, and file download links (from `download_url`).
 
 ## 1. UI philosophy
 
