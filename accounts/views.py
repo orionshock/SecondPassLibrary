@@ -120,6 +120,7 @@ class ManagedUserViewSet(
             group = membership.group
             groups.append(
                 {
+                    "membership_id": membership.id,
                     "id": group.id,
                     "name": group.name,
                     "slug": group.slug,
@@ -168,6 +169,7 @@ class ManagedUserViewSet(
                 group = membership.group
                 groups.append(
                     {
+                        "membership_id": membership.id,
                         "id": group.id,
                         "name": group.name,
                         "slug": group.slug,
@@ -208,6 +210,7 @@ class ManagedUserViewSet(
             group = membership.group
             groups.append(
                 {
+                    "membership_id": membership.id,
                     "id": group.id,
                     "name": group.name,
                     "slug": group.slug,
@@ -259,6 +262,7 @@ class ManagedUserViewSet(
             group = membership.group
             groups.append(
                 {
+                    "membership_id": membership.id,
                     "id": group.id,
                     "name": group.name,
                     "slug": group.slug,

@@ -162,6 +162,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="user-edit-form"')
         self.assertContains(response, 'id="user-edit-username"')
+        self.assertContains(response, 'id="user-memberships-card"')
+        self.assertContains(response, 'id="user-memberships-add-form"')
 
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)

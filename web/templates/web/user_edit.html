@@ -60,5 +60,38 @@
       </div>
     </form>
   </section>
-{% endblock %}
 
+  <section id="user-memberships-card" class="card is-hidden">
+    <h2 class="card__title">Group Memberships</h2>
+
+    <div id="user-memberships-note" class="muted">
+      Manage this user's LibraryGroup memberships. Group-centric membership management is also available on each group page.
+    </div>
+
+    <div id="user-memberships-status" class="muted"></div>
+    <div id="user-memberships-results"></div>
+
+    <form id="user-memberships-add-form" style="margin-top: 12px;">
+      {% csrf_token %}
+      <div class="kv">
+        <div class="kv__k"><label for="user-memberships-add-group">Add to group</label></div>
+        <div class="kv__v">
+          <select id="user-memberships-add-group" style="width: 100%;"></select>
+        </div>
+
+        <div class="kv__k"><label for="user-memberships-add-role">Role</label></div>
+        <div class="kv__v">
+          <select id="user-memberships-add-role">
+            <option value="reader">reader</option>
+            <option value="curator">curator</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button id="user-memberships-add-submit" class="button" type="submit">Add</button>
+        <span id="user-memberships-add-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+{% endblock %}

@@ -56,10 +56,12 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
         self.assertIn("g", slugs)
 
         g_row = next(g for g in groups if g["slug"] == "g")
+        self.assertIn("membership_id", g_row)
         self.assertEqual(g_row["membership_role"], "curator")
         self.assertFalse(g_row["is_public_group"])
 
         public_row = next(g for g in groups if g["slug"] == "public")
+        self.assertIn("membership_id", public_row)
         self.assertEqual(public_row["membership_role"], "reader")
         self.assertTrue(public_row["is_public_group"])
 

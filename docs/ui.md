@@ -225,7 +225,8 @@ UI behaviors:
 - `/users/` is a compact list screen with simple client-side role tabs/filters (over the currently loaded page):
   - All, Readers, Curators, Librarians, Managers, Inactive
   - Curators are detected via group membership role (`membership_role == curator`) and show a "Curates: ..." summary
-- Editing is on a dedicated page: `/users/<user_id>/edit/` (no group membership editing here).
+- Editing is on a dedicated page: `/users/<user_id>/edit/`.
+- When allowed (`capabilities.can_manage_group_memberships`), the user edit page includes user-centric group membership management (add/update/remove).
 - Show safe editable fields (email, first_name, last_name, is_active, role) on the edit page.
 - Make role editing rules explicit in the UI:
   - Owner-only Manager promotion/demotion
