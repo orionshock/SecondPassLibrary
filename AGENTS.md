@@ -407,12 +407,25 @@ Permission model documentation lives in `docs/permissions.md` (roles, groups, an
 
 ## Before Finishing Any Task
 
-Run:
+Verification guidance:
 
-```bash
-python manage.py check
-python manage.py test
-```
+1. Always run `python manage.py check` for meaningful code changes.
+2. Prefer focused tests for the area changed (use `--keepdb` for repeated runs):
+   - accounts changes: `python manage.py test tests.accounts --keepdb`
+   - library changes: `python manage.py test tests.library --keepdb`
+   - reading changes: `python manage.py test tests.reading --keepdb`
+   - core/policy/shared changes: `python manage.py test tests.core --keepdb` (plus any affected app tests)
+   - product UI/template/static changes: `python manage.py test tests.core.test_product_ui --keepdb`
+3. Run the full suite (`python manage.py test`) only when:
+   - migrations changed broadly
+   - settings/middleware/global API behavior changed
+   - shared policy/helper behavior affects multiple apps
+   - the user explicitly requests it
+   - focused tests suggest broader risk
+   - preparing release-level verification
+4. Docs-only changes: optionally run `python manage.py check`; no tests required.
+5. In the summary, list exactly which focused tests were run and whether the full suite was intentionally skipped.
+6. Do not claim “all tests pass” unless the full suite was run; use phrasing like “Focused tests passed” / “Full suite not run”. 
 
 Then summarize:
 
