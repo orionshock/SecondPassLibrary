@@ -50,6 +50,38 @@
           <div class="muted" style="margin-top: 6px;">Stored as a list; this input accepts newline or commas.</div>
         </div>
 
+        <div class="kv__k">Authors</div>
+        <div class="kv__v">
+          <div id="book-edit-authors-selected" class="muted">Loading…</div>
+
+          <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <label for="book-edit-author-add-select" class="muted">Add existing</label>
+            <select id="book-edit-author-add-select"></select>
+            <button id="book-edit-author-add-btn" class="button" type="button">Add</button>
+            <span id="book-edit-authors-status" class="muted"></span>
+          </div>
+
+          <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <label for="book-edit-author-new-name" class="muted">Create new</label>
+            <input id="book-edit-author-new-name" type="text" autocomplete="off" placeholder="Author name" style="min-width: 240px; flex: 1;" />
+            <button id="book-edit-author-new-btn" class="button" type="button">Create</button>
+          </div>
+        </div>
+
+        <div class="kv__k">Series</div>
+        <div class="kv__v">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <select id="book-edit-series-select"></select>
+            <span id="book-edit-series-status" class="muted"></span>
+          </div>
+
+          <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <label for="book-edit-series-new-name" class="muted">Create new</label>
+            <input id="book-edit-series-new-name" type="text" autocomplete="off" placeholder="Series name" style="min-width: 240px; flex: 1;" />
+            <button id="book-edit-series-new-btn" class="button" type="button">Create</button>
+          </div>
+        </div>
+
         <div class="kv__k"><label for="book-edit-series-index">Series index</label></div>
         <div class="kv__v"><input id="book-edit-series-index" type="number" min="1" step="1" style="width: 100%;" /></div>
       </div>
@@ -61,14 +93,9 @@
     </form>
 
     <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
-      <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Author and series</h3>
-      <div id="book-edit-authors-series" class="muted">Loading…</div>
-      <div class="muted" style="margin-top: 6px;">Author and series editing will be added later.</div>
-    </div>
-
-    <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
       <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Identifiers and files</h3>
       <div class="muted">Identifiers and files are managed separately.</div>
     </div>
   </section>
 {% endblock %}
+

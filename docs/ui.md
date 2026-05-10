@@ -35,7 +35,7 @@ The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` 
 
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers/Curators to only viewable groups) with links to the group pages.
 
-The book metadata edit page is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields only. Author/series editing and identifier/file management are intentionally deferred.
+The book metadata edit page is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. Author and series can be selected from existing records or created by name. Identifier/file management is intentionally deferred.
 
 The imports page is API-driven using:
 

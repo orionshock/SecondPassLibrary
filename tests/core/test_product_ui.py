@@ -112,6 +112,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-edit"')
         self.assertContains(response, f'data-book-id="{book_id}"')
         self.assertContains(response, 'id="book-edit-form"')
+        self.assertContains(response, 'id="book-edit-authors-selected"')
+        self.assertContains(response, 'id="book-edit-author-add-select"')
+        self.assertContains(response, 'id="book-edit-author-new-name"')
+        self.assertContains(response, 'id="book-edit-series-select"')
+        self.assertContains(response, 'id="book-edit-series-new-name"')
 
     def test_unauthenticated_imports_redirects_to_login(self):
         response = self.client.get("/imports/", follow=False)

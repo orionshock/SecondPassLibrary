@@ -221,6 +221,7 @@ Book payload notes:
 - For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
 - For Readers/Curators, `groups[]` includes only groups the caller can view (Public or direct membership).
 - Books include a singular `file` object (or `null`) rather than `files[]`.
+- Book write shape: `authors` is a list of Author ids; `series` is a Series id or `null`.
 
 ## Imports
 
