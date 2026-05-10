@@ -20,6 +20,8 @@ The first minimal product UI shell now exists:
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
+UI JavaScript is split into page-focused vanilla ES modules under `web/static/web/js/` and loaded via a single `<script type="module">` entrypoint (`web/static/web/js/main.js`). There is no frontend build step.
+
 Authentication for product UI pages is currently delegated to DRF's built-in login at `/api-auth/login/` (custom login is intentionally deferred).
 
 Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logout/`.

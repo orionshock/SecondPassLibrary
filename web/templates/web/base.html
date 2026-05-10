@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Second Pass Library{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'web/app.css' %}" />
-    <script defer src="{% static 'web/app.js' %}"></script>
+    <script type="module" src="{% static 'web/js/main.js' %}"></script>
   </head>
   <body data-page="{% block page_id %}{% endblock %}">
     <header class="topbar">
