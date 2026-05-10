@@ -1,0 +1,52 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}profile{% endblock %}
+
+{% block title %}Profile · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Profile</h1>
+    <a class="button" href="/profile/password/">Change password</a>
+  </div>
+
+  <section class="card">
+    <h2 class="card__title">You</h2>
+    <div id="profile-summary" class="muted">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Edit my profile</h2>
+    <form id="profile-edit-form">
+      <div class="kv">
+        <div class="kv__k"><label for="profile-edit-email">Email</label></div>
+        <div class="kv__v"><input id="profile-edit-email" type="email" style="width: 100%;" value="{{ request.user.email|default_if_none:''|escape }}" /></div>
+
+        <div class="kv__k"><label for="profile-edit-first">First name</label></div>
+        <div class="kv__v"><input id="profile-edit-first" type="text" style="width: 100%;" value="{{ request.user.first_name|default_if_none:''|escape }}" /></div>
+
+        <div class="kv__k"><label for="profile-edit-last">Last name</label></div>
+        <div class="kv__v"><input id="profile-edit-last" type="text" style="width: 100%;" value="{{ request.user.last_name|default_if_none:''|escape }}" /></div>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <button class="button" type="submit">Save</button>
+        <span id="profile-edit-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Groups</h2>
+    <div id="profile-groups" class="muted">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Capabilities</h2>
+    <details>
+      <summary class="muted">Show capabilities</summary>
+      <div id="profile-capabilities" class="muted" style="margin-top: 10px;">Loading…</div>
+    </details>
+  </section>
+{% endblock %}
+

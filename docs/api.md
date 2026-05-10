@@ -15,6 +15,13 @@ Current supported (development) authentication methods:
 
 Basic auth is enabled for convenience and should not be treated as the final production/client authentication strategy.
 
+Authentication non-goals (current):
+
+- No email verification
+- No email-based password reset
+- No MFA
+- No OIDC/OAuth
+
 See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction.
 
 ## Error responses
@@ -65,12 +72,14 @@ Response shape:
 
 - `GET /api/v1/accounts/me/`
 - `PATCH /api/v1/accounts/me/` (self-profile fields only)
+- `POST /api/v1/accounts/me/change-password/`
 - Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
 - Users (Owner/Manager only):
   - `GET /api/v1/accounts/users/` (paginated)
   - `GET /api/v1/accounts/users/<id>/`
   - `PATCH /api/v1/accounts/users/<id>/`
   - `POST /api/v1/accounts/users/` (creates a local Django user and returns a generated temporary password once)
+  - `POST /api/v1/accounts/users/<id>/reset-password/` (Manager/Owner only; returns a generated temporary password once)
 
 User-management payload notes:
 
@@ -105,6 +114,7 @@ Notes:
 
 - The temporary password is never stored except via Django's normal password hash.
 - The password is not emailed and is not shown by any list/detail endpoint after creation.
+- Newly-created managed users are marked `must_change_password=true` (force change on first login).
 
 ### `GET /api/v1/accounts/me/` response
 
@@ -139,6 +149,11 @@ Each `groups[]` item includes:
 
 If the user is a curator of any non-Public group, `curated_group_ids` lists the group IDs where they have scoped curator powers.
 
+Additional identity fields:
+
+- `first_name`, `last_name`
+- `must_change_password` (force change via product UI redirect)
+
 ### `PATCH /api/v1/accounts/me/`
 
 Self-profile update endpoint (no auth redesign; no password handling).
@@ -150,6 +165,47 @@ Allowed fields:
 - `last_name`
 
 Any attempt to patch other fields is rejected (400) using the project error envelope (`UNSAFE_FIELD`).
+
+### `POST /api/v1/accounts/me/change-password/`
+
+Self password change endpoint.
+
+Request:
+
+```json
+{ "current_password": "...", "new_password": "..." }
+```
+
+Rules:
+
+- Requires authentication.
+- Verifies `current_password` via Django `check_password()`.
+- Sets the new password via Django `set_password()` and runs configured password validators.
+- Updates the current session hash so the user stays logged in.
+- Clears `UserProfile.must_change_password` when the change succeeds.
+
+### `POST /api/v1/accounts/users/<id>/reset-password/`
+
+Managed password reset (temporary password shown once).
+
+Response shape:
+
+```json
+{
+  "username": "someuser",
+  "temporary_password": "generated",
+  "copy_block": "Username: someuser\nPassword: generated",
+  "message": "Show this password now. It will not be shown again."
+}
+```
+
+Rules:
+
+- Uses a generated secure temporary password (never stored/logged in plaintext).
+- Sets `target.profile.must_change_password=true`.
+- Manager can reset Librarian/Reader only (never Owner/Manager).
+- Owner can reset Manager/Librarian/Reader.
+- Managed reset cannot be used to reset your own password; use `/profile/password/` + `POST /accounts/me/change-password/`.
 
 ## Library
 

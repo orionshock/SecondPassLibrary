@@ -20,7 +20,7 @@
           <a class="nav__item is-hidden" href="/admin/" data-nav="admin">Service Hatch</a>
         </nav>
         <div class="userbox">
-          <span class="userbox__name" data-ui="username">Loading…</span>
+          <a class="userbox__name" href="/profile/" data-ui="username">Loading…</a>
           <form class="userbox__logoutform" action="/api-auth/logout/" method="post">
             {% csrf_token %}
             <button class="linklike" type="submit">Logout</button>

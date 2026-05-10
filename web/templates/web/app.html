@@ -2,50 +2,31 @@
 
 {% block page_id %}app{% endblock %}
 
-{% block title %}App · Second Pass Library{% endblock %}
+{% block title %}Dashboard · Second Pass Library{% endblock %}
 
 {% block content %}
-  <h1 class="page-title">App</h1>
+  <h1 class="page-title">Dashboard</h1>
 
   <section class="card">
-    <h2 class="card__title">You</h2>
-    <div id="me-summary" class="muted">Loading…</div>
-  </section>
-
-  <section class="card">
-    <h2 class="card__title">Edit my profile</h2>
-    <form id="me-edit-form">
-      <div class="kv">
-        <div class="kv__k"><label for="me-edit-email">Email</label></div>
-        <div class="kv__v"><input id="me-edit-email" type="email" style="width: 100%;" value="{{ request.user.email|default_if_none:''|escape }}" /></div>
-
-        <div class="kv__k"><label for="me-edit-first">First name</label></div>
-        <div class="kv__v"><input id="me-edit-first" type="text" style="width: 100%;" value="{{ request.user.first_name|default_if_none:''|escape }}" /></div>
-
-        <div class="kv__k"><label for="me-edit-last">Last name</label></div>
-        <div class="kv__v"><input id="me-edit-last" type="text" style="width: 100%;" value="{{ request.user.last_name|default_if_none:''|escape }}" /></div>
-      </div>
-
-      <div style="margin-top: 10px;">
-        <button class="button" type="submit">Save</button>
-        <span id="me-edit-status" class="muted"></span>
-      </div>
-    </form>
-  </section>
-
-  <section class="card">
-    <h2 class="card__title">Groups</h2>
-    <div id="me-groups" class="muted">Loading…</div>
-  </section>
-
-  <section class="card">
-    <h2 class="card__title">Capabilities</h2>
-    <div id="me-capabilities" class="muted">Loading…</div>
+    <h2 class="card__title">Welcome</h2>
+    <div id="app-greeting" class="muted">Loading…</div>
   </section>
 
   <section class="card">
     <h2 class="card__title">Sections</h2>
-    <div id="me-sections" class="muted">Loading…</div>
+    <div id="app-sections" class="muted">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Future activity dashboard</h2>
+    <ul class="muted">
+      <li>Last open book</li>
+      <li>Recent reading session</li>
+      <li>Reading sessions</li>
+      <li>Annotations</li>
+      <li>Import/export user data</li>
+    </ul>
   </section>
 
 {% endblock %}
+

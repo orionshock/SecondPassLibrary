@@ -21,6 +21,7 @@ class UserProfile(TimeStampedModel):
         related_name="profile",
     )
     role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_READER)
+    must_change_password = models.BooleanField(default=False)
     external_subject_id = models.CharField(
         max_length=255, blank=True, null=True, unique=True
     )

@@ -31,10 +31,27 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "Second Pass Library")
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
-        self.assertContains(response, 'id="me-summary"')
         self.assertContains(response, 'id="ui-global-error"')
-        self.assertContains(response, 'id="me-edit-form"')
-        self.assertContains(response, 'id="me-edit-email"')
+        self.assertContains(response, 'id="app-greeting"')
+        self.assertContains(response, 'id="app-sections"')
+        self.assertContains(response, 'href="/profile/"')
+
+    def test_must_change_password_redirects_product_ui_to_profile_password(self):
+        profile = self.user.profile
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password", "updated_at"])
+        self.client.force_login(self.user)
+        response = self.client.get("/app/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/profile/password/")
+
+    def test_must_change_password_allows_profile_password_page(self):
+        profile = self.user.profile
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password", "updated_at"])
+        self.client.force_login(self.user)
+        response = self.client.get("/profile/password/", follow=False)
+        self.assertEqual(response.status_code, 200)
 
     def test_unauthenticated_library_redirects_to_login(self):
         response = self.client.get("/library/", follow=False)
@@ -122,6 +139,16 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/users/")
 
+    def test_unauthenticated_profile_redirects_to_login(self):
+        response = self.client.get("/profile/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/profile/")
+
+    def test_unauthenticated_profile_password_redirects_to_login(self):
+        response = self.client.get("/profile/password/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/profile/password/")
+
     def test_unauthenticated_user_new_redirects_to_login(self):
         response = self.client.get("/users/new/", follow=False)
         self.assertEqual(response.status_code, 302)
@@ -162,8 +189,29 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="user-edit-form"')
         self.assertContains(response, 'id="user-edit-username"')
+        self.assertContains(response, 'id="user-edit-must-change"')
+        self.assertContains(response, 'id="user-reset-password-btn"')
         self.assertContains(response, 'id="user-memberships-card"')
         self.assertContains(response, 'id="user-memberships-add-form"')
+
+    def test_authenticated_profile_returns_200_and_has_containers(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/profile/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/js/main.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="profile-summary"')
+        self.assertContains(response, 'id="profile-edit-form"')
+        self.assertContains(response, 'id="profile-edit-email"')
+
+    def test_authenticated_profile_password_returns_200_and_has_form(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/profile/password/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/js/main.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="profile-password-form"')
+        self.assertContains(response, 'id="profile-password-current"')
 
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)

@@ -20,6 +20,7 @@ class UserProfileModelTest(TestCase):
         self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
         profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(profile.role, UserProfile.ROLE_READER)
+        self.assertFalse(profile.must_change_password)
         self.assertIsNone(profile.external_subject_id)
 
     def test_user_profile_role_helpers(self):
@@ -62,11 +63,13 @@ class UserProfileAPITest(APITestCase):
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(data["username"], "testuser")
         self.assertEqual(data["email"], "test@example.com")
+        self.assertEqual(data["first_name"], "")
+        self.assertEqual(data["last_name"], "")
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
+        self.assertFalse(data["must_change_password"])
         self.assertIn("profile_id", data)
 
     def test_anonymous_cannot_access_me(self):
         self.client.logout()
         response = self.client.get("/api/v1/accounts/me/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-

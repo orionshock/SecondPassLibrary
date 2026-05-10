@@ -239,8 +239,15 @@ export async function initUserEdit() {
   const lastInput = $("#user-edit-last");
   const roleSelect = $("#user-edit-role");
   const activeSelect = $("#user-edit-active");
+  const mustChangeInput = $("#user-edit-must-change");
   const submitBtn = $("#user-edit-submit");
   const saveStatus = $("#user-edit-save-status");
+
+  const passwordCard = $("#user-password-card");
+  const resetBtn = $("#user-reset-password-btn");
+  const resetStatus = $("#user-reset-password-status");
+  const resetResult = $("#user-reset-password-result");
+  const resetCopy = $("#user-reset-password-copy");
 
   const membershipsCard = $("#user-memberships-card");
   const membershipsStatus = $("#user-memberships-status");
@@ -264,8 +271,14 @@ export async function initUserEdit() {
     !lastInput ||
     !roleSelect ||
     !activeSelect ||
+    !mustChangeInput ||
     !submitBtn ||
     !saveStatus ||
+    !passwordCard ||
+    !resetBtn ||
+    !resetStatus ||
+    !resetResult ||
+    !resetCopy ||
     !membershipsCard ||
     !membershipsStatus ||
     !membershipsResults ||
@@ -303,6 +316,11 @@ export async function initUserEdit() {
     saveStatus.classList.toggle("error", !!isError);
   }
 
+  function setResetStatus(text, isError) {
+    resetStatus.textContent = text || "";
+    resetStatus.classList.toggle("error", !!isError);
+  }
+
   function setMembershipsStatus(text, isError) {
     membershipsStatus.textContent = text || "";
     membershipsStatus.classList.toggle("error", !!isError);
@@ -320,6 +338,7 @@ export async function initUserEdit() {
     lastInput.disabled = disabled;
     roleSelect.disabled = disabled;
     activeSelect.disabled = disabled;
+    mustChangeInput.disabled = disabled;
     submitBtn.disabled = disabled;
     if (message) setSaveStatus(message, true);
   }
@@ -440,6 +459,7 @@ export async function initUserEdit() {
   setStatus("Loading…", false);
   let original = null;
   let allGroups = null;
+  let canResetPassword = false;
 
   try {
     const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`);
@@ -451,6 +471,7 @@ export async function initUserEdit() {
     lastInput.value = payload.last_name || "";
     roleSelect.value = payload.role || "reader";
     activeSelect.value = payload.is_active === false ? "false" : "true";
+    mustChangeInput.checked = !!payload.must_change_password;
 
     applyRoleOptions();
 
@@ -464,6 +485,26 @@ export async function initUserEdit() {
     } else {
       setFormEnabled(true, "");
     }
+
+    // Password reset visibility rules (also enforced server-side).
+    canResetPassword = false;
+    if (me && payload) {
+      const isSelf = String(me.username || "") === String(payload.username || "");
+      const actorIsManager = !me.is_owner && String(me.role || "") === "manager";
+      const actorIsOwner = !!me.is_owner;
+
+      if (!isSelf) {
+        if (actorIsOwner) {
+          canResetPassword = true;
+        } else if (actorIsManager) {
+          canResetPassword = !payload.is_owner && String(payload.role || "") !== "manager";
+        }
+      }
+    }
+    visible(passwordCard, canResetPassword);
+    visible(resetResult, false);
+    resetCopy.value = "";
+    setResetStatus("", false);
 
     if (canManageMemberships) {
       setMembershipsStatus("", false);
@@ -490,6 +531,7 @@ export async function initUserEdit() {
     lastInput.value = payload.last_name || "";
     roleSelect.value = payload.role || "reader";
     activeSelect.value = payload.is_active === false ? "false" : "true";
+    mustChangeInput.checked = !!payload.must_change_password;
     applyRoleOptions();
 
     if (canManageMemberships) {
@@ -525,6 +567,7 @@ export async function initUserEdit() {
       last_name: lastInput.value || "",
       role: roleSelect.value || "reader",
       is_active: activeSelect.value === "true",
+      must_change_password: !!mustChangeInput.checked,
     };
 
     const patch = {};
@@ -571,6 +614,44 @@ export async function initUserEdit() {
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
       setSaveStatus(fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
+      setGlobalError(msg);
+    }
+  });
+
+  resetBtn.addEventListener("click", async () => {
+    setGlobalError("");
+    setResetStatus("Resetting…", false);
+    visible(resetResult, false);
+    resetCopy.value = "";
+
+    if (!canResetPassword) {
+      setResetStatus("Not allowed.", true);
+      return;
+    }
+
+    try {
+      const csrf = getCsrfToken();
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (csrf) headers["X-CSRFToken"] = csrf;
+
+      const payload = await fetchJSONWithOptions(
+        `/api/v1/accounts/users/${encodeURIComponent(String(userId))}/reset-password/`,
+        { method: "POST", headers }
+      );
+
+      const copyBlock = payload && payload.copy_block ? String(payload.copy_block) : "";
+      if (!copyBlock) throw new Error("Unexpected response from server.");
+
+      resetCopy.value = copyBlock;
+      visible(resetResult, true);
+      setResetStatus("Reset.", false);
+
+      // Refresh user to show must_change_password=true.
+      await refreshUserAndMemberships();
+    } catch (e2) {
+      console.error("Failed to reset password", { userId, e2 });
+      const msg = extractApiErrorMessage(e2);
+      setResetStatus(msg, true);
       setGlobalError(msg);
     }
   });

@@ -1,14 +1,17 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth import update_session_auth_hash
+from django.core.exceptions import ValidationError as DjangoValidationError
 from typing import cast
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 
 from .models import UserProfile
 from .serializers import (
+    ChangePasswordSerializer,
     CurrentUserSerializer,
     CurrentUserPatchSerializer,
     ManagedUserPatchSerializer,
@@ -18,8 +21,10 @@ from .serializers import (
 )
 from .services import (
     build_current_user_me_payload,
+    change_current_user_password,
     create_managed_user,
     get_or_create_profile,
+    reset_managed_user_password,
     update_current_user_via_me_api,
     update_user_via_management_api,
 )
@@ -66,6 +71,27 @@ class CurrentUserView(APIView):
         payload = build_current_user_me_payload(user=request.user)
         serializer = CurrentUserSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CurrentUserChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        body = ChangePasswordSerializer(data=request.data or {})
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+
+        try:
+            change_current_user_password(
+                user=request.user,
+                current_password=str(data.get("current_password") or ""),
+                new_password=str(data.get("new_password") or ""),
+            )
+        except DjangoValidationError as exc:
+            detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
+            raise DRFValidationError(detail=detail) from exc
+        update_session_auth_hash(request, request.user)
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
 class ManagedUserViewSet(
@@ -140,6 +166,7 @@ class ManagedUserViewSet(
             "is_owner": policies.is_owner(user),
             "profile_id": profile.id,
             "role": profile.role,
+            "must_change_password": bool(profile.must_change_password),
             "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
         }
 
@@ -190,6 +217,7 @@ class ManagedUserViewSet(
                     "is_owner": policies.is_owner(user),
                     "profile_id": profile.id,
                     "role": profile.role,
+                    "must_change_password": bool(profile.must_change_password),
                     "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
                 }
             )
@@ -230,6 +258,7 @@ class ManagedUserViewSet(
             "is_owner": policies.is_owner(user),
             "profile_id": profile.id,
             "role": profile.role,
+            "must_change_password": bool(profile.must_change_password),
             "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
         }
         serializer = ManagedUserSerializer(payload)
@@ -250,6 +279,7 @@ class ManagedUserViewSet(
             last_name=data.get("last_name"),
             is_active=data.get("is_active"),
             role=data.get("role"),
+            must_change_password=data.get("must_change_password"),
         )
 
         profile = get_or_create_profile(user=target)
@@ -282,7 +312,38 @@ class ManagedUserViewSet(
             "is_owner": policies.is_owner(target),
             "profile_id": profile.id,
             "role": profile.role,
+            "must_change_password": bool(profile.must_change_password),
             "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
         }
         serializer = ManagedUserSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ManagedUserResetPasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id: str):
+        if not user_id:
+            raise PermissionDenied("Not allowed.")
+
+        try:
+            target_user = User.objects.get(pk=user_id)
+        except User.DoesNotExist as exc:
+            raise PermissionDenied("Not allowed.") from exc
+
+        try:
+            result = reset_managed_user_password(
+                actor=request.user, target_user=target_user
+            )
+        except DjangoValidationError as exc:
+            detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
+            raise DRFValidationError(detail=detail) from exc
+        return Response(
+            {
+                "username": result.username,
+                "temporary_password": result.temporary_password,
+                "copy_block": result.copy_block,
+                "message": "Show this password now. It will not be shown again.",
+            },
+            status=status.HTTP_200_OK,
+        )

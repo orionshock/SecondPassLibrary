@@ -5,7 +5,9 @@ from typing import Any
 import secrets
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from core import policies
@@ -28,6 +30,16 @@ class UserUpdateResult:
 class ManagedUserCreateResult:
     user: Any
     temporary_password: str
+
+
+@dataclass(frozen=True)
+class ManagedPasswordResetResult:
+    username: str
+    temporary_password: str
+
+    @property
+    def copy_block(self) -> str:
+        return f"Username: {self.username}\nPassword: {self.temporary_password}"
 
 
 def get_or_create_profile(*, user) -> UserProfile:
@@ -97,10 +109,16 @@ def create_managed_user(
             raise ValidationError({"username": "A user with that username already exists."}) from exc
 
         profile = get_or_create_profile(user=user)
+        profile_updates: dict[str, Any] = {}
         if profile.role != role:
-            profile.role = role
+            profile_updates["role"] = role
+        if profile.must_change_password is not True:
+            profile_updates["must_change_password"] = True
+        if profile_updates:
+            for key, value in profile_updates.items():
+                setattr(profile, key, value)
             profile.full_clean()
-            profile.save(update_fields=["role", "updated_at"])
+            profile.save(update_fields=[*profile_updates.keys(), "updated_at"])
 
         # Ensure Public group membership via existing service (idempotent).
         ensure_user_public_membership(user=user)
@@ -117,6 +135,7 @@ def update_user_via_management_api(
     last_name: str | None = None,
     is_active: bool | None = None,
     role: str | None = None,
+    must_change_password: bool | None = None,
 ) -> UserUpdateResult:
     """
     Safe path for app-level user management (no password handling).
@@ -161,6 +180,13 @@ def update_user_via_management_api(
         if not policies.can_assign_global_role(actor=actor, target_user=target_user, new_role=role):
             raise PermissionDenied("Not allowed.")
         profile_updates["role"] = role
+
+    if must_change_password is not None:
+        if getattr(actor, "id", None) == getattr(target_user, "id", None):
+            raise PermissionDenied("Cannot change your own must-change-password flag.")
+        if not policies.can_manage_user(actor=actor, target_user=target_user):
+            raise PermissionDenied("Not allowed.")
+        profile_updates["must_change_password"] = bool(must_change_password)
 
     if not user_updates and not profile_updates:
         return UserUpdateResult(user=target_user, profile=profile)
@@ -214,6 +240,83 @@ def update_current_user_via_me_api(
     user.save(update_fields=[*updates.keys()])
 
 
+def _validate_new_password(*, new_password: str, user) -> None:
+    new_password = (new_password or "").strip()
+    if not new_password:
+        raise ValidationError({"new_password": "New password is required."})
+
+    validators = getattr(settings, "AUTH_PASSWORD_VALIDATORS", None) or []
+    if validators:
+        validate_password(new_password, user=user)
+        return
+
+    # Conventional fallback if validators are disabled.
+    if len(new_password) < 8:
+        raise ValidationError({"new_password": "New password must be at least 8 characters."})
+
+
+def change_current_user_password(
+    *,
+    user,
+    current_password: str,
+    new_password: str,
+) -> None:
+    if getattr(user, "is_anonymous", False):
+        raise PermissionDenied("Not allowed.")
+
+    if not (current_password or ""):
+        raise ValidationError({"current_password": "Current password is required."})
+
+    if not user.check_password(current_password):
+        raise ValidationError({"current_password": "Current password is incorrect."})
+
+    _validate_new_password(new_password=new_password, user=user)
+    if (new_password or "") == (current_password or ""):
+        raise ValidationError({"new_password": "New password must be different from current password."})
+
+    user.set_password(new_password)
+    user.full_clean()
+    user.save(update_fields=["password"])
+
+    profile = get_or_create_profile(user=user)
+    if profile.must_change_password:
+        profile.must_change_password = False
+        profile.save(update_fields=["must_change_password", "updated_at"])
+
+
+def reset_managed_user_password(
+    *,
+    actor,
+    target_user,
+) -> ManagedPasswordResetResult:
+    if getattr(actor, "is_anonymous", False):
+        raise PermissionDenied("Not allowed.")
+
+    if getattr(actor, "id", None) == getattr(target_user, "id", None):
+        raise PermissionDenied("Cannot reset your own password here.")
+
+    if not policies.can_reset_user_password(actor=actor, target_user=target_user):
+        raise PermissionDenied("Not allowed.")
+
+    temporary_password = _generate_temporary_password()
+
+    with transaction.atomic():
+        target_user.set_password(temporary_password)
+        target_user.full_clean()
+        target_user.save(update_fields=["password"])
+
+        profile = get_or_create_profile(user=target_user)
+        if profile.must_change_password is not True:
+            profile.must_change_password = True
+            profile.full_clean()
+            profile.save(update_fields=["must_change_password", "updated_at"])
+
+    return ManagedPasswordResetResult(
+        username=target_user.get_username(),
+        temporary_password=temporary_password,
+    )
+
+
 def build_current_user_me_payload(*, user) -> dict[str, Any]:
     profile = get_or_create_profile(user=user)
 
@@ -262,8 +365,11 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
     return {
         "username": user.get_username(),
         "email": user.email or "",
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
         "profile_id": profile.id,
         "role": profile.role,
+        "must_change_password": bool(profile.must_change_password),
         "is_owner": policies.is_owner(user),
         "capabilities": capabilities,
         "groups": groups,

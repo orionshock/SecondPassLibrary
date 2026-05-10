@@ -8,7 +8,9 @@ The first minimal product UI shell now exists:
 
 - `/` redirects to `/app/`
 - `/app/` is an authenticated dashboard shell
-- `/app/` includes self-profile editing (email/first_name/last_name only)
+- `/app/` is a placeholder dashboard (future activity widgets are intentionally not implemented yet)
+- `/profile/` is the authenticated self account page (identity + groups + capabilities + self-profile edit)
+- `/profile/password/` is the authenticated self password change page
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/imports/` is an API-driven imports page (upload + job list/results)
@@ -55,6 +57,12 @@ The users UI is API-driven using:
 - `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)
 - `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no passwords/invites)
 - `POST /api/v1/accounts/users/` (creates local Django user and returns a temporary password once)
+- `POST /api/v1/accounts/users/<id>/reset-password/` (managed reset; temporary password shown once)
+
+Password management:
+
+- The top-right username links to `/profile/`.
+- If `me.must_change_password=true`, product UI pages redirect to `/profile/password/` until the user changes their password.
 
 User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
 

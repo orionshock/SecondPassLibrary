@@ -4,6 +4,8 @@ import { initLibraryBrowse } from "./library.js";
 import { initBookDetail } from "./book_detail.js";
 import { initImports } from "./imports.js";
 import { initGroupsList, initGroupDetail } from "./groups.js";
+import { initProfile } from "./profile.js";
+import { initProfilePassword } from "./profile_password.js";
 import { initUsersList, initUserNew, initUserEdit } from "./users.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -53,6 +55,16 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("initUserEdit failed", e);
       setGlobalErrorFromError(e, "Edit user error:");
     });
+  } else if (page === "profile") {
+    initProfile().catch((e) => {
+      console.error("initProfile failed", e);
+      setGlobalErrorFromError(e, "Profile error:");
+    });
+  } else if (page === "profile-password") {
+    initProfilePassword().catch((e) => {
+      console.error("initProfilePassword failed", e);
+      setGlobalErrorFromError(e, "Password error:");
+    });
   } else {
     loadMeAndInitShell().catch((e) => {
       console.error("Shell init failed", e);
@@ -60,4 +72,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-

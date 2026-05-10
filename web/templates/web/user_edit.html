@@ -52,6 +52,12 @@
             <option value="false">false</option>
           </select>
         </div>
+
+        <div class="kv__k"><label for="user-edit-must-change">Must change password</label></div>
+        <div class="kv__v">
+          <input id="user-edit-must-change" type="checkbox" />
+          <span class="muted" style="margin-left: 8px;">Force password change on next login</span>
+        </div>
       </div>
 
       <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -59,6 +65,22 @@
         <span id="user-edit-save-status" class="muted"></span>
       </div>
     </form>
+  </section>
+
+  <section id="user-password-card" class="card is-hidden">
+    <h2 class="card__title">Password</h2>
+
+    <div class="muted">Generate a secure temporary password. Copy it now; it will not be shown again.</div>
+
+    <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button id="user-reset-password-btn" class="button" type="button">Reset password</button>
+      <span id="user-reset-password-status" class="muted"></span>
+    </div>
+
+    <div id="user-reset-password-result" class="is-hidden" style="margin-top: 10px;">
+      <div class="muted">Copy this now. It will not be shown again.</div>
+      <textarea id="user-reset-password-copy" readonly style="width: 100%; min-height: 80px; margin-top: 8px;"></textarea>
+    </div>
   </section>
 
   <section id="user-memberships-card" class="card is-hidden">

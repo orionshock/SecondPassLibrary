@@ -26,8 +26,11 @@ class CurrentUserSerializer(serializers.Serializer):
 
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
+    first_name = serializers.CharField(allow_blank=True)
+    last_name = serializers.CharField(allow_blank=True)
     profile_id = serializers.UUIDField()
     role = serializers.CharField()
+    must_change_password = serializers.BooleanField()
     is_owner = serializers.BooleanField()
     capabilities = serializers.DictField(child=serializers.BooleanField())
     groups = GroupSummarySerializer(many=True)
@@ -76,6 +79,7 @@ class ManagedUserSerializer(serializers.Serializer):
     is_owner = serializers.BooleanField()
     profile_id = serializers.UUIDField(allow_null=True)
     role = serializers.CharField(allow_blank=True)
+    must_change_password = serializers.BooleanField()
     groups = ManagedUserGroupSummarySerializer(many=True)
 
 
@@ -92,6 +96,7 @@ class ManagedUserPatchSerializer(serializers.Serializer):
             UserProfile.ROLE_READER,
         ],
     )
+    must_change_password = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
         initial = getattr(self, "initial_data", {}) or {}
@@ -107,6 +112,11 @@ class ManagedUserPatchSerializer(serializers.Serializer):
                 )
             )
         return super().validate(attrs)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField()
+    new_password = serializers.CharField()
 
 
 class ManagedUserCreateSerializer(serializers.Serializer):

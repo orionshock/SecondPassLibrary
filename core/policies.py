@@ -128,6 +128,23 @@ def can_manage_user(*, actor, target_user) -> bool:
     return True
 
 
+def can_reset_user_password(*, actor, target_user) -> bool:
+    """
+    Password reset via managed endpoint (not self-service).
+
+    Rules:
+    - Managers can reset Librarian/Reader only (never Owner/Manager).
+    - Owners can reset Manager/Librarian/Reader (never self via managed reset).
+    """
+    if getattr(actor, "is_anonymous", False):
+        return False
+    if getattr(actor, "id", None) == getattr(target_user, "id", None):
+        return False
+    if is_owner(actor):
+        return True
+    return can_manage_user(actor=actor, target_user=target_user)
+
+
 def can_manage_library(user) -> bool:
     return is_owner(user) or is_manager(user) or is_librarian(user)
 

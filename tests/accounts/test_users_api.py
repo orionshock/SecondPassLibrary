@@ -376,6 +376,7 @@ class ManagedUsersAPITest(APITestCase):
         created_user = User.objects.get(username="newmanager")
         created_profile = UserProfile.objects.get(user=created_user)
         self.assertEqual(created_profile.role, UserProfile.ROLE_MANAGER)
+        self.assertTrue(created_profile.must_change_password)
 
         self.assertTrue(
             LibraryGroupMembership.objects.filter(
@@ -428,6 +429,8 @@ class ManagedUsersAPITest(APITestCase):
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         self.assertEqual(UserProfile.objects.get(user__username="lib1").role, UserProfile.ROLE_LIBRARIAN)
         self.assertEqual(UserProfile.objects.get(user__username="reader1").role, UserProfile.ROLE_READER)
+        self.assertTrue(UserProfile.objects.get(user__username="lib1").must_change_password)
+        self.assertTrue(UserProfile.objects.get(user__username="reader1").must_change_password)
 
     def test_manager_can_create_librarian_or_reader_but_not_manager(self):
         self.client.login(username="manager", password="pw")

@@ -55,6 +55,7 @@ Manager cannot (unless also Owner):
 User management is intentionally limited:
 
 - `POST /api/v1/accounts/users/` (Manager/Owner only; creates local Django user and returns a temporary password once)
+- `POST /api/v1/accounts/users/<id>/reset-password/` (Manager/Owner only; resets a managed user's password and returns a temporary password once)
 - `GET /api/v1/accounts/users/`
 - `GET /api/v1/accounts/users/<id>/`
 - `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no password reset/invite/delete endpoints)
@@ -78,6 +79,7 @@ Rules:
 - Managers cannot promote/demote Managers.
 - Managers cannot change their own role.
 - No user can deactivate themselves via the API.
+- Managed user password resets set `UserProfile.must_change_password=true` (force change on next login via product UI redirect).
 
 ### Librarian
 

@@ -52,3 +52,13 @@ def user_new(request: HttpRequest) -> HttpResponse:
 @login_required
 def user_edit(request: HttpRequest, user_id: str) -> HttpResponse:
     return render(request, "web/user_edit.html", {"user_id": user_id})
+
+
+@login_required
+def profile(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/profile.html")
+
+
+@login_required
+def profile_password(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/profile_password.html")
