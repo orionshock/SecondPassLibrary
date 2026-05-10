@@ -4,40 +4,40 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def dedupe_book_files(apps, schema_editor):
+    BookFile = apps.get_model("library", "BookFile")
+    db_alias = schema_editor.connection.alias
+
+    # Deterministic cleanup for pre-release/dev:
+    # If any Book has multiple BookFiles, keep the earliest created one.
+    seen = set()
+    delete_ids = []
+
+    for bf in (
+        BookFile.objects.using(db_alias)
+        .order_by("book_id", "created_at", "id")
+        .values("id", "book_id")
+    ):
+        book_id = bf["book_id"]
+        bf_id = bf["id"]
+        if book_id in seen:
+            delete_ids.append(bf_id)
+        else:
+            seen.add(book_id)
+
+    if delete_ids:
+        BookFile.objects.using(db_alias).filter(id__in=delete_ids).delete()
+
+
+def noop_reverse(apps, schema_editor):
+    return None
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
         ('library', '0012_remove_librarygroup_discoverability'),
     ]
-
-    def dedupe_book_files(apps, schema_editor):
-        BookFile = apps.get_model("library", "BookFile")
-        db_alias = schema_editor.connection.alias
-
-        # Deterministic cleanup for pre-release/dev:
-        # If any Book has multiple BookFiles, keep the earliest created one.
-        seen = set()
-        keep_ids = set()
-        delete_ids = []
-
-        for bf in (
-            BookFile.objects.using(db_alias)
-            .order_by("book_id", "created_at", "id")
-            .values("id", "book_id")
-        ):
-            book_id = bf["book_id"]
-            bf_id = bf["id"]
-            if book_id in seen:
-                delete_ids.append(bf_id)
-            else:
-                seen.add(book_id)
-                keep_ids.add(bf_id)
-
-        if delete_ids:
-            BookFile.objects.using(db_alias).filter(id__in=delete_ids).delete()
-
-    def noop_reverse(apps, schema_editor):
-        return None
 
     operations = [
         migrations.RunPython(dedupe_book_files, reverse_code=noop_reverse),

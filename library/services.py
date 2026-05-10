@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 import uuid
 import zipfile
-from typing import Optional, Any
+from typing import Optional, Any, cast
 import shutil
 
 from ebooklib import epub
@@ -148,7 +148,7 @@ def import_epub(file_path):
         # One-to-one invariant: a Book has at most one stored EPUB BookFile.
         # Import creates a new Book, but keep the invariant explicit.
         try:
-            _existing_file = book.file
+            _existing_file = cast(Any, book).file
         except BookFile.DoesNotExist:
             _existing_file = None
         if _existing_file is not None:

@@ -675,8 +675,8 @@ class AuthorSeriesCreatePermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_book_patch_accepts_authors_and_series_ids(self):
         self.client.login(username="librarian2", password="pw")
-        author = cast(Response, self.client.post("/api/v1/library/authors/", data={"name": "A"}, format="json")).data
-        series = cast(Response, self.client.post("/api/v1/library/series/", data={"name": "S"}, format="json")).data
+        author = cast(dict[str, Any], cast(Response, self.client.post("/api/v1/library/authors/", data={"name": "A"}, format="json")).data)
+        series = cast(dict[str, Any], cast(Response, self.client.post("/api/v1/library/series/", data={"name": "S"}, format="json")).data)
 
         book = Book.objects.create(title="T")
         ensure_book_public_assignment(book=book, added_by=None)

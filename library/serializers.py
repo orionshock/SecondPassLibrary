@@ -242,7 +242,7 @@ class BookSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Must be >= 0.")
 
         # Enforce at most one decimal place; reject 5.12, 5.123, etc.
-        exp = value.as_tuple().exponent
+        exp: int = int(value.as_tuple().exponent)
         if exp < -1:
             raise serializers.ValidationError("Must have at most one decimal place.")
 

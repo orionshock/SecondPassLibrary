@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -19,7 +20,7 @@ class LibraryModelTest(TestCase):
         self.book = Book.objects.create(title="Test Book")
         self.book.authors.add(self.author)
         self.book.series = self.series
-        self.book.series_index = 1
+        self.book.series_index = Decimal("1.0")
         self.book.save()
 
     def test_author_str(self):
