@@ -1,73 +1,171 @@
 import { fetchJSON } from "./api.js";
-import {
-  $,
-  escapeHtml,
-  loadMeAndInitShell,
-  setGlobalError,
-  setGlobalErrorFromError,
-  visible,
-} from "./layout.js";
+import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "./layout.js";
+
+function clear(el) {
+  if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
 
 function setTitle(text) {
-  const el = $("#book-title");
-  if (!el) return;
-  el.textContent = text;
+  const titleEl = $("#book-title");
+  if (!titleEl) return;
+  titleEl.textContent = text;
 }
 
-function renderIdentifiers(identifiers) {
+function renderSubjectsPills(container, subjects) {
+  clear(container);
+  if (!subjects) return;
+  const values = Array.isArray(subjects)
+    ? subjects.map((s) => String(s).trim()).filter(Boolean)
+    : typeof subjects === "string"
+      ? [subjects.trim()].filter(Boolean)
+      : [];
+  for (const v of values) {
+    container.appendChild(el("span", "pill", v));
+    container.appendChild(document.createTextNode(" "));
+  }
+}
+
+function renderIdentifiers(container, identifiers) {
+  clear(container);
   if (!Array.isArray(identifiers) || identifiers.length === 0) {
-    return '<div class="muted">No identifiers.</div>';
+    container.appendChild(el("div", "muted", "No identifiers."));
+    return;
   }
+  const ul = document.createElement("ul");
+  for (const i of identifiers) {
+    const li = document.createElement("li");
+    const scheme = i && i.scheme ? String(i.scheme) : "";
+    const value = i && i.value ? String(i.value) : "";
+    const source = i && i.source ? String(i.source) : "";
+    const isPrimary = !!(i && i.is_primary);
 
-  const items = identifiers
-    .map((i) => {
-      const scheme = i.scheme || "";
-      const value = i.value || "";
-      const source = i.source || "";
-      const primary = i.is_primary ? ' <span class="pill">primary</span>' : "";
-      return `<li><code>${escapeHtml(scheme)}</code>: ${escapeHtml(value)}${primary}${
-        source ? ` <span class="muted">(${escapeHtml(source)})</span>` : ""
-      }</li>`;
-    })
-    .join("");
+    const code = document.createElement("code");
+    code.textContent = scheme;
+    li.appendChild(code);
+    li.appendChild(document.createTextNode(": " + value));
 
-  return `<ul>${items}</ul>`;
+    if (isPrimary) {
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(el("span", "pill", "primary"));
+    }
+    if (source) {
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(el("span", "muted", `(${source})`));
+    }
+
+    ul.appendChild(li);
+  }
+  container.appendChild(ul);
 }
 
-function renderFile(file) {
+function renderFile(container, file) {
+  clear(container);
   if (!file) {
-    return '<div class="muted">No file.</div>';
+    container.appendChild(el("div", "muted", "No file."));
+    return;
   }
 
+  const wrap = document.createElement("div");
   const format = file.format ? String(file.format).toUpperCase() : "EPUB";
-  const size =
-    file.file_size != null && file.file_size !== "" ? `${escapeHtml(file.file_size)} bytes` : "";
-  const downloadUrl = file.download_url || "";
-  const dl = downloadUrl ? `<a class="pill" href="${escapeHtml(downloadUrl)}">Download</a>` : "";
+  wrap.appendChild(el("span", "pill", format));
 
-  return `<div><span class="pill">${escapeHtml(format)}</span> <span class="muted">${
-    size ? size : ""
-  }</span> ${dl}</div>`;
+  const size = file.file_size != null && file.file_size !== "" ? `${String(file.file_size)} bytes` : "";
+  wrap.appendChild(document.createTextNode(" "));
+  wrap.appendChild(el("span", "muted", size));
+
+  const downloadUrl = file.download_url ? String(file.download_url) : "";
+  if (downloadUrl) {
+    wrap.appendChild(document.createTextNode(" "));
+    const a = el("a", "pill", "Download");
+    a.setAttribute("href", downloadUrl);
+    wrap.appendChild(a);
+  }
+
+  container.appendChild(wrap);
 }
 
-function renderSubjects(subjects) {
-  if (!subjects) return "";
-  if (Array.isArray(subjects)) {
-    const clean = subjects.map((s) => String(s).trim()).filter(Boolean);
-    if (!clean.length) return "";
-    return clean.map((s) => `<span class="pill">${escapeHtml(s)}</span>`).join(" ");
+function renderBookGroups(container, groups) {
+  clear(container);
+  if (!Array.isArray(groups) || groups.length === 0) {
+    container.appendChild(el("div", "muted", "No visible groups."));
+    return;
   }
-  if (typeof subjects === "string") {
-    const s = subjects.trim();
-    if (!s) return "";
-    return `<span class="pill">${escapeHtml(s)}</span>`;
+  const ul = document.createElement("ul");
+  for (const g of groups) {
+    const li = document.createElement("li");
+    const gid = g && g.id != null ? String(g.id) : "";
+    const name = g && g.name ? String(g.name) : "";
+    const slug = g && g.slug ? String(g.slug) : "";
+    const isPublic = !!(g && g.is_public_group);
+
+    const a = el("a", "", name);
+    a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
+    li.appendChild(a);
+    li.appendChild(document.createTextNode(" "));
+
+    const muted = el("span", "muted");
+    const code = document.createElement("code");
+    code.textContent = slug;
+    muted.appendChild(code);
+    li.appendChild(muted);
+
+    if (isPublic) {
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(el("span", "pill pill--owner", "Public"));
+    }
+
+    ul.appendChild(li);
   }
-  return "";
+  container.appendChild(ul);
+}
+
+function renderBookMeta(container, book) {
+  clear(container);
+  const kv = el("div", "kv");
+
+  function addRow(key, valueNodeOrText) {
+    kv.appendChild(el("div", "kv__k", key));
+    const v = el("div", "kv__v");
+    if (valueNodeOrText && valueNodeOrText.nodeType) v.appendChild(valueNodeOrText);
+    else v.textContent = valueNodeOrText != null ? String(valueNodeOrText) : "";
+    kv.appendChild(v);
+  }
+
+  const title = book && book.title ? String(book.title) : "Book";
+  const subtitle = book && book.subtitle ? String(book.subtitle) : "";
+  const authors = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
+  const series = book && book.series && book.series.name ? String(book.series.name) : "";
+  const seriesIndex = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
+  const seriesLine = series ? `${series}${seriesIndex ? " · " + seriesIndex : ""}` : "";
+
+  addRow("Title", title);
+  if (subtitle) addRow("Subtitle", subtitle);
+  addRow("Authors", authors.join(", ") || "");
+  if (seriesLine) addRow("Series", seriesLine);
+  if (book && book.summary) addRow("Summary", book.summary);
+  if (book && book.publisher) addRow("Publisher", book.publisher);
+  if (book && book.language) addRow("Language", book.language);
+  if (book && book.published_date) addRow("Published", book.published_date);
+  if (book && book.isbn) addRow("ISBN", book.isbn);
+  if (book && book.subjects) {
+    const pills = document.createElement("div");
+    renderSubjectsPills(pills, book.subjects);
+    if (pills.textContent && pills.textContent.trim()) addRow("Subjects", pills);
+  }
+
+  container.appendChild(kv);
 }
 
 export async function initBookDetail() {
   const me = await loadMeAndInitShell();
-
   setGlobalError("");
 
   const statusEl = $("#book-status");
@@ -107,10 +205,7 @@ export async function initBookDetail() {
   const canManage = !!(me && me.capabilities && me.capabilities.can_manage_library);
   visible(editWrapEl, canManage);
   if (canManage) {
-    editLinkEl.setAttribute(
-      "href",
-      `/library/books/${encodeURIComponent(String(bookId))}/edit/`
-    );
+    editLinkEl.setAttribute("href", `/library/books/${encodeURIComponent(String(bookId))}/edit/`);
   }
 
   function setStatus(text, isError) {
@@ -124,56 +219,14 @@ export async function initBookDetail() {
   visible(filesSection, false);
   visible(groupsSection, false);
 
-  function renderBookGroups(groups) {
-    if (!Array.isArray(groups) || groups.length === 0) {
-      return '<div class="muted">No visible groups.</div>';
-    }
-    const items = groups
-      .map((g) => {
-        const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
-        const badges = [g.is_public_group ? '<span class="pill pill--owner">Public</span>' : ""]
-          .filter(Boolean)
-          .join(" ");
-        return `<li><a href="${escapeHtml(href)}">${escapeHtml(
-          g.name || ""
-        )}</a> <span class="muted"><code>${escapeHtml(g.slug || "")}</code></span> ${badges}</li>`;
-      })
-      .join("");
-    return `<ul>${items}</ul>`;
-  }
-
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
+    setTitle(book && book.title ? book.title : "Book");
 
-    const title = book.title || "Book";
-    setTitle(title);
-
-    const subtitle = book.subtitle ? book.subtitle : "";
-    const authors = Array.isArray(book.authors) ? book.authors.map((a) => a.name).filter(Boolean) : [];
-    const series = book.series && book.series.name ? book.series.name : "";
-    const seriesIndex = book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
-    const seriesLine = series ? `${series}${seriesIndex ? " · " + seriesIndex : ""}` : "";
-
-    const subjectsHtml = renderSubjects(book.subjects);
-
-    metaEl.innerHTML = `
-        <div class="kv">
-          <div class="kv__k">Title</div><div class="kv__v">${escapeHtml(title)}</div>
-          ${subtitle ? `<div class="kv__k">Subtitle</div><div class="kv__v">${escapeHtml(subtitle)}</div>` : ""}
-          <div class="kv__k">Authors</div><div class="kv__v">${escapeHtml(authors.join(", ") || "")}</div>
-          ${seriesLine ? `<div class="kv__k">Series</div><div class="kv__v">${escapeHtml(seriesLine)}</div>` : ""}
-          ${book.summary ? `<div class="kv__k">Summary</div><div class="kv__v">${escapeHtml(book.summary)}</div>` : ""}
-          ${book.publisher ? `<div class="kv__k">Publisher</div><div class="kv__v">${escapeHtml(book.publisher)}</div>` : ""}
-          ${book.language ? `<div class="kv__k">Language</div><div class="kv__v">${escapeHtml(book.language)}</div>` : ""}
-          ${book.published_date ? `<div class="kv__k">Published</div><div class="kv__v">${escapeHtml(book.published_date)}</div>` : ""}
-          ${book.isbn ? `<div class="kv__k">ISBN</div><div class="kv__v">${escapeHtml(book.isbn)}</div>` : ""}
-          ${subjectsHtml ? `<div class="kv__k">Subjects</div><div class="kv__v">${subjectsHtml}</div>` : ""}
-        </div>
-      `.trim();
-
-    idBody.innerHTML = renderIdentifiers(book.identifiers);
-    filesBody.innerHTML = renderFile(book.file);
-    groupsBody.innerHTML = renderBookGroups(book.groups);
+    renderBookMeta(metaEl, book);
+    renderIdentifiers(idBody, book.identifiers);
+    renderFile(filesBody, book.file);
+    renderBookGroups(groupsBody, book.groups);
 
     visible(detailEl, true);
     visible(idSection, true);
@@ -190,3 +243,4 @@ export async function initBookDetail() {
     }
   }
 }
+

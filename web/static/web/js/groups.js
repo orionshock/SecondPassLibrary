@@ -355,14 +355,45 @@ export async function initGroupDetail() {
         .filter(Boolean)
         .join(" ");
 
-      metaEl.innerHTML = `
-        <div class="kv">
-          <div class="kv__k">Name</div><div class="kv__v">${escapeHtml(name)}</div>
-          <div class="kv__k">Slug</div><div class="kv__v"><code>${escapeHtml(group.slug || "")}</code></div>
-          <div class="kv__k">Badges</div><div class="kv__v">${badges || ""}</div>
-          <div class="kv__k">Description</div><div class="kv__v">${escapeHtml(group.description || "")}</div>
-        </div>
-      `.trim();
+      // Render with DOM APIs (no HTML injection).
+      metaEl.textContent = "";
+      const kv = document.createElement("div");
+      kv.className = "kv";
+
+      function addRow(k, vNodeOrText) {
+        const kk = document.createElement("div");
+        kk.className = "kv__k";
+        kk.textContent = k;
+        const vv = document.createElement("div");
+        vv.className = "kv__v";
+        if (vNodeOrText && vNodeOrText.nodeType) vv.appendChild(vNodeOrText);
+        else vv.textContent = vNodeOrText != null ? String(vNodeOrText) : "";
+        kv.appendChild(kk);
+        kv.appendChild(vv);
+      }
+
+      addRow("Name", name);
+      const slugNode = document.createElement("code");
+      slugNode.textContent = group.slug || "";
+      addRow("Slug", slugNode);
+
+      const badgesNode = document.createElement("span");
+      if (isPublicGroup) {
+        const b = document.createElement("span");
+        b.className = "pill pill--owner";
+        b.textContent = "Public";
+        badgesNode.appendChild(b);
+      }
+      if (membershipRole) {
+        if (badgesNode.childNodes.length) badgesNode.appendChild(document.createTextNode(" "));
+        const b2 = document.createElement("span");
+        b2.className = "pill";
+        b2.textContent = membershipRole;
+        badgesNode.appendChild(b2);
+      }
+      addRow("Badges", badgesNode);
+      addRow("Description", group.description || "");
+      metaEl.appendChild(kv);
 
       descInput.value = group.description || "";
       // discoverability removed
@@ -548,14 +579,18 @@ export async function initGroupDetail() {
     // Populate add-member dropdown and load current memberships.
     try {
       const users = await loadAllManageableUsers();
-      addMemberUser.innerHTML = users
-        .map((u) => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.username)} (${escapeHtml(u.email || "")})</option>`)
-        .join("");
+      addMemberUser.textContent = "";
+      for (const u of users) {
+        const opt = document.createElement("option");
+        opt.value = String(u.id);
+        opt.textContent = `${u.username} (${u.email || ""})`;
+        addMemberUser.appendChild(opt);
+      }
       visible(addMemberForm, true);
     } catch (e) {
       console.error("Failed to load manageable users for membership add", e);
       visible(addMemberForm, true);
-      addMemberUser.innerHTML = "";
+      addMemberUser.textContent = "";
       setAddMemberStatus("Error loading user list.", true);
     }
 

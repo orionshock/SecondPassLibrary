@@ -5,7 +5,19 @@ import {
   getCsrfToken,
   summarizeFieldErrors,
 } from "./api.js";
-import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "./layout.js";
+import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "./layout.js";
+
+function clear(node) {
+  if (!node) return;
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
 
 function normalizeOptionalString(value) {
   const s = value == null ? "" : String(value);
@@ -71,10 +83,10 @@ async function fetchAllPages(url) {
   return out;
 }
 
-function setInlineStatus(el, text, isError) {
-  if (!el) return;
-  el.textContent = text || "";
-  el.classList.toggle("error", !!isError);
+function setInlineStatus(node, text, isError) {
+  if (!node) return;
+  node.textContent = text || "";
+  node.classList.toggle("error", !!isError);
 }
 
 function uniqueById(items) {
@@ -105,11 +117,15 @@ const IDENT_SCHEMES = [
   ["other", "Other"],
 ];
 
-function schemeOptionsHtml(selected) {
-  return IDENT_SCHEMES.map(([v, label]) => {
-    const sel = selected && String(selected) === v ? " selected" : "";
-    return `<option value="${escapeHtml(v)}"${sel}>${escapeHtml(label)}</option>`;
-  }).join("");
+function fillSchemeOptions(selectEl, selectedValue) {
+  clear(selectEl);
+  for (const [v, label] of IDENT_SCHEMES) {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = label;
+    if (selectedValue && String(selectedValue) === v) opt.selected = true;
+    selectEl.appendChild(opt);
+  }
 }
 
 function initTabs() {
@@ -118,18 +134,11 @@ function initTabs() {
   if (!buttons.length || !panels.length) return;
 
   function show(tab) {
-    for (const btn of buttons) {
-      btn.classList.toggle("is-active", btn.dataset.tab === tab);
-    }
-    for (const panel of panels) {
-      panel.classList.toggle("is-hidden", panel.dataset.tabPanel !== tab);
-    }
+    for (const btn of buttons) btn.classList.toggle("is-active", btn.dataset.tab === tab);
+    for (const panel of panels) panel.classList.toggle("is-hidden", panel.dataset.tabPanel !== tab);
   }
 
-  for (const btn of buttons) {
-    btn.addEventListener("click", () => show(btn.dataset.tab || "metadata"));
-  }
-
+  for (const btn of buttons) btn.addEventListener("click", () => show(btn.dataset.tab || "metadata"));
   show("metadata");
 }
 
@@ -262,203 +271,350 @@ export async function initBookEdit() {
     return;
   }
 
-  let original = null;
-  let originalAuthorIds = [];
-  let originalSeriesId = null;
-
-  let selectedAuthors = [];
+  let book = null;
+  let identifiers = [];
   let allAuthors = [];
   let allSeries = [];
-
-  let identifiers = [];
-  let groups = [];
+  let selectedAuthors = [];
   let allGroups = [];
+  let groups = [];
 
-  function renderHeader(book) {
+  function renderHeader() {
     const title = book && book.title ? String(book.title) : "Book";
-    setText(headerTitleEl, title);
+    headerTitleEl.textContent = title;
 
     const authorNames = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
-    setText(headerAuthorsEl, authorNames.length ? `Authors: ${authorNames.join(", ")}` : "Authors: (none)");
+    headerAuthorsEl.textContent = authorNames.length ? `Authors: ${authorNames.join(", ")}` : "Authors: (none)";
 
     const seriesName = book && book.series && book.series.name ? String(book.series.name) : "";
-    const seriesIndex = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
-    const seriesLine = seriesName ? `Series: ${seriesName}${seriesIndex ? " · " + seriesIndex : ""}` : "Series: (none)";
-    setText(headerSeriesEl, seriesLine);
+    const seriesIdx = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
+    headerSeriesEl.textContent = seriesName ? `Series: ${seriesName}${seriesIdx ? " · " + seriesIdx : ""}` : "Series: (none)";
 
+    clear(headerFileEl);
     const file = book && book.file ? book.file : null;
     if (!file) {
-      headerFileEl.innerHTML = '<span class="pill">No file</span>';
-    } else {
-      const fmt = file.format ? String(file.format).toUpperCase() : "EPUB";
-      const size = file.file_size != null && file.file_size !== "" ? `${escapeHtml(file.file_size)} bytes` : "";
-      const downloadUrl = file.download_url || "";
-      const dl = downloadUrl ? `<a class="pill" href="${escapeHtml(downloadUrl)}">Download ${escapeHtml(fmt)}</a>` : "";
-      headerFileEl.innerHTML = `${dl}${size ? ` <span class="muted">${escapeHtml(size)}</span>` : ""}`.trim();
-    }
-  }
-
-  function renderFileInfo(book) {
-    const file = book && book.file ? book.file : null;
-    if (!file) {
-      fileInfoEl.innerHTML = "<h3 class=\"card__title\">File info</h3><div class=\"muted\">No stored file.</div>";
+      headerFileEl.appendChild(el("span", "pill", "No file"));
       return;
     }
     const fmt = file.format ? String(file.format).toUpperCase() : "EPUB";
-    const size = file.file_size != null && file.file_size !== "" ? `${escapeHtml(file.file_size)} bytes` : "";
-    const checksumShort = file.checksum_short ? String(file.checksum_short) : "";
-    const downloadUrl = file.download_url || "";
-    const dl = downloadUrl ? `<a class="pill" href="${escapeHtml(downloadUrl)}">Download</a>` : "";
-    fileInfoEl.innerHTML = `
-      <h3 class="card__title">File info</h3>
-      <div class="kv">
-        <div class="kv__k">Format</div><div class="kv__v">${escapeHtml(fmt)}</div>
-        <div class="kv__k">Size</div><div class="kv__v">${escapeHtml(size || "")}</div>
-        <div class="kv__k">Checksum</div><div class="kv__v">${escapeHtml(checksumShort || "")}</div>
-        <div class="kv__k">Download</div><div class="kv__v">${dl}</div>
-      </div>
-    `.trim();
+    const downloadUrl = file.download_url ? String(file.download_url) : "";
+    if (downloadUrl) {
+      const a = el("a", "pill", `Download ${fmt}`);
+      a.setAttribute("href", downloadUrl);
+      headerFileEl.appendChild(a);
+    } else {
+      headerFileEl.appendChild(el("span", "pill", fmt));
+    }
+  }
+
+  function renderFileInfo() {
+    clear(fileInfoEl);
+    fileInfoEl.appendChild(el("h3", "card__title", "File info"));
+    const file = book && book.file ? book.file : null;
+    if (!file) {
+      fileInfoEl.appendChild(el("div", "muted", "No stored file."));
+      return;
+    }
+    const kv = el("div", "kv");
+    function addRow(k, vNodeOrText) {
+      kv.appendChild(el("div", "kv__k", k));
+      const v = el("div", "kv__v");
+      if (vNodeOrText && vNodeOrText.nodeType) v.appendChild(vNodeOrText);
+      else v.textContent = vNodeOrText != null ? String(vNodeOrText) : "";
+      kv.appendChild(v);
+    }
+    addRow("Format", file.format ? String(file.format).toUpperCase() : "EPUB");
+    addRow("Size", file.file_size != null && file.file_size !== "" ? `${String(file.file_size)} bytes` : "");
+    addRow("Checksum", file.checksum_short ? String(file.checksum_short) : "");
+    if (file.download_url) {
+      const a = el("a", "pill", "Download");
+      a.setAttribute("href", String(file.download_url));
+      addRow("Download", a);
+    } else {
+      addRow("Download", "");
+    }
+    fileInfoEl.appendChild(kv);
   }
 
   function renderSelectedAuthors() {
+    clear(authorsSelectedEl);
     if (!selectedAuthors.length) {
-      authorsSelectedEl.innerHTML = '<div class="muted">No authors.</div>';
+      authorsSelectedEl.appendChild(el("div", "muted", "No authors."));
       return;
     }
-    const rows = selectedAuthors
-      .map((a) => {
-        const id = a && a.id != null ? String(a.id) : "";
-        const name = a && a.name ? String(a.name) : id;
-        return `<li>
-            ${escapeHtml(name)} <span class="muted"><code>${escapeHtml(id)}</code></span>
-            <button class="linklike" type="button" data-remove-author-id="${escapeHtml(id)}" style="margin-left: 8px;">Remove</button>
-          </li>`;
-      })
-      .join("");
-    authorsSelectedEl.innerHTML = `<ul>${rows}</ul>`;
+    const ul = document.createElement("ul");
+    for (const a of selectedAuthors) {
+      const id = a && a.id != null ? String(a.id) : "";
+      const name = a && a.name ? String(a.name) : id;
+      const li = document.createElement("li");
+      li.appendChild(document.createTextNode(name + " "));
+      const muted = el("span", "muted");
+      const code = document.createElement("code");
+      code.textContent = id;
+      muted.appendChild(code);
+      li.appendChild(muted);
+      li.appendChild(document.createTextNode(" "));
+      const btn = el("button", "linklike", "Remove");
+      btn.type = "button";
+      btn.style.marginLeft = "8px";
+      btn.setAttribute("data-remove-author-id", id);
+      li.appendChild(btn);
+      ul.appendChild(li);
+    }
+    authorsSelectedEl.appendChild(ul);
   }
 
   function syncAuthorSelectOptions() {
+    clear(authorAddSelectEl);
     const currentIds = new Set(selectedAuthors.map((a) => String(a.id)));
-    const options = allAuthors
+    const items = allAuthors
       .slice()
       .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
       .filter((a) => a && a.id && !currentIds.has(String(a.id)))
-      .slice(0, 500)
-      .map((a) => `<option value="${escapeHtml(String(a.id))}">${escapeHtml(String(a.name || a.id))}</option>`)
-      .join("");
-    authorAddSelectEl.innerHTML = options ? options : '<option value="">(No available authors)</option>';
-    authorAddBtnEl.disabled = !options;
+      .slice(0, 500);
+    if (!items.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "(No available authors)";
+      authorAddSelectEl.appendChild(opt);
+      authorAddBtnEl.disabled = true;
+      return;
+    }
+    for (const a of items) {
+      const opt = document.createElement("option");
+      opt.value = String(a.id);
+      opt.textContent = String(a.name || a.id);
+      authorAddSelectEl.appendChild(opt);
+    }
+    authorAddBtnEl.disabled = false;
   }
 
   function syncSeriesSelectOptions(selectedId) {
-    const options = [
-      `<option value="">(No series)</option>`,
-      ...allSeries
-        .slice()
-        .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
-        .slice(0, 500)
-        .map((s) => `<option value="${escapeHtml(String(s.id))}">${escapeHtml(String(s.name || s.id))}</option>`),
-    ].join("");
-    seriesSelectEl.innerHTML = options;
+    clear(seriesSelectEl);
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "(No series)";
+    seriesSelectEl.appendChild(none);
+    const items = allSeries
+      .slice()
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+      .slice(0, 500);
+    for (const s of items) {
+      const opt = document.createElement("option");
+      opt.value = String(s.id);
+      opt.textContent = String(s.name || s.id);
+      seriesSelectEl.appendChild(opt);
+    }
     seriesSelectEl.value = selectedId || "";
   }
 
   function renderGroups() {
+    clear(groupsEl);
     if (!groups.length) {
-      groupsEl.innerHTML = '<div class="muted">No visible groups.</div>';
+      groupsEl.appendChild(el("div", "muted", "No visible groups."));
       return;
     }
-    const rows = groups
+    const ul = document.createElement("ul");
+    const items = groups
       .slice()
-      .sort((a, b) => `${a.name || ""}:${a.slug || ""}`.localeCompare(`${b.name || ""}:${b.slug || ""}`))
-      .map((g) => {
-        const id = g.id ? String(g.id) : "";
-        const href = id ? `/groups/${encodeURIComponent(id)}/` : "#";
-        const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
-        const removeBtn = g.is_public_group
-          ? ""
-          : ` <button class="linklike" type="button" data-group-remove-id="${escapeHtml(id)}">Remove</button>`;
-        return `<li>
-            <a href="${escapeHtml(href)}">${escapeHtml(g.name || "")}</a>
-            <span class="muted"><code>${escapeHtml(g.slug || "")}</code></span>${badge}${removeBtn}
-          </li>`;
-      })
-      .join("");
-    groupsEl.innerHTML = `<ul>${rows}</ul>`;
+      .sort((a, b) => `${a.name || ""}:${a.slug || ""}`.localeCompare(`${b.name || ""}:${b.slug || ""}`));
+    for (const g of items) {
+      const li = document.createElement("li");
+      const gid = g && g.id != null ? String(g.id) : "";
+      const a = el("a", "", g && g.name ? g.name : "");
+      a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
+      li.appendChild(a);
+      li.appendChild(document.createTextNode(" "));
+      const muted = el("span", "muted");
+      const code = document.createElement("code");
+      code.textContent = String(g && g.slug ? g.slug : "");
+      muted.appendChild(code);
+      li.appendChild(muted);
+      if (g && g.is_public_group) {
+        li.appendChild(document.createTextNode(" "));
+        li.appendChild(el("span", "pill pill--owner", "Public"));
+      } else if (gid) {
+        li.appendChild(document.createTextNode(" "));
+        const btn = el("button", "linklike", "Remove");
+        btn.type = "button";
+        btn.setAttribute("data-group-remove-id", gid);
+        li.appendChild(btn);
+      }
+      ul.appendChild(li);
+    }
+    groupsEl.appendChild(ul);
   }
 
   function syncGroupsAddOptions() {
+    clear(groupsAddSelectEl);
     const currentIds = new Set(groups.map((g) => String(g.id)));
-    const options = allGroups
+    const items = allGroups
       .slice()
       .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
       .filter((g) => g && g.id && !currentIds.has(String(g.id)))
-      .slice(0, 500)
-      .map((g) => `<option value="${escapeHtml(String(g.id))}">${escapeHtml(String(g.name || g.slug || g.id))}</option>`)
-      .join("");
-    groupsAddSelectEl.innerHTML = options ? options : '<option value="">(No available groups)</option>';
-    groupsAddBtnEl.disabled = !options;
+      .slice(0, 500);
+    if (!items.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "(No available groups)";
+      groupsAddSelectEl.appendChild(opt);
+      groupsAddBtnEl.disabled = true;
+      return;
+    }
+    for (const g of items) {
+      const opt = document.createElement("option");
+      opt.value = String(g.id);
+      opt.textContent = String(g.name || g.slug || g.id);
+      groupsAddSelectEl.appendChild(opt);
+    }
+    groupsAddBtnEl.disabled = false;
   }
 
   function renderIdentifiersTable() {
-    const rows = identifiers
+    clear(identifiersEl);
+    const wrap = el("div", "ident-tablewrap");
+    const table = el("table", "ident-table");
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+    for (const h of ["Scheme", "Value", "Source", "Primary", "Actions"]) trh.appendChild(el("th", "", h));
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    const items = identifiers
       .slice()
-      .sort((a, b) => `${a.scheme || ""}:${a.value || ""}`.localeCompare(`${b.scheme || ""}:${b.value || ""}`))
-      .map((it) => {
-        const id = it.id ? String(it.id) : "";
-        const scheme = it.scheme || "other";
-        const value = it.value || "";
-        const source = it.source || "";
-        const primary = !!it.is_primary;
-        return `
-          <tr data-ident-id="${escapeHtml(id)}">
-            <td><select data-ident-field="scheme">${schemeOptionsHtml(scheme)}</select></td>
-            <td><input data-ident-field="value" type="text" value="${escapeHtml(value)}" style="width: 100%;" /></td>
-            <td><input data-ident-field="source" type="text" value="${escapeHtml(source)}" style="width: 100%;" /></td>
-            <td style="text-align: center;"><input data-ident-field="is_primary" type="checkbox" ${primary ? "checked" : ""} /></td>
-            <td class="ident-actions">
-              <button class="button" type="button" data-ident-action="save">Save</button>
-              <button class="button" type="button" data-ident-action="delete">Delete</button>
-              <span class="muted" data-ident-status=""></span>
-            </td>
-          </tr>
-        `.trim();
-      })
-      .join("");
+      .sort((a, b) => `${a.scheme || ""}:${a.value || ""}`.localeCompare(`${b.scheme || ""}:${b.value || ""}`));
 
-    const addRow = `
-      <tr data-ident-add="1">
-        <td><select data-ident-add-field="scheme">${schemeOptionsHtml("isbn_13")}</select></td>
-        <td><input data-ident-add-field="value" type="text" style="width: 100%;" /></td>
-        <td><input data-ident-add-field="source" type="text" value="manual" style="width: 100%;" /></td>
-        <td style="text-align: center;"><input data-ident-add-field="is_primary" type="checkbox" /></td>
-        <td class="ident-actions">
-          <button class="button" type="button" data-ident-action="add">Add</button>
-          <span class="muted" data-ident-status=""></span>
-        </td>
-      </tr>
-    `.trim();
+    for (const it of items) {
+      const tr = document.createElement("tr");
+      const identId = it && it.id != null ? String(it.id) : "";
+      tr.setAttribute("data-ident-id", identId);
 
-    identifiersEl.innerHTML = `
-      <div class="ident-tablewrap">
-        <table class="ident-table">
-          <thead>
-            <tr>
-              <th>Scheme</th>
-              <th>Value</th>
-              <th>Source</th>
-              <th>Primary</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows || ""}
-            ${addRow}
-          </tbody>
-        </table>
-      </div>
-    `.trim();
+      const tdScheme = document.createElement("td");
+      const schemeSel = document.createElement("select");
+      schemeSel.setAttribute("data-ident-field", "scheme");
+      fillSchemeOptions(schemeSel, it && it.scheme ? it.scheme : "other");
+      tdScheme.appendChild(schemeSel);
+      tr.appendChild(tdScheme);
+
+      const tdValue = document.createElement("td");
+      const valueInput = document.createElement("input");
+      valueInput.type = "text";
+      valueInput.style.width = "100%";
+      valueInput.setAttribute("data-ident-field", "value");
+      valueInput.value = it && it.value != null ? String(it.value) : "";
+      tdValue.appendChild(valueInput);
+      tr.appendChild(tdValue);
+
+      const tdSource = document.createElement("td");
+      const sourceInput = document.createElement("input");
+      sourceInput.type = "text";
+      sourceInput.style.width = "100%";
+      sourceInput.setAttribute("data-ident-field", "source");
+      sourceInput.value = it && it.source != null ? String(it.source) : "";
+      tdSource.appendChild(sourceInput);
+      tr.appendChild(tdSource);
+
+      const tdPrimary = document.createElement("td");
+      tdPrimary.style.textAlign = "center";
+      const primaryInput = document.createElement("input");
+      primaryInput.type = "checkbox";
+      primaryInput.setAttribute("data-ident-field", "is_primary");
+      primaryInput.checked = !!(it && it.is_primary);
+      tdPrimary.appendChild(primaryInput);
+      tr.appendChild(tdPrimary);
+
+      const tdActions = el("td", "ident-actions");
+      const save = el("button", "button", "Save");
+      save.type = "button";
+      save.setAttribute("data-ident-action", "save");
+      const del = el("button", "button", "Delete");
+      del.type = "button";
+      del.setAttribute("data-ident-action", "delete");
+      const st = el("span", "muted");
+      st.setAttribute("data-ident-status", "");
+      tdActions.appendChild(save);
+      tdActions.appendChild(del);
+      tdActions.appendChild(st);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    }
+
+    const trAdd = document.createElement("tr");
+    trAdd.setAttribute("data-ident-add", "1");
+
+    const tdAScheme = document.createElement("td");
+    const sel = document.createElement("select");
+    sel.setAttribute("data-ident-add-field", "scheme");
+    fillSchemeOptions(sel, "isbn_13");
+    tdAScheme.appendChild(sel);
+    trAdd.appendChild(tdAScheme);
+
+    const tdAValue = document.createElement("td");
+    const inVal = document.createElement("input");
+    inVal.type = "text";
+    inVal.style.width = "100%";
+    inVal.setAttribute("data-ident-add-field", "value");
+    tdAValue.appendChild(inVal);
+    trAdd.appendChild(tdAValue);
+
+    const tdASource = document.createElement("td");
+    const inSource = document.createElement("input");
+    inSource.type = "text";
+    inSource.style.width = "100%";
+    inSource.value = "manual";
+    inSource.setAttribute("data-ident-add-field", "source");
+    tdASource.appendChild(inSource);
+    trAdd.appendChild(tdASource);
+
+    const tdAPrimary = document.createElement("td");
+    tdAPrimary.style.textAlign = "center";
+    const inPrim = document.createElement("input");
+    inPrim.type = "checkbox";
+    inPrim.setAttribute("data-ident-add-field", "is_primary");
+    tdAPrimary.appendChild(inPrim);
+    trAdd.appendChild(tdAPrimary);
+
+    const tdAActions = el("td", "ident-actions");
+    const addBtn = el("button", "button", "Add");
+    addBtn.type = "button";
+    addBtn.setAttribute("data-ident-action", "add");
+    const addStatus = el("span", "muted");
+    addStatus.setAttribute("data-ident-status", "");
+    tdAActions.appendChild(addBtn);
+    tdAActions.appendChild(addStatus);
+    trAdd.appendChild(tdAActions);
+
+    tbody.appendChild(trAdd);
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    identifiersEl.appendChild(wrap);
+  }
+
+  async function refreshBook() {
+    book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
+
+    titleEl.value = book.title || "";
+    subtitleEl.value = book.subtitle != null ? String(book.subtitle) : "";
+    summaryEl.value = book.summary || "";
+    publisherEl.value = book.publisher || "";
+    languageEl.value = book.language || "";
+    publishedDateEl.value = book.published_date || "";
+    isbnEl.value = book.isbn || "";
+    subjectsEl.value = subjectsToTextareaValue(book.subjects);
+    seriesIndexEl.value = book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
+
+    selectedAuthors = uniqueById(Array.isArray(book.authors) ? book.authors : []);
+    groups = Array.isArray(book.groups) ? book.groups : [];
+
+    renderHeader();
+    renderFileInfo();
+    renderSelectedAuthors();
+    syncAuthorSelectOptions();
+    syncSeriesSelectOptions(book.series && book.series.id ? String(book.series.id) : "");
+    renderGroups();
+    syncGroupsAddOptions();
   }
 
   async function refreshIdentifiers() {
@@ -475,35 +631,6 @@ export async function initBookEdit() {
       identifiers = [];
       renderIdentifiersTable();
     }
-  }
-
-  async function refreshBook() {
-    const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
-    original = book;
-    identifiers = Array.isArray(book.identifiers) ? book.identifiers : identifiers;
-    groups = Array.isArray(book.groups) ? book.groups : groups;
-    selectedAuthors = uniqueById(Array.isArray(book.authors) ? book.authors : selectedAuthors);
-    originalAuthorIds = selectedAuthors.map((a) => String(a.id)).filter(Boolean);
-    originalSeriesId = book.series && book.series.id ? String(book.series.id) : null;
-
-    titleEl.value = book.title || "";
-    subtitleEl.value = book.subtitle != null ? String(book.subtitle) : "";
-    summaryEl.value = book.summary || "";
-    publisherEl.value = book.publisher || "";
-    languageEl.value = book.language || "";
-    publishedDateEl.value = book.published_date || "";
-    isbnEl.value = book.isbn || "";
-    subjectsEl.value = subjectsToTextareaValue(book.subjects);
-    seriesIndexEl.value = book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
-
-    renderHeader(book);
-    renderFileInfo(book);
-    renderSelectedAuthors();
-    syncAuthorSelectOptions();
-    syncSeriesSelectOptions(originalSeriesId);
-    renderGroups();
-    syncGroupsAddOptions();
-    renderIdentifiersTable();
   }
 
   setStatus("Loading…", false);
@@ -527,9 +654,8 @@ export async function initBookEdit() {
     return;
   }
 
-  // Load option lists (paged) for dropdowns.
+  // Load option lists.
   setInlineStatus(authorsStatusEl, "Loading…", false);
-  setInlineStatus(seriesStatusEl, "Loading…", false);
   try {
     allAuthors = uniqueById(await fetchAllPages("/api/v1/library/authors/"));
     setInlineStatus(authorsStatusEl, `Loaded ${allAuthors.length}.`, false);
@@ -542,16 +668,17 @@ export async function initBookEdit() {
     syncAuthorSelectOptions();
   }
 
+  setInlineStatus(seriesStatusEl, "Loading…", false);
   try {
     allSeries = uniqueById(await fetchAllPages("/api/v1/library/series/"));
     setInlineStatus(seriesStatusEl, `Loaded ${allSeries.length}.`, false);
-    syncSeriesSelectOptions(originalSeriesId);
+    syncSeriesSelectOptions(book && book.series && book.series.id ? String(book.series.id) : "");
   } catch (e2) {
     console.error("Failed to load series", e2);
     setInlineStatus(seriesStatusEl, "Failed to load.", true);
     setError(`Failed to load series: ${extractApiErrorMessage(e2)}`);
     allSeries = [];
-    syncSeriesSelectOptions(originalSeriesId);
+    syncSeriesSelectOptions("");
   }
 
   setInlineStatus(groupsStatusEl, "Loading…", false);
@@ -560,16 +687,16 @@ export async function initBookEdit() {
     setInlineStatus(groupsStatusEl, "", false);
     syncGroupsAddOptions();
   } catch (e3) {
-    console.error("Failed to load groups list", e3);
+    console.error("Failed to load groups", e3);
     setInlineStatus(groupsStatusEl, "Failed to load.", true);
     setError(`Failed to load groups: ${extractApiErrorMessage(e3)}`);
     allGroups = [];
     syncGroupsAddOptions();
   }
 
-  // Identifiers list comes from dedicated endpoint (keeps ids/created_at/updated_at).
   await refreshIdentifiers();
 
+  // Authors interactions
   authorsSelectedEl.addEventListener("click", (ev) => {
     const t = ev.target;
     if (!t || !t.getAttribute) return;
@@ -578,7 +705,8 @@ export async function initBookEdit() {
     selectedAuthors = selectedAuthors.filter((a) => String(a.id) !== String(id));
     renderSelectedAuthors();
     syncAuthorSelectOptions();
-    renderHeader({ ...original, authors: selectedAuthors, series: original ? original.series : null, series_index: original ? original.series_index : null, file: original ? original.file : null });
+    if (book) book.authors = selectedAuthors;
+    renderHeader();
   });
 
   authorAddBtnEl.addEventListener("click", () => {
@@ -591,7 +719,8 @@ export async function initBookEdit() {
     selectedAuthors = uniqueById(selectedAuthors);
     renderSelectedAuthors();
     syncAuthorSelectOptions();
-    renderHeader({ ...original, authors: selectedAuthors, series: original ? original.series : null, series_index: original ? original.series_index : null, file: original ? original.file : null });
+    if (book) book.authors = selectedAuthors;
+    renderHeader();
   });
 
   authorNewBtnEl.addEventListener("click", async () => {
@@ -621,7 +750,8 @@ export async function initBookEdit() {
       setInlineStatus(authorsStatusEl, "Created.", false);
       renderSelectedAuthors();
       syncAuthorSelectOptions();
-      renderHeader({ ...original, authors: selectedAuthors, series: original ? original.series : null, series_index: original ? original.series_index : null, file: original ? original.file : null });
+      if (book) book.authors = selectedAuthors;
+      renderHeader();
     } catch (e) {
       console.error("Failed to create author", e);
       setInlineStatus(authorsStatusEl, "Create failed.", true);
@@ -629,6 +759,7 @@ export async function initBookEdit() {
     }
   });
 
+  // Series interactions
   seriesNewBtnEl.addEventListener("click", async () => {
     setError("");
     const name = (seriesNewNameEl.value || "").trim();
@@ -652,9 +783,9 @@ export async function initBookEdit() {
       allSeries = uniqueById(allSeries);
       seriesNewNameEl.value = "";
       setInlineStatus(seriesStatusEl, "Created.", false);
-      const createdId = created && created.id ? String(created.id) : "";
-      syncSeriesSelectOptions(createdId);
-      renderHeader({ ...original, authors: selectedAuthors, series: created, series_index: seriesIndexEl.value || null, file: original ? original.file : null });
+      syncSeriesSelectOptions(created && created.id ? String(created.id) : "");
+      if (book) book.series = created;
+      renderHeader();
     } catch (e2) {
       console.error("Failed to create series", e2);
       setInlineStatus(seriesStatusEl, "Create failed.", true);
@@ -664,27 +795,25 @@ export async function initBookEdit() {
 
   seriesSelectEl.addEventListener("change", () => {
     const sid = seriesSelectEl.value || "";
-    const seriesObj = sid ? allSeries.find((s) => String(s.id) === String(sid)) : null;
-    renderHeader({ ...original, authors: selectedAuthors, series: seriesObj, series_index: seriesIndexEl.value || null, file: original ? original.file : null });
+    book.series = sid ? allSeries.find((s) => String(s.id) === String(sid)) : null;
+    renderHeader();
   });
   seriesIndexEl.addEventListener("input", () => {
-    const sid = seriesSelectEl.value || "";
-    const seriesObj = sid ? allSeries.find((s) => String(s.id) === String(sid)) : null;
-    renderHeader({ ...original, authors: selectedAuthors, series: seriesObj, series_index: seriesIndexEl.value || null, file: original ? original.file : null });
+    if (book) book.series_index = seriesIndexEl.value || null;
+    renderHeader();
   });
 
+  // Groups interactions
   groupsEl.addEventListener("click", async (ev) => {
     const t = ev.target;
     if (!t || !t.getAttribute) return;
     const gid = t.getAttribute("data-group-remove-id");
     if (!gid) return;
-
     const csrf = getCsrfToken();
     if (!csrf) {
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-
     setInlineStatus(groupsStatusEl, "Removing…", false);
     try {
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/${encodeURIComponent(String(bookId))}/`, {
@@ -704,16 +833,13 @@ export async function initBookEdit() {
     ev.preventDefault();
     setError("");
     setInlineStatus(groupsAddStatusEl, "", false);
-
     const gid = (groupsAddSelectEl.value || "").trim();
     if (!gid) return;
-
     const csrf = getCsrfToken();
     if (!csrf) {
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-
     setInlineStatus(groupsAddStatusEl, "Adding…", false);
     try {
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/`, {
@@ -733,6 +859,7 @@ export async function initBookEdit() {
     }
   });
 
+  // Identifiers interactions (table event delegation)
   identifiersEl.addEventListener("click", async (ev) => {
     const t = ev.target;
     if (!t || !t.getAttribute) return;
@@ -747,7 +874,6 @@ export async function initBookEdit() {
 
     const row = t.closest ? t.closest("tr") : null;
     if (!row) return;
-
     const statusSpan = row.querySelector ? row.querySelector("[data-ident-status]") : null;
     const setRowStatus = (text, isError) => setInlineStatus(statusSpan, text, isError);
 
@@ -762,16 +888,8 @@ export async function initBookEdit() {
         source: sourceEl && sourceEl.value != null ? String(sourceEl.value).trim() : "",
         is_primary: !!(primaryEl && primaryEl.checked),
       };
-
-      if (!payload.scheme) {
-        setError("Scheme is required.");
-        return;
-      }
-      if (!payload.value) {
-        setError("Value is required.");
-        return;
-      }
-
+      if (!payload.scheme) return setError("Scheme is required.");
+      if (!payload.value) return setError("Value is required.");
       setRowStatus("Adding…", false);
       try {
         await fetchJSONWithOptions(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`, {
@@ -882,26 +1000,6 @@ export async function initBookEdit() {
       series_index: seriesIndex,
     };
 
-    const patch = {};
-    for (const [k, v] of Object.entries(payload)) {
-      let oldVal = original ? original[k] : undefined;
-      if (k === "authors") oldVal = originalAuthorIds;
-      if (k === "series") oldVal = originalSeriesId;
-      const oldComparable = oldVal == null ? null : oldVal;
-      const newComparable = v == null ? null : v;
-      const changed =
-        Array.isArray(oldComparable) || Array.isArray(newComparable)
-          ? JSON.stringify(oldComparable || []) !== JSON.stringify(newComparable || [])
-          : String(oldComparable) !== String(newComparable);
-      if (changed) patch[k] = v;
-    }
-
-    if (Object.keys(patch).length === 0) {
-      setSaved(true);
-      setText(saveStatusEl, "No changes.");
-      return;
-    }
-
     const csrf = getCsrfToken();
     if (!csrf) {
       setError("Missing CSRF token cookie. Reload the page and try again.");
@@ -913,15 +1011,11 @@ export async function initBookEdit() {
       const updated = await fetchJSONWithOptions(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`, {
         method: "PATCH",
         headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-        body: JSON.stringify(patch),
+        body: JSON.stringify(payload),
       });
-      original = updated;
-      originalAuthorIds = payload.authors;
-      originalSeriesId = payload.series;
+      book = updated;
       setSaved(true);
       setText(saveStatusEl, "");
-
-      // Refresh header + groups without leaving the page.
       await refreshBook();
       await refreshIdentifiers();
     } catch (e) {

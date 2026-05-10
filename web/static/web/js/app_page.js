@@ -1,4 +1,16 @@
-import { $, escapeHtml, loadMeAndInitShell, setText } from "./layout.js";
+import { $, loadMeAndInitShell, setText } from "./layout.js";
+
+function clear(node) {
+  if (!node) return;
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
 
 function navShouldShowGroups(me) {
   if (!me) return false;
@@ -32,18 +44,30 @@ function sectionLinksForMe(me) {
 
 export async function initDashboard() {
   const me = await loadMeAndInitShell();
+  const greetingEl = $("#app-greeting");
+  const sectionsEl = $("#app-sections");
+  if (!greetingEl || !sectionsEl) return;
+
   if (!me) {
-    setText($("#app-greeting"), "Error loading identity.");
-    setText($("#app-sections"), "Error loading identity.");
+    setText(greetingEl, "Error loading identity.");
+    setText(sectionsEl, "Error loading identity.");
     return;
   }
 
-  const greeting = `Hi, ${escapeHtml(me.username || "User")}.`;
-  $("#app-greeting").innerHTML = greeting;
+  setText(greetingEl, `Hi, ${me.username || "User"}.`);
 
-  const sections = sectionLinksForMe(me)
-    .map((s) => `<a class="button" href="${escapeHtml(s.href)}">${escapeHtml(s.label)}</a>`)
-    .join(" ");
-  $("#app-sections").innerHTML = sections || '<div class="muted">No sections.</div>';
+  clear(sectionsEl);
+  const sections = sectionLinksForMe(me);
+  if (!sections.length) {
+    sectionsEl.appendChild(el("div", "muted", "No sections."));
+    return;
+  }
+
+  for (const s of sections) {
+    const a = el("a", "button", s.label);
+    a.setAttribute("href", s.href);
+    sectionsEl.appendChild(a);
+    sectionsEl.appendChild(document.createTextNode(" "));
+  }
 }
 

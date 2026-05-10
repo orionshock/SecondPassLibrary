@@ -1,60 +1,115 @@
 import { getCsrfToken, fetchJSONWithOptions, extractApiErrorMessage } from "./api.js";
-import { $, escapeHtml, formatRole, loadMeAndInitShell, setGlobalError, setText } from "./layout.js";
+import { $, formatRole, loadMeAndInitShell, setGlobalError, setText, visible } from "./layout.js";
 
-function renderGroups(groups) {
-  if (!Array.isArray(groups) || groups.length === 0) {
-    return '<div class="muted">No group memberships.</div>';
-  }
-  const items = groups
-    .map((g) => {
-      const bits = [];
-      if (g.is_public_group) bits.push("Public");
-      if (g.membership_role) bits.push(g.membership_role);
-      return `<li><span>${escapeHtml(g.name)}</span> <span class="muted">(${escapeHtml(bits.join(", ") || "member")})</span></li>`;
-    })
-    .join("");
-  return `<ul>${items}</ul>`;
+function clear(node) {
+  if (!node) return;
+  while (node.firstChild) node.removeChild(node.firstChild);
 }
 
-function renderCapabilities(caps) {
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+
+function renderGroups(container, groups) {
+  clear(container);
+  if (!Array.isArray(groups) || groups.length === 0) {
+    container.appendChild(el("div", "muted", "No group memberships."));
+    return;
+  }
+  const ul = document.createElement("ul");
+  for (const g of groups) {
+    const li = document.createElement("li");
+    const name = g && g.name ? String(g.name) : "";
+    li.appendChild(el("span", "", name));
+    const bits = [];
+    if (g && g.is_public_group) bits.push("Public");
+    if (g && g.membership_role) bits.push(String(g.membership_role));
+    li.appendChild(document.createTextNode(" "));
+    li.appendChild(el("span", "muted", `(${bits.join(", ") || "member"})`));
+    ul.appendChild(li);
+  }
+  container.appendChild(ul);
+}
+
+function renderCapabilities(container, caps) {
+  clear(container);
   const entries = caps && typeof caps === "object" ? Object.entries(caps) : [];
-  if (entries.length === 0) return '<div class="muted">No capabilities.</div>';
-  const items = entries
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([k, v]) => `<li><code>${escapeHtml(k)}</code>: ${v ? "yes" : "no"}</li>`)
-    .join("");
-  return `<ul>${items}</ul>`;
+  if (entries.length === 0) {
+    container.appendChild(el("div", "muted", "No capabilities."));
+    return;
+  }
+  const ul = document.createElement("ul");
+  for (const [k, v] of entries.sort((a, b) => a[0].localeCompare(b[0]))) {
+    const li = document.createElement("li");
+    const code = document.createElement("code");
+    code.textContent = String(k);
+    li.appendChild(code);
+    li.appendChild(document.createTextNode(`: ${v ? "yes" : "no"}`));
+    ul.appendChild(li);
+  }
+  container.appendChild(ul);
+}
+
+function renderSummary(container, me) {
+  clear(container);
+  const kv = el("div", "kv");
+  function addRow(k, vNodeOrText) {
+    kv.appendChild(el("div", "kv__k", k));
+    const v = el("div", "kv__v");
+    if (vNodeOrText && vNodeOrText.nodeType) v.appendChild(vNodeOrText);
+    else v.textContent = vNodeOrText != null ? String(vNodeOrText) : "";
+    kv.appendChild(v);
+  }
+
+  const usernameWrap = document.createElement("span");
+  usernameWrap.textContent = me.username || "";
+  if (me.is_owner) {
+    usernameWrap.appendChild(document.createTextNode(" "));
+    usernameWrap.appendChild(el("span", "pill pill--owner", "Owner"));
+  }
+
+  addRow("Username", usernameWrap);
+  addRow("Role", formatRole(me.role));
+
+  const email = el("div", "", me.email || "");
+  email.id = "profile-email";
+  addRow("Email", email);
+  const first = el("div", "", me.first_name || "");
+  first.id = "profile-first";
+  addRow("First name", first);
+  const last = el("div", "", me.last_name || "");
+  last.id = "profile-last";
+  addRow("Last name", last);
+
+  container.appendChild(kv);
 }
 
 export async function initProfile() {
   const me = await loadMeAndInitShell();
+  const summaryEl = $("#profile-summary");
+  const groupsEl = $("#profile-groups");
+  const capsEl = $("#profile-capabilities");
+  const statusEl = $("#profile-edit-status");
+
   if (!me) {
-    setText($("#profile-summary"), "Error loading identity.");
-    setText($("#profile-edit-status"), "Error loading identity.");
-    setText($("#profile-groups"), "Error loading identity.");
-    setText($("#profile-capabilities"), "Error loading identity.");
+    setText(summaryEl, "Error loading identity.");
+    setText(statusEl, "Error loading identity.");
+    setText(groupsEl, "Error loading identity.");
+    setText(capsEl, "Error loading identity.");
     return;
   }
 
-  const ownerBadge = me.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
-  $("#profile-summary").innerHTML = `
-      <div class="kv">
-        <div class="kv__k">Username</div><div class="kv__v">${escapeHtml(me.username || "")}${ownerBadge}</div>
-        <div class="kv__k">Role</div><div class="kv__v">${escapeHtml(formatRole(me.role))}</div>
-        <div class="kv__k">Email</div><div class="kv__v" id="profile-email">${escapeHtml(me.email || "")}</div>
-        <div class="kv__k">First name</div><div class="kv__v" id="profile-first">${escapeHtml(me.first_name || "")}</div>
-        <div class="kv__k">Last name</div><div class="kv__v" id="profile-last">${escapeHtml(me.last_name || "")}</div>
-      </div>
-    `.trim();
-
-  $("#profile-groups").innerHTML = renderGroups(me.groups);
-  $("#profile-capabilities").innerHTML = renderCapabilities(me.capabilities);
+  renderSummary(summaryEl, me);
+  renderGroups(groupsEl, me.groups);
+  renderCapabilities(capsEl, me.capabilities);
 
   const form = $("#profile-edit-form");
   const emailInput = $("#profile-edit-email");
   const firstInput = $("#profile-edit-first");
   const lastInput = $("#profile-edit-last");
-  const statusEl = $("#profile-edit-status");
 
   if (!form || !emailInput || !firstInput || !lastInput || !statusEl) return;
 
@@ -116,7 +171,6 @@ export async function initProfile() {
       const lastEl = $("#profile-last");
       if (lastEl) lastEl.textContent = desired.last_name;
 
-      // Keep local me-ish fields in sync if we got a payload back.
       if (updated && typeof updated === "object") {
         me.email = updated.email;
         me.first_name = updated.first_name;
