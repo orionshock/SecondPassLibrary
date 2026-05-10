@@ -13,6 +13,13 @@ function normalizeOptionalString(value) {
   return trimmed ? trimmed : null;
 }
 
+function normalizeDateISO(value) {
+  const s = normalizeOptionalString(value);
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return { error: "Published date must be YYYY-MM-DD." };
+}
+
 function normalizeSubjects(text) {
   const s = text == null ? "" : String(text);
   const raw = s
@@ -170,13 +177,19 @@ export async function initBookEdit() {
       return;
     }
 
+    const publishedDate = normalizeDateISO(publishedDateEl.value);
+    if (publishedDate && typeof publishedDate === "object" && publishedDate.error) {
+      setError(publishedDate.error);
+      return;
+    }
+
     const payload = {
       title,
       subtitle: normalizeOptionalString(subtitleEl.value),
       summary: normalizeOptionalString(summaryEl.value),
       publisher: normalizeOptionalString(publisherEl.value),
       language: normalizeOptionalString(languageEl.value),
-      published_date: normalizeOptionalString(publishedDateEl.value),
+      published_date: publishedDate,
       isbn: normalizeOptionalString(isbnEl.value),
       subjects: normalizeSubjects(subjectsEl.value),
       series_index: normalizeOptionalString(seriesIndexEl.value) ? Number(seriesIndexEl.value) : null,

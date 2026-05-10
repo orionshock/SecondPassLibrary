@@ -557,6 +557,7 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
                 data={
                     "title": "Updated title",
                     "publisher": "Pub",
+                    "published_date": "2018-01-23",
                     "subjects": ["A", "B"],
                     "series_index": 2,
                 },
@@ -568,5 +569,6 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(data["title"], "Updated title")
         self.assertEqual(data["publisher"], "Pub")
+        self.assertEqual(data["published_date"], "2018-01-23")
         self.assertEqual(data["subjects"], ["A", "B"])
         self.assertEqual(data["series_index"], 2)
