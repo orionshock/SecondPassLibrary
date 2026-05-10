@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -81,24 +81,28 @@ class ChangePasswordApiTests(APITestCase):
 
 class ManagedResetPasswordApiTests(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_superuser(username="owner", password="pw")
+        self.owner = User.objects.create_superuser(
+            username="owner",
+            password="pw",
+            email="owner@example.com",
+        )
 
-        self.manager = User.objects.create_user(username="manager", password="pw")
+        self.manager = User.objects.create_user(username="manager", password="pw", email="manager@example.com")
         manager_profile = UserProfile.objects.get(user=self.manager)
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.manager2 = User.objects.create_user(username="manager2", password="pw")
+        self.manager2 = User.objects.create_user(username="manager2", password="pw", email="manager2@example.com")
         manager2_profile = UserProfile.objects.get(user=self.manager2)
         manager2_profile.role = UserProfile.ROLE_MANAGER
         manager2_profile.save(update_fields=["role", "updated_at"])
 
-        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        self.librarian = User.objects.create_user(username="librarian", password="pw", email="librarian@example.com")
         librarian_profile = UserProfile.objects.get(user=self.librarian)
         librarian_profile.role = UserProfile.ROLE_LIBRARIAN
         librarian_profile.save(update_fields=["role", "updated_at"])
 
-        self.reader = User.objects.create_user(username="reader", password="pw")
+        self.reader = User.objects.create_user(username="reader", password="pw", email="reader@example.com")
         reader_profile = UserProfile.objects.get(user=self.reader)
         reader_profile.role = UserProfile.ROLE_READER
         reader_profile.save(update_fields=["role", "updated_at"])
@@ -114,12 +118,13 @@ class ManagedResetPasswordApiTests(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("temporary_password", response.data)
-        self.assertIn("copy_block", response.data)
-        self.assertIn("message", response.data)
-        temp_pw = str(response.data["temporary_password"])
-        self.assertIn("Username:", str(response.data["copy_block"]))
-        self.assertIn("Password:", str(response.data["copy_block"]))
+        payload = cast(dict[str, Any], response.data)
+        self.assertIn("temporary_password", payload)
+        self.assertIn("copy_block", payload)
+        self.assertIn("message", payload)
+        temp_pw = str(payload["temporary_password"])
+        self.assertIn("Username:", str(payload["copy_block"]))
+        self.assertIn("Password:", str(payload["copy_block"]))
 
         profile = UserProfile.objects.get(user=self.reader)
         self.assertTrue(profile.must_change_password)
@@ -172,24 +177,28 @@ class ManagedResetPasswordApiTests(APITestCase):
 
 class MustChangePasswordPatchBoundaryTests(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_superuser(username="owner", password="pw")
+        self.owner = User.objects.create_superuser(
+            username="owner",
+            password="pw",
+            email="owner@example.com",
+        )
 
-        self.manager = User.objects.create_user(username="manager", password="pw")
+        self.manager = User.objects.create_user(username="manager", password="pw", email="manager@example.com")
         manager_profile = UserProfile.objects.get(user=self.manager)
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.manager2 = User.objects.create_user(username="manager2", password="pw")
+        self.manager2 = User.objects.create_user(username="manager2", password="pw", email="manager2@example.com")
         manager2_profile = UserProfile.objects.get(user=self.manager2)
         manager2_profile.role = UserProfile.ROLE_MANAGER
         manager2_profile.save(update_fields=["role", "updated_at"])
 
-        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        self.librarian = User.objects.create_user(username="librarian", password="pw", email="librarian@example.com")
         librarian_profile = UserProfile.objects.get(user=self.librarian)
         librarian_profile.role = UserProfile.ROLE_LIBRARIAN
         librarian_profile.save(update_fields=["role", "updated_at"])
 
-        self.reader = User.objects.create_user(username="reader", password="pw")
+        self.reader = User.objects.create_user(username="reader", password="pw", email="reader@example.com")
         reader_profile = UserProfile.objects.get(user=self.reader)
         reader_profile.role = UserProfile.ROLE_READER
         reader_profile.save(update_fields=["role", "updated_at"])
@@ -275,7 +284,10 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
 class UserSerializerDoesNotLeakPasswordsTests(TestCase):
     def test_managed_user_payload_never_contains_password_fields(self):
         # Smoke check: serializer field list should not include password.
+        from rest_framework import serializers
+
         from accounts.serializers import ManagedUserSerializer
 
-        self.assertNotIn("password", ManagedUserSerializer().fields)
-        self.assertNotIn("temporary_password", ManagedUserSerializer().fields)
+        serializer = cast(serializers.Serializer, ManagedUserSerializer())
+        self.assertNotIn("password", serializer.fields)
+        self.assertNotIn("temporary_password", serializer.fields)

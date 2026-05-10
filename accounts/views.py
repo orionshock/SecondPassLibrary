@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError as DjangoValidationError
-from typing import cast
+from typing import Any, cast
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -59,7 +59,7 @@ class CurrentUserView(APIView):
     def patch(self, request):
         patch = CurrentUserPatchSerializer(data=request.data or {})
         patch.is_valid(raise_exception=True)
-        data = patch.validated_data
+        data = cast(dict[str, Any], patch.validated_data)
 
         update_current_user_via_me_api(
             user=request.user,
@@ -79,7 +79,7 @@ class CurrentUserChangePasswordView(APIView):
     def post(self, request):
         body = ChangePasswordSerializer(data=request.data or {})
         body.is_valid(raise_exception=True)
-        data = body.validated_data
+        data = cast(dict[str, Any], body.validated_data)
 
         try:
             change_current_user_password(
@@ -124,7 +124,7 @@ class ManagedUserViewSet(
     def create(self, request, *args, **kwargs):
         create = ManagedUserCreateSerializer(data=request.data or {})
         create.is_valid(raise_exception=True)
-        data = create.validated_data
+        data = cast(dict[str, Any], create.validated_data)
 
         result = create_managed_user(
             actor=request.user,
@@ -270,7 +270,7 @@ class ManagedUserViewSet(
 
         patch = ManagedUserPatchSerializer(data=request.data or {})
         patch.is_valid(raise_exception=True)
-        data = patch.validated_data
+        data = cast(dict[str, Any], patch.validated_data)
 
         update_user_via_management_api(
             actor=request.user,

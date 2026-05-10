@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from uuid import uuid4
 
+from accounts.services import get_or_create_profile
+
 
 User = get_user_model()
 
@@ -37,7 +39,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'href="/profile/"')
 
     def test_must_change_password_redirects_product_ui_to_profile_password(self):
-        profile = self.user.profile
+        profile = get_or_create_profile(user=self.user)
         profile.must_change_password = True
         profile.save(update_fields=["must_change_password", "updated_at"])
         self.client.force_login(self.user)
@@ -46,7 +48,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response["Location"], "/profile/password/")
 
     def test_must_change_password_allows_profile_password_page(self):
-        profile = self.user.profile
+        profile = get_or_create_profile(user=self.user)
         profile.must_change_password = True
         profile.save(update_fields=["must_change_password", "updated_at"])
         self.client.force_login(self.user)
