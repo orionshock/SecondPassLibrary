@@ -1823,6 +1823,419 @@
     });
   }
 
+  function formatDateTime(value) {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    try {
+      return d.toLocaleString();
+    } catch (_e) {
+      return d.toISOString();
+    }
+  }
+
+  async function initUsersList() {
+    const me = await loadMeAndInitShell();
+    setGlobalError("");
+
+    const notAllowedEl = $("#users-not-allowed");
+    const createLink = $("#users-create-link");
+    const filtersEl = $("#users-filters");
+    const statusEl = $("#users-status");
+    const resultsEl = $("#users-results");
+    const nextBtn = $("#users-next");
+    const prevBtn = $("#users-prev");
+
+    if (!notAllowedEl || !createLink || !filtersEl || !statusEl || !resultsEl || !nextBtn || !prevBtn) {
+      return;
+    }
+
+    const caps = me && me.capabilities ? me.capabilities : {};
+    const allowed = !!caps.can_manage_users;
+
+    visible(notAllowedEl, !allowed);
+    visible(createLink, allowed);
+    visible(filtersEl, allowed);
+
+    let nextUrl = null;
+    let prevUrl = null;
+    let currentUrl = "/api/v1/accounts/users/";
+    let currentResults = [];
+    let activeFilter = "all";
+
+    function setStatus(text, isError) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    function curatedGroupsFromUser(user) {
+      const groups = Array.isArray(user && user.groups) ? user.groups : [];
+      const curated = groups.filter((g) => (g && g.membership_role) === "curator");
+      return curated.map((g) => g.name || g.slug || "").filter(Boolean);
+    }
+
+    function groupsSummary(user) {
+      const groups = Array.isArray(user && user.groups) ? user.groups : [];
+      if (!groups.length) return "";
+      return groups
+        .map((g) => {
+          const name = g.name || g.slug || "";
+          if (!name) return "";
+          const badge = g.membership_role ? ` (${g.membership_role})` : "";
+          return `${name}${badge}`;
+        })
+        .filter(Boolean)
+        .join(", ");
+    }
+
+    function passesFilter(user, filter) {
+      if (!user) return false;
+      if (filter === "inactive") return user.is_active === false;
+      if (filter === "readers") return (user.role || "") === "reader";
+      if (filter === "librarians") return (user.role || "") === "librarian";
+      if (filter === "curators") return curatedGroupsFromUser(user).length > 0;
+      if (filter === "managers") return user.is_owner === true || (user.role || "") === "manager";
+      return true;
+    }
+
+    function setActiveFilter(filter) {
+      activeFilter = filter || "all";
+      const buttons = filtersEl.querySelectorAll("button[data-filter]");
+      for (const btn of buttons) {
+        const isActive = btn.getAttribute("data-filter") === activeFilter;
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      }
+      render();
+    }
+
+    function renderRow(user) {
+      const id = user && user.id != null ? String(user.id) : "";
+      const username = user.username || "";
+      const email = user.email || "";
+      const role = user.is_owner ? "manager" : user.role || "reader";
+      const isOwner = !!user.is_owner;
+      const isActive = user.is_active !== false;
+      const lastLogin = user.last_login ? formatDateTime(user.last_login) : "";
+
+      const ownerBadge = isOwner ? ' <span class="pill pill--owner">Owner</span>' : "";
+      const roleBadge = `<span class="pill">${escapeHtml(role)}</span>`;
+      const activeBadge = isActive ? '<span class="pill">active</span>' : '<span class="pill">inactive</span>';
+
+      const curated = curatedGroupsFromUser(user);
+      const curatesLine = curated.length ? `<div class="user-row__line">Curates: ${escapeHtml(curated.join(", "))}</div>` : "";
+
+      const groupText = groupsSummary(user);
+      const groupsLine = groupText ? `<div class="user-row__line">Groups: ${escapeHtml(groupText)}</div>` : `<div class="user-row__line muted">Groups: (none)</div>`;
+
+      const lastLoginLine = lastLogin ? `<div class="user-row__line">Last login: ${escapeHtml(lastLogin)}</div>` : '<div class="user-row__line muted">Last login: (never)</div>';
+
+      const editHref = id ? `/users/${encodeURIComponent(String(id))}/edit/` : "#";
+
+      return `
+        <article class="user-row">
+          <div class="user-row__main">
+            <div class="user-row__title">${escapeHtml(username)}${ownerBadge}</div>
+            <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+              ${roleBadge}
+              ${activeBadge}
+            </div>
+          </div>
+          <div class="user-row__meta">
+            ${email ? `<div class="user-row__line">${escapeHtml(email)}</div>` : '<div class="user-row__line muted">(no email)</div>'}
+            ${lastLoginLine}
+            ${groupsLine}
+            ${curatesLine}
+          </div>
+          <div class="user-row__actions">
+            <a class="button" href="${escapeHtml(editHref)}">Edit</a>
+          </div>
+        </article>
+      `.trim();
+    }
+
+    function render() {
+      resultsEl.innerHTML = "";
+      if (!allowed) return;
+
+      const filtered = (currentResults || []).filter((u) => passesFilter(u, activeFilter));
+      if (filtered.length === 0) {
+        resultsEl.innerHTML = '<div class="muted">No users match this filter on this page.</div>';
+        return;
+      }
+      resultsEl.innerHTML = filtered.map(renderRow).join("");
+    }
+
+    async function load(url) {
+      setGlobalError("");
+      setStatus("Loading users…", false);
+      resultsEl.innerHTML = "";
+      nextBtn.disabled = true;
+      prevBtn.disabled = true;
+
+      currentUrl = url;
+
+      if (!allowed) {
+        setStatus("Not allowed.", true);
+        return;
+      }
+
+      try {
+        const payload = await fetchJSON(url);
+        const results = Array.isArray(payload && payload.results) ? payload.results : [];
+        currentResults = results;
+
+        if (results.length === 0) {
+          setStatus("No users.", false);
+          nextUrl = null;
+          prevUrl = null;
+          render();
+          return;
+        }
+
+        setStatus(payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "", false);
+
+        nextUrl = payload.next || null;
+        prevUrl = payload.previous || null;
+        nextBtn.disabled = !nextUrl;
+        prevBtn.disabled = !prevUrl;
+
+        render();
+      } catch (e) {
+        console.error("Failed to load users", { url, e });
+        setStatus("Error loading users.", true);
+        setGlobalError(extractApiErrorMessage(e));
+        nextUrl = null;
+        prevUrl = null;
+      }
+    }
+
+    filtersEl.addEventListener("click", (e) => {
+      const target = e.target;
+      if (!target || target.nodeType !== 1) return;
+      if (target.tagName !== "BUTTON") return;
+      const filter = target.getAttribute("data-filter");
+      if (!filter) return;
+      setActiveFilter(filter);
+    });
+
+    setActiveFilter("all");
+    await load(currentUrl);
+
+    nextBtn.addEventListener("click", async () => {
+      if (nextUrl) await load(nextUrl);
+    });
+    prevBtn.addEventListener("click", async () => {
+      if (prevUrl) await load(prevUrl);
+    });
+  }
+
+  async function initUserEdit() {
+    const me = await loadMeAndInitShell();
+    setGlobalError("");
+
+    const root = $("#user-edit");
+    const notAllowedEl = $("#user-edit-not-allowed");
+    const statusEl = $("#user-edit-status");
+    const cardEl = $("#user-edit-card");
+    const form = $("#user-edit-form");
+    const usernameEl = $("#user-edit-username");
+    const groupsEl = $("#user-edit-groups");
+    const emailInput = $("#user-edit-email");
+    const firstInput = $("#user-edit-first");
+    const lastInput = $("#user-edit-last");
+    const roleSelect = $("#user-edit-role");
+    const activeSelect = $("#user-edit-active");
+    const submitBtn = $("#user-edit-submit");
+    const saveStatus = $("#user-edit-save-status");
+
+    if (
+      !root ||
+      !notAllowedEl ||
+      !statusEl ||
+      !cardEl ||
+      !form ||
+      !usernameEl ||
+      !groupsEl ||
+      !emailInput ||
+      !firstInput ||
+      !lastInput ||
+      !roleSelect ||
+      !activeSelect ||
+      !submitBtn ||
+      !saveStatus
+    ) {
+      return;
+    }
+
+    const userId = root.dataset ? root.dataset.userId : "";
+    if (!userId) {
+      statusEl.textContent = "Missing user id.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    const caps = me && me.capabilities ? me.capabilities : {};
+    const allowed = !!caps.can_manage_users;
+
+    visible(notAllowedEl, !allowed);
+    visible(cardEl, allowed);
+
+    function setStatus(text, isError) {
+      statusEl.textContent = text || "";
+      statusEl.classList.toggle("error", !!isError);
+    }
+
+    function setSaveStatus(text, isError) {
+      saveStatus.textContent = text || "";
+      saveStatus.classList.toggle("error", !!isError);
+    }
+
+    function setFormEnabled(on, message) {
+      const disabled = !on;
+      emailInput.disabled = disabled;
+      firstInput.disabled = disabled;
+      lastInput.disabled = disabled;
+      roleSelect.disabled = disabled;
+      activeSelect.disabled = disabled;
+      submitBtn.disabled = disabled;
+      if (message) setSaveStatus(message, true);
+    }
+
+    function applyRoleOptions() {
+      const canSetManager = !!(me && me.is_owner);
+      const mgrOpt = roleSelect.querySelector('option[value="manager"]');
+      if (mgrOpt) mgrOpt.disabled = !canSetManager;
+      if (!canSetManager && roleSelect.value === "manager") {
+        roleSelect.value = "reader";
+      }
+    }
+
+    function renderGroups(groups) {
+      if (!Array.isArray(groups) || groups.length === 0) return '<div class="muted">No group memberships.</div>';
+      return groups
+        .map((g) => {
+          const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
+          const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
+          return `<div><a href="${escapeHtml(href)}">${escapeHtml(g.name || g.slug || "")}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
+        })
+        .join("");
+    }
+
+    if (!allowed) {
+      setStatus("Not allowed.", true);
+      visible(cardEl, false);
+      return;
+    }
+
+    setStatus("Loading…", false);
+    let original = null;
+
+    try {
+      const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`);
+      original = payload;
+      usernameEl.textContent = payload.username || "";
+      groupsEl.innerHTML = renderGroups(payload.groups);
+      emailInput.value = payload.email || "";
+      firstInput.value = payload.first_name || "";
+      lastInput.value = payload.last_name || "";
+      roleSelect.value = payload.role || "reader";
+      activeSelect.value = payload.is_active === false ? "false" : "true";
+
+      applyRoleOptions();
+
+      setStatus("", false);
+      setSaveStatus("", false);
+
+      if (payload.is_owner) {
+        setFormEnabled(false, "Owner cannot be edited here.");
+      } else if (!me.is_owner && payload.role === "manager") {
+        setFormEnabled(false, "Only Owner can edit Managers.");
+      } else {
+        setFormEnabled(true, "");
+      }
+    } catch (e) {
+      console.error("Failed to load user", { userId, e });
+      setStatus(extractApiErrorMessage(e), true);
+      visible(cardEl, false);
+      return;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setGlobalError("");
+      setSaveStatus("Saving…", false);
+
+      if (!original) {
+        setSaveStatus("User not loaded.", true);
+        return;
+      }
+
+      if (original.is_owner) {
+        setSaveStatus("Owner cannot be edited here.", true);
+        return;
+      }
+      if (!me.is_owner && original.role === "manager") {
+        setSaveStatus("Only Owner can edit Managers.", true);
+        return;
+      }
+
+      const desired = {
+        email: emailInput.value || "",
+        first_name: firstInput.value || "",
+        last_name: lastInput.value || "",
+        role: roleSelect.value || "reader",
+        is_active: activeSelect.value === "true",
+      };
+
+      const patch = {};
+      for (const key of Object.keys(desired)) {
+        if (String(desired[key]) !== String(original[key])) {
+          patch[key] = desired[key];
+        }
+      }
+
+      if (Object.keys(patch).length === 0) {
+        setSaveStatus("No changes.", false);
+        return;
+      }
+
+      if (!me.is_owner && patch.role === "manager") {
+        setSaveStatus("Only Owner can assign manager.", true);
+        return;
+      }
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        const updated = await fetchJSONWithOptions(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(patch),
+        });
+
+        original = updated;
+        usernameEl.textContent = updated.username || "";
+        groupsEl.innerHTML = renderGroups(updated.groups);
+        emailInput.value = updated.email || "";
+        firstInput.value = updated.first_name || "";
+        lastInput.value = updated.last_name || "";
+        roleSelect.value = updated.role || "reader";
+        activeSelect.value = updated.is_active === false ? "false" : "true";
+        applyRoleOptions();
+
+        setSaveStatus("Saved.", false);
+      } catch (e2) {
+        console.error("Failed to save user", { userId, e2 });
+        const msg = extractApiErrorMessage(e2);
+        const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
+        setSaveStatus(fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
+        setGlobalError(msg);
+      }
+    });
+  }
+
   async function initUserNew() {
     const me = await loadMeAndInitShell();
     setGlobalError("");
@@ -1971,8 +2384,9 @@
     initImports,
     initGroupsList,
     initGroupDetail,
-    initUsers,
+    initUsersList,
     initUserNew,
+    initUserEdit,
     getCsrfToken,
   };
 
@@ -2009,9 +2423,14 @@
         setGlobalErrorFromError(e, "Group error:");
       });
     } else if (page === "users") {
-      initUsers().catch((e) => {
-        console.error("initUsers failed", e);
+      initUsersList().catch((e) => {
+        console.error("initUsersList failed", e);
         setGlobalErrorFromError(e, "Users error:");
+      });
+    } else if (page === "user-edit") {
+      initUserEdit().catch((e) => {
+        console.error("initUserEdit failed", e);
+        setGlobalErrorFromError(e, "Edit user error:");
       });
     } else if (page === "user-new") {
       initUserNew().catch((e) => {

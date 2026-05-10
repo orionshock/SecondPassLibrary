@@ -47,3 +47,8 @@ def users(request: HttpRequest) -> HttpResponse:
 @login_required
 def user_new(request: HttpRequest) -> HttpResponse:
     return render(request, "web/user_new.html")
+
+
+@login_required
+def user_edit(request: HttpRequest, user_id: str) -> HttpResponse:
+    return render(request, "web/user_edit.html", {"user_id": user_id})

@@ -16,6 +16,7 @@ The first minimal product UI shell now exists:
 - Group detail includes membership management for Manager/Owner (add/update/remove; add-by-dropdown; functional-first)
 - `/users/` provides functional user management for Manager/Owner only
 - `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
+- `/users/<user_id>/edit/` provides a dedicated user edit screen for Manager/Owner
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -221,7 +222,11 @@ Primary endpoints:
 
 UI behaviors:
 
-- Show safe editable fields (email, first_name, last_name, is_active, role).
+- `/users/` is a compact list screen with simple client-side role tabs/filters (over the currently loaded page):
+  - All, Readers, Curators, Librarians, Managers, Inactive
+  - Curators are detected via group membership role (`membership_role == curator`) and show a "Curates: ..." summary
+- Editing is on a dedicated page: `/users/<user_id>/edit/` (no group membership editing here).
+- Show safe editable fields (email, first_name, last_name, is_active, role) on the edit page.
 - Make role editing rules explicit in the UI:
   - Owner-only Manager promotion/demotion
   - Managers cannot manage Owner accounts, other Managers, or their own role

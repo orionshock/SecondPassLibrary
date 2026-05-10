@@ -16,59 +16,23 @@
 
   <section class="card">
     <h2 class="card__title">User List</h2>
+
+    <div id="users-filters" class="users-filters is-hidden" aria-label="User filters">
+      <button class="button" type="button" data-filter="all" aria-pressed="true">All</button>
+      <button class="button" type="button" data-filter="readers" aria-pressed="false">Readers</button>
+      <button class="button" type="button" data-filter="curators" aria-pressed="false">Curators</button>
+      <button class="button" type="button" data-filter="librarians" aria-pressed="false">Librarians</button>
+      <button class="button" type="button" data-filter="managers" aria-pressed="false">Managers</button>
+      <button class="button" type="button" data-filter="inactive" aria-pressed="false">Inactive</button>
+    </div>
+
     <div id="users-status" class="muted">Loading…</div>
-    <div id="users-results" class="books"></div>
+    <div id="users-results" class="users-rows"></div>
+
     <div class="pager">
       <button id="users-prev" class="button" type="button" disabled>Previous</button>
       <button id="users-next" class="button" type="button" disabled>Next</button>
     </div>
   </section>
-
-  <section class="card">
-    <h2 class="card__title">Edit User</h2>
-    <div id="users-edit-status" class="muted">Select a user to edit.</div>
-
-    <form id="users-edit-form" class="is-hidden">
-      <input type="hidden" id="users-edit-id" />
-
-      <div class="kv">
-        <div class="kv__k">Username</div>
-        <div class="kv__v" id="users-edit-username"></div>
-
-        <div class="kv__k">Groups</div>
-        <div class="kv__v" id="users-edit-groups"></div>
-
-        <div class="kv__k"><label for="users-edit-email">Email</label></div>
-        <div class="kv__v"><input id="users-edit-email" type="email" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="users-edit-first">First name</label></div>
-        <div class="kv__v"><input id="users-edit-first" type="text" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="users-edit-last">Last name</label></div>
-        <div class="kv__v"><input id="users-edit-last" type="text" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="users-edit-role">Role</label></div>
-        <div class="kv__v">
-          <select id="users-edit-role">
-            <option value="reader">reader</option>
-            <option value="librarian">librarian</option>
-            <option value="manager">manager</option>
-          </select>
-        </div>
-
-        <div class="kv__k"><label for="users-edit-active">Active</label></div>
-        <div class="kv__v">
-          <select id="users-edit-active">
-            <option value="true">true</option>
-            <option value="false">false</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="margin-top: 10px;">
-        <button class="button" type="submit">Save</button>
-        <span id="users-save-status" class="muted"></span>
-      </div>
-    </form>
-  </section>
 {% endblock %}
+

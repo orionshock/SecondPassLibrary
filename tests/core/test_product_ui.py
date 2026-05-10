@@ -127,6 +127,13 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/users/new/")
 
+    def test_unauthenticated_user_edit_redirects_to_login(self):
+        response = self.client.get(f"/users/{self.user.pk}/edit/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], f"/api-auth/login/?next=/users/{self.user.pk}/edit/"
+        )
+
     def test_authenticated_users_returns_200_and_has_containers(self):
         self.client.force_login(self.user)
         response = self.client.get("/users/")
@@ -134,7 +141,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.js")
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="users-results"')
-        self.assertContains(response, 'id="users-edit-form"')
+        self.assertContains(response, 'id="users-filters"')
         self.assertContains(response, 'id="users-create-link"')
 
     def test_authenticated_user_new_returns_200_and_has_form(self):
@@ -146,6 +153,15 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="user-new-form"')
         self.assertContains(response, 'id="user-new-username"')
         self.assertContains(response, 'id="user-new-created-password"')
+
+    def test_authenticated_user_edit_returns_200_and_has_form(self):
+        self.client.force_login(self.user)
+        response = self.client.get(f"/users/{self.user.pk}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/app.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="user-edit-form"')
+        self.assertContains(response, 'id="user-edit-username"')
 
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)

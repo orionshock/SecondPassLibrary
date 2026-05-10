@@ -1,0 +1,64 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}user-edit{% endblock %}
+
+{% block title %}Edit User · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Edit user</h1>
+    <a class="button" href="/users/">Back to users</a>
+  </div>
+
+  <div id="user-edit" data-user-id="{{ user_id|escape }}"></div>
+
+  <div id="user-edit-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
+  <div id="user-edit-status" class="muted">Loading…</div>
+
+  <section id="user-edit-card" class="card is-hidden">
+    <h2 class="card__title">User</h2>
+
+    <form id="user-edit-form">
+      {% csrf_token %}
+      <div class="kv">
+        <div class="kv__k">Username</div>
+        <div class="kv__v" id="user-edit-username"></div>
+
+        <div class="kv__k">Groups</div>
+        <div class="kv__v" id="user-edit-groups"></div>
+
+        <div class="kv__k"><label for="user-edit-email">Email</label></div>
+        <div class="kv__v"><input id="user-edit-email" type="email" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="user-edit-first">First name</label></div>
+        <div class="kv__v"><input id="user-edit-first" type="text" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="user-edit-last">Last name</label></div>
+        <div class="kv__v"><input id="user-edit-last" type="text" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="user-edit-role">Role</label></div>
+        <div class="kv__v">
+          <select id="user-edit-role">
+            <option value="reader">reader</option>
+            <option value="librarian">librarian</option>
+            <option value="manager">manager</option>
+          </select>
+        </div>
+
+        <div class="kv__k"><label for="user-edit-active">Active</label></div>
+        <div class="kv__v">
+          <select id="user-edit-active">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button id="user-edit-submit" class="button" type="submit">Save</button>
+        <span id="user-edit-save-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+

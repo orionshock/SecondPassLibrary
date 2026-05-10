@@ -38,6 +38,8 @@ python manage.py runserver
 - Imports: `/imports/`
 - Groups: `/groups/`
 - Users: `/users/` (Manager/Owner)
+- Create user: `/users/new/` (Manager/Owner; temporary password shown once)
+- Edit user: `/users/<user_id>/edit/` (Manager/Owner)
 
 If you are not authenticated, these pages redirect to `/api-auth/login/?next=...`.
 
