@@ -7,11 +7,10 @@
 {% block content %}
   <div class="page-header">
     <h1 class="page-title">Users</h1>
+    <a id="users-create-link" class="button is-hidden" href="/users/new/">Create user</a>
   </div>
 
-  <p class="muted">
-    User creation, deletion, invitations, and password management are not implemented yet.
-  </p>
+  <p class="muted">Create local Django users and manage basic profile fields.</p>
 
   <div id="users-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
 

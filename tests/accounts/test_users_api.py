@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
+from library.group_services import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership, PUBLIC_GROUP_SLUG
 
 
@@ -17,6 +18,7 @@ User = get_user_model()
 
 class ManagedUsersAPITest(APITestCase):
     def setUp(self):
+        self.public = get_public_group()
         self.owner = User.objects.create_superuser(
             username="owner", email="owner@example.com", password="pw"
         )
@@ -340,3 +342,157 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_can_create_manager_and_response_includes_temporary_password_once(self):
+        self.client.login(username="owner", password="pw")
+        response = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={
+                    "username": "newmanager",
+                    "email": "nm@example.com",
+                    "first_name": "New",
+                    "last_name": "Manager",
+                    "role": UserProfile.ROLE_MANAGER,
+                    "is_active": True,
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertIn("user", data)
+        self.assertIn("temporary_password", data)
+        self.assertIn("message", data)
+        self.assertTrue(str(data["temporary_password"]))
+
+        user_payload = cast(Mapping[str, Any], data["user"])
+        self.assertEqual(user_payload["username"], "newmanager")
+        self.assertEqual(user_payload["role"], UserProfile.ROLE_MANAGER)
+        self.assertNotIn("temporary_password", user_payload)
+        self.assertNotIn("password", user_payload)
+
+        created_user = User.objects.get(username="newmanager")
+        created_profile = UserProfile.objects.get(user=created_user)
+        self.assertEqual(created_profile.role, UserProfile.ROLE_MANAGER)
+
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=created_user, group__slug=PUBLIC_GROUP_SLUG
+            ).exists()
+        )
+
+        temp_pw = str(data["temporary_password"])
+        self.client.logout()
+        ok = self.client.login(username="newmanager", password=temp_pw)
+        self.assertTrue(ok)
+
+        list_response = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        self.assertIn(list_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN})
+        if list_response.status_code == status.HTTP_200_OK:
+            list_payload = cast(Mapping[str, Any], list_response.data)
+            results = cast(list[dict[str, Any]], list_payload["results"])
+            for row in results:
+                self.assertNotIn("temporary_password", row)
+                self.assertNotIn("password", row)
+
+        detail_response = cast(
+            Response, self.client.get(f"/api/v1/accounts/users/{created_user.pk}/")
+        )
+        self.assertIn(detail_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN})
+        if detail_response.status_code == status.HTTP_200_OK:
+            detail_payload = cast(Mapping[str, Any], detail_response.data)
+            self.assertNotIn("temporary_password", detail_payload)
+            self.assertNotIn("password", detail_payload)
+
+    def test_owner_can_create_librarian_and_reader(self):
+        self.client.login(username="owner", password="pw")
+        r1 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "lib1", "role": UserProfile.ROLE_LIBRARIAN},
+                format="json",
+            ),
+        )
+        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
+        r2 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "reader1", "role": UserProfile.ROLE_READER},
+                format="json",
+            ),
+        )
+        self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(UserProfile.objects.get(user__username="lib1").role, UserProfile.ROLE_LIBRARIAN)
+        self.assertEqual(UserProfile.objects.get(user__username="reader1").role, UserProfile.ROLE_READER)
+
+    def test_manager_can_create_librarian_or_reader_but_not_manager(self):
+        self.client.login(username="manager", password="pw")
+        ok = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "oklib", "role": UserProfile.ROLE_LIBRARIAN},
+                format="json",
+            ),
+        )
+        self.assertEqual(ok.status_code, status.HTTP_201_CREATED)
+
+        denied = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "badmgr", "role": UserProfile.ROLE_MANAGER},
+                format="json",
+            ),
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_librarian_and_reader_cannot_create_users(self):
+        self.client.login(username="librarian", password="pw")
+        denied1 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "nope1", "role": UserProfile.ROLE_READER},
+                format="json",
+            ),
+        )
+        self.assertEqual(denied1.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        denied2 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "nope2", "role": UserProfile.ROLE_READER},
+                format="json",
+            ),
+        )
+        self.assertEqual(denied2.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_duplicate_username_returns_400(self):
+        self.client.login(username="owner", password="pw")
+        first = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "dupe", "role": UserProfile.ROLE_READER},
+                format="json",
+            ),
+        )
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+
+        second = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/users/",
+                data={"username": "dupe", "role": UserProfile.ROLE_READER},
+                format="json",
+            ),
+        )
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)

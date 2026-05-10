@@ -42,3 +42,8 @@ def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
 @login_required
 def users(request: HttpRequest) -> HttpResponse:
     return render(request, "web/users.html")
+
+
+@login_required
+def user_new(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/user_new.html")

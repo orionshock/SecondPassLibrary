@@ -1,0 +1,73 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}user-new{% endblock %}
+
+{% block title %}Create User · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Create user</h1>
+  </div>
+
+  <div id="user-new-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
+  <div id="user-new-status" class="muted"></div>
+
+  <section id="user-new-form-card" class="card">
+    <h2 class="card__title">New User</h2>
+    <form id="user-new-form">
+      {% csrf_token %}
+      <div class="kv">
+        <div class="kv__k"><label for="user-new-username">Username</label></div>
+        <div class="kv__v"><input id="user-new-username" type="text" style="width: 100%;" required /></div>
+
+        <div class="kv__k"><label for="user-new-email">Email</label></div>
+        <div class="kv__v"><input id="user-new-email" type="email" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="user-new-first">First name</label></div>
+        <div class="kv__v"><input id="user-new-first" type="text" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="user-new-last">Last name</label></div>
+        <div class="kv__v"><input id="user-new-last" type="text" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="user-new-role">Role</label></div>
+        <div class="kv__v">
+          <select id="user-new-role">
+            <option value="reader">reader</option>
+            <option value="librarian">librarian</option>
+            <option value="manager">manager</option>
+          </select>
+        </div>
+
+        <div class="kv__k"><label for="user-new-active">Active</label></div>
+        <div class="kv__v">
+          <input id="user-new-active" type="checkbox" checked />
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button id="user-new-submit" class="button" type="submit">Create user</button>
+        <span id="user-new-submit-status" class="muted"></span>
+        <a class="linklike" href="/users/">Back to users</a>
+      </div>
+    </form>
+  </section>
+
+  <section id="user-new-success" class="card is-hidden" aria-live="polite">
+    <h2 class="card__title">User created</h2>
+    <div class="kv">
+      <div class="kv__k">Username</div>
+      <div class="kv__v" id="user-new-created-username"></div>
+
+      <div class="kv__k">Temporary password</div>
+      <div class="kv__v">
+        <div class="error" style="margin-bottom: 8px;">Copy this password now. It will not be shown again.</div>
+        <pre id="user-new-created-password" style="white-space: pre-wrap; word-break: break-word; margin: 0;"></pre>
+      </div>
+    </div>
+
+    <div style="margin-top: 10px;">
+      <a class="button" href="/users/">Back to users</a>
+    </div>
+  </section>
+{% endblock %}
+

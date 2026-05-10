@@ -31,6 +31,13 @@ Second Pass Library currently uses Django/DRF built-in authentication for local 
 - DRF browsable API login/logout at `/api-auth/`
 - Django admin at `/admin/` (service hatch; not the product UI)
 
+Position:
+
+- Django `User` is the canonical local user record.
+- `accounts.UserProfile` stores the app-level global role (`manager|librarian|reader`).
+- Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
+- Email verification, password reset flows, MFA, and invite systems are not implemented yet.
+
 API endpoints under `/api/v1/` require authentication unless an endpoint explicitly documents otherwise.
 
 ### Future direction (intentionally deferred)
@@ -41,6 +48,8 @@ The production/self-hosted client authentication story is intentionally not sett
 - Avoid committing to an auth protocol that would force early client/UI decisions.
 
 Expected future options include external authentication (OIDC), reverse-proxy/auth-header setups, or other self-host-friendly approaches, but none are implemented by default today.
+
+If/when external auth is added, it is expected to map into the same canonical Django `User` record (not replace it).
 
 Notes for future browser UI:
 

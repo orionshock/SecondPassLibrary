@@ -54,9 +54,16 @@ Manager cannot (unless also Owner):
 
 User management is intentionally limited:
 
+- `POST /api/v1/accounts/users/` (Manager/Owner only; creates local Django user and returns a temporary password once)
 - `GET /api/v1/accounts/users/`
 - `GET /api/v1/accounts/users/<id>/`
-- `PATCH /api/v1/accounts/users/<id>/` (no create/delete/password endpoints)
+- `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no password reset/invite/delete endpoints)
+
+Creation rules:
+
+- Owner can create `manager`, `librarian`, or `reader` users.
+- Manager can create `librarian` or `reader` users only (cannot create `manager`).
+- Librarian/Reader cannot create users.
 
 ### `/api/v1/accounts/me/` capability hints
 

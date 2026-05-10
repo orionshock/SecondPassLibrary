@@ -66,12 +66,45 @@ Response shape:
 - `GET /api/v1/accounts/me/`
 - `PATCH /api/v1/accounts/me/` (self-profile fields only)
 - Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
-- Users (Owner/Manager only): `GET /api/v1/accounts/users/` (paginated), `GET /api/v1/accounts/users/<id>/`, `PATCH /api/v1/accounts/users/<id>/`
+- Users (Owner/Manager only):
+  - `GET /api/v1/accounts/users/` (paginated)
+  - `GET /api/v1/accounts/users/<id>/`
+  - `PATCH /api/v1/accounts/users/<id>/`
+  - `POST /api/v1/accounts/users/` (creates a local Django user and returns a generated temporary password once)
 
 User-management payload notes:
 
 - Managed users now include a read-only `groups[]` membership summary for that user (group id/name/slug, membership_role, is_public_group).
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
+- User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
+
+### `POST /api/v1/accounts/users/`
+
+Create a local Django user (Manager/Owner only) and return a temporary password **once**.
+
+Request fields:
+
+- `username` (required; unique)
+- `email` (optional; blank allowed)
+- `first_name` (optional)
+- `last_name` (optional)
+- `role` (optional; `manager|librarian|reader`; default `reader`)
+- `is_active` (optional; default `true`)
+
+Response shape:
+
+```json
+{
+  "user": { "username": "newuser", "role": "reader", "...": "..." },
+  "temporary_password": "generated",
+  "message": "Show this password now. It will not be shown again."
+}
+```
+
+Notes:
+
+- The temporary password is never stored except via Django's normal password hash.
+- The password is not emailed and is not shown by any list/detail endpoint after creation.
 
 ### `GET /api/v1/accounts/me/` response
 

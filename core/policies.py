@@ -62,6 +62,30 @@ def can_manage_users(user) -> bool:
     return is_owner(user) or is_manager(user)
 
 
+def can_create_user_with_role(*, actor, role: str) -> bool:
+    """
+    Permission check for creating a new user with a given global role.
+
+    Notes:
+    - Uses the same high-level role rules as can_assign_global_role, but since a
+      target user does not exist yet, the check is based on the actor + desired role.
+    """
+    if role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
+        return False
+
+    if is_owner(actor):
+        return True
+
+    if not _is_manager_role(actor):
+        return False
+
+    # Only Owner can create Managers.
+    if role == UserProfile.ROLE_MANAGER:
+        return False
+
+    return True
+
+
 def can_assign_global_role(*, actor, target_user, new_role: str) -> bool:
     if new_role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
         return False

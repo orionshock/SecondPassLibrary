@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+import secrets
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError, transaction
 
 from core import policies
+from library.group_services import ensure_user_public_membership
 from library.models import LibraryGroupMembership, is_public_group
 
 from .models import UserProfile
@@ -21,9 +24,88 @@ class UserUpdateResult:
     profile: UserProfile
 
 
+@dataclass(frozen=True)
+class ManagedUserCreateResult:
+    user: Any
+    temporary_password: str
+
+
 def get_or_create_profile(*, user) -> UserProfile:
     profile, _created = UserProfile.objects.get_or_create(user=user)
     return profile
+
+
+def _generate_temporary_password() -> str:
+    # Short, URL-safe, cryptographically secure; shown once on create response only.
+    return secrets.token_urlsafe(18)
+
+
+def create_managed_user(
+    *,
+    actor,
+    username: str,
+    email: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    role: str = UserProfile.ROLE_READER,
+    is_active: bool = True,
+) -> ManagedUserCreateResult:
+    """
+    Create a local Django user for product-managed accounts, with a generated temporary password.
+
+    Rules:
+    - Password is generated server-side and returned once to the caller.
+    - Password is never stored except via Django's password hash.
+    - Role is stored on UserProfile.
+    """
+    if getattr(actor, "is_anonymous", False):
+        raise PermissionDenied("Not allowed.")
+
+    if role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
+        raise ValidationError({"role": "Invalid role."})
+
+    if not policies.can_manage_users(actor):
+        raise PermissionDenied("Not allowed.")
+
+    if not policies.can_create_user_with_role(actor=actor, role=role):
+        raise PermissionDenied("Not allowed.")
+
+    username = (username or "").strip()
+    if not username:
+        raise ValidationError({"username": "Username is required."})
+
+    email = (email or "").strip()
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+
+    temporary_password = _generate_temporary_password()
+
+    with transaction.atomic():
+        try:
+            user = User(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=bool(is_active),
+            )
+            user.set_password(temporary_password)
+            user.full_clean()
+            user.save()
+        except IntegrityError as exc:
+            # Race-safe unique username enforcement (Django auth has unique username by default).
+            raise ValidationError({"username": "A user with that username already exists."}) from exc
+
+        profile = get_or_create_profile(user=user)
+        if profile.role != role:
+            profile.role = role
+            profile.full_clean()
+            profile.save(update_fields=["role", "updated_at"])
+
+        # Ensure Public group membership via existing service (idempotent).
+        ensure_user_public_membership(user=user)
+
+    return ManagedUserCreateResult(user=user, temporary_password=temporary_password)
 
 
 def update_user_via_management_api(

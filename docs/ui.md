@@ -15,6 +15,7 @@ The first minimal product UI shell now exists:
 - `/groups/` and `/groups/<group_id>/` provide functional group list/detail screens
 - Group detail includes membership management for Manager/Owner (add/update/remove; add-by-dropdown; functional-first)
 - `/users/` provides functional user management for Manager/Owner only
+- `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -50,8 +51,9 @@ The users UI is API-driven using:
 
 - `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)
 - `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no passwords/invites)
+- `POST /api/v1/accounts/users/` (creates local Django user and returns a temporary password once)
 
-User creation, deletion, invitations, and password management are intentionally not implemented yet.
+User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
 
 The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Detail page.
 
@@ -215,6 +217,7 @@ Primary endpoints:
 - List: `GET /api/v1/accounts/users/` (paginated)
 - Detail: `GET /api/v1/accounts/users/<user_id>/`
 - Patch: `PATCH /api/v1/accounts/users/<user_id>/` (safe fields only; no password handling)
+- Create: `POST /api/v1/accounts/users/` (Manager/Owner only; returns generated temporary password once)
 
 UI behaviors:
 
@@ -222,7 +225,10 @@ UI behaviors:
 - Make role editing rules explicit in the UI:
   - Owner-only Manager promotion/demotion
   - Managers cannot manage Owner accounts, other Managers, or their own role
-- No user create/delete/invite/password UI yet.
+- Include a Create User flow at `/users/new/`:
+  - Manager may create Librarian/Reader users only
+  - Owner may create Manager/Librarian/Reader users
+  - A server-generated temporary password is shown once and must be copied immediately
 
 ## 9. Reading metadata screens
 

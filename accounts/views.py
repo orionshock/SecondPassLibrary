@@ -12,11 +12,13 @@ from .serializers import (
     CurrentUserSerializer,
     CurrentUserPatchSerializer,
     ManagedUserPatchSerializer,
+    ManagedUserCreateSerializer,
     ManagedUserSerializer,
     UserProfileSerializer,
 )
 from .services import (
     build_current_user_me_payload,
+    create_managed_user,
     get_or_create_profile,
     update_current_user_via_me_api,
     update_user_via_management_api,
@@ -67,6 +69,7 @@ class CurrentUserView(APIView):
 
 
 class ManagedUserViewSet(
+    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -90,6 +93,64 @@ class ManagedUserViewSet(
 
     def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def create(self, request, *args, **kwargs):
+        create = ManagedUserCreateSerializer(data=request.data or {})
+        create.is_valid(raise_exception=True)
+        data = create.validated_data
+
+        result = create_managed_user(
+            actor=request.user,
+            username=data["username"],
+            email=data.get("email") or "",
+            first_name=data.get("first_name") or "",
+            last_name=data.get("last_name") or "",
+            role=data.get("role") or UserProfile.ROLE_READER,
+            is_active=bool(data.get("is_active", True)),
+        )
+
+        user = result.user
+        profile = get_or_create_profile(user=user)
+        memberships = list(
+            getattr(user, "library_group_memberships", LibraryGroupMembership.objects.none())
+            .all()
+        )
+        groups = []
+        for membership in memberships:
+            group = membership.group
+            groups.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "slug": group.slug,
+                    "membership_role": membership.role,
+                    "is_public_group": is_public_group(group),
+                }
+            )
+        user_payload = {
+            "id": cast(int, user.pk),
+            "username": user.get_username(),
+            "email": user.email or "",
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
+            "is_active": bool(getattr(user, "is_active", True)),
+            "date_joined": user.date_joined,
+            "last_login": user.last_login,
+            "is_owner": policies.is_owner(user),
+            "profile_id": profile.id,
+            "role": profile.role,
+            "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
+        }
+
+        serializer = ManagedUserSerializer(user_payload)
+        return Response(
+            {
+                "user": serializer.data,
+                "temporary_password": result.temporary_password,
+                "message": "Show this password now. It will not be shown again.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
