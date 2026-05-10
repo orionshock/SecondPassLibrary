@@ -187,6 +187,11 @@ This includes:
 * bookmarks
 * devices
 
+Guardrail:
+
+- Reading/annotation work should follow `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/`.
+- Do not introduce client-specific proprietary annotation formats as stored server data.
+
 ### EPUB locators
 
 Reading locators are stored as flexible JSON for now. Prefer EPUB locators that include CFI and href when available, plus progression (0-1) and optional text quote context (exact/prefix/suffix) to help re-anchor highlights if a CFI fails.
@@ -425,7 +430,7 @@ Verification guidance:
    - preparing release-level verification
 4. Docs-only changes: optionally run `python manage.py check`; no tests required.
 5. In the summary, list exactly which focused tests were run and whether the full suite was intentionally skipped.
-6. Do not claim “all tests pass” unless the full suite was run; use phrasing like “Focused tests passed” / “Full suite not run”. 
+6. Do not claim "all tests pass" unless the full suite was run; use phrasing like "Focused tests passed" / "Full suite not run".
 
 Then summarize:
 

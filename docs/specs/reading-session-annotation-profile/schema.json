@@ -1,0 +1,414 @@
+{
+  "$id": "https://secondpasslibrary.local/specs/reading-session-annotations/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reading Session Annotation Collection",
+  "description": "W3C Web Annotation JSON-LD profile for EPUB reading sessions.",
+  "type": "object",
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "profile",
+    "schemaVersion",
+    "generated",
+    "generator",
+    "book",
+    "session",
+    "items"
+  ],
+  "properties": {
+    "@context": {},
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "const": "AnnotationCollection"
+    },
+    "profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "label": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generator": {
+      "type": "object",
+      "required": [
+        "type",
+        "name"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "Software",
+            "SoftwareApplication"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "book": {
+      "$ref": "#/$defs/book"
+    },
+    "session": {
+      "$ref": "#/$defs/session"
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/annotation"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "book": {
+      "type": "object",
+      "required": [
+        "id",
+        "fileHash"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "Book",
+            "Text"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "author": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "publishedDate": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "isbn": {
+          "type": "string"
+        },
+        "fileHash": {
+          "type": "string",
+          "pattern": "^sha256:[A-Fa-f0-9]{64}$"
+        },
+        "epubUniqueIdentifier": {
+          "type": "string"
+        },
+        "epubMetadata": {
+          "type": "object"
+        },
+        "displayMetadata": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "session": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "sessionStatus",
+        "startedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "ReadingSession"
+        },
+        "sessionStatus": {
+          "enum": [
+            "active",
+            "closed"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "closedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "currentLocation": {
+          "$ref": "#/$defs/epubCfiSelector"
+        },
+        "layeredSession": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotation": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "motivation",
+        "target"
+      ],
+      "properties": {
+        "@context": {},
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "Annotation"
+        },
+        "motivation": {
+          "oneOf": [
+            {
+              "enum": [
+                "highlighting",
+                "commenting",
+                "bookmarking"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "highlighting",
+                  "commenting",
+                  "bookmarking"
+                ]
+              }
+            }
+          ]
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "modified": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "creator": {
+          "type": [
+            "object",
+            "string"
+          ]
+        },
+        "body": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/body"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/body"
+              }
+            }
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/target"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "sourceSession": {
+          "type": "string"
+        },
+        "derivedFrom": {
+          "type": "string"
+        },
+        "sourceImport": {
+          "type": "object",
+          "required": [
+            "provider"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1
+            },
+            "location": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "date": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "title": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "match": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "additionalProperties": true
+            },
+            "unmatched": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "body": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "TextualBody"
+        },
+        "purpose": {
+          "enum": [
+            "commenting",
+            "describing",
+            "highlighting",
+            "tagging",
+            "bookmarking"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "source",
+        "selector"
+      ],
+      "properties": {
+        "source": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "Text",
+                    "Book"
+                  ]
+                }
+              },
+              "additionalProperties": true
+            }
+          ]
+        },
+        "selector": {
+          "$ref": "#/$defs/epubCfiSelector"
+        }
+      },
+      "additionalProperties": true
+    },
+    "epubCfiSelector": {
+      "type": "object",
+      "required": [
+        "type",
+        "conformsTo",
+        "value"
+      ],
+      "properties": {
+        "type": {
+          "const": "FragmentSelector"
+        },
+        "conformsTo": {
+          "const": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^epubcfi\\("
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

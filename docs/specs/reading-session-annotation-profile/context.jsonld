@@ -1,0 +1,71 @@
+{
+  "@context": {
+    "anno": "http://www.w3.org/ns/oa#",
+    "schema": "https://schema.org/",
+    "as": "https://www.w3.org/ns/activitystreams#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "reader": "https://secondpasslibrary.local/ns/reading-session#",
+    "ReadingSession": "reader:ReadingSession",
+    "profile": {
+      "@id": "reader:profile",
+      "@type": "@id"
+    },
+    "schemaVersion": "reader:schemaVersion",
+    "book": "schema:book",
+    "title": "schema:name",
+    "subtitle": "schema:subtitle",
+    "author": "schema:author",
+    "publisher": "schema:publisher",
+    "publishedDate": "schema:datePublished",
+    "language": "schema:inLanguage",
+    "isbn": "schema:isbn",
+    "fileHash": "reader:fileHash",
+    "epubUniqueIdentifier": "reader:epubUniqueIdentifier",
+    "displayMetadata": "reader:displayMetadata",
+    "epubMetadata": "reader:epubMetadata",
+    "session": "reader:session",
+    "sessionId": {
+      "@id": "reader:sessionId",
+      "@type": "@id"
+    },
+    "sessionStatus": "reader:sessionStatus",
+    "startedAt": {
+      "@id": "reader:startedAt",
+      "@type": "xsd:dateTime"
+    },
+    "closedAt": {
+      "@id": "reader:closedAt",
+      "@type": "xsd:dateTime"
+    },
+    "currentLocation": "reader:currentLocation",
+    "layeredSession": {
+      "@id": "reader:layeredSession",
+      "@type": "@id"
+    },
+    "derivedFrom": {
+      "@id": "reader:derivedFrom",
+      "@type": "@id"
+    },
+    "sourceSession": {
+      "@id": "reader:sourceSession",
+      "@type": "@id"
+    },
+    "generator": "schema:softwareApplication",
+    "generated": {
+      "@id": "schema:dateCreated",
+      "@type": "xsd:dateTime"
+    },
+    "version": "schema:softwareVersion",
+
+    "sourceImport": "reader:sourceImport",
+    "provider": "reader:provider",
+    "location": "reader:location",
+    "date": {
+      "@id": "reader:date",
+      "@type": "xsd:dateTime"
+    },
+    "match": "reader:match",
+    "method": "reader:matchMethod",
+    "confidence": "reader:matchConfidence"
+  }
+}

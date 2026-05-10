@@ -2,6 +2,11 @@
 
 Reading metadata is user-owned and must remain durable/exportable.
 
+Design direction:
+
+- `docs/user-data.md`
+- `docs/specs/reading-session-annotation-profile/`
+
 ## Sessions
 
 - "Open book for reading" uses lazy active-session creation.

@@ -270,6 +270,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 
 ## Reading
 
+- Reading APIs are currently pre-profile and will evolve toward the W3C-style JSON-LD profile described in `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/`.
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
 - Devices: `GET /api/v1/reading/devices/` (paginated), `GET /api/v1/reading/devices/<id>/`
