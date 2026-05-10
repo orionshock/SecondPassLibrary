@@ -135,6 +135,13 @@ export async function initBookEdit() {
   const identAddPrimaryEl = $("#book-edit-ident-add-primary");
   const identAddStatusEl = $("#book-edit-identifiers-add-status");
 
+  const groupsStatusEl = $("#book-edit-groups-status");
+  const groupsEl = $("#book-edit-groups");
+  const groupsAddFormEl = $("#book-edit-groups-add");
+  const groupsAddSelectEl = $("#book-edit-groups-add-select");
+  const groupsAddBtnEl = $("#book-edit-groups-add-btn");
+  const groupsAddStatusEl = $("#book-edit-groups-add-status");
+
   if (
     !rootEl ||
     !statusEl ||
@@ -170,6 +177,12 @@ export async function initBookEdit() {
     || !identAddSourceEl
     || !identAddPrimaryEl
     || !identAddStatusEl
+    || !groupsStatusEl
+    || !groupsEl
+    || !groupsAddFormEl
+    || !groupsAddSelectEl
+    || !groupsAddBtnEl
+    || !groupsAddStatusEl
   )
     return;
 
@@ -219,6 +232,8 @@ export async function initBookEdit() {
   let allAuthors = [];
   let allSeries = [];
   let identifiers = [];
+  let groups = [];
+  let allGroups = [];
 
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
@@ -241,6 +256,7 @@ export async function initBookEdit() {
     originalAuthorIds = selectedAuthors.map((a) => String(a.id)).filter(Boolean);
     originalSeriesId = book.series && book.series.id ? String(book.series.id) : null;
     identifiers = Array.isArray(book.identifiers) ? book.identifiers : [];
+    groups = Array.isArray(book.groups) ? book.groups : [];
   } catch (e) {
     console.error("Failed to load book for edit", { bookId, e });
     if (e && e.status === 404) {
@@ -326,6 +342,149 @@ export async function initBookEdit() {
   }
 
   await loadAuthorsAndSeries();
+
+  function setGroupsStatus(text, isError) {
+    setInlineStatus(groupsStatusEl, text, isError);
+  }
+
+  function setGroupsAddStatus(text, isError) {
+    setInlineStatus(groupsAddStatusEl, text, isError);
+  }
+
+  function renderGroups() {
+    if (!groups.length) {
+      groupsEl.innerHTML = '<div class="muted">No visible groups.</div>';
+      return;
+    }
+    const rows = groups
+      .slice()
+      .sort((a, b) => `${a.name || ""}:${a.slug || ""}`.localeCompare(`${b.name || ""}:${b.slug || ""}`))
+      .map((g) => {
+        const id = g.id ? String(g.id) : "";
+        const href = id ? `/groups/${encodeURIComponent(id)}/` : "#";
+        const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
+        const removeBtn = g.is_public_group
+          ? ""
+          : ` <button class="linklike" type="button" data-group-remove-id="${escapeHtml(id)}">Remove</button>`;
+        return `<li>
+            <a href="${escapeHtml(href)}">${escapeHtml(g.name || "")}</a>
+            <span class="muted"><code>${escapeHtml(g.slug || "")}</code></span>${badge}${removeBtn}
+          </li>`;
+      })
+      .join("");
+    groupsEl.innerHTML = `<ul>${rows}</ul>`;
+  }
+
+  function syncGroupsAddOptions() {
+    const currentIds = new Set(groups.map((g) => String(g.id)));
+    const options = allGroups
+      .slice()
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+      .filter((g) => g && g.id && !currentIds.has(String(g.id)))
+      .slice(0, 500)
+      .map((g) => `<option value="${escapeHtml(String(g.id))}">${escapeHtml(String(g.name || g.slug || g.id))}</option>`)
+      .join("");
+    groupsAddSelectEl.innerHTML = options ? options : '<option value="">(No available groups)</option>';
+    groupsAddBtnEl.disabled = !options;
+  }
+
+  async function refreshBookGroups() {
+    try {
+      const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
+      groups = Array.isArray(book.groups) ? book.groups : [];
+      renderGroups();
+      syncGroupsAddOptions();
+    } catch (e) {
+      console.error("Failed to refresh book groups", e);
+      setGroupsStatus("Failed to refresh.", true);
+      setError(`Failed to refresh book: ${extractApiErrorMessage(e)}`);
+    }
+  }
+
+  async function loadAllGroups() {
+    setGroupsStatus("Loading…", false);
+    try {
+      const payload = await fetchAllPages("/api/v1/library/groups/");
+      allGroups = uniqueById(payload);
+      setGroupsStatus("", false);
+      renderGroups();
+      syncGroupsAddOptions();
+    } catch (e) {
+      console.error("Failed to load groups list", e);
+      setGroupsStatus("Failed to load.", true);
+      setError(`Failed to load groups: ${extractApiErrorMessage(e)}`);
+      allGroups = [];
+      renderGroups();
+      syncGroupsAddOptions();
+    }
+  }
+
+  renderGroups();
+  await loadAllGroups();
+
+  groupsEl.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    if (!t || !t.getAttribute) return;
+    const gid = t.getAttribute("data-group-remove-id");
+    if (!gid) return;
+
+    const csrf = getCsrfToken();
+    if (!csrf) {
+      setError("Missing CSRF token cookie. Reload the page and try again.");
+      return;
+    }
+
+    setGroupsStatus("Removing…", false);
+    try {
+      await fetchJSONWithOptions(
+        `/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/${encodeURIComponent(String(bookId))}/`,
+        { method: "DELETE", headers: { Accept: "application/json", "X-CSRFToken": csrf } }
+      );
+      setGroupsStatus("", false);
+      await refreshBookGroups();
+    } catch (e) {
+      console.error("Remove group assignment failed", e);
+      setGroupsStatus("Remove failed.", true);
+      setError(`Failed to remove from group: ${extractApiErrorMessage(e)}`);
+    }
+  });
+
+  groupsAddFormEl.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    setError("");
+    setGroupsAddStatus("", false);
+
+    const gid = (groupsAddSelectEl.value || "").trim();
+    if (!gid) return;
+
+    const csrf = getCsrfToken();
+    if (!csrf) {
+      setError("Missing CSRF token cookie. Reload the page and try again.");
+      return;
+    }
+
+    setGroupsAddStatus("Adding…", false);
+    try {
+      await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrf,
+        },
+        body: JSON.stringify({ book: String(bookId) }),
+      });
+      setGroupsAddStatus("Added.", false);
+      await refreshBookGroups();
+    } catch (e) {
+      console.error("Add group assignment failed", e);
+      setGroupsAddStatus("Add failed.", true);
+      const msg = extractApiErrorMessage(e);
+      const body = e && e.body ? e.body : null;
+      const fields = summarizeFieldErrors(body);
+      setError(fields ? `${msg} (${fields})` : msg);
+    }
+  });
 
   const IDENT_SCHEMES = [
     ["isbn_10", "ISBN-10"],

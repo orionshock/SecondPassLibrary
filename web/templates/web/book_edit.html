@@ -93,6 +93,24 @@
     </form>
 
     <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
+      <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Groups</h3>
+      <div id="book-edit-groups-status" class="muted">Loading…</div>
+      <div id="book-edit-groups" class="muted"></div>
+
+      <form id="book-edit-groups-add" style="margin-top: 12px;">
+        {% csrf_token %}
+        <div class="kv">
+          <div class="kv__k"><label for="book-edit-groups-add-select">Add to group</label></div>
+          <div class="kv__v"><select id="book-edit-groups-add-select" style="width: 100%;"></select></div>
+        </div>
+        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button id="book-edit-groups-add-btn" class="button" type="submit">Add</button>
+          <span id="book-edit-groups-add-status" class="muted"></span>
+        </div>
+      </form>
+    </div>
+
+    <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
       <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Identifiers and files</h3>
       <div id="book-edit-identifiers-status" class="muted">Loading…</div>
       <div id="book-edit-identifiers" class="muted"></div>

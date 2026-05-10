@@ -220,6 +220,11 @@ Rules:
   - `PATCH /api/v1/library/books/<book_id>/identifiers/<identifier_id>/`
   - `DELETE /api/v1/library/books/<book_id>/identifiers/<identifier_id>/`
 
+Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
+- `GET /api/v1/library/groups/<group_id>/books/`
+- `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
+- `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
+
 Book payload notes:
 
 - Books now include a read-only `groups[]` summary (assigned LibraryGroups).
