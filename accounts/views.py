@@ -86,6 +86,7 @@ class CurrentUserChangePasswordView(APIView):
                 user=request.user,
                 current_password=str(data.get("current_password") or ""),
                 new_password=str(data.get("new_password") or ""),
+                confirm_password=str(data.get("confirm_password") or ""),
             )
         except DjangoValidationError as exc:
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}

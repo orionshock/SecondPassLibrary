@@ -68,7 +68,7 @@ export async function initProfilePassword() {
       await fetchJSONWithOptions("/api/v1/accounts/me/change-password/", {
         method: "POST",
         headers,
-        body: JSON.stringify({ current_password, new_password }),
+        body: JSON.stringify({ current_password, new_password, confirm_password: confirm }),
       });
 
       currentInput.value = "";
@@ -90,4 +90,3 @@ export async function initProfilePassword() {
     }
   });
 }
-

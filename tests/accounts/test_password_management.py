@@ -27,7 +27,26 @@ class ChangePasswordApiTests(APITestCase):
             Response,
             self.client.post(
                 "/api/v1/accounts/me/change-password/",
-                data={"current_password": "wrong", "new_password": "NewPassw0rd!"},
+                data={
+                    "current_password": "wrong",
+                    "new_password": "NewPassw0rd!",
+                    "confirm_password": "NewPassw0rd!",
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_change_password_fails_when_confirm_password_does_not_match(self):
+        response = cast(
+            Response,
+            self.client.post(
+                "/api/v1/accounts/me/change-password/",
+                data={
+                    "current_password": "pw",
+                    "new_password": "NewPassw0rd!",
+                    "confirm_password": "DifferentPassw0rd!",
+                },
                 format="json",
             ),
         )
@@ -38,7 +57,11 @@ class ChangePasswordApiTests(APITestCase):
             Response,
             self.client.post(
                 "/api/v1/accounts/me/change-password/",
-                data={"current_password": "pw", "new_password": "NewPassw0rd!"},
+                data={
+                    "current_password": "pw",
+                    "new_password": "NewPassw0rd!",
+                    "confirm_password": "NewPassw0rd!",
+                },
                 format="json",
             ),
         )
@@ -161,6 +184,11 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         manager2_profile.role = UserProfile.ROLE_MANAGER
         manager2_profile.save(update_fields=["role", "updated_at"])
 
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        librarian_profile = UserProfile.objects.get(user=self.librarian)
+        librarian_profile.role = UserProfile.ROLE_LIBRARIAN
+        librarian_profile.save(update_fields=["role", "updated_at"])
+
         self.reader = User.objects.create_user(username="reader", password="pw")
         reader_profile = UserProfile.objects.get(user=self.reader)
         reader_profile.role = UserProfile.ROLE_READER
@@ -191,6 +219,19 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
         self.assertTrue(UserProfile.objects.get(user=self.reader).must_change_password)
 
+    def test_manager_can_patch_must_change_password_for_librarian(self):
+        self.client.login(username="manager", password="pw")
+        ok = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/accounts/users/{self.librarian.pk}/",
+                data={"must_change_password": True},
+                format="json",
+            ),
+        )
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        self.assertTrue(UserProfile.objects.get(user=self.librarian).must_change_password)
+
     def test_manager_cannot_patch_must_change_password_for_manager(self):
         self.client.login(username="manager", password="pw")
         denied = cast(
@@ -202,6 +243,20 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
             ),
         )
         self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_manager_cannot_patch_must_change_password_for_owner(self):
+        self.client.login(username="manager", password="pw")
+        denied = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/accounts/users/{self.owner.pk}/",
+                data={"must_change_password": True},
+                format="json",
+            ),
+        )
+        # Managers should not be able to access/modify Owner via product APIs.
+        # Implementation returns 404 to avoid existence leaks.
+        self.assertIn(denied.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND})
 
     def test_owner_can_patch_must_change_password_for_manager(self):
         self.client.login(username="owner", password="pw")
@@ -224,4 +279,3 @@ class UserSerializerDoesNotLeakPasswordsTests(TestCase):
 
         self.assertNotIn("password", ManagedUserSerializer().fields)
         self.assertNotIn("temporary_password", ManagedUserSerializer().fields)
-

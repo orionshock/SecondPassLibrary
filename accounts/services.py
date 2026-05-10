@@ -260,6 +260,7 @@ def change_current_user_password(
     user,
     current_password: str,
     new_password: str,
+    confirm_password: str,
 ) -> None:
     if getattr(user, "is_anonymous", False):
         raise PermissionDenied("Not allowed.")
@@ -269,6 +270,9 @@ def change_current_user_password(
 
     if not user.check_password(current_password):
         raise ValidationError({"current_password": "Current password is incorrect."})
+
+    if (new_password or "") != (confirm_password or ""):
+        raise ValidationError({"confirm_password": "Passwords do not match."})
 
     _validate_new_password(new_password=new_password, user=user)
     if (new_password or "") == (current_password or ""):

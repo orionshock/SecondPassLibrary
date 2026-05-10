@@ -173,7 +173,7 @@ Self password change endpoint.
 Request:
 
 ```json
-{ "current_password": "...", "new_password": "..." }
+{ "current_password": "...", "new_password": "...", "confirm_password": "..." }
 ```
 
 Rules:
