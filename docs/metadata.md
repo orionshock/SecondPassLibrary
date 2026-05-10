@@ -3,7 +3,7 @@
 ## Core objects
 
 - `Book`: canonical, user-facing bibliographic fields (title/authors/series/publisher/language/published date/ISBN/subjects)
-- `BookFile`: stored content blob (EPUB), stored content-addressed by checksum
+- `BookFile`: stored content blob (EPUB), stored content-addressed by checksum (one Book has at most one BookFile)
 
 ## Identifiers
 

@@ -84,11 +84,13 @@ class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(book["identifiers"][0]["scheme"], "isbn_13")
         self.assertEqual(book["identifiers"][0]["source"], "epub")
 
-        self.assertIsInstance(book["files"], list)
-        file0 = book["files"][0]
+        self.assertIn("file", book)
+        self.assertIsInstance(book["file"], dict)
+        file0 = cast(Mapping[str, Any], book["file"])
         self.assertIn("download_url", file0)
         self.assertNotIn("file", file0)
         self.assertNotIn("books/", str(file0))
+        self.assertNotIn("files", book)
 
 
 class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
@@ -164,11 +166,11 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._titles(response), ["Beta"])
         data = paginated_results(response)
-        files = data[0]["files"]
-        self.assertEqual(len(files), 1)
-        self.assertIn("download_url", files[0])
-        self.assertNotIn("file", files[0])
-        self.assertNotIn("books/", str(files[0]))
+        file0 = data[0]["file"]
+        self.assertIsNotNone(file0)
+        self.assertIn("download_url", file0)
+        self.assertNotIn("file", file0)
+        self.assertNotIn("books/", str(file0))
 
 
 class PaginationBasicsAPITest(APITestCase):

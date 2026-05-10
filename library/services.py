@@ -145,6 +145,16 @@ def import_epub(file_path):
 
     # Create BookFile record
     with open(path, "rb") as f:
+        # One-to-one invariant: a Book has at most one stored EPUB BookFile.
+        # Import creates a new Book, but keep the invariant explicit.
+        try:
+            _existing_file = book.file
+        except BookFile.DoesNotExist:
+            _existing_file = None
+        if _existing_file is not None:
+            raise ValueError(
+                "Book already has a file; refusing to create a second BookFile."
+            )
         book_file = BookFile.objects.create(
             book=book,
             file=File(

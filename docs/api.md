@@ -220,6 +220,7 @@ Book payload notes:
 - Books now include a read-only `groups[]` summary (assigned LibraryGroups).
 - For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
 - For Readers/Curators, `groups[]` includes only groups the caller can view (Public or direct membership).
+- Books include a singular `file` object (or `null`) rather than `files[]`.
 
 ## Imports
 

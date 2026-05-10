@@ -1,17 +1,12 @@
 import { fetchJSON } from "./api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "./layout.js";
 
-function bookFilesHtml(files) {
-  if (!Array.isArray(files) || files.length === 0) return "";
-  const links = files
-    .filter((f) => f && f.download_url)
-    .map((f) => {
-      const label = f.format ? String(f.format).toUpperCase() : "Download";
-      return `<a class="pill" href="${escapeHtml(f.download_url)}">${escapeHtml(label)}</a>`;
-    })
-    .join("");
-  if (!links) return "";
-  return `<div class="book__files">${links}</div>`;
+function bookFileHtml(file) {
+  if (!file || !file.download_url) return "";
+  const label = file.format ? String(file.format).toUpperCase() : "Download";
+  return `<div class="book__files"><a class="pill" href="${escapeHtml(
+    file.download_url
+  )}">${escapeHtml(label)}</a></div>`;
 }
 
 function renderBooks(payload) {
@@ -42,7 +37,7 @@ function renderBooks(payload) {
                 : `${escapeHtml(title)}${subtitle}`
             }</h3>
             <div class="book__meta">${metaLines.join("") || '<div class="muted">No metadata.</div>'}</div>
-            ${bookFilesHtml(b.files)}
+            ${bookFileHtml(b.file)}
           </article>
         `.trim();
     })
@@ -149,4 +144,3 @@ export async function initLibraryBrowse() {
     await load(urlWithParams("/api/v1/library/books/", { q }));
   });
 }
-

@@ -88,7 +88,7 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 Likely top-level sections (navigation may be role-gated):
 
 - Library (browse/search)
-- Book detail (metadata, files, reading info)
+- Book detail (metadata, file, reading info)
 - Imports (upload and import job history)
 - Groups (LibraryGroups: view, curation, presentation)
 - Reading (history, sessions, annotations, devices)
@@ -147,7 +147,7 @@ UI behaviors:
 - Paginated list with "next/previous" and page size controls.
 - Search box + filter panel.
 - Each row/card should show enough metadata to disambiguate (title, authors, series if present, language, published date if present).
-- If `files` are present on the book payload, show a "Download" action that links to the BookFile download endpoint(s).
+- If `file` is present on the book payload, show a "Download" action that links to the BookFile download endpoint.
 - Optional: when the user is browsing in a specific group context, the UI should show that context and use the Groups APIs for the group book list rather than mixing access logic on the client.
 
 ## 5. Book detail screen
@@ -161,7 +161,7 @@ Content:
 - Metadata: title/subtitle/summary/publisher/language/published_date/subjects
 - Authors and series
 - Identifiers (scheme/value/source)
-- Files: list available `BookFile`s with per-file download links:
+- File: show the stored EPUB `BookFile` (if present) with a download link:
   - `GET /api/v1/library/book-files/<book_file_id>/download/`
 
 Reading summary (current API surface):

@@ -86,7 +86,7 @@ class BookFile(TimeStampedModel):
         (FORMAT_EPUB, "EPUB"),
     ]
 
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="files")
+    book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name="file")
     file = models.FileField(upload_to=book_file_upload_path)
     format = models.CharField(
         max_length=32, choices=FORMAT_CHOICES, default=FORMAT_EPUB

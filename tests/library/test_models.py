@@ -68,6 +68,23 @@ class LibraryModelTest(TestCase):
         self.assertEqual(book_file.checksum_short(), "dummy")
         self.assertEqual(book_file.file_size_human(), "123 B")
 
+    def test_book_cannot_have_two_book_files(self):
+        BookFile.objects.create(
+            book=self.book,
+            file="a.epub",
+            checksum="a" * 64,
+            file_size=1,
+            source_filename="a.epub",
+        )
+        with self.assertRaises(IntegrityError):
+            BookFile.objects.create(
+                book=self.book,
+                file="b.epub",
+                checksum="b" * 64,
+                file_size=2,
+                source_filename="b.epub",
+            )
+
     def test_book_file_str_with_missing_checksum(self):
         book_file = BookFile.objects.create(
             book=self.book,

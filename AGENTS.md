@@ -141,7 +141,7 @@ Do not create new apps unless there is a clear domain boundary.
 ### Books and files
 
 * A `Book` represents the conceptual work.
-* A `BookFile` represents a stored EPUB file.
+* A `BookFile` represents the stored EPUB file (one Book has at most one BookFile).
 * EPUB files are stored content-addressed by SHA-256.
 * Imported filenames are only fallback/diagnostic context.
 * Human-readable filenames should be generated from metadata when exporting or downloading.

@@ -112,10 +112,9 @@ class SeriesViewSet(viewsets.ModelViewSet):
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = (
-        Book.objects.select_related("series")
+        Book.objects.select_related("series", "file")
         .prefetch_related(
             Prefetch("authors", queryset=Author.objects.order_by("name")),
-            Prefetch("files", queryset=BookFile.objects.order_by("created_at")),
             Prefetch(
                 "identifiers",
                 queryset=BookIdentifier.objects.order_by("scheme", "value"),
@@ -167,9 +166,9 @@ class BookViewSet(viewsets.ModelViewSet):
 
         has_files = (request.query_params.get("has_files") or "").strip().lower()
         if has_files in {"true", "1", "yes", "y", "on"}:
-            queryset = queryset.filter(files__isnull=False)
+            queryset = queryset.filter(file__isnull=False)
         elif has_files in {"false", "0", "no", "n", "off"}:
-            queryset = queryset.filter(files__isnull=True)
+            queryset = queryset.filter(file__isnull=True)
 
         ordering = (request.query_params.get("ordering") or "").strip()
         if ordering:

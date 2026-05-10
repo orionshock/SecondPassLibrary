@@ -34,25 +34,20 @@ function renderIdentifiers(identifiers) {
   return `<ul>${items}</ul>`;
 }
 
-function renderFiles(files) {
-  if (!Array.isArray(files) || files.length === 0) {
-    return '<div class="muted">No files.</div>';
+function renderFile(file) {
+  if (!file) {
+    return '<div class="muted">No file.</div>';
   }
 
-  const items = files
-    .map((f) => {
-      const format = f.format ? String(f.format).toUpperCase() : "File";
-      const size =
-        f.file_size != null && f.file_size !== "" ? `${escapeHtml(f.file_size)} bytes` : "";
-      const downloadUrl = f.download_url || "";
-      const dl = downloadUrl ? `<a class="pill" href="${escapeHtml(downloadUrl)}">Download</a>` : "";
-      return `<li><span class="pill">${escapeHtml(format)}</span> <span class="muted">${
-        size ? size : ""
-      }</span> ${dl}</li>`;
-    })
-    .join("");
+  const format = file.format ? String(file.format).toUpperCase() : "EPUB";
+  const size =
+    file.file_size != null && file.file_size !== "" ? `${escapeHtml(file.file_size)} bytes` : "";
+  const downloadUrl = file.download_url || "";
+  const dl = downloadUrl ? `<a class="pill" href="${escapeHtml(downloadUrl)}">Download</a>` : "";
 
-  return `<ul>${items}</ul>`;
+  return `<div><span class="pill">${escapeHtml(format)}</span> <span class="muted">${
+    size ? size : ""
+  }</span> ${dl}</div>`;
 }
 
 function renderSubjects(subjects) {
@@ -177,7 +172,7 @@ export async function initBookDetail() {
       `.trim();
 
     idBody.innerHTML = renderIdentifiers(book.identifiers);
-    filesBody.innerHTML = renderFiles(book.files);
+    filesBody.innerHTML = renderFile(book.file);
     groupsBody.innerHTML = renderBookGroups(book.groups);
 
     visible(detailEl, true);

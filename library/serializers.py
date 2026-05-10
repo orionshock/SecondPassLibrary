@@ -104,7 +104,7 @@ class BookSerializer(serializers.ModelSerializer):
     series = serializers.PrimaryKeyRelatedField(
         queryset=Series.objects.all(), required=False, allow_null=True
     )
-    files = BookFileSerializer(many=True, read_only=True)
+    file = serializers.SerializerMethodField(read_only=True)
     identifiers = serializers.SerializerMethodField(read_only=True)
     groups = serializers.SerializerMethodField(read_only=True)
 
@@ -154,10 +154,16 @@ class BookSerializer(serializers.ModelSerializer):
             if instance.series is not None
             else None
         )
-        data["files"] = BookFileSummarySerializer(
-            cast(Any, instance).files.all(), many=True, context=self.context
-        ).data
         return data
+
+    def get_file(self, obj: Book):
+        try:
+            book_file = cast(Any, obj).file
+        except Exception:
+            book_file = None
+        if book_file is None:
+            return None
+        return BookFileSummarySerializer(book_file, context=self.context).data
 
     class Meta:
         model = Book
@@ -176,7 +182,7 @@ class BookSerializer(serializers.ModelSerializer):
             "series_index",
             "identifiers",
             "groups",
-            "files",
+            "file",
             "created_at",
             "updated_at",
         ]
