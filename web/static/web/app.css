@@ -1,3 +1,7 @@
+/* =====================
+   Base
+   ===================== */
+
 :root {
   --bg: #0b0f14;
   --panel: #121922;
@@ -21,11 +25,31 @@ body {
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* =====================
+   Layout
+   ===================== */
+
 .container {
   max-width: 1080px;
   margin: 0 auto;
   padding: 16px;
 }
+
+.page-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.page-title { margin: 8px 0 16px 0; font-size: 22px; }
+
+.pager { margin: 14px 0; display: flex; gap: 10px; }
+.footer { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 12px; color: var(--muted); }
+
+/* =====================
+   Navigation
+   ===================== */
 
 .topbar {
   position: sticky;
@@ -62,7 +86,6 @@ a:hover { text-decoration: underline; }
   border-color: var(--border);
   background: rgba(255, 255, 255, 0.06);
 }
-.is-hidden { display: none !important; }
 
 .userbox {
   display: flex;
@@ -71,24 +94,9 @@ a:hover { text-decoration: underline; }
 }
 .userbox__name { color: var(--muted); }
 
-.linklike {
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: var(--muted);
-  cursor: pointer;
-  font: inherit;
-}
-.linklike:hover { color: var(--text); text-decoration: underline; }
-
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-.page-title { margin: 8px 0 16px 0; font-size: 22px; }
+/* =====================
+   Cards / Panels
+   ===================== */
 
 .card {
   background: var(--panel);
@@ -99,8 +107,19 @@ a:hover { text-decoration: underline; }
 }
 .card__title { margin: 0 0 8px 0; font-size: 14px; color: var(--muted); }
 
-.muted { color: var(--muted); }
-.error { color: var(--danger); }
+/* =====================
+   Forms / Buttons
+   ===================== */
+
+.linklike {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+.linklike:hover { color: var(--text); text-decoration: underline; }
 
 .search {
   display: flex;
@@ -133,16 +152,13 @@ a:hover { text-decoration: underline; }
   cursor: not-allowed;
 }
 
-.books { margin-top: 12px; display: grid; gap: 10px; }
-.book {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.03);
-}
-.book__title { font-weight: 700; margin: 0; }
-.book__meta { margin: 6px 0 0 0; color: var(--muted); display: grid; gap: 2px; }
-.book__files { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 12px; }
+.kv__k { color: var(--muted); }
+.kv__v { color: var(--text); overflow-wrap: anywhere; }
+
+/* =====================
+   Badges
+   ===================== */
 
 .pill {
   display: inline-block;
@@ -155,13 +171,26 @@ a:hover { text-decoration: underline; }
 }
 .pill--owner { color: var(--text); border-color: rgba(125, 211, 252, 0.45); }
 
-.kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 12px; }
-.kv__k { color: var(--muted); }
-.kv__v { color: var(--text); overflow-wrap: anywhere; }
+/* =====================
+   Lists / Tables
+   ===================== */
 
-.pager { margin: 14px 0; display: flex; gap: 10px; }
-.footer { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 12px; color: var(--muted); }
+.books { margin-top: 12px; display: grid; gap: 10px; }
+.book {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.book__title { font-weight: 700; margin: 0; }
+.book__meta { margin: 6px 0 0 0; color: var(--muted); display: grid; gap: 2px; }
+.book__files { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* =====================
+   Page-specific
+   ===================== */
+
+/* Users list */
 .users-filters { margin: 8px 0 10px 0; display: flex; gap: 8px; flex-wrap: wrap; }
 .users-rows { margin-top: 10px; display: grid; gap: 8px; }
 .user-row {
@@ -179,3 +208,11 @@ a:hover { text-decoration: underline; }
 .user-row__actions { display: flex; justify-content: flex-end; align-items: flex-start; }
 .user-row__title { font-weight: 700; margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .user-row__line { overflow-wrap: anywhere; }
+
+/* =====================
+   Utilities
+   ===================== */
+
+.muted { color: var(--muted); }
+.error { color: var(--danger); }
+.is-hidden { display: none !important; }
