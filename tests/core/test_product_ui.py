@@ -78,6 +78,15 @@ class ProductUiSmokeTests(TestCase):
             response["Location"], f"/api-auth/login/?next=/library/books/{book_id}/"
         )
 
+    def test_unauthenticated_book_edit_redirects_to_login(self):
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/edit/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f"/api-auth/login/?next=/library/books/{book_id}/edit/",
+        )
+
     def test_authenticated_book_detail_returns_200_and_has_container(self):
         self.client.force_login(self.user)
         book_id = uuid4()
@@ -88,6 +97,21 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-detail"')
         self.assertContains(response, f'data-book-id="{book_id}"')
         self.assertContains(response, 'id="book-groups"')
+        self.assertContains(response, 'id="book-edit-link-wrap"')
+        self.assertContains(
+            response, f'href="/library/books/{book_id}/edit/"'
+        )
+
+    def test_authenticated_book_edit_returns_200_and_has_form_container(self):
+        self.client.force_login(self.user)
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/js/main.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="book-edit"')
+        self.assertContains(response, f'data-book-id="{book_id}"')
+        self.assertContains(response, 'id="book-edit-form"')
 
     def test_unauthenticated_imports_redirects_to_login(self):
         response = self.client.get("/imports/", follow=False)

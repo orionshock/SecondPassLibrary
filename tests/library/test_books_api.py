@@ -518,3 +518,55 @@ class BookFileSerializerAPITest(APITestCase):
 
 class BookFileDownloadAPITest(BaseBookFileDownloadAPITest):
     pass
+
+
+class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.author = Author.objects.create(name="A Author")
+        self.book = Book.objects.create(title="Original title", language="en")
+        self.book.authors.add(self.author)
+        ensure_book_public_assignment(book=self.book, added_by=None)
+
+        self.reader = User.objects.create_user(username="reader", password="pw")
+        ensure_user_public_membership(user=self.reader)
+
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        ensure_user_public_membership(user=self.librarian)
+        profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+    def test_reader_cannot_patch_book_metadata(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"title": "Nope"},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_librarian_can_patch_basic_book_metadata(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={
+                    "title": "Updated title",
+                    "publisher": "Pub",
+                    "subjects": ["A", "B"],
+                    "series_index": 2,
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertEqual(data["title"], "Updated title")
+        self.assertEqual(data["publisher"], "Pub")
+        self.assertEqual(data["subjects"], ["A", "B"])
+        self.assertEqual(data["series_index"], 2)

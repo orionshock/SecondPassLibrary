@@ -35,6 +35,7 @@ python manage.py runserver
 - App shell/dashboard: `/app/`
 - Library browse: `/library/`
 - Book detail: `/library/books/<book_id>/`
+- Edit book metadata: `/library/books/<book_id>/edit/`
 - Imports: `/imports/`
 - Groups: `/groups/`
 - Users: `/users/` (Manager/Owner)

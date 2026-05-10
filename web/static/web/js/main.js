@@ -2,6 +2,7 @@ import { loadMeAndInitShell, setGlobalErrorFromError } from "./layout.js";
 import { initDashboard } from "./app_page.js";
 import { initLibraryBrowse } from "./library.js";
 import { initBookDetail } from "./book_detail.js";
+import { initBookEdit } from "./book_edit.js";
 import { initImports } from "./imports.js";
 import { initGroupsList, initGroupDetail } from "./groups.js";
 import { initProfile } from "./profile.js";
@@ -24,6 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initBookDetail().catch((e) => {
       console.error("initBookDetail failed", e);
       setGlobalErrorFromError(e, "Book error:");
+    });
+  } else if (page === "book-edit") {
+    initBookEdit().catch((e) => {
+      console.error("initBookEdit failed", e);
+      setGlobalErrorFromError(e, "Book edit error:");
     });
   } else if (page === "imports") {
     initImports().catch((e) => {

@@ -1,0 +1,74 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}book-edit{% endblock %}
+
+{% block title %}Edit Book · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a id="book-edit-back" href="/library/books/{{ book_id|escape }}/" class="pill">← Back to Book</a>
+      <h1 class="page-title">Edit Book</h1>
+    </div>
+  </div>
+
+  <div id="book-edit-status" class="muted">Loading…</div>
+  <div id="book-edit-error" class="error is-hidden"></div>
+  <div id="book-edit-saved" class="pill is-hidden" style="margin-top: 10px;">Saved.</div>
+
+  <section id="book-edit" class="card is-hidden" data-book-id="{{ book_id|escape }}">
+    <h2 class="card__title">Metadata</h2>
+
+    <form id="book-edit-form">
+      {% csrf_token %}
+
+      <div class="kv">
+        <div class="kv__k"><label for="book-edit-title">Title</label></div>
+        <div class="kv__v"><input id="book-edit-title" type="text" autocomplete="off" required style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="book-edit-subtitle">Subtitle</label></div>
+        <div class="kv__v"><input id="book-edit-subtitle" type="text" autocomplete="off" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="book-edit-summary">Summary</label></div>
+        <div class="kv__v"><textarea id="book-edit-summary" rows="6" style="width: 100%;"></textarea></div>
+
+        <div class="kv__k"><label for="book-edit-publisher">Publisher</label></div>
+        <div class="kv__v"><input id="book-edit-publisher" type="text" autocomplete="off" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="book-edit-language">Language</label></div>
+        <div class="kv__v"><input id="book-edit-language" type="text" autocomplete="off" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="book-edit-published-date">Published date</label></div>
+        <div class="kv__v"><input id="book-edit-published-date" type="date" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="book-edit-isbn">ISBN</label></div>
+        <div class="kv__v"><input id="book-edit-isbn" type="text" autocomplete="off" style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="book-edit-subjects">Subjects</label></div>
+        <div class="kv__v">
+          <textarea id="book-edit-subjects" rows="4" placeholder="One per line, or comma-separated." style="width: 100%;"></textarea>
+          <div class="muted" style="margin-top: 6px;">Stored as a list; this input accepts newline or commas.</div>
+        </div>
+
+        <div class="kv__k"><label for="book-edit-series-index">Series index</label></div>
+        <div class="kv__v"><input id="book-edit-series-index" type="number" min="1" step="1" style="width: 100%;" /></div>
+      </div>
+
+      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button id="book-edit-save" class="button" type="submit">Save</button>
+        <span id="book-edit-save-status" class="muted"></span>
+      </div>
+    </form>
+
+    <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
+      <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Author and series</h3>
+      <div id="book-edit-authors-series" class="muted">Loading…</div>
+      <div class="muted" style="margin-top: 6px;">Author and series editing will be added later.</div>
+    </div>
+
+    <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
+      <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Identifiers and files</h3>
+      <div class="muted">Identifiers and files are managed separately.</div>
+    </div>
+  </section>
+{% endblock %}

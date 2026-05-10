@@ -71,13 +71,15 @@ function renderSubjects(subjects) {
 }
 
 export async function initBookDetail() {
-  await loadMeAndInitShell();
+  const me = await loadMeAndInitShell();
 
   setGlobalError("");
 
   const statusEl = $("#book-status");
   const detailEl = $("#book-detail");
   const metaEl = $("#book-meta");
+  const editWrapEl = $("#book-edit-link-wrap");
+  const editLinkEl = $("#book-edit-link");
   const idSection = $("#book-identifiers");
   const idBody = $("#book-identifiers-body");
   const filesSection = $("#book-files");
@@ -89,6 +91,8 @@ export async function initBookDetail() {
     !statusEl ||
     !detailEl ||
     !metaEl ||
+    !editWrapEl ||
+    !editLinkEl ||
     !idSection ||
     !idBody ||
     !filesSection ||
@@ -103,6 +107,15 @@ export async function initBookDetail() {
     statusEl.textContent = "Missing book id.";
     statusEl.classList.add("error");
     return;
+  }
+
+  const canManage = !!(me && me.capabilities && me.capabilities.can_manage_library);
+  visible(editWrapEl, canManage);
+  if (canManage) {
+    editLinkEl.setAttribute(
+      "href",
+      `/library/books/${encodeURIComponent(String(bookId))}/edit/`
+    );
   }
 
   function setStatus(text, isError) {
@@ -182,4 +195,3 @@ export async function initBookDetail() {
     }
   }
 }
-

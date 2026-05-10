@@ -10,6 +10,9 @@
       <a href="/library/" class="pill">← Back to Library</a>
       <h1 class="page-title" id="book-title">Book</h1>
     </div>
+    <div id="book-edit-link-wrap" class="is-hidden">
+      <a id="book-edit-link" class="button" href="/library/books/{{ book_id|escape }}/edit/">Edit metadata</a>
+    </div>
   </div>
 
   <div id="book-status" class="muted">Loading…</div>
@@ -34,3 +37,4 @@
     <div id="book-groups-body" class="muted"></div>
   </section>
 {% endblock %}
+

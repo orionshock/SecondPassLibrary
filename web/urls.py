@@ -11,6 +11,7 @@ urlpatterns = [
     path("profile/password/", views.profile_password, name="profile_password"),
     path("library/", views.library_browse, name="library"),
     path("library/books/<str:book_id>/", views.book_detail, name="book_detail"),
+    path("library/books/<str:book_id>/edit/", views.book_edit, name="book_edit"),
     path("imports/", views.imports, name="imports"),
     path("groups/", views.groups, name="groups"),
     path("groups/<str:group_id>/", views.group_detail, name="group_detail"),

@@ -13,6 +13,7 @@ The first minimal product UI shell now exists:
 - `/profile/password/` is the authenticated self password change page
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
+- `/library/books/<book_id>/edit/` is an API-driven book metadata edit page (Manager/Librarian/Owner only)
 - `/imports/` is an API-driven imports page (upload + job list/results)
 - `/groups/` and `/groups/<group_id>/` provide functional group list/detail screens
 - Group detail includes membership management for Manager/Owner (add/update/remove; add-by-dropdown; functional-first)
@@ -33,6 +34,8 @@ The library browse screen is API-driven using vanilla JS fetch calls to `GET /ap
 The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and renders metadata, identifiers, and file download links (from `download_url`).
 
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers/Curators to only viewable groups) with links to the group pages.
+
+The book metadata edit page is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields only. Author/series editing and identifier/file management are intentionally deferred.
 
 The imports page is API-driven using:
 

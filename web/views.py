@@ -25,6 +25,11 @@ def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
 
 
 @login_required
+def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
+    return render(request, "web/book_edit.html", {"book_id": book_id})
+
+
+@login_required
 def imports(request: HttpRequest) -> HttpResponse:
     return render(request, "web/imports.html")
 
