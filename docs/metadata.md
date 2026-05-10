@@ -8,6 +8,7 @@
 Notes:
 - `Book.subtitle` may be blank.
 - `Book.series_index` supports integers or one decimal place (e.g. `5` or `5.1`).
+- `BookIdentifier` is editable bibliographic metadata (scheme/value/source/is_primary) and does not automatically rewrite `Book.isbn`.
 
 ## Identifiers
 

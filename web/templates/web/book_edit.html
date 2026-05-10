@@ -94,7 +94,33 @@
 
     <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;">
       <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--muted);">Identifiers and files</h3>
-      <div class="muted">Identifiers and files are managed separately.</div>
+      <div id="book-edit-identifiers-status" class="muted">Loading…</div>
+      <div id="book-edit-identifiers" class="muted"></div>
+
+      <form id="book-edit-identifiers-add" style="margin-top: 12px;">
+        {% csrf_token %}
+        <div class="kv">
+          <div class="kv__k"><label for="book-edit-ident-add-scheme">Scheme</label></div>
+          <div class="kv__v"><select id="book-edit-ident-add-scheme"></select></div>
+
+          <div class="kv__k"><label for="book-edit-ident-add-value">Value</label></div>
+          <div class="kv__v"><input id="book-edit-ident-add-value" type="text" autocomplete="off" style="width: 100%;" /></div>
+
+          <div class="kv__k"><label for="book-edit-ident-add-source">Source</label></div>
+          <div class="kv__v"><input id="book-edit-ident-add-source" type="text" autocomplete="off" value="manual" style="width: 100%;" /></div>
+
+          <div class="kv__k"><label for="book-edit-ident-add-primary">Primary</label></div>
+          <div class="kv__v"><input id="book-edit-ident-add-primary" type="checkbox" /></div>
+        </div>
+
+        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button id="book-edit-ident-add-btn" class="button" type="submit">Add identifier</button>
+          <span id="book-edit-identifiers-add-status" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="muted" style="margin-top: 10px;">Book.isbn is a convenience field and is not automatically updated by identifier edits.</div>
+      <div class="muted">Files are managed separately.</div>
     </div>
   </section>
 {% endblock %}

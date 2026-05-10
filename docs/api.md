@@ -214,6 +214,11 @@ Rules:
 - Books: `GET /api/v1/library/books/` (paginated), `GET /api/v1/library/books/<id>/`
 - Book files: `GET /api/v1/library/book-files/` (paginated), `GET /api/v1/library/book-files/<id>/`
 - Download: `GET /api/v1/library/book-files/<id>/download/`
+- Book identifiers (book-scoped):
+  - `GET /api/v1/library/books/<book_id>/identifiers/`
+  - `POST /api/v1/library/books/<book_id>/identifiers/`
+  - `PATCH /api/v1/library/books/<book_id>/identifiers/<identifier_id>/`
+  - `DELETE /api/v1/library/books/<book_id>/identifiers/<identifier_id>/`
 
 Book payload notes:
 
@@ -224,6 +229,8 @@ Book payload notes:
 - Book write shape: `authors` is a list of Author ids; `series` is a Series id or `null`.
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.
+- `identifiers[]` items include `id` and remain read-only on the Book payload; mutate via the book-scoped identifier endpoints.
+- Identifier editing does not automatically update `Book.isbn` (edit `isbn` directly if desired).
 
 ## Imports
 

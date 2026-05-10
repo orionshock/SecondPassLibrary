@@ -119,6 +119,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-edit-series-new-name"')
         self.assertContains(response, 'id="book-edit-series-index"')
         self.assertContains(response, 'step="0.1"')
+        self.assertContains(response, 'id="book-edit-identifiers"')
+        self.assertContains(response, 'id="book-edit-identifiers-add"')
 
     def test_unauthenticated_imports_redirects_to_login(self):
         response = self.client.get("/imports/", follow=False)

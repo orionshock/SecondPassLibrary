@@ -77,8 +77,29 @@ class BookFileSerializer(serializers.ModelSerializer):
 class BookIdentifierSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookIdentifier
-        fields = ["scheme", "value", "source", "is_primary"]
+        fields = ["id", "scheme", "value", "source", "is_primary", "created_at", "updated_at"]
         read_only_fields = fields
+
+
+class BookIdentifierWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookIdentifier
+        fields = ["scheme", "value", "source", "is_primary"]
+
+    def validate_scheme(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("This field is required.")
+        return v
+
+    def validate_value(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("This field is required.")
+        return v
+
+    def validate_source(self, value):
+        return (value or "").strip()
 
 
 class BookFileSummarySerializer(serializers.ModelSerializer):

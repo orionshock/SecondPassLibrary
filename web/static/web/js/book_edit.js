@@ -126,6 +126,15 @@ export async function initBookEdit() {
   const subjectsEl = $("#book-edit-subjects");
   const seriesIndexEl = $("#book-edit-series-index");
 
+  const identifiersStatusEl = $("#book-edit-identifiers-status");
+  const identifiersEl = $("#book-edit-identifiers");
+  const identAddFormEl = $("#book-edit-identifiers-add");
+  const identAddSchemeEl = $("#book-edit-ident-add-scheme");
+  const identAddValueEl = $("#book-edit-ident-add-value");
+  const identAddSourceEl = $("#book-edit-ident-add-source");
+  const identAddPrimaryEl = $("#book-edit-ident-add-primary");
+  const identAddStatusEl = $("#book-edit-identifiers-add-status");
+
   if (
     !rootEl ||
     !statusEl ||
@@ -153,6 +162,14 @@ export async function initBookEdit() {
     !isbnEl ||
     !subjectsEl ||
     !seriesIndexEl
+    || !identifiersStatusEl
+    || !identifiersEl
+    || !identAddFormEl
+    || !identAddSchemeEl
+    || !identAddValueEl
+    || !identAddSourceEl
+    || !identAddPrimaryEl
+    || !identAddStatusEl
   )
     return;
 
@@ -201,6 +218,7 @@ export async function initBookEdit() {
   let selectedAuthors = [];
   let allAuthors = [];
   let allSeries = [];
+  let identifiers = [];
 
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
@@ -222,6 +240,7 @@ export async function initBookEdit() {
     selectedAuthors = uniqueById(Array.isArray(book.authors) ? book.authors : []);
     originalAuthorIds = selectedAuthors.map((a) => String(a.id)).filter(Boolean);
     originalSeriesId = book.series && book.series.id ? String(book.series.id) : null;
+    identifiers = Array.isArray(book.identifiers) ? book.identifiers : [];
   } catch (e) {
     console.error("Failed to load book for edit", { bookId, e });
     if (e && e.status === 404) {
@@ -307,6 +326,236 @@ export async function initBookEdit() {
   }
 
   await loadAuthorsAndSeries();
+
+  const IDENT_SCHEMES = [
+    ["isbn_10", "ISBN-10"],
+    ["isbn_13", "ISBN-13"],
+    ["asin", "ASIN"],
+    ["doi", "DOI"],
+    ["oclc", "OCLC"],
+    ["lccn", "LCCN"],
+    ["openlibrary", "Open Library"],
+    ["calibre", "Calibre"],
+    ["epub_uid", "EPUB UID"],
+    ["publisher", "Publisher"],
+    ["uri", "URI/URN"],
+    ["uuid", "UUID"],
+    ["other", "Other"],
+  ];
+
+  function schemeOptionsHtml(selected) {
+    return IDENT_SCHEMES.map(([v, label]) => {
+      const sel = selected && String(selected) === v ? " selected" : "";
+      return `<option value="${escapeHtml(v)}"${sel}>${escapeHtml(label)}</option>`;
+    }).join("");
+  }
+
+  identAddSchemeEl.innerHTML = schemeOptionsHtml("isbn_13");
+
+  function setIdentifiersStatus(text, isError) {
+    setInlineStatus(identifiersStatusEl, text, isError);
+  }
+
+  function setIdentifierAddStatus(text, isError) {
+    setInlineStatus(identAddStatusEl, text, isError);
+  }
+
+  function renderIdentifiers() {
+    if (!identifiers.length) {
+      identifiersEl.innerHTML = '<div class="muted">No identifiers.</div>';
+      return;
+    }
+
+    const rows = identifiers
+      .slice()
+      .sort((a, b) => `${a.scheme || ""}:${a.value || ""}`.localeCompare(`${b.scheme || ""}:${b.value || ""}`))
+      .map((it) => {
+        const id = it.id ? String(it.id) : "";
+        const scheme = it.scheme || "other";
+        const value = it.value || "";
+        const source = it.source || "";
+        const primary = !!it.is_primary;
+        return `
+          <div class="card" data-ident-id="${escapeHtml(id)}" style="margin: 10px 0;">
+            <div class="kv">
+              <div class="kv__k"><label>Scheme</label></div>
+              <div class="kv__v"><select data-ident-field="scheme">${schemeOptionsHtml(scheme)}</select></div>
+
+              <div class="kv__k"><label>Value</label></div>
+              <div class="kv__v"><input data-ident-field="value" type="text" value="${escapeHtml(value)}" style="width: 100%;" /></div>
+
+              <div class="kv__k"><label>Source</label></div>
+              <div class="kv__v"><input data-ident-field="source" type="text" value="${escapeHtml(source)}" style="width: 100%;" /></div>
+
+              <div class="kv__k"><label>Primary</label></div>
+              <div class="kv__v"><input data-ident-field="is_primary" type="checkbox" ${primary ? "checked" : ""} /></div>
+            </div>
+
+            <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <button class="button" type="button" data-ident-action="save">Save</button>
+              <button class="button" type="button" data-ident-action="delete">Delete</button>
+              <span class="muted" data-ident-status=""></span>
+            </div>
+          </div>
+        `.trim();
+      })
+      .join("");
+
+    identifiersEl.innerHTML = rows;
+  }
+
+  async function refreshIdentifiers() {
+    setIdentifiersStatus("Loading…", false);
+    try {
+      const list = await fetchJSON(
+        `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`
+      );
+      identifiers = Array.isArray(list) ? list : [];
+      setIdentifiersStatus("", false);
+      renderIdentifiers();
+    } catch (e) {
+      console.error("Failed to load identifiers", e);
+      setIdentifiersStatus("Failed to load.", true);
+      setError(`Failed to load identifiers: ${extractApiErrorMessage(e)}`);
+    }
+  }
+
+  renderIdentifiers();
+  refreshIdentifiers().catch(() => {});
+
+  identifiersEl.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    if (!t || !t.getAttribute) return;
+    const action = t.getAttribute("data-ident-action");
+    if (!action) return;
+
+    const card = t.closest ? t.closest("[data-ident-id]") : null;
+    if (!card) return;
+    const identId = card.getAttribute("data-ident-id");
+    if (!identId) return;
+
+    const statusSpan = card.querySelector ? card.querySelector("[data-ident-status]") : null;
+    const setRowStatus = (text, isError) => setInlineStatus(statusSpan, text, isError);
+
+    const csrf = getCsrfToken();
+    if (!csrf) {
+      setError("Missing CSRF token cookie. Reload the page and try again.");
+      return;
+    }
+
+    if (action === "delete") {
+      setRowStatus("Deleting…", false);
+      try {
+        await fetchJSONWithOptions(
+          `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/${encodeURIComponent(
+            String(identId)
+          )}/`,
+          { method: "DELETE", headers: { Accept: "application/json", "X-CSRFToken": csrf } }
+        );
+        setRowStatus("Deleted.", false);
+        await refreshIdentifiers();
+      } catch (e) {
+        console.error("Delete identifier failed", e);
+        setRowStatus("Delete failed.", true);
+        setError(`Failed to delete identifier: ${extractApiErrorMessage(e)}`);
+      }
+      return;
+    }
+
+    if (action === "save") {
+      const schemeEl = card.querySelector('[data-ident-field="scheme"]');
+      const valueEl = card.querySelector('[data-ident-field="value"]');
+      const sourceEl = card.querySelector('[data-ident-field="source"]');
+      const primaryEl = card.querySelector('[data-ident-field="is_primary"]');
+
+      const payload = {
+        scheme: schemeEl && schemeEl.value != null ? String(schemeEl.value) : "",
+        value: valueEl && valueEl.value != null ? String(valueEl.value) : "",
+        source: sourceEl && sourceEl.value != null ? String(sourceEl.value) : "",
+        is_primary: !!(primaryEl && primaryEl.checked),
+      };
+
+      setRowStatus("Saving…", false);
+      try {
+        await fetchJSONWithOptions(
+          `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/${encodeURIComponent(
+            String(identId)
+          )}/`,
+          {
+            method: "PATCH",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrf,
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+        setRowStatus("Saved.", false);
+        await refreshIdentifiers();
+      } catch (e) {
+        console.error("Save identifier failed", e);
+        setRowStatus("Save failed.", true);
+        const msg = extractApiErrorMessage(e);
+        const body = e && e.body ? e.body : null;
+        const fields = summarizeFieldErrors(body);
+        setError(fields ? `${msg} (${fields})` : msg);
+      }
+    }
+  });
+
+  identAddFormEl.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    setError("");
+    setIdentifierAddStatus("", false);
+
+    const scheme = (identAddSchemeEl.value || "").trim();
+    const value = (identAddValueEl.value || "").trim();
+    const source = (identAddSourceEl.value || "").trim();
+    const isPrimary = !!identAddPrimaryEl.checked;
+
+    if (!scheme) {
+      setError("Scheme is required.");
+      return;
+    }
+    if (!value) {
+      setError("Value is required.");
+      return;
+    }
+
+    const csrf = getCsrfToken();
+    if (!csrf) {
+      setError("Missing CSRF token cookie. Reload the page and try again.");
+      return;
+    }
+
+    setIdentifierAddStatus("Adding…", false);
+    try {
+      await fetchJSONWithOptions(
+        `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrf,
+          },
+          body: JSON.stringify({ scheme, value, source, is_primary: isPrimary }),
+        }
+      );
+      identAddValueEl.value = "";
+      identAddPrimaryEl.checked = false;
+      setIdentifierAddStatus("Added.", false);
+      await refreshIdentifiers();
+    } catch (e) {
+      console.error("Add identifier failed", e);
+      setIdentifierAddStatus("Add failed.", true);
+      const msg = extractApiErrorMessage(e);
+      const body = e && e.body ? e.body : null;
+      const fields = summarizeFieldErrors(body);
+      setError(fields ? `${msg} (${fields})` : msg);
+    }
+  });
 
   authorsSelectedEl.addEventListener("click", (ev) => {
     const t = ev.target;

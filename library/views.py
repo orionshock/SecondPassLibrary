@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404
 from django.db.models import Prefetch
 from django.db.models import Q
+from django.db import IntegrityError
+from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
 
 from rest_framework import mixins, viewsets
@@ -27,6 +29,8 @@ from .serializers import (
     AuthorSerializer,
     BookFileSerializer,
     BookSerializer,
+    BookIdentifierSerializer,
+    BookIdentifierWriteSerializer,
     SeriesSerializer,
     ImportJobSerializer,
     LibraryGroupSerializer,
@@ -192,6 +196,81 @@ class BookViewSet(viewsets.ModelViewSet):
         if not policies.can_manage_library(self.request.user):
             raise PermissionDenied("Not allowed.")
         instance.delete()
+
+    @action(detail=True, methods=["get", "post"], url_path="identifiers")
+    def identifiers(self, request, *args, **kwargs):
+        book: Book = self.get_object()
+        if request.method == "GET":
+            qs = BookIdentifier.objects.filter(book=book).order_by("scheme", "value")
+            serializer = BookIdentifierSerializer(qs, many=True)
+            return Response(serializer.data)
+
+        if not policies.can_manage_library(request.user):
+            raise PermissionDenied("Not allowed.")
+
+        create = BookIdentifierWriteSerializer(data=request.data or {})
+        create.is_valid(raise_exception=True)
+        data = create.validated_data
+
+        try:
+            with transaction.atomic():
+                ident = BookIdentifier.objects.create(book=book, **data)
+        except IntegrityError:
+            return api_error_response(
+                code=ErrorCode.INVALID_REQUEST,
+                message="Duplicate identifier.",
+                detail="An identifier with the same scheme and value already exists for this book.",
+                hint="Use a different scheme/value or edit the existing identifier.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = BookIdentifierSerializer(ident)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=["patch", "delete"],
+        url_path=r"identifiers/(?P<identifier_id>[^/.]+)",
+    )
+    def identifier_detail(self, request, identifier_id: str | None = None, *args, **kwargs):
+        book: Book = self.get_object()
+        if identifier_id is None:
+            raise Http404()
+
+        try:
+            ident = BookIdentifier.objects.get(pk=identifier_id, book=book)
+        except BookIdentifier.DoesNotExist as exc:
+            raise Http404() from exc
+
+        if request.method == "DELETE":
+            if not policies.can_manage_library(request.user):
+                raise PermissionDenied("Not allowed.")
+            ident.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if not policies.can_manage_library(request.user):
+            raise PermissionDenied("Not allowed.")
+
+        patch = BookIdentifierWriteSerializer(instance=ident, data=request.data or {}, partial=True)
+        patch.is_valid(raise_exception=True)
+        data = patch.validated_data
+
+        for k, v in data.items():
+            setattr(ident, k, v)
+        try:
+            with transaction.atomic():
+                ident.save()
+        except IntegrityError:
+            return api_error_response(
+                code=ErrorCode.INVALID_REQUEST,
+                message="Duplicate identifier.",
+                detail="An identifier with the same scheme and value already exists for this book.",
+                hint="Use a different scheme/value or edit the existing identifier.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = BookIdentifierSerializer(ident)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class BookFileViewSet(viewsets.ModelViewSet):
