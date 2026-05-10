@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.utils.text import slugify
 
 from core.models import TimeStampedModel
@@ -55,10 +56,13 @@ class Book(TimeStampedModel):
         blank=True,
         related_name="books",
     )
-    series_index = models.PositiveIntegerField(
+    series_index = models.DecimalField(
         blank=True,
         null=True,
-        help_text="Optional position within a series (e.g., 1 for book one).",
+        max_digits=6,
+        decimal_places=1,
+        validators=[MinValueValidator(0)],
+        help_text="Optional position within a series (e.g., 1, 5.1). One decimal place max.",
     )
 
     class Meta:

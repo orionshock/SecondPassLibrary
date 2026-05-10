@@ -222,6 +222,8 @@ Book payload notes:
 - For Readers/Curators, `groups[]` includes only groups the caller can view (Public or direct membership).
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Book write shape: `authors` is a list of Author ids; `series` is a Series id or `null`.
+- `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
+- `subtitle` may be patched to an empty string.
 
 ## Imports
 

@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.reverse import reverse
 from typing import Any, cast
+from decimal import Decimal
 
 from core import policies
 from core.errors import ErrorCode, api_error_payload
@@ -204,6 +205,27 @@ class BookSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+    def validate_series_index(self, value):
+        if value is None:
+            return None
+
+        # Accept integers or a single decimal place (e.g. 5 or 5.1).
+        if not isinstance(value, Decimal):
+            try:
+                value = Decimal(str(value))
+            except Exception as exc:
+                raise serializers.ValidationError("Must be a number.") from exc
+
+        if value < 0:
+            raise serializers.ValidationError("Must be >= 0.")
+
+        # Enforce at most one decimal place; reject 5.12, 5.123, etc.
+        exp = value.as_tuple().exponent
+        if exp < -1:
+            raise serializers.ValidationError("Must have at most one decimal place.")
+
+        return value
 
 
 class ImportJobItemSerializer(serializers.ModelSerializer):

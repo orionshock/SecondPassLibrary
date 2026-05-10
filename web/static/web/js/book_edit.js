@@ -20,6 +20,22 @@ function normalizeDateISO(value) {
   return { error: "Published date must be YYYY-MM-DD." };
 }
 
+function normalizeSeriesIndex(value) {
+  const s = normalizeOptionalString(value);
+  if (!s) return null;
+
+  // Allow integers (5) or one-decimal values (5.1). Reject 5.12, -1, non-numeric.
+  if (!/^\d+(\.\d)?$/.test(s)) {
+    return { error: "Series index must be an integer or one decimal place (e.g. 5 or 5.1)." };
+  }
+  const n = Number.parseFloat(s);
+  if (!Number.isFinite(n)) return { error: "Series index must be a number." };
+  if (n < 0) return { error: "Series index must be >= 0." };
+
+  // Normalize to 1 decimal so comparisons match API output (DecimalField emits strings).
+  return (Math.round(n * 10) / 10).toFixed(1);
+}
+
 function normalizeSubjects(text) {
   const s = text == null ? "" : String(text);
   const raw = s
@@ -406,7 +422,8 @@ export async function initBookEdit() {
 
     const payload = {
       title,
-      subtitle: normalizeOptionalString(subtitleEl.value),
+      // Book.subtitle is a CharField(blank=True); allow explicit empty string.
+      subtitle: (subtitleEl.value || "").trim(),
       summary: normalizeOptionalString(summaryEl.value),
       publisher: normalizeOptionalString(publisherEl.value),
       language: normalizeOptionalString(languageEl.value),
@@ -415,10 +432,12 @@ export async function initBookEdit() {
       subjects: normalizeSubjects(subjectsEl.value),
       authors: selectedAuthors.map((a) => String(a.id)).filter(Boolean),
       series: seriesSelectEl.value ? String(seriesSelectEl.value) : null,
-      series_index: normalizeOptionalString(seriesIndexEl.value) ? Number(seriesIndexEl.value) : null,
+      series_index: normalizeSeriesIndex(seriesIndexEl.value),
     };
-
-    if (payload.series_index != null && !Number.isFinite(payload.series_index)) payload.series_index = null;
+    if (payload.series_index && typeof payload.series_index === "object" && payload.series_index.error) {
+      setError(payload.series_index.error);
+      return;
+    }
 
     const patch = {};
     for (const [k, v] of Object.entries(payload)) {
@@ -490,4 +509,3 @@ export async function initBookEdit() {
     });
   });
 }
-

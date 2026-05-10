@@ -573,7 +573,77 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(data["publisher"], "Pub")
         self.assertEqual(data["published_date"], "2018-01-23")
         self.assertEqual(data["subjects"], ["A", "B"])
-        self.assertEqual(data["series_index"], 2)
+        self.assertEqual(data["series_index"], "2.0")
+
+    def test_librarian_can_patch_blank_subtitle(self):
+        self.client.login(username="librarian", password="pw")
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"subtitle": ""},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = cast(Mapping[str, Any], response.data)
+        self.assertEqual(payload["subtitle"], "")
+
+    def test_series_index_accepts_integer_or_one_decimal_and_rejects_invalid(self):
+        self.client.login(username="librarian", password="pw")
+
+        r1 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"series_index": 5},
+                format="json",
+            ),
+        )
+        self.assertEqual(r1.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], r1.data)["series_index"], "5.0")
+
+        r2 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"series_index": "5.1"},
+                format="json",
+            ),
+        )
+        self.assertEqual(r2.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], r2.data)["series_index"], "5.1")
+
+        r3 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"series_index": None},
+                format="json",
+            ),
+        )
+        self.assertEqual(r3.status_code, status.HTTP_200_OK)
+        self.assertIsNone(cast(Mapping[str, Any], r3.data)["series_index"])
+
+        r4 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"series_index": "5.12"},
+                format="json",
+            ),
+        )
+        self.assertEqual(r4.status_code, status.HTTP_400_BAD_REQUEST)
+
+        r5 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/books/{self.book.id}/",
+                data={"series_index": -1},
+                format="json",
+            ),
+        )
+        self.assertEqual(r5.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class AuthorSeriesCreatePermissionsAPITest(IsolatedMediaRootMixin, APITestCase):

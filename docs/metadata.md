@@ -5,6 +5,10 @@
 - `Book`: canonical, user-facing bibliographic fields (title/authors/series/publisher/language/published date/ISBN/subjects)
 - `BookFile`: stored content blob (EPUB), stored content-addressed by checksum (one Book has at most one BookFile)
 
+Notes:
+- `Book.subtitle` may be blank.
+- `Book.series_index` supports integers or one decimal place (e.g. `5` or `5.1`).
+
 ## Identifiers
 
 - `Book.isbn` is a convenience/display field (prefer ISBN-13 when available), not the only identifier.
