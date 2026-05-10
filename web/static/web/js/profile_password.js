@@ -75,11 +75,15 @@ export async function initProfilePassword() {
       newInput.value = "";
       confirmInput.value = "";
 
-      setStatus("Saved.", false);
+      setStatus("Saved. Redirectingâ€¦", false);
       if (noteEl) {
         noteEl.textContent = "";
         noteEl.classList.remove("error");
       }
+
+      window.setTimeout(() => {
+        window.location.assign("/profile/");
+      }, 750);
     } catch (e2) {
       console.error("Failed to change password", e2);
       const msg = extractApiErrorMessage(e2);
