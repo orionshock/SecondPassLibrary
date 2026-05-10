@@ -209,6 +209,74 @@ a:hover { text-decoration: underline; }
 .user-row__title { font-weight: 700; margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .user-row__line { overflow-wrap: anywhere; }
 
+/* Book edit header / tabs */
+.edit-header {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  align-items: start;
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.edit-header__cover {
+  width: 92px;
+  height: 128px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.edit-header__title { margin: 8px 0 6px 0; font-size: 20px; }
+.edit-header__badges { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.tab-button {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+}
+.tab-button.is-active {
+  background: rgba(255, 255, 255, 0.07);
+}
+.tab-panel { padding-top: 4px; }
+
+/* Compact identifier table */
+.ident-tablewrap { overflow-x: auto; }
+.ident-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ident-table th,
+.ident-table td {
+  border-top: 1px solid var(--border);
+  padding: 8px 6px;
+  vertical-align: top;
+}
+.ident-table thead th {
+  border-top: none;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+.ident-actions { white-space: nowrap; }
+
 /* =====================
    Utilities
    ===================== */
