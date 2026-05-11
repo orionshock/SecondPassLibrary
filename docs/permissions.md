@@ -206,6 +206,10 @@ This prevents scattered direct `BookGroupAssignment` writes and centralizes inva
 
 ## Group membership management (current)
 
+- **Viewing group members (read-only):**
+  - Owner/Manager/Librarian can list group members.
+  - Direct members of a group can list that group's members (including Public).
+  - Non-members cannot list memberships for non-Public groups they cannot view (anti-leakage behavior).
 - **Owner/Manager** can manage LibraryGroup memberships via the API (add/remove users and set membership role `reader` / `curator`).
 - **Librarian/Curator/Reader** cannot manage memberships via the API.
 - **Public protections**:

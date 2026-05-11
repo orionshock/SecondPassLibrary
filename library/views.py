@@ -492,10 +492,24 @@ class LibraryGroupViewSet(
     @action(detail=True, methods=["get", "post"], url_path="memberships")
     def memberships(self, request, *args, **kwargs):
         group: LibraryGroup = self.get_object()
-        if not policies.can_manage_group_membership(user=request.user, group=group):
-            raise PermissionDenied("Not allowed.")
 
         if request.method == "GET":
+            # Read permission: allow group members (and Public viewers) to see the
+            # membership list, while keeping membership mutation Manager/Owner-only.
+            #
+            # Do not expose membership lists for groups the user cannot view.
+            if not policies.can_view_library_group(user=request.user, group=group):
+                raise Http404()
+
+            if policies.can_manage_library(request.user):
+                pass
+            elif is_public_group(group):
+                pass
+            elif LibraryGroupMembership.objects.filter(user=request.user, group=group).exists():
+                pass
+            else:
+                raise Http404()
+
             qs = (
                 LibraryGroupMembership.objects.select_related("user")
                 .filter(group=group)
@@ -522,6 +536,9 @@ class LibraryGroupViewSet(
             if page is not None:
                 return self.get_paginated_response(serializer.data)
             return Response(serializer.data)
+
+        if not policies.can_manage_group_membership(user=request.user, group=group):
+            raise PermissionDenied("Not allowed.")
 
         create = LibraryGroupMembershipCreateSerializer(data=request.data or {})
         create.is_valid(raise_exception=True)

@@ -1,0 +1,99 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}group-edit{% endblock %}
+
+{% block title %}Edit Group · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/groups/{{ group_id|escape }}/" class="pill">← Back to Group</a>
+      <h1 class="page-title" id="group-edit-title">Group</h1>
+      <div class="muted" id="group-edit-subtitle"></div>
+    </div>
+  </div>
+
+  <div id="group-edit-status" class="muted">Loading…</div>
+  <div id="group-edit-not-allowed" class="error is-hidden">Not allowed.</div>
+
+  <section id="group-edit-root" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+    <div class="tabs" role="tablist" aria-label="Group edit tabs">
+      <button class="tab-button is-active" type="button" data-tab="details">Details</button>
+      <button class="tab-button" type="button" data-tab="books">Books</button>
+      <button class="tab-button" type="button" data-tab="members">Members</button>
+      <button class="tab-button" type="button" data-tab="shelves">Shelves</button>
+    </div>
+
+    <div id="tab-details" class="tab-panel" data-tab-panel="details">
+      <h2 class="card__title">Details</h2>
+
+      <div id="group-edit-meta"></div>
+
+      <form id="group-edit-form" style="margin-top: 10px;">
+        {% csrf_token %}
+        <div class="kv">
+          <div class="kv__k"><label for="group-edit-description">Description</label></div>
+          <div class="kv__v">
+            <textarea id="group-edit-description" rows="4" style="width: 100%;"></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button id="group-edit-save" class="button" type="submit">Save</button>
+          <span id="group-edit-save-status" class="muted"></span>
+        </div>
+      </form>
+    </div>
+
+    <div id="tab-books" class="tab-panel is-hidden" data-tab-panel="books">
+      <h2 class="card__title">Books</h2>
+
+      <form id="group-edit-add-book" class="search is-hidden" autocomplete="off">
+        <label class="search__label" for="group-edit-book-id">Add book by UUID</label>
+        <input id="group-edit-book-id" class="search__input" placeholder="Book UUID" />
+        <button class="button" type="submit">Add</button>
+        <span id="group-edit-add-book-status" class="muted"></span>
+      </form>
+
+      <div id="group-edit-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-edit-books-results" class="books"></div>
+
+      <div class="pager">
+        <button id="group-edit-books-prev" class="button" type="button" disabled>Previous</button>
+        <button id="group-edit-books-next" class="button" type="button" disabled>Next</button>
+      </div>
+    </div>
+
+    <div id="tab-members" class="tab-panel is-hidden" data-tab-panel="members">
+      <h2 class="card__title">Members</h2>
+      <div id="group-edit-members-note" class="muted"></div>
+
+      <form id="group-edit-add-member" class="search is-hidden" autocomplete="off" style="margin-top: 10px;">
+        <label class="search__label" for="group-edit-member-user">Add member</label>
+        <select id="group-edit-member-user"></select>
+        <select id="group-edit-member-role">
+          <option value="reader">reader</option>
+          <option value="curator">curator</option>
+        </select>
+        <button class="button" type="submit">Add</button>
+        <span id="group-edit-add-member-status" class="muted"></span>
+      </form>
+
+      <div id="group-edit-members-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-edit-members-results" class="books"></div>
+
+      <div class="pager">
+        <button id="group-edit-members-prev" class="button" type="button" disabled>Previous</button>
+        <button id="group-edit-members-next" class="button" type="button" disabled>Next</button>
+      </div>
+    </div>
+
+    <div id="tab-shelves" class="tab-panel is-hidden" data-tab-panel="shelves">
+      <h2 class="card__title">Shelves</h2>
+      <div id="group-edit-shelves-placeholder" class="muted">
+        Shelves are not implemented yet. Shelves organize books for presentation and do not grant access.
+      </div>
+    </div>
+  </section>
+{% endblock %}
+

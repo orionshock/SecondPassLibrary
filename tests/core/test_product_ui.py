@@ -178,10 +178,31 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
-        self.assertContains(response, 'id="group-summary"')
+        self.assertContains(response, 'id="group-view-root"')
         self.assertContains(response, f'data-group-id="{group_id}"')
-        self.assertContains(response, 'id="group-members"')
-        self.assertContains(response, 'id="group-members-results"')
+        self.assertContains(response, 'id="group-view-books-results"')
+        self.assertContains(response, 'id="group-view-members-results"')
+
+    def test_unauthenticated_group_edit_redirects_to_login(self):
+        group_id = uuid4()
+        response = self.client.get(f"/groups/{group_id}/edit/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], f"/api-auth/login/?next=/groups/{group_id}/edit/"
+        )
+
+    def test_authenticated_group_edit_returns_200_and_has_container(self):
+        self.client.force_login(self.user)
+        group_id = uuid4()
+        response = self.client.get(f"/groups/{group_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/js/main.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="group-edit-root"')
+        self.assertContains(response, f'data-group-id="{group_id}"')
+        self.assertContains(response, 'data-tab="details"')
+        self.assertContains(response, 'data-tab="books"')
+        self.assertContains(response, 'data-tab="members"')
 
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)

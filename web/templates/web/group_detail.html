@@ -1,6 +1,6 @@
 {% extends "web/base.html" %}
 
-{% block page_id %}group-detail{% endblock %}
+{% block page_id %}group-view{% endblock %}
 
 {% block title %}Group · Second Pass Library{% endblock %}
 
@@ -8,74 +8,51 @@
   <div class="page-header">
     <div>
       <a href="/groups/" class="pill">← Back to Groups</a>
-      <h1 class="page-title" id="group-title">Group</h1>
+      <h1 class="page-title" id="group-view-title">Group</h1>
+      <div class="muted" id="group-view-subtitle"></div>
+    </div>
+    <div id="group-view-edit-link-wrap" class="is-hidden">
+      <a id="group-view-edit-link" class="button" href="/groups/{{ group_id|escape }}/edit/">Edit</a>
     </div>
   </div>
 
-  <div id="group-status" class="muted">Loading…</div>
+  <div id="group-view-status" class="muted">Loading…</div>
 
-  <section id="group-summary" class="card is-hidden" data-group-id="{{ group_id|escape }}">
-    <h2 class="card__title">Details</h2>
-    <div id="group-meta"></div>
-  </section>
-
-  <section id="group-edit" class="card is-hidden">
-    <h2 class="card__title">Presentation</h2>
-    <form id="group-edit-form">
-      <div class="kv">
-        <div class="kv__k"><label for="group-description">Description</label></div>
-        <div class="kv__v">
-          <textarea id="group-description" rows="3" style="width: 100%;"></textarea>
-        </div>
-      </div>
-
-      <div style="margin-top: 10px;">
-        <button class="button" type="submit">Save</button>
-        <span id="group-edit-status" class="muted"></span>
-      </div>
-    </form>
-  </section>
-
-  <section id="group-books" class="card is-hidden">
-    <h2 class="card__title">Books</h2>
-
-    <form id="group-add-book" class="search" autocomplete="off">
-      <label class="search__label" for="group-book-id">Add book by UUID</label>
-      <input id="group-book-id" class="search__input" placeholder="Book UUID" />
-      <button class="button" type="submit">Add</button>
-      <span id="group-add-book-status" class="muted"></span>
-    </form>
-
-    <div id="group-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
-    <div id="group-books-results" class="books"></div>
-
-    <div class="pager">
-      <button id="group-books-prev" class="button" type="button" disabled>Previous</button>
-      <button id="group-books-next" class="button" type="button" disabled>Next</button>
+  <section id="group-view-root" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+    <div class="tabs" role="tablist" aria-label="Group view tabs">
+      <button class="tab-button is-active" type="button" data-tab="books">Books</button>
+      <button class="tab-button" type="button" data-tab="members">Members</button>
+      <button class="tab-button" type="button" data-tab="shelves">Shelves</button>
     </div>
-  </section>
 
-  <section id="group-members" class="card is-hidden">
-    <h2 class="card__title">Members</h2>
-    <div id="group-members-note" class="muted"></div>
+    <div id="tab-books" class="tab-panel" data-tab-panel="books">
+      <h2 class="card__title">Books</h2>
+      <div id="group-view-details"></div>
+      <div id="group-view-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-view-books-results" class="books"></div>
+      <div class="pager">
+        <button id="group-view-books-prev" class="button" type="button" disabled>Previous</button>
+        <button id="group-view-books-next" class="button" type="button" disabled>Next</button>
+      </div>
+    </div>
 
-    <form id="group-add-member" class="search is-hidden" autocomplete="off" style="margin-top: 10px;">
-      <label class="search__label" for="group-member-user">Add member</label>
-      <select id="group-member-user"></select>
-      <select id="group-member-role">
-        <option value="reader">reader</option>
-        <option value="curator">curator</option>
-      </select>
-      <button class="button" type="submit">Add</button>
-      <span id="group-add-member-status" class="muted"></span>
-    </form>
+    <div id="tab-members" class="tab-panel is-hidden" data-tab-panel="members">
+      <h2 class="card__title">Members</h2>
+      <div id="group-view-members-note" class="muted"></div>
+      <div id="group-view-members-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-view-members-results" class="books"></div>
+      <div class="pager">
+        <button id="group-view-members-prev" class="button" type="button" disabled>Previous</button>
+        <button id="group-view-members-next" class="button" type="button" disabled>Next</button>
+      </div>
+    </div>
 
-    <div id="group-members-status" class="muted" style="margin-top: 10px;">Loading…</div>
-    <div id="group-members-results" class="books"></div>
-
-    <div class="pager">
-      <button id="group-members-prev" class="button" type="button" disabled>Previous</button>
-      <button id="group-members-next" class="button" type="button" disabled>Next</button>
+    <div id="tab-shelves" class="tab-panel is-hidden" data-tab-panel="shelves">
+      <h2 class="card__title">Shelves</h2>
+      <div id="group-view-shelves-placeholder" class="muted">
+        Shelves are not implemented yet. Shelves organize books for presentation and do not grant access.
+      </div>
     </div>
   </section>
 {% endblock %}
+

@@ -15,8 +15,9 @@ The first minimal product UI shell now exists:
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/library/books/<book_id>/edit/` is an API-driven book metadata edit page (Manager/Librarian/Owner only)
 - `/imports/` is an API-driven imports page (upload + job list/results)
-- `/groups/` and `/groups/<group_id>/` provide functional group list/detail screens
-- Group detail includes membership management for Manager/Owner (add/update/remove; add-by-dropdown; functional-first)
+- `/groups/` is an authenticated group list page
+- `/groups/<group_id>/` is an authenticated group view page (Books/Members/Shelves tabs; read-oriented)
+- `/groups/<group_id>/edit/` is an authenticated group management page (Details/Books/Members/Shelves tabs; management-oriented)
 - `/users/` provides functional user management for Manager/Owner only
 - `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
 - `/users/<user_id>/edit/` provides a dedicated user edit screen for Manager/Owner
@@ -52,8 +53,9 @@ The groups UI is API-driven using:
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` (add-by-UUID; temporary functional UI)
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
-
-There is no group membership management UI yet.
+- Memberships:
+  - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; visible to group members + managers/owners/librarians + Public viewers)
+  - `POST/PATCH/DELETE /api/v1/library/groups/<group_id>/memberships/...` (Manager/Owner only)
 
 The users UI is API-driven using:
 
@@ -69,7 +71,7 @@ Password management:
 
 User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
 
-The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Detail page.
+The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Edit page (`/groups/<group_id>/edit/`).
 
 ## 1. UI philosophy
 

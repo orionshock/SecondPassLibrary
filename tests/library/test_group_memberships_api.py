@@ -72,21 +72,40 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         )
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
 
-    def test_librarian_and_reader_cannot_list_memberships(self):
+    def test_librarian_can_list_memberships(self):
         self.client.login(username="librarian", password="pw")
         response = cast(
             Response,
             self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.client.logout()
+    def test_non_member_reader_cannot_list_memberships_for_non_public_group(self):
         self.client.login(username="reader", password="pw")
         response2 = cast(
             Response,
             self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
         )
-        self.assertIn(response2.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND})
+        self.assertEqual(response2.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_group_member_can_list_memberships_for_their_group(self):
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER
+        )
+        self.client.login(username="reader", password="pw")
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_authenticated_user_can_list_public_memberships(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.public.id}/memberships/"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_manager_can_add_reader_and_curator_memberships_non_public(self):
         self.client.login(username="manager", password="pw")
@@ -111,6 +130,54 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         self.assertEqual(add_curator.status_code, status.HTTP_201_CREATED)
         membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.group)
         self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+
+    def test_reader_librarian_and_curator_cannot_mutate_memberships(self):
+        curator_user = User.objects.create_user(
+            username="curator", email="curator@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=curator_user)
+        curator_profile, _ = UserProfile.objects.get_or_create(user=curator_user)
+        curator_profile.role = UserProfile.ROLE_READER
+        curator_profile.save(update_fields=["role", "updated_at"])
+
+        membership = LibraryGroupMembership.objects.create(
+            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER
+        )
+        LibraryGroupMembership.objects.create(
+            user=curator_user, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
+        )
+
+        for username in ("reader", "librarian", "curator"):
+            self.client.logout()
+            self.client.login(username=username, password="pw")
+
+            create = cast(
+                Response,
+                self.client.post(
+                    f"/api/v1/library/groups/{self.group.id}/memberships/",
+                    data={"user": self.manager.pk, "role": "reader"},
+                    format="json",
+                ),
+            )
+            self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
+
+            patch = cast(
+                Response,
+                self.client.patch(
+                    f"/api/v1/library/groups/{self.group.id}/memberships/{membership.id}/",
+                    data={"role": "curator"},
+                    format="json",
+                ),
+            )
+            self.assertEqual(patch.status_code, status.HTTP_403_FORBIDDEN)
+
+            delete = cast(
+                Response,
+                self.client.delete(
+                    f"/api/v1/library/groups/{self.group.id}/memberships/{membership.id}/",
+                ),
+            )
+            self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_duplicate_add_is_idempotent_and_updates_role(self):
         self.client.login(username="manager", password="pw")
