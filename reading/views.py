@@ -21,6 +21,8 @@ from .services import (
     start_over_book,
     update_progress,
 )
+from .profile import CURRENT_READING_PROFILE_VERSION
+from .w3c import build_publication_source
 from .serializers import (
     AnnotationSerializer,
     DeviceSerializer,
@@ -137,12 +139,19 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
         current_location = validated.get("current_location", progress.current_location)
         progression = validated.get("progression", progress.progression)
         device = validated.get("device", progress.device)
+        profile_version = validated.get("profile_version", CURRENT_READING_PROFILE_VERSION)
         progress = update_progress(
             session=session,
             current_location=current_location,
             progression=progression,
             device=device,
         )
+        if profile_version != CURRENT_READING_PROFILE_VERSION:
+            # Serializer should already enforce this; keep as a safety belt.
+            return Response(
+                {"detail": f"Unsupported profile_version: {profile_version}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(ReadingProgressSerializer(progress).data)
 
 
@@ -180,6 +189,11 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         motivation = cast(str, validated["motivation"])
         target = cast(dict, validated.get("target") or {})
         body = validated.get("body") or []
+
+        # Enrich a missing source deterministically based on the session book.
+        if "source" not in target or not target.get("source"):
+            target = dict(target)
+            target["source"] = build_publication_source(book=session.book)
 
         annotation = create_annotation(
             session=session,

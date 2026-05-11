@@ -91,12 +91,14 @@ Annotation payloads use canonical fields:
 - `motivation`: `highlighting|commenting|bookmarking`
 - `target`: W3C-ish `source` + `selector` (EPUB CFI `FragmentSelector`)
 - `body`: W3C-ish body/bodies (JSON)
+- `profile_version`: currently `0.1.0`
 
 Notes:
 
 - Annotations belong to exactly one reading session.
 - The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
 - `source_import` provenance is reserved for future server-side import work and is not exposed as a normal client-writable field via the public API.
+- Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 
 ## Devices
 

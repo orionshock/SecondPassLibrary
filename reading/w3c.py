@@ -4,31 +4,7 @@ from typing import Any
 
 from library.models import Book
 
-EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
-
-
-def normalize_epub_cfi(value: object) -> str:
-    """
-    Tolerant EPUB CFI normalization.
-
-    Accepts either:
-    - "epubcfi(...)" strings
-    - raw CFI-ish paths like "/6/4"
-
-    Returns:
-    - "epubcfi(...)" when it can reasonably wrap a raw value
-    - "" for missing/invalid inputs
-    """
-    if value is None:
-        return ""
-    if not isinstance(value, str):
-        return ""
-    raw = value.strip()
-    if not raw:
-        return ""
-    if raw.startswith("epubcfi("):
-        return raw
-    return f"epubcfi({raw})"
+from .profile import EPUB_CFI_CONFORMS_TO, normalize_epub_cfi
 
 
 def build_fragment_selector(cfi: object) -> dict[str, Any]:
@@ -91,4 +67,3 @@ def build_target(*, book: Book, current_location: dict[str, Any]) -> dict[str, A
         "selector": selector,
         "locator": dict(current_location),
     }
-

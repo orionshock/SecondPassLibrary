@@ -7,6 +7,7 @@ from library.models import Book
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
 from .locators import normalize_current_location
+from .profile import CURRENT_READING_PROFILE_VERSION
 
 
 def is_session_closed(session: ReadingSession) -> bool:
@@ -93,8 +94,15 @@ def update_progress(
     progress.current_location = normalize_current_location(current_location)
     progress.progression = progression
     progress.device = device
+    progress.profile_version = CURRENT_READING_PROFILE_VERSION
     progress.save(
-        update_fields=["current_location", "progression", "device", "updated_at"]
+        update_fields=[
+            "current_location",
+            "progression",
+            "device",
+            "profile_version",
+            "updated_at",
+        ]
     )
     return progress
 
@@ -116,4 +124,5 @@ def create_annotation(
         body=body,
         # `source_import` is internal/server-managed. Keep it empty for normal creates.
         source_import={},
+        profile_version=CURRENT_READING_PROFILE_VERSION,
     )

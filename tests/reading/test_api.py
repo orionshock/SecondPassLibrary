@@ -10,6 +10,7 @@ from core import policies
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, Device, ReadingProgress, ReadingSession
+from reading.profile import CURRENT_READING_PROFILE_VERSION
 from tests.reading.utils import IsolatedUserdataMixin
 
 
@@ -153,6 +154,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(data["current_location"]["format"], "epub")
         self.assertEqual(data["current_location"]["cfi"], "/6/4")
         self.assertEqual(data["progression"], 0.5)
+        self.assertEqual(data["profile_version"], CURRENT_READING_PROFILE_VERSION)
 
     def test_annotations_create_requires_motivation_target_body(self):
         self.client.login(username="u1", password="pass1")
@@ -179,6 +181,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertIn("target", payload)
         self.assertIn("body", payload)
         self.assertNotIn("source_import", payload)
+        self.assertEqual(payload["profile_version"], CURRENT_READING_PROFILE_VERSION)
 
     def test_invalid_annotation_motivation_rejected(self):
         self.client.login(username="u1", password="pass1")
@@ -212,6 +215,51 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
                     "body": [],
                     "source_import": {"provider": "kindle"},
                 },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_create_rejects_unsupported_profile_version(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "/6/2"}},
+                    "body": [],
+                    "profile_version": "9.9.9",
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_progress_update_rejects_unsupported_profile_version(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/reading/sessions/{session.id}/progress/",
+                data={"current_location": {"cfi": "/6/2"}, "profile_version": "9.9.9"},
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_progress_update_rejects_unknown_field(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/reading/sessions/{session.id}/progress/",
+                data={"current_location": {"cfi": "/6/2"}, "weird": 1},
                 format="json",
             ),
         )

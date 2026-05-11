@@ -2,6 +2,13 @@ from rest_framework import serializers
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
 from .locators import normalize_current_location
+from .profile import (
+    CURRENT_READING_PROFILE_VERSION,
+    validate_annotation_body,
+    validate_annotation_target,
+    validate_current_location,
+    validate_profile_version,
+ )
 
 
 class DeviceSerializer(serializers.ModelSerializer):
@@ -88,13 +95,40 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
             "device",
             "current_location",
             "progression",
+            "profile_version",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["session", "created_at", "updated_at"]
 
     def validate_current_location(self, current_location):
-        return normalize_current_location(current_location)
+        normalized = normalize_current_location(current_location)
+        try:
+            return validate_current_location(normalized)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e)) from e
+
+    def validate_profile_version(self, profile_version):
+        try:
+            return validate_profile_version(profile_version)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e)) from e
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        allowed = {"device", "current_location", "progression", "profile_version"}
+        present = set(initial.keys())
+        unknown = present.difference(allowed)
+        if unknown:
+            unknown_sorted = ", ".join(sorted(unknown))
+            raise serializers.ValidationError(
+                {"detail": f"Unsupported fields: {unknown_sorted}."}
+            )
+
+        # If the client omitted profile_version, set it to the current version.
+        if "profile_version" not in attrs:
+            attrs["profile_version"] = CURRENT_READING_PROFILE_VERSION
+        return super().validate(attrs)
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
@@ -123,6 +157,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
             "motivation",
             "target",
             "body",
+            "profile_version",
             "is_deleted",
             "created_at",
             "updated_at",
@@ -134,9 +169,34 @@ class AnnotationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This field is required.")
         return motivation
 
+    def validate_target(self, target):
+        try:
+            return validate_annotation_target(target)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e)) from e
+
+    def validate_body(self, body):
+        try:
+            return validate_annotation_body(body)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e)) from e
+
+    def validate_profile_version(self, profile_version):
+        try:
+            return validate_profile_version(profile_version)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e)) from e
+
     def validate(self, attrs):
         initial = getattr(self, "initial_data", {}) or {}
-        allowed = {"session", "device", "motivation", "target", "body"}
+        allowed = {
+            "session",
+            "device",
+            "motivation",
+            "target",
+            "body",
+            "profile_version",
+        }
         present = set(initial.keys())
         unknown = present.difference(allowed)
         if unknown:
@@ -144,4 +204,8 @@ class AnnotationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"detail": f"Unsupported fields: {unknown_sorted}."}
             )
+
+        # If the client omitted profile_version, set it to the current version.
+        if "profile_version" not in attrs:
+            attrs["profile_version"] = CURRENT_READING_PROFILE_VERSION
         return super().validate(attrs)

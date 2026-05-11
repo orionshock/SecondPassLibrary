@@ -5,11 +5,13 @@ Second Pass Library stores user reading data server-side in a W3C Web Annotation
 This document is design direction for reading sessions, progress, and annotations. The canonical draft profile lives in:
 
 - `docs/specs/reading-session-annotation-profile/`
+  - Current profile version: `0.1.0`
 
 ## Position
 
 - Reader clients must adapt to the server format if they want to save user data.
 - The server does not maintain per-reader proprietary annotation formats.
+- Public reading payloads are versioned via `profile_version` and unknown/unsupported fields are rejected.
 - EPUB is the current target format.
 - EPUB CFI (`FragmentSelector`) is the primary selector for text targets.
 - The app does not repair, normalize, or beautify user-provided EPUB files.

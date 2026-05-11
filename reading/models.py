@@ -101,6 +101,7 @@ class ReadingProgress(TimeStampedModel):
     # This is intentionally flexible JSON and should preserve unknown fields.
     current_location = models.JSONField(default=dict)
     progression = models.FloatField(blank=True, null=True)
+    profile_version = models.CharField(max_length=16, default="0.1.0")
 
     class Meta:
         ordering = ["-updated_at"]
@@ -140,6 +141,7 @@ class Annotation(TimeStampedModel):
     # Internal/server-managed provenance for future import work. Not exposed as a
     # normal client-writable field via the public reading API.
     source_import = models.JSONField(default=dict, blank=True)
+    profile_version = models.CharField(max_length=16, default="0.1.0")
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
