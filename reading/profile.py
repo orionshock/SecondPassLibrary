@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
 from typing import Any
 
 
@@ -9,6 +10,15 @@ CURRENT_READING_PROFILE_ID = (
     "https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0"
 )
 EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
+
+MAX_CURRENT_LOCATION_JSON_BYTES = 16 * 1024
+MAX_TARGET_JSON_BYTES = 16 * 1024
+MAX_BODY_JSON_BYTES = 64 * 1024
+
+MAX_SELECTOR_VALUE_CHARS = 8 * 1024
+MAX_BODY_VALUE_CHARS = 64 * 1024
+MAX_SMALL_STRING_CHARS = 255
+MAX_COLOR_CHARS = 64
 
 
 def normalize_epub_cfi(value: object) -> str:
@@ -28,6 +38,40 @@ def _ensure_mapping(value: object, *, field: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise ValueError(f"{field} must be an object.")
     return dict(value)
+
+
+def json_size_bytes(value: object) -> int:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return len(payload.encode("utf-8"))
+
+
+def validate_json_size(*, value: object, max_bytes: int, field: str) -> None:
+    try:
+        size = json_size_bytes(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"{field} is not JSON-serializable.") from e
+    if size > max_bytes:
+        raise ValueError(f"{field} exceeds maximum size ({max_bytes} bytes).")
+
+
+def _validate_small_string(value: object, *, field: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string.")
+    if len(value) > MAX_SMALL_STRING_CHARS:
+        raise ValueError(
+            f"{field} exceeds maximum length ({MAX_SMALL_STRING_CHARS} chars)."
+        )
+
+
+def _validate_optional_color(value: object, *, field: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string.")
+    if len(value) > MAX_COLOR_CHARS:
+        raise ValueError(f"{field} exceeds maximum length ({MAX_COLOR_CHARS} chars).")
 
 
 def validate_profile_version(value: object) -> str:
@@ -55,16 +99,22 @@ def validate_fragment_selector(selector: object) -> dict[str, Any]:
     selector_type = selector_dict.get("type")
     if selector_type is not None and selector_type != "FragmentSelector":
         raise ValueError("selector.type must be 'FragmentSelector' when provided.")
+    _validate_small_string(selector_type, field="selector.type")
 
     conforms_to = selector_dict.get("conformsTo")
     if conforms_to is not None and conforms_to != EPUB_CFI_CONFORMS_TO:
         raise ValueError(f"selector.conformsTo must be '{EPUB_CFI_CONFORMS_TO}'.")
+    _validate_small_string(conforms_to, field="selector.conformsTo")
 
     value = selector_dict.get("value")
     if value is not None:
         normalized = normalize_epub_cfi(value)
         if not normalized:
             raise ValueError("selector.value must be a non-empty string when provided.")
+        if len(normalized) > MAX_SELECTOR_VALUE_CHARS:
+            raise ValueError(
+                f"selector.value exceeds maximum length ({MAX_SELECTOR_VALUE_CHARS} chars)."
+            )
         selector_dict["value"] = normalized
 
     return selector_dict
@@ -107,6 +157,9 @@ def validate_current_location(current_location: object) -> dict[str, Any]:
             "value": normalize_epub_cfi(loc.get("cfi")),
         }
 
+    validate_json_size(
+        value=loc, max_bytes=MAX_CURRENT_LOCATION_JSON_BYTES, field="current_location"
+    )
     return loc
 
 
@@ -141,11 +194,17 @@ def validate_annotation_target(target: object) -> dict[str, Any]:
             raise ValueError(
                 f"Unsupported target.source fields: {', '.join(sorted(unknown_source))}."
             )
+
+        for key in ("id", "type", "book_id", "book_file_id", "checksum", "fileHash", "title", "media_type"):
+            if key in source_dict:
+                _validate_small_string(source_dict.get(key), field=f"target.source.{key}")
+
         target_dict["source"] = source_dict
 
     if "selector" in target_dict:
         target_dict["selector"] = validate_fragment_selector(target_dict.get("selector"))
 
+    validate_json_size(value=target_dict, max_bytes=MAX_TARGET_JSON_BYTES, field="target")
     return target_dict
 
 
@@ -172,4 +231,28 @@ def validate_annotation_body(body: object) -> list[dict[str, Any]]:
             raise ValueError(
                 f"Unsupported body fields in body[{idx}]: {', '.join(sorted(unknown))}."
             )
+        if "type" in body_dict:
+            _validate_small_string(body_dict.get("type"), field=f"body[{idx}].type")
+        if "purpose" in body_dict:
+            _validate_small_string(
+                body_dict.get("purpose"), field=f"body[{idx}].purpose"
+            )
+        if "format" in body_dict:
+            _validate_small_string(body_dict.get("format"), field=f"body[{idx}].format")
+        if "language" in body_dict:
+            _validate_small_string(
+                body_dict.get("language"), field=f"body[{idx}].language"
+            )
+        if "color" in body_dict:
+            _validate_optional_color(body_dict.get("color"), field=f"body[{idx}].color")
+        if "value" in body_dict:
+            value = body_dict.get("value")
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"body[{idx}].value must be a string.")
+            if isinstance(value, str) and len(value) > MAX_BODY_VALUE_CHARS:
+                raise ValueError(
+                    f"body[{idx}].value exceeds maximum length ({MAX_BODY_VALUE_CHARS} chars)."
+                )
+
+    validate_json_size(value=bodies, max_bytes=MAX_BODY_JSON_BYTES, field="body")
     return bodies

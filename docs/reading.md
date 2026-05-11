@@ -99,6 +99,7 @@ Notes:
 - The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
 - `source_import` provenance is reserved for future server-side import work and is not exposed as a normal client-writable field via the public API.
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
+- Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
 
 ## Devices
 

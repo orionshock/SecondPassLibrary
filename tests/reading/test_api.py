@@ -10,7 +10,14 @@ from core import policies
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, Device, ReadingProgress, ReadingSession
-from reading.profile import CURRENT_READING_PROFILE_VERSION
+from reading.profile import (
+    CURRENT_READING_PROFILE_VERSION,
+    MAX_BODY_JSON_BYTES,
+    MAX_BODY_VALUE_CHARS,
+    MAX_CURRENT_LOCATION_JSON_BYTES,
+    MAX_SELECTOR_VALUE_CHARS,
+    MAX_TARGET_JSON_BYTES,
+)
 from tests.reading.utils import IsolatedUserdataMixin
 
 
@@ -264,6 +271,117 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_progress_current_location_size_limit_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        big = "x" * (MAX_CURRENT_LOCATION_JSON_BYTES + 1024)
+        resp = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/reading/sessions/{session.id}/progress/",
+                data={"current_location": {"cfi": "/6/2", "href": big}},
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_target_size_limit_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        big = "x" * (MAX_TARGET_JSON_BYTES + 1024)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"source": {"id": big}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_body_size_limit_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        big = "x" * (MAX_BODY_JSON_BYTES + 1024)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_COMMENTING,
+                    "target": {"selector": {"value": "/6/2"}},
+                    "body": [{"type": "TextualBody", "purpose": "commenting", "value": big}],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_selector_value_length_limit_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        big = "x" * (MAX_SELECTOR_VALUE_CHARS + 1)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": big}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_body_value_length_limit_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        big = "x" * (MAX_BODY_VALUE_CHARS + 1)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_COMMENTING,
+                    "target": {"selector": {"value": "/6/2"}},
+                    "body": [{"type": "TextualBody", "purpose": "commenting", "value": big}],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reasonably_long_body_value_under_limit_succeeds(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        # Stay under both the per-string and total JSON size limits.
+        ok_len = min(MAX_BODY_VALUE_CHARS - 10, (MAX_BODY_JSON_BYTES // 2))
+        ok_value = "x" * ok_len
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_COMMENTING,
+                    "target": {"selector": {"value": "/6/2"}},
+                    "body": [{"type": "TextualBody", "purpose": "commenting", "value": ok_value}],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
     def test_soft_deleted_annotations_hidden_by_default_and_opt_in_include_deleted(self):
         self.client.login(username="u1", password="pass1")
