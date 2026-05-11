@@ -31,6 +31,12 @@ def get_public_group() -> LibraryGroup:
 
 
 def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
+    """
+    Ensure the user has a Public membership (reader role).
+
+    Public is the default/fallback group for new users, but it is not mandatory
+    if the user belongs to at least one other group.
+    """
     public = get_public_group()
     membership, _created = LibraryGroupMembership.objects.get_or_create(
         user=user,
@@ -41,6 +47,17 @@ def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
         membership.role = LibraryGroupMembership.ROLE_READER
         membership.save(update_fields=["role", "updated_at"])
     return membership
+
+
+def ensure_user_has_at_least_one_group(*, user) -> None:
+    """
+    Invariant: every user must have at least one LibraryGroupMembership.
+
+    If the user has no memberships, add a Public reader membership as a fallback.
+    """
+    if LibraryGroupMembership.objects.filter(user=user).exists():
+        return
+    ensure_user_public_membership(user=user)
 
 
 def ensure_book_public_assignment(*, book: Book, added_by=None) -> BookGroupAssignment:
@@ -63,20 +80,15 @@ def bootstrap_public_group_membership_and_assignments() -> None:
     """
     Best-effort bootstrap for existing installs:
     - Ensure Public group exists
-    - Ensure every user is a member of Public
-    - Ensure every book is assigned to Public
+    - Ensure every user has at least one group (Public fallback if needed)
+    - Ensure every book has at least one group (Public fallback if needed)
     """
     User = get_user_model()
-    public = get_public_group()
     with transaction.atomic():
         for user in User.objects.all():
-            LibraryGroupMembership.objects.get_or_create(
-                user=user,
-                group=public,
-                defaults={"role": LibraryGroupMembership.ROLE_READER},
-            )
+            ensure_user_has_at_least_one_group(user=user)
         for book in Book.objects.all():
-            BookGroupAssignment.objects.get_or_create(book=book, group=public)
+            ensure_book_has_at_least_one_group(book=book, added_by=None)
 
 
 def add_book_to_group(*, actor, book: Book, group: LibraryGroup) -> BookGroupAssignment:
@@ -153,7 +165,7 @@ def add_user_to_group(
 
     Rules:
     - Only Owner/Manager may manage memberships.
-    - Public membership cannot be removed; Public cannot have Curators and role is forced to reader.
+    - Public cannot have Curators and role is forced to reader.
     - Non-Public: role must be reader or curator.
     - Idempotent: existing membership is updated to the requested role (subject to rules).
     """
@@ -216,11 +228,14 @@ def remove_user_from_group(
 
     Rules:
     - Only Owner/Manager may manage memberships.
-    - Public membership is protected (cannot be removed).
+    - Users must always have at least one membership. Removing the final membership
+      succeeds, and Public is re-added as a fallback.
     """
     group = membership.group
     if not policies.can_manage_group_membership(user=actor, group=group):
         raise PermissionDenied("Not allowed.")
-    if is_public_group(group):
-        raise PermissionDenied("Public membership cannot be removed.")
-    membership.delete()
+
+    target_user = membership.user
+    with transaction.atomic():
+        membership.delete()
+        ensure_user_has_at_least_one_group(user=target_user)

@@ -170,29 +170,30 @@ function renderMembersManage(payload, { isPublicGroup }) {
       const username = m.username || "";
       const role = m.role || "reader";
       const email = m.email || "";
-      const removeDisabled = isPublicGroup ? "disabled" : "";
       const curatorDisabled = isPublicGroup ? "disabled" : "";
+      const selectDisabled = isPublicGroup ? "disabled" : "";
+      const saveDisabled = isPublicGroup ? "disabled" : "";
       const note = isPublicGroup
-        ? '<div class="muted">Public memberships cannot be removed; role remains reader.</div>'
+        ? '<div class="muted">Public is the default/fallback group. Role remains reader; removal is allowed when other memberships remain (final removal restores Public).</div>'
         : "";
 
       return `
         <article class="book">
           <h3 class="book__title">${escapeHtml(username)}${ownerBadge}</h3>
-          <div class="book__meta">
-            ${email ? `<div>${escapeHtml(email)}</div>` : ""}
-            <div>Role: <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}">
-              <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
-              <option value="curator" ${role === "curator" ? "selected" : ""} ${curatorDisabled}>curator</option>
-            </select></div>
-            ${note}
-          </div>
-          <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}">Save role</button>
-            <button class="button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" ${removeDisabled}>Remove</button>
-          </div>
-        </article>
-      `.trim();
+            <div class="book__meta">
+              ${email ? `<div>${escapeHtml(email)}</div>` : ""}
+              <div>Role: <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}" ${selectDisabled}>
+                <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
+                <option value="curator" ${role === "curator" ? "selected" : ""} ${curatorDisabled}>curator</option>
+              </select></div>
+              ${note}
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}" ${saveDisabled}>Save role</button>
+              <button class="button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}">Remove</button>
+            </div>
+          </article>
+        `.trim();
     })
     .join("");
 }
@@ -872,7 +873,7 @@ export async function initGroupEdit() {
   visible(addMemberForm, allowMembershipManage);
   if (isPublicGroup) {
     membersNote.textContent = allowMembershipManage
-      ? "Public membership is required for all users. It cannot be removed, and cannot have curators."
+      ? "Public is the default/fallback group. Public cannot have curators; role remains reader. Public membership can be removed when another group remains (final removal restores Public)."
       : membersNote.textContent;
     addMemberRole.value = "reader";
     const curatorOpt = addMemberRole.querySelector('option[value="curator"]');

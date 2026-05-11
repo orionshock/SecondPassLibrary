@@ -186,9 +186,10 @@ Public is special.
 Default/fallback behavior:
 
 - Public is the default group in simple mode.
-- For now, all users belong to Public.
-- For now, all books default to Public.
-- If a book or user would otherwise have no LibraryGroup assignments, it falls back to Public.
+- New users default to Public (reader membership).
+- New/imported books default to Public (book assignment).
+- Users/books must belong to at least one LibraryGroup.
+- Public is fallback only: if a user/book would otherwise have zero groups, it is restored to Public.
 
 Role constraints:
 
@@ -213,8 +214,8 @@ This prevents scattered direct `BookGroupAssignment` writes and centralizes inva
 - **Owner/Manager** can manage LibraryGroup memberships via the API (add/remove users and set membership role `reader` / `curator`).
 - **Librarian/Curator/Reader** cannot manage memberships via the API.
 - **Public protections**:
-  - Every user belongs to Public.
-  - Public memberships cannot be removed via normal API/UI.
+  - Public is default/fallback (assigned on user creation, and restored if a user would otherwise have zero memberships).
+  - Public memberships can be removed when another group remains; removing a user's final membership restores Public.
   - Public cannot have Curators; membership role remains `reader`.
 
 ## Group API and anti-existence-leakage rules

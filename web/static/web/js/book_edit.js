@@ -433,7 +433,8 @@ export async function initBookEdit() {
       if (g && g.is_public_group) {
         li.appendChild(document.createTextNode(" "));
         li.appendChild(el("span", "pill pill--owner", "Public"));
-      } else if (gid) {
+      }
+      if (gid) {
         li.appendChild(document.createTextNode(" "));
         const btn = el("button", "linklike", "Remove");
         btn.type = "button";
@@ -1037,4 +1038,3 @@ export async function initBookEdit() {
     });
   });
 }
-

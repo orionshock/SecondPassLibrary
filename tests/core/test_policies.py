@@ -155,7 +155,7 @@ class PolicyTest(TestCase):
         self.assertTrue(policies.can_create_library_group(self.manager))
 
     def test_reader_can_view_books_only_in_groups_they_belong_to(self):
-        # Public book is visible to all via Public membership.
+        # Public book is visible only via Public membership.
         self.assertTrue(policies.can_view_book(user=self.reader, book=self.book))
         # Hidden book is visible only if user is in Hidden.
         self.assertTrue(policies.can_view_book(user=self.reader, book=self.hidden_book))
@@ -168,6 +168,27 @@ class PolicyTest(TestCase):
         profile.save(update_fields=["role", "updated_at"])
         ensure_user_public_membership(user=other_reader)
         self.assertFalse(policies.can_view_book(user=other_reader, book=self.hidden_book))
+
+    def test_user_without_public_membership_cannot_view_public_only_books(self):
+        fantasy = LibraryGroup.objects.create(name="Fantasy", slug="fantasy")
+        book_public_only = Book.objects.create(title="Public Only")
+        ensure_book_public_assignment(book=book_public_only)
+
+        book_fantasy = Book.objects.create(title="Fantasy Only")
+        BookGroupAssignment.objects.create(book=book_fantasy, group=fantasy)
+
+        u = User.objects.create_user(username="fantasy", email="fantasy@example.com", password="pw")
+        profile, _ = UserProfile.objects.get_or_create(user=u)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+
+        # Add a non-Public membership, then remove Public so the user remains in at least one group.
+        LibraryGroupMembership.objects.create(user=u, group=fantasy, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.filter(user=u, group=self.public).delete()
+        self.assertFalse(LibraryGroupMembership.objects.filter(user=u, group=self.public).exists())
+
+        self.assertFalse(policies.can_view_book(user=u, book=book_public_only))
+        self.assertTrue(policies.can_view_book(user=u, book=book_fantasy))
 
     def test_group_visibility_is_membership_based(self):
         other = LibraryGroup.objects.create(name="Other", slug="other")

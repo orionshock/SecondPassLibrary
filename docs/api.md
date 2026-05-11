@@ -263,8 +263,8 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 
 Public restrictions:
 
-- Public memberships cannot be removed via the API.
 - Public cannot have Curators; membership role remains `reader`.
+- Public is default/fallback, not mandatory: membership may be removed when another group remains; removing a user's final membership restores Public.
 
 See `docs/permissions.md` for the visibility/curation rules.
 

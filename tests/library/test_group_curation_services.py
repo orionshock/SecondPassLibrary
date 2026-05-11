@@ -150,3 +150,23 @@ class GroupCurationServicesTest(TestCase):
         self.assertTrue(removed)
         groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group__slug", flat=True))
         self.assertEqual(groups, {"b"})
+
+    def test_manager_can_remove_public_assignment_when_other_assignment_remains(self):
+        book = Book.objects.create(title="TwoGroups")
+        ensure_book_public_assignment(book=book, added_by=None)
+        BookGroupAssignment.objects.create(book=book, group=self.group, added_by=self.owner)
+
+        removed = remove_book_from_group(actor=self.manager, book=book, group=self.public)
+        self.assertTrue(removed)
+        groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group__slug", flat=True))
+        self.assertEqual(groups, {"group"})
+
+    def test_removing_public_only_assignment_restores_public(self):
+        book = Book.objects.create(title="OnlyPublic")
+        ensure_book_public_assignment(book=book, added_by=None)
+        self.assertEqual(BookGroupAssignment.objects.filter(book=book).count(), 1)
+
+        removed = remove_book_from_group(actor=self.manager, book=book, group=self.public)
+        self.assertTrue(removed)
+        groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group__slug", flat=True))
+        self.assertEqual(groups, {"public"})

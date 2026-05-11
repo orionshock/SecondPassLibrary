@@ -219,7 +219,12 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         public_membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
         self.assertEqual(public_membership.role, LibraryGroupMembership.ROLE_READER)
 
-    def test_manager_cannot_remove_public_membership(self):
+    def test_manager_can_remove_public_membership_if_another_group_remains(self):
+        other = LibraryGroup.objects.create(name="Other", slug="other")
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=other, role=LibraryGroupMembership.ROLE_READER
+        )
+
         self.client.login(username="manager", password="pw")
         membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
         response = cast(
@@ -228,7 +233,24 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
                 f"/api/v1/library/groups/{self.public.id}/memberships/{membership.id}/"
             ),
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(LibraryGroupMembership.objects.filter(pk=membership.id).exists())
+        self.assertTrue(LibraryGroupMembership.objects.filter(user=self.reader, group=other).exists())
+
+    def test_removing_users_final_membership_restores_public(self):
+        # Remove the only (Public) membership; invariant should restore it.
+        self.client.login(username="manager", password="pw")
+        membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
+        response = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/library/groups/{self.public.id}/memberships/{membership.id}/"
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(LibraryGroupMembership.objects.filter(user=self.reader).exists())
+        restored = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
+        self.assertEqual(restored.role, LibraryGroupMembership.ROLE_READER)
 
     def test_manager_can_update_and_remove_non_public_membership(self):
         self.client.login(username="manager", password="pw")
