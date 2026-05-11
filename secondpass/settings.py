@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     "web",
     "core.apps.CoreConfig",
     "accounts",
-    "library",
+    "library.apps.LibraryConfig",
     "reading",
 ]
 

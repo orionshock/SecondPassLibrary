@@ -13,6 +13,7 @@ from core.server_settings import (
     set_server_setting,
 )
 from library.group_services import PUBLIC_GROUP_ID_SETTING, get_public_group
+from library.models import LibraryGroup, is_public_group
 
 
 class ServerSettingsServiceTests(TestCase):
@@ -110,3 +111,39 @@ class ServerSettingsServiceTests(TestCase):
         self.assertEqual(repaired.id, group.id)
         repaired.refresh_from_db()
         self.assertEqual(repaired.name, "Public")
+
+    def test_public_group_setting_save_triggers_repair_invalid_string(self):
+        public = get_public_group()
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        setting.value = "0"
+        setting.save(update_fields=["value", "updated_at"])
+
+        setting.refresh_from_db()
+        self.assertEqual(setting.value, str(public.id))
+
+    def test_public_group_setting_save_triggers_repair_invalid_type(self):
+        public = get_public_group()
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        setting.value = 0
+        setting.save(update_fields=["value", "updated_at"])
+
+        setting.refresh_from_db()
+        self.assertEqual(setting.value, str(public.id))
+
+    def test_public_group_setting_delete_triggers_repair(self):
+        public = get_public_group()
+        ServerSetting.objects.filter(key=PUBLIC_GROUP_ID_SETTING).delete()
+
+        repaired = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        self.assertEqual(repaired.value, str(public.id))
+
+    def test_is_public_group_repairs_corrupted_setting(self):
+        public = get_public_group()
+        other = LibraryGroup.objects.create(name="Other")
+
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        setting.value = []
+        setting.save(update_fields=["value", "updated_at"])
+
+        self.assertTrue(is_public_group(public))
+        self.assertFalse(is_public_group(other))

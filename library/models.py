@@ -203,7 +203,20 @@ class LibraryGroup(TimeStampedModel):
 def is_public_group(group: LibraryGroup | None) -> bool:
     if group is None:
         return False
-    public_id = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
+
+    # Prefer a repair-safe public group id read. This avoids silently treating Public
+    # as non-Public if the ServerSetting is missing/malformed.
+    try:
+        from .group_services import get_public_group, get_public_group_id
+
+        public_id = get_public_group_id()
+        if public_id is None:
+            # Trigger repair and retry once.
+            get_public_group()
+            public_id = get_public_group_id()
+    except Exception:
+        public_id = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
+
     if public_id is None or public_id == "":
         return False
     return str(getattr(group, "id", "")) == str(public_id)
