@@ -38,7 +38,7 @@ PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...",
 
 ## Progress
 
-Progress is one-to-one per session (auto-created if missing):
+Progress is one-to-one per session (auto-created if missing). It stores mutable session state such as the current reading location (this is not an Annotation):
 
 ```text
 GET   /api/v1/reading/sessions/<session_id>/progress/
@@ -51,14 +51,14 @@ Example payload:
 ```json
 {
   "device": "<device_id>",
-  "locator": {"cfi": "/6/4", "chapter": "c1", "offset": 123},
+  "current_location": {"format": "epub", "cfi": "/6/4", "href": "Text/chapter01.xhtml"},
   "progression": 0.42
 }
 ```
 
-## Locators (JSON conventions)
+## Current location (JSON conventions)
 
-Locators are flexible JSON. For EPUB, prefer:
+Current location is flexible JSON. For EPUB, prefer:
 
 ```json
 {
@@ -79,12 +79,18 @@ Notes:
 
 ## Annotations (highlights, notes, bookmarks)
 
-Annotations are stored as `Annotation` records:
+Annotations are stored as W3C-style `Annotation` records:
 
 - List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
 - Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.
+
+Annotation payloads use canonical fields:
+
+- `motivation`: `highlighting|commenting|bookmarking`
+- `target`: W3C-ish `source` + `selector` (EPUB CFI `FragmentSelector`)
+- `body`: W3C-ish body/bodies (JSON)
 
 ## Devices
 

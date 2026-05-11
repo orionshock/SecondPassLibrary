@@ -14,7 +14,7 @@ def is_epub_locator(locator: object) -> bool:
 
 def normalize_locator(locator: object) -> dict[str, Any]:
     """
-    Return a shallow normalized copy of a locator dict.
+    Return a shallow normalized copy of a location/selector dict.
 
     - Defaults `format` to "epub" if missing/blank.
     - Preserves unknown fields.
@@ -32,3 +32,7 @@ def normalize_locator(locator: object) -> dict[str, Any]:
         normalized["format"] = "epub"
     return normalized
 
+
+# Canonical naming going forward. Keep `normalize_locator` for now to avoid
+# churn while the app migrates to W3C-style `current_location`.
+normalize_current_location = normalize_locator

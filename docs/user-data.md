@@ -46,7 +46,7 @@ Annotations point into a publication using an EPUB CFI selector, and are intenti
 
 ## Export/import direction
 
-Second Pass Library’s interoperability direction is JSON-LD exports in an `AnnotationCollection` shape.
+Second Pass Library's interoperability direction is JSON-LD exports in an `AnnotationCollection` shape.
 
 The current draft export extension is:
 

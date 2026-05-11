@@ -14,8 +14,10 @@ from core import policies
 
 from .models import Annotation, Device, ReadingProgress, ReadingSession
 from .services import (
+    assert_session_writable,
     get_or_create_active_session,
     get_or_create_progress,
+    create_annotation,
     start_over_book,
     update_progress,
 )
@@ -132,12 +134,12 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
         )
         serializer.is_valid(raise_exception=True)
         validated = cast(dict[str, Any], serializer.validated_data)
-        locator = validated.get("locator", progress.locator)
+        current_location = validated.get("current_location", progress.current_location)
         progression = validated.get("progression", progress.progression)
         device = validated.get("device", progress.device)
         progress = update_progress(
             session=session,
-            locator=locator,
+            current_location=current_location,
             progression=progression,
             device=device,
         )
@@ -172,6 +174,31 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        validated = cast(dict[str, Any], serializer.validated_data)
+        session = cast(ReadingSession, validated["session"])
+        device = cast(Device | None, validated.get("device"))
+        motivation = cast(str, validated["motivation"])
+        target = cast(dict, validated.get("target") or {})
+        body = validated.get("body") or []
+        source_import = cast(dict, validated.get("source_import") or {})
+        derived_from = cast(Annotation | None, validated.get("derived_from"))
+        source_session = cast(ReadingSession | None, validated.get("source_session"))
+
+        annotation = create_annotation(
+            session=session,
+            device=device,
+            motivation=motivation,
+            target=target,
+            body=body,
+            source_import=source_import,
+            derived_from=derived_from,
+            source_session=source_session,
+        )
+        serializer.instance = annotation
+
+    def perform_update(self, serializer):
+        annotation = cast(Annotation, serializer.instance)
+        assert_session_writable(session=annotation.session)
         serializer.save()
 
     def destroy(self, request, *args, **kwargs):

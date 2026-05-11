@@ -59,7 +59,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
         progress = ReadingProgress.objects.create(
             session=session,
             device=device,
-            locator={"chapter": "c1", "offset": 12},
+            current_location={"chapter": "c1", "offset": 12},
             progression=0.25,
         )
         self.assertIn("Progress:", str(progress))
@@ -69,22 +69,35 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         annotation = Annotation.objects.create(
             session=session,
-            kind=Annotation.KIND_HIGHLIGHT,
-            locator={"cfi": "/6/2[chap]!/4/2/6"},
-            selected_text="Hello world",
-            color="yellow",
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2[chap]!/4/2/6)"}},
+            body=[{"type": "TextualBody", "purpose": "describing", "value": "Hello world"}],
         )
-        self.assertIn("Highlight", str(annotation))
+        self.assertIn("Highlighting", str(annotation))
         self.assertIn("Test Book", str(annotation))
 
-    def test_annotation_kind_choices(self):
+    def test_annotation_motivation_choices(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-        highlight = Annotation.objects.create(session=session, kind=Annotation.KIND_HIGHLIGHT, locator={"cfi": "/6/2"})
-        note = Annotation.objects.create(session=session, kind=Annotation.KIND_NOTE, locator={"cfi": "/6/4"}, note="n")
-        bookmark = Annotation.objects.create(session=session, kind=Annotation.KIND_BOOKMARK, locator={"cfi": "/6/6"})
+        highlight = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
+            body=[{"type": "TextualBody", "purpose": "highlighting", "value": "yellow"}],
+        )
+        note = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_COMMENTING,
+            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/4)"}},
+            body=[{"type": "TextualBody", "purpose": "commenting", "value": "n"}],
+        )
+        bookmark = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
+            body=[],
+        )
 
-        self.assertEqual(highlight.kind, "highlight")
-        self.assertEqual(note.kind, "note")
-        self.assertEqual(bookmark.kind, "bookmark")
-
+        self.assertEqual(highlight.motivation, "highlighting")
+        self.assertEqual(note.motivation, "commenting")
+        self.assertEqual(bookmark.motivation, "bookmarking")

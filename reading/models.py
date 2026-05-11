@@ -97,7 +97,9 @@ class ReadingProgress(TimeStampedModel):
         blank=True,
         related_name="reading_progresses",
     )
-    locator = models.JSONField(default=dict)
+    # Canonical W3C-style session state: current reading location selector/locator.
+    # This is intentionally flexible JSON and should preserve unknown fields.
+    current_location = models.JSONField(default=dict)
     progression = models.FloatField(blank=True, null=True)
 
     class Meta:
@@ -110,14 +112,14 @@ class ReadingProgress(TimeStampedModel):
 
 
 class Annotation(TimeStampedModel):
-    KIND_HIGHLIGHT = "highlight"
-    KIND_NOTE = "note"
-    KIND_BOOKMARK = "bookmark"
+    MOTIVATION_HIGHLIGHTING = "highlighting"
+    MOTIVATION_COMMENTING = "commenting"
+    MOTIVATION_BOOKMARKING = "bookmarking"
 
-    KIND_CHOICES = [
-        (KIND_HIGHLIGHT, "Highlight"),
-        (KIND_NOTE, "Note"),
-        (KIND_BOOKMARK, "Bookmark"),
+    MOTIVATION_CHOICES = [
+        (MOTIVATION_HIGHLIGHTING, "Highlighting"),
+        (MOTIVATION_COMMENTING, "Commenting"),
+        (MOTIVATION_BOOKMARKING, "Bookmarking"),
     ]
 
     session = models.ForeignKey(
@@ -130,11 +132,26 @@ class Annotation(TimeStampedModel):
         blank=True,
         related_name="annotations",
     )
-    kind = models.CharField(max_length=16, choices=KIND_CHOICES)
-    locator = models.JSONField(default=dict)
-    selected_text = models.TextField(blank=True)
-    note = models.TextField(blank=True)
-    color = models.CharField(max_length=64, blank=True)
+    motivation = models.CharField(
+        max_length=32, choices=MOTIVATION_CHOICES, null=True, blank=True
+    )
+    target = models.JSONField(default=dict)
+    body = models.JSONField(default=list, blank=True)
+    source_import = models.JSONField(default=dict, blank=True)
+    derived_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="derived_annotations",
+    )
+    source_session = models.ForeignKey(
+        ReadingSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="promoted_annotations",
+    )
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
@@ -142,4 +159,4 @@ class Annotation(TimeStampedModel):
 
     def __str__(self):
         # Django provides `get_<field>_display()` dynamically for choice fields.
-        return f"{self.get_kind_display()} on {self.session}"  # type: ignore[attr-defined]
+        return f"{self.get_motivation_display()} on {self.session}"  # type: ignore[attr-defined]

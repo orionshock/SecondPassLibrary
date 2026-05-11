@@ -1,9 +1,7 @@
 from rest_framework import serializers
 
-from library.models import Book
-
 from .models import Annotation, Device, ReadingProgress, ReadingSession
-from .locators import normalize_locator
+from .locators import normalize_current_location
 
 
 class DeviceSerializer(serializers.ModelSerializer):
@@ -88,15 +86,15 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
         fields = [
             "session",
             "device",
-            "locator",
+            "current_location",
             "progression",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["session", "created_at", "updated_at"]
 
-    def validate_locator(self, locator):
-        return normalize_locator(locator)
+    def validate_current_location(self, current_location):
+        return normalize_current_location(current_location)
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
@@ -116,22 +114,25 @@ class AnnotationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid device.")
         return device
 
-    def validate_locator(self, locator):
-        return normalize_locator(locator)
-
     class Meta:
         model = Annotation
         fields = [
             "id",
             "session",
             "device",
-            "kind",
-            "locator",
-            "selected_text",
-            "note",
-            "color",
+            "motivation",
+            "target",
+            "body",
+            "source_import",
+            "derived_from",
+            "source_session",
             "is_deleted",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_deleted", "created_at", "updated_at"]
+
+    def validate_motivation(self, motivation):
+        if motivation is None or (isinstance(motivation, str) and not motivation.strip()):
+            raise serializers.ValidationError("This field is required.")
+        return motivation

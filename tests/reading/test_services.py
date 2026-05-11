@@ -32,7 +32,7 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
 
     def test_start_over_archives_old_and_creates_new(self):
         old = get_or_create_active_session(user=self.user, book=self.book)
-        ReadingProgress.objects.create(session=old, locator={"cfi": "/6/2"})
+        ReadingProgress.objects.create(session=old, current_location={"cfi": "/6/2"})
 
         new = start_over_book(user=self.user, book=self.book, name="Second pass")
         self.assertNotEqual(new.id, old.id)
@@ -47,7 +47,7 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
     def test_get_or_create_progress_is_idempotent(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         p1 = get_or_create_progress(session=session)
-        self.assertEqual(p1.locator, {})
+        self.assertEqual(p1.current_location, {})
 
         p2 = get_or_create_progress(session=session)
         self.assertEqual(p2.id, p1.id)
@@ -58,26 +58,25 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
 
         progress = update_progress(
             session=session,
-            locator={"cfi": "/6/4"},
+            current_location={"cfi": "/6/4"},
             progression=0.5,
             device=device,
         )
         self.assertEqual(progress.session.id, session.id)
         self.assertIsNotNone(progress.device)
         self.assertEqual(progress.device.id, device.id)  # type: ignore[union-attr]
-        self.assertEqual(progress.locator["format"], "epub")
-        self.assertEqual(progress.locator["cfi"], "/6/4")
+        self.assertEqual(progress.current_location["format"], "epub")
+        self.assertEqual(progress.current_location["cfi"], "/6/4")
         self.assertEqual(progress.progression, 0.5)
 
         progress2 = update_progress(
             session=session,
-            locator={"cfi": "/6/6"},
+            current_location={"cfi": "/6/6"},
             progression=0.75,
             device=None,
         )
         self.assertEqual(progress2.id, progress.id)
         self.assertIsNone(progress2.device)
-        self.assertEqual(progress2.locator["format"], "epub")
-        self.assertEqual(progress2.locator["cfi"], "/6/6")
+        self.assertEqual(progress2.current_location["format"], "epub")
+        self.assertEqual(progress2.current_location["cfi"], "/6/6")
         self.assertEqual(progress2.progression, 0.75)
-
