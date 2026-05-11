@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "web",
-    "core",
+    "core.apps.CoreConfig",
     "accounts",
     "library",
     "reading",

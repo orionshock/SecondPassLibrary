@@ -43,6 +43,21 @@ class ServerSettingsServiceTests(TestCase):
         set_server_setting(key="k", value="v2", description="")
         self.assertEqual(get_server_setting("k", default=None), "v2")
 
+    def test_direct_model_save_invalidates_cache(self):
+        obj = ServerSetting.objects.create(key="k", value="v1", description="")
+        _ = get_server_settings_map()
+
+        obj.value = "v2"
+        obj.save(update_fields=["value", "updated_at"])
+        self.assertEqual(get_server_setting("k", default=None), "v2")
+
+    def test_direct_model_delete_invalidates_cache(self):
+        obj = ServerSetting.objects.create(key="k", value="v1", description="")
+        _ = get_server_settings_map()
+
+        obj.delete()
+        self.assertEqual(get_server_setting("k", default="missing"), "missing")
+
     def test_get_public_group_repairs_missing_setting(self):
         public = get_public_group()
         ServerSetting.objects.filter(key=PUBLIC_GROUP_ID_SETTING).delete()
@@ -68,3 +83,30 @@ class ServerSettingsServiceTests(TestCase):
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         self.assertEqual(setting.value, str(public.id))
 
+    def test_get_public_group_repairs_invalid_string_setting_to_existing_public(self):
+        public = get_public_group()
+        set_server_setting(key=PUBLIC_GROUP_ID_SETTING, value="not-a-uuid", description="")
+        clear_server_settings_cache()
+
+        repaired = get_public_group()
+        self.assertEqual(repaired.id, public.id)
+        self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id))
+
+    def test_get_public_group_repairs_invalid_type_setting_to_existing_public(self):
+        public = get_public_group()
+        set_server_setting(key=PUBLIC_GROUP_ID_SETTING, value=["not-a-uuid"], description="")
+        clear_server_settings_cache()
+
+        repaired = get_public_group()
+        self.assertEqual(repaired.id, public.id)
+        self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id))
+
+    def test_get_public_group_normalizes_name(self):
+        group = get_public_group()
+        group.name = "Shared"
+        group.save(update_fields=["name", "updated_at"])
+
+        repaired = get_public_group()
+        self.assertEqual(repaired.id, group.id)
+        repaired.refresh_from_db()
+        self.assertEqual(repaired.name, "Public")

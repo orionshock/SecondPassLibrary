@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
@@ -11,11 +13,25 @@ from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembers
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
 
 
+def _parse_uuid_setting_value(value) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return None
+        try:
+            return str(uuid.UUID(s))
+        except (ValueError, AttributeError, TypeError):
+            return None
+    return None
+
+
 def get_public_group_id() -> str | None:
     value = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
-    if value is None or value == "":
-        return None
-    return str(value)
+    return _parse_uuid_setting_value(value)
 
 
 def set_public_group_id(group_id: str) -> None:
@@ -34,17 +50,19 @@ def get_public_group() -> LibraryGroup:
     If missing or invalid, this function repairs the setting and/or creates a Public group.
     """
     public_id = get_public_group_id()
-    if public_id:
+    if public_id is not None:
         try:
             group = LibraryGroup.objects.get(pk=public_id)
+        except LibraryGroup.DoesNotExist:
+            group = None
+
+        if group is not None:
             if group.name != "Public":
                 group.name = "Public"
                 group.save(update_fields=["name", "updated_at"])
             return group
-        except LibraryGroup.DoesNotExist:
-            # Repair below.
-            pass
 
+    # Repair path: prefer an existing group named exactly "Public".
     existing = LibraryGroup.objects.filter(name="Public").order_by("created_at", "id").first()
     if existing is not None:
         set_public_group_id(str(existing.id))
