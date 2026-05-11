@@ -161,9 +161,7 @@
           "purpose": "highlighting",
           "value": "yellow"
         }
-      ],
-      "sourceSession": "urn:uuid:session-old",
-      "derivedFrom": "urn:uuid:99999999-9999-4999-8999-999999999999"
+      ]
     }
   ]
 }

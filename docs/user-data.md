@@ -69,7 +69,7 @@ The current draft export extension is:
 
 - Adjust model fields if needed to better represent the profile semantics.
 - Expose W3C-style read/write APIs for reading data.
-- Preserve unknown fields where practical (round-trip external imports/clients without data loss).
+- Preserve unknown fields where practical on future import/export paths (round-trip external imports without data loss). The current public reading APIs reject unknown fields.
 
 ### Phase 3 (portability)
 

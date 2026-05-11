@@ -2,7 +2,7 @@
   "$id": "https://secondpasslibrary.local/specs/reading-session-annotations/schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Reading Session Annotation Collection",
-  "description": "W3C Web Annotation JSON-LD profile for EPUB reading sessions.",
+  "description": "Draft W3C Web Annotation JSON-LD profile for EPUB reading sessions (future export/import). Note: the current Second Pass Library reading REST APIs are stricter and reject unknown fields; this schema is for JSON-LD portability work and may evolve.",
   "type": "object",
   "required": [
     "@context",
@@ -259,12 +259,6 @@
           "$ref": "#/$defs/target"
         },
         "sessionId": {
-          "type": "string"
-        },
-        "sourceSession": {
-          "type": "string"
-        },
-        "derivedFrom": {
           "type": "string"
         },
         "sourceImport": {

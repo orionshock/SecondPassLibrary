@@ -42,14 +42,6 @@
       "@id": "reader:layeredSession",
       "@type": "@id"
     },
-    "derivedFrom": {
-      "@id": "reader:derivedFrom",
-      "@type": "@id"
-    },
-    "sourceSession": {
-      "@id": "reader:sourceSession",
-      "@type": "@id"
-    },
     "generator": "schema:softwareApplication",
     "generated": {
       "@id": "schema:dateCreated",

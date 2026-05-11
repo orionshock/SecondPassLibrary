@@ -19,6 +19,7 @@ This profile defines a portable annotation/export format for a personal EPUB rea
 
 Second Pass Library note:
 
+- The current server implementation does not implement JSON-LD import/export yet; it stores a strict W3C-inspired subset via REST/JSON.
 - The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.
 
 It represents:
@@ -31,7 +32,7 @@ It represents:
 - book metadata
 - immutable previous sessions
 - read-only layered previous sessions
-- promoted annotations derived from older sessions
+- promoted annotations derived from older sessions (future)
 
 The goal is to keep the application data model portable without tying it to a specific EPUB renderer such as epub.js.
 
@@ -59,7 +60,7 @@ Rules:
 - Closed sessions are immutable.
 - Closed sessions cannot be reopened.
 - A new session may layer previous sessions as read-only overlays.
-- An annotation from an older session may be promoted into the current session by creating a new annotation with `derivedFrom`.
+- Cross-session promotion/linking is future profile direction and is not implemented on the server today.
 
 ### Annotation
 
@@ -102,7 +103,7 @@ Recommended shape:
 }
 ```
 
-### Layering Sessions
+### Layering Sessions (Future)
 
 Layered sessions are referenced by ID.
 
@@ -110,9 +111,9 @@ Layered annotations are read-only overlays.
 
 The active session owns only its own annotations.
 
-### Promoting Old Annotations
+### Promoting Old Annotations (Future)
 
-When a previous annotation is promoted into the current session, create a new annotation and point to the old one:
+When/if a previous annotation is promoted into a current session in the future, create a new annotation and point to the old one:
 
 ```json
 {
@@ -124,7 +125,7 @@ The old annotation remains immutable.
 
 ## Export Format
 
-The recommended export format is a JSON-LD `AnnotationCollection` with profile-specific metadata.
+The recommended export format is a JSON-LD `AnnotationCollection` with profile-specific metadata. Second Pass Library does not implement export/import yet.
 
 Recommended file extension:
 
@@ -206,13 +207,12 @@ This profile adds a small number of JSON-LD terms:
 - `sessionStatus`
 - `currentLocation`
 - `layeredSession`
-- `derivedFrom`
 - `book`
 - `fileHash`
 - `epubUniqueIdentifier`
 - `schemaVersion`
 - `profile`
-- `sourceImport`
+- `sourceImport` (future)
 
 These terms are defined in `context.jsonld`.
 

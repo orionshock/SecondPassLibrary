@@ -57,8 +57,9 @@ export type W3CReadingAnnotation = {
   body?: TextualBody | TextualBody[]
   target: AnnotationTarget
   sessionId?: string
-  sourceSession?: string
-  derivedFrom?: string
+  // Second Pass Library note: cross-session promotion/linking is not implemented
+  // in the current server reading APIs. Keep future fields out of the current
+  // draft TypeScript helpers to avoid overpromising.
 }
 
 export type ExportBookMetadata = {
