@@ -42,8 +42,8 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.member_group = LibraryGroup.objects.create(name="MemberGroup", slug="member-group")
-        self.other_group = LibraryGroup.objects.create(name="OtherGroup", slug="other-group")
+        self.member_group = LibraryGroup.objects.create(name="MemberGroup")
+        self.other_group = LibraryGroup.objects.create(name="OtherGroup")
         LibraryGroupMembership.objects.create(
             user=self.reader,
             group=self.member_group,
@@ -57,12 +57,12 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         self.assertIsNotNone(response.data)
         payload = cast(Mapping[str, Any], response.data)
         data = cast(list[dict[str, Any]], payload["results"])
-        slugs = {g["slug"] for g in data}
-        self.assertIn("public", slugs)
-        self.assertIn("member-group", slugs)
-        self.assertNotIn("other-group", slugs)
+        names = {g["name"] for g in data}
+        self.assertIn("Public", names)
+        self.assertIn("MemberGroup", names)
+        self.assertNotIn("OtherGroup", names)
 
-        public = next(g for g in data if g["slug"] == "public")
+        public = next(g for g in data if g["is_public_group"])
         self.assertTrue(public["is_public_group"])
 
     def test_reader_cannot_view_non_member_non_public_group(self):
@@ -79,8 +79,8 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         self.assertIsNotNone(response.data)
         payload = cast(Mapping[str, Any], response.data)
         data = cast(list[dict[str, Any]], payload["results"])
-        slugs = {g["slug"] for g in data}
-        self.assertTrue({"public", "member-group", "other-group"}.issubset(slugs))
+        names = {g["name"] for g in data}
+        self.assertTrue({"Public", "MemberGroup", "OtherGroup"}.issubset(names))
 
 
 class LibraryGroupBooksAndCurationAPITest(APITestCase):
@@ -111,14 +111,14 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         librarian_profile.role = UserProfile.ROLE_LIBRARIAN
         librarian_profile.save(update_fields=["role", "updated_at"])
 
-        self.group = LibraryGroup.objects.create(name="Group", slug="group")
+        self.group = LibraryGroup.objects.create(name="Group")
         LibraryGroupMembership.objects.create(
             user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
         )
 
-        self.other_group = LibraryGroup.objects.create(name="Other", slug="other")
+        self.other_group = LibraryGroup.objects.create(name="Other")
 
-        self.visible_group = LibraryGroup.objects.create(name="VisibleGroup", slug="visible-group")
+        self.visible_group = LibraryGroup.objects.create(name="VisibleGroup")
         LibraryGroupMembership.objects.create(
             user=self.reader, group=self.visible_group, role=LibraryGroupMembership.ROLE_READER
         )
@@ -132,7 +132,7 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         )
 
         self.book_inaccessible = Book.objects.create(title="Inaccessible")
-        hidden = LibraryGroup.objects.create(name="Hidden", slug="hidden")
+        hidden = LibraryGroup.objects.create(name="Hidden")
         other = User.objects.create_user(username="other", email="other@example.com", password="pw")
         ensure_user_public_membership(user=other)
         LibraryGroupMembership.objects.create(
@@ -268,10 +268,10 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         manager_profile.role = UserProfile.ROLE_MANAGER
         manager_profile.save(update_fields=["role", "updated_at"])
 
-        self.group = LibraryGroup.objects.create(name="Group", slug="group", description="before")
+        self.group = LibraryGroup.objects.create(name="Group", description="before")
         LibraryGroupMembership.objects.create(user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR)
 
-        self.other_group = LibraryGroup.objects.create(name="Other", slug="other", description="before")
+        self.other_group = LibraryGroup.objects.create(name="Other", description="before")
 
     def test_reader_cannot_patch_group(self):
         self.client.login(username="reader", password="pw")
@@ -326,7 +326,7 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         self.assertIn("error", payload2)
         self.assertEqual(cast(dict[str, Any], payload2["error"])["code"], ErrorCode.GROUP_IDENTITY_IMMUTABLE)
         self.group.refresh_from_db()
-        self.assertEqual(self.group.slug, "group")
+        self.assertEqual(self.group.name, "Group")
 
     def test_discoverability_patch_is_rejected(self):
         self.client.login(username="librarian", password="pw")

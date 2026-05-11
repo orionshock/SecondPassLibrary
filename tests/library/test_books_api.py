@@ -276,8 +276,8 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         from library.group_services import get_public_group
 
         self.public = get_public_group()
-        self.group_a = LibraryGroup.objects.create(name="Group A", slug="group-a")
-        self.group_b = LibraryGroup.objects.create(name="Group B", slug="group-b")
+        self.group_a = LibraryGroup.objects.create(name="Group A")
+        self.group_b = LibraryGroup.objects.create(name="Group B")
 
         LibraryGroupMembership.objects.create(
             user=self.reader, group=self.group_a, role=LibraryGroupMembership.ROLE_READER
@@ -371,7 +371,6 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.hidden_group = LibraryGroup.objects.create(
             name="Hidden",
-            slug="hidden",
         )
 
         # Book is viewable via Public, but also assigned to an unlisted non-member group.
@@ -385,9 +384,9 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         payload = cast(Mapping[str, Any], response.data)
         groups = cast(list[dict[str, Any]], payload["groups"])
-        slugs = {g["slug"] for g in groups}
-        self.assertIn("public", slugs)
-        self.assertIn("hidden", slugs)
+        names = {g["name"] for g in groups}
+        self.assertIn("Public", names)
+        self.assertIn("Hidden", names)
 
     def test_reader_only_sees_viewable_groups(self):
         self.client.login(username="reader", password="pw")
@@ -395,9 +394,9 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         payload = cast(Mapping[str, Any], response.data)
         groups = cast(list[dict[str, Any]], payload["groups"])
-        slugs = {g["slug"] for g in groups}
-        self.assertIn("public", slugs)
-        self.assertNotIn("hidden", slugs)
+        names = {g["name"] for g in groups}
+        self.assertIn("Public", names)
+        self.assertNotIn("Hidden", names)
 
 
 class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
@@ -408,11 +407,11 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
 
         from library.models import LibraryGroup, LibraryGroupMembership
 
-        self.group_x = LibraryGroup.objects.create(name="X", slug="x")
+        self.group_x = LibraryGroup.objects.create(name="X")
         LibraryGroupMembership.objects.create(
             user=self.reader, group=self.group_x, role=LibraryGroupMembership.ROLE_READER
         )
-        self.group_y = LibraryGroup.objects.create(name="Y", slug="y")
+        self.group_y = LibraryGroup.objects.create(name="Y")
 
         self.author_public = Author.objects.create(name="Public Author")
         self.series_public = Series.objects.create(name="Public Series")

@@ -20,7 +20,6 @@ class CurrentUserSerializer(serializers.Serializer):
     class GroupSummarySerializer(serializers.Serializer):
         id = serializers.UUIDField()
         name = serializers.CharField()
-        slug = serializers.SlugField()
         membership_role = serializers.ChoiceField(choices=["reader", "curator"])
         is_public_group = serializers.BooleanField()
 
@@ -64,7 +63,6 @@ class ManagedUserSerializer(serializers.Serializer):
         membership_id = serializers.UUIDField()
         id = serializers.UUIDField()
         name = serializers.CharField()
-        slug = serializers.SlugField()
         membership_role = serializers.ChoiceField(choices=["reader", "curator"])
         is_public_group = serializers.BooleanField()
 

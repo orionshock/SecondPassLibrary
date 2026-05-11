@@ -150,7 +150,6 @@ class ManagedUserViewSet(
                     "membership_id": membership.id,
                     "id": group.id,
                     "name": group.name,
-                    "slug": group.slug,
                     "membership_role": membership.role,
                     "is_public_group": is_public_group(group),
                 }
@@ -168,7 +167,7 @@ class ManagedUserViewSet(
             "profile_id": profile.id,
             "role": profile.role,
             "must_change_password": bool(profile.must_change_password),
-            "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
+            "groups": sorted(groups, key=lambda g: (g["name"], str(g["id"]))),
         }
 
         serializer = ManagedUserSerializer(user_payload)
@@ -200,7 +199,6 @@ class ManagedUserViewSet(
                         "membership_id": membership.id,
                         "id": group.id,
                         "name": group.name,
-                        "slug": group.slug,
                         "membership_role": membership.role,
                         "is_public_group": is_public_group(group),
                     }
@@ -219,7 +217,7 @@ class ManagedUserViewSet(
                     "profile_id": profile.id,
                     "role": profile.role,
                     "must_change_password": bool(profile.must_change_password),
-                    "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
+                    "groups": sorted(groups, key=lambda g: (g["name"], str(g["id"]))),
                 }
             )
         serializer = ManagedUserSerializer(payload, many=True)
@@ -242,7 +240,6 @@ class ManagedUserViewSet(
                     "membership_id": membership.id,
                     "id": group.id,
                     "name": group.name,
-                    "slug": group.slug,
                     "membership_role": membership.role,
                     "is_public_group": is_public_group(group),
                 }
@@ -260,7 +257,7 @@ class ManagedUserViewSet(
             "profile_id": profile.id,
             "role": profile.role,
             "must_change_password": bool(profile.must_change_password),
-            "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
+            "groups": sorted(groups, key=lambda g: (g["name"], str(g["id"]))),
         }
         serializer = ManagedUserSerializer(payload)
         return Response(serializer.data)
@@ -296,7 +293,6 @@ class ManagedUserViewSet(
                     "membership_id": membership.id,
                     "id": group.id,
                     "name": group.name,
-                    "slug": group.slug,
                     "membership_role": membership.role,
                     "is_public_group": is_public_group(group),
                 }
@@ -314,7 +310,7 @@ class ManagedUserViewSet(
             "profile_id": profile.id,
             "role": profile.role,
             "must_change_password": bool(profile.must_change_password),
-            "groups": sorted(groups, key=lambda g: (g["name"], g["slug"])),
+            "groups": sorted(groups, key=lambda g: (g["name"], str(g["id"]))),
         }
         serializer = ManagedUserSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)

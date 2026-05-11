@@ -15,6 +15,7 @@ from .models import (
     BookGroupAssignment,
     ImportJob,
     ImportJobItem,
+    is_public_group,
 )
 
 
@@ -308,34 +309,33 @@ class ImportJobItemAdmin(admin.ModelAdmin):
 
 @admin.register(LibraryGroup)
 class LibraryGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "created_at"]
-    search_fields = ["name", "slug", "description"]
+    list_display = ["name", "created_at"]
+    search_fields = ["name", "description"]
     list_filter = [("created_at", DateFieldListFilter)]
     readonly_fields = ["created_at", "updated_at"]
 
     def has_delete_permission(self, request, obj=None):
-        if obj is not None and obj.slug == "public":
+        if obj is not None and is_public_group(obj):
             return False
         return super().has_delete_permission(request, obj=obj)
 
     def get_readonly_fields(self, request, obj=None):
         fields = list(super().get_readonly_fields(request, obj=obj))
-        if obj is not None and obj.slug == "public":
-            fields.extend(["name", "slug"])
+        if obj is not None and is_public_group(obj):
+            fields.extend(["name"])
         return fields
 
 
 @admin.register(LibraryGroupMembership)
 class LibraryGroupMembershipAdmin(admin.ModelAdmin):
     list_display = ["user", "group", "role", "created_at"]
-    search_fields = ["user__username", "user__email", "group__name", "group__slug"]
+    search_fields = ["user__username", "user__email", "group__name"]
     list_filter = ["role", ("created_at", DateFieldListFilter)]
     raw_id_fields = ["user", "group"]
     readonly_fields = ["created_at", "updated_at"]
 
     def has_delete_permission(self, request, obj=None):
-        if obj is not None and obj.group.slug == "public":
-            return False
+        # Public membership may be removed if another group remains.
         return super().has_delete_permission(request, obj=obj)
 
     def has_add_permission(self, request):
@@ -346,7 +346,7 @@ class LibraryGroupMembershipAdmin(admin.ModelAdmin):
 @admin.register(BookGroupAssignment)
 class BookGroupAssignmentAdmin(admin.ModelAdmin):
     list_display = ["book", "group", "added_by", "created_at"]
-    search_fields = ["book__title", "group__name", "group__slug", "added_by__username"]
+    search_fields = ["book__title", "group__name", "added_by__username"]
     list_filter = [("created_at", DateFieldListFilter), "group"]
     raw_id_fields = ["book", "group", "added_by"]
     readonly_fields = ["created_at", "updated_at"]

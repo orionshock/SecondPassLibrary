@@ -417,19 +417,13 @@ export async function initBookEdit() {
     const ul = document.createElement("ul");
     const items = groups
       .slice()
-      .sort((a, b) => `${a.name || ""}:${a.slug || ""}`.localeCompare(`${b.name || ""}:${b.slug || ""}`));
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
     for (const g of items) {
       const li = document.createElement("li");
       const gid = g && g.id != null ? String(g.id) : "";
       const a = el("a", "", g && g.name ? g.name : "");
       a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
       li.appendChild(a);
-      li.appendChild(document.createTextNode(" "));
-      const muted = el("span", "muted");
-      const code = document.createElement("code");
-      code.textContent = String(g && g.slug ? g.slug : "");
-      muted.appendChild(code);
-      li.appendChild(muted);
       if (g && g.is_public_group) {
         li.appendChild(document.createTextNode(" "));
         li.appendChild(el("span", "pill pill--owner", "Public"));
@@ -465,7 +459,7 @@ export async function initBookEdit() {
     for (const g of items) {
       const opt = document.createElement("option");
       opt.value = String(g.id);
-      opt.textContent = String(g.name || g.slug || g.id);
+      opt.textContent = String(g.name || g.id);
       groupsAddSelectEl.appendChild(opt);
     }
     groupsAddBtnEl.disabled = false;

@@ -5,28 +5,53 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 from core import policies
-from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-from .models import PUBLIC_GROUP_SLUG, is_public_group
+from core.server_settings import get_server_setting, set_server_setting
+from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
+
+PUBLIC_GROUP_ID_SETTING = "public_group_id"
+
+
+def get_public_group_id() -> str | None:
+    value = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
+    if value is None or value == "":
+        return None
+    return str(value)
+
+
+def set_public_group_id(group_id: str) -> None:
+    set_server_setting(
+        key=PUBLIC_GROUP_ID_SETTING,
+        value=str(group_id),
+        description="UUID of the server-wide Public LibraryGroup (default/fallback access scope).",
+    )
 
 
 def get_public_group() -> LibraryGroup:
-    group, _created = LibraryGroup.objects.get_or_create(
-        slug=PUBLIC_GROUP_SLUG,
-        defaults={
-            "name": "Public",
-            "description": "Default shared library group.",
-        },
-    )
-    # If an existing group uses the slug, ensure fields are consistent.
-    updates = {}
-    if group.name != "Public":
-        updates["name"] = "Public"
-    if updates:
-        for k, v in updates.items():
-            setattr(group, k, v)
-        group.save(update_fields=[*updates.keys(), "updated_at"])
-    if not is_public_group(group):
-        raise ValueError("Public group must have slug 'public'.")
+    """
+    Return the server-wide Public LibraryGroup (default/fallback access scope).
+
+    Public is identified by the ServerSetting `public_group_id` rather than a slug.
+    If missing or invalid, this function repairs the setting and/or creates a Public group.
+    """
+    public_id = get_public_group_id()
+    if public_id:
+        try:
+            group = LibraryGroup.objects.get(pk=public_id)
+            if group.name != "Public":
+                group.name = "Public"
+                group.save(update_fields=["name", "updated_at"])
+            return group
+        except LibraryGroup.DoesNotExist:
+            # Repair below.
+            pass
+
+    existing = LibraryGroup.objects.filter(name="Public").order_by("created_at", "id").first()
+    if existing is not None:
+        set_public_group_id(str(existing.id))
+        return existing
+
+    group = LibraryGroup.objects.create(name="Public", description="Default shared library group.")
+    set_public_group_id(str(group.id))
     return group
 
 

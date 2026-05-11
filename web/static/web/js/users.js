@@ -64,7 +64,7 @@ export async function initUsersList() {
   function curatedGroupsFromUser(user) {
     const groups = Array.isArray(user && user.groups) ? user.groups : [];
     const curated = groups.filter((g) => (g && g.membership_role) === "curator");
-    return curated.map((g) => g.name || g.slug || "").filter(Boolean);
+    return curated.map((g) => g.name || String(g.id || "")).filter(Boolean);
   }
 
   function groupsSummary(user) {
@@ -72,7 +72,7 @@ export async function initUsersList() {
     if (!groups.length) return "";
     return groups
       .map((g) => {
-        const name = g.name || g.slug || "";
+        const name = g.name || String(g.id || "");
         if (!name) return "";
         const badge = g.membership_role ? ` (${g.membership_role})` : "";
         return `${name}${badge}`;
@@ -365,7 +365,7 @@ export async function initUserEdit() {
       .map((g) => {
         const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
         const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
-        return `<div><a href="${escapeHtml(href)}">${escapeHtml(g.name || g.slug || "")}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
+        return `<div><a href="${escapeHtml(href)}">${escapeHtml(g.name || String(g.id || ""))}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
       })
       .join("");
   }
@@ -378,29 +378,30 @@ export async function initUserEdit() {
       .map((g) => {
         const groupId = g.id ? String(g.id) : "";
         const membershipId = g.membership_id ? String(g.membership_id) : "";
-        const name = g.name || g.slug || "";
-        const slug = g.slug || "";
+        const name = g.name || String(g.id || "");
         const role = g.membership_role || "reader";
         const isPublic = !!g.is_public_group;
 
         const publicBadge = isPublic ? ' <span class="pill pill--owner">Public</span>' : "";
-        const disabled = isPublic ? "disabled" : "";
-        const note = isPublic ? '<div class="muted">Public memberships cannot be removed; role remains reader.</div>' : "";
+        const roleDisabled = isPublic ? "disabled" : "";
+        const saveDisabled = isPublic ? "disabled" : "";
+        const note = isPublic
+          ? '<div class="muted">Public is the default/fallback group. Role remains reader; removal is allowed when another membership remains (final removal restores Public).</div>'
+          : "";
 
         return `
           <article class="book">
             <h3 class="book__title">${escapeHtml(name)}${publicBadge}</h3>
             <div class="book__meta">
-              <div class="muted">${escapeHtml(slug)}</div>
-              <div>Role: <select data-action="membership-role" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${disabled}>
+              <div>Role: <select data-action="membership-role" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${roleDisabled}>
                 <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
-                <option value="curator" ${role === "curator" ? "selected" : ""} ${disabled}>curator</option>
+                <option value="curator" ${role === "curator" ? "selected" : ""} ${roleDisabled}>curator</option>
               </select></div>
               ${note}
             </div>
             <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="button" type="button" data-action="membership-save" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${disabled}>Save role</button>
-              <button class="button" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${disabled}>Remove</button>
+              <button class="button" type="button" data-action="membership-save" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${saveDisabled}>Save role</button>
+              <button class="button" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}">Remove</button>
             </div>
           </article>
         `.trim();
@@ -426,7 +427,7 @@ export async function initUserEdit() {
 
     const selectable = (Array.isArray(allGroups) ? allGroups : [])
       .filter((g) => g && g.id && !existing.has(String(g.id)))
-      .filter((g) => !(g && g.slug === "public"));
+      .filter((g) => !(g && g.is_public_group));
 
     if (!selectable.length) {
       const opt = document.createElement("option");
@@ -444,7 +445,7 @@ export async function initUserEdit() {
     for (const g of selectable) {
       const opt = document.createElement("option");
       opt.value = String(g.id);
-      opt.textContent = g.name ? `${g.name} (${g.slug})` : String(g.slug || g.id);
+      opt.textContent = g.name ? String(g.name) : String(g.id);
       addGroupSelect.appendChild(opt);
     }
   }

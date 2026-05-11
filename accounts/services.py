@@ -327,7 +327,7 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
     memberships = list(
         LibraryGroupMembership.objects.select_related("group")
         .filter(user=user)
-        .order_by("group__name", "group__slug")
+        .order_by("group__name", "group__id")
     )
 
     groups: list[dict[str, Any]] = []
@@ -339,7 +339,6 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
             {
                 "id": group.id,
                 "name": group.name,
-                "slug": group.slug,
                 "membership_role": membership.role,
                 "is_public_group": public,
             }

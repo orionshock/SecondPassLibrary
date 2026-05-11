@@ -49,6 +49,7 @@ from .models import ImportJob
 from .group_services import (
     add_book_to_group,
     ensure_book_public_assignment,
+    get_public_group,
     remove_book_from_group,
     add_user_to_group,
     remove_user_from_group,
@@ -126,7 +127,7 @@ class BookViewSet(viewsets.ModelViewSet):
             Prefetch(
                 "group_assignments",
                 queryset=BookGroupAssignment.objects.select_related("group").order_by(
-                    "group__name", "group__slug"
+                    "group__name", "group__id"
                 ),
             ),
         )
@@ -392,9 +393,9 @@ class LibraryGroupViewSet(
         if policies.can_manage_library(user):
             return queryset
 
+        public = get_public_group()
         return queryset.filter(
-            Q(slug="public")
-            | Q(memberships__user=user)
+            Q(id=public.id) | Q(memberships__user=user)
         ).distinct()
 
     def update(self, request, *args, **kwargs):

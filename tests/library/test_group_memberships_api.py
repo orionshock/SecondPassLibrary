@@ -53,7 +53,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         reader_profile.save(update_fields=["role", "updated_at"])
 
         self.group = LibraryGroup.objects.create(
-            name="Group", slug="group"
+            name="Group"
         )
 
     def test_manager_and_owner_can_list_memberships(self):
@@ -220,7 +220,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         self.assertEqual(public_membership.role, LibraryGroupMembership.ROLE_READER)
 
     def test_manager_can_remove_public_membership_if_another_group_remains(self):
-        other = LibraryGroup.objects.create(name="Other", slug="other")
+        other = LibraryGroup.objects.create(name="Other")
         LibraryGroupMembership.objects.create(
             user=self.reader, group=other, role=LibraryGroupMembership.ROLE_READER
         )

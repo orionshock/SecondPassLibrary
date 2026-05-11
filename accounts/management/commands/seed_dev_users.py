@@ -108,7 +108,7 @@ class Command(BaseCommand):
         )
 
         public = get_public_group()
-        self.stdout.write(f"Public group: {public.name} ({public.slug})")
+        self.stdout.write(f"Public group: {public.name} ({public.id})")
 
         created_users: list[str] = []
         updated_users: list[str] = []
@@ -163,22 +163,18 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated users: {', '.join(updated_users)}")
 
         fantasy, _fantasy_created = LibraryGroup.objects.update_or_create(
-            slug="fantasy-club",
-            defaults={
-                "name": "Fantasy Club",
-            },
+            name="Fantasy Club",
+            defaults={},
         )
         kids, _kids_created = LibraryGroup.objects.update_or_create(
-            slug="kids-books",
-            defaults={
-                "name": "Kids Books",
-            },
+            name="Kids Books",
+            defaults={},
         )
 
         self.stdout.write("")
         self.stdout.write("Groups:")
-        self.stdout.write(f"- {fantasy.name} ({fantasy.slug})")
-        self.stdout.write(f"- {kids.name} ({kids.slug})")
+        self.stdout.write(f"- {fantasy.name} ({fantasy.id})")
+        self.stdout.write(f"- {kids.name} ({kids.id})")
 
         memberships: list[str] = []
 
@@ -190,14 +186,14 @@ class Command(BaseCommand):
             group=fantasy,
             defaults={"role": LibraryGroupMembership.ROLE_CURATOR},
         )
-        memberships.append("curator -> fantasy-club (curator)")
+        memberships.append("curator -> Fantasy Club (curator)")
 
         LibraryGroupMembership.objects.update_or_create(
             user=reader_user,
             group=fantasy,
             defaults={"role": LibraryGroupMembership.ROLE_READER},
         )
-        memberships.append("reader -> fantasy-club (reader)")
+        memberships.append("reader -> Fantasy Club (reader)")
 
         self.stdout.write("")
         self.stdout.write("Memberships ensured:")
@@ -218,7 +214,7 @@ class Command(BaseCommand):
                 for idx, book in enumerate(books):
                     target_group = fantasy if idx % 2 == 0 else kids
                     assignment = add_book_to_group(actor=owner_user, book=book, group=target_group)
-                    assigned.append(f"{book.title} -> {assignment.group.slug}")
+                    assigned.append(f"{book.title} -> {assignment.group.name}")
                 for line in assigned:
                     self.stdout.write(f"- {line}")
 

@@ -155,12 +155,11 @@ class BookSerializer(serializers.ModelSerializer):
             # Readers/Curators only see groups they can view (public, listed, or member).
             visible_groups = [g for g in groups if policies.can_view_library_group(user=user, group=g)]
 
-        visible_groups = sorted(visible_groups, key=lambda g: (g.name, g.slug))
+        visible_groups = sorted(visible_groups, key=lambda g: (g.name, str(g.id)))
         return [
             {
                 "id": g.id,
                 "name": g.name,
-                "slug": g.slug,
                 "is_public_group": is_public_group(g),
             }
             for g in visible_groups
@@ -317,7 +316,6 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "slug",
             "description",
             "is_public_group",
             "membership_role",
@@ -334,7 +332,7 @@ class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
     Allowed fields:
     - description
 
-    Identity fields (name/slug) are rejected if present in the request payload.
+    Identity fields are rejected if present in the request payload.
     """
 
     class Meta:

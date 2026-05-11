@@ -72,7 +72,6 @@ function renderGroupsList(payload) {
   return results
     .map((g) => {
       const name = g.name || "";
-      const slug = g.slug || "";
       const membershipRole = g.membership_role || "";
       const isPublic = !!g.is_public_group;
       const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
@@ -93,7 +92,6 @@ function renderGroupsList(payload) {
               </h3>
               ${badges ? ` <span style="margin-left: 8px;">${badges}</span>` : ""}
             </div>
-            <div class="muted">slug: <code>${escapeHtml(slug)}</code></div>
           </div>
         </article>
       `.trim();
@@ -308,7 +306,6 @@ export async function initGroupView() {
   const statusEl = $("#group-view-status");
   const titleEl = $("#group-view-title");
   const subtitleEl = $("#group-view-subtitle");
-  const slugEl = $("#group-view-slug");
   const badgesEl = $("#group-view-badges");
   const descEl = $("#group-view-description");
   const editWrap = $("#group-view-edit-link-wrap");
@@ -331,7 +328,6 @@ export async function initGroupView() {
     !statusEl ||
     !titleEl ||
     !subtitleEl ||
-    !slugEl ||
     !badgesEl ||
     !descEl ||
     !booksStatus ||
@@ -372,8 +368,6 @@ export async function initGroupView() {
   const isPublicGroup = !!group.is_public_group;
   titleEl.textContent = group.name || "Group";
 
-  // Slug is diagnostic/internal-facing for now: product routes use UUIDs.
-  slugEl.textContent = group.slug ? `slug: ${group.slug}` : "";
   subtitleEl.textContent = "";
 
   if (canEditGroupPage({ me, group })) {
@@ -435,7 +429,6 @@ export async function initGroupEdit() {
   const statusEl = $("#group-edit-status");
   const titleEl = $("#group-edit-title");
   const subtitleEl = $("#group-edit-subtitle");
-  const slugEl = $("#group-edit-slug");
   const notAllowedEl = $("#group-edit-not-allowed");
 
   const badgesEl = $("#group-edit-badges");
@@ -477,7 +470,6 @@ export async function initGroupEdit() {
     !statusEl ||
     !titleEl ||
     !subtitleEl ||
-    !slugEl ||
     !notAllowedEl ||
     !badgesEl ||
     !descPreviewEl ||
@@ -537,8 +529,6 @@ export async function initGroupEdit() {
   const isPublicGroup = !!group.is_public_group;
   titleEl.textContent = group.name || "Group";
   subtitleEl.textContent = "";
-  // Slug is diagnostic/internal-facing for now: product routes use UUIDs.
-  slugEl.textContent = group.slug ? `slug: ${group.slug}` : "";
 
   if (!canEditGroupPage({ me, group })) {
     setStatus(statusEl, "", false);

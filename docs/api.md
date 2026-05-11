@@ -83,7 +83,7 @@ Response shape:
 
 User-management payload notes:
 
-- Managed users now include a read-only `groups[]` membership summary for that user (membership_id, group id/name/slug, membership_role, is_public_group).
+- Managed users now include a read-only `groups[]` membership summary for that user (membership_id, group id/name, membership_role, is_public_group).
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 - User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
 
@@ -143,7 +143,7 @@ It also includes a `groups` array listing the caller's `LibraryGroupMembership`s
 
 Each `groups[]` item includes:
 
-- `id`, `name`, `slug`
+- `id`, `name`
 - `membership_role` (`reader` / `curator`)
 - `is_public_group`
 

@@ -44,9 +44,8 @@ class LibraryAdminSafetyTest(TestCase):
         request.user = self.staff
         self.assertFalse(self.group_admin.has_delete_permission(request, obj=self.public))
 
-    def test_public_group_slug_is_readonly_in_admin(self):
+    def test_public_group_name_is_readonly_in_admin(self):
         request = self.factory.get("/admin/library/librarygroup/")
         request.user = self.staff
         readonly = set(self.group_admin.get_readonly_fields(request, obj=self.public))
-        self.assertIn("slug", readonly)
-
+        self.assertIn("name", readonly)

@@ -103,19 +103,11 @@ function renderBookGroups(container, groups) {
     const li = document.createElement("li");
     const gid = g && g.id != null ? String(g.id) : "";
     const name = g && g.name ? String(g.name) : "";
-    const slug = g && g.slug ? String(g.slug) : "";
     const isPublic = !!(g && g.is_public_group);
 
     const a = el("a", "", name);
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
     li.appendChild(a);
-    li.appendChild(document.createTextNode(" "));
-
-    const muted = el("span", "muted");
-    const code = document.createElement("code");
-    code.textContent = slug;
-    muted.appendChild(code);
-    li.appendChild(muted);
 
     if (isPublic) {
       li.appendChild(document.createTextNode(" "));
@@ -243,4 +235,3 @@ export async function initBookDetail() {
     }
   }
 }
-

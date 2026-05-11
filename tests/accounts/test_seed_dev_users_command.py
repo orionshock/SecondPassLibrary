@@ -37,12 +37,10 @@ class SeedDevUsersCommandTests(TestCase):
             self.assertEqual(profile.role, role)
 
         public = get_public_group()
-        self.assertEqual(public.slug, "public")
+        self.assertEqual(public.name, "Public")
 
-        fantasy = LibraryGroup.objects.get(slug="fantasy-club")
-        kids = LibraryGroup.objects.get(slug="kids-books")
-        self.assertEqual(fantasy.slug, "fantasy-club")
-        self.assertEqual(kids.slug, "kids-books")
+        fantasy = LibraryGroup.objects.get(name="Fantasy Club")
+        kids = LibraryGroup.objects.get(name="Kids Books")
 
         curator = User.objects.get(username="curator")
         reader = User.objects.get(username="reader")

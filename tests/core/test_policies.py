@@ -60,7 +60,7 @@ class PolicyTest(TestCase):
         self.book = Book.objects.create(title="Public Book")
         ensure_book_public_assignment(book=self.book)
 
-        self.hidden_group = LibraryGroup.objects.create(name="Hidden", slug="hidden")
+        self.hidden_group = LibraryGroup.objects.create(name="Hidden")
         LibraryGroupMembership.objects.create(
             user=self.reader,
             group=self.hidden_group,
@@ -170,7 +170,7 @@ class PolicyTest(TestCase):
         self.assertFalse(policies.can_view_book(user=other_reader, book=self.hidden_book))
 
     def test_user_without_public_membership_cannot_view_public_only_books(self):
-        fantasy = LibraryGroup.objects.create(name="Fantasy", slug="fantasy")
+        fantasy = LibraryGroup.objects.create(name="Fantasy")
         book_public_only = Book.objects.create(title="Public Only")
         ensure_book_public_assignment(book=book_public_only)
 
@@ -191,13 +191,13 @@ class PolicyTest(TestCase):
         self.assertTrue(policies.can_view_book(user=u, book=book_fantasy))
 
     def test_group_visibility_is_membership_based(self):
-        other = LibraryGroup.objects.create(name="Other", slug="other")
+        other = LibraryGroup.objects.create(name="Other")
         self.assertTrue(policies.can_view_library_group(user=self.reader, group=self.public))
         self.assertTrue(policies.can_view_library_group(user=self.reader, group=self.hidden_group))
         self.assertFalse(policies.can_view_library_group(user=self.reader, group=other))
 
     def test_group_management_helpers(self):
-        group = LibraryGroup.objects.create(name="G", slug="g")
+        group = LibraryGroup.objects.create(name="G")
 
         # Identity: Owner/Manager only; Public identity is protected.
         self.assertTrue(policies.can_manage_group_identity(user=self.owner, group=group))
@@ -241,7 +241,7 @@ class PolicyTest(TestCase):
         )
 
     def test_curator_rules(self):
-        fantasy = LibraryGroup.objects.create(name="Fantasy", slug="fantasy")
+        fantasy = LibraryGroup.objects.create(name="Fantasy")
         LibraryGroupMembership.objects.create(
             user=self.reader, group=fantasy, role=LibraryGroupMembership.ROLE_CURATOR
         )

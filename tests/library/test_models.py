@@ -129,8 +129,8 @@ class BookGroupInvariantTest(TestCase):
         from library.models import LibraryGroup
 
         self.public = get_public_group()
-        self.group_a = LibraryGroup.objects.create(name="A", slug="a")
-        self.group_b = LibraryGroup.objects.create(name="B", slug="b")
+        self.group_a = LibraryGroup.objects.create(name="A")
+        self.group_b = LibraryGroup.objects.create(name="B")
         self.book = Book.objects.create(title="B")
 
         self.a1 = BookGroupAssignment.objects.create(
@@ -144,17 +144,17 @@ class BookGroupInvariantTest(TestCase):
         self.a1.delete()
         groups = set(
             BookGroupAssignment.objects.filter(book=self.book).values_list(
-                "group__slug", flat=True
+                "group_id", flat=True
             )
         )
-        self.assertEqual(groups, {"b"})
+        self.assertEqual(groups, {self.group_b.id})
 
     def test_deleting_last_assignment_reassigns_public(self):
         self.a1.delete()
         self.b1.delete()
         groups = set(
             BookGroupAssignment.objects.filter(book=self.book).values_list(
-                "group__slug", flat=True
+                "group_id", flat=True
             )
         )
-        self.assertEqual(groups, {"public"})
+        self.assertEqual(groups, {self.public.id})

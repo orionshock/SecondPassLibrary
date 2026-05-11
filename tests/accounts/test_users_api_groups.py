@@ -36,7 +36,7 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
         reader_profile.role = UserProfile.ROLE_READER
         reader_profile.save(update_fields=["role", "updated_at"])
 
-        self.group = LibraryGroup.objects.create(name="G", slug="g")
+        self.group = LibraryGroup.objects.create(name="G")
         LibraryGroupMembership.objects.create(
             user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
         )
@@ -51,16 +51,16 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
         groups = cast(list[dict[str, Any]], reader_row["groups"])
         self.assertGreaterEqual(len(groups), 1)
 
-        slugs = {g["slug"] for g in groups}
-        self.assertIn("public", slugs)
-        self.assertIn("g", slugs)
+        names = {g["name"] for g in groups}
+        self.assertIn("Public", names)
+        self.assertIn("G", names)
 
-        g_row = next(g for g in groups if g["slug"] == "g")
+        g_row = next(g for g in groups if g["name"] == "G")
         self.assertIn("membership_id", g_row)
         self.assertEqual(g_row["membership_role"], "curator")
         self.assertFalse(g_row["is_public_group"])
 
-        public_row = next(g for g in groups if g["slug"] == "public")
+        public_row = next(g for g in groups if g["is_public_group"])
         self.assertIn("membership_id", public_row)
         self.assertEqual(public_row["membership_role"], "reader")
         self.assertTrue(public_row["is_public_group"])

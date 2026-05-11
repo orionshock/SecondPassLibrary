@@ -10,7 +10,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.group_services import get_public_group
-from library.models import LibraryGroup, LibraryGroupMembership, PUBLIC_GROUP_SLUG
+from library.models import LibraryGroup, LibraryGroupMembership
 
 
 User = get_user_model()
@@ -72,7 +72,7 @@ class ManagedUsersAPITest(APITestCase):
 
         groups = cast(list[dict[str, Any]], data["groups"])
         self.assertGreaterEqual(len(groups), 1)
-        public_groups = [g for g in groups if g["slug"] == PUBLIC_GROUP_SLUG]
+        public_groups = [g for g in groups if g["is_public_group"]]
         self.assertEqual(len(public_groups), 1)
         self.assertTrue(public_groups[0]["is_public_group"])
         self.assertEqual(public_groups[0]["membership_role"], LibraryGroupMembership.ROLE_READER)
@@ -113,7 +113,6 @@ class ManagedUsersAPITest(APITestCase):
     def test_me_curator_reader_has_scoped_group_presentation_power(self):
         group = LibraryGroup.objects.create(
             name="Fantasy Club",
-            slug="fantasy-club",
         )
         LibraryGroupMembership.objects.create(
             user=self.reader,
@@ -380,7 +379,7 @@ class ManagedUsersAPITest(APITestCase):
 
         self.assertTrue(
             LibraryGroupMembership.objects.filter(
-                user=created_user, group__slug=PUBLIC_GROUP_SLUG
+                user=created_user, group=self.public
             ).exists()
         )
 

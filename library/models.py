@@ -4,12 +4,12 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.utils.text import slugify
+from core.server_settings import get_server_setting
 
 from core.models import TimeStampedModel
 
 
-PUBLIC_GROUP_SLUG = "public"
+PUBLIC_GROUP_ID_SETTING = "public_group_id"
 
 
 class Author(TimeStampedModel):
@@ -192,7 +192,6 @@ class BookIdentifier(TimeStampedModel):
 
 class LibraryGroup(TimeStampedModel):
     name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=64, unique=True)
     description = models.TextField(blank=True)
 
     class Meta:
@@ -201,16 +200,13 @@ class LibraryGroup(TimeStampedModel):
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)[:64] or "group"
-        super().save(*args, **kwargs)
-
-
 def is_public_group(group: LibraryGroup | None) -> bool:
     if group is None:
         return False
-    return getattr(group, "slug", None) == PUBLIC_GROUP_SLUG
+    public_id = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
+    if public_id is None or public_id == "":
+        return False
+    return str(getattr(group, "id", "")) == str(public_id)
 
 
 class LibraryGroupMembership(TimeStampedModel):
@@ -251,7 +247,7 @@ class LibraryGroupMembership(TimeStampedModel):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.get_username()} in {self.group.slug} ({self.role})"
+        return f"{self.user.get_username()} in {self.group.name} ({self.role})"
 
 
 class BookGroupAssignment(TimeStampedModel):
@@ -275,7 +271,7 @@ class BookGroupAssignment(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.book.title} -> {self.group.slug}"
+        return f"{self.book.title} -> {self.group.name}"
 
 
 class ImportJob(TimeStampedModel):

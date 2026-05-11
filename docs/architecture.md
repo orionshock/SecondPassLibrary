@@ -9,6 +9,16 @@ Current apps:
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
 - `reading`: devices, reading sessions, progress, annotations
 
+## Server-wide settings
+
+Server-wide configuration lives in the database as `core.ServerSetting` and is accessed through the cached service helpers in `core.server_settings` to avoid a DB hit on every request.
+
+Notes:
+
+- Settings are cached as a single dict under one Django cache key and invalidated on update.
+- `ServerSetting` is **not** intended for secrets.
+- The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
+
 ## Service-layer rule
 
 Keep business logic out of framework glue:

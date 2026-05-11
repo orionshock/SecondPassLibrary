@@ -97,7 +97,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         profile.save(update_fields=["role", "updated_at"])
         ensure_user_public_membership(user=user)
 
-        group = LibraryGroup.objects.create(name="Private", slug="private")
+        group = LibraryGroup.objects.create(name="Private")
         LibraryGroupMembership.objects.create(
             user=user, group=group, role=LibraryGroupMembership.ROLE_READER
         )
@@ -120,7 +120,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
 
     def test_active_session_404_for_inaccessible_book_without_existing_session(self):
         self.client.login(username="u1", password="pass1")
-        group = LibraryGroup.objects.create(name="Hidden", slug="hidden2")
+        group = LibraryGroup.objects.create(name="Hidden")
         restricted = Book.objects.create(title="Restricted2")
         BookGroupAssignment.objects.create(book=restricted, group=group)
 
@@ -133,7 +133,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
 
     def test_start_over_requires_book_access(self):
         self.client.login(username="u1", password="pass1")
-        group = LibraryGroup.objects.create(name="Hidden", slug="hidden3")
+        group = LibraryGroup.objects.create(name="Hidden")
         restricted = Book.objects.create(title="Restricted3")
         BookGroupAssignment.objects.create(book=restricted, group=group)
 

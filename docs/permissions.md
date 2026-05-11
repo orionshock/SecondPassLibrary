@@ -100,7 +100,7 @@ Librarian cannot:
 - create LibraryGroups
 - delete LibraryGroups
 - rename LibraryGroups
-- change LibraryGroup slugs
+- change LibraryGroup identity fields
 - manage LibraryGroup membership
 - add/remove users from groups
 - assign Curators
@@ -109,7 +109,7 @@ Librarian cannot:
 Public-specific librarian rule:
 
 - Librarian may edit Public description only.
-- Librarian may not change Public name or slug.
+- Librarian may not change Public name.
 
 ### Reader
 
@@ -143,7 +143,7 @@ Curator cannot:
 - import books
 - delete books from the system
 - create/delete/rename LibraryGroups
-- change LibraryGroup slugs
+- change LibraryGroup identity fields
 - manage group membership
 - add/remove users from groups
 - assign Curators
@@ -158,7 +158,6 @@ LibraryGroups are access scopes. They are not shelves and they do not exist to p
 Identity fields:
 
 - `name`
-- `slug`
 
 Presentation/configuration fields:
 
@@ -166,20 +165,18 @@ Presentation/configuration fields:
 
 Rules:
 
-- Name and slug should be treated as immutable in normal product workflows after group creation.
-- Slug should never be changed through normal API/UI.
-- Public name/slug are fixed (see below).
+- Name should be treated as immutable in normal product workflows after group creation.
+- Public name is fixed (see below).
 - Description is a presentation/configuration field and may be editable according to role policy.
 
 ## Public group
 
 Public is special.
 
-- Public is identified by canonical slug `public`.
+- Public is identified by `ServerSetting(public_group_id)`.
 - Public is the only special built-in LibraryGroup.
-- Public behavior is based on `PUBLIC_GROUP_SLUG` / `is_public_group()` / `get_public_group()` (not boolean flags).
+- Public behavior is based on `is_public_group()` / `get_public_group()` (not boolean flags).
 - Public name is fixed.
-- Public slug is fixed.
 - Public cannot be deleted.
 - Public cannot have Curators.
 

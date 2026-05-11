@@ -58,7 +58,7 @@ The groups UI is API-driven using:
   - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; visible to group members + managers/owners/librarians + Public viewers)
   - `POST/PATCH/DELETE /api/v1/library/groups/<group_id>/memberships/...` (Manager/Owner only)
 
-Note: `LibraryGroup.slug` is currently shown in the product UI as diagnostic/internal-facing context only (group routes use UUIDs). Public is still identified internally by `slug="public"`.
+Note: Group product routes use UUIDs and `LibraryGroup` no longer has a slug. The special Public group is identified internally by `ServerSetting(public_group_id)` (not by a slug string).
 
 The users UI is API-driven using:
 
