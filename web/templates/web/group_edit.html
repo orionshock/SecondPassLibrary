@@ -11,10 +11,19 @@
       <h1 class="page-title" id="group-edit-title">Group</h1>
       <div class="muted" id="group-edit-subtitle"></div>
     </div>
+    <div style="text-align: right;">
+      <div class="muted" id="group-edit-slug"></div>
+    </div>
   </div>
 
   <div id="group-edit-status" class="muted">Loading…</div>
   <div id="group-edit-not-allowed" class="error is-hidden">Not allowed.</div>
+
+  <section id="group-edit-summary" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+    <h2 class="card__title">Details</h2>
+    <div id="group-edit-badges"></div>
+    <div id="group-edit-description-preview" class="muted" style="margin-top: 10px;"></div>
+  </section>
 
   <section id="group-edit-root" class="card is-hidden" data-group-id="{{ group_id|escape }}">
     <div class="tabs" role="tablist" aria-label="Group edit tabs">
@@ -25,9 +34,7 @@
     </div>
 
     <div id="tab-details" class="tab-panel" data-tab-panel="details">
-      <h2 class="card__title">Details</h2>
-
-      <div id="group-edit-meta"></div>
+      <h2 class="card__title">Description</h2>
 
       <form id="group-edit-form" style="margin-top: 10px;">
         {% csrf_token %}

@@ -304,10 +304,13 @@ export async function initGroupView() {
   setGlobalError("");
 
   const root = $("#group-view-root");
+  const summaryEl = $("#group-view-summary");
   const statusEl = $("#group-view-status");
   const titleEl = $("#group-view-title");
   const subtitleEl = $("#group-view-subtitle");
-  const detailsEl = $("#group-view-details");
+  const slugEl = $("#group-view-slug");
+  const badgesEl = $("#group-view-badges");
+  const descEl = $("#group-view-description");
   const editWrap = $("#group-view-edit-link-wrap");
   const editLink = $("#group-view-edit-link");
 
@@ -324,10 +327,13 @@ export async function initGroupView() {
 
   if (
     !root ||
+    !summaryEl ||
     !statusEl ||
     !titleEl ||
     !subtitleEl ||
-    !detailsEl ||
+    !slugEl ||
+    !badgesEl ||
+    !descEl ||
     !booksStatus ||
     !booksResults ||
     !booksNext ||
@@ -348,6 +354,7 @@ export async function initGroupView() {
 
   setStatus(statusEl, "Loading…", false);
   visible(root, false);
+  visible(summaryEl, false);
   visible(editWrap, false);
 
   let group = null;
@@ -365,37 +372,18 @@ export async function initGroupView() {
   const isPublicGroup = !!group.is_public_group;
   titleEl.textContent = group.name || "Group";
 
-  const badgeBits = [
-    isPublicGroup ? "Public" : "",
-    group.membership_role ? `Your role: ${group.membership_role}` : "",
-  ].filter(truthy);
-  subtitleEl.textContent = `${group.slug ? `slug: ${group.slug}` : ""}${badgeBits.length ? ` · ${badgeBits.join(" · ")}` : ""}`;
+  // Slug is diagnostic/internal-facing for now: product routes use UUIDs.
+  slugEl.textContent = group.slug ? `slug: ${group.slug}` : "";
+  subtitleEl.textContent = "";
 
   if (canEditGroupPage({ me, group })) {
     if (editLink) editLink.setAttribute("href", `/groups/${encodeURIComponent(String(groupId))}/edit/`);
     visible(editWrap, true);
   }
 
-  // Details section (read-only)
-  detailsEl.textContent = "";
-  const kv = document.createElement("div");
-  kv.className = "kv";
-  function addRow(k, v) {
-    const kk = document.createElement("div");
-    kk.className = "kv__k";
-    kk.textContent = k;
-    const vv = document.createElement("div");
-    vv.className = "kv__v";
-    if (v && v.nodeType) vv.appendChild(v);
-    else vv.textContent = v != null ? String(v) : "";
-    kv.appendChild(kk);
-    kv.appendChild(vv);
-  }
-  addRow("Name", group.name || "");
-  const slugNode = document.createElement("code");
-  slugNode.textContent = group.slug || "";
-  addRow("Slug", slugNode);
-  const badgesNode = document.createElement("span");
+  // Stable details card above tabs.
+  badgesEl.textContent = "";
+  const badgesNode = document.createElement("div");
   if (isPublicGroup) {
     const b = document.createElement("span");
     b.className = "pill pill--owner";
@@ -409,10 +397,10 @@ export async function initGroupView() {
     b2.textContent = `Your role: ${group.membership_role}`;
     badgesNode.appendChild(b2);
   }
-  addRow("Badges", badgesNode);
-  addRow("Description", group.description || "");
-  detailsEl.appendChild(kv);
+  badgesEl.appendChild(badgesNode);
+  descEl.textContent = group.description || "";
 
+  visible(summaryEl, true);
   visible(root, true);
   setStatus(statusEl, "", false);
 
@@ -443,12 +431,15 @@ export async function initGroupEdit() {
   setGlobalError("");
 
   const root = $("#group-edit-root");
+  const summaryEl = $("#group-edit-summary");
   const statusEl = $("#group-edit-status");
   const titleEl = $("#group-edit-title");
   const subtitleEl = $("#group-edit-subtitle");
+  const slugEl = $("#group-edit-slug");
   const notAllowedEl = $("#group-edit-not-allowed");
 
-  const metaEl = $("#group-edit-meta");
+  const badgesEl = $("#group-edit-badges");
+  const descPreviewEl = $("#group-edit-description-preview");
   const editForm = $("#group-edit-form");
   const descInput = $("#group-edit-description");
   const saveStatus = $("#group-edit-save-status");
@@ -482,11 +473,14 @@ export async function initGroupEdit() {
 
   if (
     !root ||
+    !summaryEl ||
     !statusEl ||
     !titleEl ||
     !subtitleEl ||
+    !slugEl ||
     !notAllowedEl ||
-    !metaEl ||
+    !badgesEl ||
+    !descPreviewEl ||
     !editForm ||
     !descInput ||
     !saveStatus ||
@@ -525,6 +519,7 @@ export async function initGroupEdit() {
 
   setStatus(statusEl, "Loading…", false);
   visible(root, false);
+  visible(summaryEl, false);
   visible(notAllowedEl, false);
 
   let group = null;
@@ -541,40 +536,40 @@ export async function initGroupEdit() {
 
   const isPublicGroup = !!group.is_public_group;
   titleEl.textContent = group.name || "Group";
-  subtitleEl.textContent = `${group.slug ? `slug: ${group.slug}` : ""}${
-    group.membership_role ? ` · Your role: ${group.membership_role}` : ""
-  }${isPublicGroup ? " · Public" : ""}`;
+  subtitleEl.textContent = "";
+  // Slug is diagnostic/internal-facing for now: product routes use UUIDs.
+  slugEl.textContent = group.slug ? `slug: ${group.slug}` : "";
 
   if (!canEditGroupPage({ me, group })) {
     setStatus(statusEl, "", false);
     visible(notAllowedEl, true);
     visible(root, false);
+    visible(summaryEl, false);
     return;
   }
 
+  // Stable details card above tabs.
+  badgesEl.textContent = "";
+  const badgesNode = document.createElement("div");
+  if (isPublicGroup) {
+    const b = document.createElement("span");
+    b.className = "pill pill--owner";
+    b.textContent = "Public";
+    badgesNode.appendChild(b);
+  }
+  if (group.membership_role) {
+    if (badgesNode.childNodes.length) badgesNode.appendChild(document.createTextNode(" "));
+    const b2 = document.createElement("span");
+    b2.className = "pill";
+    b2.textContent = `Your role: ${group.membership_role}`;
+    badgesNode.appendChild(b2);
+  }
+  badgesEl.appendChild(badgesNode);
+  descPreviewEl.textContent = group.description || "";
+
+  visible(summaryEl, true);
   visible(root, true);
   setStatus(statusEl, "", false);
-
-  // Meta block
-  metaEl.textContent = "";
-  const kv = document.createElement("div");
-  kv.className = "kv";
-  function addRow(k, v) {
-    const kk = document.createElement("div");
-    kk.className = "kv__k";
-    kk.textContent = k;
-    const vv = document.createElement("div");
-    vv.className = "kv__v";
-    if (v && v.nodeType) vv.appendChild(v);
-    else vv.textContent = v != null ? String(v) : "";
-    kv.appendChild(kk);
-    kv.appendChild(vv);
-  }
-  addRow("Name", group.name || "");
-  const slugNode = document.createElement("code");
-  slugNode.textContent = group.slug || "";
-  addRow("Slug", slugNode);
-  metaEl.appendChild(kv);
 
   const allowDescriptionEdit = canEditGroupDescription({ me, group });
   descInput.value = group.description || "";

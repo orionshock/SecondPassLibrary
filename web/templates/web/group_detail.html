@@ -11,12 +11,21 @@
       <h1 class="page-title" id="group-view-title">Group</h1>
       <div class="muted" id="group-view-subtitle"></div>
     </div>
-    <div id="group-view-edit-link-wrap" class="is-hidden">
-      <a id="group-view-edit-link" class="button" href="/groups/{{ group_id|escape }}/edit/">Edit</a>
+    <div style="text-align: right;">
+      <div class="muted" id="group-view-slug"></div>
+      <div id="group-view-edit-link-wrap" class="is-hidden" style="margin-top: 6px;">
+        <a id="group-view-edit-link" class="button" href="/groups/{{ group_id|escape }}/edit/">Edit</a>
+      </div>
     </div>
   </div>
 
   <div id="group-view-status" class="muted">Loading…</div>
+
+  <section id="group-view-summary" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+    <h2 class="card__title">Details</h2>
+    <div id="group-view-badges"></div>
+    <div id="group-view-description" style="margin-top: 10px;"></div>
+  </section>
 
   <section id="group-view-root" class="card is-hidden" data-group-id="{{ group_id|escape }}">
     <div class="tabs" role="tablist" aria-label="Group view tabs">
@@ -27,7 +36,6 @@
 
     <div id="tab-books" class="tab-panel" data-tab-panel="books">
       <h2 class="card__title">Books</h2>
-      <div id="group-view-details"></div>
       <div id="group-view-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
       <div id="group-view-books-results" class="books"></div>
       <div class="pager">
