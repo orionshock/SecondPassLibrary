@@ -6,6 +6,7 @@ Design direction:
 
 - `docs/user-data.md`
 - `docs/specs/reading-session-annotation-profile/`
+- Current REST examples: `docs/reading-rest-examples.md`
 
 ## Sessions
 

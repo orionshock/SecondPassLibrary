@@ -7,6 +7,10 @@ This document is design direction for reading sessions, progress, and annotation
 - `docs/specs/reading-session-annotation-profile/`
   - Current profile version: `0.1.0`
 
+For practical current REST payload examples for reader-client development, see:
+
+- `docs/reading-rest-examples.md`
+
 ## Position
 
 - Reader clients must adapt to the server format if they want to save user data.

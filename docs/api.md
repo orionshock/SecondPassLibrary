@@ -271,6 +271,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 ## Reading
 
 - Reading APIs follow the W3C-style direction described in `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/` (import/export is future work; not implemented yet).
+- Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
 - Devices: `GET /api/v1/reading/devices/` (paginated), `GET /api/v1/reading/devices/<id>/`
