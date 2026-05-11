@@ -123,9 +123,6 @@ class AnnotationSerializer(serializers.ModelSerializer):
             "motivation",
             "target",
             "body",
-            "source_import",
-            "derived_from",
-            "source_session",
             "is_deleted",
             "created_at",
             "updated_at",
@@ -136,3 +133,15 @@ class AnnotationSerializer(serializers.ModelSerializer):
         if motivation is None or (isinstance(motivation, str) and not motivation.strip()):
             raise serializers.ValidationError("This field is required.")
         return motivation
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        allowed = {"session", "device", "motivation", "target", "body"}
+        present = set(initial.keys())
+        unknown = present.difference(allowed)
+        if unknown:
+            unknown_sorted = ", ".join(sorted(unknown))
+            raise serializers.ValidationError(
+                {"detail": f"Unsupported fields: {unknown_sorted}."}
+            )
+        return super().validate(attrs)

@@ -178,6 +178,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(payload["motivation"], Annotation.MOTIVATION_HIGHLIGHTING)
         self.assertIn("target", payload)
         self.assertIn("body", payload)
+        self.assertNotIn("source_import", payload)
 
     def test_invalid_annotation_motivation_rejected(self):
         self.client.login(username="u1", password="pass1")
@@ -191,6 +192,25 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
                     "motivation": "not-a-real-motivation",
                     "target": {},
                     "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_api_rejects_source_import_field(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
+                    "body": [],
+                    "source_import": {"provider": "kindle"},
                 },
                 format="json",
             ),

@@ -92,6 +92,12 @@ Annotation payloads use canonical fields:
 - `target`: W3C-ish `source` + `selector` (EPUB CFI `FragmentSelector`)
 - `body`: W3C-ish body/bodies (JSON)
 
+Notes:
+
+- Annotations belong to exactly one reading session.
+- The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
+- `source_import` provenance is reserved for future server-side import work and is not exposed as a normal client-writable field via the public API.
+
 ## Devices
 
 Devices are user-scoped records intended for client progress attribution and debugging context.

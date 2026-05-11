@@ -137,21 +137,9 @@ class Annotation(TimeStampedModel):
     )
     target = models.JSONField(default=dict)
     body = models.JSONField(default=list, blank=True)
+    # Internal/server-managed provenance for future import work. Not exposed as a
+    # normal client-writable field via the public reading API.
     source_import = models.JSONField(default=dict, blank=True)
-    derived_from = models.ForeignKey(
-        "self",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="derived_annotations",
-    )
-    source_session = models.ForeignKey(
-        ReadingSession,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="promoted_annotations",
-    )
     is_deleted = models.BooleanField(default=False)
 
     class Meta:

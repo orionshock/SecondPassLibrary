@@ -17,6 +17,10 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 This profile defines a portable annotation/export format for a personal EPUB reading system.
 
+Second Pass Library note:
+
+- The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.
+
 It represents:
 
 - reading sessions

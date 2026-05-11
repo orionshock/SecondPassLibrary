@@ -37,7 +37,7 @@ Annotations point into a publication using an EPUB CFI selector, and are intenti
 - A user may have one active session per book.
 - Closed sessions are immutable (not reopened/mutated).
 - New sessions may layer previous sessions as read-only overlays.
-- Promoted annotations are represented by creating a new annotation that references the old one via `derivedFrom`.
+- There is no cross-session annotation promotion/linking in the current implementation. Re-highlighting in a new session creates a separate annotation.
 
 ### Ownership and durability
 

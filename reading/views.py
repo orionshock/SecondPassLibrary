@@ -180,9 +180,6 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         motivation = cast(str, validated["motivation"])
         target = cast(dict, validated.get("target") or {})
         body = validated.get("body") or []
-        source_import = cast(dict, validated.get("source_import") or {})
-        derived_from = cast(Annotation | None, validated.get("derived_from"))
-        source_session = cast(ReadingSession | None, validated.get("source_session"))
 
         annotation = create_annotation(
             session=session,
@@ -190,9 +187,6 @@ class AnnotationViewSet(viewsets.ModelViewSet):
             motivation=motivation,
             target=target,
             body=body,
-            source_import=source_import,
-            derived_from=derived_from,
-            source_session=source_session,
         )
         serializer.instance = annotation
 

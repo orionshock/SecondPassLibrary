@@ -106,9 +106,6 @@ def create_annotation(
     motivation: str,
     target: dict,
     body,
-    source_import: dict | None = None,
-    derived_from: Annotation | None = None,
-    source_session: ReadingSession | None = None,
 ) -> Annotation:
     assert_session_writable(session=session)
     return Annotation.objects.create(
@@ -117,7 +114,6 @@ def create_annotation(
         motivation=motivation,
         target=target,
         body=body,
-        source_import=source_import or {},
-        derived_from=derived_from,
-        source_session=source_session,
+        # `source_import` is internal/server-managed. Keep it empty for normal creates.
+        source_import={},
     )
