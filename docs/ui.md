@@ -51,7 +51,8 @@ The groups UI is API-driven using:
 - `GET /api/v1/library/groups/<group_id>/` (detail)
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-- `POST /api/v1/library/groups/<group_id>/books/` (add-by-UUID; temporary functional UI)
+- `GET /api/v1/library/books/?q=<search>` (book search for the Groups UI picker)
+- `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
 - Memberships:
   - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; visible to group members + managers/owners/librarians + Public viewers)

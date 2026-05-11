@@ -203,6 +203,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'data-tab="details"')
         self.assertContains(response, 'data-tab="books"')
         self.assertContains(response, 'data-tab="members"')
+        self.assertContains(response, 'id="group-edit-book-search-form"')
+        self.assertContains(response, 'id="group-edit-book-search-results"')
 
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)

@@ -48,12 +48,30 @@
     <div id="tab-books" class="tab-panel is-hidden" data-tab-panel="books">
       <h2 class="card__title">Books</h2>
 
-      <form id="group-edit-add-book" class="search is-hidden" autocomplete="off">
-        <label class="search__label" for="group-edit-book-id">Add book by UUID</label>
-        <input id="group-edit-book-id" class="search__input" placeholder="Book UUID" />
-        <button class="button" type="submit">Add</button>
-        <span id="group-edit-add-book-status" class="muted"></span>
+      <form id="group-edit-book-search-form" class="search is-hidden" autocomplete="off">
+        <label class="search__label" for="group-edit-book-search">Find a book to add</label>
+        <input id="group-edit-book-search" class="search__input" placeholder="Search title, author, series…" />
+        <button id="group-edit-book-search-btn" class="button" type="submit">Search</button>
+        <span id="group-edit-book-search-status" class="muted"></span>
       </form>
+
+      <div id="group-edit-book-search-results-wrap" class="is-hidden" style="margin-top: 10px;">
+        <div id="group-edit-book-search-results" class="books"></div>
+        <div class="pager">
+          <button id="group-edit-book-search-prev" class="button" type="button" disabled>Previous</button>
+          <button id="group-edit-book-search-next" class="button" type="button" disabled>Next</button>
+        </div>
+      </div>
+
+      <details id="group-edit-book-uuid-debug" class="is-hidden" style="margin-top: 10px;">
+        <summary class="muted">Debug: add book by UUID</summary>
+        <form id="group-edit-add-book" class="search" autocomplete="off" style="margin-top: 8px;">
+          <label class="search__label" for="group-edit-book-id">Book UUID</label>
+          <input id="group-edit-book-id" class="search__input" placeholder="Book UUID" />
+          <button class="button" type="submit">Add</button>
+          <span id="group-edit-add-book-status" class="muted"></span>
+        </form>
+      </details>
 
       <div id="group-edit-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
       <div id="group-edit-books-results" class="books"></div>
