@@ -127,6 +127,42 @@ class ShelvesAPITest(APITestCase):
         resp = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))
         self.assertIn(resp.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_400_BAD_REQUEST})
 
+    def test_group_shelf_with_listed_visibility_returns_400(self):
+        self.client.login(username="owner", password="pw")
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "GS",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                    "visibility": "listed",
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_group_filter_does_not_leak_to_non_member(self):
+        self.client.login(username="owner", password="pw")
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "HiddenShelf", "owner_type": "group", "owner_group": str(self.hidden_group.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?owner_group={self.hidden_group.id}"))
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        self.assertEqual(results, [])
+
     def test_add_and_list_items_filters_by_access(self):
         self.client.login(username="reader", password="pw")
         create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))

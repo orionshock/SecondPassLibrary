@@ -4,11 +4,13 @@ from typing import Any, cast
 
 from django.db.models import Q
 from django.http import Http404
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 
 from core import policies as core_policies
 from library.models import Book, LibraryGroup, LibraryGroupMembership
@@ -105,15 +107,18 @@ class ShelfViewSet(
             except LibraryGroup.DoesNotExist as exc:
                 raise Http404() from exc
 
-        shelf = create_shelf(
-            request.user,
-            name=data["name"],
-            description=data.get("description") or "",
-            owner_type=owner_type,
-            owner_user=request.user if owner_type == Shelf.OWNER_TYPE_USER else None,
-            owner_group=owner_group,
-            visibility=data.get("visibility") or Shelf.VISIBILITY_PRIVATE,
-        )
+        try:
+            shelf = create_shelf(
+                request.user,
+                name=data["name"],
+                description=data.get("description") or "",
+                owner_type=owner_type,
+                owner_user=request.user if owner_type == Shelf.OWNER_TYPE_USER else None,
+                owner_group=owner_group,
+                visibility=data.get("visibility") or Shelf.VISIBILITY_PRIVATE,
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
         out = ShelfSerializer(shelf, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -122,7 +127,10 @@ class ShelfViewSet(
         serializer = cast(Any, self.get_serializer(data=request.data or {}, partial=True))
         serializer.is_valid(raise_exception=True)
         data = cast(dict[str, Any], serializer.validated_data)
-        updated = update_shelf(request.user, shelf, **data)
+        try:
+            updated = update_shelf(request.user, shelf, **data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
         out = ShelfSerializer(updated, context={"request": request})
         return Response(out.data, status=status.HTTP_200_OK)
 
@@ -152,12 +160,15 @@ class ShelfViewSet(
         except Book.DoesNotExist as exc:
             raise Http404() from exc
 
-        item = add_book_to_shelf(
-            request.user,
-            shelf=shelf,
-            book=book,
-            position=data.get("position"),
-        )
+        try:
+            item = add_book_to_shelf(
+                request.user,
+                shelf=shelf,
+                book=book,
+                position=data.get("position"),
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
         out = ShelfItemSerializer(item, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -185,6 +196,9 @@ class ShelfViewSet(
         if not can_edit_shelf(user=request.user, shelf=shelf):
             raise PermissionDenied("Not allowed.")
         item.position = position
-        item.save(update_fields=["position", "updated_at"])
+        try:
+            item.save(update_fields=["position", "updated_at"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
         out = ShelfItemSerializer(item, context={"request": request})
         return Response(out.data, status=status.HTTP_200_OK)
