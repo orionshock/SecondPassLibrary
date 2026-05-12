@@ -60,16 +60,26 @@ class ShelfViewSet(
         qs = super().get_queryset().select_related("owner_user", "owner_group", "created_by")
 
         if core_policies.can_manage_library(user):
-            return qs
+            visible_qs = qs
+        else:
+            visible_qs = qs.filter(
+                Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
+                | Q(owner_type=Shelf.OWNER_TYPE_USER, visibility=Shelf.VISIBILITY_LISTED)
+                | Q(
+                    owner_type=Shelf.OWNER_TYPE_GROUP,
+                    owner_group__memberships__user=user,
+                )
+            ).distinct()
 
-        return qs.filter(
-            Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
-            | Q(owner_type=Shelf.OWNER_TYPE_USER, visibility=Shelf.VISIBILITY_LISTED)
-            | Q(
-                owner_type=Shelf.OWNER_TYPE_GROUP,
-                owner_group__memberships__user=user,
-            )
-        ).distinct()
+        owner_group = self.request.query_params.get("owner_group")
+        if owner_group:
+            visible_qs = visible_qs.filter(owner_type=Shelf.OWNER_TYPE_GROUP, owner_group_id=owner_group)
+
+        book = self.request.query_params.get("book")
+        if book:
+            visible_qs = visible_qs.filter(items__book_id=book).distinct()
+
+        return visible_qs
 
     def get_object(self):
         obj = super().get_object()
@@ -178,4 +188,3 @@ class ShelfViewSet(
         item.save(update_fields=["position", "updated_at"])
         out = ShelfItemSerializer(item, context={"request": request})
         return Response(out.data, status=status.HTTP_200_OK)
-

@@ -65,6 +65,26 @@ def user_edit(request: HttpRequest, user_id: str) -> HttpResponse:
 
 
 @login_required
+def shelves(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/shelves.html")
+
+
+@login_required
+def shelf_new(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/shelf_new.html")
+
+
+@login_required
+def shelf_detail(request: HttpRequest, shelf_id: str) -> HttpResponse:
+    return render(request, "web/shelf_detail.html", {"shelf_id": shelf_id})
+
+
+@login_required
+def shelf_edit(request: HttpRequest, shelf_id: str) -> HttpResponse:
+    return render(request, "web/shelf_edit.html", {"shelf_id": shelf_id})
+
+
+@login_required
 def profile(request: HttpRequest) -> HttpResponse:
     return render(request, "web/profile.html")
 

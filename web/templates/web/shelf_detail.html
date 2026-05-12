@@ -1,0 +1,37 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}shelf-view{% endblock %}
+
+{% block title %}Shelf · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/shelves/" class="pill">← Back to Shelves</a>
+      <h1 class="page-title" id="shelf-title">Shelf</h1>
+    </div>
+    <div id="shelf-view-edit-wrap" class="is-hidden">
+      <a id="shelf-view-edit-link" class="button" href="/shelves/{{ shelf_id|escape }}/edit/">Edit</a>
+    </div>
+  </div>
+
+  <div id="shelf-view-status" class="muted">Loading…</div>
+  <div id="shelf-view-error" class="error is-hidden"></div>
+
+  <section id="shelf-view" class="card is-hidden" data-shelf-id="{{ shelf_id|escape }}">
+    <h2 class="card__title">Details</h2>
+    <div id="shelf-view-meta"></div>
+  </section>
+
+  <section id="shelf-view-items" class="card is-hidden">
+    <h2 class="card__title">Books</h2>
+    <div id="shelf-view-items-status" class="muted"></div>
+    <div id="shelf-view-items-results" class="muted"></div>
+    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button id="shelf-view-items-prev" class="button" type="button">Previous</button>
+      <button id="shelf-view-items-next" class="button" type="button">Next</button>
+      <span id="shelf-view-items-page-note" class="muted"></span>
+    </div>
+  </section>
+{% endblock %}
+

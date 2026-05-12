@@ -1,0 +1,60 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}shelf-new{% endblock %}
+
+{% block title %}New Shelf · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/shelves/" class="pill">← Back to Shelves</a>
+      <h1 class="page-title">New shelf</h1>
+    </div>
+  </div>
+
+  <div id="shelf-new-status" class="muted">Loading…</div>
+  <div id="shelf-new-error" class="error is-hidden"></div>
+
+  <section id="shelf-new-card" class="card is-hidden">
+    <h2 class="card__title">Details</h2>
+    <form id="shelf-new-form">
+      {% csrf_token %}
+      <div class="kv">
+        <div class="kv__k"><label for="shelf-new-name">Name</label></div>
+        <div class="kv__v"><input id="shelf-new-name" type="text" required style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="shelf-new-description">Description</label></div>
+        <div class="kv__v"><textarea id="shelf-new-description" rows="4" style="width: 100%;"></textarea></div>
+
+        <div class="kv__k"><label for="shelf-new-owner-type">Owner type</label></div>
+        <div class="kv__v">
+          <select id="shelf-new-owner-type">
+            <option value="user">My shelf</option>
+            <option value="group">Group shelf</option>
+          </select>
+        </div>
+
+        <div class="kv__k"><label for="shelf-new-visibility">Visibility</label></div>
+        <div class="kv__v">
+          <select id="shelf-new-visibility">
+            <option value="private">Private</option>
+            <option value="listed">Listed</option>
+          </select>
+          <div class="muted" style="margin-top: 6px;">Listed shelves are visible to authenticated users but do not grant book access.</div>
+        </div>
+
+        <div class="kv__k"><label for="shelf-new-owner-group">Owner group</label></div>
+        <div class="kv__v">
+          <select id="shelf-new-owner-group"></select>
+          <div class="muted" style="margin-top: 6px;">Group shelves are visible to group members and broad roles. Group shelves are always private.</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="button" type="submit">Create</button>
+        <span id="shelf-new-submit-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+

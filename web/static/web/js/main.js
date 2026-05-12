@@ -5,6 +5,7 @@ import { initBookDetail } from "./book_detail.js";
 import { initBookEdit } from "./book_edit.js";
 import { initImports } from "./imports.js";
 import { initGroupsList, initGroupView, initGroupEdit } from "./groups.js";
+import { initShelvesList, initShelfNew, initShelfView, initShelfEdit } from "./shelves.js";
 import { initProfile } from "./profile.js";
 import { initProfilePassword } from "./profile_password.js";
 import { initUsersList, initUserNew, initUserEdit } from "./users.js";
@@ -35,6 +36,26 @@ document.addEventListener("DOMContentLoaded", () => {
     initImports().catch((e) => {
       console.error("initImports failed", e);
       setGlobalErrorFromError(e, "Imports error:");
+    });
+  } else if (page === "shelves") {
+    initShelvesList().catch((e) => {
+      console.error("initShelvesList failed", e);
+      setGlobalErrorFromError(e, "Shelves error:");
+    });
+  } else if (page === "shelf-new") {
+    initShelfNew().catch((e) => {
+      console.error("initShelfNew failed", e);
+      setGlobalErrorFromError(e, "New shelf error:");
+    });
+  } else if (page === "shelf-view") {
+    initShelfView().catch((e) => {
+      console.error("initShelfView failed", e);
+      setGlobalErrorFromError(e, "Shelf error:");
+    });
+  } else if (page === "shelf-edit") {
+    initShelfEdit().catch((e) => {
+      console.error("initShelfEdit failed", e);
+      setGlobalErrorFromError(e, "Shelf edit error:");
     });
   } else if (page === "groups") {
     initGroupsList().catch((e) => {

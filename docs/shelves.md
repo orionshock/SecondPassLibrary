@@ -250,6 +250,10 @@ Book edit page:
 
 - a future “Shelves” tab may show shelves containing this book
 
+Implementation note:
+
+- Product UI now includes shelf pages under `/shelves/` and integrates shelf context into group/book pages. Item management lives on the Shelf Edit page (not on group/book pages).
+
 ## 11. Non-goals
 
 - Do not use shelves for access control.

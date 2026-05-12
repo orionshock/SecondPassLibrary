@@ -99,6 +99,31 @@ function renderGroupsList(payload) {
     .join("");
 }
 
+function renderGroupShelvesCompact(payload) {
+  const results = Array.isArray(payload && payload.results) ? payload.results : [];
+  if (results.length === 0) return "";
+
+  return results
+    .map((s) => {
+      const id = s && s.id != null ? String(s.id) : "";
+      const name = s && s.name ? String(s.name) : "(Unnamed shelf)";
+      const desc = s && s.description ? String(s.description) : "";
+      const href = id ? `/shelves/${encodeURIComponent(id)}/` : "#";
+
+      return `
+        <article class="book">
+          <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+            <div style="flex: 1;">
+              <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
+              ${desc ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(desc)}</div>` : ""}
+            </div>
+          </div>
+        </article>
+      `.trim();
+    })
+    .join("");
+}
+
 function renderBooksCompact(payload, { groupId, canRemove }) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
@@ -322,6 +347,11 @@ export async function initGroupView() {
   const membersNext = $("#group-view-members-next");
   const membersPrev = $("#group-view-members-prev");
 
+  const shelvesStatus = $("#group-view-shelves-status");
+  const shelvesResults = $("#group-view-shelves-results");
+  const shelvesNext = $("#group-view-shelves-next");
+  const shelvesPrev = $("#group-view-shelves-prev");
+
   if (
     !root ||
     !summaryEl ||
@@ -418,6 +448,18 @@ export async function initGroupView() {
     emptyText: "No members.",
     render: (payload) => renderMembersReadOnly(payload),
   });
+
+  if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
+    await pagedListController({
+      statusEl: shelvesStatus,
+      resultsEl: shelvesResults,
+      nextBtn: shelvesNext,
+      prevBtn: shelvesPrev,
+      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}`,
+      emptyText: "No shelves.",
+      render: (payload) => renderGroupShelvesCompact(payload),
+    });
+  }
 }
 
 export async function initGroupEdit() {
@@ -463,6 +505,14 @@ export async function initGroupEdit() {
   const membersResults = $("#group-edit-members-results");
   const membersNext = $("#group-edit-members-next");
   const membersPrev = $("#group-edit-members-prev");
+
+  const shelvesNote = $("#group-edit-shelves-note");
+  const shelvesActions = $("#group-edit-shelves-actions");
+  const shelvesCreateLink = $("#group-edit-shelves-create-link");
+  const shelvesStatus = $("#group-edit-shelves-status");
+  const shelvesResults = $("#group-edit-shelves-results");
+  const shelvesNext = $("#group-edit-shelves-next");
+  const shelvesPrev = $("#group-edit-shelves-prev");
 
   if (
     !root ||
@@ -976,6 +1026,32 @@ export async function initGroupEdit() {
           setGlobalError(extractApiErrorMessage(e2));
         }
       }
+    });
+  }
+
+  if (shelvesNote) {
+    shelvesNote.textContent =
+      "Shelves organize presentation and do not grant book access. Group shelves contain only books assigned to this group.";
+  }
+
+  const allowShelfManage = canManageGroupBooks({ me, group });
+  visible(shelvesActions, !!allowShelfManage);
+  if (allowShelfManage && shelvesCreateLink) {
+    shelvesCreateLink.setAttribute(
+      "href",
+      `/shelves/new/?owner_type=group&owner_group=${encodeURIComponent(String(groupId))}`
+    );
+  }
+
+  if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
+    await pagedListController({
+      statusEl: shelvesStatus,
+      resultsEl: shelvesResults,
+      nextBtn: shelvesNext,
+      prevBtn: shelvesPrev,
+      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}`,
+      emptyText: "No shelves.",
+      render: (payload) => renderGroupShelvesCompact(payload),
     });
   }
 }

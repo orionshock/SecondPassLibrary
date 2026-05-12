@@ -56,10 +56,12 @@
 
     <div id="tab-shelves" class="tab-panel is-hidden" data-tab-panel="shelves">
       <h2 class="card__title">Shelves</h2>
-      <div id="group-view-shelves-placeholder" class="muted">
-        Shelves are not implemented yet. Shelves organize books for presentation and do not grant access.
+      <div id="group-view-shelves-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-view-shelves-results" class="books"></div>
+      <div class="pager">
+        <button id="group-view-shelves-prev" class="button" type="button" disabled>Previous</button>
+        <button id="group-view-shelves-next" class="button" type="button" disabled>Next</button>
       </div>
     </div>
   </section>
 {% endblock %}
-

@@ -97,6 +97,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-detail"')
         self.assertContains(response, f'data-book-id="{book_id}"')
         self.assertContains(response, 'id="book-groups"')
+        self.assertContains(response, 'id="book-shelves"')
         self.assertContains(response, 'id="book-edit-link-wrap"')
         self.assertContains(
             response, f'href="/library/books/{book_id}/edit/"'
@@ -134,7 +135,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-edit-file-info"')
         self.assertContains(response, 'id="book-edit-groups"')
         self.assertContains(response, 'id="book-edit-groups-add"')
-        self.assertContains(response, 'id="book-edit-shelves-placeholder"')
+        self.assertContains(response, 'id="book-edit-shelves"')
 
     def test_unauthenticated_imports_redirects_to_login(self):
         response = self.client.get("/imports/", follow=False)
@@ -182,6 +183,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, f'data-group-id="{group_id}"')
         self.assertContains(response, 'id="group-view-books-results"')
         self.assertContains(response, 'id="group-view-members-results"')
+        self.assertContains(response, 'id="group-view-shelves-results"')
 
     def test_unauthenticated_group_edit_redirects_to_login(self):
         group_id = uuid4()
@@ -203,8 +205,63 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'data-tab="details"')
         self.assertContains(response, 'data-tab="books"')
         self.assertContains(response, 'data-tab="members"')
+        self.assertContains(response, 'data-tab="shelves"')
         self.assertContains(response, 'id="group-edit-book-search-form"')
         self.assertContains(response, 'id="group-edit-book-search-results"')
+        self.assertContains(response, 'id="group-edit-shelves-results"')
+
+    def test_unauthenticated_shelves_redirects_to_login(self):
+        response = self.client.get("/shelves/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/shelves/")
+
+    def test_authenticated_shelves_returns_200_and_has_containers(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/shelves/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/web/js/main.js")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="shelves-results"')
+
+    def test_unauthenticated_shelf_new_redirects_to_login(self):
+        response = self.client.get("/shelves/new/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/shelves/new/")
+
+    def test_authenticated_shelf_new_returns_200_and_has_form(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/shelves/new/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="shelf-new-form"')
+        self.assertContains(response, 'id="shelf-new-owner-type"')
+
+    def test_unauthenticated_shelf_detail_redirects_to_login(self):
+        shelf_id = uuid4()
+        response = self.client.get(f"/shelves/{shelf_id}/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/api-auth/login/?next=/shelves/{shelf_id}/")
+
+    def test_authenticated_shelf_detail_returns_200_and_has_container(self):
+        self.client.force_login(self.user)
+        shelf_id = uuid4()
+        response = self.client.get(f"/shelves/{shelf_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-shelf-id="{shelf_id}"')
+        self.assertContains(response, 'id="shelf-view-items-results"')
+
+    def test_unauthenticated_shelf_edit_redirects_to_login(self):
+        shelf_id = uuid4()
+        response = self.client.get(f"/shelves/{shelf_id}/edit/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/api-auth/login/?next=/shelves/{shelf_id}/edit/")
+
+    def test_authenticated_shelf_edit_returns_200_and_has_container(self):
+        self.client.force_login(self.user)
+        shelf_id = uuid4()
+        response = self.client.get(f"/shelves/{shelf_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-shelf-id="{shelf_id}"')
+        self.assertContains(response, 'id="shelf-edit-book-search-form"')
 
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)

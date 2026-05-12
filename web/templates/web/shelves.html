@@ -1,0 +1,29 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}shelves{% endblock %}
+
+{% block title %}Shelves · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/app/" class="pill">← Back to Dashboard</a>
+      <h1 class="page-title">Shelves</h1>
+      <div class="muted">Shelves organize presentation and never grant book access.</div>
+    </div>
+    <div>
+      <a class="button" href="/shelves/new/">New shelf</a>
+    </div>
+  </div>
+
+  <div id="shelves-status" class="muted">Loading…</div>
+  <section id="shelves-list" class="card is-hidden">
+    <div id="shelves-results" class="muted"></div>
+    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button id="shelves-prev" class="button" type="button">Previous</button>
+      <button id="shelves-next" class="button" type="button">Next</button>
+      <span id="shelves-page-note" class="muted"></span>
+    </div>
+  </section>
+{% endblock %}
+

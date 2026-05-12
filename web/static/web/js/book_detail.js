@@ -119,6 +119,37 @@ function renderBookGroups(container, groups) {
   container.appendChild(ul);
 }
 
+function renderBookShelves(container, shelves) {
+  clear(container);
+  const results = Array.isArray(shelves && shelves.results) ? shelves.results : Array.isArray(shelves) ? shelves : [];
+  if (!Array.isArray(results) || results.length === 0) {
+    container.appendChild(el("div", "muted", "No visible shelves."));
+    return;
+  }
+  const ul = document.createElement("ul");
+  for (const s of results) {
+    const li = document.createElement("li");
+    const sid = s && s.id != null ? String(s.id) : "";
+    const name = s && s.name ? String(s.name) : "";
+    const a = el("a", "", name || "(Shelf)");
+    a.setAttribute("href", sid ? `/shelves/${encodeURIComponent(sid)}/` : "#");
+    li.appendChild(a);
+
+    const ownerType = s && s.owner_type ? String(s.owner_type) : "";
+    if (ownerType === "user" && s.owner_user && s.owner_user.username) {
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(el("span", "muted", `(user: ${String(s.owner_user.username)})`));
+    }
+    if (ownerType === "group" && s.owner_group && s.owner_group.name) {
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(el("span", "muted", `(group: ${String(s.owner_group.name)})`));
+    }
+
+    ul.appendChild(li);
+  }
+  container.appendChild(ul);
+}
+
 function renderBookMeta(container, book) {
   clear(container);
   const kv = el("div", "kv");
@@ -171,6 +202,8 @@ export async function initBookDetail() {
   const filesBody = $("#book-files-body");
   const groupsSection = $("#book-groups");
   const groupsBody = $("#book-groups-body");
+  const shelvesSection = $("#book-shelves");
+  const shelvesBody = $("#book-shelves-body");
 
   if (
     !statusEl ||
@@ -183,7 +216,9 @@ export async function initBookDetail() {
     !filesSection ||
     !filesBody ||
     !groupsSection ||
-    !groupsBody
+    !groupsBody ||
+    !shelvesSection ||
+    !shelvesBody
   )
     return;
 
@@ -210,6 +245,7 @@ export async function initBookDetail() {
   visible(idSection, false);
   visible(filesSection, false);
   visible(groupsSection, false);
+  visible(shelvesSection, false);
 
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
@@ -220,10 +256,20 @@ export async function initBookDetail() {
     renderFile(filesBody, book.file);
     renderBookGroups(groupsBody, book.groups);
 
+    try {
+      const shelves = await fetchJSON(`/api/v1/shelves/?book=${encodeURIComponent(String(bookId))}`);
+      renderBookShelves(shelvesBody, shelves);
+      visible(shelvesSection, true);
+    } catch (e2) {
+      console.error("Failed to load shelves for book", { bookId, e2 });
+      // Non-fatal; keep shelves section hidden.
+    }
+
     visible(detailEl, true);
     visible(idSection, true);
     visible(filesSection, true);
     visible(groupsSection, true);
+    // shelvesSection toggled above if load succeeded.
     setStatus("", false);
   } catch (e) {
     console.error("Failed to load book detail", { bookId, e });

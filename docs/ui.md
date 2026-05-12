@@ -60,6 +60,18 @@ The groups UI is API-driven using:
 
 Note: Group product routes use UUIDs and `LibraryGroup` no longer has a slug. The special Public group is identified internally by `ServerSetting(public_group_id)` (not by a slug string).
 
+Shelves product UI pages exist (API-driven):
+
+- `GET /shelves/` (list)
+- `GET /shelves/new/` (create)
+- `GET /shelves/<shelf_id>/` (view)
+- `GET /shelves/<shelf_id>/edit/` (edit/manage items)
+
+Book pages:
+
+- Book detail (`/library/books/<book_id>/`) shows visible shelves containing the book.
+- Book edit Shelves tab links to visible shelves containing the book (item management lives on Shelf Edit).
+
 The users UI is API-driven using:
 
 - `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)

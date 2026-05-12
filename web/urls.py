@@ -19,4 +19,8 @@ urlpatterns = [
     path("users/", views.users, name="users"),
     path("users/new/", views.user_new, name="user_new"),
     path("users/<str:user_id>/edit/", views.user_edit, name="user_edit"),
+    path("shelves/", views.shelves, name="shelves"),
+    path("shelves/new/", views.shelf_new, name="shelf_new"),
+    path("shelves/<str:shelf_id>/", views.shelf_detail, name="shelf_detail"),
+    path("shelves/<str:shelf_id>/edit/", views.shelf_edit, name="shelf_edit"),
 ]

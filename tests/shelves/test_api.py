@@ -87,6 +87,41 @@ class ShelvesAPITest(APITestCase):
         detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_list_filter_owner_group(self):
+        self.client.login(username="owner", password="pw")
+        created = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+
+        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?owner_group={self.group.id}"))
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        self.assertIn(shelf_id, {r["id"] for r in results})
+
+    def test_list_filter_book_does_not_leak_private_user_shelves(self):
+        # Create a private user shelf for reader and add book_in_group.
+        self.client.login(username="reader", password="pw")
+        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "P", "owner_type": "user"}, format="json"))
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        add = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(self.book_in_group.id)}, format="json"))
+        self.assertEqual(add.status_code, status.HTTP_201_CREATED)
+
+        # Other user can view the book (Public membership), but must not see reader's private shelf.
+        self.client.logout()
+        self.client.login(username="other", password="pw")
+        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?book={self.book_in_group.id}"))
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        self.assertNotIn(shelf_id, {r["id"] for r in results})
+
     def test_reader_cannot_create_group_shelf(self):
         self.client.login(username="reader", password="pw")
         resp = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))

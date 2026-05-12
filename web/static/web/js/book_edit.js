@@ -189,6 +189,9 @@ export async function initBookEdit() {
   const groupsAddBtnEl = $("#book-edit-groups-add-btn");
   const groupsAddStatusEl = $("#book-edit-groups-add-status");
 
+  const shelvesStatusEl = $("#book-edit-shelves-status");
+  const shelvesEl = $("#book-edit-shelves");
+
   const identifiersStatusEl = $("#book-edit-identifiers-status");
   const identifiersEl = $("#book-edit-identifiers");
   const fileInfoEl = $("#book-edit-file-info");
@@ -228,12 +231,14 @@ export async function initBookEdit() {
     !groupsStatusEl ||
     !groupsEl ||
     !groupsAddFormEl ||
-    !groupsAddSelectEl ||
-    !groupsAddBtnEl ||
-    !groupsAddStatusEl ||
-    !identifiersStatusEl ||
-    !identifiersEl ||
-    !fileInfoEl
+      !groupsAddSelectEl ||
+      !groupsAddBtnEl ||
+      !groupsAddStatusEl ||
+      !shelvesStatusEl ||
+      !shelvesEl ||
+      !identifiersStatusEl ||
+      !identifiersEl ||
+      !fileInfoEl
   )
     return;
 
@@ -610,6 +615,36 @@ export async function initBookEdit() {
     syncSeriesSelectOptions(book.series && book.series.id ? String(book.series.id) : "");
     renderGroups();
     syncGroupsAddOptions();
+    await refreshShelvesContext();
+  }
+
+  async function refreshShelvesContext() {
+    setInlineStatus(shelvesStatusEl, "Loading…", false);
+    try {
+      const payload = await fetchJSON(`/api/v1/shelves/?book=${encodeURIComponent(String(bookId))}`);
+      const results = payload && Array.isArray(payload.results) ? payload.results : [];
+      if (!results.length) {
+        shelvesEl.innerHTML = `<div class="muted">No visible shelves contain this book.</div>`;
+      } else {
+        shelvesEl.innerHTML = results
+          .map((s) => {
+            const sid = s && s.id != null ? String(s.id) : "";
+            const name = s && s.name ? String(s.name) : "(Shelf)";
+            const href = sid ? `/shelves/${encodeURIComponent(sid)}/` : "#";
+            const ownerType = s && s.owner_type ? String(s.owner_type) : "";
+            let owner = "";
+            if (ownerType === "user" && s.owner_user && s.owner_user.username) owner = `user: ${s.owner_user.username}`;
+            if (ownerType === "group" && s.owner_group && s.owner_group.name) owner = `group: ${s.owner_group.name}`;
+            return `<div><a href="${href}">${name}</a>${owner ? ` <span class="muted">(${owner})</span>` : ""}</div>`;
+          })
+          .join("");
+      }
+      setInlineStatus(shelvesStatusEl, "", false);
+    } catch (e) {
+      console.error("Failed to load shelves for book", e);
+      setInlineStatus(shelvesStatusEl, "Failed to load shelves.", true);
+      shelvesEl.innerHTML = "";
+    }
   }
 
   async function refreshIdentifiers() {

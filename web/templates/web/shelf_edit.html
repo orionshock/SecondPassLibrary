@@ -1,0 +1,66 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}shelf-edit{% endblock %}
+
+{% block title %}Edit Shelf · Second Pass Library{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a id="shelf-edit-back" href="/shelves/{{ shelf_id|escape }}/" class="pill">← Back to Shelf</a>
+      <h1 class="page-title" id="shelf-edit-title">Edit shelf</h1>
+    </div>
+  </div>
+
+  <div id="shelf-edit-status" class="muted">Loading…</div>
+  <div id="shelf-edit-error" class="error is-hidden"></div>
+  <div id="shelf-edit-not-allowed" class="error is-hidden">Not allowed.</div>
+
+  <section id="shelf-edit" class="card is-hidden" data-shelf-id="{{ shelf_id|escape }}">
+    <h2 class="card__title">Details</h2>
+    <form id="shelf-edit-form">
+      {% csrf_token %}
+      <div class="kv">
+        <div class="kv__k"><label for="shelf-edit-name">Name</label></div>
+        <div class="kv__v"><input id="shelf-edit-name" type="text" required style="width: 100%;" /></div>
+
+        <div class="kv__k"><label for="shelf-edit-description">Description</label></div>
+        <div class="kv__v"><textarea id="shelf-edit-description" rows="4" style="width: 100%;"></textarea></div>
+
+        <div class="kv__k"><label for="shelf-edit-visibility">Visibility</label></div>
+        <div class="kv__v">
+          <select id="shelf-edit-visibility">
+            <option value="private">Private</option>
+            <option value="listed">Listed</option>
+          </select>
+          <div id="shelf-edit-visibility-note" class="muted" style="margin-top: 6px;"></div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="button" type="submit">Save</button>
+        <span id="shelf-edit-save-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+
+  <section id="shelf-edit-items" class="card is-hidden">
+    <h2 class="card__title">Books</h2>
+
+    <div id="shelf-edit-items-status" class="muted"></div>
+    <div id="shelf-edit-items-results" class="muted"></div>
+    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button id="shelf-edit-items-prev" class="button" type="button">Previous</button>
+      <button id="shelf-edit-items-next" class="button" type="button">Next</button>
+      <span id="shelf-edit-items-page-note" class="muted"></span>
+    </div>
+
+    <h3 class="card__title" style="margin-top: 18px;">Add book</h3>
+    <form id="shelf-edit-book-search-form" style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <input id="shelf-edit-book-search-input" type="text" autocomplete="off" placeholder="Search books…" style="min-width: 240px; flex: 1;" />
+      <button class="button" type="submit">Search</button>
+      <span id="shelf-edit-book-search-status" class="muted"></span>
+    </form>
+    <div id="shelf-edit-book-search-results" class="muted" style="margin-top: 10px;"></div>
+  </section>
+{% endblock %}
+

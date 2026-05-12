@@ -74,6 +74,7 @@ function setActiveNav() {
   const mapping = [
     { key: "library", prefix: "/library/" },
     { key: "app", prefix: "/app/" },
+    { key: "shelves", prefix: "/shelves/" },
     { key: "groups", prefix: "/groups/" },
     { key: "imports", prefix: "/imports/" },
     { key: "users", prefix: "/users/" },
@@ -103,4 +104,3 @@ export async function loadMeAndInitShell() {
     return null;
   }
 }
-
