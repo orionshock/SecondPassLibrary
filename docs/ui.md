@@ -76,6 +76,8 @@ User deletion, invitations, email verification, password reset flows, and MFA ar
 
 The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Edit page (`/groups/<group_id>/edit/`).
 
+Shelves are planned (not implemented yet): see `docs/shelves.md`.
+
 ## 1. UI philosophy
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.

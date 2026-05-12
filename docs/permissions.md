@@ -202,6 +202,10 @@ Safe changes to group assignments should go through:
 
 This prevents scattered direct `BookGroupAssignment` writes and centralizes invariants (including the Public fallback invariant).
 
+## Shelves (planned)
+
+Shelves are a planned presentation/organization feature and **do not** grant book access. See `docs/shelves.md`.
+
 ## Group membership management (current)
 
 - **Viewing group members (read-only):**

@@ -19,6 +19,10 @@ Notes:
 - `ServerSetting` is **not** intended for secrets.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
 
+## Shelves (planned)
+
+Shelves are planned as a separate Django app (likely `shelves`) and are strictly for presentation/organization, not access control. See `docs/shelves.md`.
+
 ## Service-layer rule
 
 Keep business logic out of framework glue:
