@@ -28,6 +28,7 @@ urlpatterns = [
         "api/v1/accounts/", include(("accounts.urls", "accounts"), namespace="accounts")
     ),
     path("api/v1/reading/", include(("reading.urls", "reading"), namespace="reading")),
+    path("api/v1/shelves/", include(("shelves.urls", "shelves"), namespace="shelves")),
     path("api/v1/", include(("core.urls", "core"), namespace="core")),
     path("api-auth/", include("rest_framework.urls")),
 ]

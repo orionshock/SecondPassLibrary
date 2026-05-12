@@ -170,6 +170,23 @@ Any attempt to patch other fields is rejected (400) using the project error enve
 
 Self password change endpoint.
 
+## Shelves
+
+Shelves are presentation/organization and **do not** grant book access. LibraryGroups still control access.
+
+Endpoints:
+
+- `GET /api/v1/shelves/` (paginated; visible shelves)
+- `POST /api/v1/shelves/` (create; user-owned or group-owned depending on permissions)
+- `GET /api/v1/shelves/<id>/`
+- `PATCH /api/v1/shelves/<id>/` (name/description/visibility only)
+- `DELETE /api/v1/shelves/<id>/`
+- Items:
+  - `GET /api/v1/shelves/<id>/items/` (paginated; books are filtered through access policy)
+  - `POST /api/v1/shelves/<id>/items/` (add book)
+  - `PATCH /api/v1/shelves/<id>/items/<item_id>/` (position only)
+  - `DELETE /api/v1/shelves/<id>/items/<item_id>/`
+
 Request:
 
 ```json

@@ -8,6 +8,7 @@ Current apps:
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
 - `reading`: devices, reading sessions, progress, annotations
+- `shelves`: shelves and shelf items (presentation/organization; planned UI later)
 
 ## Server-wide settings
 

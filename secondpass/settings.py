@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "accounts",
     "library.apps.LibraryConfig",
     "reading",
+    "shelves",
 ]
 
 MIDDLEWARE = [

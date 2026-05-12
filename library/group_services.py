@@ -192,6 +192,15 @@ def remove_book_from_group(*, actor, book: Book, group: LibraryGroup) -> bool:
         existed = qs.exists()
         if existed:
             qs.delete()
+            # Shelf invariant: a group-owned shelf may contain only books assigned to that group.
+            # When a book is removed from a group, remove it from shelves owned by that group.
+            from shelves.models import Shelf, ShelfItem
+
+            ShelfItem.objects.filter(
+                shelf__owner_type=Shelf.OWNER_TYPE_GROUP,
+                shelf__owner_group=group,
+                book=book,
+            ).delete()
         ensure_book_has_at_least_one_group(book=book, added_by=actor)
     return existed
 

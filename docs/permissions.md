@@ -206,6 +206,8 @@ This prevents scattered direct `BookGroupAssignment` writes and centralizes inva
 
 Shelves are a planned presentation/organization feature and **do not** grant book access. See `docs/shelves.md`.
 
+Shelves API is implemented under `/api/v1/shelves/`. Product UI for shelves is intentionally deferred.
+
 ## Group membership management (current)
 
 - **Viewing group members (read-only):**

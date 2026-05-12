@@ -122,6 +122,10 @@ Listed shelf behavior:
 
 Group-owned shelves have no discoverability/visibility state; access is derived from the owning group.
 
+Implementation note:
+
+- Group-owned shelves store `visibility="private"` (enforced) to keep a single stable value in the database.
+
 They are visible only to:
 
 - direct members of the owning `LibraryGroup`
@@ -256,3 +260,6 @@ Book edit page:
 - Do not implement global shelf discovery beyond listed user shelves.
 - Do not implement separate UserShelf/GroupShelf tables unless future needs prove one model is insufficient.
 
+## Service hatch
+
+Shelf internals are available for debugging/repair via Django admin at `/admin/` (service hatch). This is not the product UI.

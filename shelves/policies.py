@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+from core import policies as core_policies
+from library.models import Book, LibraryGroupMembership, is_public_group
+
+from .models import Shelf
+
+
+def can_view_shelf(*, user, shelf: Shelf) -> bool:
+    if getattr(user, "is_anonymous", False):
+        return False
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_USER:
+        if shelf.owner_user_id == getattr(user, "id", None):
+            return True
+        return shelf.visibility == Shelf.VISIBILITY_LISTED
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
+        if core_policies.can_manage_library(user):
+            return True
+        group = shelf.owner_group
+        if group is None:
+            return False
+        return LibraryGroupMembership.objects.filter(user=user, group=group).exists()
+
+    return False
+
+
+def can_edit_shelf(*, user, shelf: Shelf) -> bool:
+    if getattr(user, "is_anonymous", False):
+        return False
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_USER:
+        return shelf.owner_user_id == getattr(user, "id", None)
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
+        group = shelf.owner_group
+        if group is None:
+            return False
+        if is_public_group(group):
+            return core_policies.can_manage_library(user)
+        return core_policies.can_manage_library(user) or core_policies.can_curate_group(
+            user=user, group=group
+        )
+
+    return False
+
+
+def can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
+    if not can_edit_shelf(user=user, shelf=shelf):
+        return False
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_USER:
+        return core_policies.can_view_book(user=user, book=book)
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
+        group = shelf.owner_group
+        if group is None:
+            return False
+        return book.group_assignments.filter(group=group).exists()
+
+    return False
+
+
+def can_remove_book_from_shelf(*, user, book: Book, shelf: Shelf) -> bool:
+    return can_edit_shelf(user=user, shelf=shelf)
+
