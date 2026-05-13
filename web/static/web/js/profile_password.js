@@ -75,7 +75,7 @@ export async function initProfilePassword() {
       newInput.value = "";
       confirmInput.value = "";
 
-      setStatus("Saved. Redirectingâ€¦", false);
+      setStatus("Saved. Redirecting", false);
       if (noteEl) {
         noteEl.textContent = "";
         noteEl.classList.remove("error");
