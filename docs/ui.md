@@ -72,6 +72,12 @@ Book pages:
 - Book detail (`/library/books/<book_id>/`) shows visible shelves containing the book.
 - Book edit Shelves tab links to visible shelves containing the book (item management lives on Shelf Edit).
 
+Group shelves UX:
+
+- Group View Shelves tab (`/groups/<group_id>/`) lists shelves owned by the group.
+- Group Edit Shelves tab (`/groups/<group_id>/edit/`) lists shelves and links to View/Edit; creation deep-links to `GET /shelves/new/?owner_group=<group_id>`.
+- Shelf Edit remains the canonical shelf management page (details + items + add/remove + ordering + delete).
+
 The users UI is API-driven using:
 
 - `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)

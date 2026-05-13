@@ -99,7 +99,7 @@ function renderGroupsList(payload) {
     .join("");
 }
 
-function renderGroupShelvesCompact(payload) {
+function renderGroupShelvesCompact(payload, { canEdit }) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
@@ -108,15 +108,29 @@ function renderGroupShelvesCompact(payload) {
       const id = s && s.id != null ? String(s.id) : "";
       const name = s && s.name ? String(s.name) : "(Unnamed shelf)";
       const desc = s && s.description ? String(s.description) : "";
+      const itemCount = s && s.item_count != null ? Number(s.item_count) : null;
       const href = id ? `/shelves/${encodeURIComponent(id)}/` : "#";
+      const editHref = id ? `/shelves/${encodeURIComponent(id)}/edit/` : "#";
+
+      const descSnippet = desc && desc.length > 160 ? `${desc.slice(0, 160)}…` : desc;
+      const countLine = itemCount != null ? `${itemCount} item${itemCount === 1 ? "" : "s"}` : "";
+
+      const actions = [
+        id ? `<a class="button" href="${escapeHtml(href)}">View</a>` : "",
+        canEdit && id ? `<a class="button" href="${escapeHtml(editHref)}">Edit</a>` : "",
+      ]
+        .filter(truthy)
+        .join(" ");
 
       return `
         <article class="book">
           <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
             <div style="flex: 1;">
               <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
-              ${desc ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(desc)}</div>` : ""}
+              ${descSnippet ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(descSnippet)}</div>` : ""}
+              ${countLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(countLine)}</div>` : ""}
             </div>
+            ${actions ? `<div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">${actions}</div>` : ""}
           </div>
         </article>
       `.trim();
@@ -456,8 +470,8 @@ export async function initGroupView() {
       nextBtn: shelvesNext,
       prevBtn: shelvesPrev,
       initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}`,
-      emptyText: "No shelves.",
-      render: (payload) => renderGroupShelvesCompact(payload),
+      emptyText: "No shelves yet.",
+      render: (payload) => renderGroupShelvesCompact(payload, { canEdit: false }),
     });
   }
 }
@@ -1039,7 +1053,7 @@ export async function initGroupEdit() {
   if (allowShelfManage && shelvesCreateLink) {
     shelvesCreateLink.setAttribute(
       "href",
-      `/shelves/new/?owner_type=group&owner_group=${encodeURIComponent(String(groupId))}`
+      `/shelves/new/?owner_group=${encodeURIComponent(String(groupId))}`
     );
   }
 
@@ -1050,8 +1064,8 @@ export async function initGroupEdit() {
       nextBtn: shelvesNext,
       prevBtn: shelvesPrev,
       initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}`,
-      emptyText: "No shelves.",
-      render: (payload) => renderGroupShelvesCompact(payload),
+      emptyText: "No shelves yet.",
+      render: (payload) => renderGroupShelvesCompact(payload, { canEdit: !!allowShelfManage }),
     });
   }
 }

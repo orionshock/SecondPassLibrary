@@ -209,6 +209,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="group-edit-book-search-form"')
         self.assertContains(response, 'id="group-edit-book-search-results"')
         self.assertContains(response, 'id="group-edit-shelves-results"')
+        self.assertContains(response, 'id="group-edit-shelves-actions"')
 
     def test_unauthenticated_shelves_redirects_to_login(self):
         response = self.client.get("/shelves/", follow=False)
@@ -234,6 +235,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="shelf-new-form"')
         self.assertContains(response, 'id="shelf-new-owner-type"')
+        self.assertContains(response, 'id="shelf-new-owner-group"')
 
     def test_unauthenticated_shelf_detail_redirects_to_login(self):
         shelf_id = uuid4()

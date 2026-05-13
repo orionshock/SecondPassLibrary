@@ -175,6 +175,7 @@ export async function initShelfNew() {
   const preOwnerType = qs.get("owner_type");
   const preOwnerGroup = qs.get("owner_group");
   if (preOwnerType === "group") ownerTypeEl.value = "group";
+  else if (preOwnerGroup) ownerTypeEl.value = "group";
   if (preOwnerGroup) ownerGroupEl.value = preOwnerGroup;
 
   function syncOwnerUI() {

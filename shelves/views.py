@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
@@ -59,7 +59,12 @@ class ShelfViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        qs = super().get_queryset().select_related("owner_user", "owner_group", "created_by")
+        qs = (
+            super()
+            .get_queryset()
+            .select_related("owner_user", "owner_group", "created_by")
+            .annotate(item_count=Count("items"))
+        )
 
         if core_policies.can_manage_library(user):
             visible_qs = qs
@@ -81,7 +86,7 @@ class ShelfViewSet(
         if book:
             visible_qs = visible_qs.filter(items__book_id=book).distinct()
 
-        return visible_qs
+        return visible_qs.order_by("name", "created_at")
 
     def get_object(self):
         obj = super().get_object()
