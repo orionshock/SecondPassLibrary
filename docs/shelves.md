@@ -1,6 +1,6 @@
-# Shelves (Design / Planned)
+# Shelves
 
-Shelves are a planned feature. This document records the intended model, routes, and policy rules **before implementation**.
+Shelves are implemented. This document records the model, routes, and policy rules, plus product UI behavior.
 
 ## 1. Core principle
 
@@ -66,9 +66,9 @@ Each shelf has **exactly one** owner:
 - Ordering starts simple with an integer `position`.
 - No drag/drop reordering complexity initially; UI can submit final ordering later.
 
-## 3. Routes (planned)
+## 3. Routes
 
-Planned UI routes are shelf-centric (not user-centric):
+UI routes are shelf-centric (not user-centric):
 
 - `GET /shelves/`
 - `GET /shelves/new/`
@@ -215,7 +215,14 @@ Rendering direction:
 - first check `can_view_shelf`
 - then filter shelf items/books according to shelf type and book access policy
 
-## 9. Planned API (direction only)
+## 9. API
+
+## 10. Product UI behavior
+
+- Shelf edit (`/shelves/<shelf_id>/edit/`) is the full shelf management page.
+- Reordering is numeric/simple (position input + move up/down); no drag/drop yet.
+- Deleting a shelf deletes only the shelf and its shelf items (never books or files).
+- Group-owned shelf edit only allows adding books assigned to the owning group (API authoritative; UI may hint using `book.groups[]`).
 
 This is a likely REST shape; it is not implemented-current unless documented elsewhere.
 

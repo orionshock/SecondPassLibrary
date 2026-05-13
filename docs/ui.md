@@ -88,8 +88,6 @@ User deletion, invitations, email verification, password reset flows, and MFA ar
 
 The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Edit page (`/groups/<group_id>/edit/`).
 
-Shelves are planned (not implemented yet): see `docs/shelves.md`.
-
 ## 1. UI philosophy
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
@@ -287,13 +285,14 @@ UI behaviors:
 - Annotations view with filters by book and session and a toggle for deleted items.
 - Soft delete should be communicated clearly (deleted items can be shown when requested).
 
-## 10. Future shelves (not implemented yet)
+## 10. Shelves UI
 
+- Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
+  - Edit details (name/description; visibility only for user-owned shelves).
+  - Manage items (remove; reorder via numeric position and simple move up/down actions).
+  - Add books via search (`GET /api/v1/library/books/?q=...`) and item create.
+  - Delete shelf (removes shelf + shelf items only; never deletes books or files).
 - Shelves are presentation/organization objects, not access control.
-- Likely future direction:
-  - user-owned shelves
-  - group-owned shelves
-- Shelf membership must not grant book access; each book must still pass `can_view_book`.
 
 ## 11. Implementation options (non-binding)
 

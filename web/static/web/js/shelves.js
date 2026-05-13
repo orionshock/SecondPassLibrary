@@ -384,6 +384,8 @@ export async function initShelfEdit() {
   const descEl = $("#shelf-edit-description");
   const visEl = $("#shelf-edit-visibility");
   const visNote = $("#shelf-edit-visibility-note");
+  const visRowK = $("#shelf-edit-visibility-row");
+  const visRowV = $("#shelf-edit-visibility-row-v");
   const saveStatus = $("#shelf-edit-save-status");
   const itemsCard = $("#shelf-edit-items");
   const itemsStatus = $("#shelf-edit-items-status");
@@ -396,6 +398,14 @@ export async function initShelfEdit() {
   const searchStatus = $("#shelf-edit-book-search-status");
   const searchResults = $("#shelf-edit-book-search-results");
   const titleEl = $("#shelf-edit-title");
+  const ownerContextEl = $("#shelf-edit-owner-context");
+  const visibilityContextEl = $("#shelf-edit-visibility-context");
+  const itemCountEl = $("#shelf-edit-item-count");
+  const groupLinkEl = $("#shelf-edit-group-link");
+  const contextNoteEl = $("#shelf-edit-context-note");
+  const dangerCard = $("#shelf-edit-danger");
+  const deleteBtn = $("#shelf-edit-delete-btn");
+  const deleteStatus = $("#shelf-edit-delete-status");
   if (
     !statusEl ||
     !errEl ||
@@ -406,6 +416,8 @@ export async function initShelfEdit() {
     !descEl ||
     !visEl ||
     !visNote ||
+    !visRowK ||
+    !visRowV ||
     !saveStatus ||
     !itemsCard ||
     !itemsStatus ||
@@ -417,7 +429,15 @@ export async function initShelfEdit() {
     !searchInput ||
     !searchStatus ||
     !searchResults ||
-    !titleEl
+    !titleEl ||
+    !ownerContextEl ||
+    !visibilityContextEl ||
+    !itemCountEl ||
+    !groupLinkEl ||
+    !contextNoteEl ||
+    !dangerCard ||
+    !deleteBtn ||
+    !deleteStatus
   )
     return;
 
@@ -436,6 +456,7 @@ export async function initShelfEdit() {
   setErr("");
   visible(wrapEl, false);
   visible(itemsCard, false);
+  visible(dangerCard, false);
   visible(notAllowedEl, false);
 
   let shelf = null;
@@ -450,7 +471,39 @@ export async function initShelfEdit() {
     return;
   }
 
-  titleEl.textContent = shelf && shelf.name ? `Edit: ${shelf.name}` : "Edit shelf";
+  const ownerType = shelf && shelf.owner_type ? String(shelf.owner_type) : "";
+  const ownerUser = shelf && shelf.owner_user ? shelf.owner_user : null;
+  const ownerGroup = shelf && shelf.owner_group ? shelf.owner_group : null;
+  const ownerGroupId = ownerType === "group" && ownerGroup && ownerGroup.id ? String(ownerGroup.id) : "";
+
+  titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
+
+  if (ownerType === "user") {
+    const username = ownerUser && ownerUser.username ? String(ownerUser.username) : "user";
+    ownerContextEl.textContent = `User shelf by ${username}`;
+    const visibility = shelf && shelf.visibility ? String(shelf.visibility) : "private";
+    visibilityContextEl.textContent = `Visibility: ${visibility}`;
+    contextNoteEl.textContent =
+      "User shelves do not grant book access. Books are shown only while you can access them. Listed shelves do not grant access.";
+    visible(groupLinkEl, false);
+  } else if (ownerType === "group") {
+    const groupName = ownerGroup && ownerGroup.name ? String(ownerGroup.name) : "group";
+    ownerContextEl.textContent = `Group shelf: ${groupName}`;
+    visibilityContextEl.textContent = "";
+    contextNoteEl.textContent = "Only books assigned to this group can be added.";
+    if (ownerGroupId) {
+      groupLinkEl.setAttribute("href", `/groups/${encodeURIComponent(String(ownerGroupId))}/`);
+      visible(groupLinkEl, true);
+    } else {
+      visible(groupLinkEl, false);
+    }
+  } else {
+    ownerContextEl.textContent = "";
+    visibilityContextEl.textContent = "";
+    contextNoteEl.textContent = "";
+    visible(groupLinkEl, false);
+  }
+
   const canEdit = inferCanEditShelf({ me, shelf });
   if (!canEdit) {
     visible(notAllowedEl, true);
@@ -464,15 +517,20 @@ export async function initShelfEdit() {
   if (shelf.owner_type === "group") {
     visEl.value = "private";
     visEl.disabled = true;
-    visNote.textContent = "Group-owned shelves are always private.";
+    visRowK.style.display = "";
+    visRowV.style.display = "";
+    visNote.textContent = "Group shelves are visible to group members only.";
   } else {
     visEl.disabled = false;
+    visRowK.style.display = "";
+    visRowV.style.display = "";
     visEl.value = shelf.visibility || "private";
     visNote.textContent = "Listed shelves are visible to authenticated users but do not grant book access.";
   }
 
   visible(wrapEl, true);
   visible(itemsCard, true);
+  visible(dangerCard, true);
   setStatus(statusEl, "", false);
 
   formEl.addEventListener("submit", async (e) => {
@@ -503,10 +561,13 @@ export async function initShelfEdit() {
     }
   });
 
+  let currentItems = [];
+
   async function loadItems(url) {
     setStatus(itemsStatus, "Loading…", false);
     const payload = await fetchJSON(url);
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
+    currentItems = results;
     if (!results.length) itemsResults.innerHTML = `<div class="muted">No books.</div>`;
     else {
       itemsResults.innerHTML = results
@@ -526,11 +587,13 @@ export async function initShelfEdit() {
                   </h3>
                   ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
                   <div class="muted" style="margin-top: 6px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
-                    <label class="muted">Position</label>
-                    <input type="number" value="${escapeHtml(it.position)}" style="width: 110px;" data-action="pos" data-item-id="${escapeHtml(
+                    <label class="muted">Pos</label>
+                    <input type="number" value="${escapeHtml(it.position)}" style="width: 90px;" data-action="pos" data-item-id="${escapeHtml(
                       it.id
                     )}" />
-                    <button class="button" type="button" data-action="save-pos" data-item-id="${escapeHtml(it.id)}">Save position</button>
+                    <button class="button" type="button" data-action="save-pos" data-item-id="${escapeHtml(it.id)}">Save</button>
+                    <button class="button" type="button" data-action="move-up" data-item-id="${escapeHtml(it.id)}">Move up</button>
+                    <button class="button" type="button" data-action="move-down" data-item-id="${escapeHtml(it.id)}">Move down</button>
                     <button class="button" type="button" data-action="remove-item" data-item-id="${escapeHtml(it.id)}">Remove</button>
                   </div>
                 </div>
@@ -543,6 +606,7 @@ export async function initShelfEdit() {
     prevBtn.disabled = !payload.previous;
     nextBtn.disabled = !payload.next;
     noteEl.textContent = payload.count != null ? `${payload.count} total` : "";
+    itemCountEl.textContent = payload.count != null ? `Items: ${payload.count}` : "";
     setStatus(itemsStatus, "", false);
     return payload;
   }
@@ -552,12 +616,28 @@ export async function initShelfEdit() {
   let currentItemsUrl = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/`;
   let currentShelfBookIds = new Set();
 
+  async function refreshAllShelfBookIds() {
+    const ids = new Set();
+    let url = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/?page_size=200`;
+    let guard = 0;
+    while (url && guard < 20) {
+      guard += 1;
+      const payload = await fetchJSON(url);
+      const results = Array.isArray(payload && payload.results) ? payload.results : [];
+      for (const it of results) {
+        const b = it && it.book ? it.book : null;
+        if (b && b.id != null) ids.add(String(b.id));
+      }
+      url = payload && payload.next ? String(payload.next) : "";
+    }
+    currentShelfBookIds = ids;
+  }
+
   async function reloadItems() {
     const payload = await loadItems(currentItemsUrl);
     itemsNext = payload.next ? String(payload.next) : null;
     itemsPrev = payload.previous ? String(payload.previous) : null;
-    const results = Array.isArray(payload && payload.results) ? payload.results : [];
-    currentShelfBookIds = new Set(results.map((it) => (it && it.book && it.book.id != null ? String(it.book.id) : "")).filter(Boolean));
+    await refreshAllShelfBookIds();
   }
 
   prevBtn.addEventListener("click", () => {
@@ -572,6 +652,16 @@ export async function initShelfEdit() {
   });
 
   await reloadItems();
+
+  async function patchShelfItemPosition(itemId, position) {
+    const csrf = getCsrfToken();
+    const headers = { Accept: "application/json", "Content-Type": "application/json" };
+    if (csrf) headers["X-CSRFToken"] = csrf;
+    await fetchJSONWithOptions(
+      `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/${encodeURIComponent(String(itemId))}/`,
+      { method: "PATCH", headers, body: JSON.stringify({ position }) }
+    );
+  }
 
   itemsResults.addEventListener("click", async (e) => {
     const target = e.target;
@@ -605,16 +695,35 @@ export async function initShelfEdit() {
       setGlobalError("");
       setStatus(itemsStatus, "Saving…", false);
       try {
-        const csrf = getCsrfToken();
-        const headers = { Accept: "application/json", "Content-Type": "application/json" };
-        if (csrf) headers["X-CSRFToken"] = csrf;
-        await fetchJSONWithOptions(
-          `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/${encodeURIComponent(String(itemId))}/`,
-          { method: "PATCH", headers, body: JSON.stringify({ position }) }
-        );
+        await patchShelfItemPosition(itemId, position);
         await reloadItems();
       } catch (e2) {
         console.error("Failed to save position", e2);
+        setGlobalError(extractApiErrorMessage(e2));
+        setStatus(itemsStatus, "", true);
+      }
+    }
+
+    if (action === "move-up" || action === "move-down") {
+      const idx = currentItems.findIndex((it) => it && String(it.id) === String(itemId));
+      if (idx < 0) return;
+      const otherIdx = action === "move-up" ? idx - 1 : idx + 1;
+      if (otherIdx < 0 || otherIdx >= currentItems.length) return;
+
+      const a = currentItems[idx];
+      const b = currentItems[otherIdx];
+      if (!a || !b) return;
+      const aPos = Number(a.position || 0);
+      const bPos = Number(b.position || 0);
+
+      setGlobalError("");
+      setStatus(itemsStatus, "Reordering…", false);
+      try {
+        await patchShelfItemPosition(String(a.id), bPos);
+        await patchShelfItemPosition(String(b.id), aPos);
+        await reloadItems();
+      } catch (e2) {
+        console.error("Failed to reorder shelf items", e2);
         setGlobalError(extractApiErrorMessage(e2));
         setStatus(itemsStatus, "", true);
       }
@@ -629,33 +738,53 @@ export async function initShelfEdit() {
     setStatus(searchStatus, "Searching…", false);
     const payload = await fetchJSON(`/api/v1/library/books/?q=${encodeURIComponent(term)}`);
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
-    const filtered = results.filter((b) => {
-      const bid = b && b.id != null ? String(b.id) : "";
-      return bid && !currentShelfBookIds.has(bid);
-    });
 
-    if (!filtered.length) {
+    if (!results.length) {
       searchResults.innerHTML = `<div class="muted">No results.</div>`;
       setStatus(searchStatus, "", false);
       return;
     }
 
-    searchResults.innerHTML = filtered
+    searchResults.innerHTML = results
       .map((b) => {
         const bid = b.id ? String(b.id) : "";
         const title = b.title ? String(b.title) : "(Untitled)";
         const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
         const series = b.series && b.series.name ? String(b.series.name) : "";
         const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join(" · ");
+        const inShelf = bid && currentShelfBookIds.has(bid);
+
+        let canAdd = !!bid && !inShelf;
+        let badgeText = inShelf ? "Already in shelf" : "";
+        if (!badgeText && ownerType === "group" && ownerGroupId) {
+          const groups = Array.isArray(b.groups) ? b.groups : null;
+          if (groups && groups.length) {
+            const inGroup = groups.some((g) => g && String(g.id) === String(ownerGroupId));
+            if (!inGroup) {
+              badgeText = "Not in group";
+              canAdd = false;
+            } else {
+              badgeText = "In group";
+            }
+          } else {
+            badgeText = "Group assignment unknown";
+          }
+        }
+
+        const badge = badgeText ? `<span class="pill">${escapeHtml(badgeText)}</span>` : "";
+        const addBtn = canAdd
+          ? `<button class="button" type="button" data-action="add-book" data-book-id="${escapeHtml(bid)}">Add</button>`
+          : "";
         return `
           <article class="book">
             <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
               <div style="flex: 1;">
                 <h3 class="book__title">${escapeHtml(title)}</h3>
                 ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
+                ${badge ? `<div class="muted" style="margin-top: 6px;">${badge}</div>` : ""}
               </div>
               <div>
-                <button class="button" type="button" data-action="add-book" data-book-id="${escapeHtml(bid)}">Add</button>
+                ${addBtn}
               </div>
             </div>
           </article>
@@ -703,6 +832,26 @@ export async function initShelfEdit() {
       console.error("Failed to add book to shelf", e2);
       setGlobalError(extractApiErrorMessage(e2));
       setStatus(searchStatus, "", true);
+    }
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    const shelfName = shelf && shelf.name ? String(shelf.name) : "";
+    const ok = window.confirm(`Delete shelf${shelfName ? ` “${shelfName}”` : ""}? This cannot be undone.`);
+    if (!ok) return;
+
+    setGlobalError("");
+    setStatus(deleteStatus, "Deleting…", false);
+    try {
+      const csrf = getCsrfToken();
+      const headers = { Accept: "application/json" };
+      if (csrf) headers["X-CSRFToken"] = csrf;
+      await fetchJSONWithOptions(`/api/v1/shelves/${encodeURIComponent(String(shelfId))}/`, { method: "DELETE", headers });
+      window.location.href = "/shelves/";
+    } catch (e2) {
+      console.error("Failed to delete shelf", e2);
+      setGlobalError(extractApiErrorMessage(e2));
+      setStatus(deleteStatus, "", true);
     }
   });
 }

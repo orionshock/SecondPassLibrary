@@ -261,7 +261,12 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get(f"/shelves/{shelf_id}/edit/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'data-shelf-id="{shelf_id}"')
+        self.assertContains(response, 'id="shelf-edit-owner-context"')
+        self.assertContains(response, 'id="shelf-edit-form"')
+        self.assertContains(response, 'id="shelf-edit-items-results"')
         self.assertContains(response, 'id="shelf-edit-book-search-form"')
+        self.assertContains(response, 'id="shelf-edit-danger"')
+        self.assertContains(response, 'id="shelf-edit-delete-btn"')
 
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)
