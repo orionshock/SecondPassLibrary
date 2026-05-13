@@ -80,12 +80,12 @@ class Shelf(TimeStampedModel):
         super().clean()
 
         if self.owner_type == self.OWNER_TYPE_USER:
-            if self.owner_user_id is None or self.owner_group_id is not None:
+            if self.owner_user is None or self.owner_group is not None:
                 raise ValidationError(
                     "User-owned shelf must have owner_user set and owner_group unset."
                 )
         elif self.owner_type == self.OWNER_TYPE_GROUP:
-            if self.owner_group_id is None or self.owner_user_id is not None:
+            if self.owner_group is None or self.owner_user is not None:
                 raise ValidationError(
                     "Group-owned shelf must have owner_group set and owner_user unset."
                 )
