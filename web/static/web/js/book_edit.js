@@ -626,16 +626,74 @@ export async function initBookEdit() {
       if (!results.length) {
         shelvesEl.innerHTML = `<div class="muted">No visible shelves contain this book.</div>`;
       } else {
+        function canEditShelf(s) {
+          if (!me || !s) return false;
+          if (s.owner_type === "user") {
+            return !!(s.owner_user && String(s.owner_user.username) === String(me.username || ""));
+          }
+
+          const isOwner = !!me.is_owner;
+          const role = me.role || "";
+          const isBroad = isOwner || role === "manager" || role === "librarian";
+          if (isBroad) return true;
+
+          const og = s.owner_group;
+          if (!og || og.is_public_group) return false;
+          const groups = Array.isArray(me.groups) ? me.groups : [];
+          const membership = groups.find((g) => g && String(g.id) === String(og.id));
+          return membership && membership.membership_role === "curator";
+        }
+
         shelvesEl.innerHTML = results
           .map((s) => {
             const sid = s && s.id != null ? String(s.id) : "";
             const name = s && s.name ? String(s.name) : "(Shelf)";
             const href = sid ? `/shelves/${encodeURIComponent(sid)}/` : "#";
+            const editHref = sid ? `/shelves/${encodeURIComponent(sid)}/edit/` : "#";
             const ownerType = s && s.owner_type ? String(s.owner_type) : "";
-            let owner = "";
-            if (ownerType === "user" && s.owner_user && s.owner_user.username) owner = `user: ${s.owner_user.username}`;
-            if (ownerType === "group" && s.owner_group && s.owner_group.name) owner = `group: ${s.owner_group.name}`;
-            return `<div><a href="${href}">${name}</a>${owner ? ` <span class="muted">(${owner})</span>` : ""}</div>`;
+            const canEdit = canEditShelf(s);
+            const itemCount = s && s.item_count != null ? Number(s.item_count) : null;
+            const matchedItemId = s && s.matched_item_id ? String(s.matched_item_id) : "";
+
+            let ownerLine = "";
+            if (ownerType === "user" && s.owner_user && s.owner_user.username) {
+              ownerLine = `User shelf by ${String(s.owner_user.username)}`;
+              if (s.visibility) ownerLine += ` · Visibility: ${String(s.visibility)}`;
+            }
+            if (ownerType === "group" && s.owner_group && s.owner_group.name) {
+              ownerLine = `Group shelf: ${String(s.owner_group.name)}`;
+            }
+
+            const countLine = itemCount != null ? `Items: ${itemCount}` : "";
+            const removeBtn =
+              canEdit && sid && matchedItemId
+                ? `<button class="button" type="button" data-action="remove-from-shelf" data-shelf-id="${escapeHtml(
+                    sid
+                  )}" data-item-id="${escapeHtml(matchedItemId)}">Remove from this shelf</button>`
+                : "";
+
+            const actions = [
+              `<a class="button" href="${escapeHtml(href)}">View</a>`,
+              canEdit ? `<a class="button" href="${escapeHtml(editHref)}">Edit</a>` : "",
+              removeBtn,
+            ]
+              .filter((x) => x && x !== "")
+              .join(" ");
+
+            return `
+              <article class="book">
+                <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+                  <div style="flex: 1;">
+                    <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
+                    ${ownerLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(ownerLine)}</div>` : ""}
+                    ${countLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(countLine)}</div>` : ""}
+                  </div>
+                  <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    ${actions}
+                  </div>
+                </div>
+              </article>
+            `.trim();
           })
           .join("");
       }
@@ -646,6 +704,34 @@ export async function initBookEdit() {
       shelvesEl.innerHTML = "";
     }
   }
+
+  shelvesEl.addEventListener("click", async (e) => {
+    const target = e.target;
+    if (!target || target.nodeType !== 1) return;
+    if (target.getAttribute("data-action") !== "remove-from-shelf") return;
+    const shelfId = target.getAttribute("data-shelf-id");
+    const itemId = target.getAttribute("data-item-id");
+    if (!shelfId || !itemId) return;
+
+    const ok = window.confirm("Remove this book from this shelf?");
+    if (!ok) return;
+
+    setInlineStatus(shelvesStatusEl, "Removing…", false);
+    try {
+      const csrf = getCsrfToken();
+      const headers = { Accept: "application/json" };
+      if (csrf) headers["X-CSRFToken"] = csrf;
+      await fetchJSONWithOptions(
+        `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/${encodeURIComponent(String(itemId))}/`,
+        { method: "DELETE", headers }
+      );
+      await refreshShelvesContext();
+      setInlineStatus(shelvesStatusEl, "", false);
+    } catch (e2) {
+      console.error("Failed to remove book from shelf", { shelfId, itemId, e2 });
+      setInlineStatus(shelvesStatusEl, extractApiErrorMessage(e2) || "Failed to remove.", true);
+    }
+  });
 
   async function refreshIdentifiers() {
     setInlineStatus(identifiersStatusEl, "Loading…", false);

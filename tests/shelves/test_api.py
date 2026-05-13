@@ -122,6 +122,34 @@ class ShelvesAPITest(APITestCase):
         results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
         self.assertNotIn(shelf_id, {r["id"] for r in results})
 
+    def test_list_filter_book_includes_matched_item_id(self):
+        self.client.login(username="reader", password="pw")
+        created = cast(
+            Response,
+            self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"),
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+
+        add = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_public.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(add.status_code, status.HTTP_201_CREATED)
+        item_id = cast(Mapping[str, Any], add.data)["id"]
+
+        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?book={self.book_public.id}"))
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+
+        row = next((r for r in results if r.get("id") == shelf_id), None)
+        self.assertIsNotNone(row)
+        self.assertEqual(cast(dict[str, Any], row).get("matched_item_id"), item_id)
+
     def test_reader_cannot_create_group_shelf(self):
         self.client.login(username="reader", password="pw")
         resp = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))

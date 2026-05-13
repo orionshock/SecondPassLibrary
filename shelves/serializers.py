@@ -30,6 +30,7 @@ class ShelfSerializer(serializers.ModelSerializer):
     owner_group = serializers.SerializerMethodField(read_only=True)
     created_by = serializers.SerializerMethodField(read_only=True)
     item_count = serializers.IntegerField(read_only=True)
+    matched_item_id = serializers.UUIDField(read_only=True, allow_null=True, required=False)
 
     def get_owner_user(self, obj: Shelf) -> dict[str, Any] | None:
         user = obj.owner_user
@@ -60,6 +61,7 @@ class ShelfSerializer(serializers.ModelSerializer):
             "owner_group",
             "visibility",
             "item_count",
+            "matched_item_id",
             "created_by",
             "created_at",
             "updated_at",

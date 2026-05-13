@@ -71,6 +71,7 @@ Book pages:
 
 - Book detail (`/library/books/<book_id>/`) shows visible shelves containing the book.
 - Book edit Shelves tab links to visible shelves containing the book (item management lives on Shelf Edit).
+  - Book Edit Shelves tab (`/library/books/<book_id>/edit/`) lists shelves containing the book and can remove this book from editable shelves (it deletes only the ShelfItem).
 
 Group shelves UX:
 
