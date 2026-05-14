@@ -22,7 +22,7 @@ Authentication non-goals (current):
 - No MFA
 - No OIDC/OAuth
 
-See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction.
+See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction. Planned session revocation and future web/client session tracking is documented in `docs/session-management.md`.
 
 ## Error responses
 

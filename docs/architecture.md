@@ -71,6 +71,8 @@ Notes for future browser UI:
 - Session/CSRF behavior matters; any future web UI should account for CSRF when using session auth.
 - Basic auth should not be treated as the final production/client authentication strategy.
 
+Session revocation direction (planned web/client sessions and terminology) is documented in `docs/session-management.md`.
+
 ## Runtime/user data layout
 
 All runtime and user-generated data lives under `userdata/` (ignored by Git):
