@@ -35,6 +35,19 @@ class ShelvesAPITest(APITestCase):
 
         self.group = LibraryGroup.objects.create(name="G")
         LibraryGroupMembership.objects.create(user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER)
+        self.curator = User.objects.create_user(username="curator", password="pw")
+        ensure_user_public_membership(user=self.curator)
+        LibraryGroupMembership.objects.create(
+            user=self.curator,
+            group=self.group,
+            role=LibraryGroupMembership.ROLE_CURATOR,
+        )
+
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        ensure_user_public_membership(user=self.librarian)
+        profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
 
         self.book_in_group = Book.objects.create(title="B1")
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
@@ -149,6 +162,91 @@ class ShelvesAPITest(APITestCase):
         row = next((r for r in results if r.get("id") == shelf_id), None)
         self.assertIsNotNone(row)
         self.assertEqual(cast(dict[str, Any], row).get("matched_item_id"), item_id)
+
+    def test_can_edit_user_shelf_owner_true_other_false(self):
+        self.client.login(username="reader", password="pw")
+        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "P", "owner_type": "user"}, format="json"))
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], detail.data)["can_edit"], True)
+
+        self.client.logout()
+        self.client.login(username="other", password="pw")
+        detail2 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail2.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Listed shelf should be visible but not editable to other users.
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        created2 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "L", "owner_type": "user", "visibility": "listed"},
+                format="json",
+            ),
+        )
+        self.assertEqual(created2.status_code, status.HTTP_201_CREATED)
+        shelf2_id = cast(Mapping[str, Any], created2.data)["id"]
+
+        self.client.logout()
+        self.client.login(username="other", password="pw")
+        detail3 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf2_id}/"))
+        self.assertEqual(detail3.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], detail3.data)["can_edit"], False)
+
+    def test_can_edit_group_shelf_curator_true_reader_false(self):
+        self.client.login(username="owner", password="pw")
+        created = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+
+        self.client.logout()
+        self.client.login(username="curator", password="pw")
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], detail.data)["can_edit"], True)
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        detail2 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail2.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], detail2.data)["can_edit"], False)
+
+    def test_can_edit_public_group_shelf_reader_false_librarian_true(self):
+        self.client.login(username="owner", password="pw")
+        created = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "PGS", "owner_type": "group", "owner_group": str(self.public.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], detail.data)["can_edit"], False)
+
+        self.client.logout()
+        self.client.login(username="librarian", password="pw")
+        detail2 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail2.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], detail2.data)["can_edit"], True)
 
     def test_reader_cannot_create_group_shelf(self):
         self.client.login(username="reader", password="pw")

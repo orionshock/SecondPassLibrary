@@ -9,6 +9,7 @@ from library.models import Book, LibraryGroup, is_public_group
 from library.serializers import AuthorSummarySerializer, SeriesSummarySerializer
 
 from .models import Shelf, ShelfItem
+from .policies import can_edit_shelf
 
 
 User = get_user_model()
@@ -31,6 +32,7 @@ class ShelfSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField(read_only=True)
     item_count = serializers.IntegerField(read_only=True)
     matched_item_id = serializers.UUIDField(read_only=True, allow_null=True, required=False)
+    can_edit = serializers.SerializerMethodField(read_only=True)
 
     def get_owner_user(self, obj: Shelf) -> dict[str, Any] | None:
         user = obj.owner_user
@@ -50,6 +52,13 @@ class ShelfSerializer(serializers.ModelSerializer):
             return None
         return {"id": cast(int, user.pk), "username": user.get_username()}
 
+    def get_can_edit(self, obj: Shelf) -> bool:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is None:
+            return False
+        return can_edit_shelf(user=user, shelf=obj)
+
     class Meta:
         model = Shelf
         fields = [
@@ -62,6 +71,7 @@ class ShelfSerializer(serializers.ModelSerializer):
             "visibility",
             "item_count",
             "matched_item_id",
+            "can_edit",
             "created_by",
             "created_at",
             "updated_at",

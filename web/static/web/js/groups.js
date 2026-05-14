@@ -111,13 +111,14 @@ function renderGroupShelvesCompact(payload, { canEdit }) {
       const itemCount = s && s.item_count != null ? Number(s.item_count) : null;
       const href = id ? `/shelves/${encodeURIComponent(id)}/` : "#";
       const editHref = id ? `/shelves/${encodeURIComponent(id)}/edit/` : "#";
+      const rowCanEdit = s && s.can_edit != null ? !!s.can_edit : !!canEdit;
 
       const descSnippet = desc && desc.length > 160 ? `${desc.slice(0, 160)}…` : desc;
       const countLine = itemCount != null ? `${itemCount} item${itemCount === 1 ? "" : "s"}` : "";
 
       const actions = [
         id ? `<a class="button" href="${escapeHtml(href)}">View</a>` : "",
-        canEdit && id ? `<a class="button" href="${escapeHtml(editHref)}">Edit</a>` : "",
+        rowCanEdit && id ? `<a class="button" href="${escapeHtml(editHref)}">Edit</a>` : "",
       ]
         .filter(truthy)
         .join(" ");

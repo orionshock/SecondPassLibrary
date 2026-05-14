@@ -626,24 +626,6 @@ export async function initBookEdit() {
       if (!results.length) {
         shelvesEl.innerHTML = `<div class="muted">No visible shelves contain this book.</div>`;
       } else {
-        function canEditShelf(s) {
-          if (!me || !s) return false;
-          if (s.owner_type === "user") {
-            return !!(s.owner_user && String(s.owner_user.username) === String(me.username || ""));
-          }
-
-          const isOwner = !!me.is_owner;
-          const role = me.role || "";
-          const isBroad = isOwner || role === "manager" || role === "librarian";
-          if (isBroad) return true;
-
-          const og = s.owner_group;
-          if (!og || og.is_public_group) return false;
-          const groups = Array.isArray(me.groups) ? me.groups : [];
-          const membership = groups.find((g) => g && String(g.id) === String(og.id));
-          return membership && membership.membership_role === "curator";
-        }
-
         shelvesEl.innerHTML = results
           .map((s) => {
             const sid = s && s.id != null ? String(s.id) : "";
@@ -651,7 +633,7 @@ export async function initBookEdit() {
             const href = sid ? `/shelves/${encodeURIComponent(sid)}/` : "#";
             const editHref = sid ? `/shelves/${encodeURIComponent(sid)}/edit/` : "#";
             const ownerType = s && s.owner_type ? String(s.owner_type) : "";
-            const canEdit = canEditShelf(s);
+            const canEdit = s && s.can_edit != null ? !!s.can_edit : false;
             const itemCount = s && s.item_count != null ? Number(s.item_count) : null;
             const matchedItemId = s && s.matched_item_id ? String(s.matched_item_id) : "";
 

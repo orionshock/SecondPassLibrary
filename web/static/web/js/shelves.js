@@ -92,6 +92,7 @@ async function pagedController({ statusEl, resultsEl, prevBtn, nextBtn, noteEl, 
 
 function inferCanEditShelf({ me, shelf }) {
   if (!me || !shelf) return false;
+  if (shelf.can_edit != null) return !!shelf.can_edit;
   if (shelf.owner_type === "user") return shelf.owner_user && String(shelf.owner_user.username) === String(me.username || "");
 
   // For group shelves, infer from role/capabilities:
@@ -328,7 +329,7 @@ export async function initShelfView() {
     renderShelfMeta(metaEl, shelf);
     visible(wrapEl, true);
 
-    const canEdit = inferCanEditShelf({ me, shelf });
+    const canEdit = shelf && shelf.can_edit != null ? !!shelf.can_edit : inferCanEditShelf({ me, shelf });
     visible(editWrap, canEdit);
     if (canEdit) editLink.setAttribute("href", `/shelves/${encodeURIComponent(String(shelfId))}/edit/`);
 
@@ -505,7 +506,7 @@ export async function initShelfEdit() {
     visible(groupLinkEl, false);
   }
 
-  const canEdit = inferCanEditShelf({ me, shelf });
+  const canEdit = shelf && shelf.can_edit != null ? !!shelf.can_edit : inferCanEditShelf({ me, shelf });
   if (!canEdit) {
     visible(notAllowedEl, true);
     setStatus(statusEl, "", false);
