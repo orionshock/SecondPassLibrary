@@ -210,6 +210,7 @@ Rules:
 - Verifies `current_password` via Django `check_password()`.
 - Sets the new password via Django `set_password()` and runs configured password validators.
 - Updates the current session hash so the user stays logged in.
+- Revokes all other Django web sessions for the user (keeps the current session).
 - Clears `UserProfile.must_change_password` when the change succeeds.
 
 ### `POST /api/v1/accounts/users/<id>/reset-password/`
@@ -231,6 +232,7 @@ Rules:
 
 - Uses a generated secure temporary password (never stored/logged in plaintext).
 - Sets `target.profile.must_change_password=true`.
+- Revokes all Django web sessions for the target user.
 - Manager can reset Librarian/Reader only (never Owner/Manager).
 - Owner can reset Manager/Librarian/Reader.
 - Managed reset cannot be used to reset your own password; use `/profile/password/` + `POST /accounts/me/change-password/`.

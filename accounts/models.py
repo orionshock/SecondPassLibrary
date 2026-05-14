@@ -53,3 +53,34 @@ class UserProfile(TimeStampedModel):
     @property
     def is_regular_user(self):
         return self.is_reader
+
+
+class UserWebSession(TimeStampedModel):
+    """
+    Companion tracking row for a Django web (browser/product UI) session.
+
+    Notes:
+    - This does not replace Django's session authentication. It is tracking only.
+    - Revocation still deletes Django `django_session` rows; this model mirrors/tracks them.
+    - `updated_at` acts as a "last_seen" timestamp for now (updated by middleware).
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="web_sessions",
+    )
+    session_key = models.CharField(max_length=128, unique=True, db_index=True)
+    user_agent = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        username = ""
+        try:
+            username = self.user.get_username()
+        except Exception:
+            username = ""
+        return f"{username} ({self.session_key})"

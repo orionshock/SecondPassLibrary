@@ -1,6 +1,11 @@
 # Session management (design)
 
-This document describes the planned direction for **authentication/login sessions** vs **reading sessions**. It is design documentation; current behavior may be simpler until the related models/modules are implemented.
+This document describes the direction for **authentication/login sessions** vs **reading sessions**.
+
+Status:
+
+- Phase 1 (web session tracking + revocation) is implemented.
+- API/client token sessions are future work (not implemented).
 
 ## Terminology
 
@@ -10,9 +15,9 @@ This document describes the planned direction for **authentication/login session
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
 - **`reading.Device`**: reading attribution/context (device-like metadata), not an auth mechanism.
 
-## Web session policy (desired)
+## Web session policy
 
-When implemented, web session revocation should follow these rules:
+Web session revocation follows these rules:
 
 - **Self password change**:
   - keeps the **current** Django web session
@@ -26,16 +31,16 @@ When implemented, web session revocation should follow these rules:
 
 API endpoints remain authoritative; these are *policy goals* for the implementation.
 
-## Future models (planned)
+## Models
 
-### `accounts.UserWebSession` (planned)
+### `accounts.UserWebSession` (implemented)
 
 - `user`
 - `session_key`
 - `user_agent`
 - `ip_address`
 - `created_at`
-- `last_seen_at`
+- `updated_at` (used as `last_seen` for now)
 
 ### `accounts.UserApiSession` / `accounts.ClientSession` (planned)
 
@@ -53,9 +58,9 @@ Notes:
 - Raw API tokens are **never** stored.
 - Only token hashes are stored (e.g., `token_hash`).
 
-## Session control module (planned)
+## Session control module
 
-Planned module: `accounts/session_control.py`
+Module: `accounts/session_control.py`
 
 Functions:
 
@@ -88,9 +93,9 @@ Do not assume per-browser session listing in the first implementation; revocatio
 - Do not conflate `reading.ReadingSession` with auth/login sessions
 - `reading.Device` remains reading context until client auth/session work exists
 
-## Implementation phases (planned)
+## Implementation phases
 
-Phase 1:
+Phase 1 (implemented):
 
 - `UserWebSession` model + middleware/hooks to track sessions
 - `accounts/session_control.py`
@@ -103,4 +108,3 @@ Phase 2:
 Phase 3:
 
 - API/client token sessions for a reader client (`UserApiSession` / `ClientSession`)
-

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import UserProfile
+from .models import UserProfile, UserWebSession
 
 
 class UserProfileAdminForm(forms.ModelForm):
@@ -52,3 +52,25 @@ class UserProfileAdmin(admin.ModelAdmin):
                 super().__init__(*args, **inner_kwargs)
 
         return RequestForm
+
+
+@admin.register(UserWebSession)
+class UserWebSessionAdmin(admin.ModelAdmin):
+    list_display = ["user", "session_key", "ip_address", "short_user_agent", "created_at", "updated_at"]
+    search_fields = ["user__username", "user__email", "session_key", "ip_address", "user_agent"]
+    readonly_fields = ["user", "session_key", "user_agent", "ip_address", "created_at", "updated_at"]
+    list_select_related = ["user"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def short_user_agent(self, obj: UserWebSession):
+        ua = obj.user_agent or ""
+        if len(ua) <= 80:
+            return ua
+        return f"{ua[:77]}..."
+
+    short_user_agent.short_description = "User agent"

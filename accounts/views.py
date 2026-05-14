@@ -30,6 +30,7 @@ from .services import (
 )
 from core import policies
 from library.models import LibraryGroupMembership, is_public_group
+from accounts import session_control
 
 
 User = get_user_model()
@@ -92,6 +93,9 @@ class CurrentUserChangePasswordView(APIView):
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
             raise DRFValidationError(detail=detail) from exc
         update_session_auth_hash(request, request.user)
+        session_control.user_changed_own_password(
+            request.user, getattr(getattr(request, "session", None), "session_key", None)
+        )
         return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
@@ -335,6 +339,7 @@ class ManagedUserResetPasswordView(APIView):
         except DjangoValidationError as exc:
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
             raise DRFValidationError(detail=detail) from exc
+        session_control.admin_reset_user_password(target_user)
         return Response(
             {
                 "username": result.username,

@@ -146,6 +146,7 @@ def update_user_via_management_api(
         raise PermissionDenied("Not allowed.")
 
     profile = get_or_create_profile(user=target_user)
+    was_active = bool(getattr(target_user, "is_active", True))
 
     user_updates: dict[str, Any] = {}
     profile_updates: dict[str, Any] = {}
@@ -196,6 +197,13 @@ def update_user_via_management_api(
             setattr(target_user, key, value)
         target_user.full_clean()
         target_user.save(update_fields=[*user_updates.keys()])
+
+        # If a user is being disabled, revoke all their web sessions.
+        # Re-enabling does not restore sessions.
+        if "is_active" in user_updates and user_updates.get("is_active") is False and was_active is True:
+            from accounts import session_control
+
+            session_control.disable_user(target_user)
 
     if profile_updates:
         for key, value in profile_updates.items():
