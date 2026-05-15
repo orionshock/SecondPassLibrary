@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from rest_framework import status
@@ -15,17 +17,17 @@ class UserWebSessionMiddlewareTests(APITestCase):
         user = User.objects.create_user(username="u", password="pw")
         self.client.login(username="u", password="pw")
 
-        r = self.client.get("/api/v1/accounts/me/")
+        r = cast(Any, self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         session_key = self.client.session.session_key
         self.assertTrue(session_key)
 
         tracked = UserWebSession.objects.get(session_key=session_key)
-        self.assertEqual(tracked.user_id, user.id)
+        self.assertEqual(tracked.user.pk, user.pk)
 
     def test_anonymous_request_does_not_track_user_web_session(self):
-        r = self.client.get("/api/v1/accounts/me/")
+        r = cast(Any, self.client.get("/api/v1/accounts/me/"))
         self.assertIn(r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
         self.assertEqual(UserWebSession.objects.count(), 0)
 
@@ -42,7 +44,7 @@ class SessionControlTests(APITestCase):
         ok = c.login(username="u", password="pw")
         self.assertTrue(ok)
         # Hit an authenticated endpoint to ensure middleware tracks the session.
-        r = c.get("/api/v1/accounts/me/")
+        r = cast(Any, c.get("/api/v1/accounts/me/"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         key = c.session.session_key
         self.assertTrue(key)
@@ -99,26 +101,26 @@ class PasswordSessionRevocationTests(APITestCase):
         self.assertTrue(c2.login(username="u", password="pw"))
 
         # Ensure both sessions are tracked.
-        self.assertEqual(c1.get("/api/v1/accounts/me/").status_code, status.HTTP_200_OK)
-        self.assertEqual(c2.get("/api/v1/accounts/me/").status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Any, c1.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Any, c2.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
         key1 = c1.session.session_key
         key2 = c2.session.session_key
         self.assertTrue(key1 and key2 and key1 != key2)
 
-        r = c1.post(
+        r = cast(Any, c1.post(
             "/api/v1/accounts/me/change-password/",
             data={"current_password": "pw", "new_password": "NewPassw0rd!", "confirm_password": "NewPassw0rd!"},
             format="json",
-        )
+        ))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         # Current session stays valid.
-        self.assertEqual(c1.get("/api/v1/accounts/me/").status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Any, c1.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
         current_key = c1.session.session_key
         self.assertTrue(current_key)
 
         # Other session is revoked.
-        r2 = c2.get("/api/v1/accounts/me/")
+        r2 = cast(Any, c2.get("/api/v1/accounts/me/"))
         self.assertIn(r2.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
         # Note: Django rotates the session key on password change via update_session_auth_hash.
         self.assertTrue(Session.objects.filter(session_key=current_key).exists())
@@ -141,8 +143,8 @@ class ManagedResetAndDisableSessionRevocationTests(APITestCase):
         c2 = APIClient()
         self.assertTrue(c1.login(username="target", password="pw"))
         self.assertTrue(c2.login(username="target", password="pw"))
-        self.assertEqual(c1.get("/api/v1/accounts/me/").status_code, status.HTTP_200_OK)
-        self.assertEqual(c2.get("/api/v1/accounts/me/").status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Any, c1.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Any, c2.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
         k1 = c1.session.session_key
         k2 = c2.session.session_key
         self.assertTrue(k1 and k2 and k1 != k2)
@@ -155,7 +157,7 @@ class ManagedResetAndDisableSessionRevocationTests(APITestCase):
 
         actor = APIClient()
         self.assertTrue(actor.login(username="owner", password="pw"))
-        r = actor.post(f"/api/v1/accounts/users/{self.target.pk}/reset-password/", data={}, format="json")
+        r = cast(Any, actor.post(f"/api/v1/accounts/users/{self.target.pk}/reset-password/", data={}, format="json"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         self.assertFalse(Session.objects.filter(session_key=k1).exists())
@@ -167,7 +169,7 @@ class ManagedResetAndDisableSessionRevocationTests(APITestCase):
 
         actor = APIClient()
         self.assertTrue(actor.login(username="manager", password="pw"))
-        r = actor.patch(f"/api/v1/accounts/users/{self.target.pk}/", data={"is_active": False}, format="json")
+        r = cast(Any, actor.patch(f"/api/v1/accounts/users/{self.target.pk}/", data={"is_active": False}, format="json"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         self.assertFalse(Session.objects.filter(session_key=k1).exists())

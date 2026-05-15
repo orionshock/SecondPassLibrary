@@ -56,7 +56,8 @@ class UserWebSessionMiddleware:
             needs_save = False
             update_fields: list[str] = []
 
-            if obj.user_id != user.id:
+            # Avoid relying on implicit Django `<fk>_id` attributes for type-checkers.
+            if obj.user.pk != user.pk:
                 obj.user = user
                 needs_save = True
                 update_fields.append("user")
@@ -86,4 +87,3 @@ class UserWebSessionMiddleware:
             return response
 
         return response
-
