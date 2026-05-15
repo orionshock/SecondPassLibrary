@@ -90,6 +90,41 @@ class SessionControlTests(APITestCase):
         self.assertFalse(UserWebSession.objects.filter(session_key=stale_key).exists())
 
 
+class LogoutOtherWebSessionsApiTests(APITestCase):
+    def test_authenticated_request_revokes_other_web_sessions_and_keeps_current(self):
+        c1 = APIClient()
+        c2 = APIClient()
+        user = User.objects.create_user(username="u", password="pw")
+        self.assertTrue(c1.login(username="u", password="pw"))
+        self.assertTrue(c2.login(username="u", password="pw"))
+
+        # Ensure both sessions are tracked.
+        self.assertEqual(cast(Any, c1.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Any, c2.get("/api/v1/accounts/me/")).status_code, status.HTTP_200_OK)
+        key1 = c1.session.session_key
+        key2 = c2.session.session_key
+        self.assertTrue(key1 and key2 and key1 != key2)
+
+        self.assertTrue(UserWebSession.objects.filter(user=user, session_key=key1).exists())
+        self.assertTrue(UserWebSession.objects.filter(user=user, session_key=key2).exists())
+        self.assertTrue(Session.objects.filter(session_key=key1).exists())
+        self.assertTrue(Session.objects.filter(session_key=key2).exists())
+
+        r = cast(Any, c1.post("/api/v1/accounts/me/web-sessions/logout-others/", data={}, format="json"))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(getattr(r, "data", {}).get("message"), "Other web sessions logged out.")
+
+        self.assertTrue(Session.objects.filter(session_key=key1).exists())
+        self.assertFalse(Session.objects.filter(session_key=key2).exists())
+        self.assertTrue(UserWebSession.objects.filter(user=user, session_key=key1).exists())
+        self.assertFalse(UserWebSession.objects.filter(user=user, session_key=key2).exists())
+
+    def test_anonymous_request_is_denied(self):
+        c = APIClient()
+        r = cast(Any, c.post("/api/v1/accounts/me/web-sessions/logout-others/", data={}, format="json"))
+        self.assertIn(r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+
 class PasswordSessionRevocationTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u", password="pw", email="u@example.com")

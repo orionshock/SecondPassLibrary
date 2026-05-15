@@ -337,9 +337,13 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
-        self.assertContains(response, 'id="profile-summary"')
         self.assertContains(response, 'id="profile-edit-form"')
-        self.assertContains(response, 'id="profile-edit-email"')
+        self.assertContains(response, 'id="profile-edit-btn"')
+        self.assertContains(response, 'id="profile-save-btn"')
+        self.assertContains(response, 'id="profile-email-input"')
+        self.assertContains(response, "Session management")
+        self.assertContains(response, 'id="profile-logout-others-btn"')
+        self.assertContains(response, "Device/API sessions are not implemented yet.")
 
     def test_authenticated_profile_password_returns_200_and_has_form(self):
         self.client.force_login(self.user)

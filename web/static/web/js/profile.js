@@ -1,5 +1,5 @@
 import { getCsrfToken, fetchJSONWithOptions, extractApiErrorMessage } from "./api.js";
-import { $, formatRole, loadMeAndInitShell, setGlobalError, setText, visible } from "./layout.js";
+import { $, loadMeAndInitShell, setGlobalError, setText, visible } from "./layout.js";
 
 function clear(node) {
   if (!node) return;
@@ -53,136 +53,205 @@ function renderCapabilities(container, caps) {
   container.appendChild(ul);
 }
 
-function renderSummary(container, me) {
-  clear(container);
-  const kv = el("div", "kv");
-  function addRow(k, vNodeOrText) {
-    kv.appendChild(el("div", "kv__k", k));
-    const v = el("div", "kv__v");
-    if (vNodeOrText && vNodeOrText.nodeType) v.appendChild(vNodeOrText);
-    else v.textContent = vNodeOrText != null ? String(vNodeOrText) : "";
-    kv.appendChild(v);
-  }
-
-  const usernameWrap = document.createElement("span");
-  usernameWrap.textContent = me.username || "";
-  if (me.is_owner) {
-    usernameWrap.appendChild(document.createTextNode(" "));
-    usernameWrap.appendChild(el("span", "pill pill--owner", "Owner"));
-  }
-
-  addRow("Username", usernameWrap);
-  addRow("Role", formatRole(me.role));
-
-  const email = el("div", "", me.email || "");
-  email.id = "profile-email";
-  addRow("Email", email);
-  const first = el("div", "", me.first_name || "");
-  first.id = "profile-first";
-  addRow("First name", first);
-  const last = el("div", "", me.last_name || "");
-  last.id = "profile-last";
-  addRow("Last name", last);
-
-  container.appendChild(kv);
-}
-
 export async function initProfile() {
   const me = await loadMeAndInitShell();
-  const summaryEl = $("#profile-summary");
   const groupsEl = $("#profile-groups");
   const capsEl = $("#profile-capabilities");
   const statusEl = $("#profile-edit-status");
 
   if (!me) {
-    setText(summaryEl, "Error loading identity.");
     setText(statusEl, "Error loading identity.");
     setText(groupsEl, "Error loading identity.");
     setText(capsEl, "Error loading identity.");
     return;
   }
 
-  renderSummary(summaryEl, me);
   renderGroups(groupsEl, me.groups);
   renderCapabilities(capsEl, me.capabilities);
 
   const form = $("#profile-edit-form");
-  const emailInput = $("#profile-edit-email");
-  const firstInput = $("#profile-edit-first");
-  const lastInput = $("#profile-edit-last");
+  const editBtn = $("#profile-edit-btn");
+  const saveBtn = $("#profile-save-btn");
+  const cancelBtn = $("#profile-cancel-btn");
 
-  if (!form || !emailInput || !firstInput || !lastInput || !statusEl) return;
+  const usernameEl = $("#profile-username");
+  const emailDisplayEl = $("#profile-email-display");
+  const firstDisplayEl = $("#profile-first-display");
+  const lastDisplayEl = $("#profile-last-display");
 
-  emailInput.value = me.email || "";
-  firstInput.value = me.first_name || "";
-  lastInput.value = me.last_name || "";
+  const emailInput = $("#profile-email-input");
+  const firstInput = $("#profile-first-input");
+  const lastInput = $("#profile-last-input");
+
+  if (
+    !form ||
+    !editBtn ||
+    !saveBtn ||
+    !cancelBtn ||
+    !statusEl ||
+    !usernameEl ||
+    !emailDisplayEl ||
+    !firstDisplayEl ||
+    !lastDisplayEl ||
+    !emailInput ||
+    !firstInput ||
+    !lastInput
+  ) {
+    return;
+  }
+
+  function setEditing(on) {
+    visible(editBtn, !on);
+    visible(saveBtn, on);
+    visible(cancelBtn, on);
+
+    visible(emailDisplayEl, !on);
+    visible(firstDisplayEl, !on);
+    visible(lastDisplayEl, !on);
+
+    visible(emailInput, on);
+    visible(firstInput, on);
+    visible(lastInput, on);
+
+    if (on) emailInput.focus();
+  }
+
+  function setBaseFromMe() {
+    form.dataset.baseEmail = me.email || "";
+    form.dataset.baseFirst = me.first_name || "";
+    form.dataset.baseLast = me.last_name || "";
+  }
+
+  function syncDisplayFromMe() {
+    usernameEl.textContent = me.username || "";
+    emailDisplayEl.textContent = me.email || "";
+    firstDisplayEl.textContent = me.first_name || "";
+    lastDisplayEl.textContent = me.last_name || "";
+  }
+
+  function syncInputsFromBase() {
+    emailInput.value = form.dataset.baseEmail || "";
+    firstInput.value = form.dataset.baseFirst || "";
+    lastInput.value = form.dataset.baseLast || "";
+  }
 
   statusEl.textContent = "";
   statusEl.classList.remove("error");
 
-  if (form.dataset.bound) return;
-  form.dataset.bound = "1";
-  form.dataset.baseEmail = emailInput.value || "";
-  form.dataset.baseFirst = firstInput.value || "";
-  form.dataset.baseLast = lastInput.value || "";
+  syncDisplayFromMe();
+  setBaseFromMe();
+  syncInputsFromBase();
+  setEditing(false);
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    setGlobalError("");
-    statusEl.textContent = "Saving…";
-    statusEl.classList.remove("error");
+  if (!form.dataset.bound) {
+    form.dataset.bound = "1";
 
-    const desired = {
-      email: (emailInput.value || "").trim(),
-      first_name: (firstInput.value || "").trim(),
-      last_name: (lastInput.value || "").trim(),
-    };
+    editBtn.addEventListener("click", () => {
+      statusEl.textContent = "";
+      statusEl.classList.remove("error");
+      syncInputsFromBase();
+      setEditing(true);
+    });
 
-    const patch = {};
-    if (String(desired.email) !== String(form.dataset.baseEmail || "")) patch.email = desired.email;
-    if (String(desired.first_name) !== String(form.dataset.baseFirst || "")) patch.first_name = desired.first_name;
-    if (String(desired.last_name) !== String(form.dataset.baseLast || "")) patch.last_name = desired.last_name;
+    cancelBtn.addEventListener("click", () => {
+      statusEl.textContent = "";
+      statusEl.classList.remove("error");
+      syncInputsFromBase();
+      setEditing(false);
+    });
 
-    if (Object.keys(patch).length === 0) {
-      statusEl.textContent = "No changes.";
-      return;
-    }
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setGlobalError("");
+      statusEl.textContent = "Saving...";
+      statusEl.classList.remove("error");
 
-    try {
-      const csrf = getCsrfToken();
-      const headers = { Accept: "application/json", "Content-Type": "application/json" };
-      if (csrf) headers["X-CSRFToken"] = csrf;
+      const desired = {
+        email: (emailInput.value || "").trim(),
+        first_name: (firstInput.value || "").trim(),
+        last_name: (lastInput.value || "").trim(),
+      };
 
-      const updated = await fetchJSONWithOptions("/api/v1/accounts/me/", {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify(patch),
-      });
+      const patch = {};
+      if (String(desired.email) !== String(form.dataset.baseEmail || "")) patch.email = desired.email;
+      if (String(desired.first_name) !== String(form.dataset.baseFirst || "")) patch.first_name = desired.first_name;
+      if (String(desired.last_name) !== String(form.dataset.baseLast || "")) patch.last_name = desired.last_name;
 
-      statusEl.textContent = "Saved.";
-      form.dataset.baseEmail = desired.email;
-      form.dataset.baseFirst = desired.first_name;
-      form.dataset.baseLast = desired.last_name;
-
-      const emailEl = $("#profile-email");
-      if (emailEl) emailEl.textContent = desired.email;
-      const firstEl = $("#profile-first");
-      if (firstEl) firstEl.textContent = desired.first_name;
-      const lastEl = $("#profile-last");
-      if (lastEl) lastEl.textContent = desired.last_name;
-
-      if (updated && typeof updated === "object") {
-        me.email = updated.email;
-        me.first_name = updated.first_name;
-        me.last_name = updated.last_name;
+      if (Object.keys(patch).length === 0) {
+        statusEl.textContent = "No changes.";
+        setEditing(false);
+        return;
       }
-    } catch (e2) {
-      console.error("Failed to save /api/v1/accounts/me/", e2);
-      const msg = extractApiErrorMessage(e2);
-      statusEl.textContent = msg;
-      statusEl.classList.add("error");
-      setGlobalError(msg);
-    }
-  });
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        const updated = await fetchJSONWithOptions("/api/v1/accounts/me/", {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(patch),
+        });
+
+        if (updated && typeof updated === "object") {
+          me.email = updated.email;
+          me.first_name = updated.first_name;
+          me.last_name = updated.last_name;
+        } else {
+          me.email = desired.email;
+          me.first_name = desired.first_name;
+          me.last_name = desired.last_name;
+        }
+
+        syncDisplayFromMe();
+        setBaseFromMe();
+        syncInputsFromBase();
+        statusEl.textContent = "Saved.";
+        setEditing(false);
+      } catch (e2) {
+        console.error("Failed to save /api/v1/accounts/me/", e2);
+        const msg = extractApiErrorMessage(e2);
+        statusEl.textContent = msg;
+        statusEl.classList.add("error");
+        setGlobalError(msg);
+      }
+    });
+  }
+
+  const logoutOthersBtn = $("#profile-logout-others-btn");
+  const logoutOthersStatusEl = $("#profile-logout-others-status");
+  if (logoutOthersBtn && logoutOthersStatusEl && !logoutOthersBtn.dataset.bound) {
+    logoutOthersBtn.dataset.bound = "1";
+
+    logoutOthersBtn.addEventListener("click", async () => {
+      setGlobalError("");
+      logoutOthersStatusEl.textContent = "Working...";
+      logoutOthersStatusEl.classList.remove("error");
+      logoutOthersBtn.disabled = true;
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        await fetchJSONWithOptions("/api/v1/accounts/me/web-sessions/logout-others/", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({}),
+        });
+
+        logoutOthersStatusEl.textContent = "Other web sessions logged out.";
+      } catch (e2) {
+        console.error("Failed to log out other web sessions", e2);
+        const msg = extractApiErrorMessage(e2);
+        logoutOthersStatusEl.textContent = msg;
+        logoutOthersStatusEl.classList.add("error");
+        setGlobalError(msg);
+      } finally {
+        logoutOthersBtn.disabled = false;
+      }
+    });
+  }
 }
 

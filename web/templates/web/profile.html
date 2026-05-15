@@ -11,41 +11,64 @@
   </div>
 
   <section class="card">
-    <h2 class="card__title">You</h2>
-    <div id="profile-summary" class="muted">Loading…</div>
-  </section>
+    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+      <h2 class="card__title" style="margin: 0;">Profile details</h2>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="profile-edit-btn" class="button" type="button">Edit</button>
+        <button id="profile-save-btn" class="button is-hidden" type="submit" form="profile-edit-form">Save</button>
+        <button id="profile-cancel-btn" class="button is-hidden" type="button">Cancel</button>
+      </div>
+    </div>
 
-  <section class="card">
-    <h2 class="card__title">Edit my profile</h2>
-    <form id="profile-edit-form">
+    <form id="profile-edit-form" style="margin-top: 10px;">
       <div class="kv">
-        <div class="kv__k"><label for="profile-edit-email">Email</label></div>
-        <div class="kv__v"><input id="profile-edit-email" type="email" style="width: 100%;" value="{{ request.user.email|default_if_none:''|escape }}" /></div>
+        <div class="kv__k">Username</div>
+        <div class="kv__v"><span id="profile-username" class="muted">Loading...</span></div>
 
-        <div class="kv__k"><label for="profile-edit-first">First name</label></div>
-        <div class="kv__v"><input id="profile-edit-first" type="text" style="width: 100%;" value="{{ request.user.first_name|default_if_none:''|escape }}" /></div>
+        <div class="kv__k">Email</div>
+        <div class="kv__v">
+          <span id="profile-email-display" class="muted">Loading...</span>
+          <input id="profile-email-input" class="is-hidden" type="email" style="width: 100%;" value="" />
+        </div>
 
-        <div class="kv__k"><label for="profile-edit-last">Last name</label></div>
-        <div class="kv__v"><input id="profile-edit-last" type="text" style="width: 100%;" value="{{ request.user.last_name|default_if_none:''|escape }}" /></div>
+        <div class="kv__k">First name</div>
+        <div class="kv__v">
+          <span id="profile-first-display" class="muted">Loading...</span>
+          <input id="profile-first-input" class="is-hidden" type="text" style="width: 100%;" value="" />
+        </div>
+
+        <div class="kv__k">Last name</div>
+        <div class="kv__v">
+          <span id="profile-last-display" class="muted">Loading...</span>
+          <input id="profile-last-input" class="is-hidden" type="text" style="width: 100%;" value="" />
+        </div>
       </div>
 
       <div style="margin-top: 10px;">
-        <button class="button" type="submit">Save</button>
         <span id="profile-edit-status" class="muted"></span>
       </div>
     </form>
   </section>
 
   <section class="card">
+    <h2 class="card__title">Session management</h2>
+    <div>
+      <button id="profile-logout-others-btn" class="button" type="button">Log out all other web sessions</button>
+      <span id="profile-logout-others-status" class="muted" style="margin-left: 8px;"></span>
+    </div>
+    <div class="muted" style="margin-top: 10px;">Device/API sessions are not implemented yet.</div>
+  </section>
+
+  <section class="card">
     <h2 class="card__title">Groups</h2>
-    <div id="profile-groups" class="muted">Loading…</div>
+    <div id="profile-groups" class="muted">Loading...</div>
   </section>
 
   <section class="card">
     <h2 class="card__title">Capabilities</h2>
     <details>
       <summary class="muted">Show capabilities</summary>
-      <div id="profile-capabilities" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="profile-capabilities" class="muted" style="margin-top: 10px;">Loading...</div>
     </details>
   </section>
 {% endblock %}

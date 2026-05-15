@@ -213,6 +213,22 @@ Rules:
 - Revokes all other Django web sessions for the user (keeps the current session).
 - Clears `UserProfile.must_change_password` when the change succeeds.
 
+### `POST /api/v1/accounts/me/web-sessions/logout-others/`
+
+Revoke other Django web sessions for the current user (keeps the current session).
+
+Response shape:
+
+```json
+{ "message": "Other web sessions logged out." }
+```
+
+Rules:
+
+- Requires authentication.
+- Does not expose session keys, IP addresses, or user agents.
+- Deletes the other sessions from Django's session store and removes their `UserWebSession` tracking rows.
+
 ### `POST /api/v1/accounts/users/<id>/reset-password/`
 
 Managed password reset (temporary password shown once).

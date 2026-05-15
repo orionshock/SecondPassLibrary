@@ -93,6 +93,7 @@ Password management:
 - The top-right username links to `/profile/`.
 - If `me.must_change_password=true`, product UI pages redirect to `/profile/password/` until the user changes their password.
 - Self password change keeps the current login session but logs out other web sessions for that user.
+- `/profile/` also includes a Session management section with a “Log out all other web sessions” action (no session listing/details yet).
 
 User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
 

@@ -99,6 +99,15 @@ class CurrentUserChangePasswordView(APIView):
         return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
+class CurrentUserLogoutOtherWebSessionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current_session_key = getattr(getattr(request, "session", None), "session_key", None)
+        session_control.revoke_other_web_sessions(request.user, current_session_key)
+        return Response({"message": "Other web sessions logged out."}, status=status.HTTP_200_OK)
+
+
 class ManagedUserViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,

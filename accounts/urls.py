@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     CurrentUserChangePasswordView,
+    CurrentUserLogoutOtherWebSessionsView,
     CurrentUserView,
     ManagedUserResetPasswordView,
     ManagedUserViewSet,
@@ -21,6 +22,11 @@ urlpatterns = [
         "me/change-password/",
         CurrentUserChangePasswordView.as_view(),
         name="accounts_me_change_password",
+    ),
+    path(
+        "me/web-sessions/logout-others/",
+        CurrentUserLogoutOtherWebSessionsView.as_view(),
+        name="accounts_me_web_sessions_logout_others",
     ),
     path(
         "users/<str:user_id>/reset-password/",

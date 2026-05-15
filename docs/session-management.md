@@ -75,10 +75,10 @@ These functions should be called by views/services that implement password chang
 
 ## Product UI direction (planned)
 
-Future direction is a **Profile** page tab/section (not a separate `/profile/security/` route):
+The Product UI exposes basic web session controls inside the **Profile** page (not a separate `/profile/security/` route):
 
 - Change password (existing `/profile/password/` remains the password form route today)
-- “Log out other sessions” (revoke other Django web sessions)
+- “Log out other web sessions” (revoke other Django web sessions; keeps the current session)
 - “Log out everywhere” (revoke all Django web sessions)
 - Later: list/revoke API/client sessions (once API/client sessions exist)
 
@@ -103,7 +103,7 @@ Phase 1 (implemented):
 
 Phase 2:
 
-- Profile “Security” tab/section UI (within `/profile/`) calling the revocation actions
+- Profile session management section (within `/profile/`) calling the revocation actions (implemented: logout other web sessions)
 
 Phase 3:
 
