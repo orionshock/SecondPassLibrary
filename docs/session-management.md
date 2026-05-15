@@ -7,6 +7,8 @@ Status:
 - Phase 1 (web session tracking + revocation) is implemented.
 - API/client token sessions are future work (not implemented).
 
+See `docs/client-api-auth.md` for the planned PIN/code authorization flow for reader clients.
+
 ## Terminology
 
 - **Django web session**: the browser/product UI login session managed by Django’s session framework (cookie + server-side session).
@@ -57,6 +59,7 @@ Notes:
 
 - Raw API tokens are **never** stored.
 - Only token hashes are stored (e.g., `token_hash`).
+- Planned reader-client auth flow is documented in `docs/client-api-auth.md`.
 
 ## Session control module
 

@@ -74,6 +74,8 @@ Notes for future browser UI:
 
 Session revocation direction (planned web/client sessions and terminology) is documented in `docs/session-management.md`.
 
+Planned reader-client PIN/code authorization (Client API tokens) is documented in `docs/client-api-auth.md`.
+
 ## Runtime/user data layout
 
 All runtime and user-generated data lives under `userdata/` (ignored by Git):
