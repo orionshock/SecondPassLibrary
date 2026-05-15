@@ -3,6 +3,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError as DjangoValidationError
 from typing import Any, cast
 from rest_framework import mixins, viewsets
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -31,6 +32,8 @@ from .services import (
 from core import policies
 from library.models import LibraryGroupMembership, is_public_group
 from accounts import session_control
+from accounts.authentication import ClientBearerAuthentication
+from accounts.models import UserClientSession
 
 
 User = get_user_model()
@@ -51,6 +54,11 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
 
     def get(self, request):
         payload = build_current_user_me_payload(user=request.user)
@@ -58,6 +66,10 @@ class CurrentUserView(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
+        # Phase 1 guardrail: Client API bearer tokens may read /me but not update it.
+        if isinstance(getattr(request, "auth", None), UserClientSession):
+            return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+
         patch = CurrentUserPatchSerializer(data=request.data or {})
         patch.is_valid(raise_exception=True)
         data = cast(dict[str, Any], patch.validated_data)
@@ -358,3 +370,4 @@ class ManagedUserResetPasswordView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication

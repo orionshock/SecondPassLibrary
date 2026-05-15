@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
+from accounts import client_api
+
 
 def index(request: HttpRequest) -> HttpResponse:
     return redirect("/app/")
@@ -92,3 +94,66 @@ def profile(request: HttpRequest) -> HttpResponse:
 @login_required
 def profile_password(request: HttpRequest) -> HttpResponse:
     return render(request, "web/profile_password.html")
+
+
+@login_required
+def client_api_authorize(request: HttpRequest) -> HttpResponse:
+    code = str(request.GET.get("code") or "").strip()
+    message = ""
+    error = ""
+    login_request = None
+
+    if request.method == "POST":
+        action = str(request.POST.get("action") or "").strip().lower()
+        code = str(request.POST.get("code") or "").strip()
+        login_request = client_api.get_pending_login_request_for_code(code)
+        if not login_request:
+            error = "Invalid or expired code."
+        else:
+            try:
+                if action == "approve":
+                    client_api.approve_login_request(
+                        login_request=login_request, user=request.user
+                    )
+                    message = "Client authorized. Return to your reader."
+                elif action == "deny":
+                    client_api.deny_login_request(
+                        login_request=login_request, user=request.user
+                    )
+                    message = "Client request denied."
+                elif action == "lookup":
+                    # No-op: just render the request details for confirmation.
+                    pass
+                else:
+                    error = "Invalid action."
+            except ValueError as exc:
+                error = str(exc)
+
+        return render(
+            request,
+            "web/client_api_authorize.html",
+            {
+                "code": client_api.format_human_code(code),
+                "login_request": login_request,
+                "message": message,
+                "error": error,
+                "done": bool(message) and not bool(error),
+            },
+        )
+
+    if code:
+        login_request = client_api.get_pending_login_request_for_code(code)
+        if not login_request:
+            error = "Invalid or expired code."
+
+    return render(
+        request,
+        "web/client_api_authorize.html",
+        {
+            "code": client_api.format_human_code(code),
+            "login_request": login_request,
+            "message": message,
+            "error": error,
+            "done": False,
+        },
+    )

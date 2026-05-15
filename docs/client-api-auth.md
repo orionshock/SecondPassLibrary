@@ -9,7 +9,10 @@ Goals:
 - Support "server and client may be on different devices" (copy/paste a URL or type a code).
 - Avoid OAuth/OIDC for v1 (this is not an OAuth provider).
 
-Status: design only (not implemented yet).
+Status:
+
+- Phase 1 (credential lifecycle + browser authorization + bearer token) is implemented.
+- Phase 2 (bearer token access to library/reading APIs) is future work.
 
 ## 1. Terms
 
@@ -31,7 +34,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
 2. Client calls `POST /api/v1/client-api/login-requests/` with basic client metadata.
 3. Server returns:
    - `id` (request UUID)
-   - `code` (short human code; not secret at high security level, but should still be unpredictable enough)
+   - `code` (short human code; not a bearer credential, but should still be unpredictable enough)
    - `authorize_url` (a product-UI URL the user can open in a browser; preferably includes the code as a query param)
    - `poll_url`
    - `expires_at`
@@ -176,12 +179,12 @@ When `UserClientSession` exists, session control should treat these as API/clien
 Phase 1:
 
 - Models (`ClientLoginRequest`, `UserClientSession`)
-- Discovery endpoint
-- Create login request endpoint
-- Authorize page (GET/POST)
-- Poll endpoint
-- Bearer token authentication
-- Token works for `/api/v1/accounts/me/`
+- Discovery endpoint (`/.well-known/secondpass` and `GET /api/v1/client-api/discovery/`)
+- Create login request endpoint (`POST /api/v1/client-api/login-requests/`)
+- Authorize page (GET/POST `/client-api/authorize/`)
+- Poll endpoint (`GET /api/v1/client-api/login-requests/<id>/poll/`)
+- Bearer token authentication (enabled on `/api/v1/accounts/me/` only)
+- Phase 1 guardrail: bearer tokens can `GET /api/v1/accounts/me/` but cannot `PATCH /api/v1/accounts/me/`.
 
 Phase 2:
 
@@ -205,4 +208,3 @@ Phase 3:
 - Polling semantics: long-poll vs short-poll, server throttling strategy, and recommended interval defaults.
 - Token lifetime: expiring vs non-expiring tokens, rotation strategy, and how "last_seen_at" is updated.
 - How/when to associate `reading.Device` with a `UserClientSession` (if at all) without conflating reading attribution with auth.
-

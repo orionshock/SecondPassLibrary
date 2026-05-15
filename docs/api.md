@@ -81,6 +81,21 @@ Response shape:
   - `POST /api/v1/accounts/users/` (creates a local Django user and returns a generated temporary password once)
   - `POST /api/v1/accounts/users/<id>/reset-password/` (Manager/Owner only; returns a generated temporary password once)
 
+## Client API (Phase 1)
+
+Phase 1 provides the Client API credential lifecycle only. Bearer tokens are valid for `GET /api/v1/accounts/me/` only (not `PATCH`), and library/reading endpoints are intentionally not enabled for bearer tokens yet.
+
+Discovery:
+
+- `GET /.well-known/secondpass`
+- `GET /api/v1/client-api/discovery/`
+
+Login request / authorization:
+
+- `POST /api/v1/client-api/login-requests/` (anonymous allowed)
+- `GET/POST /client-api/authorize/` (browser; requires Django login)
+- `GET /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is an unguessable UUID)
+
 User-management payload notes:
 
 - Managed users now include a read-only `groups[]` membership summary for that user (membership_id, group id/name, membership_role, is_public_group).

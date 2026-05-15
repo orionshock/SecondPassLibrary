@@ -9,6 +9,7 @@ urlpatterns = [
     path("app/", views.app_dashboard, name="app"),
     path("profile/", views.profile, name="profile"),
     path("profile/password/", views.profile_password, name="profile_password"),
+    path("client-api/authorize/", views.client_api_authorize, name="client_api_authorize"),
     path("library/", views.library_browse, name="library"),
     path("library/books/<str:book_id>/", views.book_detail, name="book_detail"),
     path("library/books/<str:book_id>/edit/", views.book_edit, name="book_edit"),

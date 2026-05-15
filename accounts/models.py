@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -84,3 +88,74 @@ class UserWebSession(TimeStampedModel):
         except Exception:
             username = ""
         return f"{username} ({self.session_key})"
+
+
+class ClientLoginRequest(TimeStampedModel):
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_DENIED = "denied"
+    STATUS_CONSUMED = "consumed"
+    STATUS_EXPIRED = "expired"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_DENIED, "Denied"),
+        (STATUS_CONSUMED, "Consumed"),
+        (STATUS_EXPIRED, "Expired"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code_hash = models.CharField(max_length=64, db_index=True)
+    client_name = models.CharField(max_length=200)
+    client_type = models.CharField(max_length=64)
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_client_login_requests",
+    )
+    expires_at = models.DateTimeField()
+    approved_at = models.DateTimeField(null=True, blank=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    request_user_agent = models.TextField(blank=True)
+    request_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.client_name} ({self.client_type}) [{self.status}]"
+
+
+class UserClientSession(TimeStampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="client_sessions",
+    )
+    name = models.CharField(max_length=200)
+    client_type = models.CharField(max_length=64)
+    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
+
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        username = ""
+        try:
+            username = self.user.get_username()
+        except Exception:
+            username = ""
+        return f"{username} ({self.name}) [{self.client_type}]"

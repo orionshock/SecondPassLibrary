@@ -5,7 +5,7 @@ This document describes the direction for **authentication/login sessions** vs *
 Status:
 
 - Phase 1 (web session tracking + revocation) is implemented.
-- API/client token sessions are future work (not implemented).
+- Phase 1 Client API sessions (PIN/code authorize + bearer token) are implemented (bearer token is enabled for `/api/v1/accounts/me/` only).
 
 See `docs/client-api-auth.md` for the planned PIN/code authorization flow for reader clients.
 
@@ -13,7 +13,7 @@ See `docs/client-api-auth.md` for the planned PIN/code authorization flow for re
 
 - **Django web session**: the browser/product UI login session managed by Django’s session framework (cookie + server-side session).
 - **UserWebSession**: planned companion model to track and revoke Django web sessions.
-- **UserApiSession / ClientSession**: planned future token/session model for reader/API clients (not implemented yet).
+- **UserClientSession**: bearer-token session for reader/API clients (implemented; Phase 1 enables bearer auth for `GET /api/v1/accounts/me/` only).
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
 - **`reading.Device`**: reading attribution/context (device-like metadata), not an auth mechanism.
 
@@ -28,8 +28,8 @@ Web session revocation follows these rules:
   - revokes **all** Django web sessions for the target user
 - **Disabling a user**:
   - revokes **all** Django web sessions for the target user
-- **Future client/API sessions**:
-  - once `UserApiSession` exists, the flows above should revoke client/API sessions as well
+- **Client API bearer sessions**:
+  - revoke Client API sessions (see `revoke_all_api_sessions(user)`)
 
 API endpoints remain authoritative; these are *policy goals* for the implementation.
 
@@ -44,7 +44,7 @@ API endpoints remain authoritative; these are *policy goals* for the implementat
 - `created_at`
 - `updated_at` (used as `last_seen` for now)
 
-### `accounts.UserApiSession` / `accounts.ClientSession` (planned)
+### `accounts.UserClientSession` (implemented)
 
 - `user`
 - `name`
@@ -92,7 +92,7 @@ Do not assume per-browser session listing in the first implementation; revocatio
 - No MFA (yet)
 - No email-based password reset (yet)
 - No OIDC (yet)
-- No API token/session implementation yet
+- No bearer-token access to library/reading endpoints yet (Client API Phase 1 is credential lifecycle + `/api/v1/accounts/me/` only)
 - Do not conflate `reading.ReadingSession` with auth/login sessions
 - `reading.Device` remains reading context until client auth/session work exists
 
@@ -110,4 +110,4 @@ Phase 2:
 
 Phase 3:
 
-- API/client token sessions for a reader client (`UserApiSession` / `ClientSession`)
+- Profile UI listing/revocation for Client API sessions (UserClientSession)

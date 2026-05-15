@@ -2,7 +2,7 @@ from django.contrib import admin
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import UserProfile, UserWebSession
+from .models import ClientLoginRequest, UserClientSession, UserProfile, UserWebSession
 
 
 class UserProfileAdminForm(forms.ModelForm):
@@ -74,3 +74,75 @@ class UserWebSessionAdmin(admin.ModelAdmin):
         return f"{ua[:77]}..."
 
     short_user_agent.short_description = "User agent"
+
+
+@admin.register(ClientLoginRequest)
+class ClientLoginRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        "client_name",
+        "client_type",
+        "status",
+        "approved_by",
+        "expires_at",
+        "approved_at",
+        "consumed_at",
+        "created_at",
+    ]
+    search_fields = ["client_name", "client_type", "approved_by__username", "approved_by__email"]
+    list_filter = ["status", "client_type"]
+    readonly_fields = [
+        "id",
+        "code_hash",
+        "client_name",
+        "client_type",
+        "status",
+        "approved_by",
+        "expires_at",
+        "approved_at",
+        "consumed_at",
+        "request_user_agent",
+        "request_ip",
+        "created_at",
+        "updated_at",
+    ]
+    list_select_related = ["approved_by"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(UserClientSession)
+class UserClientSessionAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "name",
+        "client_type",
+        "last_seen_at",
+        "expires_at",
+        "revoked_at",
+        "created_at",
+    ]
+    search_fields = ["user__username", "user__email", "name", "client_type"]
+    list_filter = ["client_type", "revoked_at"]
+    readonly_fields = [
+        "id",
+        "user",
+        "name",
+        "client_type",
+        "token_hash",
+        "last_seen_at",
+        "expires_at",
+        "revoked_at",
+        "created_at",
+        "updated_at",
+    ]
+    list_select_related = ["user"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from django.contrib.sessions.models import Session
+from django.utils import timezone
 
-from .models import UserWebSession
+from .models import UserClientSession, UserWebSession
 
 
 def revoke_web_session(session_key: str) -> None:
@@ -52,9 +53,15 @@ def revoke_other_web_sessions(user, current_session_key: str | None) -> None:
 
 def revoke_all_api_sessions(user) -> None:
     """
-    Placeholder for future API/client sessions. No-op for Phase 1.
+    Revoke all Client API bearer sessions for the given user.
     """
-    return
+    if not user or getattr(user, "is_anonymous", False):
+        return
+
+    now = timezone.now()
+    UserClientSession.objects.filter(user=user, revoked_at__isnull=True).update(
+        revoked_at=now, updated_at=now
+    )
 
 
 def user_changed_own_password(user, current_session_key: str | None) -> None:
@@ -70,4 +77,3 @@ def admin_reset_user_password(user) -> None:
 def disable_user(user) -> None:
     revoke_all_web_sessions(user)
     revoke_all_api_sessions(user)
-

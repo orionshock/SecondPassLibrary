@@ -18,12 +18,19 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from core.views import secondpass_well_known
+
 urlpatterns = [
+    path(".well-known/secondpass", secondpass_well_known, name="secondpass_well_known"),
     # Product UI (Django templates; capability-driven client-side nav)
     path("", include(("web.urls", "web"), namespace="web")),
     path("admin/", admin.site.urls),
     # API v1 (versioned, REST/JSON)
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),
+    path(
+        "api/v1/client-api/",
+        include(("accounts.client_api_urls", "client_api"), namespace="client_api"),
+    ),
     path(
         "api/v1/accounts/", include(("accounts.urls", "accounts"), namespace="accounts")
     ),
