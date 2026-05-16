@@ -12,7 +12,8 @@ Goals:
 Status:
 
 - Phase 1 (credential lifecycle + browser authorization + bearer token) is implemented.
-- Phase 2 (bearer token access to library/reading APIs) is future work.
+- Phase 2 (bearer token access to **library read/download** APIs) is implemented.
+- Bearer token access to **reading** write endpoints remains future work.
 
 ## 1. Terms
 
@@ -188,8 +189,9 @@ Phase 1:
 
 Phase 2:
 
-- Allow tokens on library read + reading endpoints (explicit allow-list)
-- Explicitly reject management endpoints (if not already rejected by default)
+- Allow tokens on library read + download endpoints (explicit allow-list)
+- Explicitly reject library/import/group-management endpoints for Client API tokens
+- Reading endpoints remain future work (separate, explicit allow-list)
 
 Phase 3:
 

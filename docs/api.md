@@ -83,7 +83,12 @@ Response shape:
 
 ## Client API (Phase 1)
 
-Phase 1 provides the Client API credential lifecycle only. Bearer tokens are valid for `GET /api/v1/accounts/me/` only (not `PATCH`), and library/reading endpoints are intentionally not enabled for bearer tokens yet.
+Phase 1 provides the Client API credential lifecycle. Client API bearer tokens are valid for:
+
+- `GET /api/v1/accounts/me/` only (not `PATCH`)
+- Selected **read-only** Library API endpoints (explicit allow-list; see Library section)
+
+Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or reading write endpoints yet.
 
 Discovery:
 
@@ -286,6 +291,23 @@ Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 - `GET /api/v1/library/groups/<group_id>/books/`
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
+
+Client API bearer token support (read-only allow-list):
+
+- `GET /api/v1/library/books/`
+- `GET /api/v1/library/books/<id>/`
+- `GET /api/v1/library/book-files/`
+- `GET /api/v1/library/book-files/<id>/`
+- `GET /api/v1/library/book-files/<id>/download/`
+- `GET /api/v1/library/authors/`
+- `GET /api/v1/library/authors/<id>/`
+- `GET /api/v1/library/series/`
+- `GET /api/v1/library/series/<id>/`
+- `GET /api/v1/library/groups/`
+- `GET /api/v1/library/groups/<group_id>/`
+- `GET /api/v1/library/groups/<group_id>/books/`
+
+All Library mutation endpoints (including imports, identifier CRUD, group memberships, and group book add/remove) reject Client API bearer tokens.
 
 Book payload notes:
 

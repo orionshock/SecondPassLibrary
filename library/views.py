@@ -8,11 +8,15 @@ from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
 
 from rest_framework import mixins, viewsets
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+
+from accounts.authentication import ClientBearerAuthentication
+from accounts.models import UserClientSession
 
 from .models import (
     Author,
@@ -61,7 +65,43 @@ from core.errors import ErrorCode, api_error_response
 User = get_user_model()
 
 
-class AuthorViewSet(viewsets.ModelViewSet):
+class ClientBearerReadOnlyMixin:
+    """
+    Allow Client API bearer tokens only for explicitly allowed read actions.
+
+    Notes:
+    - Session/basic auth continues to work normally.
+    - If a request is authenticated via a client bearer token (request.auth is a
+      UserClientSession), disallowed actions are rejected with 403.
+    """
+
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
+
+    # Map of DRF action -> allowed HTTP methods for client bearer auth.
+    client_bearer_allowed: dict[str, set[str]] = {}
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if isinstance(getattr(request, "auth", None), UserClientSession):
+            action = getattr(self, "action", None)
+            if not action:
+                # Fallback for edge cases where DRF hasn't set `self.action` yet.
+                ctx = getattr(request, "parser_context", None) or {}
+                if isinstance(ctx, dict):
+                    action = ctx.get("action") or ""
+                else:
+                    action = ""
+            allowed = self.client_bearer_allowed.get(str(action), set())
+            if request.method.upper() not in allowed:
+                raise PermissionDenied("Client API tokens are read-only for this endpoint.")
+
+
+class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
+    client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}}
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
     permission_classes = [IsAuthenticated]
@@ -88,7 +128,8 @@ class AuthorViewSet(viewsets.ModelViewSet):
         instance.delete()
 
 
-class SeriesViewSet(viewsets.ModelViewSet):
+class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
+    client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}}
     queryset = Series.objects.all()
     serializer_class = SeriesSerializer
     permission_classes = [IsAuthenticated]
@@ -115,7 +156,8 @@ class SeriesViewSet(viewsets.ModelViewSet):
         instance.delete()
 
 
-class BookViewSet(viewsets.ModelViewSet):
+class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
+    client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}}
     queryset = (
         Book.objects.select_related("series", "file")
         .prefetch_related(
@@ -274,7 +316,8 @@ class BookViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class BookFileViewSet(viewsets.ModelViewSet):
+class BookFileViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
+    client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}, "download": {"GET"}}
     queryset = (
         BookFile.objects.select_related("book", "book__series")
         .prefetch_related("book__authors")
@@ -330,8 +373,11 @@ class BookFileViewSet(viewsets.ModelViewSet):
 
 
 class ImportJobViewSet(
+    ClientBearerReadOnlyMixin,
     mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
+    # Client bearer tokens should not be usable for imports (even read).
+    client_bearer_allowed: dict[str, set[str]] = {}
     serializer_class = ImportJobSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -369,11 +415,13 @@ class ImportJobViewSet(
 
 
 class LibraryGroupViewSet(
+    ClientBearerReadOnlyMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
+    client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}, "books": {"GET"}}
     queryset = LibraryGroup.objects.all()
     permission_classes = [IsAuthenticated]
     ordering = ["name", "created_at"]
