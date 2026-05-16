@@ -82,11 +82,18 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
             source_filename="HIDDEN.epub",
         )
 
-    def _auth(self) -> dict[str, str]:
-        return {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+    @property
+    def _auth_header(self) -> str:
+        return f"Bearer {self.token}"
 
     def test_bearer_can_list_books(self):
-        r = cast(Response, self.client.get("/api/v1/library/books/", **self._auth()))
+        r = cast(
+            Response,
+            self.client.get(
+                "/api/v1/library/books/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         titles = sorted([b["title"] for b in paginated_results(r)])
         self.assertEqual(titles, ["Public Book"])
@@ -94,66 +101,105 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_bearer_can_retrieve_accessible_book_and_404_inaccessible(self):
         ok = cast(
             Response,
-            self.client.get(f"/api/v1/library/books/{self.public_book.id}/", **self._auth()),
+            self.client.get(
+                f"/api/v1/library/books/{self.public_book.id}/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
         payload = cast(Mapping[str, Any], ok.data)
         self.assertEqual(payload["id"], str(self.public_book.id))
 
-        hidden = self.client.get(f"/api/v1/library/books/{self.hidden_book.id}/", **self._auth())
+        hidden = self.client.get(
+            f"/api/v1/library/books/{self.hidden_book.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
         self.assertEqual(hidden.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_bearer_can_download_accessible_file_and_404_inaccessible(self):
         ok = self.client.get(
             f"/api/v1/library/book-files/{self.public_file.id}/download/",
-            **self._auth(),
+            HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
         self.assertEqual(ok.get("Content-Type"), "application/epub+zip")
 
         hidden = self.client.get(
             f"/api/v1/library/book-files/{self.hidden_file.id}/download/",
-            **self._auth(),
+            HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(hidden.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_bearer_can_use_common_book_filters(self):
         r1 = cast(
             Response,
-            self.client.get("/api/v1/library/books/?q=Public", **self._auth()),
+            self.client.get(
+                "/api/v1/library/books/?q=Public",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
         )
         self.assertEqual(r1.status_code, status.HTTP_200_OK)
         self.assertEqual([b["title"] for b in paginated_results(r1)], ["Public Book"])
 
         r2 = cast(
             Response,
-            self.client.get("/api/v1/library/books/?has_files=true", **self._auth()),
+            self.client.get(
+                "/api/v1/library/books/?has_files=true",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
         )
         self.assertEqual(r2.status_code, status.HTTP_200_OK)
         self.assertEqual([b["title"] for b in paginated_results(r2)], ["Public Book"])
 
         r3 = cast(
             Response,
-            self.client.get("/api/v1/library/books/?ordering=-updated_at", **self._auth()),
+            self.client.get(
+                "/api/v1/library/books/?ordering=-updated_at",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
         )
         self.assertEqual(r3.status_code, status.HTTP_200_OK)
 
     def test_bearer_can_read_authors_series_groups(self):
-        authors = cast(Response, self.client.get("/api/v1/library/authors/", **self._auth()))
+        authors = cast(
+            Response,
+            self.client.get(
+                "/api/v1/library/authors/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
         self.assertEqual(authors.status_code, status.HTTP_200_OK)
         names = [a["name"] for a in paginated_results(authors)]
         self.assertIn("A Author", names)
 
-        author_detail = self.client.get(f"/api/v1/library/authors/{self.author.id}/", **self._auth())
+        author_detail = self.client.get(
+            f"/api/v1/library/authors/{self.author.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
         self.assertEqual(author_detail.status_code, status.HTTP_200_OK)
 
-        series = cast(Response, self.client.get("/api/v1/library/series/", **self._auth()))
+        series = cast(
+            Response,
+            self.client.get(
+                "/api/v1/library/series/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
         self.assertEqual(series.status_code, status.HTTP_200_OK)
 
-        series_detail = self.client.get(f"/api/v1/library/series/{self.series.id}/", **self._auth())
+        series_detail = self.client.get(
+            f"/api/v1/library/series/{self.series.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
         self.assertEqual(series_detail.status_code, status.HTTP_200_OK)
 
-        groups = cast(Response, self.client.get("/api/v1/library/groups/", **self._auth()))
+        groups = cast(
+            Response,
+            self.client.get(
+                "/api/v1/library/groups/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
         self.assertEqual(groups.status_code, status.HTTP_200_OK)
         # Only Public should be visible to this user.
         group_names = [g["name"] for g in paginated_results(groups)]
@@ -165,7 +211,7 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
             f"/api/v1/library/books/{self.public_book.id}/",
             data={"title": "X"},
             format="json",
-            **self._auth(),
+            HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(patch.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -173,7 +219,7 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
             "/api/v1/library/imports/",
             data={"file": SimpleUploadedFile("x.epub", b"x", content_type="application/epub+zip")},
             format="multipart",
-            **self._auth(),
+            HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(imports.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -181,17 +227,23 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
             f"/api/v1/library/groups/{self.hidden_group.id}/books/",
             data={"book": str(self.public_book.id)},
             format="json",
-            **self._auth(),
+            HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(group_books_add.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_revoked_or_inactive_token_is_rejected_for_library_reads(self):
         UserClientSession.objects.filter(user=self.user).update(revoked_at=timezone.now())
-        r = self.client.get("/api/v1/library/books/", **self._auth())
+        r = self.client.get(
+            "/api/v1/library/books/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
         self.assertIn(r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
         self.user.is_active = False
         self.user.save(update_fields=["is_active"])
         UserClientSession.objects.filter(user=self.user).update(revoked_at=None)
-        r2 = self.client.get("/api/v1/library/books/", **self._auth())
+        r2 = self.client.get(
+            "/api/v1/library/books/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
         self.assertIn(r2.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
