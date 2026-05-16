@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.client_api import hash_client_secret, normalize_human_code
+from accounts.client_api import hash_client_secret, normalize_human_code, consume_login_request
 from accounts.models import ClientLoginRequest, UserClientSession
 from accounts import session_control
 
@@ -89,6 +89,8 @@ class ClientApiPhase1Tests(APITestCase):
         self.assertEqual(poll1.data.get("status"), "approved")
         token = poll1.data.get("access_token")
         self.assertTrue(token)
+        self.assertEqual(poll1.data.get("token_type"), "Bearer")
+        self.assertTrue(poll1.data.get("client_session"))
 
         # Token is stored hashed only.
         session = UserClientSession.objects.get(pk=poll1.data["client_session"]["id"])
@@ -197,6 +199,57 @@ class ClientApiPhase1Tests(APITestCase):
         r = self.client.post("/client-api/authorize/", data={"code": "CODE", "action": "approve"})
         self.assertEqual(r.status_code, 200)
 
-        obj.refresh_from_db()
+        # Pylance/Django stubs sometimes mis-type the optional `from_queryset` arg;
+        # be explicit to avoid type-checker noise.
+        obj.refresh_from_db(from_queryset=None)
         self.assertEqual(obj.status, ClientLoginRequest.STATUS_PENDING)
         self.assertIsNone(obj.approved_by)
+
+    def test_poll_returns_consumed_not_approved_without_token(self):
+        """
+        Contract guardrail: poll must never return `approved` without `access_token`.
+
+        Simulate the "already consumed" case and ensure the second poll yields `consumed`.
+        """
+        user = User.objects.create_user(username="u", password="pw", email="u@example.com")
+
+        r = cast(
+            Any,
+            self.client.post(
+                "/api/v1/client-api/login-requests/",
+                data={"client_name": "Second Pass Reader", "client_type": "reader"},
+                format="json",
+            ),
+        )
+        body = cast(dict[str, Any], r.data)
+        req_id = str(body["id"])
+        code = str(body["code"])
+
+        self.client.force_login(user)
+        self.client.post("/client-api/authorize/", data={"code": code, "action": "approve"})
+
+        poll1 = cast(Any, self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/"))
+        self.assertEqual(poll1.data.get("status"), "approved")
+        self.assertTrue(poll1.data.get("access_token"))
+
+        poll2 = cast(Any, self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/"))
+        self.assertEqual(poll2.data.get("status"), "consumed")
+        self.assertFalse("access_token" in poll2.data)
+
+    def test_consume_is_idempotent_and_issues_token_once(self):
+        user = User.objects.create_user(username="u", password="pw", email="u@example.com")
+        obj = ClientLoginRequest.objects.create(
+            code_hash=hash_client_secret("CODE"),
+            client_name="Second Pass Reader",
+            client_type="reader",
+            status=ClientLoginRequest.STATUS_APPROVED,
+            approved_by=user,
+            expires_at=timezone.now() + timedelta(minutes=10),
+            request_user_agent="",
+            request_ip=None,
+        )
+
+        first = consume_login_request(login_request=obj)
+        self.assertIsNotNone(first)
+        second = consume_login_request(login_request=obj)
+        self.assertIsNone(second)

@@ -104,11 +104,17 @@ class ClientLoginRequestPollView(APIView):
         if obj.status == ClientLoginRequest.STATUS_APPROVED:
             result = client_api.consume_login_request(login_request=obj)
             if result is None:
-                # Another poll likely consumed it already.
-                obj.refresh_from_db(fields=["status"])
+                # Another poll likely consumed it already, or the request is no longer
+                # eligible to consume. Never return `approved` without a token.
+                obj.refresh_from_db(fields=["status", "expires_at"])
                 if obj.status == ClientLoginRequest.STATUS_CONSUMED:
                     return Response({"status": "consumed"}, status=status.HTTP_200_OK)
-                return Response({"status": "approved"}, status=status.HTTP_200_OK)
+                if client_api.is_login_request_expired(obj, now=now):
+                    return Response({"status": "expired"}, status=status.HTTP_200_OK)
+                if obj.status == ClientLoginRequest.STATUS_APPROVED:
+                    # Contract-safe fallback: if we cannot return a token, treat as consumed.
+                    return Response({"status": "consumed"}, status=status.HTTP_200_OK)
+                return Response({"status": str(obj.status)}, status=status.HTTP_200_OK)
 
             return Response(
                 {
@@ -126,4 +132,3 @@ class ClientLoginRequestPollView(APIView):
 
         # Safety fallback
         return Response({"status": str(obj.status)}, status=status.HTTP_200_OK)
-

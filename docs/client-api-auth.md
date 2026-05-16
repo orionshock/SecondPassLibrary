@@ -53,7 +53,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
 1. Client polls `poll_url` using the request id.
 2. Server returns a status:
    - `pending`: not approved yet
-   - `approved`: returns a bearer token **once** (then the request becomes `consumed`)
+   - `approved`: returns a bearer token **once** (then the request becomes `consumed`). `approved` always includes the token.
    - `denied` / `expired`: terminal
 3. Client stores a connection profile and uses `Authorization: Bearer <token>` for future Client API requests.
 

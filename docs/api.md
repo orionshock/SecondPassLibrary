@@ -95,6 +95,7 @@ Login request / authorization:
 - `POST /api/v1/client-api/login-requests/` (anonymous allowed)
 - `GET/POST /client-api/authorize/` (browser; requires Django login)
 - `GET /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is an unguessable UUID)
+  - `status=approved` always includes `access_token`; after the token is delivered once, polling returns `status=consumed`.
 
 User-management payload notes:
 
