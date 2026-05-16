@@ -94,6 +94,19 @@ export async function fetchJSONWithOptions(url, options) {
   return isJson ? bodyJson : bodyText;
 }
 
+export async function patchJSON(url, body) {
+  const csrf = getCsrfToken();
+  return fetchJSONWithOptions(url, {
+    method: "PATCH",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(csrf ? { "X-CSRFToken": csrf } : {}),
+    },
+    body: JSON.stringify(body || {}),
+  });
+}
+
 export function extractApiErrorMessage(error) {
   const body = error && error.body ? error.body : null;
   if (body && typeof body === "object") {
@@ -117,4 +130,3 @@ export function summarizeFieldErrors(body) {
     .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`);
   return entries.length ? entries.join(" | ") : "";
 }
-
