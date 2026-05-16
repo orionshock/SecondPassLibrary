@@ -10,6 +10,7 @@ from rest_framework import status
 
 from . import client_api
 from .models import ClientLoginRequest
+from core import server_settings
 
 
 class ClientApiDiscoveryView(APIView):
@@ -19,6 +20,8 @@ class ClientApiDiscoveryView(APIView):
         base = request.build_absolute_uri("/")
         payload = {
             "discovery_version": "0.1",
+            "server_name": server_settings.get_server_name(),
+            "server_description": server_settings.get_server_description(),
             "api_base_url": request.build_absolute_uri("/api/v1/"),
             "login_request_endpoint": request.build_absolute_uri(
                 "/api/v1/client-api/login-requests/"

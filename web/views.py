@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 
 from accounts import client_api
+from core import policies
 
 
 def index(request: HttpRequest) -> HttpResponse:
@@ -157,3 +159,10 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
             "done": False,
         },
     )
+
+
+@login_required
+def server_settings(request: HttpRequest) -> HttpResponse:
+    if not policies.is_owner(getattr(request, "user", None)):
+        return HttpResponseForbidden("Not allowed.")
+    return render(request, "web/server_settings.html")

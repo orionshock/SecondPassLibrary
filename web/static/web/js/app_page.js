@@ -27,9 +27,12 @@ function navShouldShowGroups(me) {
 }
 
 function navShouldShowAdmin(me) {
+  return false;
+}
+
+function navShouldShowServerSettings(me) {
   if (!me) return false;
-  if (me.is_owner) return true;
-  return me.role === "manager";
+  return !!me.is_owner;
 }
 
 function sectionLinksForMe(me) {
@@ -38,7 +41,11 @@ function sectionLinksForMe(me) {
   sections.push({ href: "/groups/", label: "Groups", visible: navShouldShowGroups(me) });
   sections.push({ href: "/imports/", label: "Imports", visible: !!caps.can_access_imports });
   sections.push({ href: "/users/", label: "Users", visible: !!caps.can_manage_users });
-  sections.push({ href: "/admin/", label: "Service Hatch", visible: navShouldShowAdmin(me) });
+  sections.push({
+    href: "/server/",
+    label: "Server settings",
+    visible: navShouldShowServerSettings(me),
+  });
   return sections.filter((s) => s.visible);
 }
 
@@ -70,4 +77,3 @@ export async function initDashboard() {
     sectionsEl.appendChild(document.createTextNode(" "));
   }
 }
-

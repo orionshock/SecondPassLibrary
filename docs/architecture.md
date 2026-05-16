@@ -18,6 +18,7 @@ Notes:
 
 - Settings are cached as a single dict under one Django cache key and invalidated on update.
 - `ServerSetting` is **not** intended for secrets.
+- Server identity is stored as `ServerSetting(server_name)` and `ServerSetting(server_description)` and is editable via an Owner-only UI page (`/server/`) and API endpoint (`/api/v1/server/settings/`).
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
 
 ## Shelves (planned)

@@ -5,6 +5,8 @@ from django.test import TestCase
 from uuid import uuid4
 
 from accounts.services import get_or_create_profile
+from core import server_settings
+from accounts.models import UserProfile
 
 
 User = get_user_model()
@@ -25,6 +27,55 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get("/app/", follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/app/")
+
+    def test_unauthenticated_server_settings_redirects_to_login(self):
+        response = self.client.get("/server/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/server/")
+
+    def test_owner_server_settings_returns_200_and_has_form_and_service_hatch_link(self):
+        owner = User.objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+        response = self.client.get("/server/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Server Settings")
+        self.assertContains(response, 'id="server-settings-form"')
+        self.assertContains(response, 'href="/admin/"')
+
+    def test_manager_server_settings_is_not_allowed(self):
+        manager = User.objects.create_user(
+            username="manager", email="m@example.com", password="pw"
+        )
+        profile = get_or_create_profile(user=manager)
+        profile.role = UserProfile.ROLE_MANAGER
+        profile.save(update_fields=["role", "updated_at"])
+
+        self.client.force_login(manager)
+        response = self.client.get("/server/", follow=False)
+        self.assertEqual(response.status_code, 403)
+
+    def test_login_page_uses_configured_server_identity(self):
+        server_settings.set_server_name("My Library")
+        server_settings.set_server_description("Private family library.")
+        response = self.client.get("/api-auth/login/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "My Library")
+        self.assertContains(response, "A SecondPass Library")
+        self.assertContains(response, "Private family library.")
+
+    def test_base_template_has_no_service_hatch_nav_link(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/app/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'href="/admin/"')
+        self.assertContains(response, 'href="/server/"')
+        self.assertContains(response, "Server Settings")
 
     def test_authenticated_app_returns_200_and_title(self):
         self.client.force_login(self.user)

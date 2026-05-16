@@ -46,6 +46,7 @@ Client API calls use `Authorization: Bearer ...` tokens; cross-origin cookie cre
 ## Product UI (current)
 
 - App shell/dashboard: `/app/`
+- Owner server settings: `/server/` (Owner only; includes Django Admin / Service Hatch link)
 - Library browse: `/library/`
 - Book detail: `/library/books/<book_id>/`
 - Edit book metadata: `/library/books/<book_id>/edit/`

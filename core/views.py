@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 
+from core import server_settings
 
 def health_check(request):
     return JsonResponse({"status": "ok"})
@@ -14,7 +15,8 @@ def secondpass_well_known(request):
     api_base = request.build_absolute_uri("/api/v1/")
     return JsonResponse(
         {
-            "server_name": "Second Pass Library",
+            "server_name": server_settings.get_server_name(),
+            "server_description": server_settings.get_server_description(),
             "api_base_url": api_base,
             "client_api": {
                 "discovery_version": "0.1",

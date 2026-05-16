@@ -7,6 +7,7 @@ app_name = "web"
 urlpatterns = [
     path("", views.index, name="index"),
     path("app/", views.app_dashboard, name="app"),
+    path("server/", views.server_settings, name="server_settings"),
     path("profile/", views.profile, name="profile"),
     path("profile/password/", views.profile_password, name="profile_password"),
     path("client-api/authorize/", views.client_api_authorize, name="client_api_authorize"),

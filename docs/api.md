@@ -351,5 +351,6 @@ Reading payload notes:
 ## Core
 
 - Health check: `GET /api/v1/health/`
+- Owner server settings: `GET/PATCH /api/v1/server/settings/`
 
 See `docs/reading.md` for details.

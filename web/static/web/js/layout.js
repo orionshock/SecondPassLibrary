@@ -55,9 +55,12 @@ function navShouldShowGroups(me) {
 }
 
 function navShouldShowAdmin(me) {
+  return false;
+}
+
+function navShouldShowServerSettings(me) {
   if (!me) return false;
-  if (me.is_owner) return true;
-  return me.role === "manager";
+  return !!me.is_owner;
 }
 
 function updateNavVisibility(me) {
@@ -66,7 +69,7 @@ function updateNavVisibility(me) {
   visible($('[data-nav="groups"]'), navShouldShowGroups(me));
   visible($('[data-nav="imports"]'), !!caps.can_access_imports);
   visible($('[data-nav="users"]'), !!caps.can_manage_users);
-  visible($('[data-nav="admin"]'), navShouldShowAdmin(me));
+  visible($('[data-nav="server-settings"]'), navShouldShowServerSettings(me));
 }
 
 function setActiveNav() {
@@ -78,7 +81,7 @@ function setActiveNav() {
     { key: "groups", prefix: "/groups/" },
     { key: "imports", prefix: "/imports/" },
     { key: "users", prefix: "/users/" },
-    { key: "admin", prefix: "/admin/" },
+    { key: "server-settings", prefix: "/server/" },
   ];
   for (const { key, prefix } of mapping) {
     const el = $(`[data-nav="${key}"]`);

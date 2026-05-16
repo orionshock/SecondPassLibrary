@@ -9,6 +9,11 @@ from .models import ServerSetting
 
 
 SERVER_SETTINGS_CACHE_KEY = "core:server_settings:v1"
+SERVER_NAME_SETTING = "server_name"
+SERVER_DESCRIPTION_SETTING = "server_description"
+SERVER_NAME_MAX_LEN = 120
+SERVER_DESCRIPTION_MAX_LEN = 1000
+DEFAULT_SERVER_NAME = "Second Pass Library"
 
 
 def clear_server_settings_cache() -> None:
@@ -49,3 +54,50 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
     clear_server_settings_cache()
     return obj
 
+
+def _normalize_str(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def get_server_name() -> str:
+    value = get_server_setting(SERVER_NAME_SETTING, default=None)
+    if isinstance(value, str):
+        normalized = value.strip()
+        if normalized:
+            return normalized
+    return DEFAULT_SERVER_NAME
+
+
+def set_server_name(value: str) -> None:
+    normalized = _normalize_str(value)
+    if not normalized:
+        raise ValueError("Server name is required.")
+    if len(normalized) > SERVER_NAME_MAX_LEN:
+        raise ValueError(f"Server name must be at most {SERVER_NAME_MAX_LEN} characters.")
+    set_server_setting(
+        key=SERVER_NAME_SETTING,
+        value=normalized,
+        description="Server display name used in UI and discovery.",
+    )
+
+
+def get_server_description() -> str:
+    value = get_server_setting(SERVER_DESCRIPTION_SETTING, default=None)
+    if isinstance(value, str):
+        normalized = value.strip()
+        if normalized:
+            return normalized
+    return ""
+
+
+def set_server_description(value: str) -> None:
+    normalized = _normalize_str(value)
+    if len(normalized) > SERVER_DESCRIPTION_MAX_LEN:
+        raise ValueError(
+            f"Server description must be at most {SERVER_DESCRIPTION_MAX_LEN} characters."
+        )
+    set_server_setting(
+        key=SERVER_DESCRIPTION_SETTING,
+        value=normalized,
+        description="Optional server description used in discovery.",
+    )

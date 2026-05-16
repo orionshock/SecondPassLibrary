@@ -9,6 +9,7 @@ The first minimal product UI shell now exists:
 - `/` redirects to `/app/`
 - `/app/` is an authenticated dashboard shell
 - `/app/` is a placeholder dashboard (future activity widgets are intentionally not implemented yet)
+- `/server/` is an authenticated Owner-only Server Settings page (server identity + Django Admin / Service Hatch link)
 - `/profile/` is the authenticated self account page (identity + groups + capabilities + self-profile edit)
 - `/profile/password/` is the authenticated self password change page
 - `/library/` is an authenticated library browse page
@@ -102,6 +103,7 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 ## 1. UI philosophy
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
+- The product UI should not expose the service hatch as a normal nav item; it is linked from the Owner-only Server Settings page (`/server/`).
 - The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role/capabilities.
 - The UI should not hardcode role logic in many places. It should treat `GET /api/v1/accounts/me/` as the bootstrap source of truth for:
   - identity (`username`, `email`)

@@ -1,0 +1,12 @@
+{% extends "rest_framework/login_base.html" %}
+
+{% block branding %}
+  <h3 style="margin: 0 0 8px;">{{ server_name }}</h3>
+  <div class="muted" style="margin: 0 0 8px;">A SecondPass Library</div>
+  {% if server_description %}
+    <div class="muted" style="margin: 0 0 20px;">{{ server_description }}</div>
+  {% else %}
+    <div style="margin: 0 0 20px;"></div>
+  {% endif %}
+{% endblock %}
+

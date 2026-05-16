@@ -8,6 +8,7 @@ import { initGroupsList, initGroupView, initGroupEdit } from "./groups.js";
 import { initShelvesList, initShelfNew, initShelfView, initShelfEdit } from "./shelves.js";
 import { initProfile } from "./profile.js";
 import { initProfilePassword } from "./profile_password.js";
+import { initServerSettings } from "./server_settings.js";
 import { initUsersList, initUserNew, initUserEdit } from "./users.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -96,6 +97,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initProfilePassword().catch((e) => {
       console.error("initProfilePassword failed", e);
       setGlobalErrorFromError(e, "Password error:");
+    });
+  } else if (page === "server-settings") {
+    initServerSettings().catch((e) => {
+      console.error("initServerSettings failed", e);
+      setGlobalErrorFromError(e, "Server settings error:");
     });
   } else {
     loadMeAndInitShell().catch((e) => {

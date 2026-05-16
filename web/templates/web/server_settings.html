@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}server-settings{% endblock %}
+
+{% block title %}Server Settings · {{ server_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1 class="page-title">Server Settings</h1>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <a class="button" href="/admin/">Django Admin / Service Hatch</a>
+    </div>
+  </div>
+
+  <section class="card">
+    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+      <h2 class="card__title" style="margin: 0;">Identity</h2>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="server-settings-edit-btn" class="button" type="button">Edit</button>
+        <button id="server-settings-save-btn" class="button is-hidden" type="submit" form="server-settings-form">Save</button>
+        <button id="server-settings-cancel-btn" class="button is-hidden" type="button">Cancel</button>
+      </div>
+    </div>
+
+    <form id="server-settings-form" style="margin-top: 10px;">
+      <div class="kv">
+        <div class="kv__k"><label for="server-settings-name-input">Server name</label></div>
+        <div class="kv__v">
+          <span id="server-settings-name-display" class="muted">Loading...</span>
+          <input id="server-settings-name-input" class="is-hidden" type="text" style="width: 100%;" value="" maxlength="120" />
+        </div>
+
+        <div class="kv__k"><label for="server-settings-description-input">Description</label></div>
+        <div class="kv__v">
+          <span id="server-settings-description-display" class="muted">Loading...</span>
+          <textarea id="server-settings-description-input" class="is-hidden" style="width: 100%; min-height: 90px;" maxlength="1000"></textarea>
+          <div class="muted" style="margin-top: 6px;">Shown to reader clients via discovery (optional).</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <span id="server-settings-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+{% endblock %}
