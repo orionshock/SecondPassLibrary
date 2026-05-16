@@ -30,6 +30,19 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+## Standalone reader dev (React)
+
+The first reader client is expected to be a standalone browser app (e.g. React) running on `http://localhost:5173` during development.
+
+The Django server enables narrow CORS support for these dev origins by default:
+
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+
+Production deployments should configure allowed reader origins explicitly via `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated).
+
+Client API calls use `Authorization: Bearer ...` tokens; cross-origin cookie credentials are not enabled.
+
 ## Product UI (current)
 
 - App shell/dashboard: `/app/`

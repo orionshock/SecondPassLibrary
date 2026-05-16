@@ -25,6 +25,13 @@ def _env_bool(name: str, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
 
 
+def _env_csv(name: str, default: list[str]) -> list[str]:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 # User data directory for runtime data
 USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
 
@@ -63,6 +70,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
     "web",
     "core.apps.CoreConfig",
@@ -74,6 +82,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -171,3 +180,12 @@ STATIC_ROOT = USERDATA_DIR / "static"
 LOGIN_URL = "/api-auth/login/"
 LOGIN_REDIRECT_URL = "/app/"
 LOGOUT_REDIRECT_URL = "/"
+
+# CORS (standalone reader dev client)
+CORS_ALLOWED_ORIGINS = _env_csv(
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+)
