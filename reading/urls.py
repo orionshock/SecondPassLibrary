@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ActiveSessionView,
     AnnotationViewSet,
+    OpenBookView,
     ReadingProgressViewSet,
     ReadingSessionViewSet,
     StartOverView,
@@ -24,6 +25,11 @@ urlpatterns = [
     ),
     path(
         "books/<uuid:book_id>/start-over/", StartOverView.as_view(), name="start_over"
+    ),
+    path(
+        "books/<uuid:book_id>/open/",
+        OpenBookView.as_view(),
+        name="open_book",
     ),
     path(
         "sessions/<uuid:session_id>/progress/",

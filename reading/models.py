@@ -56,7 +56,10 @@ class ReadingProgress(TimeStampedModel):
         ReadingSession, on_delete=models.CASCADE, related_name="progress"
     )
     # Canonical W3C-style session state: current reading location selector/locator.
-    # This is intentionally flexible JSON and should preserve unknown fields.
+    #
+    # Note: the *storage* field is flexible JSON, but the public Reading API
+    # intentionally validates `current_location` with a strict allowlist of keys.
+    # Reader clients should not treat this as arbitrary blob storage.
     current_location = models.JSONField(default=dict)
     progression = models.FloatField(blank=True, null=True)
     profile_version = models.CharField(max_length=16, default="0.1.0")

@@ -357,6 +357,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 - Reading APIs follow the W3C-style direction described in `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/` (import/export is future work; not implemented yet).
 - Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
 - Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
+- Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
 - Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)

@@ -13,7 +13,7 @@ Status:
 
 - Phase 1 (credential lifecycle + browser authorization + bearer token) is implemented.
 - Phase 2 (bearer token access to **library read/download** APIs) is implemented.
-- Bearer token access to **reading** write endpoints remains future work.
+- Phase 2 also enables bearer token access to **reading** user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner.
 
 ## 1. Terms
 

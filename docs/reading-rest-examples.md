@@ -54,6 +54,36 @@ Behavior notes:
 - A new session is created only if the user can **currently** view the book.
 - If the user cannot view the book and there is no existing active session, the endpoint returns `404 Not Found` (anti-leakage behavior).
 
+## 2.5) Open book bootstrap (recommended)
+
+Bootstrap a reader client opening a book with a single request:
+
+`POST /api/v1/reading/books/<book_id>/open/`
+
+Behavior notes:
+
+- If an active session already exists, it is returned even if current book access is later lost.
+- If no active session exists yet, the server creates one only when the user can currently view the book (otherwise `404`).
+- Progress is created if missing.
+- The response includes the **first page** of non-deleted annotations for that session.
+- To fetch more annotations pages, use: `GET /api/v1/reading/annotations/?session_id=<session_id>&page=...`
+
+Example response:
+
+```json
+{
+  "profile_version": "0.1.0",
+  "session": { "...": "..." },
+  "progress": { "...": "..." },
+  "annotations": {
+    "count": 0,
+    "next": null,
+    "previous": null,
+    "results": []
+  }
+}
+```
+
 ## 3) Start over
 
 Close/archive the current active session (if any) and create a new active session:
@@ -307,7 +337,7 @@ A minimal integration flow for a reader client:
 1. Authenticate.
 2. `GET /api/v1/accounts/me/`
 3. If `must_change_password` is `true`, send the user to `/profile/password/` (then call `POST /api/v1/accounts/me/change-password/`).
-4. `GET /api/v1/reading/books/<book_id>/active-session/`
+4. `POST /api/v1/reading/books/<book_id>/open/`
 5. Periodically `PUT /api/v1/reading/sessions/<session_id>/progress/`
 6. `POST /api/v1/reading/annotations/` for bookmarks/highlights/notes
 7. `DELETE /api/v1/reading/annotations/<annotation_id>/` for soft delete

@@ -19,6 +19,7 @@ The `/sessions/` API exists for listing/retrieving and limited client-safe metad
 Endpoints:
 
 ```text
+POST /api/v1/reading/books/<book_id>/open/                    (recommended bootstrap: session + progress + annotations)
 GET  /api/v1/reading/books/<book_id>/active-session/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
 GET  /api/v1/reading/sessions/                            (paginated)
@@ -65,7 +66,6 @@ Current location is flexible JSON. For EPUB, prefer:
   "format": "epub",
   "href": "Text/chapter01.xhtml",
   "cfi": "epubcfi(...)",
-  "progression": 0.1234,
   "position": 12345,
   "text": {"exact": "...", "prefix": "...", "suffix": "..."}
 }
