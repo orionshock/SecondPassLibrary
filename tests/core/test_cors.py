@@ -36,3 +36,17 @@ class CorsPolicyTests(TestCase):
         )
         self.assertIn(response.status_code, (200, 302))
         self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
+
+    def test_api_allows_idempotency_key_header_in_preflight(self):
+        response = self.client.options(
+            "/api/v1/reading/annotations/",
+            HTTP_ORIGIN="http://localhost:5173",
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type, idempotency-key, authorization",
+        )
+        # CORS middleware should handle preflight for API paths.
+        self.assertIn(response.status_code, (200, 204))
+        self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "*")
+        allow_headers = (response.headers.get("Access-Control-Allow-Headers") or "").lower()
+        self.assertIn("idempotency-key", allow_headers)
+        self.assertNotEqual(response.headers.get("Access-Control-Allow-Credentials"), "true")

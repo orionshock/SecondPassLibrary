@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 
+from corsheaders.defaults import default_headers
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -191,3 +193,5 @@ LOGOUT_REDIRECT_URL = "/"
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = False
 CORS_URLS_REGEX = r"^/api/|^/\.well-known/"
+# Allow Idempotency-Key for safe retries from browser clients.
+CORS_ALLOW_HEADERS = list(default_headers) + ["idempotency-key"]
