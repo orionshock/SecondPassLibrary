@@ -5,7 +5,8 @@ This document describes the direction for **authentication/login sessions** vs *
 Status:
 
 - Phase 1 (web session tracking + revocation) is implemented.
-- Phase 1 Client API sessions (PIN/code authorize + bearer token) are implemented (bearer token is enabled for `/api/v1/accounts/me/` only).
+- Phase 1 Client API sessions (PIN/code authorize + bearer token) are implemented.
+- Profile listing + revocation of Client API sessions is implemented.
 
 See `docs/client-api-auth.md` for the planned PIN/code authorization flow for reader clients.
 
@@ -13,7 +14,7 @@ See `docs/client-api-auth.md` for the planned PIN/code authorization flow for re
 
 - **Django web session**: the browser/product UI login session managed by Django’s session framework (cookie + server-side session).
 - **UserWebSession**: planned companion model to track and revoke Django web sessions.
-- **UserClientSession**: bearer-token session for reader/API clients (implemented; Phase 1 enables bearer auth for `GET /api/v1/accounts/me/` only).
+- **UserClientSession**: bearer-token session for reader/API clients (implemented; bearer tokens are enabled for `/api/v1/accounts/me/`, library read/download, and reading user-data endpoints).
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
 
 ## Web session policy
@@ -83,6 +84,8 @@ The Product UI exposes basic web session controls inside the **Profile** page (n
 - “Log out other web sessions” (revoke other Django web sessions; keeps the current session)
 - “Log out everywhere” (revoke all Django web sessions)
 - Later: list/revoke API/client sessions (once API/client sessions exist)
+
+Status: the Profile page now lists and allows revoking the current user's active Client API sessions.
 
 Do not assume per-browser session listing in the first implementation; revocation-first is sufficient initially.
 

@@ -62,6 +62,12 @@ Notes:
 - The bearer token is a **client token** (reader token), not a browser session token.
 - The browser never sees the bearer token; only the client receives it from the poll endpoint.
 
+UI notes (implemented):
+
+- The Profile page (`/profile/`) lists active Device/API sessions (Client API sessions) for the current user and allows revoking them.
+- The Profile page links to `/client-api/authorize/` to begin the human side of pairing.
+- During authorization, the client proposes a `client_name`, but the human can edit the “Device/client name” before approving. The approved name is returned by poll (`client_session.name`) and is what appears in the Profile list.
+
 ## 3. Models (planned)
 
 ### `ClientLoginRequest` (planned)

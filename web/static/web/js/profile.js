@@ -53,6 +53,66 @@ function renderCapabilities(container, caps) {
   container.appendChild(ul);
 }
 
+function formatWhen(value) {
+  if (!value) return "";
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString();
+}
+
+function renderClientSessions(container, sessions, onRevoke) {
+  clear(container);
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    container.appendChild(el("div", "muted", "No device/API sessions connected."));
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = `<tr>
+    <th>Device/client name</th>
+    <th class="muted">Type</th>
+    <th class="muted">Last seen</th>
+    <th></th>
+  </tr>`;
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const s of sessions) {
+    const tr = document.createElement("tr");
+
+    const name = s && s.name ? String(s.name) : "";
+    const ctype = s && s.client_type ? String(s.client_type) : "";
+    const when = formatWhen((s && (s.last_seen_at || s.created_at)) || "");
+
+    const tdName = document.createElement("td");
+    tdName.textContent = name;
+    tr.appendChild(tdName);
+
+    const tdType = document.createElement("td");
+    tdType.className = "muted";
+    tdType.textContent = ctype;
+    tr.appendChild(tdType);
+
+    const tdWhen = document.createElement("td");
+    tdWhen.className = "muted";
+    tdWhen.textContent = when;
+    tr.appendChild(tdWhen);
+
+    const tdBtn = document.createElement("td");
+    const btn = el("button", "button", "Revoke");
+    btn.type = "button";
+    btn.addEventListener("click", () => onRevoke(s));
+    tdBtn.appendChild(btn);
+    tr.appendChild(tdBtn);
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
 export async function initProfile() {
   const me = await loadMeAndInitShell();
   const groupsEl = $("#profile-groups");
@@ -253,5 +313,60 @@ export async function initProfile() {
       }
     });
   }
-}
 
+  const clientSessionsEl = $("#profile-client-sessions");
+  const clientSessionsStatusEl = $("#profile-client-sessions-status");
+  if (clientSessionsEl && clientSessionsStatusEl) {
+    async function loadClientSessions() {
+      try {
+        clientSessionsStatusEl.textContent = "";
+        clientSessionsStatusEl.classList.remove("error");
+        const sessions = await fetchJSONWithOptions("/api/v1/accounts/me/client-sessions/", {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        });
+        renderClientSessions(clientSessionsEl, sessions, revokeClientSession);
+      } catch (e2) {
+        console.error("Failed to load client sessions", e2);
+        const msg = extractApiErrorMessage(e2);
+        clientSessionsEl.textContent = "Error loading device/API sessions.";
+        clientSessionsStatusEl.textContent = msg;
+        clientSessionsStatusEl.classList.add("error");
+        setGlobalError(msg);
+      }
+    }
+
+    async function revokeClientSession(session) {
+      const id = session && session.id ? String(session.id) : "";
+      const name = session && session.name ? String(session.name) : "this session";
+      if (!id) return;
+      if (!window.confirm(`Revoke ${name}? This will invalidate its bearer token.`)) return;
+
+      clientSessionsStatusEl.textContent = "Revoking...";
+      clientSessionsStatusEl.classList.remove("error");
+      setGlobalError("");
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        await fetchJSONWithOptions(`/api/v1/accounts/me/client-sessions/${encodeURIComponent(id)}/`, {
+          method: "DELETE",
+          headers,
+        });
+
+        clientSessionsStatusEl.textContent = "Revoked.";
+        await loadClientSessions();
+      } catch (e2) {
+        console.error("Failed to revoke client session", e2);
+        const msg = extractApiErrorMessage(e2);
+        clientSessionsStatusEl.textContent = msg;
+        clientSessionsStatusEl.classList.add("error");
+        setGlobalError(msg);
+      }
+    }
+
+    await loadClientSessions();
+  }
+}

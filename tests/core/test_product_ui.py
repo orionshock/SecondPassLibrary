@@ -394,7 +394,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="profile-email-input"')
         self.assertContains(response, "Session management")
         self.assertContains(response, 'id="profile-logout-others-btn"')
-        self.assertContains(response, "Device/API sessions are not implemented yet.")
+        self.assertContains(response, "Device/API sessions")
+        self.assertContains(response, 'href="/client-api/authorize/"')
+        self.assertContains(response, 'id="profile-client-sessions"')
+        self.assertContains(response, 'id="profile-client-sessions-status"')
 
     def test_authenticated_profile_password_returns_200_and_has_form(self):
         self.client.force_login(self.user)

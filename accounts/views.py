@@ -9,12 +9,15 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from .models import UserProfile
 from .serializers import (
     ChangePasswordSerializer,
     CurrentUserSerializer,
     CurrentUserPatchSerializer,
+    CurrentUserClientSessionSerializer,
     ManagedUserPatchSerializer,
     ManagedUserCreateSerializer,
     ManagedUserSerializer,
@@ -118,6 +121,40 @@ class CurrentUserLogoutOtherWebSessionsView(APIView):
         current_session_key = getattr(getattr(request, "session", None), "session_key", None)
         session_control.revoke_other_web_sessions(request.user, current_session_key)
         return Response({"message": "Other web sessions logged out."}, status=status.HTTP_200_OK)
+
+
+class CurrentUserClientSessionsView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
+
+    def get(self, request):
+        qs = (
+            UserClientSession.objects.filter(user=request.user, revoked_at__isnull=True)
+            .order_by("-created_at", "id")
+        )
+        return Response(CurrentUserClientSessionSerializer(qs, many=True).data)
+
+
+class CurrentUserClientSessionRevokeView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
+
+    def delete(self, request, session_id: str):
+        # Anti-leakage: only operate on the current user's sessions.
+        obj = get_object_or_404(
+            UserClientSession, pk=session_id, user=request.user, revoked_at__isnull=True
+        )
+        now = timezone.now()
+        UserClientSession.objects.filter(pk=obj.pk).update(revoked_at=now, updated_at=now)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ManagedUserViewSet(
@@ -370,4 +407,3 @@ class ManagedUserResetPasswordView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication

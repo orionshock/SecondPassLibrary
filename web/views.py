@@ -101,6 +101,7 @@ def profile_password(request: HttpRequest) -> HttpResponse:
 @login_required
 def client_api_authorize(request: HttpRequest) -> HttpResponse:
     code = str(request.GET.get("code") or "").strip()
+    client_name = ""
     message = ""
     error = ""
     login_request = None
@@ -108,16 +109,38 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         action = str(request.POST.get("action") or "").strip().lower()
         code = str(request.POST.get("code") or "").strip()
+        raw_client_name = request.POST.get("client_name", None)
+        client_name = str(raw_client_name or "").strip()
         login_request = client_api.get_pending_login_request_for_code(code)
         if not login_request:
             error = "Invalid or expired code."
         else:
             try:
                 if action == "approve":
-                    client_api.approve_login_request(
-                        login_request=login_request, user=request.user
-                    )
-                    message = "Client authorized. Return to your reader."
+                    # Allow user to edit the client name during approval.
+                    if raw_client_name is None:
+                        # Backwards-compatible: if the form field was not sent, keep the
+                        # existing request client_name.
+                        final_name = (login_request.client_name or "").strip()
+                    else:
+                        # If the field was present, treat empty/whitespace as invalid.
+                        final_name = (client_name or "").strip()
+
+                    if not final_name:
+                        error = "Device/client name is required."
+                    elif len(final_name) > 200:
+                        error = "Device/client name is too long."
+                    else:
+                        if final_name != login_request.client_name:
+                            login_request.client_name = final_name
+                            login_request.save(update_fields=["client_name", "updated_at"])
+                        client_name = final_name
+
+                    if not error:
+                        client_api.approve_login_request(
+                            login_request=login_request, user=request.user
+                        )
+                        message = "Client authorized. Return to your reader."
                 elif action == "deny":
                     client_api.deny_login_request(
                         login_request=login_request, user=request.user
@@ -136,6 +159,7 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
             "web/client_api_authorize.html",
             {
                 "code": client_api.format_human_code(code),
+                "client_name": client_name,
                 "login_request": login_request,
                 "message": message,
                 "error": error,
@@ -147,12 +171,15 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
         login_request = client_api.get_pending_login_request_for_code(code)
         if not login_request:
             error = "Invalid or expired code."
+        else:
+            client_name = login_request.client_name
 
     return render(
         request,
         "web/client_api_authorize.html",
         {
             "code": client_api.format_human_code(code),
+            "client_name": client_name,
             "login_request": login_request,
             "message": message,
             "error": error,

@@ -96,6 +96,7 @@ class ClientApiPhase1Tests(APITestCase):
         session = UserClientSession.objects.get(pk=poll1.data["client_session"]["id"])
         self.assertNotEqual(session.token_hash, token)
         self.assertEqual(session.token_hash, hash_client_secret(str(token)))
+        self.assertEqual(session.name, "Second Pass Reader")
 
         # Second poll does not return token again.
         poll2 = cast(Any, self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/"))
@@ -138,6 +139,71 @@ class ClientApiPhase1Tests(APITestCase):
             ),
         )
         self.assertIn(users.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+    def test_authorize_page_allows_editing_client_name_before_approval(self):
+        user = User.objects.create_user(username="u", password="pw", email="u@example.com")
+
+        r = cast(
+            Any,
+            self.client.post(
+                "/api/v1/client-api/login-requests/",
+                data={"client_name": "Second Pass Reader", "client_type": "reader"},
+                format="json",
+            ),
+        )
+        body = cast(dict[str, Any], r.data)
+        req_id = str(body["id"])
+        code = str(body["code"])
+
+        self.client.force_login(user)
+
+        page = self.client.get(f"/client-api/authorize/?code={code}")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'name="client_name"')
+        self.assertContains(page, "Second Pass Reader")
+        self.assertContains(page, "reader")
+
+        approve = self.client.post(
+            "/client-api/authorize/",
+            data={"code": code, "action": "approve", "client_name": "My Phone Reader"},
+            follow=True,
+        )
+        self.assertEqual(approve.status_code, 200)
+
+        poll1 = cast(Any, self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/"))
+        self.assertEqual(poll1.data.get("status"), "approved")
+        token = poll1.data.get("access_token")
+        self.assertTrue(token)
+
+        session = UserClientSession.objects.get(pk=poll1.data["client_session"]["id"])
+        self.assertEqual(session.name, "My Phone Reader")
+        self.assertEqual(poll1.data["client_session"]["name"], "My Phone Reader")
+
+    def test_blank_edited_client_name_is_rejected_and_request_remains_pending(self):
+        user = User.objects.create_user(username="u", password="pw", email="u@example.com")
+
+        r = cast(
+            Any,
+            self.client.post(
+                "/api/v1/client-api/login-requests/",
+                data={"client_name": "Second Pass Reader", "client_type": "reader"},
+                format="json",
+            ),
+        )
+        body = cast(dict[str, Any], r.data)
+        req_id = str(body["id"])
+        code = str(body["code"])
+
+        self.client.force_login(user)
+        approve = self.client.post(
+            "/client-api/authorize/",
+            data={"code": code, "action": "approve", "client_name": "   "},
+            follow=True,
+        )
+        self.assertEqual(approve.status_code, 200)
+
+        obj = ClientLoginRequest.objects.get(pk=req_id)
+        self.assertEqual(obj.status, ClientLoginRequest.STATUS_PENDING)
 
     def test_revoked_token_cannot_call_me(self):
         user = User.objects.create_user(username="u", password="pw")

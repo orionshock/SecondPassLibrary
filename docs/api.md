@@ -73,6 +73,9 @@ Response shape:
 - `GET /api/v1/accounts/me/`
 - `PATCH /api/v1/accounts/me/` (self-profile fields only)
 - `POST /api/v1/accounts/me/change-password/`
+- Current user's Client API sessions:
+  - `GET /api/v1/accounts/me/client-sessions/` (active only)
+  - `DELETE /api/v1/accounts/me/client-sessions/<id>/` (revoke; sets `revoked_at`)
 - Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
 - Users (Owner/Manager only):
   - `GET /api/v1/accounts/users/` (paginated)

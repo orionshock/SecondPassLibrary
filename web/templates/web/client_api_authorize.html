@@ -39,8 +39,26 @@
           <div style="margin-top: 12px;">
             <div class="muted">Request</div>
             <div style="margin-top: 6px;">
-              <div><strong>{{ login_request.client_name|escape }}</strong></div>
-              <div class="muted">{{ login_request.client_type|escape }}</div>
+              <div class="kv" style="margin-top: 10px;">
+                <div class="kv__k"><label for="client-api-client-name">Device/client name</label></div>
+                <div class="kv__v">
+                  <input
+                    id="client-api-client-name"
+                    name="client_name"
+                    type="text"
+                    style="width: 100%;"
+                    value="{{ client_name|default:login_request.client_name|default_if_none:''|escape }}"
+                  />
+                  <div class="muted" style="margin-top: 6px;">
+                    This is how this client will appear in your Profile session list.
+                  </div>
+                </div>
+
+                <div class="kv__k">Client type</div>
+                <div class="kv__v">
+                  <div class="muted">{{ login_request.client_type|escape }}</div>
+                </div>
+              </div>
             </div>
           </div>
 

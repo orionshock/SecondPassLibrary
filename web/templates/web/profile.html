@@ -56,7 +56,16 @@
       <button id="profile-logout-others-btn" class="button" type="button">Log out all other web sessions</button>
       <span id="profile-logout-others-status" class="muted" style="margin-left: 8px;"></span>
     </div>
-    <div class="muted" style="margin-top: 10px;">Device/API sessions are not implemented yet.</div>
+
+    <hr style="margin: 16px 0; border: 0; border-top: 1px solid var(--border);" />
+
+    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+      <h3 class="card__title" style="margin: 0;">Device/API sessions</h3>
+      <a class="button" href="/client-api/authorize/">Connect a device/app</a>
+    </div>
+
+    <div id="profile-client-sessions" class="muted" style="margin-top: 10px;">Loading...</div>
+    <div id="profile-client-sessions-status" class="muted" style="margin-top: 8px;"></div>
   </section>
 
   <section class="card">
