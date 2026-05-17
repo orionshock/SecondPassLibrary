@@ -176,7 +176,7 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
     )
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
-    ordering_fields = ["title", "created_at", "updated_at", "published_date"]
+    ordering_fields = ["title", "created_at", "updated_at", "published_date", "series_index"]
     ordering = ["title", "created_at"]
 
     def get_queryset(self):

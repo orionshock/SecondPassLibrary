@@ -125,6 +125,10 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         data = paginated_results(response)
         return sorted([b["title"] for b in data])
 
+    def _titles_in_order(self, response: Response):
+        data = paginated_results(response)
+        return [b["title"] for b in data]
+
     def test_q_matches_title(self):
         response = cast(Response, self.client.get("/api/v1/library/books/?q=Alp"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -155,6 +159,24 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._titles(response), ["Alpha"])
+
+    def test_ordering_series_index_on_series_filtered_list(self):
+        self.book1.series_index = 0
+        self.book1.save(update_fields=["series_index", "updated_at"])
+
+        b2 = Book.objects.create(title="Gamma", series=self.series_s, series_index=2)
+        ensure_book_public_assignment(book=b2, added_by=None)
+        b0 = Book.objects.create(title="Zero", series=self.series_s, series_index=1)
+        ensure_book_public_assignment(book=b0, added_by=None)
+
+        response = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/library/books/?series={self.series_s.id}&ordering=series_index"
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles_in_order(response), ["Alpha", "Zero", "Gamma"])
 
     def test_filter_by_language(self):
         response = cast(Response, self.client.get("/api/v1/library/books/?language=en"))
