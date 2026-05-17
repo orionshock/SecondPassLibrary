@@ -35,6 +35,29 @@ from .serializers import (
 )
 
 
+def _build_open_response_payload(*, request: Request, session: ReadingSession, view) -> dict[str, Any]:
+    progress = get_or_create_progress(session=session)
+
+    annotations_qs = (
+        Annotation.objects.select_related("session", "session__book")
+        .filter(session=session, is_deleted=False)
+        .order_by(*Annotation._meta.ordering)  # type: ignore[arg-type]
+    )
+
+    paginator = DefaultPageNumberPagination()
+    paginated = paginator.paginate_queryset(annotations_qs, request, view=view)
+    annotations_payload = paginator.get_paginated_response(
+        AnnotationSerializer(paginated, many=True).data
+    ).data
+
+    return {
+        "profile_version": CURRENT_READING_PROFILE_VERSION,
+        "session": ReadingSessionSerializer(session).data,
+        "progress": ReadingProgressSerializer(progress, context={"request": request}).data,
+        "annotations": annotations_payload,
+    }
+
+
 class ReadingSessionViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -106,9 +129,8 @@ class StartOverView(APIView):
             raise NotFound()
         name = request.data.get("name", "")
         session = start_over_book(user=request.user, book=book, name=name or "")
-        return Response(
-            ReadingSessionSerializer(session).data, status=status.HTTP_201_CREATED
-        )
+        payload = _build_open_response_payload(request=request, session=session, view=self)
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class OpenBookView(APIView):
@@ -144,26 +166,7 @@ class OpenBookView(APIView):
             session = get_or_create_active_session(user=request.user, book=book)
             created = True
 
-        progress = get_or_create_progress(session=session)
-
-        annotations_qs = (
-            Annotation.objects.select_related("session", "session__book")
-            .filter(session=session, is_deleted=False)
-            .order_by(*Annotation._meta.ordering)  # type: ignore[arg-type]
-        )
-
-        paginator = DefaultPageNumberPagination()
-        paginated = paginator.paginate_queryset(annotations_qs, request, view=self)
-        annotations_payload = paginator.get_paginated_response(
-            AnnotationSerializer(paginated, many=True).data
-        ).data
-
-        payload = {
-            "profile_version": CURRENT_READING_PROFILE_VERSION,
-            "session": ReadingSessionSerializer(session).data,
-            "progress": ReadingProgressSerializer(progress, context={"request": request}).data,
-            "annotations": annotations_payload,
-        }
+        payload = _build_open_response_payload(request=request, session=session, view=self)
 
         return Response(
             payload, status=(status.HTTP_201_CREATED if created else status.HTTP_200_OK)

@@ -98,19 +98,19 @@ Request body:
 
 Example response (`201 Created`):
 
+`start-over` returns the same bootstrap shape as `/open/` (session + progress + first page of annotations):
+
 ```json
 {
-  "id": "2d6b0d7a-1e1a-4e55-9c1c-6c5db2a8a4d2",
-  "book": "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
-  "book_title": "The Left Hand of Darkness",
-  "status": "active",
-  "name": "Reread 2026",
-  "started_at": "2026-05-11T02:01:44Z",
-  "completed_at": null,
-  "is_active": true,
-  "notes": "",
-  "created_at": "2026-05-11T02:01:44Z",
-  "updated_at": "2026-05-11T02:01:44Z"
+  "profile_version": "0.1.0",
+  "session": { "...": "..." },
+  "progress": { "...": "..." },
+  "annotations": {
+    "count": 0,
+    "next": null,
+    "previous": null,
+    "results": []
+  }
 }
 ```
 

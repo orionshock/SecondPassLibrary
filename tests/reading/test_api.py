@@ -233,6 +233,40 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         resp = cast(Response, self.client.post(url, data={}, format="json"))
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_start_over_returns_open_response_shape_and_archives_old_active(self):
+        self.client.login(username="u1", password="pass1")
+
+        old = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True)
+        Annotation.objects.create(
+            session=old,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            target={"selector": {"value": "epubcfi(/6/2)"}},
+            body=[],
+        )
+
+        url = f"/api/v1/reading/books/{self.book.id}/start-over/"
+        resp = cast(Response, self.client.post(url, data={"name": "Reread"}, format="json"))
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        data = _response_data_dict(resp)
+        self.assertEqual(data["profile_version"], CURRENT_READING_PROFILE_VERSION)
+        self.assertIn("session", data)
+        self.assertIn("progress", data)
+        self.assertIn("annotations", data)
+
+        new_session_id = data["session"]["id"]
+        self.assertNotEqual(str(old.id), str(new_session_id))
+        self.assertEqual(str(data["progress"]["session"]), str(new_session_id))
+        self.assertEqual(data["annotations"]["results"], [])
+
+        old.refresh_from_db(from_queryset=None)
+        self.assertFalse(old.is_active)
+        self.assertEqual(old.status, ReadingSession.STATUS_ARCHIVED)
+
+        new = ReadingSession.objects.get(pk=new_session_id)
+        self.assertTrue(new.is_active)
+        self.assertEqual(new.status, ReadingSession.STATUS_ACTIVE)
+
     def test_progress_put_round_trips_current_location(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -432,6 +466,12 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
             ),
         )
         self.assertEqual(start_over.status_code, status.HTTP_201_CREATED)
+        start_over_data = _response_data_dict(start_over)
+        self.assertEqual(start_over_data["profile_version"], CURRENT_READING_PROFILE_VERSION)
+        self.assertIn("session", start_over_data)
+        self.assertIn("progress", start_over_data)
+        self.assertIn("annotations", start_over_data)
+        self.assertEqual(start_over_data["annotations"]["results"], [])
 
         # Progress writes should reject unsupported fields (including legacy device field).
         bad_progress = self.client.put(

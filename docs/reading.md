@@ -37,6 +37,7 @@ PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...",
 
 - `start-over` requires current book access (the user must be able to view the book).
 - If the user cannot view the book, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
+- `start-over` returns the same bootstrap response shape as `/open/` (session + progress + first page of annotations) so reader clients can immediately continue with the new session id.
 
 ## Progress
 
