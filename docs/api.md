@@ -367,6 +367,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
 - Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
+  - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
 
 Reading payload notes:
 

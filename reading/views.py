@@ -1,7 +1,14 @@
 from typing import Any, cast
 
+import hashlib
+import json
+from datetime import timedelta
+
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from rest_framework import mixins, status, viewsets
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -10,6 +17,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from core.pagination import DefaultPageNumberPagination
+from rest_framework.renderers import JSONRenderer
 
 from accounts.authentication import ClientBearerAuthentication
 
@@ -34,6 +42,7 @@ from .serializers import (
     ReadingSessionPatchSerializer,
     ReadingSessionSerializer,
 )
+from core.models import IdempotencyRecord
 
 
 def _build_open_response_payload(*, request: Request, session: ReadingSession, view) -> dict[str, Any]:
@@ -273,6 +282,135 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         if book_id:
             queryset = queryset.filter(session__book_id=book_id)
         return queryset
+
+    def _validate_idempotency_key(self, raw: str) -> str:
+        key = (raw or "").strip()
+        if not key:
+            raise DRFValidationError({"detail": "Idempotency-Key is required when provided."})
+        if len(key) > 128:
+            raise DRFValidationError({"detail": "Idempotency-Key is too long (max 128)."})
+        # Reject control characters.
+        for ch in key:
+            o = ord(ch)
+            if o < 32 or o == 127:
+                raise DRFValidationError({"detail": "Idempotency-Key contains invalid characters."})
+        return key
+
+    def _request_hash(self, request: Request) -> str:
+        data = request.data or {}
+        try:
+            body_json = json.dumps(data, sort_keys=True, separators=(",", ":"))
+        except (TypeError, ValueError) as exc:
+            raise DRFValidationError({"detail": "Request body is not JSON-serializable for idempotency."}) from exc
+        payload = f"{request.method}\n{request.path}\n{body_json}".encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    def create(self, request, *args, **kwargs):
+        raw_key = request.headers.get("Idempotency-Key")
+        if not raw_key:
+            return super().create(request, *args, **kwargs)
+
+        key = self._validate_idempotency_key(raw_key)
+        req_hash = self._request_hash(cast(Request, request))
+        now = timezone.now()
+
+        # Idempotency applies only after successful validation + create.
+        # If validation fails, we do not store any record.
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        expires_at = now + timedelta(hours=24)
+
+        with transaction.atomic():
+            existing = (
+                IdempotencyRecord.objects.select_for_update()
+                .filter(user=request.user, key=key)
+                .first()
+            )
+
+            if existing is not None and existing.expires_at <= now:
+                existing.delete()
+                existing = None
+
+            if existing is not None:
+                if (
+                    existing.method != request.method
+                    or existing.path != request.path
+                    or existing.request_hash != req_hash
+                ):
+                    return Response(
+                        {"detail": "Idempotency-Key was already used for a different request."},
+                        status=status.HTTP_409_CONFLICT,
+                    )
+
+                if (
+                    existing.status == IdempotencyRecord.STATUS_COMPLETED
+                    and existing.response_status is not None
+                    and existing.response_body is not None
+                ):
+                    return Response(existing.response_body, status=int(existing.response_status))
+
+                return Response(
+                    {"detail": "Idempotency-Key request is still processing."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            # Create a processing record to prevent double-creates under retries.
+            try:
+                record = IdempotencyRecord.objects.create(
+                    user=request.user,
+                    key=key,
+                    method=request.method,
+                    path=request.path,
+                    request_hash=req_hash,
+                    status=IdempotencyRecord.STATUS_PROCESSING,
+                    expires_at=expires_at,
+                )
+            except IntegrityError:
+                # Race: another request created the record. Re-check under lock.
+                raced = (
+                    IdempotencyRecord.objects.select_for_update()
+                    .filter(user=request.user, key=key)
+                    .first()
+                )
+                if raced is None:
+                    raise
+                if raced.expires_at <= now:
+                    raced.delete()
+                    return self.create(request, *args, **kwargs)
+                if (
+                    raced.method != request.method
+                    or raced.path != request.path
+                    or raced.request_hash != req_hash
+                ):
+                    return Response(
+                        {"detail": "Idempotency-Key was already used for a different request."},
+                        status=status.HTTP_409_CONFLICT,
+                    )
+                if (
+                    raced.status == IdempotencyRecord.STATUS_COMPLETED
+                    and raced.response_status is not None
+                    and raced.response_body is not None
+                ):
+                    return Response(raced.response_body, status=int(raced.response_status))
+                return Response(
+                    {"detail": "Idempotency-Key request is still processing."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            # Perform create using the already-validated serializer.
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            # Store a JSON-serializable copy (DRF serializer.data may contain UUID objects).
+            rendered = JSONRenderer().render(serializer.data)
+            response_body = cast(Any, json.loads(rendered.decode("utf-8")))
+
+            record.status = IdempotencyRecord.STATUS_COMPLETED
+            record.response_status = status.HTTP_201_CREATED
+            record.response_body = response_body
+            record.save(update_fields=["status", "response_status", "response_body", "updated_at"])
+
+        return Response(response_body, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         validated = cast(dict[str, Any], serializer.validated_data)

@@ -181,6 +181,12 @@ Bookmarks are stored as Annotations.
 
 `POST /api/v1/reading/annotations/`
 
+Idempotency (recommended):
+
+- Clients SHOULD send an `Idempotency-Key` header for each annotation create request.
+- If the client retries the same request with the same key, the server returns the original `201` response (same annotation id) and does not create a duplicate.
+- Reusing the same key for a different request returns `409 Conflict`.
+
 Example request body:
 
 ```json

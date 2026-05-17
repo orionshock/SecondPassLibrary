@@ -17,6 +17,7 @@ For practical current REST payload examples for reader-client development, see:
 - The server does not maintain per-reader proprietary annotation formats.
 - Public reading payloads are versioned via `profile_version` and unknown/unsupported fields are rejected.
 - Reading payloads are also size-limited as a coarse abuse guard (the server is not arbitrary client blob storage).
+- For REST clients, `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) so clients can safely retry create requests without duplicating annotations.
 - EPUB is the current target format.
 - EPUB CFI (`FragmentSelector`) is the primary selector for text targets.
 - The app does not repair, normalize, or beautify user-provided EPUB files.
