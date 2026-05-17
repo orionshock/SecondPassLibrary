@@ -23,7 +23,6 @@ Status:
 - **UserClientSession**: A long-lived (or semi-long-lived) server-side record representing a bearer token granted to a reader client for a specific user.
 - **Django web session**: Browser/product UI login session managed by Django sessions (cookie + server-side session rows).
 - **ReadingSession**: A reading/progress session through a book in the `reading` domain model. Not related to authentication.
-- **`reading.Device`**: Reading attribution/context metadata. Not an authentication mechanism (it may be linked to Client API sessions later, but it is not the auth primitive).
 
 ## 2. Core flow
 
@@ -136,7 +135,7 @@ Allowed future surface (explicit allow-list; subject to change as endpoints are 
 
 - `/api/v1/accounts/me/`
 - Library read/download endpoints
-- Reading endpoints: devices/sessions/progress/annotations (user-owned data)
+- Reading endpoints: sessions/progress/annotations (user-owned data)
 - Possibly read-only shelves
 
 Management endpoints should reject Client API tokens by default unless explicitly allowed later.
@@ -209,4 +208,4 @@ Phase 3:
 - Code format: digits only vs alphanumeric, length, and error tolerance (e.g. grouping `ABCD-EFGH`).
 - Polling semantics: long-poll vs short-poll, server throttling strategy, and recommended interval defaults.
 - Token lifetime: expiring vs non-expiring tokens, rotation strategy, and how "last_seen_at" is updated.
-- How/when to associate `reading.Device` with a `UserClientSession` (if at all) without conflating reading attribution with auth.
+- Whether to add optional client-session attribution fields to reading data (not implemented in v1).

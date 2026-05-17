@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError
 
 from library.models import Book
 
-from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .models import Annotation, ReadingProgress, ReadingSession
 from .locators import normalize_current_location
 from .profile import CURRENT_READING_PROFILE_VERSION
 
@@ -61,17 +61,12 @@ def start_over_book(*, user, book: Book, name: str | None = None) -> ReadingSess
         )
 
 
-def get_or_create_progress(
-    *, session: ReadingSession, device: Device | None = None
-) -> ReadingProgress:
+def get_or_create_progress(*, session: ReadingSession) -> ReadingProgress:
     """
     Get the ReadingProgress for a session, creating one if missing.
     """
-    defaults: dict = {"current_location": {}}
-    if device is not None:
-        defaults["device"] = device
     progress, _created = ReadingProgress.objects.get_or_create(
-        session=session, defaults=defaults
+        session=session, defaults={"current_location": {}}
     )
     return progress
 
@@ -81,25 +76,22 @@ def update_progress(
     session: ReadingSession,
     current_location: dict,
     progression: float | None = None,
-    device: Device | None = None,
 ) -> ReadingProgress:
     """
     Create or update session progress.
 
     This function does not perform user-authorization checks; views/serializers are
-    expected to enforce user scoping and device/session ownership validation.
+    expected to enforce user scoping and session ownership validation.
     """
     assert_session_writable(session=session)
     progress = get_or_create_progress(session=session)
     progress.current_location = normalize_current_location(current_location)
     progress.progression = progression
-    progress.device = device
     progress.profile_version = CURRENT_READING_PROFILE_VERSION
     progress.save(
         update_fields=[
             "current_location",
             "progression",
-            "device",
             "profile_version",
             "updated_at",
         ]
@@ -110,7 +102,6 @@ def update_progress(
 def create_annotation(
     *,
     session: ReadingSession,
-    device: Device | None,
     motivation: str,
     target: dict,
     body,
@@ -118,7 +109,6 @@ def create_annotation(
     assert_session_writable(session=session)
     return Annotation.objects.create(
         session=session,
-        device=device,
         motivation=motivation,
         target=target,
         body=body,

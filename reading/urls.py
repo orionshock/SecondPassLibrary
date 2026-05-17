@@ -4,7 +4,6 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ActiveSessionView,
     AnnotationViewSet,
-    DeviceViewSet,
     ReadingProgressViewSet,
     ReadingSessionViewSet,
     StartOverView,
@@ -13,7 +12,6 @@ from .views import (
 app_name = "reading"
 
 router = DefaultRouter()
-router.register(r"devices", DeviceViewSet, basename="device")
 router.register(r"sessions", ReadingSessionViewSet, basename="readingsession")
 router.register(r"annotations", AnnotationViewSet, basename="annotation")
 

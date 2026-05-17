@@ -15,7 +15,7 @@ from accounts.authentication import ClientBearerAuthentication
 from library.models import Book
 from core import policies
 
-from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .models import Annotation, ReadingProgress, ReadingSession
 from .services import (
     assert_session_writable,
     get_or_create_active_session,
@@ -28,27 +28,10 @@ from .profile import CURRENT_READING_PROFILE_VERSION
 from .w3c import build_publication_source
 from .serializers import (
     AnnotationSerializer,
-    DeviceSerializer,
     ReadingProgressSerializer,
     ReadingSessionPatchSerializer,
     ReadingSessionSerializer,
 )
-
-
-class DeviceViewSet(viewsets.ModelViewSet):
-    authentication_classes = [
-        SessionAuthentication,
-        BasicAuthentication,
-        ClientBearerAuthentication,
-    ]
-    serializer_class = DeviceSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Device.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
 
 class ReadingSessionViewSet(
@@ -138,7 +121,7 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
     lookup_field = "session_id"
 
     def get_queryset(self):
-        return ReadingProgress.objects.select_related("session", "device").filter(
+        return ReadingProgress.objects.select_related("session").filter(
             session__user=self.request.user
         )
 
@@ -166,13 +149,11 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
         validated = cast(dict[str, Any], serializer.validated_data)
         current_location = validated.get("current_location", progress.current_location)
         progression = validated.get("progression", progress.progression)
-        device = validated.get("device", progress.device)
         profile_version = validated.get("profile_version", CURRENT_READING_PROFILE_VERSION)
         progress = update_progress(
             session=session,
             current_location=current_location,
             progression=progression,
-            device=device,
         )
         if profile_version != CURRENT_READING_PROFILE_VERSION:
             # Serializer should already enforce this; keep as a safety belt.
@@ -195,7 +176,7 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         request = cast(Request, self.request)
         queryset = Annotation.objects.select_related(
-            "session", "session__book", "device"
+            "session", "session__book"
         ).filter(session__user=self.request.user)
 
         include_deleted = (
@@ -218,7 +199,6 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         validated = cast(dict[str, Any], serializer.validated_data)
         session = cast(ReadingSession, validated["session"])
-        device = cast(Device | None, validated.get("device"))
         motivation = cast(str, validated["motivation"])
         target = cast(dict, validated.get("target") or {})
         body = validated.get("body") or []
@@ -230,7 +210,6 @@ class AnnotationViewSet(viewsets.ModelViewSet):
 
         annotation = create_annotation(
             session=session,
-            device=device,
             motivation=motivation,
             target=target,
             body=body,

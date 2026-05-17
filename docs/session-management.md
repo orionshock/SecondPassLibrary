@@ -15,7 +15,6 @@ See `docs/client-api-auth.md` for the planned PIN/code authorization flow for re
 - **UserWebSession**: planned companion model to track and revoke Django web sessions.
 - **UserClientSession**: bearer-token session for reader/API clients (implemented; Phase 1 enables bearer auth for `GET /api/v1/accounts/me/` only).
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
-- **`reading.Device`**: reading attribution/context (device-like metadata), not an auth mechanism.
 
 ## Web session policy
 
@@ -92,9 +91,9 @@ Do not assume per-browser session listing in the first implementation; revocatio
 - No MFA (yet)
 - No email-based password reset (yet)
 - No OIDC (yet)
-- No bearer-token access to library/reading endpoints yet (Client API Phase 1 is credential lifecycle + `/api/v1/accounts/me/` only)
+- No bearer-token access to product UI/admin endpoints
 - Do not conflate `reading.ReadingSession` with auth/login sessions
-- `reading.Device` remains reading context until client auth/session work exists
+
 
 ## Implementation phases
 

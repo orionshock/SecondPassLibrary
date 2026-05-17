@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Annotation, Device, ReadingProgress, ReadingSession
+from .models import Annotation, ReadingProgress, ReadingSession
 from .locators import normalize_current_location
 from .profile import (
     CURRENT_READING_PROFILE_VERSION,
@@ -9,21 +9,6 @@ from .profile import (
     validate_current_location,
     validate_profile_version,
  )
-
-
-class DeviceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = [
-            "id",
-            "name",
-            "device_type",
-            "last_seen_at",
-            "is_active",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class ReadingSessionSerializer(serializers.ModelSerializer):
@@ -80,19 +65,10 @@ class ReadingSessionPatchSerializer(serializers.ModelSerializer):
 
 
 class ReadingProgressSerializer(serializers.ModelSerializer):
-    def validate_device(self, device):
-        request = self.context.get("request")
-        if device is None or request is None or request.user.is_anonymous:
-            return device
-        if device.user_id != request.user.id:
-            raise serializers.ValidationError("Invalid device.")
-        return device
-
     class Meta:
         model = ReadingProgress
         fields = [
             "session",
-            "device",
             "current_location",
             "progression",
             "profile_version",
@@ -116,7 +92,7 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         initial = getattr(self, "initial_data", {}) or {}
-        allowed = {"device", "current_location", "progression", "profile_version"}
+        allowed = {"current_location", "progression", "profile_version"}
         present = set(initial.keys())
         unknown = present.difference(allowed)
         if unknown:
@@ -140,20 +116,11 @@ class AnnotationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid session.")
         return session
 
-    def validate_device(self, device):
-        request = self.context.get("request")
-        if device is None or request is None or request.user.is_anonymous:
-            return device
-        if device.user_id != request.user.id:
-            raise serializers.ValidationError("Invalid device.")
-        return device
-
     class Meta:
         model = Annotation
         fields = [
             "id",
             "session",
-            "device",
             "motivation",
             "target",
             "body",
@@ -191,7 +158,6 @@ class AnnotationSerializer(serializers.ModelSerializer):
         initial = getattr(self, "initial_data", {}) or {}
         allowed = {
             "session",
-            "device",
             "motivation",
             "target",
             "body",

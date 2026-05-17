@@ -1,22 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
 
-from .models import Annotation, Device, ReadingProgress, ReadingSession
-
-
-@admin.register(Device)
-class DeviceAdmin(admin.ModelAdmin):
-    list_display = [
-        "name",
-        "device_type",
-        "user",
-        "last_seen_at",
-        "is_active",
-        "updated_at",
-    ]
-    search_fields = ["name", "user__username", "user__email"]
-    list_filter = ["device_type", "is_active", ("updated_at", DateFieldListFilter)]
-    readonly_fields = ["created_at", "updated_at"]
+from .models import Annotation, ReadingProgress, ReadingSession
 
 
 @admin.register(ReadingSession)
@@ -35,19 +20,18 @@ class ReadingSessionAdmin(admin.ModelAdmin):
 
 @admin.register(ReadingProgress)
 class ReadingProgressAdmin(admin.ModelAdmin):
-    list_display = ["session", "device", "progression", "updated_at"]
-    search_fields = ["session__book__title", "session__user__username", "device__name"]
+    list_display = ["session", "progression", "updated_at"]
+    search_fields = ["session__book__title", "session__user__username"]
     list_filter = [("updated_at", DateFieldListFilter)]
     readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(Annotation)
 class AnnotationAdmin(admin.ModelAdmin):
-    list_display = ["motivation", "session", "device", "is_deleted", "created_at"]
+    list_display = ["motivation", "session", "is_deleted", "created_at"]
     search_fields = [
         "session__book__title",
         "session__user__username",
-        "device__name",
     ]
     list_filter = ["motivation", "is_deleted", ("created_at", DateFieldListFilter)]
     readonly_fields = ["created_at", "updated_at"]

@@ -9,7 +9,7 @@ All reading endpoints require authentication.
 Client API bearer tokens may be used for these endpoints:
 
 - Send `Authorization: Bearer <token>` (issued via the Client API PIN/code flow).
-- Reading data access is strictly scoped to the token owner (devices/sessions/progress/annotations are user-owned).
+- Reading data access is strictly scoped to the token owner (sessions/progress/annotations are user-owned).
 
 ## 1) Overview
 
@@ -101,7 +101,6 @@ Example request body (explicit selector form):
 ```json
 {
   "profile_version": "0.1.0",
-  "device": "<device_id>",
   "current_location": {
     "format": "epub",
     "selector": {
@@ -145,7 +144,6 @@ Example request body:
 {
   "profile_version": "0.1.0",
   "session": "<session_id>",
-  "device": "<device_id>",
   "motivation": "bookmarking",
   "target": {
     "selector": {
@@ -247,7 +245,6 @@ Example response:
     {
       "id": "c9c1b4d2-7f6f-4d70-97d5-2b1d4b9c7a11",
       "session": "<session_id>",
-      "device": "<device_id>",
       "motivation": "bookmarking",
       "target": {
         "source": { "book_id": "<book_id>", "type": "Book" },
@@ -276,28 +273,9 @@ Notes:
 - Delete is a **soft delete**: it sets `is_deleted=true` and returns `204 No Content`.
 - Soft-delete is allowed even for closed sessions (deletion is not treated as “mutating reading content”).
 
-## 10) Devices
+## 10) Device attribution (v1)
 
-Devices are user-scoped records useful for attribution/debugging/sync context.
-
-Endpoints:
-
-- `GET /api/v1/reading/devices/`
-- `POST /api/v1/reading/devices/`
-
-Example create body:
-
-```json
-{
-  "name": "Orion's iPad",
-  "device_type": "tablet"
-}
-```
-
-Notes:
-
-- Devices are user-scoped.
-- Devices are useful attribution/debug context, but they are not security boundaries.
+The v1 Reading API does not model a separate device object. Client/auth identity is represented by the Client API bearer token (`accounts.UserClientSession`). Future versions may add optional attribution fields, but that is not implemented yet.
 
 ## 11) Common validation failures
 
@@ -329,11 +307,10 @@ A minimal integration flow for a reader client:
 1. Authenticate.
 2. `GET /api/v1/accounts/me/`
 3. If `must_change_password` is `true`, send the user to `/profile/password/` (then call `POST /api/v1/accounts/me/change-password/`).
-4. `GET /api/v1/reading/devices/` and create a device if needed.
-5. `GET /api/v1/reading/books/<book_id>/active-session/`
-6. Periodically `PUT /api/v1/reading/sessions/<session_id>/progress/`
-7. `POST /api/v1/reading/annotations/` for bookmarks/highlights/notes
-8. `DELETE /api/v1/reading/annotations/<annotation_id>/` for soft delete
+4. `GET /api/v1/reading/books/<book_id>/active-session/`
+5. Periodically `PUT /api/v1/reading/sessions/<session_id>/progress/`
+6. `POST /api/v1/reading/annotations/` for bookmarks/highlights/notes
+7. `DELETE /api/v1/reading/annotations/<annotation_id>/` for soft delete
 
 ## 13) Non-goals (current)
 

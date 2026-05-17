@@ -3,7 +3,7 @@ from django.db import IntegrityError
 from django.test import TestCase
 
 from library.models import Book
-from reading.models import Annotation, Device, ReadingProgress, ReadingSession
+from reading.models import Annotation, ReadingProgress, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 
 
@@ -16,13 +16,6 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             username="reader", password="testpass", email="reader@example.com"
         )
         self.book = Book.objects.create(title="Test Book")
-
-    def test_create_device(self):
-        device = Device.objects.create(
-            user=self.user, name="My Phone", device_type=Device.TYPE_MOBILE
-        )
-        self.assertIn("My Phone", str(device))
-        self.assertIn("Mobile", str(device))
 
     def test_create_reading_session(self):
         session = ReadingSession.objects.create(
@@ -55,10 +48,8 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
 
     def test_create_progress_for_session(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        device = Device.objects.create(user=self.user, name="Web", device_type=Device.TYPE_WEB)
         progress = ReadingProgress.objects.create(
             session=session,
-            device=device,
             current_location={"chapter": "c1", "offset": 12},
             progression=0.25,
         )

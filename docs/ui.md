@@ -121,7 +121,7 @@ Likely top-level sections (navigation may be role-gated):
 - Book detail (metadata, file, reading info)
 - Imports (upload and import job history)
 - Groups (LibraryGroups: view, curation, presentation)
-- Reading (history, sessions, annotations, devices)
+- Reading (history, sessions, annotations)
 - Users (management)
 - Settings / system (lightweight configuration and diagnostics)
 - Optional future reader UI (separate scope; not required for the first product UI)
@@ -290,7 +290,6 @@ Primary endpoints:
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
 - Annotations: `GET /api/v1/reading/annotations/` (paginated), supports `?book_id=...`, `?session_id=...`, `?include_deleted=true`
-- Devices: `GET /api/v1/reading/devices/` (paginated) and per-device CRUD (user-scoped)
 
 UI behaviors:
 

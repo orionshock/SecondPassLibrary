@@ -359,7 +359,6 @@ See `docs/permissions.md` for the visibility/curation rules.
 - Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
-- Devices: `GET /api/v1/reading/devices/` (paginated), `GET /api/v1/reading/devices/<id>/`
 - Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
 - Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)

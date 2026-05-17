@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from library.models import Book
-from reading.models import Device, ReadingProgress, ReadingSession
+from reading.models import ReadingProgress, ReadingSession
 from reading.services import (
     get_or_create_active_session,
     get_or_create_progress,
@@ -54,17 +54,13 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
 
     def test_update_progress_creates_and_updates(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        device = Device.objects.create(user=self.user, name="Web", device_type=Device.TYPE_WEB)
 
         progress = update_progress(
             session=session,
             current_location={"cfi": "/6/4"},
             progression=0.5,
-            device=device,
         )
         self.assertEqual(progress.session.id, session.id)
-        self.assertIsNotNone(progress.device)
-        self.assertEqual(progress.device.id, device.id)  # type: ignore[union-attr]
         self.assertEqual(progress.current_location["format"], "epub")
         self.assertEqual(progress.current_location["cfi"], "/6/4")
         self.assertEqual(progress.progression, 0.5)
@@ -73,10 +69,8 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
             session=session,
             current_location={"cfi": "/6/6"},
             progression=0.75,
-            device=None,
         )
         self.assertEqual(progress2.id, progress.id)
-        self.assertIsNone(progress2.device)
         self.assertEqual(progress2.current_location["format"], "epub")
         self.assertEqual(progress2.current_location["cfi"], "/6/6")
         self.assertEqual(progress2.progression, 0.75)

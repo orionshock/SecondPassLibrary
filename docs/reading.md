@@ -51,7 +51,6 @@ Example payload:
 
 ```json
 {
-  "device": "<device_id>",
   "current_location": {"format": "epub", "cfi": "/6/4", "href": "Text/chapter01.xhtml"},
   "progression": 0.42
 }
@@ -102,16 +101,6 @@ Notes:
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
 
-## Devices
+## Device attribution (v1)
 
-Devices are user-scoped records intended for client progress attribution and debugging context.
-
-Endpoints:
-
-```text
-GET    /api/v1/reading/devices/                 (paginated)
-POST   /api/v1/reading/devices/
-GET    /api/v1/reading/devices/<device_id>/
-PATCH  /api/v1/reading/devices/<device_id>/
-DELETE /api/v1/reading/devices/<device_id>/
-```
+The v1 Reading API does not model a separate `Device` object. Client/auth identity is represented by `accounts.UserClientSession` (bearer tokens). Future versions may add optional client-session attribution fields, but that is not implemented yet.
