@@ -25,6 +25,7 @@ POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name
 GET  /api/v1/reading/sessions/                            (paginated)
 GET  /api/v1/reading/sessions/<session_id>/
 PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...", "notes": "..."})
+POST /api/v1/reading/sessions/<session_id>/close/          (mark session completed/inactive; idempotent)
 ```
 
 ### Active session behavior
@@ -38,6 +39,13 @@ PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...",
 - `start-over` requires current book access (the user must be able to view the book).
 - If the user cannot view the book, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
 - `start-over` returns the same bootstrap response shape as `/open/` (session + progress + first page of annotations) so reader clients can immediately continue with the new session id.
+
+### Close behavior
+
+- `close` marks a session as completed (`status=completed`, `is_active=false`) and sets `completed_at` the first time it is closed.
+- The endpoint is idempotent: closing an already-closed session returns the current session payload and does not change `completed_at`.
+- `close` does not create a new session; the client should call `/open/` when opening another book.
+- `start-over` is different: it archives the current active session for the same book and creates a new active session.
 
 ## Progress
 

@@ -267,6 +267,88 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertTrue(new.is_active)
         self.assertEqual(new.status, ReadingSession.STATUS_ACTIVE)
 
+    def test_close_session_closes_active_idempotent_and_allows_open_new(self):
+        self.client.login(username="u1", password="pass1")
+
+        session = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True)
+        ann = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            target={"selector": {"value": "epubcfi(/6/2)"}},
+            body=[],
+        )
+
+        close1 = cast(Response, self.client.post(f"/api/v1/reading/sessions/{session.id}/close/", data={}, format="json"))
+        self.assertEqual(close1.status_code, status.HTTP_200_OK)
+        data1 = _response_data_dict(close1)
+        self.assertEqual(data1["id"], str(session.id))
+        self.assertEqual(data1["status"], ReadingSession.STATUS_COMPLETED)
+        self.assertFalse(data1["is_active"])
+        self.assertIsNotNone(data1["completed_at"])
+
+        session.refresh_from_db(from_queryset=None)
+        completed_at1 = session.completed_at
+        self.assertIsNotNone(completed_at1)
+
+        # Idempotent: closing again does not change completed_at.
+        close2 = cast(Response, self.client.post(f"/api/v1/reading/sessions/{session.id}/close/", data={}, format="json"))
+        self.assertEqual(close2.status_code, status.HTTP_200_OK)
+        session.refresh_from_db(from_queryset=None)
+        self.assertEqual(session.completed_at, completed_at1)
+
+        # After close, progress writes and annotation create/update are rejected.
+        prog = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/progress/",
+                data={"current_location": {"cfi": "/6/2"}},
+                format="json",
+            ),
+        )
+        self.assertEqual(prog.status_code, status.HTTP_400_BAD_REQUEST)
+
+        ann_create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "epubcfi(/6/4)"}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(ann_create.status_code, status.HTTP_400_BAD_REQUEST)
+
+        ann_update = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/annotations/{ann.id}/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(ann_update.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Soft-delete still works on closed sessions.
+        del_resp = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{ann.id}/"))
+        self.assertEqual(del_resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Opening the book again creates a new active session (since none is active now).
+        open_resp = cast(Response, self.client.post(f"/api/v1/reading/books/{self.book.id}/open/", data={}, format="json"))
+        self.assertIn(open_resp.status_code, (status.HTTP_200_OK, status.HTTP_201_CREATED))
+        open_data = _response_data_dict(open_resp)
+        self.assertNotEqual(open_data["session"]["id"], str(session.id))
+        self.assertTrue(open_data["session"]["is_active"])
+        self.assertEqual(open_data["session"]["status"], ReadingSession.STATUS_ACTIVE)
+
     def test_progress_put_round_trips_current_location(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -481,6 +563,36 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
             HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(bad_progress.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_bearer_can_close_own_session_and_cannot_close_cross_user(self):
+        session1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True)
+
+        ok = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/reading/sessions/{session1.id}/close/",
+                data={},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        data = _response_data_dict(ok)
+        self.assertEqual(data["id"], str(session1.id))
+        self.assertEqual(data["status"], ReadingSession.STATUS_COMPLETED)
+        self.assertFalse(data["is_active"])
+        self.assertIsNotNone(data["completed_at"])
+
+        cross = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/reading/sessions/{self.session2.id}/close/",
+                data={},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(cross.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_bearer_can_open_endpoint(self):
         resp = cast(

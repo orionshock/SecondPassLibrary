@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from library.models import Book
@@ -59,6 +60,26 @@ def start_over_book(*, user, book: Book, name: str | None = None) -> ReadingSess
             status=ReadingSession.STATUS_ACTIVE,
             is_active=True,
         )
+
+
+def close_session(*, session: ReadingSession) -> ReadingSession:
+    """
+    Mark a reading session as completed/closed.
+
+    Idempotent:
+    - If the session is already closed, no changes are made (completed_at is preserved).
+    - If the session is active, it becomes completed/inactive and completed_at is set.
+    """
+    if is_session_closed(session):
+        return session
+
+    now = timezone.now()
+    session.is_active = False
+    session.status = ReadingSession.STATUS_COMPLETED
+    if session.completed_at is None:
+        session.completed_at = now
+    session.save(update_fields=["is_active", "status", "completed_at", "updated_at"])
+    return session
 
 
 def get_or_create_progress(*, session: ReadingSession) -> ReadingProgress:

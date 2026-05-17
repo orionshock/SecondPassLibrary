@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ActiveSessionView,
     AnnotationViewSet,
+    CloseSessionView,
     OpenBookView,
     ReadingProgressViewSet,
     ReadingSessionViewSet,
@@ -37,5 +38,10 @@ urlpatterns = [
             {"get": "retrieve", "put": "update", "patch": "partial_update"}
         ),
         name="session_progress",
+    ),
+    path(
+        "sessions/<uuid:session_id>/close/",
+        CloseSessionView.as_view(),
+        name="session_close",
     ),
 ]

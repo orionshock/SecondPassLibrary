@@ -120,6 +120,19 @@ Behavior notes:
 - Archives any existing active session for that book (preserves old progress and annotations).
 - Creates a new active session.
 
+## 3.5) Close a reading session
+
+Mark a reading session as completed/inactive without creating a new session:
+
+`POST /api/v1/reading/sessions/<session_id>/close/`
+
+Notes:
+
+- Returns the `ReadingSession` payload.
+- Idempotent: closing an already-closed session returns the current session payload and does not change `completed_at`.
+- After close, progress writes and annotation create/update are rejected (closed-session immutability).
+- Soft-delete of annotations remains allowed.
+
 ## 4) Save reading progress / current location
 
 Progress is one-to-one per session and stores mutable **session state** like the current location (this is not an Annotation).

@@ -19,6 +19,7 @@ from core import policies
 from .models import Annotation, ReadingProgress, ReadingSession
 from .services import (
     assert_session_writable,
+    close_session,
     get_or_create_active_session,
     get_or_create_progress,
     create_annotation,
@@ -131,6 +132,20 @@ class StartOverView(APIView):
         session = start_over_book(user=request.user, book=book, name=name or "")
         payload = _build_open_response_payload(request=request, session=session, view=self)
         return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class CloseSessionView(APIView):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = get_object_or_404(ReadingSession, id=session_id, user=request.user)
+        session = close_session(session=session)
+        return Response(ReadingSessionSerializer(session).data, status=status.HTTP_200_OK)
 
 
 class OpenBookView(APIView):
