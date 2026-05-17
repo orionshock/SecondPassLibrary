@@ -123,12 +123,23 @@ class BookSerializer(serializers.ModelSerializer):
     authors = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Author.objects.all()
     )
+    # These are optional in the product and API. Accept `null` from clients and
+    # coerce to empty string for storage (model fields are blank=True, null=False).
+    summary = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    isbn = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     series = serializers.PrimaryKeyRelatedField(
         queryset=Series.objects.all(), required=False, allow_null=True
     )
     file = serializers.SerializerMethodField(read_only=True)
     identifiers = serializers.SerializerMethodField(read_only=True)
     groups = serializers.SerializerMethodField(read_only=True)
+
+    def validate(self, attrs: dict[str, Any]):
+        if "summary" in attrs and attrs["summary"] is None:
+            attrs["summary"] = ""
+        if "isbn" in attrs and attrs["isbn"] is None:
+            attrs["isbn"] = ""
+        return super().validate(attrs)
 
     def get_identifiers(self, obj: Book):
         identifiers = cast(Any, obj).identifiers.all()

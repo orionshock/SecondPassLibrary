@@ -23,12 +23,18 @@
   <div id="book-edit-saved" class="pill is-hidden" style="margin-top: 10px;">Saved.</div>
 
   <section id="book-edit" class="card is-hidden" data-book-id="{{ book_id|escape }}">
-    <div class="tabs" role="tablist" aria-label="Book edit tabs">
-      <button class="tab-button is-active" type="button" data-tab="metadata">Metadata</button>
-      <button class="tab-button" type="button" data-tab="authors">Authors &amp; Series</button>
-      <button class="tab-button" type="button" data-tab="groups">Library Groups</button>
-      <button class="tab-button" type="button" data-tab="shelves">Shelves</button>
-      <button class="tab-button" type="button" data-tab="idents">Identifiers &amp; File Info</button>
+    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+      <div class="tabs" role="tablist" aria-label="Book edit tabs">
+        <button class="tab-button is-active" type="button" data-tab="metadata">Metadata</button>
+        <button class="tab-button" type="button" data-tab="authors">Authors &amp; Series</button>
+        <button class="tab-button" type="button" data-tab="groups">Library Groups</button>
+        <button class="tab-button" type="button" data-tab="shelves">Shelves</button>
+        <button class="tab-button" type="button" data-tab="idents">Identifiers &amp; File Info</button>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex: 1;">
+        <button id="book-edit-save" class="button" type="submit" form="book-edit-form">Save</button>
+        <span id="book-edit-save-status" class="muted"></span>
+      </div>
     </div>
 
     <div id="tab-metadata" class="tab-panel" data-tab-panel="metadata">
@@ -66,10 +72,6 @@
           </div>
         </div>
 
-        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <button id="book-edit-save" class="button" type="submit">Save</button>
-          <span id="book-edit-save-status" class="muted"></span>
-        </div>
       </form>
     </div>
 
