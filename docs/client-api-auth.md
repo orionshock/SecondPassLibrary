@@ -136,7 +136,7 @@ Allowed future surface (explicit allow-list; subject to change as endpoints are 
 
 - `/api/v1/accounts/me/`
 - Library read/download endpoints
-- Reading endpoints: sessions/progress/annotations/devices
+- Reading endpoints: devices/sessions/progress/annotations (user-owned data)
 - Possibly read-only shelves
 
 Management endpoints should reject Client API tokens by default unless explicitly allowed later.
@@ -191,7 +191,7 @@ Phase 2:
 
 - Allow tokens on library read + download endpoints (explicit allow-list)
 - Explicitly reject library/import/group-management endpoints for Client API tokens
-- Reading endpoints remain future work (separate, explicit allow-list)
+- Allow tokens on reading user-data endpoints (explicit allow-list; user-owned and strictly scoped to the token owner)
 
 Phase 3:
 

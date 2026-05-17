@@ -6,6 +6,11 @@ They are **profile-shaped** and versioned, but they are **not** the future JSON-
 
 All reading endpoints require authentication.
 
+Client API bearer tokens may be used for these endpoints:
+
+- Send `Authorization: Bearer <token>` (issued via the Client API PIN/code flow).
+- Reading data access is strictly scoped to the token owner (devices/sessions/progress/annotations are user-owned).
+
 ## 1) Overview
 
 - Base path: `/api/v1/reading/`

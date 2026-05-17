@@ -182,11 +182,12 @@ LOGIN_URL = "/api-auth/login/"
 LOGIN_REDIRECT_URL = "/app/"
 LOGOUT_REDIRECT_URL = "/"
 
-# CORS (standalone reader dev client)
-CORS_ALLOWED_ORIGINS = _env_csv(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-)
+# CORS
+#
+# Default policy: open CORS for API + discovery endpoints only.
+# This supports standalone reader clients from arbitrary browser origins.
+# Cross-origin cookie/session credentials remain disabled; bearer tokens are the
+# security boundary for protected API data.
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = False
+CORS_URLS_REGEX = r"^/api/|^/\.well-known/"

@@ -34,14 +34,12 @@ python manage.py runserver
 
 The first reader client is expected to be a standalone browser app (e.g. React) running on `http://localhost:5173` during development.
 
-The Django server enables narrow CORS support for these dev origins by default:
+The Django server enables open CORS for API + discovery endpoints only:
 
-- `http://localhost:5173`
-- `http://127.0.0.1:5173`
+- `/.well-known/*`
+- `/api/*`
 
-Production deployments should configure allowed reader origins explicitly via `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated).
-
-Client API calls use `Authorization: Bearer ...` tokens; cross-origin cookie credentials are not enabled.
+This supports standalone reader clients from arbitrary origins. Cross-origin cookie credentials are not enabled; clients must use `Authorization: Bearer ...` tokens for protected API calls.
 
 ## Product UI (current)
 

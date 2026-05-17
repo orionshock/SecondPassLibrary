@@ -4,10 +4,13 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import NotFound
 
 from rest_framework import mixins, status, viewsets
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from accounts.authentication import ClientBearerAuthentication
 
 from library.models import Book
 from core import policies
@@ -33,6 +36,11 @@ from .serializers import (
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     serializer_class = DeviceSerializer
     permission_classes = [IsAuthenticated]
 
@@ -49,6 +57,11 @@ class ReadingSessionViewSet(
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -72,6 +85,11 @@ class ReadingSessionViewSet(
 
 
 class ActiveSessionView(APIView):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, book_id):
@@ -91,6 +109,11 @@ class ActiveSessionView(APIView):
 
 
 class StartOverView(APIView):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, book_id):
@@ -105,6 +128,11 @@ class StartOverView(APIView):
 
 
 class ReadingProgressViewSet(viewsets.GenericViewSet):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     serializer_class = ReadingProgressSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = "session_id"
@@ -120,7 +148,7 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
     def retrieve(self, request, session_id=None):
         session = self._get_session(session_id)
         progress = get_or_create_progress(session=session)
-        return Response(ReadingProgressSerializer(progress).data)
+        return Response(ReadingProgressSerializer(progress, context={"request": request}).data)
 
     def partial_update(self, request, session_id=None):
         return self._update(request, session_id=session_id, partial=True)
@@ -132,7 +160,7 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
         session = self._get_session(session_id)
         progress = get_or_create_progress(session=session)
         serializer = ReadingProgressSerializer(
-            progress, data=request.data, partial=partial
+            progress, data=request.data, partial=partial, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         validated = cast(dict[str, Any], serializer.validated_data)
@@ -156,6 +184,11 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
 
 
 class AnnotationViewSet(viewsets.ModelViewSet):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     serializer_class = AnnotationSerializer
     permission_classes = [IsAuthenticated]
 

@@ -88,7 +88,7 @@ Phase 1 provides the Client API credential lifecycle. Client API bearer tokens a
 - `GET /api/v1/accounts/me/` only (not `PATCH`)
 - Selected **read-only** Library API endpoints (explicit allow-list; see Library section)
 
-Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or reading write endpoints yet.
+Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
 
 Discovery:
 
@@ -356,6 +356,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 
 - Reading APIs follow the W3C-style direction described in `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/` (import/export is future work; not implemented yet).
 - Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
+- Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
 - Devices: `GET /api/v1/reading/devices/` (paginated), `GET /api/v1/reading/devices/<id>/`

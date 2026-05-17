@@ -1,11 +1,14 @@
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
+from accounts.client_api import hash_client_secret
+from accounts.models import UserClientSession
 from core import policies
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
@@ -258,6 +261,236 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(
+            username="u1", password="pass1", email="u1@example.com"
+        )
+        self.user2 = User.objects.create_user(
+            username="u2", password="pass2", email="u2@example.com"
+        )
+        ensure_user_public_membership(user=self.user1)
+        ensure_user_public_membership(user=self.user2)
+
+        self.book = Book.objects.create(title="Book 1")
+        ensure_book_public_assignment(book=self.book, added_by=None)
+
+        # Cross-user fixtures
+        self.device2 = Device.objects.create(
+            user=self.user2, name="Other device", device_type=Device.TYPE_WEB
+        )
+        self.session2 = ReadingSession.objects.create(user=self.user2, book=self.book)
+        self.annotation2 = Annotation.objects.create(
+            session=self.session2,
+            device=self.device2,
+            motivation=Annotation.MOTIVATION_COMMENTING,
+            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
+            body=[{"type": "TextualBody", "purpose": "commenting", "value": "secret"}],
+        )
+
+        self.token = "spl_testtoken_reading"
+        UserClientSession.objects.create(
+            user=self.user1,
+            name="Reader",
+            client_type="reader",
+            token_hash=hash_client_secret(self.token),
+            last_seen_at=None,
+            expires_at=None,
+            revoked_at=None,
+        )
+        self._auth_header = f"Bearer {self.token}"
+
+    def test_bearer_can_crud_own_devices_and_cannot_touch_others(self):
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/devices/",
+                data={"name": "My Device", "device_type": Device.TYPE_WEB},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        dev_id = _response_data_dict(create)["id"]
+
+        listing = cast(
+            Response,
+            self.client.get(
+                "/api/v1/reading/devices/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        ids = {d["id"] for d in _response_data_list(listing)}
+        self.assertIn(dev_id, ids)
+        self.assertNotIn(str(self.device2.id), ids)
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/devices/{dev_id}/",
+                data={"name": "Renamed"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(patch.status_code, status.HTTP_200_OK)
+
+        other_get = self.client.get(
+            f"/api/v1/reading/devices/{self.device2.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertEqual(other_get.status_code, status.HTTP_404_NOT_FOUND)
+
+        delete = self.client.delete(
+            f"/api/v1/reading/devices/{dev_id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertEqual(delete.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_bearer_sessions_active_session_start_over_and_progress(self):
+        # Active session requires book access (Public assignment makes it accessible here).
+        active = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/reading/books/{self.book.id}/active-session/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(active.status_code, status.HTTP_200_OK)
+        session_id = _response_data_dict(active)["id"]
+
+        sessions = cast(
+            Response,
+            self.client.get(
+                "/api/v1/reading/sessions/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(sessions.status_code, status.HTTP_200_OK)
+        sess_ids = {s["id"] for s in _response_data_list(sessions)}
+        self.assertIn(session_id, sess_ids)
+
+        other = self.client.get(
+            f"/api/v1/reading/sessions/{self.session2.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertEqual(other.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Progress update must not accept another user's device.
+        invalid_device = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/reading/sessions/{session_id}/progress/",
+                data={"device": str(self.device2.id), "current_location": {"cfi": "/6/2"}, "progression": 0.1},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(invalid_device.status_code, status.HTTP_400_BAD_REQUEST)
+
+        my_device = Device.objects.create(user=self.user1, name="Web", device_type=Device.TYPE_WEB)
+        ok = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/reading/sessions/{session_id}/progress/",
+                data={"device": str(my_device.id), "current_location": {"cfi": "/6/2"}, "progression": 0.1},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+
+        start_over = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/reading/books/{self.book.id}/start-over/",
+                data={"name": "Reread"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(start_over.status_code, status.HTTP_201_CREATED)
+
+    def test_bearer_annotations_are_user_scoped(self):
+        session1 = ReadingSession.objects.create(user=self.user1, book=self.book)
+        device1 = Device.objects.create(user=self.user1, name="Web", device_type=Device.TYPE_WEB)
+
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session1.id),
+                    "device": str(device1.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
+                    "body": [{"type": "TextualBody", "purpose": "describing", "value": "hello"}],
+                },
+                format="json",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        ann_id = _response_data_dict(create)["id"]
+
+        list_all = cast(
+            Response,
+            self.client.get(
+                "/api/v1/reading/annotations/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(list_all.status_code, status.HTTP_200_OK)
+        ids = {a["id"] for a in _response_data_list(list_all)}
+        self.assertIn(ann_id, ids)
+        self.assertNotIn(str(self.annotation2.id), ids)
+
+        # Cross-user detail and delete should 404.
+        other_get = self.client.get(
+            f"/api/v1/reading/annotations/{self.annotation2.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertEqual(other_get.status_code, status.HTTP_404_NOT_FOUND)
+        other_del = self.client.delete(
+            f"/api/v1/reading/annotations/{self.annotation2.id}/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertEqual(other_del.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Cross-user creation should be rejected by serializer validation (invalid session/device).
+        bad_create = self.client.post(
+            "/api/v1/reading/annotations/",
+            data={
+                "session": str(self.session2.id),
+                "device": str(self.device2.id),
+                "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
+                "body": [],
+            },
+            format="json",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertEqual(bad_create.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_revoked_and_inactive_bearer_token_rejected(self):
+        UserClientSession.objects.filter(user=self.user1).update(revoked_at=timezone.now())
+        r = self.client.get(
+            "/api/v1/reading/devices/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertIn(r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+        self.user1.is_active = False
+        self.user1.save(update_fields=["is_active"])
+        UserClientSession.objects.filter(user=self.user1).update(revoked_at=None)
+        r2 = self.client.get(
+            "/api/v1/reading/devices/",
+            HTTP_AUTHORIZATION=self._auth_header,
+        )
+        self.assertIn(r2.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
     def test_progress_update_rejects_unknown_field(self):
         self.client.login(username="u1", password="pass1")
