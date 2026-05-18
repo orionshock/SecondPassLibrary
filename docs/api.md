@@ -364,6 +364,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
 - Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
+- Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`)
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
 - Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)

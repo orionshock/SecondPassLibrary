@@ -23,10 +23,19 @@ POST /api/v1/reading/books/<book_id>/open/                    (recommended boots
 GET  /api/v1/reading/books/<book_id>/active-session/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
 GET  /api/v1/reading/sessions/                            (paginated)
+GET  /api/v1/reading/sessions/recent/                     (compact recent list; active sessions only; default limit 10)
 GET  /api/v1/reading/sessions/<session_id>/
 PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...", "notes": "..."})
 POST /api/v1/reading/sessions/<session_id>/close/          (mark session completed/inactive; idempotent)
 ```
+
+### Recent sessions
+
+`GET /api/v1/reading/sessions/recent/?limit=10` returns a compact, fast list of the user's **active** reading sessions ordered by `last_activity_at`:
+
+`last_activity_at = max(session.updated_at, progress.updated_at if exists, latest non-deleted annotation.updated_at if any)`
+
+This endpoint is intended for “Continue reading” style UIs. For full session history use `GET /api/v1/reading/sessions/`.
 
 ### Active session behavior
 

@@ -8,6 +8,7 @@ from .views import (
     OpenBookView,
     ReadingProgressViewSet,
     ReadingSessionViewSet,
+    RecentSessionsView,
     StartOverView,
 )
 
@@ -18,6 +19,11 @@ router.register(r"sessions", ReadingSessionViewSet, basename="readingsession")
 router.register(r"annotations", AnnotationViewSet, basename="annotation")
 
 urlpatterns = [
+    path(
+        "sessions/recent/",
+        RecentSessionsView.as_view(),
+        name="sessions_recent",
+    ),
     path("", include(router.urls)),
     path(
         "books/<uuid:book_id>/active-session/",

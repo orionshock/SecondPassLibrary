@@ -21,6 +21,9 @@ from rest_framework.renderers import JSONRenderer
 
 from accounts.authentication import ClientBearerAuthentication
 
+from django.db.models import Max, Q, F
+from django.db.models.functions import Coalesce, Greatest
+
 from library.models import Book
 from core import policies
 
@@ -155,6 +158,77 @@ class CloseSessionView(APIView):
         session = get_object_or_404(ReadingSession, id=session_id, user=request.user)
         session = close_session(session=session)
         return Response(ReadingSessionSerializer(session).data, status=status.HTTP_200_OK)
+
+
+class RecentSessionsView(APIView):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        raw_limit = (request.query_params.get("limit") or "").strip()
+        if raw_limit == "":
+            limit = 10
+        else:
+            try:
+                limit = int(raw_limit)
+            except (TypeError, ValueError):
+                raise DRFValidationError({"detail": "limit must be an integer."})
+            if limit < 1:
+                raise DRFValidationError({"detail": "limit must be >= 1."})
+            if limit > 50:
+                limit = 50
+
+        ann_updated = Max(
+            "annotations__updated_at", filter=Q(annotations__is_deleted=False)
+        )
+        last_activity = Greatest(
+            F("updated_at"),
+            Coalesce(F("progress__updated_at"), F("updated_at")),
+            Coalesce(ann_updated, F("updated_at")),
+        )
+
+        qs = (
+            ReadingSession.objects.select_related("book")
+            .filter(
+                user=request.user,
+                is_active=True,
+                status=ReadingSession.STATUS_ACTIVE,
+            )
+            .annotate(last_activity_at=last_activity, latest_annotation_updated_at=ann_updated)
+            .order_by("-last_activity_at", "-updated_at", "-started_at")
+        )
+
+        # Defensive dedupe by book (should already be unique for active sessions).
+        seen_books: set[str] = set()
+        results: list[dict[str, Any]] = []
+        for s in qs[: max(50, limit * 5)]:
+            book_id = str(getattr(s, "book_id", ""))
+            if not book_id or book_id in seen_books:
+                continue
+            seen_books.add(book_id)
+            results.append(
+                {
+                    "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
+                    "session": {
+                        "id": str(s.id),
+                        "status": s.status,
+                        "is_active": bool(s.is_active),
+                    },
+                    "book": {
+                        "id": book_id,
+                        "title": getattr(getattr(s, "book", None), "title", "") or "",
+                        "cover_url": None,
+                    },
+                }
+            )
+            if len(results) >= limit:
+                break
+
+        return Response({"count": len(results), "results": results}, status=status.HTTP_200_OK)
 
 
 class OpenBookView(APIView):

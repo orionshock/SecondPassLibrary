@@ -24,6 +24,19 @@ Practical notes:
 - Requests should be `Content-Type: application/json`.
 - List endpoints are paginated (see `docs/api.md`).
 
+## 1.5) Recent active sessions (compact)
+
+Fetch a compact “continue reading” list:
+
+`GET /api/v1/reading/sessions/recent/?limit=10`
+
+Notes:
+
+- Active sessions only (`is_active=true`, `status=active`).
+- Unique by book.
+- Ordered by `last_activity_at = max(session.updated_at, progress.updated_at if exists, latest non-deleted annotation.updated_at if any)`.
+- Returns `cover_url: null` until cover art is implemented.
+
 ## 2) Get or create active session
 
 Get the current active session for a given book (creating one lazily if needed):

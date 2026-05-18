@@ -1,4 +1,5 @@
 from typing import Any, cast
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -349,6 +350,56 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertNotEqual(open_data["session"]["id"], str(session.id))
         self.assertTrue(open_data["session"]["is_active"])
         self.assertEqual(open_data["session"]["status"], ReadingSession.STATUS_ACTIVE)
+
+    def test_recent_sessions_endpoint_limits_filters_active_and_orders_by_last_activity(self):
+        self.client.login(username="u1", password="pass1")
+
+        book2 = Book.objects.create(title="Book 2")
+        ensure_book_public_assignment(book=book2, added_by=None)
+
+        s1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True, status=ReadingSession.STATUS_ACTIVE)
+        s2 = ReadingSession.objects.create(user=self.user1, book=book2, is_active=True, status=ReadingSession.STATUS_ACTIVE)
+
+        # Exclude closed sessions.
+        closed = ReadingSession.objects.create(user=self.user1, book=book2, is_active=False, status=ReadingSession.STATUS_COMPLETED)
+
+        # Make s1 more recent via progress.
+        ReadingProgress.objects.create(session=s1, current_location={"cfi": "/6/2"})
+        ReadingProgress.objects.filter(session=s1).update(updated_at=timezone.now())
+
+        # Make s2 more recent via annotation.
+        a = Annotation.objects.create(
+            session=s2,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            target={"selector": {"value": "epubcfi(/6/4)"}},
+            body=[],
+        )
+        Annotation.objects.filter(pk=a.pk).update(updated_at=timezone.now() + timedelta(seconds=5))
+
+        r = cast(Response, self.client.get("/api/v1/reading/sessions/recent/"))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        body = cast(dict[str, Any], r.data)
+        self.assertIn("count", body)
+        self.assertIn("results", body)
+        results = cast(list[dict[str, Any]], body["results"])
+        self.assertLessEqual(len(results), 10)
+
+        # Active-only and unique-by-book.
+        session_ids = {row["session"]["id"] for row in results}
+        self.assertNotIn(str(closed.id), session_ids)
+
+        # Ordered: s2 should come before s1 due to newer annotation.
+        self.assertEqual(results[0]["session"]["id"], str(s2.id))
+        self.assertEqual(results[1]["session"]["id"], str(s1.id))
+        self.assertEqual(results[0]["book"]["cover_url"], None)
+
+        r2 = cast(Response, self.client.get("/api/v1/reading/sessions/recent/?limit=1"))
+        self.assertEqual(r2.status_code, status.HTTP_200_OK)
+        results2 = cast(list[dict[str, Any]], cast(dict[str, Any], r2.data)["results"])
+        self.assertEqual(len(results2), 1)
+
+        bad = cast(Response, self.client.get("/api/v1/reading/sessions/recent/?limit=0"))
+        self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_progress_put_round_trips_current_location(self):
         self.client.login(username="u1", password="pass1")
@@ -805,6 +856,23 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
             ),
         )
         self.assertEqual(cross.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_bearer_can_call_recent_sessions(self):
+        s1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True, status=ReadingSession.STATUS_ACTIVE)
+        r = cast(
+            Response,
+            self.client.get(
+                "/api/v1/reading/sessions/recent/",
+                HTTP_AUTHORIZATION=self._auth_header,
+            ),
+        )
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        payload = cast(dict[str, Any], r.data)
+        results = cast(list[dict[str, Any]], payload["results"])
+        ids = {row["session"]["id"] for row in results}
+        self.assertIn(str(s1.id), ids)
+        # Cross-user session should not appear.
+        self.assertNotIn(str(self.session2.id), ids)
 
     def test_bearer_can_open_endpoint(self):
         resp = cast(

@@ -143,6 +143,7 @@ Allowed future surface (explicit allow-list; subject to change as endpoints are 
 - Library read/download endpoints
 - Reading endpoints: sessions/progress/annotations (user-owned data)
   - Note: `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) for safe retries.
+  - For “continue reading” UIs: `GET /api/v1/reading/sessions/recent/?limit=10`
 - Possibly read-only shelves
 
 Management endpoints should reject Client API tokens by default unless explicitly allowed later.
