@@ -179,3 +179,6 @@ TestFiles/
 
 # User data directory
 userdata/
+
+# Line Counter Addon
+out

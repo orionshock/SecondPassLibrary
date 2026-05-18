@@ -11,5 +11,16 @@
       "mv": true,
       "true": true,
     },
+    "LineCount.excludes": [
+      "**/.ruff_cache/**",
+      "**/.venv/**",
+      "**/.vscode/**",
+      "**/node_modules/**",
+      "**/TestFiles/**",
+      "**/tests/**",
+      "**/userdata/**",
+      "**/__pycache__/**",
+      "**/out/**"
+    ],
   },
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from decimal import Decimal
 from typing import Any, cast
 
 from django.contrib.auth.models import User
@@ -161,7 +162,7 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(self._titles(response), ["Alpha"])
 
     def test_ordering_series_index_on_series_filtered_list(self):
-        self.book1.series_index = 0
+        self.book1.series_index = Decimal("0")
         self.book1.save(update_fields=["series_index", "updated_at"])
 
         b2 = Book.objects.create(title="Gamma", series=self.series_s, series_index=2)

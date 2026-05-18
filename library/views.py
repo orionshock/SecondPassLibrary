@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404
@@ -85,7 +87,9 @@ class ClientBearerReadOnlyMixin:
     client_bearer_allowed: dict[str, set[str]] = {}
 
     def initial(self, request, *args, **kwargs):
-        super().initial(request, *args, **kwargs)
+        # Pylance can't reliably infer the `super()` type for a mixin; at runtime
+        # this is always a DRF view/viewset that implements `initial`.
+        cast(Any, super()).initial(request, *args, **kwargs)
         if isinstance(getattr(request, "auth", None), UserClientSession):
             action = getattr(self, "action", None)
             if not action:
