@@ -8,7 +8,7 @@ The first minimal product UI shell now exists:
 
 - `/` redirects to `/app/`
 - `/app/` is an authenticated dashboard shell
-- `/app/` is a placeholder dashboard (future activity widgets are intentionally not implemented yet)
+- `/app/` shows recent reading activity (from `GET /api/v1/reading/sessions/recent/`) and a simple welcome message
 - `/server/` is an authenticated Owner-only Server Settings page (server identity + Django Admin / Service Hatch link)
 - `/profile/` is the authenticated self account page (identity + groups + capabilities + self-profile edit)
 - `/profile/password/` is the authenticated self password change page
@@ -62,6 +62,8 @@ The groups UI is API-driven using:
   - `POST/PATCH/DELETE /api/v1/library/groups/<group_id>/memberships/...` (Manager/Owner only)
 
 Note: Group product routes use UUIDs and `LibraryGroup` no longer has a slug. The special Public group is identified internally by `ServerSetting(public_group_id)` (not by a slug string).
+
+Dashboard note: the old “Sections” navigation card was removed from `/app/` because the top navigation already provides the same links.
 
 Shelves product UI pages exist (API-driven):
 

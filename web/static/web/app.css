@@ -108,6 +108,69 @@ a:hover { text-decoration: underline; }
 .card__title { margin: 0 0 8px 0; font-size: 14px; color: var(--muted); }
 
 /* =====================
+   Dashboard: Recent Reading
+   ===================== */
+
+.recent-reading__row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 6px 2px;
+  scroll-snap-type: x mandatory;
+}
+
+.recent-reading__item {
+  display: flex;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 320px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  scroll-snap-align: start;
+}
+
+.recent-reading__item:hover {
+  text-decoration: none;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.recent-reading__cover {
+  width: 52px;
+  height: 72px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.02);
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.recent-reading__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-reading__title {
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-reading__when {
+  font-size: 12px;
+}
+
+/* =====================
    Forms / Buttons
    ===================== */
 

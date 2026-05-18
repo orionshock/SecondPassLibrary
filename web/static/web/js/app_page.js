@@ -1,4 +1,5 @@
-import { $, loadMeAndInitShell, setText } from "./layout.js";
+import { fetchJSON } from "./api.js";
+import { $, loadMeAndInitShell, setText, visible } from "./layout.js";
 
 function clear(node) {
   if (!node) return;
@@ -12,68 +13,74 @@ function el(tag, className, text) {
   return node;
 }
 
-function navShouldShowGroups(me) {
-  if (!me) return false;
-  const groups = Array.isArray(me.groups) ? me.groups : [];
-  const caps = me.capabilities || {};
-  return (
-    groups.length > 0 ||
-    !!caps.can_manage_library ||
-    !!caps.can_create_library_groups ||
-    !!caps.can_manage_group_memberships ||
-    !!caps.can_manage_group_identity ||
-    !!caps.can_edit_group_presentation
-  );
+function formatWhen(value) {
+  if (!value) return "";
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function navShouldShowAdmin(me) {
-  return false;
-}
+function renderRecentItem(item) {
+  const wrap = el("a", "recent-reading__item", "");
+  wrap.setAttribute("href", `/library/books/${encodeURIComponent(String(item.book.id || ""))}/`);
 
-function navShouldShowServerSettings(me) {
-  if (!me) return false;
-  return !!me.is_owner;
-}
+  const cover = el("div", "recent-reading__cover", "Cover");
+  cover.setAttribute("aria-hidden", "true");
+  wrap.appendChild(cover);
 
-function sectionLinksForMe(me) {
-  const caps = me && me.capabilities ? me.capabilities : {};
-  const sections = [{ href: "/library/", label: "Library", visible: true }];
-  sections.push({ href: "/groups/", label: "Groups", visible: navShouldShowGroups(me) });
-  sections.push({ href: "/imports/", label: "Imports", visible: !!caps.can_access_imports });
-  sections.push({ href: "/users/", label: "Users", visible: !!caps.can_manage_users });
-  sections.push({
-    href: "/server/",
-    label: "Server settings",
-    visible: navShouldShowServerSettings(me),
-  });
-  return sections.filter((s) => s.visible);
+  const meta = el("div", "recent-reading__meta", "");
+  const title = el("div", "recent-reading__title", item.book && item.book.title ? item.book.title : "");
+  const when = el("div", "muted recent-reading__when", formatWhen(item.last_activity_at));
+  meta.appendChild(title);
+  meta.appendChild(when);
+  wrap.appendChild(meta);
+
+  if (item.session && item.session.id) {
+    wrap.dataset.sessionId = String(item.session.id);
+  }
+
+  return wrap;
 }
 
 export async function initDashboard() {
   const me = await loadMeAndInitShell();
   const greetingEl = $("#app-greeting");
-  const sectionsEl = $("#app-sections");
-  if (!greetingEl || !sectionsEl) return;
+  const recentStatusEl = $("#recent-reading-status");
+  const recentListEl = $("#recent-reading-list");
+  if (!greetingEl || !recentStatusEl || !recentListEl) return;
 
   if (!me) {
     setText(greetingEl, "Error loading identity.");
-    setText(sectionsEl, "Error loading identity.");
+    setText(recentStatusEl, "Could not load recent reading activity.");
     return;
   }
 
   setText(greetingEl, `Hi, ${me.username || "User"}.`);
 
-  clear(sectionsEl);
-  const sections = sectionLinksForMe(me);
-  if (!sections.length) {
-    sectionsEl.appendChild(el("div", "muted", "No sections."));
-    return;
+  async function loadRecent() {
+    setText(recentStatusEl, "Loading…");
+    clear(recentListEl);
+    visible(recentListEl, false);
+
+    try {
+      const data = await fetchJSON("/api/v1/reading/sessions/recent/?limit=10");
+      const results = data && Array.isArray(data.results) ? data.results : [];
+      if (!results.length) {
+        setText(recentStatusEl, "No recent reading activity yet.");
+        return;
+      }
+
+      setText(recentStatusEl, "");
+      visible(recentListEl, true);
+      for (const item of results.slice(0, 10)) {
+        if (!item || !item.book || !item.book.id) continue;
+        recentListEl.appendChild(renderRecentItem(item));
+      }
+    } catch (e) {
+      console.error("Failed to load recent reading activity", e);
+      setText(recentStatusEl, "Could not load recent reading activity.");
+    }
   }
 
-  for (const s of sections) {
-    const a = el("a", "button", s.label);
-    a.setAttribute("href", s.href);
-    sectionsEl.appendChild(a);
-    sectionsEl.appendChild(document.createTextNode(" "));
-  }
+  await loadRecent();
 }

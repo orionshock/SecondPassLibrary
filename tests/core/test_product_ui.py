@@ -86,7 +86,9 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="ui-global-error"')
         self.assertContains(response, 'id="app-greeting"')
-        self.assertContains(response, 'id="app-sections"')
+        self.assertContains(response, 'id="recent-reading-section"')
+        self.assertContains(response, 'id="recent-reading-status"')
+        self.assertContains(response, 'id="recent-reading-list"')
         self.assertContains(response, 'href="/profile/"')
 
     def test_must_change_password_redirects_product_ui_to_profile_password(self):
