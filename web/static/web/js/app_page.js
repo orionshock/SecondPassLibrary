@@ -22,15 +22,26 @@ function formatWhen(value) {
 
 function renderRecentItem(item) {
   const wrap = el("a", "recent-reading__item", "");
-  wrap.setAttribute("href", `/library/books/${encodeURIComponent(String(item.book.id || ""))}/`);
+  wrap.setAttribute(
+    "href",
+    `/library/books/${encodeURIComponent(String(item.book.id || ""))}/`,
+  );
 
   const cover = el("div", "recent-reading__cover", "Cover");
   cover.setAttribute("aria-hidden", "true");
   wrap.appendChild(cover);
 
   const meta = el("div", "recent-reading__meta", "");
-  const title = el("div", "recent-reading__title", item.book && item.book.title ? item.book.title : "");
-  const when = el("div", "muted recent-reading__when", formatWhen(item.last_activity_at));
+  const title = el(
+    "div",
+    "recent-reading__title",
+    item.book && item.book.title ? item.book.title : "",
+  );
+  const when = el(
+    "div",
+    "muted recent-reading__when",
+    formatWhen(item.last_activity_at),
+  );
   meta.appendChild(title);
   meta.appendChild(when);
   wrap.appendChild(meta);
@@ -44,18 +55,14 @@ function renderRecentItem(item) {
 
 export async function initDashboard() {
   const me = await loadMeAndInitShell();
-  const greetingEl = $("#app-greeting");
   const recentStatusEl = $("#recent-reading-status");
   const recentListEl = $("#recent-reading-list");
-  if (!greetingEl || !recentStatusEl || !recentListEl) return;
+  if (!recentStatusEl || !recentListEl) return;
 
   if (!me) {
-    setText(greetingEl, "Error loading identity.");
     setText(recentStatusEl, "Could not load recent reading activity.");
     return;
   }
-
-  setText(greetingEl, `Hi, ${me.username || "User"}.`);
 
   async function loadRecent() {
     setText(recentStatusEl, "Loading…");
@@ -84,3 +91,4 @@ export async function initDashboard() {
 
   await loadRecent();
 }
+

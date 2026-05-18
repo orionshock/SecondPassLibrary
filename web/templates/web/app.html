@@ -2,15 +2,10 @@
 
 {% block page_id %}app{% endblock %}
 
-{% block title %}Dashboard Â· {{ server_name }}{% endblock %}
+{% block title %}Dashboard · {{ server_name }}{% endblock %}
 
 {% block content %}
   <h1 class="page-title">Dashboard</h1>
-
-  <section class="card">
-    <h2 class="card__title">Welcome</h2>
-    <div id="app-greeting" class="muted">Loading…</div>
-  </section>
 
   <section class="card">
     <h2 class="card__title">Recent reading activity</h2>
@@ -18,6 +13,16 @@
       <div id="recent-reading-status" class="muted">Loading…</div>
       <div id="recent-reading-list" class="recent-reading__row" aria-label="Recent reading activity"></div>
     </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Future activity dashboard</h2>
+    <ul id="future-activity-dashboard" class="muted">
+      <li>Recent reading → cover art</li>
+      <li>Recent reading → “continue” deep links</li>
+      <li>Progress/annotation UI screens (product UI) — later</li>
+      <li>Import quality-of-life</li>
+    </ul>
   </section>
 
 {% endblock %}
