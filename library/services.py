@@ -17,6 +17,7 @@ from .models import Author, Book, BookFile
 from .models import BookIdentifier
 from .models import ImportJob, ImportJobItem
 from .group_services import ensure_book_public_assignment
+from .cover_services import extract_epub_embedded_cover_to_book
 
 
 class ImportStatus(str, Enum):
@@ -142,6 +143,13 @@ def import_epub(file_path):
 
     identifiers: list[dict[str, Any]] = metadata.get("identifiers") or []
     _create_book_identifiers(book=book, identifiers=identifiers)
+
+    # Best-effort embedded cover extraction.
+    # This should never fail the import; invalid/unsupported covers are skipped.
+    try:
+        extract_epub_embedded_cover_to_book(book=book, epub_path=str(path), save=True)
+    except Exception:
+        pass
 
     # Create BookFile record
     with open(path, "rb") as f:

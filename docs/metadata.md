@@ -26,7 +26,12 @@ Notes:
 - `Book.cover_file` stores the current cover image (optional).
 - `cover_url` is exposed in Book API payloads and recent reading payloads; it is `null` when no cover exists.
 - Covers are validated with Pillow and stored as the original validated bytes (no re-encoding/thumbnails yet).
-- Cover extraction from EPUB/OPF is planned follow-up work.
+- EPUB embedded cover extraction is implemented during import (best-effort).
+- Cover discovery uses the EPUB package OPF:
+  - EPUB3 manifest item with `properties~="cover-image"`
+  - EPUB2 `<meta name="cover" content="...">` + manifest lookup
+- Unsupported/corrupt/oversized covers are ignored; import still succeeds.
+- OPF sidecar cover/metadata support is planned follow-up work.
 
 ## Duplicate detection and filenames
 

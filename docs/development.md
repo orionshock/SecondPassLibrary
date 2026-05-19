@@ -11,6 +11,7 @@ pip install -r requirements.txt
 ```
 
 Note: `requirements.txt` includes Pillow for cover image validation.
+EPUB imports also attempt best-effort embedded cover extraction (JPEG/PNG/WebP only).
 
 Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
 

@@ -3,7 +3,12 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import PurePosixPath
 from typing import Literal
+from urllib.parse import urlparse
+import zipfile
+import posixpath
+import xml.etree.ElementTree as ET
 
 from django.core.files.base import ContentFile
 
@@ -29,6 +34,8 @@ class CoverImageInfo:
 
 MAX_COVER_BYTES = 5 * 1024 * 1024
 MAX_COVER_DIMENSION = 8000
+MAX_OPF_XML_BYTES = 512 * 1024
+MAX_CONTAINER_XML_BYTES = 128 * 1024
 
 
 _FORMAT_TO_MIME_EXT: dict[str, tuple[str, str]] = {
@@ -120,3 +127,191 @@ def set_book_cover_from_bytes(
 
     return info
 
+
+def _is_url_like_href(href: str) -> bool:
+    h = (href or "").strip()
+    if not h:
+        return True
+    parsed = urlparse(h)
+    return parsed.scheme.lower() in {"http", "https", "data"}
+
+
+def _safe_posix_relpath(path: str) -> str | None:
+    p = (path or "").strip()
+    if not p:
+        return None
+
+    # Reject URL-like and drive-letter-ish paths early.
+    if _is_url_like_href(p):
+        return None
+    if p.startswith(("/", "\\")):
+        return None
+    if ":" in p:
+        return None
+
+    # EPUB uses forward slashes; normalize defensively.
+    p = p.replace("\\", "/")
+    pure = PurePosixPath(p)
+    if pure.is_absolute():
+        return None
+    if any(part in {"", ".", ".."} for part in pure.parts):
+        return None
+
+    normalized = posixpath.normpath(p)
+    if normalized.startswith("../") or normalized == "..":
+        return None
+    if normalized.startswith("/"):
+        return None
+    return normalized
+
+
+def _read_zip_member_bytes(
+    *, zf: zipfile.ZipFile, member: str, max_bytes: int
+) -> bytes | None:
+    try:
+        info = zf.getinfo(member)
+    except KeyError:
+        return None
+
+    if info.file_size is not None and info.file_size > max_bytes:
+        return None
+
+    with zf.open(info, "r") as fp:
+        data = fp.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        return None
+    return data
+
+
+def _parse_xml_bytes(*, data: bytes) -> ET.Element:
+    # xml.etree.ElementTree does not expand external entities. Keep parsing local-only.
+    return ET.fromstring(data)
+
+
+def _find_opf_path_from_container_xml(container_xml: bytes) -> str | None:
+    try:
+        root = _parse_xml_bytes(data=container_xml)
+    except Exception:
+        return None
+
+    # container.xml typically uses the namespace:
+    # urn:oasis:names:tc:opendocument:xmlns:container
+    rootfiles = list(root.iter())
+    for el in rootfiles:
+        if el.tag.endswith("rootfile"):
+            full_path = (el.attrib.get("full-path") or "").strip()
+            return _safe_posix_relpath(full_path)
+    return None
+
+
+def _find_cover_href_from_opf(opf_xml: bytes) -> str | None:
+    try:
+        root = _parse_xml_bytes(data=opf_xml)
+    except Exception:
+        return None
+
+    # 1) EPUB3: manifest item properties includes cover-image
+    for el in root.iter():
+        if not el.tag.endswith("item"):
+            continue
+        props = (el.attrib.get("properties") or "").lower()
+        if "cover-image" not in props:
+            continue
+        href = (el.attrib.get("href") or "").strip()
+        safe = _safe_posix_relpath(href)
+        if safe is not None:
+            return safe
+
+    # 2) EPUB2: <meta name="cover" content="manifest-id">
+    cover_id: str | None = None
+    for el in root.iter():
+        if not el.tag.endswith("meta"):
+            continue
+        name = (el.attrib.get("name") or "").strip().lower()
+        if name != "cover":
+            continue
+        cover_id = (el.attrib.get("content") or "").strip()
+        if cover_id:
+            break
+
+    if not cover_id:
+        return None
+
+    for el in root.iter():
+        if not el.tag.endswith("item"):
+            continue
+        if (el.attrib.get("id") or "").strip() != cover_id:
+            continue
+        href = (el.attrib.get("href") or "").strip()
+        safe = _safe_posix_relpath(href)
+        if safe is not None:
+            return safe
+
+    return None
+
+
+def extract_epub_embedded_cover_to_book(
+    *, book: Book, epub_path: str, save: bool = True
+) -> bool:
+    """
+    Attempt to extract an embedded cover image from an EPUB file and store it on the Book.
+
+    Returns True if a cover was found and stored, False otherwise.
+
+    Notes:
+    - This is best-effort and should not fail the import if cover parsing/validation fails.
+    - This does not overwrite an existing cover.
+    """
+    if getattr(book, "cover_file", None):
+        return False
+
+    try:
+        with zipfile.ZipFile(epub_path, "r") as zf:
+            container_member = "META-INF/container.xml"
+            container_xml = _read_zip_member_bytes(
+                zf=zf, member=container_member, max_bytes=MAX_CONTAINER_XML_BYTES
+            )
+            if not container_xml:
+                return False
+
+            opf_path = _find_opf_path_from_container_xml(container_xml)
+            if not opf_path:
+                return False
+
+            opf_xml = _read_zip_member_bytes(
+                zf=zf, member=opf_path, max_bytes=MAX_OPF_XML_BYTES
+            )
+            if not opf_xml:
+                return False
+
+            cover_href = _find_cover_href_from_opf(opf_xml)
+            if not cover_href:
+                return False
+
+            opf_dir = posixpath.dirname(opf_path)
+            cover_member = (
+                posixpath.normpath(posixpath.join(opf_dir, cover_href))
+                if opf_dir
+                else cover_href
+            )
+            cover_member = _safe_posix_relpath(cover_member) or ""
+            if not cover_member:
+                return False
+
+            cover_bytes = _read_zip_member_bytes(
+                zf=zf, member=cover_member, max_bytes=MAX_COVER_BYTES
+            )
+            if not cover_bytes:
+                return False
+
+            # Validate + store original bytes.
+            set_book_cover_from_bytes(
+                book=book,
+                data=cover_bytes,
+                source="epub",
+                source_filename=posixpath.basename(cover_member) or None,
+                save=save,
+            )
+            return True
+    except Exception:
+        return False
