@@ -1,5 +1,6 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
+import { mountCovers } from "../ui/covers.js";
 
 export function setStatus(el, text, isError) {
   if (!el) return;
@@ -17,6 +18,7 @@ export async function pagedController({ statusEl, resultsEl, prevBtn, nextBtn, n
     const payload = await fetchJSON(url);
     const rows = Array.isArray(payload && payload.results) ? payload.results : [];
     resultsEl.innerHTML = rows.length ? rows.map(renderRow).join("") : `<div class="muted">${escapeHtml(emptyText)}</div>`;
+    mountCovers(resultsEl);
     nextUrl = payload && payload.next ? String(payload.next) : null;
     prevUrl = payload && payload.previous ? String(payload.previous) : null;
     currentUrl = url;
@@ -73,4 +75,3 @@ export function inferCanEditShelf({ me, shelf }) {
   const membership = groups.find((g) => g && String(g.id) === String(og.id));
   return membership && membership.membership_role === "curator";
 }
-

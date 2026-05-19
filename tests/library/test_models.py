@@ -158,3 +158,10 @@ class BookGroupInvariantTest(TestCase):
             )
         )
         self.assertEqual(groups, {self.public.id})
+
+    def test_deleting_book_does_not_recreate_assignments_and_does_not_fk_error(self):
+        # Regression test: deleting a Book cascades BookGroupAssignment deletes.
+        # The post_delete signal should not try to re-add Public while the Book is deleting.
+        book_id = self.book.id
+        self.book.delete()
+        self.assertFalse(Book.objects.filter(id=book_id).exists())

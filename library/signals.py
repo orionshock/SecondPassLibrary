@@ -1,16 +1,45 @@
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
+import threading
 
 from core.models import ServerSetting
 
 from .group_services import ensure_user_public_membership, ensure_user_has_at_least_one_group, ensure_book_has_at_least_one_group
 from .group_services import PUBLIC_GROUP_ID_SETTING, get_public_group
-from .models import BookGroupAssignment, LibraryGroupMembership
+from .models import Book, BookGroupAssignment, LibraryGroupMembership
 
 
 User = get_user_model()
+
+
+_state = threading.local()
+
+
+def _deleting_book_ids() -> set[str]:
+    ids = getattr(_state, "deleting_book_ids", None)
+    if ids is None:
+        ids = set()
+        _state.deleting_book_ids = ids
+    return ids
+
+
+@receiver(pre_delete, sender=Book)
+def _mark_book_deleting(sender, instance: Book, **kwargs):
+    book_id = getattr(instance, "id", None)
+    if book_id is None:
+        return
+    _deleting_book_ids().add(str(book_id))
+
+
+@receiver(post_delete, sender=Book)
+def _unmark_book_deleting(sender, instance: Book, **kwargs):
+    book_id = getattr(instance, "id", None)
+    if book_id is None:
+        return
+    _deleting_book_ids().discard(str(book_id))
 
 
 @receiver(post_save, sender=User)
@@ -39,6 +68,12 @@ def ensure_book_has_group_after_assignment_delete(sender, instance, **kwargs):
     If the last assignment is removed, re-assign the book back to Public.
     """
     if instance.book_id is None:
+        return
+
+    # If the Book is being deleted, skip this safety repair. Otherwise, bulk
+    # deletions (including Django admin delete actions) can re-create assignments
+    # during cascade deletes and trigger FK constraint errors on commit.
+    if str(instance.book_id) in _deleting_book_ids():
         return
     ensure_book_has_at_least_one_group(book=instance.book, added_by=None)
 

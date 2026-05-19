@@ -221,6 +221,7 @@ Shelf payload notes:
 
 - Shelves include a read-only `can_edit` boolean computed for the current request user. This is a UI hint; API permissions remain authoritative.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
+- Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
 
 Request:
 

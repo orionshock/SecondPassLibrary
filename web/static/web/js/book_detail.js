@@ -1,5 +1,6 @@
 import { fetchJSON } from "./api.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "./layout.js";
+import { mountCovers } from "./ui/covers.js";
 
 function clear(el) {
   if (!el) return;
@@ -194,6 +195,7 @@ export async function initBookDetail() {
   const statusEl = $("#book-status");
   const detailEl = $("#book-detail");
   const metaEl = $("#book-meta");
+  const coverEl = $("#book-cover");
   const editWrapEl = $("#book-edit-link-wrap");
   const editLinkEl = $("#book-edit-link");
   const idSection = $("#book-identifiers");
@@ -209,6 +211,7 @@ export async function initBookDetail() {
     !statusEl ||
     !detailEl ||
     !metaEl ||
+    !coverEl ||
     !editWrapEl ||
     !editLinkEl ||
     !idSection ||
@@ -250,6 +253,12 @@ export async function initBookDetail() {
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     setTitle(book && book.title ? book.title : "Book");
+
+    const titleText = book && book.title ? String(book.title) : "";
+    const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
+    coverEl.dataset.coverUrl = coverUrl;
+    coverEl.dataset.coverTitle = titleText;
+    mountCovers(coverEl.parentNode);
 
     renderBookMeta(metaEl, book);
     renderIdentifiers(idBody, book.identifiers);

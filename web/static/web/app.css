@@ -256,6 +256,27 @@ a:hover { text-decoration: underline; }
 .book__title { font-weight: 700; margin: 0; }
 .book__meta { margin: 6px 0 0 0; color: var(--muted); display: grid; gap: 2px; }
 .book__files { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.book--with-cover {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.book__cover {
+  width: 52px;
+  height: 72px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+}
+.book__cover-img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.book__cover-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 
 /* =====================
    Page-specific

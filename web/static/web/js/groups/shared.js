@@ -1,5 +1,6 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
+import { mountCovers } from "../ui/covers.js";
 
 export function truthy(v) {
   return !!v;
@@ -91,6 +92,7 @@ export async function pagedListController({ statusEl, resultsEl, nextBtn, prevBt
         false
       );
       resultsEl.innerHTML = render(payload);
+      mountCovers(resultsEl);
 
       nextUrl = payload.next || null;
       prevUrl = payload.previous || null;
@@ -169,6 +171,7 @@ export function renderBooksCompact(payload, { groupId, canRemove }) {
       const subtitle = b.subtitle ? ` <span class="muted">â€” ${escapeHtml(b.subtitle)}</span>` : "";
       const href = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
+      const coverUrl = b.cover_url ? String(b.cover_url) : "";
 
       const removeBtn =
         canRemove && b.id && groupId
@@ -178,7 +181,8 @@ export function renderBooksCompact(payload, { groupId, canRemove }) {
           : "";
 
       return `
-        <article class="book">
+        <article class="book book--with-cover">
+          <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
           <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
             <div>
               <h3 class="book__title" style="display:inline;">
@@ -267,4 +271,3 @@ export async function loadAllManageableUsers() {
   }
   return users;
 }
-

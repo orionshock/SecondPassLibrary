@@ -6,6 +6,7 @@ import {
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
 import { isLibrarian, isManagerOrOwner, pagedListController, renderBooksCompact, setStatus, truthy } from "./shared.js";
+import { mountCovers } from "../ui/covers.js";
 
 export async function initGroupBooksTab({
   me,
@@ -83,6 +84,7 @@ export async function initGroupBooksTab({
         const inGroup = id && groupBookIds.has(id);
 
         const title = b.title || "(Untitled)";
+        const coverUrl = b.cover_url ? String(b.cover_url) : "";
         const subtitle = b.subtitle ? ` <span class="muted">â€” ${escapeHtml(b.subtitle)}</span>` : "";
         const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
         const series = b.series && b.series.name ? b.series.name : "";
@@ -105,7 +107,8 @@ export async function initGroupBooksTab({
             : "";
 
         return `
-            <article class="book">
+            <article class="book book--with-cover">
+              <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
               <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                 <div>
                   <h3 class="book__title" style="display:inline;">${escapeHtml(title)}${subtitle}</h3>
@@ -147,6 +150,7 @@ export async function initGroupBooksTab({
         false
       );
       bookSearchResults.innerHTML = renderBookSearchResults(payload);
+      mountCovers(bookSearchResults);
       searchNextUrl = payload.next || null;
       searchPrevUrl = payload.previous || null;
       bookSearchNext.disabled = !searchNextUrl;

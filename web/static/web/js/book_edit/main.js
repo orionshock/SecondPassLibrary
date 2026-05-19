@@ -13,6 +13,7 @@ import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions
 import { renderGroups, syncGroupsAddOptions } from "./groups.js";
 import { renderHeader, renderFileInfo, renderIdentifiersTable } from "./identifiers_file.js";
 import { refreshShelvesContext } from "./shelves.js";
+import { mountCovers } from "../ui/covers.js";
 
 export async function initBookEdit() {
   const me = await loadMeAndInitShell();
@@ -23,6 +24,7 @@ export async function initBookEdit() {
   const headerAuthorsEl = $("#book-edit-header-authors");
   const headerSeriesEl = $("#book-edit-header-series");
   const headerFileEl = $("#book-edit-header-file");
+  const headerCoverEl = headerEl ? headerEl.querySelector(".edit-header__cover") : null;
 
   const rootEl = $("#book-edit");
   const statusEl = $("#book-edit-status");
@@ -74,6 +76,7 @@ export async function initBookEdit() {
     !headerAuthorsEl ||
     !headerSeriesEl ||
     !headerFileEl ||
+    !headerCoverEl ||
     !rootEl ||
     !statusEl ||
     !errorEl ||
@@ -203,6 +206,12 @@ export async function initBookEdit() {
     applyBookToMetadataForm({ book, dom, selectedAuthors });
 
     renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
+
+    const titleText = book && book.title ? String(book.title) : "";
+    const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
+    headerCoverEl.dataset.coverUrl = coverUrl;
+    headerCoverEl.dataset.coverTitle = titleText;
+    mountCovers(headerEl);
     renderFileInfo({ book, fileInfoEl });
     renderSelectedAuthors({ selectedAuthors, authorsSelectedEl });
     syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
@@ -611,4 +620,3 @@ export async function initBookEdit() {
     });
   });
 }
-

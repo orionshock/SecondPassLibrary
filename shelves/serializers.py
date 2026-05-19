@@ -104,13 +104,28 @@ class BookSummarySerializer(serializers.ModelSerializer):
     authors = AuthorSummarySerializer(many=True, read_only=True)
     series = SeriesSummarySerializer(read_only=True, allow_null=True)
     has_file = serializers.SerializerMethodField(read_only=True)
+    cover_url = serializers.SerializerMethodField(read_only=True)
 
     def get_has_file(self, obj: Book) -> bool:
         return bool(getattr(obj, "file", None))
 
+    def get_cover_url(self, obj: Book) -> str | None:
+        cover = getattr(obj, "cover_file", None)
+        if not cover:
+            return None
+        try:
+            url = cover.url
+        except Exception:
+            return None
+
+        request = self.context.get("request")
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
     class Meta:
         model = Book
-        fields = ["id", "title", "authors", "series", "has_file"]
+        fields = ["id", "title", "authors", "series", "has_file", "cover_url"]
         read_only_fields = fields
 
 

@@ -1,9 +1,11 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
 from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
+from .cover_services import set_book_cover_from_bytes, MAX_COVER_BYTES
 from .models import (
     Author,
     Book,
@@ -66,8 +68,34 @@ class BookGroupAssignmentInline(admin.TabularInline):
     readonly_fields = ["created_at", "updated_at"]
 
 
+class BookAdminForm(forms.ModelForm):
+    cover_upload = forms.FileField(
+        required=False,
+        help_text="Upload a cover image (JPEG/PNG/WebP). Stored as original validated bytes.",
+    )
+    clear_cover = forms.BooleanField(
+        required=False,
+        initial=False,
+        help_text="Remove the stored cover image and clear cover metadata.",
+    )
+
+    class Meta:
+        model = Book
+        fields = "__all__"
+
+    def clean_cover_upload(self):
+        f = self.cleaned_data.get("cover_upload")
+        if f is None:
+            return None
+        size = getattr(f, "size", None)
+        if isinstance(size, int) and size > MAX_COVER_BYTES:
+            raise forms.ValidationError("Cover image exceeds 5MB limit.")
+        return f
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
+    form = BookAdminForm
     list_display = [
         "title",
         "author_list",
@@ -92,7 +120,16 @@ class BookAdmin(admin.ModelAdmin):
         ("created_at", DateFieldListFilter),
     ]
     filter_horizontal = ["authors"]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = [
+        "cover_preview",
+        "cover_internal_path",
+        "cover_source",
+        "cover_mime",
+        "cover_width",
+        "cover_height",
+        "created_at",
+        "updated_at",
+    ]
     inlines = [BookIdentifierInline, BookGroupAssignmentInline]
 
     fieldsets = (
@@ -109,6 +146,20 @@ class BookAdmin(admin.ModelAdmin):
             },
         ),
         (
+            "Cover",
+            {
+                "fields": (
+                    "cover_preview",
+                    "cover_upload",
+                    "clear_cover",
+                    "cover_source",
+                    "cover_mime",
+                    ("cover_width", "cover_height"),
+                    "cover_internal_path",
+                )
+            },
+        ),
+        (
             "Bibliographic",
             {"fields": ("publisher", "language", "published_date", "isbn", "subjects")},
         ),
@@ -118,6 +169,76 @@ class BookAdmin(admin.ModelAdmin):
     @admin.display(description="Authors")
     def author_list(self, obj):
         return obj.author_list()
+
+    @admin.display(description="Cover")
+    def cover_preview(self, obj: Book) -> str:
+        cover = getattr(obj, "cover_file", None)
+        if not cover:
+            return format_html("<span class='muted'>No cover.</span>")
+        try:
+            url = cover.url
+        except Exception:
+            url = ""
+        if not url:
+            return format_html("<span class='muted'>Cover missing.</span>")
+        return format_html(
+            '<img src="{}" alt="Cover" style="max-height: 240px; max-width: 180px; border: 1px solid #ccc; border-radius: 6px;" />',
+            url,
+        )
+
+    @admin.display(description="Cover stored path")
+    def cover_internal_path(self, obj: Book) -> str:
+        cover = getattr(obj, "cover_file", None)
+        return cover.name if cover else ""
+
+    def save_model(self, request, obj: Book, form, change):
+        super().save_model(request, obj, form, change)
+
+        clear_cover = bool(form.cleaned_data.get("clear_cover"))
+        cover_upload = form.cleaned_data.get("cover_upload")
+
+        if clear_cover and getattr(obj, "cover_file", None):
+            try:
+                obj.cover_file.delete(save=False)
+            except Exception:
+                pass
+            obj.cover_source = ""
+            obj.cover_mime = ""
+            obj.cover_width = None
+            obj.cover_height = None
+            obj.cover_file = ""
+            obj.save(
+                update_fields=[
+                    "cover_file",
+                    "cover_source",
+                    "cover_mime",
+                    "cover_width",
+                    "cover_height",
+                    "updated_at",
+                ]
+            )
+            return
+
+        if cover_upload is None:
+            return
+
+        try:
+            data = cover_upload.read()
+        except Exception:
+            return
+
+        # Validate + store via shared service helper (content-addressed filename).
+        try:
+            set_book_cover_from_bytes(
+                book=obj,
+                data=data,
+                source="manual",
+                source_filename=getattr(cover_upload, "name", None),
+                save=True,
+            )
+        except ValueError:
+            # Treat invalid cover upload as non-fatal; operator can retry.
+            return
 
 
 @admin.register(BookFile)

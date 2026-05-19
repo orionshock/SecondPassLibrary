@@ -1,5 +1,6 @@
 import { fetchJSON } from "./api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "./layout.js";
+import { mountCovers } from "./ui/covers.js";
 
 function bookFileHtml(file) {
   if (!file || !file.download_url) return "";
@@ -23,6 +24,7 @@ function renderBooks(payload) {
       const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
       const seriesLine = series ? `${series}${seriesIndex ? " · " + seriesIndex : ""}` : "";
       const language = b.language || "";
+      const coverUrl = b.cover_url ? String(b.cover_url) : "";
 
       const metaLines = [];
       if (authors.length) metaLines.push(`<div>${escapeHtml(authors.join(", "))}</div>`);
@@ -30,14 +32,17 @@ function renderBooks(payload) {
       if (language) metaLines.push(`<div>Language: ${escapeHtml(language)}</div>`);
 
       return `
-          <article class="book">
-            <h3 class="book__title">${
-              bookHref
-                ? `<a href="${escapeHtml(bookHref)}">${escapeHtml(title)}</a>${subtitle}`
-                : `${escapeHtml(title)}${subtitle}`
-            }</h3>
-            <div class="book__meta">${metaLines.join("") || '<div class="muted">No metadata.</div>'}</div>
-            ${bookFileHtml(b.file)}
+          <article class="book book--with-cover">
+            <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
+            <div>
+              <h3 class="book__title">${
+                bookHref
+                  ? `<a href="${escapeHtml(bookHref)}">${escapeHtml(title)}</a>${subtitle}`
+                  : `${escapeHtml(title)}${subtitle}`
+              }</h3>
+              <div class="book__meta">${metaLines.join("") || '<div class="muted">No metadata.</div>'}</div>
+              ${bookFileHtml(b.file)}
+            </div>
           </article>
         `.trim();
     })
@@ -95,6 +100,7 @@ export async function initLibraryBrowse() {
 
       setStatus("", false);
       resultsEl.innerHTML = renderBooks(payload);
+      mountCovers(resultsEl);
 
       nextUrl = payload.next || null;
       prevUrl = payload.previous || null;

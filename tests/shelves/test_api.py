@@ -10,6 +10,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.group_services import add_book_to_group, ensure_book_public_assignment, ensure_user_public_membership, get_public_group
+from library.cover_services import set_book_cover_from_bytes
 from library.models import Book, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf
 
@@ -58,6 +59,15 @@ class ShelvesAPITest(APITestCase):
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
         self.book_hidden = Book.objects.create(title="HB")
         add_book_to_group(actor=self.owner, book=self.book_hidden, group=self.hidden_group)
+
+    def _png_bytes(self, *, size=(12, 16)) -> bytes:
+        from PIL import Image
+        from io import BytesIO
+
+        img = Image.new("RGB", size, color=(1, 2, 3))
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
 
     def test_create_user_shelf_and_list_visibility_private_vs_listed(self):
         self.client.login(username="reader", password="pw")
@@ -306,3 +316,23 @@ class ShelvesAPITest(APITestCase):
         items_payload = cast(Mapping[str, Any], items.data)
         results = cast(list[dict[str, Any]], items_payload["results"])
         self.assertEqual(len(results), 1)
+
+    def test_shelf_items_include_book_cover_url_when_present(self):
+        self.client.login(username="reader", password="pw")
+        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+
+        set_book_cover_from_bytes(book=self.book_in_group, data=self._png_bytes(), source="manual")
+
+        add_ok = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(self.book_in_group.id)}, format="json"))
+        self.assertEqual(add_ok.status_code, status.HTTP_201_CREATED)
+
+        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        self.assertEqual(items.status_code, status.HTTP_200_OK)
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        self.assertEqual(len(results), 1)
+        book = cast(dict[str, Any], results[0]["book"])
+        self.assertIn("cover_url", book)
+        self.assertIsInstance(book["cover_url"], str)
+        self.assertTrue(str(book["cover_url"]).startswith("http://testserver/"))

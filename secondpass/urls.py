@@ -16,7 +16,10 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.conf import settings
+from django.http import Http404
+from django.views.static import serve as static_serve
 
 from core.views import secondpass_well_known
 
@@ -38,4 +41,14 @@ urlpatterns = [
     path("api/v1/shelves/", include(("shelves.urls", "shelves"), namespace="shelves")),
     path("api/v1/", include(("core.urls", "core"), namespace="core")),
     path("api-auth/", include("rest_framework.urls")),
+]
+
+def _debug_media(request, path: str):
+    if not settings.DEBUG:
+        raise Http404()
+    return static_serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
+urlpatterns += [
+    re_path(r"^media/(?P<path>.*)$", _debug_media),
 ]

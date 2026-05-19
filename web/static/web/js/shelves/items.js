@@ -6,6 +6,7 @@ import {
 } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
 import { setStatus } from "./shared.js";
+import { mountCovers } from "../ui/covers.js";
 
 export async function initShelfItemsEditor({
   shelfId,
@@ -30,11 +31,13 @@ export async function initShelfItemsEditor({
           const b = it.book || {};
           const bid = b.id ? String(b.id) : "";
           const title = b.title ? String(b.title) : "(Untitled)";
+          const coverUrl = b.cover_url ? String(b.cover_url) : "";
           const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
           const series = b.series && b.series.name ? String(b.series.name) : "";
           const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join(" Â· ");
           return `
-            <article class="book">
+            <article class="book book--with-cover">
+              <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
               <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                 <div style="flex: 1;">
                   <h3 class="book__title">
@@ -63,6 +66,7 @@ export async function initShelfItemsEditor({
     noteEl.textContent = payload.count != null ? `${payload.count} total` : "";
     itemCountEl.textContent = payload.count != null ? `Items: ${payload.count}` : "";
     setStatus(itemsStatus, "", false);
+    mountCovers(itemsResults);
     return payload;
   }
 
