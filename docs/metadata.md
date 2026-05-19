@@ -33,6 +33,21 @@ Notes:
 - Unsupported/corrupt/oversized covers are ignored; import still succeeds.
 - OPF sidecar cover/metadata support is planned follow-up work.
 
+## ZIP OPF sidecars (current)
+
+When importing a `.zip` of EPUBs, the importer can optionally use an OPF sidecar to bootstrap metadata and cover **for new books only** (not a sync/refresh mechanism).
+
+Sidecar lookup (per EPUB member), in order:
+
+- `metadata.opf` in the same directory as the EPUB (Calibre-style)
+- same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
+- if there is exactly one `.opf` in the same directory, use it
+
+Metadata precedence:
+
+- OPF sidecar values win when present; missing fields fall back to EPUB metadata.
+- Duplicate EPUB checksum imports are still treated as duplicates and do not refresh metadata or covers.
+
 ## Duplicate detection and filenames
 
 - Duplicate EPUB detection is checksum-driven (file SHA-256), not identifier-driven.

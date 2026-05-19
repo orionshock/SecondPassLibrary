@@ -250,6 +250,16 @@ def _find_cover_href_from_opf(opf_xml: bytes) -> str | None:
     return None
 
 
+def find_cover_href_in_opf(*, opf_xml: bytes) -> str | None:
+    """
+    Return a safe OPF-relative cover href if discoverable, else None.
+
+    This does not join against any base directory; callers must resolve relative to
+    the OPF's directory (e.g. within an EPUB zip, or within a ZIP import folder).
+    """
+    return _find_cover_href_from_opf(opf_xml)
+
+
 def extract_epub_embedded_cover_to_book(
     *, book: Book, epub_path: str, save: bool = True
 ) -> bool:

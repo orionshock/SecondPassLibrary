@@ -5,19 +5,27 @@ from pathlib import Path
 import re
 import uuid
 import zipfile
-from typing import Optional, Any, cast
+from typing import Optional, Any, cast, Callable
 import shutil
+from decimal import Decimal, InvalidOperation
+import posixpath
+import xml.etree.ElementTree as ET
 
 from ebooklib import epub
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import UploadedFile
 
-from .models import Author, Book, BookFile
+from .models import Author, Book, BookFile, Series
 from .models import BookIdentifier
 from .models import ImportJob, ImportJobItem
 from .group_services import ensure_book_public_assignment
-from .cover_services import extract_epub_embedded_cover_to_book
+from .cover_services import (
+    extract_epub_embedded_cover_to_book,
+    find_cover_href_in_opf,
+    set_book_cover_from_bytes,
+    MAX_COVER_BYTES,
+)
 
 
 class ImportStatus(str, Enum):
@@ -74,7 +82,16 @@ def generate_epub_download_filename(*, book: Book) -> str:
     return f"{filename}.epub"
 
 
-def import_epub(file_path):
+MAX_OPF_SIDECAR_XML_BYTES = 1024 * 1024
+
+
+def import_epub(
+    file_path,
+    *,
+    sidecar_opf_bytes: bytes | None = None,
+    sidecar_opf_dir: str | None = None,
+    sidecar_asset_reader: Callable[[str], bytes | None] | None = None,
+):
     """
     Import a single EPUB file from the filesystem.
 
@@ -116,7 +133,13 @@ def import_epub(file_path):
 
     # Parse EPUB metadata
     book_epub = epub.read_epub(str(path))
-    metadata = _extract_metadata(book_epub)
+    epub_metadata = _extract_metadata(book_epub)
+
+    sidecar_metadata: dict[str, Any] | None = None
+    if sidecar_opf_bytes:
+        sidecar_metadata = _extract_opf_sidecar_metadata(sidecar_opf_bytes)
+
+    metadata = _merge_metadata(epub=epub_metadata, opf=sidecar_metadata)
 
     # Create or reuse Author records
     authors = []
@@ -126,6 +149,17 @@ def import_epub(file_path):
 
     # Create Book record
     isbn = metadata.get("isbn") or ""
+
+    series_obj: Series | None = None
+    series_name = _clean_str(metadata.get("series_name", ""))
+    if series_name:
+        series_obj, _ = Series.objects.get_or_create(name=series_name)
+
+    series_index_value: Decimal | None = None
+    raw_series_index = metadata.get("series_index")
+    if raw_series_index is not None and raw_series_index != "":
+        series_index_value = _parse_series_index(raw_series_index)
+
     book = Book.objects.create(
         title=metadata.get("title") or path.stem,  # fallback to filename stem
         subtitle=metadata.get("subtitle", ""),
@@ -135,6 +169,8 @@ def import_epub(file_path):
         published_date=metadata.get("published_date"),
         isbn=isbn,
         subjects=metadata.get("subjects") or [],
+        series=series_obj,
+        series_index=series_index_value,
     )
     if authors:
         book.authors.set(authors)
@@ -144,12 +180,22 @@ def import_epub(file_path):
     identifiers: list[dict[str, Any]] = metadata.get("identifiers") or []
     _create_book_identifiers(book=book, identifiers=identifiers)
 
-    # Best-effort embedded cover extraction.
-    # This should never fail the import; invalid/unsupported covers are skipped.
-    try:
-        extract_epub_embedded_cover_to_book(book=book, epub_path=str(path), save=True)
-    except Exception:
-        pass
+    # Best-effort cover extraction:
+    # - Prefer OPF sidecar cover (ZIP imports) when present/valid.
+    # - Fall back to embedded EPUB cover.
+    if sidecar_opf_bytes and sidecar_opf_dir and sidecar_asset_reader:
+        _try_set_book_cover_from_sidecar_opf(
+            book=book,
+            opf_xml=sidecar_opf_bytes,
+            opf_dir=sidecar_opf_dir,
+            asset_reader=sidecar_asset_reader,
+        )
+
+    if not getattr(book, "cover_file", None):
+        try:
+            extract_epub_embedded_cover_to_book(book=book, epub_path=str(path), save=True)
+        except Exception:
+            pass
 
     # Create BookFile record
     with open(path, "rb") as f:
@@ -445,6 +491,52 @@ def _safe_zip_epub_members(zip_file: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
     return members
 
 
+def _safe_zip_member_name(name: str) -> str | None:
+    if not name:
+        return None
+    if name.startswith(("/", "\\")) or ":" in name:
+        return None
+    normalized = Path(name)
+    if any(part in {"..", ""} for part in normalized.parts):
+        return None
+    # Normalize to forward slashes for internal matching.
+    return name.replace("\\", "/")
+
+
+def _zip_sidecar_opf_for_epub(
+    *,
+    epub_member: str,
+    opfs_by_dir: dict[str, list[str]],
+    members_index: dict[str, zipfile.ZipInfo],
+) -> str | None:
+    """
+    Return the matched OPF member path for an EPUB zip member, or None.
+
+    Lookup order:
+    1) metadata.opf in same directory (Calibre-style)
+    2) same-basename .opf in same directory
+    3) if exactly one .opf in same directory, use it
+    """
+    epub_member = epub_member.replace("\\", "/")
+    d = posixpath.dirname(epub_member)
+    base = posixpath.basename(epub_member)
+    stem, _ext = posixpath.splitext(base)
+
+    preferred = posixpath.join(d, "metadata.opf") if d else "metadata.opf"
+    if preferred in members_index:
+        return preferred
+
+    same_base = posixpath.join(d, f"{stem}.opf") if d else f"{stem}.opf"
+    if same_base in members_index:
+        return same_base
+
+    opfs = opfs_by_dir.get(d or "", [])
+    if len(opfs) == 1:
+        return opfs[0]
+
+    return None
+
+
 def process_import_job(*, job: ImportJob) -> ImportJob:
     """
     Process an ImportJob synchronously.
@@ -511,7 +603,27 @@ def process_import_job(*, job: ImportJob) -> ImportJob:
             extracted_dir = imports_dir / "jobs" / str(job.id) / "extracted"
             extracted_dir.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(staged_path, "r") as zf:
-                members = _safe_zip_epub_members(zf)
+                members_index: dict[str, zipfile.ZipInfo] = {}
+                epub_members: list[zipfile.ZipInfo] = []
+                opfs_by_dir: dict[str, list[str]] = {}
+
+                for info in zf.infolist():
+                    if info.is_dir():
+                        continue
+                    safe_name = _safe_zip_member_name(info.filename)
+                    if safe_name is None:
+                        continue
+                    info.filename = safe_name  # normalize for downstream use
+                    members_index[safe_name] = info
+
+                    lower = safe_name.lower()
+                    if lower.endswith(".epub"):
+                        epub_members.append(info)
+                    elif lower.endswith(".opf"):
+                        d = posixpath.dirname(safe_name)
+                        opfs_by_dir.setdefault(d, []).append(safe_name)
+
+                members = epub_members
                 job.total_found = len(members)
                 job.save(update_fields=["total_found", "updated_at"])
                 for info in members:
@@ -523,7 +635,47 @@ def process_import_job(*, job: ImportJob) -> ImportJob:
                             "wb"
                         ) as dst:
                             shutil.copyfileobj(src, dst)
-                        result = import_epub(str(extracted_path))
+
+                        sidecar_opf_member = _zip_sidecar_opf_for_epub(
+                            epub_member=source_name,
+                            opfs_by_dir=opfs_by_dir,
+                            members_index=members_index,
+                        )
+                        sidecar_opf_bytes: bytes | None = None
+                        sidecar_opf_dir: str | None = None
+                        if sidecar_opf_member is not None:
+                            try:
+                                with zf.open(sidecar_opf_member, "r") as opf_fp:
+                                    sidecar_opf_bytes = opf_fp.read(MAX_OPF_SIDECAR_XML_BYTES + 1)
+                                if sidecar_opf_bytes and len(sidecar_opf_bytes) > MAX_OPF_SIDECAR_XML_BYTES:
+                                    sidecar_opf_bytes = None
+                                else:
+                                    sidecar_opf_dir = posixpath.dirname(sidecar_opf_member)
+                            except Exception:
+                                sidecar_opf_bytes = None
+                                sidecar_opf_dir = None
+
+                        def asset_reader(member: str) -> bytes | None:
+                            safe = _safe_zip_member_name(member)
+                            if safe is None:
+                                return None
+                            if safe not in members_index:
+                                return None
+                            try:
+                                with zf.open(safe, "r") as fp:
+                                    data = fp.read(MAX_COVER_BYTES + 1)
+                                if len(data) > MAX_COVER_BYTES:
+                                    return None
+                                return data
+                            except Exception:
+                                return None
+
+                        result = import_epub(
+                            str(extracted_path),
+                            sidecar_opf_bytes=sidecar_opf_bytes,
+                            sidecar_opf_dir=sidecar_opf_dir,
+                            sidecar_asset_reader=asset_reader if sidecar_opf_bytes and sidecar_opf_dir else None,
+                        )
                         item_status = (
                             ImportJobItem.STATUS_IMPORTED
                             if result.status == ImportStatus.IMPORTED
@@ -651,3 +803,227 @@ def _extract_metadata(book_epub):
     metadata["isbn"] = _best_isbn_from_identifiers(identifiers)
 
     return metadata
+
+
+def _parse_series_index(value: object) -> Decimal | None:
+    try:
+        d = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+    # Reject negatives.
+    if d < 0:
+        return None
+
+    # One decimal place max. Quantize to 1 dp without introducing binary float issues.
+    try:
+        normalized = d.quantize(Decimal("0.1"))
+    except Exception:
+        return None
+
+    # Ensure the value didn't require >1 decimal place.
+    exp = int(d.as_tuple().exponent)
+    if exp < -1:
+        return None
+
+    return normalized
+
+
+def _extract_opf_sidecar_metadata(opf_xml: bytes) -> dict[str, Any] | None:
+    if not opf_xml or len(opf_xml) > MAX_OPF_SIDECAR_XML_BYTES:
+        return None
+    try:
+        root = ET.fromstring(opf_xml)
+    except Exception:
+        return None
+
+    dc_ns = "http://purl.org/dc/elements/1.1/"
+    out: dict[str, Any] = {}
+
+    def dc_texts(local_name: str) -> list[str]:
+        vals: list[str] = []
+        for el in root.iter():
+            if not isinstance(el.tag, str):
+                continue
+            if not el.tag.endswith("}" + local_name):
+                continue
+            if not el.tag.startswith("{" + dc_ns + "}"):
+                continue
+            text = _clean_str(el.text)
+            if text:
+                vals.append(text)
+        return _dedupe_nonblank(vals)
+
+    titles = dc_texts("title")
+    if titles:
+        out["title"] = titles[0]
+
+    creators = dc_texts("creator")
+    if creators:
+        out["authors"] = creators
+
+    publishers = dc_texts("publisher")
+    if publishers:
+        out["publisher"] = publishers[0]
+
+    languages = dc_texts("language")
+    if languages:
+        out["language"] = _normalize_language(languages[0])
+
+    descriptions = dc_texts("description")
+    if descriptions:
+        out["summary"] = descriptions[0]
+
+    subjects = dc_texts("subject")
+    if subjects:
+        out["subjects"] = subjects
+
+    dates = dc_texts("date")
+    if dates:
+        raw_date = dates[0]
+        if len(raw_date) >= 10 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw_date[:10]):
+            out["published_date"] = raw_date[:10]
+
+    # Calibre series metadata usually appears as <meta name="calibre:series" content="..."/>
+    series_name: str = ""
+    series_index: object | None = None
+    for el in root.iter():
+        if not isinstance(el.tag, str) or not el.tag.endswith("meta"):
+            continue
+        name = _clean_str(el.attrib.get("name", "")).lower()
+        content = _clean_str(el.attrib.get("content", ""))
+        if name == "calibre:series" and content:
+            series_name = content
+        elif name == "calibre:series_index" and content:
+            series_index = content
+    if series_name:
+        out["series_name"] = series_name
+    if series_index is not None:
+        parsed = _parse_series_index(series_index)
+        if parsed is not None:
+            out["series_index"] = parsed
+
+    # Identifiers from dc:identifier
+    identifiers: list[dict[str, Any]] = []
+    for el in root.iter():
+        if not isinstance(el.tag, str):
+            continue
+        if not el.tag.startswith("{" + dc_ns + "}") or not el.tag.endswith("}identifier"):
+            continue
+        value = _clean_str(el.text)
+        if not value:
+            continue
+        attrs = dict(el.attrib or {})
+        scheme = _identifier_scheme_for(value=value, attrs=attrs)
+        normalized_value = _normalize_identifier_value(scheme=scheme, value=value)
+        if not normalized_value:
+            continue
+        identifiers.append(
+            {
+                "scheme": scheme,
+                "value": normalized_value,
+                "source": "opf_sidecar",
+                "is_primary": False,
+            }
+        )
+
+    # Mark primary (same rule as EPUB identifiers).
+    primary_index: int | None = None
+    for idx, ident in enumerate(identifiers):
+        if ident["scheme"] == BookIdentifier.SCHEME_ISBN_13:
+            primary_index = idx
+            break
+    if primary_index is None:
+        for idx, ident in enumerate(identifiers):
+            if ident["scheme"] == BookIdentifier.SCHEME_ISBN_10:
+                primary_index = idx
+                break
+    if primary_index is None and identifiers:
+        primary_index = 0
+    if primary_index is not None:
+        identifiers[primary_index]["is_primary"] = True
+
+    # Dedupe (scheme,value) preserving order.
+    seen: set[tuple[str, str]] = set()
+    deduped: list[dict[str, Any]] = []
+    for ident in identifiers:
+        key = (str(ident["scheme"]), str(ident["value"]).lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(ident)
+
+    if deduped:
+        out["identifiers"] = deduped
+        out["isbn"] = _best_isbn_from_identifiers(deduped)
+
+    return out
+
+
+def _merge_metadata(*, epub: dict[str, Any], opf: dict[str, Any] | None) -> dict[str, Any]:
+    if not opf:
+        return epub
+
+    merged: dict[str, Any] = dict(epub)
+
+    def take_str(key: str):
+        v = _clean_str(opf.get(key, ""))
+        if v:
+            merged[key] = v
+
+    def take_list(key: str):
+        v = opf.get(key)
+        if isinstance(v, list) and v:
+            merged[key] = v
+
+    take_str("title")
+    # Subtitle: do not guess from OPF in this pass.
+    take_str("publisher")
+    take_str("language")
+    take_str("summary")
+    if opf.get("published_date"):
+        merged["published_date"] = opf.get("published_date")
+    take_list("authors")
+    take_list("subjects")
+    if isinstance(opf.get("identifiers"), list) and opf.get("identifiers"):
+        merged["identifiers"] = opf.get("identifiers")
+        merged["isbn"] = _best_isbn_from_identifiers(cast(list[dict[str, Any]], merged["identifiers"]))
+    if _clean_str(opf.get("series_name", "")):
+        merged["series_name"] = _clean_str(opf.get("series_name", ""))
+    if opf.get("series_index") is not None:
+        merged["series_index"] = opf.get("series_index")
+
+    return merged
+
+
+def _try_set_book_cover_from_sidecar_opf(
+    *,
+    book: Book,
+    opf_xml: bytes,
+    opf_dir: str,
+    asset_reader: Callable[[str], bytes | None],
+) -> bool:
+    if getattr(book, "cover_file", None):
+        return False
+
+    try:
+        href = find_cover_href_in_opf(opf_xml=opf_xml)
+        if not href:
+            return False
+        cover_member = posixpath.normpath(posixpath.join(opf_dir, href))
+        # Re-check traversal and reject absolute/parent paths.
+        if cover_member.startswith("../") or cover_member.startswith("/") or cover_member == "..":
+            return False
+        data = asset_reader(cover_member)
+        if not data:
+            return False
+        set_book_cover_from_bytes(
+            book=book,
+            data=data,
+            source="opf_sidecar",
+            source_filename=posixpath.basename(cover_member) or None,
+            save=True,
+        )
+        return True
+    except Exception:
+        return False
