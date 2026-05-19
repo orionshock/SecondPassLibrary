@@ -133,6 +133,7 @@ class BookSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField(read_only=True)
     identifiers = serializers.SerializerMethodField(read_only=True)
     groups = serializers.SerializerMethodField(read_only=True)
+    cover_url = serializers.SerializerMethodField(read_only=True)
 
     def validate(self, attrs: dict[str, Any]):
         if "summary" in attrs and attrs["summary"] is None:
@@ -197,6 +198,20 @@ class BookSerializer(serializers.ModelSerializer):
             return None
         return BookFileSummarySerializer(book_file, context=self.context).data
 
+    def get_cover_url(self, obj: Book) -> str | None:
+        cover = getattr(obj, "cover_file", None)
+        if not cover:
+            return None
+        try:
+            url = cover.url
+        except Exception:
+            return None
+
+        request = self.context.get("request")
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
     class Meta:
         model = Book
         fields = [
@@ -209,6 +224,7 @@ class BookSerializer(serializers.ModelSerializer):
             "published_date",
             "isbn",
             "subjects",
+            "cover_url",
             "authors",
             "series",
             "series_index",

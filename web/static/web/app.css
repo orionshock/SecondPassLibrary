@@ -151,6 +151,14 @@ a:hover { text-decoration: underline; }
   font-size: 12px;
 }
 
+.recent-reading__cover-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
 .recent-reading__meta {
   min-width: 0;
   display: flex;

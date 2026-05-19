@@ -2,3 +2,4 @@ Django==6.0.4
 djangorestframework==3.17.1
 EbookLib==0.20
 django-cors-headers==4.9.0
+Pillow==12.2.0

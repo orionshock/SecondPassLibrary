@@ -357,6 +357,15 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         book2 = Book.objects.create(title="Book 2")
         ensure_book_public_assignment(book=book2, added_by=None)
 
+        from io import BytesIO
+        from PIL import Image
+        from library.cover_services import set_book_cover_from_bytes
+
+        img = Image.new("RGB", (20, 30), color=(1, 2, 3))
+        bio = BytesIO()
+        img.save(bio, format="PNG")
+        set_book_cover_from_bytes(book=book2, data=bio.getvalue(), source="manual")
+
         s1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True, status=ReadingSession.STATUS_ACTIVE)
         s2 = ReadingSession.objects.create(user=self.user1, book=book2, is_active=True, status=ReadingSession.STATUS_ACTIVE)
 
@@ -391,7 +400,9 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         # Ordered: s2 should come before s1 due to newer annotation.
         self.assertEqual(results[0]["session"]["id"], str(s2.id))
         self.assertEqual(results[1]["session"]["id"], str(s1.id))
-        self.assertEqual(results[0]["book"]["cover_url"], None)
+        self.assertIsInstance(results[0]["book"]["cover_url"], str)
+        self.assertTrue(str(results[0]["book"]["cover_url"]).startswith("http://testserver/"))
+        self.assertEqual(results[1]["book"]["cover_url"], None)
 
         r2 = cast(Response, self.client.get("/api/v1/reading/sessions/recent/?limit=1"))
         self.assertEqual(r2.status_code, status.HTTP_200_OK)

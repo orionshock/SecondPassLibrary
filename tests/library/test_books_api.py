@@ -196,6 +196,49 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertNotIn("books/", str(file0))
 
 
+class BookCoverUrlAPITest(IsolatedMediaRootMixin, APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        ensure_user_public_membership(user=self.user)
+        self.client.login(username="testuser", password="testpass")
+
+    def test_cover_url_null_when_no_cover(self):
+        book = Book.objects.create(title="No Cover")
+        ensure_book_public_assignment(book=book, added_by=None)
+
+        r = cast(Response, self.client.get(f"/api/v1/library/books/{book.id}/"))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        payload = cast(dict[str, Any], r.data)
+        self.assertIn("cover_url", payload)
+        self.assertEqual(payload["cover_url"], None)
+
+    def test_cover_url_present_when_cover_exists(self):
+        from io import BytesIO
+        from PIL import Image
+        from library.cover_services import set_book_cover_from_bytes
+
+        book = Book.objects.create(title="Has Cover")
+        ensure_book_public_assignment(book=book, added_by=None)
+
+        img = Image.new("RGB", (10, 12), color=(9, 9, 9))
+        bio = BytesIO()
+        img.save(bio, format="PNG")
+        set_book_cover_from_bytes(book=book, data=bio.getvalue(), source="manual")
+
+        r_list = cast(Response, self.client.get("/api/v1/library/books/"))
+        self.assertEqual(r_list.status_code, status.HTTP_200_OK)
+        books = paginated_results(r_list)
+        self.assertEqual(len(books), 1)
+        self.assertIsInstance(books[0]["cover_url"], str)
+        self.assertTrue(str(books[0]["cover_url"]).startswith("http://testserver/"))
+
+        r_detail = cast(Response, self.client.get(f"/api/v1/library/books/{book.id}/"))
+        self.assertEqual(r_detail.status_code, status.HTTP_200_OK)
+        detail = cast(dict[str, Any], r_detail.data)
+        self.assertIsInstance(detail["cover_url"], str)
+        self.assertTrue(str(detail["cover_url"]).startswith("http://testserver/"))
+
+
 class PaginationBasicsAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="reader", password="pw")

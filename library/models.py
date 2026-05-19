@@ -1,4 +1,6 @@
 from typing import TYPE_CHECKING
+import re
+from pathlib import Path
 
 from django.db import models
 from django.conf import settings
@@ -10,6 +12,19 @@ from core.models import TimeStampedModel
 
 
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
+
+
+_COVER_FILENAME_RE = re.compile(r"^(?P<sha>[0-9a-f]{64})(?P<ext>\.[A-Za-z0-9]+)?$")
+
+
+def book_cover_upload_path(instance, filename):
+    base = Path(filename).name
+    m = _COVER_FILENAME_RE.match(base)
+    if not m:
+        raise ValueError("Cover filename must be '<sha256>.<ext>' (sha256 hex).")
+    sha = m.group("sha")
+    ext = (m.group("ext") or "").lower()
+    return f"covers/{sha[:2]}/{sha[2:4]}/{sha}{ext}"
 
 
 class Author(TimeStampedModel):
@@ -64,6 +79,12 @@ class Book(TimeStampedModel):
         validators=[MinValueValidator(0)],
         help_text="Optional position within a series (e.g., 1, 5.1). One decimal place max.",
     )
+
+    cover_file = models.FileField(blank=True, upload_to=book_cover_upload_path)
+    cover_source = models.CharField(max_length=32, blank=True)
+    cover_mime = models.CharField(max_length=64, blank=True)
+    cover_width = models.PositiveIntegerField(null=True, blank=True)
+    cover_height = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["title"]

@@ -21,6 +21,13 @@ Notes:
 - Keep `Book` user-facing fields clean and stable.
 - If raw imported metadata/provenance is needed later, model it separately (don't overload `Book`).
 
+## Cover art (current)
+
+- `Book.cover_file` stores the current cover image (optional).
+- `cover_url` is exposed in Book API payloads and recent reading payloads; it is `null` when no cover exists.
+- Covers are validated with Pillow and stored as the original validated bytes (no re-encoding/thumbnails yet).
+- Cover extraction from EPUB/OPF is planned follow-up work.
+
 ## Duplicate detection and filenames
 
 - Duplicate EPUB detection is checksum-driven (file SHA-256), not identifier-driven.

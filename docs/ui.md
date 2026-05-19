@@ -37,6 +37,8 @@ The library browse screen is API-driven using vanilla JS fetch calls to `GET /ap
 
 The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and renders metadata, identifiers, and file download links (from `download_url`).
 
+Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box.
+
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers/Curators to only viewable groups) with links to the group pages.
 
 The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Author and series can be selected from existing records or created by name. Book identifiers can be added/edited/deleted here. LibraryGroup assignments can be added/removed here. The Shelves tab is a placeholder only. The Identifiers & File Info tab includes read-only BookFile info; the stored EPUB is not edited from this page.

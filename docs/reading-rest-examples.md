@@ -35,7 +35,7 @@ Notes:
 - Active sessions only (`is_active=true`, `status=active`).
 - Unique by book.
 - Ordered by `last_activity_at = max(session.updated_at, progress.updated_at if exists, latest non-deleted annotation.updated_at if any)`.
-- Returns `cover_url: null` until cover art is implemented.
+- Each book includes `cover_url` (string URL) or `null` when no cover is available.
 
 ## 2) Get or create active session
 

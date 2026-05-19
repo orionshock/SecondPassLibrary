@@ -27,15 +27,27 @@ function renderRecentItem(item) {
     `/library/books/${encodeURIComponent(String(item.book.id || ""))}/`,
   );
 
-  const cover = el("div", "recent-reading__cover", "Cover");
-  cover.setAttribute("aria-hidden", "true");
+  const titleText = item.book && item.book.title ? String(item.book.title) : "";
+  const cover = el("div", "recent-reading__cover", "");
+  const coverUrl = item.book && item.book.cover_url ? String(item.book.cover_url) : "";
+  if (coverUrl) {
+    const img = document.createElement("img");
+    img.className = "recent-reading__cover-img";
+    img.alt = titleText || "Cover";
+    img.loading = "lazy";
+    img.src = coverUrl;
+    cover.appendChild(img);
+  } else {
+    cover.textContent = "Cover";
+    cover.setAttribute("aria-hidden", "true");
+  }
   wrap.appendChild(cover);
 
   const meta = el("div", "recent-reading__meta", "");
   const title = el(
     "div",
     "recent-reading__title",
-    item.book && item.book.title ? item.book.title : "",
+    titleText,
   );
   const when = el(
     "div",
@@ -91,4 +103,3 @@ export async function initDashboard() {
 
   await loadRecent();
 }
-

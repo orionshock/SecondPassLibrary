@@ -210,6 +210,17 @@ class RecentSessionsView(APIView):
             if not book_id or book_id in seen_books:
                 continue
             seen_books.add(book_id)
+
+            book = getattr(s, "book", None)
+            cover_url: str | None = None
+            if book is not None:
+                cover = getattr(book, "cover_file", None)
+                if cover:
+                    try:
+                        cover_url = request.build_absolute_uri(cover.url)
+                    except Exception:
+                        cover_url = None
+
             results.append(
                 {
                     "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
@@ -220,8 +231,8 @@ class RecentSessionsView(APIView):
                     },
                     "book": {
                         "id": book_id,
-                        "title": getattr(getattr(s, "book", None), "title", "") or "",
-                        "cover_url": None,
+                        "title": getattr(book, "title", "") if book is not None else "",
+                        "cover_url": cover_url,
                     },
                 }
             )

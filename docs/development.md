@@ -10,6 +10,8 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+Note: `requirements.txt` includes Pillow for cover image validation.
+
 Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
 
 ## Migrate
