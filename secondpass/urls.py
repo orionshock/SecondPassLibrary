@@ -19,12 +19,19 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.conf import settings
 from django.http import Http404
+from django.templatetags.static import static
+from django.views.generic.base import RedirectView
 from django.views.static import serve as static_serve
 
 from core.views import secondpass_well_known
 
 urlpatterns = [
     path(".well-known/secondpass", secondpass_well_known, name="secondpass_well_known"),
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url=static("web/favicon.png"), permanent=True),
+        name="favicon",
+    ),
     # Product UI (Django templates; capability-driven client-side nav)
     path("", include(("web.urls", "web"), namespace="web")),
     path("admin/", admin.site.urls),

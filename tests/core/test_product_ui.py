@@ -84,12 +84,19 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "Second Pass Library")
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, "/static/web/favicon.png")
         self.assertContains(response, 'id="ui-global-error"')
         self.assertContains(response, 'id="recent-reading-section"')
         self.assertContains(response, 'id="recent-reading-status"')
         self.assertContains(response, 'id="recent-reading-list"')
         self.assertContains(response, 'id="future-activity-dashboard"')
         self.assertContains(response, 'href="/profile/"')
+
+    def test_favicon_ico_route_works(self):
+        response = self.client.get("/favicon.ico", follow=False)
+        self.assertIn(response.status_code, (200, 301, 302))
+        if response.status_code in (301, 302):
+            self.assertIn("/static/web/favicon.png", response["Location"])
 
     def test_must_change_password_redirects_product_ui_to_profile_password(self):
         profile = get_or_create_profile(user=self.user)
