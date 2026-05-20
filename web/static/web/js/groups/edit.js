@@ -166,9 +166,11 @@ export async function initGroupEdit() {
     badgesNode.appendChild(b2);
   }
   badgesEl.appendChild(badgesNode);
-  descPreviewEl.textContent = group.description || "";
+  const description = String(group.description || "").trim();
+  descPreviewEl.textContent = description;
 
-  visible(summaryEl, true);
+  // Omit the details box when there's no description.
+  visible(summaryEl, !!description);
   visible(root, true);
   setStatus(statusEl, "", false);
 
