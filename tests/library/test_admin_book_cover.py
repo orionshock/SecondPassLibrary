@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from types import SimpleNamespace
+from typing import Any, cast
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
@@ -46,7 +47,7 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
         upload = _png_upload(size=(21, 22))
         form = SimpleNamespace(cleaned_data={"cover_upload": upload, "clear_cover": False})
 
-        self.admin.save_model(request, book, form, change=True)
+        self.admin.save_model(request, book, cast(Any, form), change=True)
 
         book.refresh_from_db()
         self.assertTrue(bool(book.cover_file))
@@ -62,13 +63,13 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
 
         upload = _png_upload(size=(10, 11))
         form_upload = SimpleNamespace(cleaned_data={"cover_upload": upload, "clear_cover": False})
-        self.admin.save_model(request, book, form_upload, change=True)
+        self.admin.save_model(request, book, cast(Any, form_upload), change=True)
 
         book.refresh_from_db()
         self.assertTrue(bool(book.cover_file))
 
         form_clear = SimpleNamespace(cleaned_data={"cover_upload": None, "clear_cover": True})
-        self.admin.save_model(request, book, form_clear, change=True)
+        self.admin.save_model(request, book, cast(Any, form_clear), change=True)
 
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
@@ -76,4 +77,3 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(book.cover_mime, "")
         self.assertIsNone(book.cover_width)
         self.assertIsNone(book.cover_height)
-

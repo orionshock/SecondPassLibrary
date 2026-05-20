@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django import forms
 from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
@@ -206,7 +208,8 @@ class BookAdmin(admin.ModelAdmin):
             obj.cover_mime = ""
             obj.cover_width = None
             obj.cover_height = None
-            obj.cover_file = ""
+            # Clear the FileField value; Django stores empty FileFields as "".
+            setattr(cast(Any, obj), "cover_file", "")
             obj.save(
                 update_fields=[
                     "cover_file",
