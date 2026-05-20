@@ -1,117 +1,64 @@
 import { loadMeAndInitShell, setGlobalErrorFromError } from "./layout.js";
-import { initDashboard } from "./app_page.js";
-import { initLibraryBrowse } from "./library.js";
-import { initBookDetail } from "./book_detail.js";
-import { initBookEdit } from "./book_edit.js";
-import { initImports } from "./imports.js";
-import { initGroupsList, initGroupView, initGroupEdit, initGroupNew } from "./groups.js";
-import { initShelvesList, initShelfNew, initShelfView, initShelfEdit } from "./shelves.js";
-import { initProfile } from "./profile.js";
-import { initProfilePassword } from "./profile_password.js";
-import { initServerSettings } from "./server_settings.js";
-import { initUsersList, initUserNew, initUserEdit } from "./users.js";
+
+async function runPageInit({ importer, initExportName, label }) {
+  try {
+    const mod = await importer();
+    const initFn = mod && mod[initExportName];
+    if (typeof initFn !== "function") {
+      throw new Error(`Module did not export ${initExportName}`);
+    }
+    await initFn();
+  } catch (e) {
+    console.error(`${initExportName} failed`, e);
+    setGlobalErrorFromError(e, `${label} error:`);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const page = document.body && document.body.dataset ? document.body.dataset.page : "";
-  if (page === "app") {
-    initDashboard().catch((e) => {
-      console.error("initDashboard failed", e);
-      setGlobalErrorFromError(e, "App error:");
-    });
-  } else if (page === "library") {
-    initLibraryBrowse().catch((e) => {
-      console.error("initLibraryBrowse failed", e);
-      setGlobalErrorFromError(e, "Library error:");
-    });
-  } else if (page === "book-detail") {
-    initBookDetail().catch((e) => {
-      console.error("initBookDetail failed", e);
-      setGlobalErrorFromError(e, "Book error:");
-    });
-  } else if (page === "book-edit") {
-    initBookEdit().catch((e) => {
-      console.error("initBookEdit failed", e);
-      setGlobalErrorFromError(e, "Book edit error:");
-    });
-  } else if (page === "imports") {
-    initImports().catch((e) => {
-      console.error("initImports failed", e);
-      setGlobalErrorFromError(e, "Imports error:");
-    });
-  } else if (page === "shelves") {
-    initShelvesList().catch((e) => {
-      console.error("initShelvesList failed", e);
-      setGlobalErrorFromError(e, "Shelves error:");
-    });
-  } else if (page === "shelf-new") {
-    initShelfNew().catch((e) => {
-      console.error("initShelfNew failed", e);
-      setGlobalErrorFromError(e, "New shelf error:");
-    });
-  } else if (page === "shelf-view") {
-    initShelfView().catch((e) => {
-      console.error("initShelfView failed", e);
-      setGlobalErrorFromError(e, "Shelf error:");
-    });
-  } else if (page === "shelf-edit") {
-    initShelfEdit().catch((e) => {
-      console.error("initShelfEdit failed", e);
-      setGlobalErrorFromError(e, "Shelf edit error:");
-    });
-  } else if (page === "groups") {
-    initGroupsList().catch((e) => {
-      console.error("initGroupsList failed", e);
-      setGlobalErrorFromError(e, "Groups error:");
-    });
-  } else if (page === "group-new") {
-    initGroupNew().catch((e) => {
-      console.error("initGroupNew failed", e);
-      setGlobalErrorFromError(e, "New group error:");
-    });
-  } else if (page === "group-view") {
-    initGroupView().catch((e) => {
-      console.error("initGroupView failed", e);
-      setGlobalErrorFromError(e, "Group error:");
-    });
-  } else if (page === "group-edit") {
-    initGroupEdit().catch((e) => {
-      console.error("initGroupEdit failed", e);
-      setGlobalErrorFromError(e, "Group edit error:");
-    });
-  } else if (page === "users") {
-    initUsersList().catch((e) => {
-      console.error("initUsersList failed", e);
-      setGlobalErrorFromError(e, "Users error:");
-    });
-  } else if (page === "user-new") {
-    initUserNew().catch((e) => {
-      console.error("initUserNew failed", e);
-      setGlobalErrorFromError(e, "Create user error:");
-    });
-  } else if (page === "user-edit") {
-    initUserEdit().catch((e) => {
-      console.error("initUserEdit failed", e);
-      setGlobalErrorFromError(e, "Edit user error:");
-    });
-  } else if (page === "profile") {
-    initProfile().catch((e) => {
-      console.error("initProfile failed", e);
-      setGlobalErrorFromError(e, "Profile error:");
-    });
-  } else if (page === "profile-password") {
-    initProfilePassword().catch((e) => {
-      console.error("initProfilePassword failed", e);
-      setGlobalErrorFromError(e, "Password error:");
-    });
-  } else if (page === "server-settings") {
-    initServerSettings().catch((e) => {
-      console.error("initServerSettings failed", e);
-      setGlobalErrorFromError(e, "Server settings error:");
-    });
-  } else {
-    loadMeAndInitShell().catch((e) => {
-      console.error("Shell init failed", e);
-      setGlobalErrorFromError(e, "UI error:");
-    });
+
+  const registry = {
+    app: { importer: () => import("./app_page.js"), initExportName: "initDashboard", label: "App" },
+    library: { importer: () => import("./library.js"), initExportName: "initLibraryBrowse", label: "Library" },
+    "book-detail": { importer: () => import("./book_detail.js"), initExportName: "initBookDetail", label: "Book" },
+    "book-edit": { importer: () => import("./book_edit/main.js"), initExportName: "initBookEdit", label: "Book edit" },
+    imports: { importer: () => import("./imports.js"), initExportName: "initImports", label: "Imports" },
+
+    shelves: { importer: () => import("./shelves/main.js"), initExportName: "initShelvesList", label: "Shelves" },
+    "shelf-new": { importer: () => import("./shelves/main.js"), initExportName: "initShelfNew", label: "New shelf" },
+    "shelf-view": { importer: () => import("./shelves/main.js"), initExportName: "initShelfView", label: "Shelf" },
+    "shelf-edit": { importer: () => import("./shelves/main.js"), initExportName: "initShelfEdit", label: "Shelf edit" },
+
+    groups: { importer: () => import("./groups/main.js"), initExportName: "initGroupsList", label: "Groups" },
+    "group-new": { importer: () => import("./groups/main.js"), initExportName: "initGroupNew", label: "New group" },
+    "group-view": { importer: () => import("./groups/main.js"), initExportName: "initGroupView", label: "Group" },
+    "group-edit": { importer: () => import("./groups/main.js"), initExportName: "initGroupEdit", label: "Group edit" },
+
+    users: { importer: () => import("./users/main.js"), initExportName: "initUsersList", label: "Users" },
+    "user-new": { importer: () => import("./users/main.js"), initExportName: "initUserNew", label: "Create user" },
+    "user-edit": { importer: () => import("./users/main.js"), initExportName: "initUserEdit", label: "Edit user" },
+
+    profile: { importer: () => import("./profile.js"), initExportName: "initProfile", label: "Profile" },
+    "profile-password": {
+      importer: () => import("./profile_password.js"),
+      initExportName: "initProfilePassword",
+      label: "Password",
+    },
+    "server-settings": {
+      importer: () => import("./server_settings.js"),
+      initExportName: "initServerSettings",
+      label: "Server settings",
+    },
+  };
+
+  const entry = registry[page];
+  if (entry) {
+    runPageInit(entry);
+    return;
   }
+
+  loadMeAndInitShell().catch((e) => {
+    console.error("Shell init failed", e);
+    setGlobalErrorFromError(e, "UI error:");
+  });
 });
