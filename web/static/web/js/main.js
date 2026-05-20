@@ -4,7 +4,7 @@ import { initLibraryBrowse } from "./library.js";
 import { initBookDetail } from "./book_detail.js";
 import { initBookEdit } from "./book_edit.js";
 import { initImports } from "./imports.js";
-import { initGroupsList, initGroupView, initGroupEdit } from "./groups.js";
+import { initGroupsList, initGroupView, initGroupEdit, initGroupNew } from "./groups.js";
 import { initShelvesList, initShelfNew, initShelfView, initShelfEdit } from "./shelves.js";
 import { initProfile } from "./profile.js";
 import { initProfilePassword } from "./profile_password.js";
@@ -62,6 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initGroupsList().catch((e) => {
       console.error("initGroupsList failed", e);
       setGlobalErrorFromError(e, "Groups error:");
+    });
+  } else if (page === "group-new") {
+    initGroupNew().catch((e) => {
+      console.error("initGroupNew failed", e);
+      setGlobalErrorFromError(e, "New group error:");
     });
   } else if (page === "group-view") {
     initGroupView().catch((e) => {

@@ -1,4 +1,4 @@
-import { $, escapeHtml, loadMeAndInitShell, setGlobalError } from "../layout.js";
+import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { pagedListController, truthy } from "./shared.js";
 
 function renderGroupsList(payload) {
@@ -36,8 +36,13 @@ function renderGroupsList(payload) {
 }
 
 export async function initGroupsList() {
-  await loadMeAndInitShell();
+  const me = await loadMeAndInitShell();
   setGlobalError("");
+
+  const actionsEl = $("#groups-actions");
+  if (actionsEl) {
+    visible(actionsEl, !!(me && (me.is_owner || me.role === "manager")));
+  }
 
   const statusEl = $("#groups-status");
   const resultsEl = $("#groups-results");

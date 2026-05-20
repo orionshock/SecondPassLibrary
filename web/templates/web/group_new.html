@@ -1,0 +1,45 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}group-new{% endblock %}
+
+{% block title %}New group · {{ server_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/groups/" class="pill">← Back to Groups</a>
+      <h1 class="page-title">New group</h1>
+      <div class="muted">Owner and Manager only.</div>
+    </div>
+  </div>
+
+  <div id="group-new-not-allowed" class="error is-hidden">Not allowed.</div>
+
+  <section id="group-new-root" class="card is-hidden">
+    <h2 class="card__title">Details</h2>
+
+    <form id="group-new-form" style="margin-top: 10px;">
+      {% csrf_token %}
+      <div class="kv">
+        <div class="kv__k"><label for="group-new-name">Name</label></div>
+        <div class="kv__v">
+          <input id="group-new-name" style="width: 100%;" placeholder="Group name" />
+        </div>
+      </div>
+
+      <div class="kv" style="margin-top: 10px;">
+        <div class="kv__k"><label for="group-new-description">Description</label></div>
+        <div class="kv__v">
+          <textarea id="group-new-description" rows="4" style="width: 100%;"></textarea>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
+        <button id="group-new-save" class="button" type="submit">Create group</button>
+        <a class="button" href="/groups/">Cancel</a>
+        <span id="group-new-status" class="muted"></span>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+

@@ -181,6 +181,10 @@ def can_create_library_group(user) -> bool:
     return is_owner(user) or _is_manager_role(user)
 
 
+def can_delete_library_group(user) -> bool:
+    return can_create_library_group(user)
+
+
 def can_manage_group_identity(*, user, group: LibraryGroup) -> bool:
     if is_public_group(group):
         return False

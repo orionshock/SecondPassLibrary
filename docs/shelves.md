@@ -116,6 +116,10 @@ Important rule:
 - when adding/removing shelf items, the API enforces that the editor is allowed to edit the shelf
 - for group-owned shelves, adding is further constrained by group context (the API is authoritative)
 
+Group deletion:
+
+- Deleting a non-Public LibraryGroup deletes shelves owned by that group (and their shelf items).
+
 ## User-owned shelves
 
 User-owned shelves are personal organization with an optional listed mode.

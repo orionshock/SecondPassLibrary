@@ -49,6 +49,11 @@ def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
 
 
 @login_required
+def group_new(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/group_new.html")
+
+
+@login_required
 def group_edit(request: HttpRequest, group_id: str) -> HttpResponse:
     return render(request, "web/group_edit.html", {"group_id": group_id})
 

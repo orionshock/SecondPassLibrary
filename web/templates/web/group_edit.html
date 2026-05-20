@@ -47,6 +47,34 @@
           <span id="group-edit-save-status" class="muted"></span>
         </div>
       </form>
+
+      <section id="group-delete-root" class="card is-hidden" style="margin-top: 16px; border: 1px solid #c33;">
+        <h2 class="card__title">Danger Zone</h2>
+        <div class="muted">
+          Deleting a group is destructive:
+          <ul style="margin-top: 6px;">
+            <li>removes all book assignments to this group</li>
+            <li>removes all user memberships in this group</li>
+            <li>deletes group-owned shelves and their shelf items</li>
+            <li>deletes the group</li>
+          </ul>
+          Books/users left with no groups fall back to Public.
+        </div>
+
+        <form id="group-delete-form" style="margin-top: 10px;">
+          {% csrf_token %}
+          <div class="kv">
+            <div class="kv__k"><label for="group-delete-confirm">Type the group name to confirm</label></div>
+            <div class="kv__v">
+              <input id="group-delete-confirm" style="width: 100%;" placeholder="Group name" />
+            </div>
+          </div>
+          <div style="margin-top: 10px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
+            <button id="group-delete-btn" class="button" type="submit" disabled>Delete group</button>
+            <span id="group-delete-status" class="muted"></span>
+          </div>
+        </form>
+      </section>
     </div>
 
     <div id="tab-books" class="tab-panel is-hidden" data-tab-panel="books">

@@ -19,6 +19,7 @@ The first minimal product UI shell now exists:
 - `/groups/` is an authenticated group list page
 - `/groups/<group_id>/` is an authenticated group view page (Books/Members/Shelves tabs; read-oriented)
 - `/groups/<group_id>/edit/` is an authenticated group management page (Details/Books/Members/Shelves tabs; management-oriented)
+- `/groups/new/` is an authenticated group create page (Owner/Manager only)
 - `/users/` provides functional user management for Manager/Owner only
 - `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
 - `/users/<user_id>/edit/` provides a dedicated user edit screen for Manager/Owner
@@ -67,8 +68,10 @@ ZIP OPF sidecars (current):
 The groups UI is API-driven using:
 
 - `GET /api/v1/library/groups/` (paginated list)
+- `POST /api/v1/library/groups/` (Owner/Manager only; create)
 - `GET /api/v1/library/groups/<group_id>/` (detail)
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
+- `DELETE /api/v1/library/groups/<group_id>/` (Owner/Manager only; destructive delete; Public cannot be deleted)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `GET /api/v1/library/books/?q=<search>` (book search for the Groups UI picker)
 - `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)

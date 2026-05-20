@@ -352,6 +352,22 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class LibraryGroupCreateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_name(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("This field is required.")
+        if len(v) > 255:
+            raise serializers.ValidationError("Name is too long.")
+        return v
+
+    def validate_description(self, value):
+        return (value or "").strip()
+
+
 class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
     """
     Presentation-only update serializer.

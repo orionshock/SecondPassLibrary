@@ -226,6 +226,18 @@ class ProductUiSmokeTests(TestCase):
             response["Location"], f"/api-auth/login/?next=/groups/{group_id}/"
         )
 
+    def test_unauthenticated_group_new_redirects_to_login(self):
+        response = self.client.get("/groups/new/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/groups/new/")
+
+    def test_authenticated_group_new_returns_200_and_has_form(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/groups/new/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-page="group-new"')
+        self.assertContains(response, 'id="group-new-form"')
+
     def test_authenticated_group_detail_returns_200_and_has_container(self):
         self.client.force_login(self.user)
         group_id = uuid4()
@@ -264,6 +276,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="group-edit-book-search-results"')
         self.assertContains(response, 'id="group-edit-shelves-results"')
         self.assertContains(response, 'id="group-edit-shelves-actions"')
+        self.assertContains(response, 'id="group-delete-root"')
 
     def test_unauthenticated_shelves_redirects_to_login(self):
         response = self.client.get("/shelves/", follow=False)

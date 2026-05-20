@@ -9,6 +9,7 @@ import {
   canEditGroupDescription,
   canEditGroupPage,
   canManageGroupBooks,
+  isManagerOrOwner,
   initTabs,
   setStatus,
 } from "./shared.js";
@@ -67,6 +68,12 @@ export async function initGroupEdit() {
   const shelvesResults = $("#group-edit-shelves-results");
   const shelvesNext = $("#group-edit-shelves-next");
   const shelvesPrev = $("#group-edit-shelves-prev");
+
+  const deleteRoot = $("#group-delete-root");
+  const deleteForm = $("#group-delete-form");
+  const deleteConfirm = $("#group-delete-confirm");
+  const deleteBtn = $("#group-delete-btn");
+  const deleteStatus = $("#group-delete-status");
 
   if (
     !root ||
@@ -168,6 +175,49 @@ export async function initGroupEdit() {
   const allowDescriptionEdit = canEditGroupDescription({ me, group });
   descInput.value = group.description || "";
   visible(editForm, allowDescriptionEdit);
+
+  // Delete (Owner/Manager only; never for Public)
+  if (deleteRoot && deleteForm && deleteConfirm && deleteBtn && deleteStatus) {
+    const allowDelete = isManagerOrOwner(me) && !isPublicGroup;
+    visible(deleteRoot, allowDelete);
+    deleteConfirm.value = "";
+    deleteBtn.disabled = true;
+    deleteStatus.textContent = "";
+
+    function syncDeleteEnabled() {
+      const typed = String(deleteConfirm.value || "").trim();
+      deleteBtn.disabled = typed !== String(group.name || "").trim();
+    }
+    deleteConfirm.addEventListener("input", syncDeleteEnabled);
+
+    deleteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (deleteBtn.disabled) return;
+      deleteStatus.textContent = "Deleting…";
+      deleteStatus.classList.remove("error");
+      setGlobalError("");
+
+      try {
+        const csrf = getCsrfToken();
+        const headers = { Accept: "application/json" };
+        if (csrf) headers["X-CSRFToken"] = csrf;
+
+        await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/`, {
+          method: "DELETE",
+          headers,
+        });
+        window.location.href = "/groups/";
+      } catch (e2) {
+        console.error("Failed to delete group", { groupId, e2 });
+        const msg = extractApiErrorMessage(e2) || "Failed to delete group.";
+        deleteStatus.textContent = msg;
+        deleteStatus.classList.add("error");
+        setGlobalError(msg);
+      }
+    });
+  } else if (deleteRoot) {
+    visible(deleteRoot, false);
+  }
 
   function setSaveStatus(text, isError) {
     setStatus(saveStatus, text, isError);

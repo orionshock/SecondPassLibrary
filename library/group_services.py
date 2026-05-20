@@ -291,3 +291,80 @@ def remove_user_from_group(
     with transaction.atomic():
         membership.delete()
         ensure_user_has_at_least_one_group(user=target_user)
+
+
+@transaction.atomic
+def delete_library_group(*, actor, group: LibraryGroup) -> dict[str, int]:
+    """
+    Destructively delete a non-Public LibraryGroup.
+
+    Behavior:
+    - Removes all book assignments for the group.
+    - Removes all user memberships for the group.
+    - Deletes group-owned shelves and shelf items.
+    - Deletes the group.
+    - Reconciles affected books/users back to Public if they would otherwise have
+      zero groups/memberships.
+
+    Returns counts for diagnostics.
+    """
+    if not policies.can_delete_library_group(actor):
+        raise PermissionDenied("Not allowed.")
+    if is_public_group(group):
+        raise ValidationError("Public group cannot be deleted.")
+
+    group_id = group.id
+
+    affected_book_ids = list(
+        BookGroupAssignment.objects.filter(group=group).values_list("book_id", flat=True)
+    )
+    affected_user_ids = list(
+        LibraryGroupMembership.objects.filter(group=group).values_list("user_id", flat=True)
+    )
+
+    removed_assignments = BookGroupAssignment.objects.filter(group=group).count()
+    removed_memberships = LibraryGroupMembership.objects.filter(group=group).count()
+
+    # Delete group-owned shelves and items explicitly (do not rely on FK cascade).
+    from shelves.models import Shelf, ShelfItem
+
+    shelf_qs = Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_GROUP, owner_group=group)
+    shelf_ids = list(shelf_qs.values_list("id", flat=True))
+    deleted_shelf_items = ShelfItem.objects.filter(shelf_id__in=shelf_ids).count() if shelf_ids else 0
+    if shelf_ids:
+        ShelfItem.objects.filter(shelf_id__in=shelf_ids).delete()
+    deleted_shelves = len(shelf_ids)
+    if shelf_ids:
+        shelf_qs.delete()
+
+    # Remove group relationships.
+    BookGroupAssignment.objects.filter(group_id=group_id).delete()
+    LibraryGroupMembership.objects.filter(group_id=group_id).delete()
+
+    # Delete the group itself.
+    group.delete()
+
+    # Reconcile: any affected books/users left with zero groups/memberships fall back to Public.
+    for book_id in affected_book_ids:
+        if not BookGroupAssignment.objects.filter(book_id=book_id).exists():
+            try:
+                book = Book.objects.get(pk=book_id)
+            except Book.DoesNotExist:
+                continue
+            ensure_book_public_assignment(book=book, added_by=actor)
+
+    User = get_user_model()
+    for user_id in affected_user_ids:
+        if not LibraryGroupMembership.objects.filter(user_id=user_id).exists():
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                continue
+            ensure_user_public_membership(user=user)
+
+    return {
+        "removed_book_assignments": int(removed_assignments),
+        "removed_memberships": int(removed_memberships),
+        "deleted_shelves": int(deleted_shelves),
+        "deleted_shelf_items": int(deleted_shelf_items),
+    }

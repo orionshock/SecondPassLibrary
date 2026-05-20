@@ -41,7 +41,7 @@ Manager can:
 
 API note (current implementation):
 
-- Some of the above are capability/policy direction. The current public REST API does **not** yet expose LibraryGroup create/delete endpoints.
+- LibraryGroup create/delete endpoints are available to Owner/Manager only (and Public remains protected from deletion).
 - Group membership management is now exposed via Manager/Owner-only group membership endpoints (see `docs/api.md`).
 
 Manager cannot (unless also Owner):
@@ -232,8 +232,7 @@ When exposing groups through the API:
 
 Not implemented (non-goals):
 
-- No public API for creating/deleting LibraryGroups.
-- The product UI does not provide create/delete group workflows; LibraryGroups are currently bootstrap/admin-oriented (use the Service Hatch / Django admin when needed).
+- No public API for anonymous users to create/delete LibraryGroups.
 
 ## Shelves are separate (design principle)
 

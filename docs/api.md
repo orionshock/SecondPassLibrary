@@ -340,8 +340,10 @@ See `docs/imports.md` for details.
 LibraryGroups are access scopes, not shelves. Group book lists still filter each book through `can_view_book(user, book)`.
 
 - `GET /api/v1/library/groups/` (paginated)
+- `POST /api/v1/library/groups/` (Owner/Manager only; creates a group)
 - `GET /api/v1/library/groups/<group_id>/`
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`)
+- `DELETE /api/v1/library/groups/<group_id>/` (Owner/Manager only; destructive delete; Public cannot be deleted)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`

@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.db import IntegrityError
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from rest_framework import mixins, viewsets
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -40,6 +41,7 @@ from .serializers import (
     SeriesSerializer,
     ImportJobSerializer,
     LibraryGroupSerializer,
+    LibraryGroupCreateSerializer,
     LibraryGroupPresentationUpdateSerializer,
     BookGroupAssignmentSerializer,
     LibraryGroupMembershipSerializer,
@@ -60,6 +62,7 @@ from .group_services import (
     add_user_to_group,
     remove_user_from_group,
     update_user_group_membership,
+    delete_library_group,
 )
 from core import policies
 from core.errors import ErrorCode, api_error_response
@@ -420,9 +423,11 @@ class ImportJobViewSet(
 
 class LibraryGroupViewSet(
     ClientBearerReadOnlyMixin,
+    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}, "books": {"GET"}}
@@ -431,6 +436,8 @@ class LibraryGroupViewSet(
     ordering = ["name", "created_at"]
 
     def get_serializer_class(self):
+        if self.action == "create":
+            return LibraryGroupCreateSerializer
         if self.action == "partial_update":
             return LibraryGroupPresentationUpdateSerializer
         return LibraryGroupSerializer
@@ -454,6 +461,21 @@ class LibraryGroupViewSet(
         # Disallow full PUT updates; only PATCH is supported for presentation fields.
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    def create(self, request, *args, **kwargs):
+        if not policies.can_create_library_group(request.user):
+            raise PermissionDenied("Not allowed.")
+
+        serializer = self.get_serializer(data=request.data or {})
+        serializer.is_valid(raise_exception=True)
+        data = cast(dict[str, Any], serializer.validated_data)
+
+        group = LibraryGroup.objects.create(
+            name=data["name"],
+            description=data.get("description") or "",
+        )
+        out = LibraryGroupSerializer(group, context={"request": request})
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -462,6 +484,15 @@ class LibraryGroupViewSet(
 
         output = LibraryGroupSerializer(instance, context={"request": request})
         return Response(output.data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        group: LibraryGroup = self.get_object()
+        # delete_library_group handles Public protection and permission checks.
+        try:
+            delete_library_group(actor=request.user, group=group)
+        except ValidationError as exc:
+            raise DRFValidationError(detail={"detail": str(exc)}) from exc
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["get", "post"], url_path="books")
     def books(self, request, *args, **kwargs):
