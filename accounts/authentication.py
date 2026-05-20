@@ -10,8 +10,17 @@ class ClientBearerAuthentication(BaseAuthentication):
     """
     Client API bearer-token authentication.
 
-    Phase 1 guardrail: this authentication class is only enabled on endpoints
-    that explicitly opt in (e.g. /api/v1/accounts/me/).
+    This authentication class is opt-in: it is enabled only on endpoints that
+    explicitly include it in their authentication_classes.
+
+    Current intended bearer-token surfaces include:
+
+    - `/api/v1/accounts/me/` (read-only for bearer tokens)
+    - selected library read/download endpoints (explicit allow-list)
+    - reading user-data endpoints (sessions/progress/annotations; user-owned data)
+
+    Management/product UI/admin endpoints should not enable bearer auth unless
+    deliberately designed and explicitly allow-listed.
     """
 
     keyword = "Bearer"
@@ -42,4 +51,3 @@ class ClientBearerAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Invalid bearer token.")
 
         return (session.user, session)
-

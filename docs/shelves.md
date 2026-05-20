@@ -1,276 +1,179 @@
 # Shelves
 
-Shelves are implemented. This document records the model, routes, and policy rules, plus product UI behavior.
-
-## 1. Core principle
-
-Second Pass Library has three distinct concepts:
-
-- **LibraryGroups** answer: “Can this user access this book?”
-- **Shelves** answer: “How is this book organized or presented?”
-- **Genres/tags/metadata** answer: “What kind of book is this?”
-
 Shelves are **presentation/organization**, not access control.
 
-Important implications:
+## Summary
 
-- A visible shelf does **not** imply all of its books are visible.
-- Every book rendered from a shelf must still pass the normal access policy (e.g. `can_view_book(viewer, book)`).
-- The server should not treat shelves as a backdoor for access.
+- LibraryGroups answer: "Can this user access this book?"
+- Shelves answer: "How is this book organized or presented?"
+- Metadata (subjects/tags/series/etc.) answer: "What kind of book is this?"
 
-## 2. Model direction
+Shelves never grant access to books. Any book shown from a shelf must still pass normal book access checks.
 
-Implementation should use **one** `Shelf` model (not separate `UserShelf` and `GroupShelf` tables).
+## Core concepts
 
-Reason:
+Second Pass Library distinguishes:
 
-- The core object is the same: a named/ordered collection of books.
-- Ownership and policy differ, but the shelf object does not.
-- One model keeps the API/UI consistent and reduces duplication.
+- **LibraryGroups**: access scopes for books (security boundary)
+- **Shelves**: ordered collections of books (presentation)
+- **Book metadata**: bibliographic fields and tags/subjects (descriptive)
 
-### Planned models
+Implications:
 
-`Shelf`:
+- A visible shelf does **not** imply all its books are visible.
+- Shelf items may remain in the database even if a viewer cannot currently see a particular book; hidden books must not be leaked via shelf rendering.
+
+## Ownership and visibility
+
+Each shelf has exactly one owner:
+
+- **User-owned shelf**: `owner_type="user"`, `owner_user` set, `owner_group` null
+- **Group-owned shelf**: `owner_type="group"`, `owner_group` set, `owner_user` null
+
+### User-owned shelves
+
+User-owned shelves have a visibility setting:
+
+- `private`: visible only to the owner
+- `listed`: shelf metadata is visible to authenticated users
+
+### Group-owned shelves
+
+Group-owned shelves have no listed/public state. Visibility is derived from the owning LibraryGroup:
+
+- visible to direct members of the owning group
+- also visible to broad roles (Owner/Manager/Librarian)
+
+## Models
+
+### `Shelf`
 
 - `id` (UUID)
-- `name`
-- `description`
+- `name`, `description`
 - `owner_type`: `user | group`
-- `owner_user` (nullable FK)
-- `owner_group` (nullable FK to `LibraryGroup`)
+- `owner_user` (nullable FK), `owner_group` (nullable FK)
 - `visibility` (user-owned shelves only): `private | listed`
-- `created_by` (nullable FK to user; “who created it”)
-- timestamps (`created_at`, `updated_at`)
+- `created_by` (nullable FK)
+- timestamps
 
-`ShelfItem`:
+List/detail payloads also include:
+
+- `item_count`: number of shelf items
+- `can_edit`: whether the current caller can edit the shelf
+- `matched_item_id`: included on list results when filtering by `?book=<book_id>`
+
+### `ShelfItem`
 
 - `id` (UUID)
 - `shelf` (FK)
 - `book` (FK)
 - `position` (integer ordering)
-- `added_by` (nullable FK to user)
+- `added_by` (nullable FK)
 - timestamps
 
-### Ownership invariant (hard rule)
+Invariants:
 
-Each shelf has **exactly one** owner:
+- a given book appears at most once per shelf
+- deleting a shelf deletes only the shelf and its items (never books or files)
 
-- user shelf: `owner_user` is set; `owner_group` is null
-- group shelf: `owner_group` is set; `owner_user` is null
-- never both
-- never neither
+## Permissions
 
-### ShelfItem invariants (hard rules)
+High-level rules:
 
-- Each book appears **at most once** per shelf.
-- Ordering starts simple with an integer `position`.
-- No drag/drop reordering complexity initially; UI can submit final ordering later.
-
-## 3. Routes
-
-UI routes are shelf-centric (not user-centric):
-
-- `GET /shelves/`
-- `GET /shelves/new/`
-- `GET /shelves/<shelf_id>/`
-- `GET /shelves/<shelf_id>/edit/`
-
-Do not put user IDs in shelf URLs.
-
-Reason:
-
-- Shelf ID is sufficient.
-- User IDs should not be dragged into URLs unless necessary.
-- Django `User` currently uses sequential IDs, and we do not want to get sidetracked changing that.
-
-## 4. User-owned shelves
-
-User-owned shelves have visibility:
-
-- `private`: visible only to the owning user
-- `listed`: shelf metadata visible to authenticated users
-
-Listed user shelves should show attribution, for example:
-
-- “Alice’s Favorites”
-- show owner username / display name in the shelf header/details
-
-Editing rules:
-
-- Only the owning user can edit a user-owned shelf in the product UI.
-- Managers/Librarians do not edit personal shelves through normal product UI.
-- Service hatch/admin can still exist.
-
-Add/remove rules:
-
-- A user can add only books they can currently view (enforced by `can_view_book(owner, book)` at write time).
-
-Rendering rules (important):
-
-- First check `can_view_shelf(viewer, shelf)`.
-- Then filter shelf books through `can_view_book(viewer, book)`.
-- This applies even to the shelf owner.
-- If the owner later loses access to a book, the `ShelfItem` may remain in the DB but the book is hidden until access returns.
-
-Listed shelf behavior:
-
-- Listed shelves do not grant access to books.
-- Listed shelves may show different visible books to different viewers.
-- If a viewer can see the shelf but none of its books, render it as empty (do not leak hidden titles).
-
-## 5. Group-owned shelves
-
-Group-owned shelves have no discoverability/visibility state; access is derived from the owning group.
-
-Implementation note:
-
-- Group-owned shelves store `visibility="private"` (enforced) to keep a single stable value in the database.
-
-They are visible only to:
-
-- direct members of the owning `LibraryGroup`
-- Owner/Manager/Librarian broad roles
-
-They are editable by:
-
-- Owner
-- Manager
-- Librarian
-- Curator of the owning **non-Public** group
+- **User-owned shelf**
+  - view: owner always; other users only if `visibility="listed"`
+  - edit: owner only
+- **Group-owned shelf**
+  - view: group members and broad roles
+  - edit: Owner/Manager/Librarian; Curator of the owning non-Public group
 
 Public group shelves:
 
-- are just group-owned shelves for the Public `LibraryGroup`
 - Public has no curators
-- editable only by Owner/Manager/Librarian
+- Public group shelves are editable only by Owner/Manager/Librarian
 
-Readers cannot edit group-owned shelves.
+## Book access constraints (important)
 
-## 6. Group shelf item invariant (hard rule)
+Shelf visibility and book visibility are separate:
 
-A group-owned shelf may contain **only** books assigned to that same `LibraryGroup`.
+1. First check `can_view_shelf(viewer, shelf)`.
+2. Then filter shelf items/books through `can_view_book(viewer, book)`.
 
-Examples:
+This applies to:
 
-- “Fantasy Club” shelf may contain only books assigned to “Fantasy Club”.
-- Public shelf may contain only books assigned to Public.
+- user-owned shelves (including the owner)
+- listed shelves
+- group-owned shelves
 
-This rule is intentionally stricter than “the editor can currently view the book”.
+If a user can see a shelf but cannot see any books on it, the shelf should render as empty (no hidden titles).
 
-Reason:
+## Group-owned shelves
 
-- every group member should see every book on that group shelf
-- group shelves should not contain books that disappear for some group members
-- shelves organize presentation; `LibraryGroup`s still define access
+Group-owned shelves are owned by a LibraryGroup and intended to organize books within that group.
 
-When a book is removed from a `LibraryGroup`:
+Important rule:
 
-- the server should remove that book from shelves owned by that `LibraryGroup`
-- do this cleanup in the group assignment service later (not by relying on UI reminders)
+- when adding/removing shelf items, the API enforces that the editor is allowed to edit the shelf
+- for group-owned shelves, adding is further constrained by group context (the API is authoritative)
 
-## 7. Public semantics
+## User-owned shelves
 
-Public is:
+User-owned shelves are personal organization with an optional listed mode.
 
-- a default/fallback `LibraryGroup`
-- not mandatory membership
-- identified by `ServerSetting(public_group_id)`
+Write constraint:
 
-Public shelves:
+- when adding a book to a user-owned shelf, the server enforces that the editor can view the book at write time
 
-- are group-owned shelves for the Public group
-- visible to Public members and broad roles
-- editable only by Owner/Manager/Librarian
-- do not grant access to Public books
+## API endpoints
 
-## 8. Policy helpers to implement later
+Shelves are under `/api/v1/shelves/`:
 
-Planned policy helpers:
-
-- `can_view_shelf(user, shelf)`
-- `can_edit_shelf(user, shelf)`
-- `can_add_book_to_shelf(user, book, shelf)`
-- `can_remove_book_from_shelf(user, book, shelf)`
-
-Rules:
-
-`can_view_shelf`:
-
-- user shelf `private`: owner only
-- user shelf `listed`: authenticated users
-- group shelf: group members + Owner/Manager/Librarian
-
-`can_edit_shelf`:
-
-- user shelf: owner only
-- group shelf: Owner/Manager/Librarian, or curator of owning non-Public group
-
-`can_add_book_to_shelf`:
-
-- user shelf: `can_edit_shelf` and `can_view_book(user, book)`
-- group shelf: `can_edit_shelf` and book is assigned to `shelf.owner_group`
-
-Rendering direction:
-
-- first check `can_view_shelf`
-- then filter shelf items/books according to shelf type and book access policy
-
-## 9. API
-
-## 10. Product UI behavior
-
-- Shelf edit (`/shelves/<shelf_id>/edit/`) is the full shelf management page.
-- Reordering is numeric/simple (position input + move up/down); no drag/drop yet.
-- Deleting a shelf deletes only the shelf and its shelf items (never books or files).
-- Group-owned shelf edit only allows adding books assigned to the owning group (API authoritative; UI may hint using `book.groups[]`).
-
-This is a likely REST shape; it is not implemented-current unless documented elsewhere.
-
-- `GET /api/v1/shelves/`
-- `POST /api/v1/shelves/`
+- `GET /api/v1/shelves/` (paginated)
+  - filters:
+    - `?owner_group=<group_id>` (group-owned shelves for a group)
+    - `?book=<book_id>` (shelves containing the book; includes `matched_item_id` when applicable)
+- `POST /api/v1/shelves/` (create)
 - `GET /api/v1/shelves/<id>/`
 - `PATCH /api/v1/shelves/<id>/`
 - `DELETE /api/v1/shelves/<id>/`
-- `GET /api/v1/shelves/<id>/items/`
-- `POST /api/v1/shelves/<id>/items/`
-- `PATCH /api/v1/shelves/<id>/items/<item_id>/`
-- `DELETE /api/v1/shelves/<id>/items/<item_id>/`
+- items:
+  - `GET /api/v1/shelves/<id>/items/` (paginated)
+  - `POST /api/v1/shelves/<id>/items/`
+  - `PATCH /api/v1/shelves/<id>/items/<item_id>/`
+  - `DELETE /api/v1/shelves/<id>/items/<item_id>/`
 
-## 10. Planned UI (direction only)
+Notes:
 
-Global shelves section:
+- Shelf item `book` summaries include `cover_url` when available.
 
-- `/shelves/` lists:
-  - my shelves
-  - listed user shelves visible to me
-  - group shelves visible to me
-- `/shelves/new/` creates a shelf
-- `/shelves/<id>/` views a shelf
-- `/shelves/<id>/edit/` edits shelf details/items where allowed
+## Product UI
 
-Group pages:
+Product UI routes:
 
-- group view “Shelves” tab lists group-owned shelves
-- group edit “Shelves” tab manages group-owned shelves where allowed
+- `GET /shelves/` (list)
+- `GET /shelves/new/` (create)
+- `GET /shelves/<shelf_id>/` (view)
+- `GET /shelves/<shelf_id>/edit/` (edit/manage items)
 
-Book edit page:
+Behavior:
 
-- a future “Shelves” tab may show shelves containing this book
+- Shelf edit is the primary shelf management page (add/remove items, ordering, delete).
+- Book detail and book edit pages surface shelf context (shelves containing the book).
+- Group pages include shelf tabs for group-owned shelves.
 
-Implementation note:
+## Service Hatch / admin
 
-- Product UI now includes shelf pages under `/shelves/` and integrates shelf context into group/book pages. Item management lives on the Shelf Edit page (not on group/book pages).
+Django admin at `/admin/` is the service hatch and can inspect/edit shelf internals for recovery/debugging. It is not the product UI.
 
-## 11. Non-goals
+## Non-goals
 
-- Do not use shelves for access control.
-- Do not make group shelves publicly discoverable outside the group.
-- Do not add social/follow/federation features.
-- Do not implement reader-client shelf UX yet.
-- Do not implement drag/drop ordering initially.
-- Do not implement global shelf discovery beyond listed user shelves.
-- Do not implement separate UserShelf/GroupShelf tables unless future needs prove one model is insufficient.
+- Shelves are not access control.
+- No public/anonymous shelf browsing.
+- No drag/drop ordering UI (ordering is numeric inputs).
+- No reader-client shelf UX (Client API bearer tokens are not enabled for shelves endpoints).
 
-## Service hatch
+## Future possibilities
 
-Shelf internals are available for debugging/repair via Django admin at `/admin/` (service hatch). This is not the product UI.
+- Reader-client shelves support (explicit allow-list; keep write rules conservative).
+- Server-side cleanup hooks when removing a book from a LibraryGroup (e.g. removing from shelves owned by that group).
+- Bulk reordering APIs.

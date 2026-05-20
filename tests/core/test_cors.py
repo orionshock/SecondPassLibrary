@@ -37,6 +37,14 @@ class CorsPolicyTests(TestCase):
         self.assertIn(response.status_code, (200, 302))
         self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
 
+    def test_product_ui_app_is_not_cors_open(self):
+        response = self.client.get(
+            "/app/",
+            HTTP_ORIGIN="http://evil.example",
+        )
+        self.assertIn(response.status_code, (200, 302))
+        self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
+
     def test_api_allows_idempotency_key_header_in_preflight(self):
         response = self.client.options(
             "/api/v1/reading/annotations/",

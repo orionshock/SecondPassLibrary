@@ -233,7 +233,7 @@ When exposing groups through the API:
 Not implemented (non-goals):
 
 - No public API for creating/deleting LibraryGroups.
-- No public API for creating/deleting LibraryGroups via the product UI yet.
+- The product UI does not provide create/delete group workflows; LibraryGroups are currently bootstrap/admin-oriented (use the Service Hatch / Django admin when needed).
 
 ## Shelves are separate (design principle)
 
