@@ -31,7 +31,7 @@ Notes:
   - EPUB3 manifest item with `properties~="cover-image"`
   - EPUB2 `<meta name="cover" content="...">` + manifest lookup
 - Unsupported/corrupt/oversized covers are ignored; import still succeeds.
-- OPF sidecar cover/metadata support is planned follow-up work.
+- ZIP imports can also use OPF sidecars (Calibre-style) to bootstrap metadata and cover for new books only.
 
 ## ZIP OPF sidecars (current)
 

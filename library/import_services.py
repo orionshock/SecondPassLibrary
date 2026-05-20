@@ -65,10 +65,21 @@ def _safe_zip_member_name(name: str) -> str | None:
         return None
     if name.startswith(("/", "\\")) or ":" in name:
         return None
-    normalized = Path(name)
-    if any(part in {"..", ""} for part in normalized.parts):
+    name = name.replace("\\", "/")
+
+    # Normalize harmless "./" segments so directory matching (e.g. metadata.opf)
+    # remains stable across ZIP tools.
+    parts = [p for p in name.split("/") if p != "."]
+    if any(p in {"", ".."} for p in parts):
         return None
-    return name.replace("\\", "/")
+    normalized = "/".join(parts)
+    if not normalized:
+        return None
+    if normalized.startswith("/"):
+        return None
+    if normalized.startswith("../") or normalized == "..":
+        return None
+    return normalized
 
 
 def _zip_sidecar_opf_for_epub(
@@ -168,12 +179,16 @@ def process_import_job(
                 members_index: dict[str, zipfile.ZipInfo] = {}
                 epub_members: list[zipfile.ZipInfo] = []
                 opfs_by_dir: dict[str, list[str]] = {}
+                collisions: set[str] = set()
 
                 for info in zf.infolist():
                     if info.is_dir():
                         continue
                     safe_name = _safe_zip_member_name(info.filename)
                     if safe_name is None:
+                        continue
+                    if safe_name in members_index:
+                        collisions.add(safe_name)
                         continue
                     info.filename = safe_name
                     members_index[safe_name] = info
@@ -184,6 +199,18 @@ def process_import_job(
                     elif lower.endswith(".opf"):
                         d = posixpath.dirname(safe_name)
                         opfs_by_dir.setdefault(d, []).append(safe_name)
+
+                if collisions:
+                    # If multiple ZIP members normalize to the same safe name,
+                    # treat that path as unsafe/ambiguous. Skip those entries.
+                    members_index = {k: v for (k, v) in members_index.items() if k not in collisions}
+                    epub_members = [i for i in epub_members if i.filename not in collisions]
+                    for d, names in list(opfs_by_dir.items()):
+                        filtered = [n for n in names if n not in collisions]
+                        if filtered:
+                            opfs_by_dir[d] = filtered
+                        else:
+                            opfs_by_dir.pop(d, None)
 
                 members = epub_members
                 job.total_found = len(members)
@@ -219,6 +246,8 @@ def process_import_job(
                         def asset_reader(member: str) -> bytes | None:
                             safe = _safe_zip_member_name(member)
                             if safe is None:
+                                return None
+                            if safe in collisions:
                                 return None
                             if safe not in members_index:
                                 return None
@@ -299,4 +328,3 @@ def process_import_job(
             except OSError:
                 pass
         staged_path.unlink(missing_ok=True)
-

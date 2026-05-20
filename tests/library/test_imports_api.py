@@ -281,6 +281,67 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         )
 
     @patch("library.services.epub.read_epub")
+    def test_zip_member_dot_segment_is_normalized_for_sidecar_matching(self, mock_read_epub):
+        mock_read_epub.return_value = _mock_epub()
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        self.client.login(username="u1", password="pw")
+
+        opf_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Dot Segment OPF Title</dc:title>
+    <meta name="cover" content="cov"/>
+  </metadata>
+  <manifest>
+    <item id="cov" href="cover.png" media-type="image/png"/>
+  </manifest>
+</package>
+"""
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            # Some ZIP tools include harmless "./" segments; importer should normalize these.
+            zf.writestr("dir/./Book.epub", b"epub-bytes")
+            zf.writestr("dir/metadata.opf", opf_xml)
+            zf.writestr("dir/cover.png", _png_bytes())
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = _response_data_dict(response)
+        self.assertEqual(data["total_found"], 1)
+
+        book = Book.objects.get(title="Dot Segment OPF Title")
+        self.assertTrue(bool(book.cover_file))
+        self.assertEqual(book.cover_source, "opf_sidecar")
+
+    @patch("library.services.epub.read_epub")
+    def test_zip_member_normalization_collision_is_skipped_safely(self, mock_read_epub):
+        mock_read_epub.return_value = _mock_epub()
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        self.client.login(username="u1", password="pw")
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            # These normalize to the same member name.
+            zf.writestr("dir/book.epub", b"bytes-a")
+            zf.writestr("dir/./book.epub", b"bytes-b")
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = _response_data_dict(response)
+        # Ambiguous/unsafe normalized paths are skipped (no items created).
+        self.assertEqual(data["total_found"], 0)
+        self.assertEqual(len(cast(list[Any], data["items"])), 0)
+
+    @patch("library.services.epub.read_epub")
     def test_zip_sidecar_metadata_opf_precedence_and_cover(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -64,6 +65,15 @@ class CoverValidationTests(TestCase):
         with self.assertRaises(ValueError):
             validate_cover_image_bytes(data=data)
 
+    def test_rejects_pillow_decompression_bomb_error(self):
+        bomb_error = getattr(Image, "DecompressionBombError", None)
+        if bomb_error is None:
+            self.skipTest("Pillow does not expose DecompressionBombError")
+
+        with patch("library.cover_services.Image.open", side_effect=bomb_error("bomb")):
+            with self.assertRaises(ValueError):
+                validate_cover_image_bytes(data=b"x" * 32)
+
 
 class CoverStorageTests(IsolatedMediaRootMixin, TestCase):
     def test_sets_book_cover_and_metadata_and_path(self):
@@ -82,4 +92,3 @@ class CoverStorageTests(IsolatedMediaRootMixin, TestCase):
         expected_prefix = f"covers/{info.sha256[:2]}/{info.sha256[2:4]}/{info.sha256}"
         self.assertTrue(book.cover_file.name.startswith(expected_prefix))
         self.assertTrue(book.cover_file.name.endswith(".png"))
-

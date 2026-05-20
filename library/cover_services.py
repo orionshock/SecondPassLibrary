@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import zipfile
 import posixpath
 import xml.etree.ElementTree as ET
+import warnings
 
 from django.core.files.base import ContentFile
 
@@ -61,25 +62,39 @@ def validate_cover_image_bytes(
     previous_load_truncated = ImageFile.LOAD_TRUNCATED_IMAGES
     ImageFile.LOAD_TRUNCATED_IMAGES = False
     try:
-        with Image.open(BytesIO(data)) as img:
-            # Ensure the image decodes (not just header-parse).
-            img.load()
+        bomb_warning = getattr(Image, "DecompressionBombWarning", None)
+        bomb_error = getattr(Image, "DecompressionBombError", None)
 
-            pil_format = (img.format or "").upper().strip()
-            if pil_format not in _FORMAT_TO_MIME_EXT:
-                raise ValueError("Unsupported cover image format (JPEG/PNG/WEBP only).")
+        try:
+            with warnings.catch_warnings():
+                if bomb_warning is not None:
+                    warnings.simplefilter("error", bomb_warning)
 
-            width, height = img.size
-            if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
-                raise ValueError("Invalid cover image dimensions.")
+                with Image.open(BytesIO(data)) as img:
+                    # Ensure the image decodes (not just header-parse).
+                    img.load()
 
-            if width > MAX_COVER_DIMENSION or height > MAX_COVER_DIMENSION:
-                raise ValueError("Cover image dimensions are too large.")
+                    pil_format = (img.format or "").upper().strip()
+                    if pil_format not in _FORMAT_TO_MIME_EXT:
+                        raise ValueError("Unsupported cover image format (JPEG/PNG/WEBP only).")
 
-            mime, ext = _FORMAT_TO_MIME_EXT[pil_format]
-    except UnidentifiedImageError as exc:
-        filename_note = f" ({source_filename})" if source_filename else ""
-        raise ValueError(f"Invalid or corrupt cover image{filename_note}.") from exc
+                    width, height = img.size
+                    if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+                        raise ValueError("Invalid cover image dimensions.")
+
+                    if width > MAX_COVER_DIMENSION or height > MAX_COVER_DIMENSION:
+                        raise ValueError("Cover image dimensions are too large.")
+
+                    mime, ext = _FORMAT_TO_MIME_EXT[pil_format]
+        except UnidentifiedImageError as exc:
+            filename_note = f" ({source_filename})" if source_filename else ""
+            raise ValueError(f"Invalid or corrupt cover image{filename_note}.") from exc
+        except Exception as exc:
+            if bomb_error is not None and isinstance(exc, bomb_error):
+                raise ValueError("Cover image rejected (possible decompression bomb).") from exc
+            if bomb_warning is not None and isinstance(exc, bomb_warning):
+                raise ValueError("Cover image rejected (possible decompression bomb).") from exc
+            raise
     finally:
         ImageFile.LOAD_TRUNCATED_IMAGES = previous_load_truncated
 

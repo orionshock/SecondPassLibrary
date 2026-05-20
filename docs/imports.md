@@ -33,11 +33,17 @@ GET /api/v1/library/imports/<id>/
 
 - A single `.epub`
 - A simple `.zip` containing `.epub` files (non-EPUB entries are ignored)
+  - ZIP imports may include OPF sidecars (Calibre-style) to bootstrap metadata and cover for **new books only**.
+  - Sidecar lookup (per EPUB member), in order:
+    - `metadata.opf` in the same directory as the EPUB
+    - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
+    - if there is exactly one `.opf` in the same directory, use it
+  - OPF values take precedence over EPUB metadata when present.
+  - Duplicate EPUB checksum imports are still rejected/skipped and do not refresh metadata or covers.
 
 ### Unsupported (by design, for now)
 
-- Calibre/library backup ZIPs
-- OPF sidecars
+- Calibre sync/import of `metadata.db` (this is not a Calibre library sync target)
 - PDF
 
 ## Models

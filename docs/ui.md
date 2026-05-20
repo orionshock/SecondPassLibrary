@@ -52,7 +52,17 @@ The imports page is API-driven using:
 - `GET /api/v1/library/imports/` (paginated job list)
 - `POST /api/v1/library/imports/` (multipart upload field `file`)
 
-It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre library imports, OPF sidecars, or PDF).
+It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre sync/import of `metadata.db`, and no PDF).
+
+ZIP OPF sidecars (current):
+
+- When importing a `.zip`, the importer can optionally use an OPF sidecar to bootstrap metadata and cover **for new books only** (not a sync/refresh mechanism).
+- Sidecar lookup (per EPUB member), in order:
+  - `metadata.opf` in the same directory as the EPUB (Calibre-style)
+  - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
+  - if there is exactly one `.opf` in the same directory, use it
+- OPF sidecar values take precedence over EPUB embedded metadata when present.
+- Duplicate EPUB checksum imports are rejected/skipped and do not refresh metadata or covers.
 
 The groups UI is API-driven using:
 
