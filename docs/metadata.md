@@ -48,6 +48,12 @@ Metadata precedence:
 - OPF sidecar values win when present; missing fields fall back to EPUB metadata.
 - Duplicate EPUB checksum imports are still treated as duplicates and do not refresh metadata or covers.
 
+Media serving note:
+
+- Covers are stored under `MEDIA_ROOT` and addressed under `MEDIA_URL` (default: `/media/`).
+- In development, Django serves `MEDIA_URL` only when `DEBUG=True` as a convenience.
+- In production, deployments should serve `MEDIA_ROOT` at `MEDIA_URL` outside Django.
+
 ## Duplicate detection and filenames
 
 - Duplicate EPUB detection is checksum-driven (file SHA-256), not identifier-driven.

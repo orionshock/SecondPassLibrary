@@ -16,9 +16,11 @@ ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) t
 
 ## Media serving (dev)
 
-In local development (`DEBUG=True`), Django serves `MEDIA_URL` (`/media/`) from `MEDIA_ROOT` so cover images render in the product UI.
+Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/media/`) and stored under `MEDIA_ROOT` (default: `userdata/media`).
 
-Production deployments should serve `MEDIA_ROOT` at `MEDIA_URL` via the front-end web server (Django should not serve media in production).
+In local development (`DEBUG=True`), Django serves `MEDIA_ROOT` at `MEDIA_URL` so cover images render in the product UI.
+
+Production deployments should serve `MEDIA_ROOT` at `MEDIA_URL` via the front-end web server/reverse proxy/static file layer (Django should not serve media in production).
 
 Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
 

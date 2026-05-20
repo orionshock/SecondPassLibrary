@@ -44,11 +44,22 @@ urlpatterns = [
 ]
 
 def _debug_media(request, path: str):
+    """
+    Development convenience: serve MEDIA_ROOT at MEDIA_URL via Django only when DEBUG=True.
+
+    Notes:
+    - MEDIA_URL (default: /media/) is the canonical public URL prefix for user media
+      like cover images.
+    - In production, deployments should serve MEDIA_ROOT at MEDIA_URL via their web
+      server/reverse proxy/static file layer, not Django.
+    """
     if not settings.DEBUG:
         raise Http404()
     return static_serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
 urlpatterns += [
+    # Always register the route so generated URLs remain stable; it only serves
+    # content when DEBUG=True.
     re_path(r"^media/(?P<path>.*)$", _debug_media),
 ]
