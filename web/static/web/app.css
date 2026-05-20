@@ -210,6 +210,26 @@ a:hover { text-decoration: underline; }
 }
 .search__input:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+.form { margin-top: 10px; }
+.form-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.form-control:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+.form-control--textarea { resize: vertical; min-height: 92px; }
+
 .button {
   padding: 8px 10px;
   border-radius: 10px;
@@ -218,6 +238,25 @@ a:hover { text-decoration: underline; }
   color: var(--text);
   cursor: pointer;
 }
+.button--danger {
+  border-color: rgba(251, 113, 133, 0.6);
+  background: rgba(251, 113, 133, 0.12);
+}
+.button--danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.group-edit-summary {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.group-edit-summary__description { margin-top: 10px; }
+
+.danger-zone {
+  margin-top: 16px;
+  border-color: rgba(251, 113, 133, 0.6);
+  background: rgba(251, 113, 133, 0.06);
+}
+.danger-zone__list { margin-top: 6px; }
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

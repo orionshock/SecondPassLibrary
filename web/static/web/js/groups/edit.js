@@ -120,7 +120,7 @@ export async function initGroupEdit() {
   const groupId = root.getAttribute("data-group-id") || "";
   if (!groupId) return;
 
-  setStatus(statusEl, "Loadingâ€¦", false);
+  setStatus(statusEl, "Loading...", false);
   visible(root, false);
   visible(summaryEl, false);
   visible(notAllowedEl, false);
@@ -193,7 +193,7 @@ export async function initGroupEdit() {
     deleteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (deleteBtn.disabled) return;
-      deleteStatus.textContent = "Deleting…";
+      deleteStatus.textContent = "Deleting...";
       deleteStatus.classList.remove("error");
       setGlobalError("");
 
@@ -226,7 +226,7 @@ export async function initGroupEdit() {
   if (allowDescriptionEdit) {
     editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      setSaveStatus("Savingâ€¦", false);
+      setSaveStatus("Saving...", false);
       setGlobalError("");
 
       try {

@@ -2,27 +2,26 @@
 
 {% block page_id %}group-edit{% endblock %}
 
-{% block title %}Edit group · {{ server_name }}{% endblock %}
+{% block title %}Edit group - {{ server_name }}{% endblock %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/groups/{{ group_id|escape }}/" class="pill">← Back to Group</a>
+      <a href="/groups/{{ group_id|escape }}/" class="pill">&larr; Back to Group</a>
       <h1 class="page-title" id="group-edit-title">Group</h1>
       <div class="muted" id="group-edit-subtitle"></div>
     </div>
   </div>
 
-  <div id="group-edit-status" class="muted">Loading…</div>
+  <div id="group-edit-status" class="muted">Loading...</div>
   <div id="group-edit-not-allowed" class="error is-hidden">Not allowed.</div>
 
-  <section id="group-edit-summary" class="card is-hidden" data-group-id="{{ group_id|escape }}">
-    <h2 class="card__title">Details</h2>
-    <div id="group-edit-badges"></div>
-    <div id="group-edit-description-preview" class="muted" style="margin-top: 10px;"></div>
-  </section>
-
   <section id="group-edit-root" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+    <div id="group-edit-summary" class="group-edit-summary is-hidden">
+      <div id="group-edit-badges"></div>
+      <div id="group-edit-description-preview" class="muted group-edit-summary__description"></div>
+    </div>
+
     <div class="tabs" role="tablist" aria-label="Group edit tabs">
       <button class="tab-button is-active" type="button" data-tab="details">Details</button>
       <button class="tab-button" type="button" data-tab="books">Books</button>
@@ -31,28 +30,26 @@
     </div>
 
     <div id="tab-details" class="tab-panel" data-tab-panel="details">
-      <h2 class="card__title">Description</h2>
-
-      <form id="group-edit-form" style="margin-top: 10px;">
+      <form id="group-edit-form" class="form">
         {% csrf_token %}
         <div class="kv">
           <div class="kv__k"><label for="group-edit-description">Description</label></div>
           <div class="kv__v">
-            <textarea id="group-edit-description" rows="4" style="width: 100%;"></textarea>
+            <textarea id="group-edit-description" class="form-control form-control--textarea" rows="4"></textarea>
           </div>
         </div>
 
-        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div class="form-actions">
           <button id="group-edit-save" class="button" type="submit">Save</button>
           <span id="group-edit-save-status" class="muted"></span>
         </div>
       </form>
 
-      <section id="group-delete-root" class="card is-hidden" style="margin-top: 16px; border: 1px solid #c33;">
+      <section id="group-delete-root" class="card danger-zone is-hidden">
         <h2 class="card__title">Danger Zone</h2>
         <div class="muted">
           Deleting a group is destructive:
-          <ul style="margin-top: 6px;">
+          <ul class="danger-zone__list">
             <li>removes all book assignments to this group</li>
             <li>removes all user memberships in this group</li>
             <li>deletes group-owned shelves and their shelf items</li>
@@ -61,16 +58,16 @@
           Books/users left with no groups fall back to Public.
         </div>
 
-        <form id="group-delete-form" style="margin-top: 10px;">
+        <form id="group-delete-form" class="form">
           {% csrf_token %}
           <div class="kv">
             <div class="kv__k"><label for="group-delete-confirm">Type the group name to confirm</label></div>
             <div class="kv__v">
-              <input id="group-delete-confirm" style="width: 100%;" placeholder="Group name" />
+              <input id="group-delete-confirm" class="form-control" type="text" placeholder="Group name" />
             </div>
           </div>
-          <div style="margin-top: 10px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
-            <button id="group-delete-btn" class="button" type="submit" disabled>Delete group</button>
+          <div class="form-actions">
+            <button id="group-delete-btn" class="button button--danger" type="submit" disabled>Delete group</button>
             <span id="group-delete-status" class="muted"></span>
           </div>
         </form>
@@ -82,7 +79,7 @@
 
       <form id="group-edit-book-search-form" class="search is-hidden" autocomplete="off">
         <label class="search__label" for="group-edit-book-search">Find a book to add</label>
-        <input id="group-edit-book-search" class="search__input" placeholder="Search title, author, series…" />
+        <input id="group-edit-book-search" class="search__input" placeholder="Search title, author, series..." />
         <button id="group-edit-book-search-btn" class="button" type="submit">Search</button>
         <span id="group-edit-book-search-status" class="muted"></span>
       </form>
@@ -105,7 +102,7 @@
         </form>
       </details>
 
-      <div id="group-edit-books-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-edit-books-status" class="muted" style="margin-top: 10px;">Loading...</div>
       <div id="group-edit-books-results" class="books"></div>
 
       <div class="pager">
@@ -129,7 +126,7 @@
         <span id="group-edit-add-member-status" class="muted"></span>
       </form>
 
-      <div id="group-edit-members-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-edit-members-status" class="muted" style="margin-top: 10px;">Loading...</div>
       <div id="group-edit-members-results" class="books"></div>
 
       <div class="pager">
@@ -144,7 +141,7 @@
       <div id="group-edit-shelves-actions" class="is-hidden" style="margin-top: 10px;">
         <a id="group-edit-shelves-create-link" class="button" href="#">Create shelf for this group</a>
       </div>
-      <div id="group-edit-shelves-status" class="muted" style="margin-top: 10px;">Loading…</div>
+      <div id="group-edit-shelves-status" class="muted" style="margin-top: 10px;">Loading...</div>
       <div id="group-edit-shelves-results" class="books"></div>
       <div class="pager">
         <button id="group-edit-shelves-prev" class="button" type="button" disabled>Previous</button>

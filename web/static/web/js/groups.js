@@ -1,2 +1,7 @@
-export { initGroupsList, initGroupView, initGroupEdit, initGroupDetail } from "./groups/main.js";
-
+export {
+  initGroupsList,
+  initGroupView,
+  initGroupEdit,
+  initGroupDetail,
+  initGroupNew,
+} from "./groups/main.js";
