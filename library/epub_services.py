@@ -8,11 +8,9 @@ from pathlib import Path
 import re
 from typing import Any, Callable, Optional, cast
 
-from django.core.files import File
-
+from .book_import_services import persist_new_imported_book
 from .cover_services import extract_epub_embedded_cover_to_book
-from .group_services import ensure_book_public_assignment
-from .models import Author, Book, BookFile, BookIdentifier, Series
+from .models import Book, BookFile, BookIdentifier
 from .opf_services import extract_opf_sidecar_metadata, merge_metadata, try_set_book_cover_from_sidecar_opf
 
 
@@ -222,28 +220,6 @@ def _best_isbn_from_identifiers(identifiers: list[dict[str, Any]]) -> str:
     return isbn10 or ""
 
 
-def _create_book_identifiers(*, book: Book, identifiers: list[dict[str, Any]]) -> None:
-    for ident in identifiers:
-        scheme = _clean_str(ident.get("scheme"))
-        value = _clean_str(ident.get("value"))
-        if not scheme or not value:
-            continue
-        source = _clean_str(ident.get("source", ""))
-        is_primary = bool(ident.get("is_primary", False))
-        BookIdentifier.objects.get_or_create(
-            book=book,
-            scheme=scheme,
-            value=value,
-            defaults={"source": source, "is_primary": is_primary},
-        )
-
-    primaries = list(BookIdentifier.objects.filter(book=book, is_primary=True).order_by("created_at"))
-    if len(primaries) > 1:
-        for extra in primaries[1:]:
-            extra.is_primary = False
-            extra.save(update_fields=["is_primary", "updated_at"])
-
-
 def _parse_series_index(value: object) -> Decimal | None:
     try:
         d = Decimal(str(value).strip())
@@ -364,72 +340,36 @@ def import_epub_impl(
         best_isbn_from_identifiers=_best_isbn_from_identifiers,
     )
 
-    authors = []
-    for author_name in metadata.get("authors", []):
-        author, _ = Author.objects.get_or_create(name=author_name.strip())
-        authors.append(author)
-
-    isbn = metadata.get("isbn") or ""
-
-    series_obj: Series | None = None
-    series_name = _clean_str(metadata.get("series_name", ""))
-    if series_name:
-        series_obj, _ = Series.objects.get_or_create(name=series_name)
-
-    series_index_value: Decimal | None = None
     raw_series_index = metadata.get("series_index")
     if raw_series_index is not None and raw_series_index != "":
-        series_index_value = _parse_series_index(raw_series_index)
+        metadata["series_index"] = _parse_series_index(raw_series_index)
 
-    book = Book.objects.create(
-        title=metadata.get("title") or path.stem,
-        subtitle=metadata.get("subtitle", ""),
-        summary=metadata.get("summary", ""),
-        publisher=metadata.get("publisher", ""),
-        language=metadata.get("language", ""),
-        published_date=metadata.get("published_date"),
-        isbn=isbn,
-        subjects=metadata.get("subjects") or [],
-        series=series_obj,
-        series_index=series_index_value,
+    def cover_hook(book: Book) -> None:
+        if sidecar_opf_bytes and sidecar_opf_dir and sidecar_asset_reader:
+            try:
+                try_set_book_cover_from_sidecar_opf(
+                    book=book,
+                    opf_xml=sidecar_opf_bytes,
+                    opf_dir=sidecar_opf_dir,
+                    asset_reader=sidecar_asset_reader,
+                )
+            except Exception:
+                pass
+
+        if not getattr(book, "cover_file", None):
+            try:
+                extract_epub_embedded_cover_to_book(book=book, epub_path=str(path), save=True)
+            except Exception:
+                pass
+
+    book, book_file = persist_new_imported_book(
+        metadata=metadata,
+        source_path=path,
+        checksum=checksum,
+        file_size=file_size,
+        added_by=None,
+        cover_hook=cover_hook,
     )
-    if authors:
-        book.authors.set(authors)
-
-    ensure_book_public_assignment(book=book, added_by=None)
-
-    identifiers: list[dict[str, Any]] = metadata.get("identifiers") or []
-    _create_book_identifiers(book=book, identifiers=identifiers)
-
-    if sidecar_opf_bytes and sidecar_opf_dir and sidecar_asset_reader:
-        try_set_book_cover_from_sidecar_opf(
-            book=book,
-            opf_xml=sidecar_opf_bytes,
-            opf_dir=sidecar_opf_dir,
-            asset_reader=sidecar_asset_reader,
-        )
-
-    if not getattr(book, "cover_file", None):
-        try:
-            extract_epub_embedded_cover_to_book(book=book, epub_path=str(path), save=True)
-        except Exception:
-            pass
-
-    with open(path, "rb") as f:
-        try:
-            _existing_file = cast(Any, book).file
-        except BookFile.DoesNotExist:
-            _existing_file = None
-        if _existing_file is not None:
-            raise ValueError("Book already has a file; refusing to create a second BookFile.")
-        book_file = BookFile.objects.create(
-            book=book,
-            file=File(f, name=f"{checksum}.epub"),
-            format=BookFile.FORMAT_EPUB,
-            checksum=checksum,
-            file_size=file_size,
-            source_filename=path.name,
-        )
 
     return ImportResult(
         status=ImportStatus.IMPORTED,
@@ -438,4 +378,3 @@ def import_epub_impl(
         checksum=checksum,
         message="Successfully imported EPUB.",
     )
-
