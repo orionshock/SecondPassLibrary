@@ -345,18 +345,17 @@ UI behaviors:
 
 Recommendation (first pass): start with Django templates + vanilla JS progressive enhancement. Keep navigation and shell server-rendered; use the API for the dynamic parts (lists, uploads, inline edits) and rely on `/api/v1/accounts/me/` to build the initial UI state.
 
-## 12. API gaps before UI
+## 12. Known limitations
 
-These gaps are likely to block or significantly complicate a first product UI:
+Current limitations and intentional non-goals that affect the product UI:
 
 - LibraryGroups:
-  - no public API for creating/deleting groups
-  - no public API for managing group memberships (adding/removing users, assigning curator roles)
+  - no public API for creating/deleting groups (groups are currently bootstrap/admin-oriented)
 - Reading:
-  - sessions list has no server-side filter/query params documented for common UI needs (e.g., filter by `book_id`, active-only); the UI can work around this initially, but it will not scale well
+  - the UI focuses on “continue reading” and per-book flows; a dedicated session history UI is not implemented
 - Users:
-  - no user create/invite flow yet (acceptable for bootstrap/admin usage, but limits self-host onboarding UX)
+  - no email-based invites or password reset flows (managed user creation/reset exists for self-host administration)
 
-Non-blocking but useful:
+Nice to have:
 
-- A small "system info" endpoint for build/version and configured features (optional; can also be static in the UI for now).
+- A small "system info" endpoint for build/version and configured features (optional; UI can also display a static build label).

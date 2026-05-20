@@ -119,6 +119,10 @@ Notes:
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
 
-## Device attribution (v1)
+## Client attribution
 
-The v1 Reading API does not model a separate `Device` object. Client/auth identity is represented by `accounts.UserClientSession` (bearer tokens). Future versions may add optional client-session attribution fields, but that is not implemented yet.
+The Reading API does not model a separate `Device` object. Client/auth identity is represented by `accounts.UserClientSession` (Client API bearer tokens).
+
+Future possibilities:
+
+- Optional client-session attribution fields on reading data (without changing reading data ownership rules).

@@ -202,11 +202,11 @@ Safe changes to group assignments should go through:
 
 This prevents scattered direct `BookGroupAssignment` writes and centralizes invariants (including the Public fallback invariant).
 
-## Shelves (planned)
+## Shelves
 
-Shelves are a planned presentation/organization feature and **do not** grant book access. See `docs/shelves.md`.
+Shelves are a presentation/organization feature and **do not** grant book access. See `docs/shelves.md`.
 
-Shelves API is implemented under `/api/v1/shelves/`. Product UI for shelves is intentionally deferred.
+Shelves API is implemented under `/api/v1/shelves/`. Shelves have product UI support; they remain separate from access control.
 
 ## Group membership management (current)
 
@@ -230,14 +230,14 @@ When exposing groups through the API:
 - Group curation endpoints should call the safe group curation services above.
 - Group presentation updates should be limited to `description` via `PATCH /api/v1/library/groups/<group_id>/`.
 
-Not implemented yet (by design, for now):
+Not implemented (non-goals):
 
 - No public API for creating/deleting LibraryGroups.
 - No public API for creating/deleting LibraryGroups via the product UI yet.
 
-## Shelves are separate (future)
+## Shelves are separate (design principle)
 
-LibraryGroups are access scopes. Shelves are future presentation/organization objects.
+LibraryGroups are access scopes. Shelves are presentation/organization objects.
 
 - A shelf never grants access to a book.
 - Shelf visibility controls whether the shelf/list itself can be seen.

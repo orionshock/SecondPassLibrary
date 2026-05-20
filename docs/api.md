@@ -41,7 +41,7 @@ Second Pass Library uses two broad categories of error responses:
 }
 ```
 
-2. **Standard DRF serializer validation errors** generally keep DRF's default field-error shape for now.
+2. **Standard DRF serializer validation errors** generally keep DRF's default field-error shape.
 
 Notes:
 
@@ -84,12 +84,13 @@ Response shape:
   - `POST /api/v1/accounts/users/` (creates a local Django user and returns a generated temporary password once)
   - `POST /api/v1/accounts/users/<id>/reset-password/` (Manager/Owner only; returns a generated temporary password once)
 
-## Client API (Phase 1)
+## Client API
 
-Phase 1 provides the Client API credential lifecycle. Client API bearer tokens are valid for:
+The Client API provides a pairing flow (human code + browser approval) and bearer tokens for reader clients. Client API bearer tokens are valid for:
 
 - `GET /api/v1/accounts/me/` only (not `PATCH`)
 - Selected **read-only** Library API endpoints (explicit allow-list; see Library section)
+- Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
 

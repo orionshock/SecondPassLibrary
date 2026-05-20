@@ -62,21 +62,8 @@ The current draft export extension is:
 .reading-session.jsonld
 ```
 
-## Future implementation notes
+## Future possibilities
 
-### Phase 1 (docs + mapping)
-
-- Document the profile and treat it as canonical direction.
-- Map current ReadingSession/Annotation/ReadingProgress models to the profile concepts.
-- Add helpers for W3C-style serialization without breaking the current reading API.
-
-### Phase 2 (API alignment)
-
-- Adjust model fields if needed to better represent the profile semantics.
-- Expose W3C-style read/write APIs for reading data.
-- Preserve unknown fields where practical on future import/export paths (round-trip external imports without data loss). The current public reading APIs reject unknown fields.
-
-### Phase 3 (portability)
-
-- Add export/import of `.reading-session.jsonld`.
-- Add `sourceImport` provenance for external imports (e.g. Kindle exports).
+- JSON-LD export/import of `.reading-session.jsonld` in an `AnnotationCollection` shape.
+- Optional provenance (`sourceImport`) for imported annotations/sessions, without changing normal client write semantics.
+- Additional W3C-style serialization helpers, without changing the current REST API surface unexpectedly.

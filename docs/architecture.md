@@ -7,8 +7,8 @@ Current apps:
 - `core`: shared base models, policy helpers, utilities
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
-- `reading`: devices, reading sessions, progress, annotations
-- `shelves`: shelves and shelf items (presentation/organization; planned UI later)
+- `reading`: reading sessions, progress, annotations
+- `shelves`: shelves and shelf items (presentation/organization; not access control)
 
 ## Server-wide settings
 
@@ -21,9 +21,9 @@ Notes:
 - Server identity is stored as `ServerSetting(server_name)` and `ServerSetting(server_description)` and is editable via an Owner-only UI page (`/server/`) and API endpoint (`/api/v1/server/settings/`).
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
 
-## Shelves (planned)
+## Shelves
 
-Shelves are planned as a separate Django app (likely `shelves`) and are strictly for presentation/organization, not access control. See `docs/shelves.md`.
+Shelves live in the `shelves` app and are strictly for presentation/organization, not access control. See `docs/shelves.md`.
 
 ## Service-layer rule
 
@@ -52,7 +52,7 @@ Position:
 - Django `User` is the canonical local user record.
 - `accounts.UserProfile` stores the app-level global role (`manager|librarian|reader`).
 - `accounts.UserWebSession` tracks active Django web sessions to support revocation (companion tracking only; does not replace Django sessions).
-- Client API bearer sessions are represented by `accounts.UserClientSession` (Phase 1 enables bearer tokens for `/api/v1/accounts/me/` only).
+- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, and reading user-data endpoints).
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
 - Email verification, password reset flows, MFA, and invite systems are not implemented yet.
 
@@ -74,9 +74,9 @@ Notes for future browser UI:
 - Session/CSRF behavior matters; any future web UI should account for CSRF when using session auth.
 - Basic auth should not be treated as the final production/client authentication strategy.
 
-Session revocation direction (planned web/client sessions and terminology) is documented in `docs/session-management.md`.
+Session revocation rules and terminology are documented in `docs/session-management.md`.
 
-Planned reader-client PIN/code authorization (Client API tokens) is documented in `docs/client-api-auth.md`.
+Client API pairing (human code + approval + bearer token) is documented in `docs/client-api-auth.md`.
 
 ## Runtime/user data layout
 
@@ -94,3 +94,14 @@ userdata/
 ## File storage
 
 EPUB files are stored content-addressed by checksum (SHA-256). Imported filenames are diagnostic context only; human-readable filenames are derived from metadata when downloading/exporting.
+
+## Library import services (current)
+
+The library import pipeline follows a facade + focused-module structure:
+
+- `library/services.py`: public facade (stable import paths and test patch points)
+- `library/import_services.py`: `ImportJob` staging and ZIP orchestration
+- `library/epub_services.py`: EPUB parsing and normalized metadata extraction/merge
+- `library/opf_services.py`: OPF sidecar parsing and merge helpers
+- `library/book_import_services.py`: persistence/orchestration for new `Book` records (create-only)
+- `library/cover_services.py`: cover validation/storage and embedded cover discovery

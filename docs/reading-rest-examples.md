@@ -335,9 +335,13 @@ Notes:
 - Delete is a **soft delete**: it sets `is_deleted=true` and returns `204 No Content`.
 - Soft-delete is allowed even for closed sessions (deletion is not treated as “mutating reading content”).
 
-## 10) Device attribution (v1)
+## 10) Client attribution
 
-The v1 Reading API does not model a separate device object. Client/auth identity is represented by the Client API bearer token (`accounts.UserClientSession`). Future versions may add optional attribution fields, but that is not implemented yet.
+The Reading API does not model a separate device object. Client/auth identity is represented by the Client API bearer token (`accounts.UserClientSession`).
+
+Future possibilities:
+
+- Optional client-session attribution fields on reading data (without changing reading data ownership rules).
 
 ## 11) Common validation failures
 

@@ -41,9 +41,9 @@ GET /api/v1/library/imports/<id>/
   - OPF values take precedence over EPUB metadata when present.
   - Duplicate EPUB checksum imports are still rejected/skipped and do not refresh metadata or covers.
 
-### Unsupported (by design, for now)
+### Unsupported (non-goals)
 
-- Calibre sync/import of `metadata.db` (this is not a Calibre library sync target)
+- Calibre sync/import of `metadata.db` (Second Pass Library is not a Calibre sync target)
 - PDF
 
 ## Models

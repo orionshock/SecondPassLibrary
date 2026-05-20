@@ -1,20 +1,14 @@
-# Session management (design)
+# Session management
 
-This document describes the direction for **authentication/login sessions** vs **reading sessions**.
+This document describes **authentication/login sessions** vs **reading sessions** and the current revocation rules.
 
-Status:
-
-- Phase 1 (web session tracking + revocation) is implemented.
-- Phase 1 Client API sessions (PIN/code authorize + bearer token) are implemented.
-- Profile listing + revocation of Client API sessions is implemented.
-
-See `docs/client-api-auth.md` for the planned PIN/code authorization flow for reader clients.
+See `docs/client-api-auth.md` for Client API pairing and bearer token semantics.
 
 ## Terminology
 
 - **Django web session**: the browser/product UI login session managed by Django’s session framework (cookie + server-side session).
-- **UserWebSession**: planned companion model to track and revoke Django web sessions.
-- **UserClientSession**: bearer-token session for reader/API clients (implemented; bearer tokens are enabled for `/api/v1/accounts/me/`, library read/download, and reading user-data endpoints).
+- **UserWebSession**: companion model to track and revoke Django web sessions.
+- **UserClientSession**: bearer-token session for reader/API clients (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, and reading user-data endpoints).
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
 
 ## Web session policy
@@ -31,7 +25,7 @@ Web session revocation follows these rules:
 - **Client API bearer sessions**:
   - revoke Client API sessions (see `revoke_all_api_sessions(user)`)
 
-API endpoints remain authoritative; these are *policy goals* for the implementation.
+API endpoints remain authoritative; the rules below describe the intended behavior enforced by the session control module.
 
 ## Models
 
@@ -42,7 +36,7 @@ API endpoints remain authoritative; these are *policy goals* for the implementat
 - `user_agent`
 - `ip_address`
 - `created_at`
-- `updated_at` (used as `last_seen` for now)
+- `updated_at` (currently acts as `last_seen`)
 
 ### `accounts.UserClientSession` (implemented)
 
@@ -76,40 +70,23 @@ Functions:
 
 These functions should be called by views/services that implement password changes, managed resets, and disable flows.
 
-## Product UI direction (planned)
+## Product UI
 
-The Product UI exposes basic web session controls inside the **Profile** page (not a separate `/profile/security/` route):
+The Product UI exposes basic session controls inside the **Profile** page:
 
-- Change password (existing `/profile/password/` remains the password form route today)
+- Change password (`/profile/password/`)
 - “Log out other web sessions” (revoke other Django web sessions; keeps the current session)
-- “Log out everywhere” (revoke all Django web sessions)
-- Later: list/revoke API/client sessions (once API/client sessions exist)
-
-Status: the Profile page now lists and allows revoking the current user's active Client API sessions.
-
-Do not assume per-browser session listing in the first implementation; revocation-first is sufficient initially.
+- Client API sessions list + revoke (UserClientSession)
 
 ## Non-goals
 
-- No MFA (yet)
-- No email-based password reset (yet)
-- No OIDC (yet)
+- No MFA
+- No email-based password reset
+- No OIDC
 - No bearer-token access to product UI/admin endpoints
 - Do not conflate `reading.ReadingSession` with auth/login sessions
 
+## Future possibilities
 
-## Implementation phases
-
-Phase 1 (implemented):
-
-- `UserWebSession` model + middleware/hooks to track sessions
-- `accounts/session_control.py`
-- Password change/reset/disable flows revoke sessions correctly
-
-Phase 2:
-
-- Profile session management section (within `/profile/`) calling the revocation actions (implemented: logout other web sessions)
-
-Phase 3:
-
-- Profile UI listing/revocation for Client API sessions (UserClientSession)
+- Per-browser web session listing (revocation already exists; listing is optional).
+- Additional client-session attribution on reading data (without changing reading data ownership rules).
