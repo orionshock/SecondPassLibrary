@@ -109,7 +109,7 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
   - other users' shelves are read-only when visible (listed)
 - reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) for safe retries
-  - for “continue reading” UIs: `GET /api/v1/reading/sessions/recent/?limit=10`
+  - for "continue reading" UIs: `GET /api/v1/reading/sessions/recent/?limit=10`
 
 Management endpoints reject Client API tokens unless explicitly allowed.
 

@@ -10,7 +10,7 @@ from library.serializers import AuthorSummarySerializer, SeriesSummarySerializer
 from accounts.models import UserClientSession
 
 from .models import Shelf, ShelfItem
-from .policies import can_edit_shelf
+from .policies import can_client_bearer_edit_shelf, can_edit_shelf
 
 
 User = get_user_model()
@@ -60,10 +60,7 @@ class ShelfSerializer(serializers.ModelSerializer):
             return False
         # Client API bearer tokens may only edit personal shelves owned by the token user.
         if isinstance(getattr(request, "auth", None), UserClientSession):
-            return (
-                obj.owner_type == Shelf.OWNER_TYPE_USER
-                and getattr(obj, "owner_user_id", None) == getattr(user, "id", None)
-            )
+            return can_client_bearer_edit_shelf(user=user, shelf=obj)
         return can_edit_shelf(user=user, shelf=obj)
 
     class Meta:

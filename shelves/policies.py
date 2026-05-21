@@ -48,6 +48,20 @@ def can_edit_shelf(*, user, shelf: Shelf) -> bool:
     return False
 
 
+def can_client_bearer_edit_shelf(*, user, shelf: Shelf) -> bool:
+    """
+    Client API bearer tokens may only edit personal shelves owned by the token user.
+
+    This helper is intentionally narrower than can_edit_shelf (which includes
+    group-shelf edit rules for session-authenticated product UI users).
+    """
+    if user is None or getattr(user, "is_anonymous", False):
+        return False
+    if shelf.owner_type != Shelf.OWNER_TYPE_USER:
+        return False
+    return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
+
+
 def can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
     if not can_edit_shelf(user=user, shelf=shelf):
         return False

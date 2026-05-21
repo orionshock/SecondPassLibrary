@@ -208,6 +208,39 @@ class ShelvesAPITest(APITestCase):
         self.assertEqual(detail3.status_code, status.HTTP_200_OK)
         self.assertEqual(cast(Mapping[str, Any], detail3.data)["can_edit"], False)
 
+    def test_put_shelf_behaves_like_partial_update(self):
+        self.client.login(username="reader", password="pw")
+        created = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Before",
+                    "description": "Desc",
+                    "owner_type": "user",
+                    "visibility": "listed",
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+
+        put = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "After"},
+                format="json",
+            ),
+        )
+        self.assertEqual(put.status_code, status.HTTP_200_OK)
+        payload = cast(Mapping[str, Any], put.data)
+        self.assertEqual(payload["name"], "After")
+        # PUT behaves like PATCH here: omitted fields are preserved.
+        self.assertEqual(payload["description"], "Desc")
+        self.assertEqual(payload["visibility"], "listed")
+
     def test_can_edit_group_shelf_curator_true_reader_false(self):
         self.client.login(username="owner", password="pw")
         created = cast(

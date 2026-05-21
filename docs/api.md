@@ -208,7 +208,8 @@ Endpoints:
 - `GET /api/v1/shelves/` (paginated; visible shelves)
 - `POST /api/v1/shelves/` (create; user-owned or group-owned depending on permissions)
 - `GET /api/v1/shelves/<id>/`
-- `PATCH /api/v1/shelves/<id>/` (name/description/visibility only)
+- `PATCH /api/v1/shelves/<id>/` (partial update; name/description/visibility only)
+- `PUT /api/v1/shelves/<id>/` (treated the same as `PATCH` for compatibility; partial update)
 - `DELETE /api/v1/shelves/<id>/`
 - Items:
   - `GET /api/v1/shelves/<id>/items/` (paginated; books are filtered through access policy)

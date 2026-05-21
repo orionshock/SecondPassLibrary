@@ -138,7 +138,8 @@ Shelves are under `/api/v1/shelves/`:
     - `?book=<book_id>` (shelves containing the book; includes `matched_item_id` when applicable)
 - `POST /api/v1/shelves/` (create)
 - `GET /api/v1/shelves/<id>/`
-- `PATCH /api/v1/shelves/<id>/`
+- `PATCH /api/v1/shelves/<id>/` (partial update; name/description/visibility only)
+- `PUT /api/v1/shelves/<id>/` (treated the same as `PATCH` for compatibility; partial update)
 - `DELETE /api/v1/shelves/<id>/`
 - items:
   - `GET /api/v1/shelves/<id>/items/` (paginated)

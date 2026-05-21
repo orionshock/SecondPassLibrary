@@ -112,6 +112,36 @@ class ShelvesClientBearerTests(APITestCase):
         self.assertEqual(data["name"], "P2")
         self.assertTrue(data["can_edit"])
 
+    def test_bearer_put_behaves_like_partial_update_for_own_shelf(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+        # Set initial description via PATCH first.
+        patch1 = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"description": "Before", "visibility": "listed"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(patch1.status_code, 200)
+
+        put = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "After"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(put.status_code, 200)
+        data = cast(dict[str, Any], put.data)
+        self.assertEqual(data["name"], "After")
+        # PUT behaves like PATCH: omitted fields are preserved.
+        self.assertEqual(data["description"], "Before")
+        self.assertEqual(data["visibility"], "listed")
+
     def test_bearer_cannot_patch_other_users_shelf(self):
         # Create a listed shelf for other using session auth (baseline behavior).
         self.client.logout()
@@ -217,6 +247,17 @@ class ShelvesClientBearerTests(APITestCase):
             ),
         )
         self.assertEqual(patch.status_code, 403)
+
+        put = cast(
+            Response,
+            self.client.put(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "Nope2"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(put.status_code, 403)
 
     def test_bearer_can_add_and_remove_accessible_book_on_own_shelf(self):
         shelf_id = self._create_personal_shelf_as_owner()

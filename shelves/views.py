@@ -35,6 +35,7 @@ from .services import (
     update_shelf,
     visible_shelf_items_for_user,
 )
+from .policies import can_client_bearer_edit_shelf
 
 
 class ShelfViewSet(
@@ -79,9 +80,7 @@ class ShelfViewSet(
     def _client_bearer_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
         if not isinstance(getattr(request, "auth", None), UserClientSession):
             return True
-        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
-            return False
-        return getattr(shelf, "owner_user_id", None) == getattr(request.user, "id", None)
+        return can_client_bearer_edit_shelf(user=request.user, shelf=shelf)
 
     def get_serializer_class(self):
         if self.action == "create":
