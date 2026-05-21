@@ -102,6 +102,11 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
 
 - `GET /api/v1/accounts/me/` (read-only; bearer tokens do not allow `PATCH`)
 - selected library read/download endpoints
+- shelves endpoints:
+  - bearer tokens may read any shelf the user can view
+  - bearer tokens may create/edit/delete **only** the user's own personal shelves
+  - group-owned shelves are read-only via bearer tokens
+  - other users' shelves are read-only when visible (listed)
 - reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) for safe retries
   - for “continue reading” UIs: `GET /api/v1/reading/sessions/recent/?limit=10`

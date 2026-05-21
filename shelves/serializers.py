@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from library.models import Book, LibraryGroup, is_public_group
 from library.serializers import AuthorSummarySerializer, SeriesSummarySerializer
+from accounts.models import UserClientSession
 
 from .models import Shelf, ShelfItem
 from .policies import can_edit_shelf
@@ -57,6 +58,12 @@ class ShelfSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
         if user is None:
             return False
+        # Client API bearer tokens may only edit personal shelves owned by the token user.
+        if isinstance(getattr(request, "auth", None), UserClientSession):
+            return (
+                obj.owner_type == Shelf.OWNER_TYPE_USER
+                and getattr(obj, "owner_user_id", None) == getattr(user, "id", None)
+            )
         return can_edit_shelf(user=user, shelf=obj)
 
     class Meta:

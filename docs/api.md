@@ -90,6 +90,10 @@ The Client API provides a pairing flow (human code + browser approval) and beare
 
 - `GET /api/v1/accounts/me/` only (not `PATCH`)
 - Selected **read-only** Library API endpoints (explicit allow-list; see Library section)
+- Shelves API:
+  - bearer tokens may read any shelf the token user can view
+  - bearer tokens may create/edit/delete and manage items only in the token user's own personal shelves
+  - group shelves and other users' shelves are read-only via bearer tokens
 - Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
@@ -223,6 +227,10 @@ Shelf payload notes:
 - Shelves include a read-only `can_edit` boolean computed for the current request user. This is a UI hint; API permissions remain authoritative.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
+- Client API bearer tokens:
+  - may read any shelf the token user can view
+  - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
+  - group shelves are read-only via bearer tokens
 
 Request:
 

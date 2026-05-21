@@ -6,6 +6,7 @@ from django.db.models import Count, OuterRef, Q, Subquery
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -14,6 +15,8 @@ from rest_framework import serializers
 
 from core import policies as core_policies
 from library.models import Book, LibraryGroup, LibraryGroupMembership
+from accounts.authentication import ClientBearerAuthentication
+from accounts.models import UserClientSession
 
 from .models import Shelf, ShelfItem
 from .serializers import (
@@ -43,13 +46,47 @@ class ShelfViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = Shelf.objects.all()
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
     permission_classes = [IsAuthenticated]
     ordering = ["name", "created_at"]
+
+    # Map of DRF action -> allowed HTTP methods for client bearer auth.
+    client_bearer_allowed: dict[str, set[str]] = {
+        "list": {"GET"},
+        "retrieve": {"GET"},
+        "create": {"POST"},
+        "partial_update": {"PATCH"},
+        "update": {"PUT"},
+        "destroy": {"DELETE"},
+        "items": {"GET", "POST"},
+        "item_detail": {"PATCH", "DELETE"},
+    }
+
+    def initial(self, request, *args, **kwargs):
+        # Pylance can't reliably infer the `super()` type for a mixin; at runtime
+        # this is always a DRF view/viewset that implements `initial`.
+        cast(Any, super()).initial(request, *args, **kwargs)
+        if isinstance(getattr(request, "auth", None), UserClientSession):
+            action = getattr(self, "action", "") or ""
+            allowed = self.client_bearer_allowed.get(str(action), set())
+            if request.method.upper() not in allowed:
+                raise PermissionDenied("Client API tokens are not allowed for this endpoint/action.")
+
+    def _client_bearer_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
+        if not isinstance(getattr(request, "auth", None), UserClientSession):
+            return True
+        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
+            return False
+        return getattr(shelf, "owner_user_id", None) == getattr(request.user, "id", None)
 
     def get_serializer_class(self):
         if self.action == "create":
             return ShelfCreateSerializer
-        if self.action in {"partial_update"}:
+        if self.action in {"partial_update", "update"}:
             return ShelfPatchSerializer
         if self.action in {"items", "add_item"}:
             return ShelfItemCreateSerializer
@@ -108,6 +145,10 @@ class ShelfViewSet(
         data = cast(dict[str, Any], serializer.validated_data)
 
         owner_type = data["owner_type"]
+        if isinstance(getattr(request, "auth", None), UserClientSession):
+            # Client API bearer tokens may only create personal shelves.
+            if owner_type != Shelf.OWNER_TYPE_USER:
+                raise PermissionDenied("Client API tokens may only create personal shelves.")
         owner_group = None
         if owner_type == Shelf.OWNER_TYPE_GROUP:
             group_id = data.get("owner_group")
@@ -133,8 +174,14 @@ class ShelfViewSet(
         out = ShelfSerializer(shelf, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
+    def update(self, request, *args, **kwargs):
+        # Treat PUT the same as PATCH for this API (partial updates only).
+        return self.partial_update(request, *args, **kwargs)
+
     def partial_update(self, request, *args, **kwargs):
         shelf = self.get_object()
+        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied("Client API tokens may only edit personal shelves you own.")
         serializer = cast(Any, self.get_serializer(data=request.data or {}, partial=True))
         serializer.is_valid(raise_exception=True)
         data = cast(dict[str, Any], serializer.validated_data)
@@ -147,6 +194,8 @@ class ShelfViewSet(
 
     def destroy(self, request, *args, **kwargs):
         shelf = self.get_object()
+        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied("Client API tokens may only delete personal shelves you own.")
         delete_shelf(request.user, shelf)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -162,6 +211,9 @@ class ShelfViewSet(
             if page is not None:
                 return self.get_paginated_response(out.data)
             return Response(out.data)
+
+        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
 
         serializer = cast(Any, ShelfItemCreateSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)
@@ -186,6 +238,9 @@ class ShelfViewSet(
     @action(detail=True, methods=["patch", "delete"], url_path=r"items/(?P<item_id>[^/.]+)")
     def item_detail(self, request, item_id: str | None = None, *args, **kwargs):
         shelf = self.get_object()
+        if request.method in {"PATCH", "DELETE"}:
+            if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
+                raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
         if item_id is None:
             raise Http404()
 

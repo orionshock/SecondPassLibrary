@@ -174,7 +174,7 @@ Django admin at `/admin/` is the service hatch and can inspect/edit shelf intern
 - Shelves are not access control.
 - No public/anonymous shelf browsing.
 - No drag/drop ordering UI (ordering is numeric inputs).
-- No reader-client shelf UX (Client API bearer tokens are not enabled for shelves endpoints).
+- No group-shelf management via Client API bearer tokens (group shelves remain product UI/session-auth only).
 
 ## Future possibilities
 

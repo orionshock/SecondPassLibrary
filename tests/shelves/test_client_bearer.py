@@ -1,0 +1,285 @@
+from __future__ import annotations
+
+from typing import Any, cast
+from uuid import uuid4
+
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework.test import APITestCase
+
+from accounts.client_api import generate_bearer_token, hash_client_secret
+from accounts.models import UserClientSession, UserProfile
+from accounts.services import get_or_create_profile
+from library.group_services import get_public_group
+from library.models import Book, LibraryGroup, LibraryGroupMembership
+
+
+User = get_user_model()
+
+
+class ShelvesClientBearerTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="u", email="u@example.com", password="pw")
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+
+        self.other = User.objects.create_user(username="o", email="o@example.com", password="pw")
+        other_profile = get_or_create_profile(user=self.other)
+        other_profile.role = UserProfile.ROLE_READER
+        other_profile.save(update_fields=["role", "updated_at"])
+
+        token = generate_bearer_token()
+        UserClientSession.objects.create(
+            user=self.user,
+            name="t",
+            client_type="test",
+            token_hash=hash_client_secret(token),
+            last_seen_at=timezone.now(),
+        )
+        self._auth = f"Bearer {token}"
+
+        self.public_group = get_public_group()
+        self.group = LibraryGroup.objects.create(name="G")
+        LibraryGroupMembership.objects.create(user=self.user, group=self.group, role=LibraryGroupMembership.ROLE_READER)
+
+        self.book_public = Book.objects.create(title="Public book")
+        cast(Any, self.book_public).group_assignments.create(group=self.public_group, added_by=self.user)
+        self.book_in_group = Book.objects.create(title="Group book")
+        cast(Any, self.book_in_group).group_assignments.create(group=self.group, added_by=self.user)
+
+        self.book_hidden = Book.objects.create(title="Hidden")
+        hidden_group = LibraryGroup.objects.create(name="Hidden")
+        cast(Any, self.book_hidden).group_assignments.create(group=hidden_group, added_by=self.user)
+
+    def test_bearer_can_create_personal_shelf(self):
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "Mine", "owner_type": "user", "visibility": "private"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = cast(dict[str, Any], resp.data)
+        self.assertEqual(data["owner_type"], "user")
+        owner_user = cast(dict[str, Any], data["owner_user"])
+        self.assertEqual(owner_user["id"], cast(int, self.user.id))
+        self.assertTrue(data["can_edit"])
+
+    def test_bearer_cannot_create_group_shelf(self):
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def _create_personal_shelf_as_owner(self) -> str:
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "P", "owner_type": "user"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = cast(dict[str, Any], resp.data)
+        return str(data["id"])
+
+    def test_bearer_can_patch_own_personal_shelf(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+        resp = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "P2", "description": "d"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = cast(dict[str, Any], resp.data)
+        self.assertEqual(data["name"], "P2")
+        self.assertTrue(data["can_edit"])
+
+    def test_bearer_cannot_patch_other_users_shelf(self):
+        # Create a listed shelf for other using session auth (baseline behavior).
+        self.client.logout()
+        self.client.login(username="o", password="pw")
+        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "O", "owner_type": "user", "visibility": "listed"}, format="json"))
+        self.assertEqual(created.status_code, 201)
+        shelf_id = str(cast(dict[str, Any], created.data)["id"])
+        self.client.logout()
+
+        resp = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "Hacked"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_bearer_cannot_delete_other_users_shelf(self):
+        self.client.logout()
+        self.client.login(username="o", password="pw")
+        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "O", "owner_type": "user", "visibility": "listed"}, format="json"))
+        self.assertEqual(created.status_code, 201)
+        shelf_id = str(cast(dict[str, Any], created.data)["id"])
+        self.client.logout()
+
+        resp = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_bearer_can_delete_own_personal_shelf(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+        resp = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(resp.status_code, 204)
+
+    def test_bearer_can_read_listed_other_users_shelf_but_not_edit(self):
+        self.client.logout()
+        self.client.login(username="o", password="pw")
+        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "Listed", "owner_type": "user", "visibility": "listed"}, format="json"))
+        shelf_id = str(cast(dict[str, Any], created.data)["id"])
+        self.client.logout()
+
+        list_resp = cast(Response, self.client.get("/api/v1/shelves/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(list_resp.status_code, 200)
+        list_data = cast(dict[str, Any], list_resp.data)
+        ids = {str(r["id"]) for r in cast(list[dict[str, Any]], list_data["results"])}
+        self.assertIn(shelf_id, ids)
+
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(detail.status_code, 200)
+        self.assertFalse(cast(dict[str, Any], detail.data)["can_edit"])
+
+    def test_bearer_cannot_read_private_other_users_shelf(self):
+        self.client.logout()
+        self.client.login(username="o", password="pw")
+        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "Private", "owner_type": "user", "visibility": "private"}, format="json"))
+        shelf_id = str(cast(dict[str, Any], created.data)["id"])
+        self.client.logout()
+
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(detail.status_code, 404)
+
+    def test_bearer_can_read_visible_group_shelf_but_not_edit(self):
+        # Create a group shelf using owner session auth.
+        owner = User.objects.create_user(username="owner", password="pw", is_superuser=True, is_staff=True)
+        self.client.force_login(owner)
+        created = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(created.status_code, 201)
+        shelf_id = str(cast(dict[str, Any], created.data)["id"])
+        self.client.logout()
+
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(detail.status_code, 200)
+        self.assertFalse(cast(dict[str, Any], detail.data)["can_edit"])
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "Nope"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(patch.status_code, 403)
+
+    def test_bearer_can_add_and_remove_accessible_book_on_own_shelf(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+
+        add = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(add.status_code, 201)
+        item_id = str(cast(dict[str, Any], add.data)["id"])
+
+        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(items.status_code, 200)
+
+        rm = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(rm.status_code, 204)
+
+    def test_bearer_cannot_add_inaccessible_book_to_own_shelf(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+        add = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_hidden.id)},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(add.status_code, 403)
+
+    def test_bearer_can_reorder_items_in_own_shelf(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+        add1 = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(add1.status_code, 201)
+        item_id = str(cast(dict[str, Any], add1.data)["id"])
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                data={"position": 5},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(patch.status_code, 200)
+        self.assertEqual(cast(dict[str, Any], patch.data)["position"], 5)
