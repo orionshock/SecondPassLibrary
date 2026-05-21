@@ -53,6 +53,21 @@ function clear(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
 }
 
+function formatBytes(byteCount) {
+  const n = typeof byteCount === "number" ? byteCount : Number(byteCount);
+  if (!Number.isFinite(n) || n < 0) return "";
+  if (n < 1024) return `${n} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = n / 1024;
+  let unitIdx = 0;
+  while (value >= 1024 && unitIdx < units.length - 1) {
+    value /= 1024;
+    unitIdx += 1;
+  }
+  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+  return `${rounded} ${units[unitIdx]}`;
+}
+
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -91,7 +106,6 @@ function renderIdentifiers(container, identifiers) {
     const li = document.createElement("li");
     const scheme = i && i.scheme ? String(i.scheme) : "";
     const value = i && i.value ? String(i.value) : "";
-    const source = i && i.source ? String(i.source) : "";
     const isPrimary = !!(i && i.is_primary);
 
     const code = document.createElement("code");
@@ -102,10 +116,6 @@ function renderIdentifiers(container, identifiers) {
     if (isPrimary) {
       li.appendChild(document.createTextNode(" "));
       li.appendChild(el("span", "pill", "primary"));
-    }
-    if (source) {
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(el("span", "muted", `(${source})`));
     }
 
     ul.appendChild(li);
@@ -122,7 +132,7 @@ function renderFile(container, file) {
 
   const wrap = document.createElement("div");
   const format = file.format ? String(file.format).toUpperCase() : "EPUB";
-  const size = file.file_size != null && file.file_size !== "" ? `${String(file.file_size)} bytes` : "";
+  const size = formatBytes(file.file_size);
   wrap.appendChild(el("div", "", `${format}${size ? ` (${size})` : ""}`));
 
   const downloadUrl = file.download_url ? String(file.download_url) : "";
