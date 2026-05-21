@@ -2,6 +2,52 @@ import { fetchJSON } from "./api.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "./layout.js";
 import { mountCovers } from "./ui/covers.js";
 
+function initTabs(root) {
+  if (!root) return;
+  const buttons = Array.from(root.querySelectorAll(".tab-button"));
+  const panels = Array.from(root.querySelectorAll("[data-tab-panel]"));
+  if (!buttons.length || !panels.length) return;
+
+  function activate(tabName) {
+    for (const b of buttons) {
+      b.classList.toggle("is-active", b.getAttribute("data-tab") === tabName);
+    }
+    for (const p of panels) {
+      p.classList.toggle("is-hidden", p.getAttribute("data-tab-panel") !== tabName);
+    }
+  }
+
+  for (const b of buttons) {
+    b.addEventListener("click", () => activate(b.getAttribute("data-tab") || ""));
+  }
+
+  // Default tab: Shelves
+  activate("shelves");
+}
+
+function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
+  if (!summaryWrapEl || !summaryEl || !toggleEl) return;
+  const text = String(summaryText || "").trim();
+  visible(summaryWrapEl, !!text);
+  if (!text) return;
+
+  summaryEl.textContent = text;
+  summaryEl.classList.add("book-hero__summary--clamped");
+  toggleEl.textContent = "Show more";
+  visible(toggleEl, false);
+
+  // Wait for layout so we can detect truncation.
+  window.requestAnimationFrame(() => {
+    const isClamped = summaryEl.scrollHeight > summaryEl.clientHeight + 1;
+    visible(toggleEl, isClamped);
+  });
+
+  toggleEl.addEventListener("click", () => {
+    const clamped = summaryEl.classList.toggle("book-hero__summary--clamped");
+    toggleEl.textContent = clamped ? "Show more" : "Show less";
+  });
+}
+
 function clear(el) {
   if (!el) return;
   while (el.firstChild) el.removeChild(el.firstChild);
@@ -76,16 +122,13 @@ function renderFile(container, file) {
 
   const wrap = document.createElement("div");
   const format = file.format ? String(file.format).toUpperCase() : "EPUB";
-  wrap.appendChild(el("span", "pill", format));
-
   const size = file.file_size != null && file.file_size !== "" ? `${String(file.file_size)} bytes` : "";
-  wrap.appendChild(document.createTextNode(" "));
-  wrap.appendChild(el("span", "muted", size));
+  wrap.appendChild(el("div", "", `${format}${size ? ` (${size})` : ""}`));
 
   const downloadUrl = file.download_url ? String(file.download_url) : "";
   if (downloadUrl) {
     wrap.appendChild(document.createTextNode(" "));
-    const a = el("a", "pill", "Download");
+    const a = el("a", "pill", "Download file");
     a.setAttribute("href", downloadUrl);
     wrap.appendChild(a);
   }
@@ -153,39 +196,31 @@ function renderBookShelves(container, shelves) {
 
 function renderBookMeta(container, book) {
   clear(container);
-  const kv = el("div", "kv");
-
-  function addRow(key, valueNodeOrText) {
-    kv.appendChild(el("div", "kv__k", key));
-    const v = el("div", "kv__v");
-    if (valueNodeOrText && valueNodeOrText.nodeType) v.appendChild(valueNodeOrText);
-    else v.textContent = valueNodeOrText != null ? String(valueNodeOrText) : "";
-    kv.appendChild(v);
-  }
-
-  const title = book && book.title ? String(book.title) : "Book";
   const subtitle = book && book.subtitle ? String(book.subtitle) : "";
   const authors = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
   const series = book && book.series && book.series.name ? String(book.series.name) : "";
   const seriesIndex = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
-  const seriesLine = series ? `${series}${seriesIndex ? " · " + seriesIndex : ""}` : "";
+  const seriesLine = series ? `${series}${seriesIndex ? ` #${seriesIndex}` : ""}` : "";
 
-  addRow("Title", title);
-  if (subtitle) addRow("Subtitle", subtitle);
-  addRow("Authors", authors.join(", ") || "");
-  if (seriesLine) addRow("Series", seriesLine);
-  if (book && book.summary) addRow("Summary", book.summary);
-  if (book && book.publisher) addRow("Publisher", book.publisher);
-  if (book && book.language) addRow("Language", book.language);
-  if (book && book.published_date) addRow("Published", book.published_date);
-  if (book && book.isbn) addRow("ISBN", book.isbn);
+  const wrap = el("div", "book-meta");
+
+  if (subtitle) wrap.appendChild(el("div", "muted", subtitle));
+  if (seriesLine) wrap.appendChild(el("div", "book-meta__line", seriesLine));
+  if (authors.length) wrap.appendChild(el("div", "book-meta__line", authors.join(", ")));
+
+  const metaBits = [];
+  if (book && book.published_date) metaBits.push(String(book.published_date));
+  if (book && book.language) metaBits.push(String(book.language));
+  if (metaBits.length) wrap.appendChild(el("div", "muted", metaBits.join(" - ")));
+
   if (book && book.subjects) {
     const pills = document.createElement("div");
+    pills.className = "book-meta__subjects";
     renderSubjectsPills(pills, book.subjects);
-    if (pills.textContent && pills.textContent.trim()) addRow("Subjects", pills);
+    if (pills.textContent && pills.textContent.trim()) wrap.appendChild(pills);
   }
 
-  container.appendChild(kv);
+  container.appendChild(wrap);
 }
 
 export async function initBookDetail() {
@@ -198,14 +233,16 @@ export async function initBookDetail() {
   const coverEl = $("#book-cover");
   const editWrapEl = $("#book-edit-link-wrap");
   const editLinkEl = $("#book-edit-link");
-  const idSection = $("#book-identifiers");
   const idBody = $("#book-identifiers-body");
-  const filesSection = $("#book-files");
   const filesBody = $("#book-files-body");
   const groupsSection = $("#book-groups");
   const groupsBody = $("#book-groups-body");
   const shelvesSection = $("#book-shelves");
   const shelvesBody = $("#book-shelves-body");
+  const downloadLink = $("#book-download-link");
+  const summaryWrapEl = $("#book-summary-wrap");
+  const summaryEl = $("#book-summary");
+  const summaryToggle = $("#book-summary-toggle");
 
   if (
     !statusEl ||
@@ -214,14 +251,16 @@ export async function initBookDetail() {
     !coverEl ||
     !editWrapEl ||
     !editLinkEl ||
-    !idSection ||
     !idBody ||
-    !filesSection ||
     !filesBody ||
     !groupsSection ||
     !groupsBody ||
     !shelvesSection ||
-    !shelvesBody
+    !shelvesBody ||
+    !downloadLink ||
+    !summaryWrapEl ||
+    !summaryEl ||
+    !summaryToggle
   )
     return;
 
@@ -243,10 +282,8 @@ export async function initBookDetail() {
     statusEl.classList.toggle("error", !!isError);
   }
 
-  setStatus("Loading…", false);
+  setStatus("Loading...", false);
   visible(detailEl, false);
-  visible(idSection, false);
-  visible(filesSection, false);
   visible(groupsSection, false);
   visible(shelvesSection, false);
 
@@ -265,6 +302,24 @@ export async function initBookDetail() {
     renderFile(filesBody, book.file);
     renderBookGroups(groupsBody, book.groups);
 
+    // Primary action: download
+    const dlUrl = book && book.file && book.file.download_url ? String(book.file.download_url) : "";
+    const dlFmt = book && book.file && book.file.format ? String(book.file.format).toUpperCase() : "";
+    if (dlUrl) {
+      downloadLink.setAttribute("href", dlUrl);
+      downloadLink.textContent = `Download ${dlFmt || "file"}`;
+      visible(downloadLink, true);
+    } else {
+      visible(downloadLink, false);
+    }
+
+    setupSummary({
+      summaryWrapEl,
+      summaryEl,
+      toggleEl: summaryToggle,
+      summaryText: book && book.summary ? book.summary : "",
+    });
+
     try {
       const shelves = await fetchJSON(`/api/v1/shelves/?book=${encodeURIComponent(String(bookId))}`);
       renderBookShelves(shelvesBody, shelves);
@@ -274,9 +329,8 @@ export async function initBookDetail() {
       // Non-fatal; keep shelves section hidden.
     }
 
+    initTabs(detailEl);
     visible(detailEl, true);
-    visible(idSection, true);
-    visible(filesSection, true);
     visible(groupsSection, true);
     // shelvesSection toggled above if load succeeded.
     setStatus("", false);

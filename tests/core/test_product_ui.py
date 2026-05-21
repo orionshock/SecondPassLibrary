@@ -163,6 +163,15 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="book-groups"')
         self.assertContains(response, 'id="book-shelves"')
         self.assertContains(response, 'id="book-edit-link-wrap"')
+        self.assertContains(response, 'id="book-download-link"')
+        self.assertContains(response, 'id="book-summary-toggle"')
+        self.assertContains(response, 'data-tab="shelves"')
+        self.assertContains(response, 'data-tab="groups"')
+        self.assertContains(response, 'data-tab="metadata"')
+        self.assertContains(response, 'data-tab-panel="shelves"')
+        self.assertContains(response, 'data-tab-panel="groups"')
+        self.assertContains(response, 'data-tab-panel="metadata"')
+        self.assertContains(response, 'id="tab-metadata"')
         self.assertContains(
             response, f'href="/library/books/{book_id}/edit/"'
         )

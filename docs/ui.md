@@ -36,7 +36,10 @@ Planned auth/login session revocation behavior (and terminology vs `reading` ses
 
 The library browse screen is API-driven using vanilla JS fetch calls to `GET /api/v1/library/books/` (paginated), with basic loading/error/empty states.
 
-The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and renders metadata, identifiers, and file download links (from `download_url`).
+The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and is cover-forward:
+
+- Top panel shows cover art (or placeholder), title/series/authors, and a primary Download action when a file is available.
+- Tabs (default: Shelves) show Shelves, Groups, and Metadata. Secondary metadata includes identifiers and file details.
 
 Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box.
 

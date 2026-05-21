@@ -2,12 +2,12 @@
 
 {% block page_id %}book-detail{% endblock %}
 
-{% block title %}Book · {{ server_name }}{% endblock %}
+{% block title %}Book - {{ server_name }}{% endblock %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/library/" class="pill">← Back to Library</a>
+      <a href="/library/" class="pill">&larr; Back to Library</a>
       <h1 class="page-title" id="book-title">Book</h1>
     </div>
     <div id="book-edit-link-wrap" class="is-hidden">
@@ -15,31 +15,51 @@
     </div>
   </div>
 
-  <div id="book-status" class="muted">Loading…</div>
+  <div id="book-status" class="muted">Loading...</div>
 
   <section id="book-detail" class="card is-hidden" data-book-id="{{ book_id|escape }}">
-    <h2 class="card__title">Details</h2>
-    <div id="book-cover" class="edit-header__cover" style="margin-bottom: 10px;" aria-hidden="true">Cover</div>
-    <div id="book-meta"></div>
-  </section>
+    <div class="book-hero">
+      <div id="book-cover" class="edit-header__cover" aria-hidden="true">Cover</div>
 
-  <section id="book-identifiers" class="card is-hidden">
-    <h2 class="card__title">Identifiers</h2>
-    <div id="book-identifiers-body" class="muted"></div>
-  </section>
+      <div class="book-hero__main">
+        <div class="book-hero__actions">
+          <a id="book-download-link" class="button is-hidden" href="#">Download</a>
+        </div>
 
-  <section id="book-files" class="card is-hidden">
-    <h2 class="card__title">Files</h2>
-    <div id="book-files-body" class="muted"></div>
-  </section>
+        <div id="book-meta"></div>
 
-  <section id="book-groups" class="card is-hidden">
-    <h2 class="card__title">Groups</h2>
-    <div id="book-groups-body" class="muted"></div>
-  </section>
+        <div id="book-summary-wrap" class="is-hidden">
+          <div id="book-summary" class="book-hero__summary"></div>
+          <button id="book-summary-toggle" class="linklike is-hidden" type="button">Show more</button>
+        </div>
+      </div>
+    </div>
 
-  <section id="book-shelves" class="card is-hidden">
-    <h2 class="card__title">Shelves</h2>
-    <div id="book-shelves-body" class="muted"></div>
+    <div class="tabs" role="tablist" aria-label="Book detail tabs">
+      <button class="tab-button is-active" type="button" data-tab="shelves">Shelves</button>
+      <button class="tab-button" type="button" data-tab="groups">Groups</button>
+      <button class="tab-button" type="button" data-tab="metadata">Metadata</button>
+    </div>
+
+    <div id="book-shelves" class="tab-panel" data-tab-panel="shelves">
+      <div id="book-shelves-body" class="muted"></div>
+    </div>
+
+    <div id="book-groups" class="tab-panel is-hidden" data-tab-panel="groups">
+      <div id="book-groups-body" class="muted"></div>
+    </div>
+
+    <div id="tab-metadata" class="tab-panel is-hidden" data-tab-panel="metadata">
+      <div class="book-meta-grid">
+        <div class="book-meta-grid__item">
+          <h2 class="card__title">File</h2>
+          <div id="book-files-body" class="muted"></div>
+        </div>
+        <div class="book-meta-grid__item">
+          <h2 class="card__title">Identifiers</h2>
+          <div id="book-identifiers-body" class="muted"></div>
+        </div>
+      </div>
+    </div>
   </section>
 {% endblock %}
