@@ -283,9 +283,9 @@ export async function initBookDetail() {
   }
 
   setStatus("Loading...", false);
+  // Initialize tab state immediately so only Shelves is visible on first paint.
+  initTabs(detailEl);
   visible(detailEl, false);
-  visible(groupsSection, false);
-  visible(shelvesSection, false);
 
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
@@ -320,19 +320,19 @@ export async function initBookDetail() {
       summaryText: book && book.summary ? book.summary : "",
     });
 
+    // Default tab content should show something immediately.
+    shelvesBody.textContent = "Loading...";
+
     try {
       const shelves = await fetchJSON(`/api/v1/shelves/?book=${encodeURIComponent(String(bookId))}`);
       renderBookShelves(shelvesBody, shelves);
-      visible(shelvesSection, true);
     } catch (e2) {
       console.error("Failed to load shelves for book", { bookId, e2 });
-      // Non-fatal; keep shelves section hidden.
+      // Non-fatal: show an empty/unknown state and keep the page usable.
+      renderBookShelves(shelvesBody, []);
     }
 
-    initTabs(detailEl);
     visible(detailEl, true);
-    visible(groupsSection, true);
-    // shelvesSection toggled above if load succeeded.
     setStatus("", false);
   } catch (e) {
     console.error("Failed to load book detail", { bookId, e });
