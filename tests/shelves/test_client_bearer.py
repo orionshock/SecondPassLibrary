@@ -67,7 +67,8 @@ class ShelvesClientBearerTests(APITestCase):
         data = cast(dict[str, Any], resp.data)
         self.assertEqual(data["owner_type"], "user")
         owner_user = cast(dict[str, Any], data["owner_user"])
-        self.assertEqual(owner_user["id"], cast(int, self.user.id))
+        user_id = cast(int, getattr(self.user, "pk"))
+        self.assertEqual(owner_user["id"], user_id)
         self.assertTrue(data["can_edit"])
 
     def test_bearer_cannot_create_group_shelf(self):

@@ -38,11 +38,6 @@ class UserProfile(TimeStampedModel):
         return f"{self.user.get_username()} ({self.role})"
 
     @property
-    def is_app_admin(self):
-        # Compatibility alias: "app admin" means Manager in-app (Owner is is_superuser).
-        return self.role == self.ROLE_MANAGER
-
-    @property
     def is_manager(self):
         return self.role == self.ROLE_MANAGER
 

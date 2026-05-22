@@ -28,12 +28,10 @@ class UserProfileModelTest(TestCase):
         self.assertTrue(profile.is_reader)
         self.assertFalse(profile.is_manager)
         self.assertFalse(profile.is_librarian)
-        self.assertFalse(profile.is_app_admin)
         profile.role = UserProfile.ROLE_MANAGER
         profile.save()
         profile.refresh_from_db()
         self.assertTrue(profile.is_manager)
-        self.assertTrue(profile.is_app_admin)
         self.assertFalse(profile.is_reader)
 
     def test_user_profile_str(self):
