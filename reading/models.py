@@ -6,6 +6,9 @@ from core.models import TimeStampedModel
 from library.models import Book, BookFile
 
 
+SELECTOR_KIND_EPUB_CFI = "epub_cfi"
+
+
 class ReadingSession(TimeStampedModel):
     STATUS_ACTIVE = "active"
     STATUS_COMPLETED = "completed"
@@ -99,10 +102,7 @@ class Annotation(TimeStampedModel):
         max_length=32, choices=MOTIVATION_CHOICES, null=True, blank=True
     )
 
-    selector_type = models.CharField(max_length=64, default="FragmentSelector")
-    selector_conforms_to = models.CharField(
-        max_length=255, default="http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
-    )
+    selector_kind = models.CharField(max_length=32, default=SELECTOR_KIND_EPUB_CFI)
     selector_value = models.TextField()
 
     highlight_text = models.TextField(blank=True, default="")

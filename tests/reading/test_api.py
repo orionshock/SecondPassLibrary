@@ -17,6 +17,7 @@ from library.models import Book, BookFile, BookGroupAssignment, LibraryGroup, Li
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from reading.profile import (
     CURRENT_READING_PROFILE_VERSION,
+    EPUB_CFI_CONFORMS_TO,
     MAX_BODY_JSON_BYTES,
     MAX_BODY_VALUE_CHARS,
     MAX_CURRENT_LOCATION_JSON_BYTES,
@@ -472,9 +473,16 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(ann.session_id, session.id)
         self.assertEqual(ann.book_id, self.book.id)
         self.assertEqual(ann.book_file_id, self.book.file.id)
+        self.assertEqual(ann.selector_kind, "epub_cfi")
         self.assertEqual(ann.selector_value, "epubcfi(/6/6)")
         self.assertEqual(ann.highlight_text, "hello")
         self.assertEqual(ann.comment_text, "")
+
+        # Reconstructed selector should be a FragmentSelector with EPUB CFI conformsTo.
+        selector = payload["target"]["selector"]
+        self.assertEqual(selector["type"], "FragmentSelector")
+        self.assertEqual(selector["conformsTo"], EPUB_CFI_CONFORMS_TO)
+        self.assertEqual(selector["value"], "epubcfi(/6/6)")
 
     def test_annotation_create_idempotency_key_allows_safe_retry(self):
         self.client.login(username="u1", password="pass1")
@@ -1129,6 +1137,124 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_selector_type_optional_or_fragmentselector_only(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        ok1 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "/6/2"}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(ok1.status_code, status.HTTP_201_CREATED)
+
+        ok2 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {
+                        "selector": {
+                            "type": "FragmentSelector",
+                            "value": "/6/4",
+                        }
+                    },
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(ok2.status_code, status.HTTP_201_CREATED)
+
+        bad = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {
+                        "selector": {
+                            "type": "TextQuoteSelector",
+                            "value": "/6/6",
+                        }
+                    },
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_selector_conformsto_optional_or_epub_cfi_only(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        ok1 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "/6/2"}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(ok1.status_code, status.HTTP_201_CREATED)
+
+        ok2 = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {
+                        "selector": {
+                            "conformsTo": EPUB_CFI_CONFORMS_TO,
+                            "value": "/6/4",
+                        }
+                    },
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(ok2.status_code, status.HTTP_201_CREATED)
+
+        bad = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {
+                        "selector": {
+                            "conformsTo": "https://example.invalid/conformsTo",
+                            "value": "/6/6",
+                        }
+                    },
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_annotation_selector_value_length_limit_rejected(self):
         self.client.login(username="u1", password="pass1")

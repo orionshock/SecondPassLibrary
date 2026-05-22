@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
-from .models import Annotation, ReadingProgress, ReadingSession
+from .models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from .locators import normalize_current_location
 from .profile import (
     CURRENT_READING_PROFILE_VERSION,
+    EPUB_CFI_CONFORMS_TO,
     validate_annotation_body,
     validate_annotation_target,
     validate_current_location,
@@ -195,16 +196,6 @@ class AnnotationSerializer(serializers.ModelSerializer):
         self, *, target: dict, body: list[dict]
     ) -> dict[str, str]:
         selector = target.get("selector") if isinstance(target, dict) else None
-        selector_type = (
-            str(selector.get("type"))
-            if isinstance(selector, dict) and selector.get("type")
-            else "FragmentSelector"
-        )
-        selector_conforms_to = (
-            str(selector.get("conformsTo"))
-            if isinstance(selector, dict) and selector.get("conformsTo")
-            else "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
-        )
         selector_value = (
             str(selector.get("value"))
             if isinstance(selector, dict) and selector.get("value")
@@ -234,8 +225,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
                     comment_text = value
 
         return {
-            "selector_type": selector_type,
-            "selector_conforms_to": selector_conforms_to,
+            "selector_kind": SELECTOR_KIND_EPUB_CFI,
             "selector_value": selector_value,
             "highlight_text": highlight_text,
             "highlight_color": highlight_color,
@@ -245,10 +235,13 @@ class AnnotationSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
+        if instance.selector_kind != SELECTOR_KIND_EPUB_CFI:
+            # Keep behavior explicit: today we only support EPUB CFI selectors.
+            raise serializers.ValidationError({"detail": "Unsupported selector_kind."})
+
         selector = {
-            "type": instance.selector_type or "FragmentSelector",
-            "conformsTo": instance.selector_conforms_to
-            or "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
+            "type": "FragmentSelector",
+            "conformsTo": EPUB_CFI_CONFORMS_TO,
             "value": instance.selector_value,
         }
 

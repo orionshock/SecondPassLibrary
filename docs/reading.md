@@ -97,7 +97,13 @@ Notes:
 
 ## Annotations (highlights, notes, bookmarks)
 
-Annotations are represented externally as W3C-style `Annotation` records, but stored internally in compact/queryable columns (selector + highlight/comment text). The API reconstructs the W3C-ish `target`/`body` shape from those columns at the boundary.
+Annotations are represented externally as W3C-style `Annotation` records, but stored internally in compact/queryable columns:
+
+- `selector_kind` + `selector_value` (currently `epub_cfi`)
+- `highlight_text` / `highlight_color`
+- `comment_text`
+
+The API reconstructs the W3C-ish `target`/`body` shape from those columns at the boundary.
 
 - List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
 - Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`

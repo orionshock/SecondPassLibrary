@@ -124,8 +124,7 @@ def create_annotation(
     *,
     session: ReadingSession,
     motivation: str,
-    selector_type: str,
-    selector_conforms_to: str,
+    selector_kind: str,
     selector_value: str,
     highlight_text: str = "",
     highlight_color: str = "",
@@ -139,8 +138,7 @@ def create_annotation(
         book=book,
         book_file=book_file,
         motivation=motivation,
-        selector_type=selector_type,
-        selector_conforms_to=selector_conforms_to,
+        selector_kind=selector_kind,
         selector_value=selector_value,
         highlight_text=highlight_text or "",
         highlight_color=highlight_color or "",
@@ -155,8 +153,7 @@ def update_annotation(
     *,
     annotation: Annotation,
     motivation: str,
-    selector_type: str,
-    selector_conforms_to: str,
+    selector_kind: str,
     selector_value: str,
     highlight_text: str = "",
     highlight_color: str = "",
@@ -164,8 +161,7 @@ def update_annotation(
 ) -> Annotation:
     assert_session_writable(session=annotation.session)
     annotation.motivation = motivation
-    annotation.selector_type = selector_type
-    annotation.selector_conforms_to = selector_conforms_to
+    annotation.selector_kind = selector_kind
     annotation.selector_value = selector_value
     annotation.highlight_text = highlight_text or ""
     annotation.highlight_color = highlight_color or ""
@@ -180,8 +176,7 @@ def update_annotation(
     annotation.save(
         update_fields=[
             "motivation",
-            "selector_type",
-            "selector_conforms_to",
+            "selector_kind",
             "selector_value",
             "highlight_text",
             "highlight_color",

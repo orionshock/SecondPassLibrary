@@ -3,7 +3,7 @@ from django.db import IntegrityError
 from django.test import TestCase
 
 from library.models import Book
-from reading.models import Annotation, ReadingProgress, ReadingSession
+from reading.models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from tests.reading.utils import IsolatedUserdataMixin
 
 
@@ -62,6 +62,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/2[chap]!/4/2/6)",
             highlight_text="Hello world",
         )
@@ -75,6 +76,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/2)",
             highlight_text="yellow",
         )
@@ -82,6 +84,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/4)",
             comment_text="n",
         )
@@ -89,6 +92,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_BOOKMARKING,
+            selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/6)",
         )
 
