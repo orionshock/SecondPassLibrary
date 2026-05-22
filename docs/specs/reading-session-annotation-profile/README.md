@@ -12,11 +12,11 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 ## Files
 
-- `profile.md` — human-readable profile
-- `context.jsonld` — JSON-LD context for app-specific terms
-- `schema.json` — JSON Schema validator (draft)
-- `types.ts` — TypeScript helper types (draft)
-- `examples/` — example annotations and a full reading-session export (draft)
+- `profile.md` - human-readable profile
+- `context.jsonld` - JSON-LD context for app-specific terms
+- `schema.json` - JSON Schema validator (draft)
+- `types.ts` - TypeScript helper types (draft)
+- `examples/` - example annotations and a full reading-session export (draft)
 
 ## Current Implementation (Server)
 

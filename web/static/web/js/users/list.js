@@ -124,7 +124,7 @@ export async function initUsersList() {
 
   async function load(url) {
     setGlobalError("");
-    setStatus("Loading usersâ€¦", false);
+    setStatus("Loading users...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;

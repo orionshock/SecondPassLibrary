@@ -147,7 +147,7 @@ export async function initUserEdit() {
     return;
   }
 
-  setStatus("Loadingâ€¦", false);
+  setStatus("Loading...", false);
   let original = null;
   let allGroups = null;
   let canResetPassword = false;
@@ -260,7 +260,7 @@ export async function initUserEdit() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     setGlobalError("");
-    setSaveStatus("Savingâ€¦", false);
+    setSaveStatus("Saving...", false);
 
     if (!original) {
       setSaveStatus("User not loaded.", true);

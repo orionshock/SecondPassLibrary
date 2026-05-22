@@ -22,7 +22,7 @@
           <a class="nav__item is-hidden" href="/server/" data-nav="server-settings">Server Settings</a>
         </nav>
         <div class="userbox">
-          <a class="userbox__name" href="/profile/" data-ui="username">Loading…</a>
+          <a class="userbox__name" href="/profile/" data-ui="username">Loading...</a>
           <form class="userbox__logoutform" action="/api-auth/logout/" method="post">
             {% csrf_token %}
             <button class="linklike" type="submit">Logout</button>

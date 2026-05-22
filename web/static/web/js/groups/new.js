@@ -31,7 +31,7 @@ export async function initGroupNew() {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setStatus("Creating…", false);
+    setStatus("Creating...", false);
     setGlobalError("");
 
     try {

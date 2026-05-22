@@ -8,14 +8,14 @@ This document describes the **Client API** pairing flow (human code + browser ap
 
 - Keep human authentication as normal Django web login/session.
 - Avoid redirect URI / custom URL scheme complexity for early reader clients.
-- Support “server and client may be on different devices” (copy/paste a URL or type a short code).
+- Support "server and client may be on different devices" (copy/paste a URL or type a short code).
 - This is not an OAuth/OIDC provider.
 
 ### Terms
 
 - **Client API**: a subset of the server API intended for non-browser clients. Authenticated via server-issued bearer tokens.
 - **Reader client**: a separate app (mobile/desktop/etc.) that connects to a Second Pass Library server and uses the Client API.
-- **ClientLoginRequest**: a short-lived server-side object representing a pending “pair this client” request, created by a reader client and authorized by a human in a browser session.
+- **ClientLoginRequest**: a short-lived server-side object representing a pending "pair this client" request, created by a reader client and authorized by a human in a browser session.
 - **UserClientSession**: a server-side record representing a bearer token granted to a reader client for a specific user.
 - **Django web session**: browser/product UI login session managed by Django sessions (cookie + server-side session rows).
 - **ReadingSession**: a reading/progress session through a book in the `reading` domain model. Not related to authentication.
@@ -41,7 +41,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
 
 1. User opens `authorize_url` in a browser.
 2. If needed, user logs in via normal Django session auth.
-3. Server shows an approval screen: “Authorize this device/app?”.
+3. Server shows an approval screen: "Authorize this device/app?".
 4. User approves or denies.
 
 ### Reader client

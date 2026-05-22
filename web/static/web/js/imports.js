@@ -14,7 +14,7 @@ function renderImportJobItems(items) {
       const refs = [book, bookFile].filter(Boolean).join(" ");
       return `<li><span class="pill">${escapeHtml(status)}</span> ${escapeHtml(source)}${
         refs ? ` <span class="muted">${escapeHtml(refs)}</span>` : ""
-      }${message ? ` <span class="muted">— ${escapeHtml(message)}</span>` : ""}</li>`;
+      }${message ? ` <span class="muted">- ${escapeHtml(message)}</span>` : ""}</li>`;
     })
     .join("");
 
@@ -113,7 +113,7 @@ export async function initImports() {
 
   async function load(url) {
     setGlobalError("");
-    setStatus("Loading…", false);
+    setStatus("Loading...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;
@@ -168,7 +168,7 @@ export async function initImports() {
       return;
     }
 
-    setUploadStatus("Uploading…", false);
+    setUploadStatus("Uploading...", false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -184,7 +184,7 @@ export async function initImports() {
         body: formData,
       });
 
-      setUploadStatus("Upload complete. Refreshing jobs…", false);
+      setUploadStatus("Upload complete. Refreshing jobs...", false);
       if (created && created.id) {
         console.log("Created import job", created.id);
       }

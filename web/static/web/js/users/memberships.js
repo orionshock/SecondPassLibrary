@@ -145,7 +145,7 @@ export function initUserMembershipsManager({
     }
 
     try {
-      setMembershipsStatus(action === "membership-save" ? "Saving roleâ€¦" : "Removingâ€¦", false);
+      setMembershipsStatus(action === "membership-save" ? "Saving role..." : "Removing...", false);
       setGlobalError("");
 
       const csrf = getCsrfToken();
@@ -184,7 +184,7 @@ export function initUserMembershipsManager({
   addForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     setGlobalError("");
-    setAddStatus("Addingâ€¦", false);
+    setAddStatus("Adding...", false);
     setAddFormEnabled(false);
 
     const groupId = addGroupSelect.value || "";

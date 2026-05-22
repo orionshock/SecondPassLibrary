@@ -15,7 +15,7 @@ function renderShelfRow(s) {
     ownerLine = `Group: ${escapeHtml(s.owner_group.name || "group")}`;
   }
 
-  const visLine = ownerType === "user" ? ` Â· ${escapeHtml(visibility)}` : "";
+  const visLine = ownerType === "user" ? `  -  ${escapeHtml(visibility)}` : "";
 
   return `
     <article class="book">

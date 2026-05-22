@@ -58,7 +58,7 @@ export async function initGroupView() {
   const groupId = root.getAttribute("data-group-id") || "";
   if (!groupId) return;
 
-  setStatus(statusEl, "Loadingâ€¦", false);
+  setStatus(statusEl, "Loading...", false);
   visible(root, false);
   visible(summaryEl, false);
   visible(editWrap, false);

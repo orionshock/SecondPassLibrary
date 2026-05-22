@@ -90,7 +90,7 @@ export async function initShelfEdit() {
     return;
   }
 
-  setStatus(statusEl, "Loadingâ€¦", false);
+  setStatus(statusEl, "Loading...", false);
   setErr("");
   visible(wrapEl, false);
   visible(itemsCard, false);
@@ -175,7 +175,7 @@ export async function initShelfEdit() {
     e.preventDefault();
     setErr("");
     setGlobalError("");
-    setStatus(saveStatus, "Savingâ€¦", false);
+    setStatus(saveStatus, "Saving...", false);
     try {
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json", "Content-Type": "application/json" };
@@ -223,11 +223,11 @@ export async function initShelfEdit() {
 
   deleteBtn.addEventListener("click", async () => {
     const shelfName = shelf && shelf.name ? String(shelf.name) : "";
-    const ok = window.confirm(`Delete shelf${shelfName ? ` â€œ${shelfName}â€` : ""}? This cannot be undone.`);
+    const ok = window.confirm(`Delete shelf${shelfName ? ` "${shelfName}"` : ""}? This cannot be undone.`);
     if (!ok) return;
 
     setGlobalError("");
-    setStatus(deleteStatus, "Deletingâ€¦", false);
+    setStatus(deleteStatus, "Deleting...", false);
     try {
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json" };

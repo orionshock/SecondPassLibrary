@@ -133,7 +133,7 @@ export async function initBookEdit() {
 
   function setSaving(on) {
     saveBtn.disabled = !!on;
-    if (on) setText(saveStatusEl, "Saving…");
+    if (on) setText(saveStatusEl, "Saving...");
     else setText(saveStatusEl, "");
   }
 
@@ -183,7 +183,7 @@ export async function initBookEdit() {
   }
 
   async function refreshIdentifiers() {
-    setInlineStatus(identifiersStatusEl, "Loading…", false);
+    setInlineStatus(identifiersStatusEl, "Loading...", false);
     try {
       const list = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`);
       identifiers = Array.isArray(list) ? list : [];
@@ -221,7 +221,7 @@ export async function initBookEdit() {
     await refreshShelves();
   }
 
-  setStatus("Loading…", false);
+  setStatus("Loading...", false);
   setError("");
   setSaved(false);
   visible(rootEl, false);
@@ -243,7 +243,7 @@ export async function initBookEdit() {
   }
 
   // Load option lists.
-  setInlineStatus(authorsStatusEl, "Loading…", false);
+  setInlineStatus(authorsStatusEl, "Loading...", false);
   try {
     allAuthors = uniqueById(await fetchAllPages("/api/v1/library/authors/"));
     setInlineStatus(authorsStatusEl, "", false);
@@ -254,7 +254,7 @@ export async function initBookEdit() {
   }
   syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
 
-  setInlineStatus(seriesStatusEl, "Loading…", false);
+  setInlineStatus(seriesStatusEl, "Loading...", false);
   try {
     allSeries = uniqueById(await fetchAllPages("/api/v1/library/series/"));
     setInlineStatus(seriesStatusEl, "", false);
@@ -265,7 +265,7 @@ export async function initBookEdit() {
   }
   syncSeriesSelectOptions({ allSeries, seriesSelectEl, selectedId: book && book.series && book.series.id ? String(book.series.id) : "" });
 
-  setInlineStatus(groupsStatusEl, "Loading…", false);
+  setInlineStatus(groupsStatusEl, "Loading...", false);
   try {
     allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
     setInlineStatus(groupsStatusEl, "", false);
@@ -290,7 +290,7 @@ export async function initBookEdit() {
     const ok = window.confirm("Remove this book from this shelf?");
     if (!ok) return;
 
-    setInlineStatus(shelvesStatusEl, "Removing…", false);
+    setInlineStatus(shelvesStatusEl, "Removing...", false);
     try {
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json" };
@@ -345,7 +345,7 @@ export async function initBookEdit() {
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(authorsStatusEl, "Creating…", false);
+    setInlineStatus(authorsStatusEl, "Creating...", false);
     try {
       const created = await fetchJSONWithOptions("/api/v1/library/authors/", {
         method: "POST",
@@ -382,7 +382,7 @@ export async function initBookEdit() {
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(seriesStatusEl, "Creating…", false);
+    setInlineStatus(seriesStatusEl, "Creating...", false);
     try {
       const created = await fetchJSONWithOptions("/api/v1/library/series/", {
         method: "POST",
@@ -424,7 +424,7 @@ export async function initBookEdit() {
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(groupsStatusEl, "Removing…", false);
+    setInlineStatus(groupsStatusEl, "Removing...", false);
     try {
       await fetchJSONWithOptions(
         `/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/${encodeURIComponent(String(bookId))}/`,
@@ -450,7 +450,7 @@ export async function initBookEdit() {
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(groupsAddStatusEl, "Adding…", false);
+    setInlineStatus(groupsAddStatusEl, "Adding...", false);
     try {
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/`, {
         method: "POST",
@@ -498,7 +498,7 @@ export async function initBookEdit() {
         source: sourceEl && sourceEl.value != null ? String(sourceEl.value).trim() : "",
         is_primary: !!(primaryEl && primaryEl.checked),
       };
-      setRowStatus("Adding…", false);
+      setRowStatus("Adding...", false);
       try {
         await fetchJSONWithOptions(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`, {
           method: "POST",
@@ -522,7 +522,7 @@ export async function initBookEdit() {
     if (!identId) return;
 
     if (action === "delete") {
-      setRowStatus("Deleting…", false);
+      setRowStatus("Deleting...", false);
       try {
         await fetchJSONWithOptions(
           `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/${encodeURIComponent(String(identId))}/`,
@@ -549,7 +549,7 @@ export async function initBookEdit() {
         source: sourceEl && sourceEl.value != null ? String(sourceEl.value).trim() : "",
         is_primary: !!(primaryEl && primaryEl.checked),
       };
-      setRowStatus("Saving…", false);
+      setRowStatus("Saving...", false);
       try {
         await fetchJSONWithOptions(
           `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/${encodeURIComponent(String(identId))}/`,

@@ -28,7 +28,7 @@ export async function initShelfNew() {
     visible(errEl, !!msg);
   }
 
-  setStatus(statusEl, "Loadingâ€¦", false);
+  setStatus(statusEl, "Loading...", false);
   setErr("");
   visible(cardEl, true);
 
@@ -64,7 +64,7 @@ export async function initShelfNew() {
     e.preventDefault();
     setGlobalError("");
     setErr("");
-    setStatus(submitStatusEl, "Creatingâ€¦", false);
+    setStatus(submitStatusEl, "Creating...", false);
 
     const body = {
       name: nameEl.value || "",

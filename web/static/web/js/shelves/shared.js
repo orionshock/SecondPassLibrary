@@ -14,7 +14,7 @@ export async function pagedController({ statusEl, resultsEl, prevBtn, nextBtn, n
   let currentUrl = initialUrl;
 
   async function load(url) {
-    setStatus(statusEl, "Loadingâ€¦", false);
+    setStatus(statusEl, "Loading...", false);
     const payload = await fetchJSON(url);
     const rows = Array.isArray(payload && payload.results) ? payload.results : [];
     resultsEl.innerHTML = rows.length ? rows.map(renderRow).join("") : `<div class="muted">${escapeHtml(emptyText)}</div>`;

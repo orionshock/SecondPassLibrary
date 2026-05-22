@@ -35,7 +35,7 @@ POST /api/v1/reading/sessions/<session_id>/close/          (mark session complet
 
 `last_activity_at = max(session.updated_at, progress.updated_at if exists, latest non-deleted annotation.updated_at if any)`
 
-This endpoint is intended for “Continue reading” style UIs. For full session history use `GET /api/v1/reading/sessions/`.
+This endpoint is intended for "Continue reading" style UIs. For full session history use `GET /api/v1/reading/sessions/`.
 
 ### Active session behavior
 

@@ -46,7 +46,7 @@ function renderShelfItems(payload) {
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const series = b.series && b.series.name ? String(b.series.name) : "";
-      const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join(" Â· ");
+      const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
       return `
         <article class="book book--with-cover">
           <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
@@ -94,7 +94,7 @@ export async function initShelfView() {
     return;
   }
 
-  setStatus(statusEl, "Loadingâ€¦", false);
+  setStatus(statusEl, "Loading...", false);
   setErr("");
   visible(wrapEl, false);
   visible(itemsCard, false);
@@ -115,7 +115,7 @@ export async function initShelfView() {
     let currentUrl = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/`;
 
     async function loadItems(url) {
-      setStatus(itemsStatus, "Loadingâ€¦", false);
+      setStatus(itemsStatus, "Loading...", false);
       const payload = await fetchJSON(url);
       itemsResults.innerHTML = renderShelfItems(payload);
       mountCovers(itemsResults);

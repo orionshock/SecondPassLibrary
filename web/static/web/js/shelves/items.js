@@ -20,7 +20,7 @@ export async function initShelfItemsEditor({
   let currentItems = [];
 
   async function loadItems(url) {
-    setStatus(itemsStatus, "Loadingâ€¦", false);
+    setStatus(itemsStatus, "Loading...", false);
     const payload = await fetchJSON(url);
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
     currentItems = results;
@@ -34,7 +34,7 @@ export async function initShelfItemsEditor({
           const coverUrl = b.cover_url ? String(b.cover_url) : "";
           const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
           const series = b.series && b.series.name ? String(b.series.name) : "";
-          const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join(" Â· ");
+          const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
           return `
             <article class="book book--with-cover">
               <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
@@ -129,7 +129,7 @@ export async function initShelfItemsEditor({
 
     if (action === "remove-item") {
       setGlobalError("");
-      setStatus(itemsStatus, "Removingâ€¦", false);
+      setStatus(itemsStatus, "Removing...", false);
       try {
         const csrf = getCsrfToken();
         const headers = { Accept: "application/json" };
@@ -150,7 +150,7 @@ export async function initShelfItemsEditor({
       const input = itemsResults.querySelector(`input[data-action="pos"][data-item-id="${itemId}"]`);
       const position = input ? Number(input.value) : 0;
       setGlobalError("");
-      setStatus(itemsStatus, "Savingâ€¦", false);
+      setStatus(itemsStatus, "Saving...", false);
       try {
         await patchShelfItemPosition(itemId, position);
         await reloadItems();
@@ -174,7 +174,7 @@ export async function initShelfItemsEditor({
       const bPos = Number(b.position || 0);
 
       setGlobalError("");
-      setStatus(itemsStatus, "Reorderingâ€¦", false);
+      setStatus(itemsStatus, "Reordering...", false);
       try {
         await patchShelfItemPosition(String(a.id), bPos);
         await patchShelfItemPosition(String(b.id), aPos);

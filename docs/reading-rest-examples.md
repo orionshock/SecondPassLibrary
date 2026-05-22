@@ -26,7 +26,7 @@ Practical notes:
 
 ## 1.5) Recent active sessions (compact)
 
-Fetch a compact “continue reading” list:
+Fetch a compact "continue reading" list:
 
 `GET /api/v1/reading/sessions/recent/?limit=10`
 
@@ -333,7 +333,7 @@ Example response:
 Notes:
 
 - Delete is a **soft delete**: it sets `is_deleted=true` and returns `204 No Content`.
-- Soft-delete is allowed even for closed sessions (deletion is not treated as “mutating reading content”).
+- Soft-delete is allowed even for closed sessions (deletion is not treated as "mutating reading content").
 
 ## 10) Client attribution
 

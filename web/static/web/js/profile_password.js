@@ -57,7 +57,7 @@ export async function initProfilePassword() {
       return;
     }
 
-    setStatus("Saving…", false);
+    setStatus("Saving...", false);
     setEnabled(false);
 
     try {

@@ -7,7 +7,7 @@ export async function refreshShelvesContext({
   shelvesEl,
   setInlineStatus,
 }) {
-  setInlineStatus(shelvesStatusEl, "Loading…", false);
+  setInlineStatus(shelvesStatusEl, "Loading...", false);
   try {
     const payload = await fetchJSON(`/api/v1/shelves/?book=${encodeURIComponent(String(bookId))}`);
     const results = payload && Array.isArray(payload.results) ? payload.results : [];

@@ -6,7 +6,7 @@ See `docs/client-api-auth.md` for Client API pairing and bearer token semantics.
 
 ## Terminology
 
-- **Django web session**: the browser/product UI login session managed by Django’s session framework (cookie + server-side session).
+- **Django web session**: the browser/product UI login session managed by Django's session framework (cookie + server-side session).
 - **UserWebSession**: companion model to track and revoke Django web sessions.
 - **UserClientSession**: bearer-token session for reader/API clients (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, and reading user-data endpoints).
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
@@ -75,7 +75,7 @@ These functions should be called by views/services that implement password chang
 The Product UI exposes basic session controls inside the **Profile** page:
 
 - Change password (`/profile/password/`)
-- “Log out other web sessions” (revoke other Django web sessions; keeps the current session)
+- "Log out other web sessions" (revoke other Django web sessions; keeps the current session)
 - Client API sessions list + revoke (UserClientSession)
 
 ## Non-goals

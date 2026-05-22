@@ -18,7 +18,7 @@ function renderBooks(payload) {
     .map((b) => {
       const title = b.title || "(Untitled)";
       const bookHref = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
-      const subtitle = b.subtitle ? ` <span class="muted">— ${escapeHtml(b.subtitle)}</span>` : "";
+      const subtitle = b.subtitle ? ` <span class="muted">- ${escapeHtml(b.subtitle)}</span>` : "";
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const series = b.series && b.series.name ? b.series.name : "";
       const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
@@ -79,7 +79,7 @@ export async function initLibraryBrowse() {
   }
 
   async function load(url) {
-    setStatus("Loading…", false);
+    setStatus("Loading...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;

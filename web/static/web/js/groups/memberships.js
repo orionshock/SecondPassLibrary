@@ -72,7 +72,7 @@ export async function initGroupMembershipsTab({
 
   addMemberForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setAddMemberStatus("Addingâ€¦", false);
+    setAddMemberStatus("Adding...", false);
     setGlobalError("");
 
     const userId = addMemberUser.value;
@@ -110,7 +110,7 @@ export async function initGroupMembershipsTab({
     if (!action || !membershipId) return;
 
     if (action === "member-remove") {
-      setStatus(membersStatus, "Removingâ€¦", false);
+      setStatus(membersStatus, "Removing...", false);
       try {
         const csrf = getCsrfToken();
         const headers = { Accept: "application/json" };
@@ -135,7 +135,7 @@ export async function initGroupMembershipsTab({
         `select[data-action=\"member-role\"][data-membership-id=\"${membershipId}\"]`
       );
       const role = select ? select.value : "reader";
-      setStatus(membersStatus, "Savingâ€¦", false);
+      setStatus(membersStatus, "Saving...", false);
       try {
         const csrf = getCsrfToken();
         const headers = { Accept: "application/json", "Content-Type": "application/json" };

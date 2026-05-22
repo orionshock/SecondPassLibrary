@@ -77,7 +77,7 @@ export async function initDashboard() {
   }
 
   async function loadRecent() {
-    setText(recentStatusEl, "Loading…");
+    setText(recentStatusEl, "Loading...");
     clear(recentListEl);
     visible(recentListEl, false);
 

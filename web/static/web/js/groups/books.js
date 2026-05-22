@@ -85,7 +85,7 @@ export async function initGroupBooksTab({
 
         const title = b.title || "(Untitled)";
         const coverUrl = b.cover_url ? String(b.cover_url) : "";
-        const subtitle = b.subtitle ? ` <span class="muted">â€” ${escapeHtml(b.subtitle)}</span>` : "";
+        const subtitle = b.subtitle ? ` <span class="muted">- ${escapeHtml(b.subtitle)}</span>` : "";
         const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
         const series = b.series && b.series.name ? b.series.name : "";
         const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
@@ -97,7 +97,7 @@ export async function initGroupBooksTab({
         const metaBits = [];
         if (authors.length) metaBits.push(escapeHtml(authors.join(", ")));
         if (series) metaBits.push(`${escapeHtml(series)}${seriesIndex ? ` #${escapeHtml(seriesIndex)}` : ""}`);
-        const meta = metaBits.length ? `<div class="muted">${metaBits.join(" Â· ")}</div>` : "";
+        const meta = metaBits.length ? `<div class="muted">${metaBits.join("  -  ")}</div>` : "";
 
         const addBtn =
           !inGroup && id
@@ -128,7 +128,7 @@ export async function initGroupBooksTab({
   let lastSearchUrl = null;
 
   async function loadBookSearch(url) {
-    setBookSearchStatus("Searchingâ€¦", false);
+    setBookSearchStatus("Searching...", false);
     bookSearchResults.innerHTML = "";
     bookSearchNext.disabled = true;
     bookSearchPrev.disabled = true;
@@ -195,7 +195,7 @@ export async function initGroupBooksTab({
     const bookId = target.getAttribute("data-book-id");
     if (!bookId) return;
 
-    setBookSearchStatus("Addingâ€¦", false);
+    setBookSearchStatus("Adding...", false);
     setGlobalError("");
 
     try {
@@ -229,7 +229,7 @@ export async function initGroupBooksTab({
 
   addBookForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setAddBookStatus("Addingâ€¦", false);
+    setAddBookStatus("Adding...", false);
     setGlobalError("");
 
     const bookId = (addBookInput.value || "").trim();
@@ -267,7 +267,7 @@ export async function initGroupBooksTab({
     if (!bookId) return;
 
     setGlobalError("");
-    setStatus(booksStatus, "Removingâ€¦", false);
+    setStatus(booksStatus, "Removing...", false);
     try {
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json" };

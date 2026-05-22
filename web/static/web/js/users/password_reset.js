@@ -17,7 +17,7 @@ export function initManagedPasswordReset({
 
   resetBtn.addEventListener("click", async () => {
     setGlobalError("");
-    setResetStatus("Resettingâ€¦", false);
+    setResetStatus("Resetting...", false);
     visible(resetResult, false);
     resetCopy.value = "";
 

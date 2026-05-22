@@ -71,7 +71,7 @@ export async function pagedListController({ statusEl, resultsEl, nextBtn, prevBt
   let prevUrl = null;
 
   async function load(url) {
-    setStatus(statusEl, "Loadingâ€¦", false);
+    setStatus(statusEl, "Loading...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;
@@ -135,7 +135,7 @@ export function renderGroupShelvesCompact(payload, { canEdit }) {
       const editHref = id ? `/shelves/${encodeURIComponent(id)}/edit/` : "#";
       const rowCanEdit = s && s.can_edit != null ? !!s.can_edit : !!canEdit;
 
-      const descSnippet = desc && desc.length > 160 ? `${desc.slice(0, 160)}â€¦` : desc;
+      const descSnippet = desc && desc.length > 160 ? `${desc.slice(0, 160)}...` : desc;
       const countLine = itemCount != null ? `${itemCount} item${itemCount === 1 ? "" : "s"}` : "";
 
       const actions = [
@@ -168,7 +168,7 @@ export function renderBooksCompact(payload, { groupId, canRemove }) {
   return results
     .map((b) => {
       const title = b.title || "(Untitled)";
-      const subtitle = b.subtitle ? ` <span class="muted">â€” ${escapeHtml(b.subtitle)}</span>` : "";
+      const subtitle = b.subtitle ? ` <span class="muted">- ${escapeHtml(b.subtitle)}</span>` : "";
       const href = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
@@ -213,7 +213,7 @@ export function renderMembersReadOnly(payload) {
           <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
             <div>
               <h3 class="book__title" style="display:inline;">${escapeHtml(username)}${ownerBadge}</h3>
-              <div class="muted">Role: <code>${escapeHtml(role)}</code>${email ? ` Â· ${escapeHtml(email)}` : ""}</div>
+              <div class="muted">Role: <code>${escapeHtml(role)}</code>${email ? `  -  ${escapeHtml(email)}` : ""}</div>
             </div>
           </div>
         </article>

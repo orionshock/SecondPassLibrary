@@ -88,7 +88,7 @@ export async function initUserNew() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     setGlobalError("");
-    setSubmitStatus("Creatingâ€¦", false);
+    setSubmitStatus("Creating...", false);
     setFormEnabled(false);
 
     const payload = {

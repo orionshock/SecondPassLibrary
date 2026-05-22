@@ -85,7 +85,7 @@ The groups UI is API-driven using:
 
 Note: Group product routes use UUIDs and `LibraryGroup` no longer has a slug. The special Public group is identified internally by `ServerSetting(public_group_id)` (not by a slug string).
 
-Dashboard note: the old “Sections” navigation card was removed from `/app/` because the top navigation already provides the same links.
+Dashboard note: the old "Sections" navigation card was removed from `/app/` because the top navigation already provides the same links.
 
 Shelves product UI pages exist (API-driven):
 
@@ -118,9 +118,9 @@ Password management:
 - The top-right username links to `/profile/`.
 - If `me.must_change_password=true`, product UI pages redirect to `/profile/password/` until the user changes their password.
 - Self password change keeps the current login session but logs out other web sessions for that user.
-- `/profile/` includes a Session management section with a “Log out all other web sessions” action.
+- `/profile/` includes a Session management section with a "Log out all other web sessions" action.
 - `/profile/` also lists active Device/API sessions (Client API bearer sessions) and allows revoking them.
-- `/profile/` includes a “Connect a device/app” link to `/client-api/authorize/` to begin the human side of pairing.
+- `/profile/` includes a "Connect a device/app" link to `/client-api/authorize/` to begin the human side of pairing.
 
 User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
 
@@ -358,7 +358,7 @@ Current limitations and intentional non-goals that affect the product UI:
 - LibraryGroups:
   - no public API for creating/deleting groups (groups are currently bootstrap/admin-oriented)
 - Reading:
-  - the UI focuses on “continue reading” and per-book flows; a dedicated session history UI is not implemented
+  - the UI focuses on "continue reading" and per-book flows; a dedicated session history UI is not implemented
 - Users:
   - no email-based invites or password reset flows (managed user creation/reset exists for self-host administration)
 

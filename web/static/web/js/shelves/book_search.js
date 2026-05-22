@@ -24,7 +24,7 @@ export function initShelfBookSearch({
       searchResults.innerHTML = "";
       return;
     }
-    setStatus(searchStatus, "Searchingâ€¦", false);
+    setStatus(searchStatus, "Searching...", false);
     const payload = await fetchJSON(`/api/v1/library/books/?q=${encodeURIComponent(term)}`);
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
 
@@ -42,7 +42,7 @@ export function initShelfBookSearch({
         const coverUrl = b.cover_url ? String(b.cover_url) : "";
         const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
         const series = b.series && b.series.name ? String(b.series.name) : "";
-        const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join(" Â· ");
+        const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
         const inShelf = bid && currentShelfBookIds.has(bid);
 
         let canAdd = !!bid && !inShelf;
@@ -107,7 +107,7 @@ export function initShelfBookSearch({
     if (action !== "add-book" || !bookId) return;
 
     setGlobalError("");
-    setStatus(searchStatus, "Addingâ€¦", false);
+    setStatus(searchStatus, "Adding...", false);
     try {
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json", "Content-Type": "application/json" };
