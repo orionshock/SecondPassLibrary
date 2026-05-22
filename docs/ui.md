@@ -326,10 +326,11 @@ UI behaviors:
 ## 10. Shelves UI
 
 - Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
-  - Edit details (name/description; visibility only for user-owned shelves).
-  - Manage items (remove; reorder via numeric position and simple move up/down actions).
-  - Add books via search (`GET /api/v1/library/books/?q=...`) and item create.
-  - Delete shelf (removes shelf + shelf items only; never deletes books or files).
+  - Uses tabs to reduce scroll:
+    - Books in shelf (default): remove and reorder items; changes apply immediately.
+    - Add books: search and add; changes apply immediately; books already in shelf are hidden from results.
+    - Details: edit name/description (and visibility for user-owned shelves only) and delete shelf.
+  - Delete shelf removes the shelf and its shelf items only; it never deletes books or files.
 - Shelves are presentation/organization objects, not access control.
 
 ## 11. Implementation options (non-binding)

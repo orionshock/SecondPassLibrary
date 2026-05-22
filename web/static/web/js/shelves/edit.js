@@ -16,6 +16,13 @@ export async function initShelfEdit() {
   const statusEl = $("#shelf-edit-status");
   const errEl = $("#shelf-edit-error");
   const notAllowedEl = $("#shelf-edit-not-allowed");
+  const tabsEl = $("#shelf-edit-tabs");
+  const tabBooks = $("#shelf-edit-tab-books");
+  const tabAdd = $("#shelf-edit-tab-add");
+  const tabDetails = $("#shelf-edit-tab-details");
+  const panelBooks = $("#shelf-edit-panel-books");
+  const panelAdd = $("#shelf-edit-panel-add");
+  const panelDetails = $("#shelf-edit-panel-details");
   const wrapEl = $("#shelf-edit");
   const formEl = $("#shelf-edit-form");
   const nameEl = $("#shelf-edit-name");
@@ -41,6 +48,7 @@ export async function initShelfEdit() {
   const itemCountEl = $("#shelf-edit-item-count");
   const groupLinkEl = $("#shelf-edit-group-link");
   const contextNoteEl = $("#shelf-edit-context-note");
+  const addCard = $("#shelf-edit-add");
   const dangerCard = $("#shelf-edit-danger");
   const deleteBtn = $("#shelf-edit-delete-btn");
   const deleteStatus = $("#shelf-edit-delete-status");
@@ -48,6 +56,13 @@ export async function initShelfEdit() {
     !statusEl ||
     !errEl ||
     !notAllowedEl ||
+    !tabsEl ||
+    !tabBooks ||
+    !tabAdd ||
+    !tabDetails ||
+    !panelBooks ||
+    !panelAdd ||
+    !panelDetails ||
     !wrapEl ||
     !formEl ||
     !nameEl ||
@@ -73,11 +88,26 @@ export async function initShelfEdit() {
     !itemCountEl ||
     !groupLinkEl ||
     !contextNoteEl ||
+    !addCard ||
     !dangerCard ||
     !deleteBtn ||
     !deleteStatus
   )
     return;
+
+  function setActiveTab(tabName) {
+    const isBooks = tabName === "books";
+    const isAdd = tabName === "add";
+    const isDetails = tabName === "details";
+
+    tabBooks.classList.toggle("is-active", isBooks);
+    tabAdd.classList.toggle("is-active", isAdd);
+    tabDetails.classList.toggle("is-active", isDetails);
+
+    visible(panelBooks, isBooks);
+    visible(panelAdd, isAdd);
+    visible(panelDetails, isDetails);
+  }
 
   function setErr(msg) {
     errEl.textContent = msg || "";
@@ -92,8 +122,13 @@ export async function initShelfEdit() {
 
   setStatus(statusEl, "Loading...", false);
   setErr("");
+  visible(tabsEl, false);
+  visible(panelBooks, false);
+  visible(panelAdd, false);
+  visible(panelDetails, false);
   visible(wrapEl, false);
   visible(itemsCard, false);
+  visible(addCard, false);
   visible(dangerCard, false);
   visible(notAllowedEl, false);
 
@@ -166,10 +201,18 @@ export async function initShelfEdit() {
     visNote.textContent = "Listed shelves are visible to authenticated users but do not grant book access.";
   }
 
+  visible(tabsEl, true);
+  setActiveTab("books");
+
   visible(wrapEl, true);
   visible(itemsCard, true);
+  visible(addCard, true);
   visible(dangerCard, true);
   setStatus(statusEl, "", false);
+
+  tabBooks.addEventListener("click", () => setActiveTab("books"));
+  tabAdd.addEventListener("click", () => setActiveTab("add"));
+  tabDetails.addEventListener("click", () => setActiveTab("details"));
 
   formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -241,4 +284,3 @@ export async function initShelfEdit() {
     }
   });
 }
-

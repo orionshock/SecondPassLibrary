@@ -162,7 +162,10 @@ Product UI routes:
 
 Behavior:
 
-- Shelf edit is the primary shelf management page (add/remove items, ordering, delete).
+- Shelf edit is the primary shelf management page. It uses tabs:
+  - Books in shelf (default): remove/reorder; changes apply immediately.
+  - Add books: search/add; changes apply immediately; books already in the shelf are hidden from results.
+  - Details: edit name/description/visibility (user shelves only) and delete.
 - Book detail and book edit pages surface shelf context (shelves containing the book).
 - Group pages include shelf tabs for group-owned shelves.
 

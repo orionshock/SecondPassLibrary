@@ -2,7 +2,7 @@
 
 {% block page_id %}shelf-edit{% endblock %}
 
-{% block title %}Edit shelf · {{ server_name }}{% endblock %}
+{% block title %}Edit shelf - {{ server_name }}{% endblock %}
 
 {% block content %}
   <div class="page-header">
@@ -28,62 +28,80 @@
     Not allowed. <a href="/shelves/{{ shelf_id|escape }}/">Back to shelf</a>
   </div>
 
-  <section id="shelf-edit" class="card is-hidden" data-shelf-id="{{ shelf_id|escape }}">
-    <h2 class="card__title">Details</h2>
-    <form id="shelf-edit-form">
-      {% csrf_token %}
-      <div class="kv">
-        <div class="kv__k"><label for="shelf-edit-name">Name</label></div>
-        <div class="kv__v"><input id="shelf-edit-name" type="text" required style="width: 100%;" /></div>
+  <div id="shelf-edit-tabs" class="tabs is-hidden" style="margin-top: 12px;">
+    <button id="shelf-edit-tab-books" class="tab-button" type="button">Books in shelf</button>
+    <button id="shelf-edit-tab-add" class="tab-button" type="button">Add books</button>
+    <button id="shelf-edit-tab-details" class="tab-button" type="button">Details</button>
+  </div>
 
-        <div class="kv__k"><label for="shelf-edit-description">Description</label></div>
-        <div class="kv__v"><textarea id="shelf-edit-description" rows="4" style="width: 100%;"></textarea></div>
+  <div id="shelf-edit-panel-books" class="tab-panel is-hidden">
+    <section id="shelf-edit-items" class="card is-hidden">
+      <h2 class="card__title">Books in shelf</h2>
+      <div class="muted">Changes apply immediately. There is no separate save for book membership.</div>
 
-        <div id="shelf-edit-visibility-row" class="kv__k"><label for="shelf-edit-visibility">Visibility</label></div>
-        <div id="shelf-edit-visibility-row-v" class="kv__v">
-          <select id="shelf-edit-visibility">
-            <option value="private">Private</option>
-            <option value="listed">Listed</option>
-          </select>
-          <div id="shelf-edit-visibility-note" class="muted" style="margin-top: 6px;"></div>
-        </div>
+      <div id="shelf-edit-items-status" class="muted" style="margin-top: 10px;"></div>
+      <div id="shelf-edit-items-results" class="muted"></div>
+      <div id="shelf-edit-items-note" class="muted" style="margin-top: 10px;">
+        Tip: Use position numbers (or Move up/down) to reorder. Drag/drop is not supported yet.
       </div>
       <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <button id="shelf-edit-save-btn" class="button" type="submit">Save</button>
-        <span id="shelf-edit-save-status" class="muted"></span>
+        <button id="shelf-edit-items-prev" class="button" type="button">Previous</button>
+        <button id="shelf-edit-items-next" class="button" type="button">Next</button>
+        <span id="shelf-edit-items-page-note" class="muted"></span>
       </div>
-    </form>
-  </section>
+    </section>
+  </div>
 
-  <section id="shelf-edit-items" class="card is-hidden">
-    <h2 class="card__title">Books</h2>
+  <div id="shelf-edit-panel-add" class="tab-panel is-hidden">
+    <section id="shelf-edit-add" class="card is-hidden">
+      <h2 class="card__title">Add books</h2>
+      <div class="muted">Adding a book applies immediately. Books already in this shelf are hidden from results.</div>
 
-    <div id="shelf-edit-items-status" class="muted"></div>
-    <div id="shelf-edit-items-results" class="muted"></div>
-    <div id="shelf-edit-items-note" class="muted" style="margin-top: 10px;">
-      Tip: Use position numbers (or Move up/down) to reorder. Drag/drop is not supported yet.
-    </div>
-    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <button id="shelf-edit-items-prev" class="button" type="button">Previous</button>
-      <button id="shelf-edit-items-next" class="button" type="button">Next</button>
-      <span id="shelf-edit-items-page-note" class="muted"></span>
-    </div>
+      <form id="shelf-edit-book-search-form" style="margin-top: 12px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input id="shelf-edit-book-search-input" type="text" autocomplete="off" placeholder="Search books..." style="min-width: 240px; flex: 1;" />
+        <button id="shelf-edit-book-search-btn" class="button" type="submit">Search</button>
+        <span id="shelf-edit-book-search-status" class="muted"></span>
+      </form>
+      <div id="shelf-edit-book-search-results" class="muted" style="margin-top: 10px;"></div>
+    </section>
+  </div>
 
-    <h3 class="card__title" style="margin-top: 18px;">Add book</h3>
-    <form id="shelf-edit-book-search-form" style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <input id="shelf-edit-book-search-input" type="text" autocomplete="off" placeholder="Search books..." style="min-width: 240px; flex: 1;" />
-      <button id="shelf-edit-book-search-btn" class="button" type="submit">Search</button>
-      <span id="shelf-edit-book-search-status" class="muted"></span>
-    </form>
-    <div id="shelf-edit-book-search-results" class="muted" style="margin-top: 10px;"></div>
-  </section>
+  <div id="shelf-edit-panel-details" class="tab-panel is-hidden">
+    <section id="shelf-edit" class="card is-hidden" data-shelf-id="{{ shelf_id|escape }}">
+      <h2 class="card__title">Details</h2>
+      <form id="shelf-edit-form">
+        {% csrf_token %}
+        <div class="kv">
+          <div class="kv__k"><label for="shelf-edit-name">Name</label></div>
+          <div class="kv__v"><input id="shelf-edit-name" type="text" required style="width: 100%;" /></div>
 
-  <section id="shelf-edit-danger" class="card is-hidden">
-    <h2 class="card__title">Danger</h2>
-    <div class="muted">Deleting a shelf removes only the shelf and its shelf items. Books and files are not deleted.</div>
-    <div style="margin-top: 12px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <button id="shelf-edit-delete-btn" class="button" type="button">Delete shelf</button>
-      <span id="shelf-edit-delete-status" class="muted"></span>
-    </div>
-  </section>
+          <div class="kv__k"><label for="shelf-edit-description">Description</label></div>
+          <div class="kv__v"><textarea id="shelf-edit-description" rows="4" style="width: 100%;"></textarea></div>
+
+          <div id="shelf-edit-visibility-row" class="kv__k"><label for="shelf-edit-visibility">Visibility</label></div>
+          <div id="shelf-edit-visibility-row-v" class="kv__v">
+            <select id="shelf-edit-visibility">
+              <option value="private">Private</option>
+              <option value="listed">Listed</option>
+            </select>
+            <div id="shelf-edit-visibility-note" class="muted" style="margin-top: 6px;"></div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button id="shelf-edit-save-btn" class="button" type="submit">Save details</button>
+          <span id="shelf-edit-save-status" class="muted"></span>
+        </div>
+      </form>
+    </section>
+
+    <section id="shelf-edit-danger" class="card is-hidden">
+      <h2 class="card__title">Danger</h2>
+      <div class="muted">Deleting a shelf removes only the shelf and its shelf items. Books and files are not deleted.</div>
+      <div style="margin-top: 12px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button id="shelf-edit-delete-btn" class="button" type="button">Delete shelf</button>
+        <span id="shelf-edit-delete-status" class="muted"></span>
+      </div>
+    </section>
+  </div>
 {% endblock %}
+

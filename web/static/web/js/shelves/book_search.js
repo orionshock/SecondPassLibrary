@@ -44,9 +44,10 @@ export function initShelfBookSearch({
         const series = b.series && b.series.name ? String(b.series.name) : "";
         const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
         const inShelf = bid && currentShelfBookIds.has(bid);
+        if (inShelf) return "";
 
-        let canAdd = !!bid && !inShelf;
-        let badgeText = inShelf ? "Already in shelf" : "";
+        let canAdd = !!bid;
+        let badgeText = "";
         if (!badgeText && ownerType === "group" && ownerGroupId) {
           const groups = Array.isArray(b.groups) ? b.groups : null;
           if (groups && groups.length) {
@@ -82,6 +83,7 @@ export function initShelfBookSearch({
           </article>
         `.trim();
       })
+      .filter(Boolean)
       .join("");
 
     setStatus(searchStatus, "", false);
