@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Q
 
 from core.models import TimeStampedModel
-from library.models import Book
+from library.models import Book, BookFile
 
 
 class ReadingSession(TimeStampedModel):
@@ -87,11 +87,28 @@ class Annotation(TimeStampedModel):
     session = models.ForeignKey(
         ReadingSession, on_delete=models.CASCADE, related_name="annotations"
     )
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="annotations")
+    book_file = models.ForeignKey(
+        BookFile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="annotations",
+    )
     motivation = models.CharField(
         max_length=32, choices=MOTIVATION_CHOICES, null=True, blank=True
     )
-    target = models.JSONField(default=dict)
-    body = models.JSONField(default=list, blank=True)
+
+    selector_type = models.CharField(max_length=64, default="FragmentSelector")
+    selector_conforms_to = models.CharField(
+        max_length=255, default="http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
+    )
+    selector_value = models.TextField()
+
+    highlight_text = models.TextField(blank=True, default="")
+    highlight_color = models.CharField(max_length=32, blank=True, default="")
+    comment_text = models.TextField(blank=True, default="")
+
     # Internal/server-managed provenance for future import work. Not exposed as a
     # normal client-writable field via the public reading API.
     source_import = models.JSONField(default=dict, blank=True)
@@ -100,6 +117,12 @@ class Annotation(TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["session", "is_deleted", "created_at"]),
+            models.Index(fields=["session", "is_deleted", "updated_at"]),
+            models.Index(fields=["book", "is_deleted", "created_at"]),
+            models.Index(fields=["book", "is_deleted", "updated_at"]),
+        ]
 
     def __str__(self):
         # Django provides `get_<field>_display()` dynamically for choice fields.

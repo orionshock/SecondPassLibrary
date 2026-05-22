@@ -34,6 +34,8 @@ Highlights, notes, and bookmarks are treated as W3C Annotations:
 
 Annotations point into a publication using an EPUB CFI selector, and are intentionally saved user artifacts.
 
+Internally, annotations are stored in compact/queryable columns (selector value + highlight/comment text). The API/export shape remains W3C-ish (`target`/`body`) and is reconstructed at the boundary.
+
 ### Current reading location vs bookmarks
 
 - Current reading location is mutable **ReadingSession state**, not necessarily an Annotation.

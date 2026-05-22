@@ -34,11 +34,11 @@ from .services import (
     get_or_create_active_session,
     get_or_create_progress,
     create_annotation,
+    update_annotation,
     start_over_book,
     update_progress,
 )
 from .profile import CURRENT_READING_PROFILE_VERSION
-from .w3c import build_publication_source
 from .serializers import (
     AnnotationSerializer,
     ReadingProgressSerializer,
@@ -52,7 +52,7 @@ def _build_open_response_payload(*, request: Request, session: ReadingSession, v
     progress = get_or_create_progress(session=session)
 
     annotations_qs = (
-        Annotation.objects.select_related("session", "session__book")
+        Annotation.objects.select_related("session", "book", "book_file")
         .filter(session=session, is_deleted=False)
         .order_by(*Annotation._meta.ordering)  # type: ignore[arg-type]
     )
@@ -348,7 +348,7 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         request = cast(Request, self.request)
         queryset = Annotation.objects.select_related(
-            "session", "session__book"
+            "session", "book", "book_file"
         ).filter(session__user=self.request.user)
 
         include_deleted = (
@@ -502,25 +502,21 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         session = cast(ReadingSession, validated["session"])
         motivation = cast(str, validated["motivation"])
         target = cast(dict, validated.get("target") or {})
-        body = validated.get("body") or []
+        body = cast(list[dict], validated.get("body") or [])
 
-        # Enrich a missing source deterministically based on the session book.
-        if "source" not in target or not target.get("source"):
-            target = dict(target)
-            target["source"] = build_publication_source(book=session.book)
-
-        annotation = create_annotation(
-            session=session,
-            motivation=motivation,
-            target=target,
-            body=body,
-        )
+        compact = serializer._compact_from_profile(target=target, body=body)  # type: ignore[attr-defined]
+        annotation = create_annotation(session=session, motivation=motivation, **compact)
         serializer.instance = annotation
 
     def perform_update(self, serializer):
         annotation = cast(Annotation, serializer.instance)
-        assert_session_writable(session=annotation.session)
-        serializer.save()
+        validated = cast(dict[str, Any], serializer.validated_data)
+        motivation = cast(str, validated.get("motivation") or annotation.motivation or "")
+        target = cast(dict, validated.get("target") or {})
+        body = cast(list[dict], validated.get("body") or [])
+
+        compact = serializer._compact_from_profile(target=target, body=body)  # type: ignore[attr-defined]
+        update_annotation(annotation=annotation, motivation=motivation, **compact)
 
     def destroy(self, request, *args, **kwargs):
         annotation = self.get_object()

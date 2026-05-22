@@ -9,6 +9,7 @@ from .profile import (
     validate_current_location,
     validate_profile_version,
  )
+from .w3c import build_publication_source
 
 
 class ReadingSessionSerializer(serializers.ModelSerializer):
@@ -108,6 +109,9 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
+    target = serializers.JSONField(write_only=True)
+    body = serializers.JSONField(write_only=True, required=False)
+
     def validate_session(self, session):
         request = self.context.get("request")
         if request is None or request.user.is_anonymous:
@@ -138,9 +142,15 @@ class AnnotationSerializer(serializers.ModelSerializer):
 
     def validate_target(self, target):
         try:
-            return validate_annotation_target(target)
+            validated = validate_annotation_target(target)
         except ValueError as e:
             raise serializers.ValidationError(str(e)) from e
+
+        selector = validated.get("selector") if isinstance(validated, dict) else None
+        selector_value = selector.get("value") if isinstance(selector, dict) else None
+        if not selector_value:
+            raise serializers.ValidationError("selector.value is required.")
+        return validated
 
     def validate_body(self, body):
         try:
@@ -174,4 +184,86 @@ class AnnotationSerializer(serializers.ModelSerializer):
         # If the client omitted profile_version, set it to the current version.
         if "profile_version" not in attrs:
             attrs["profile_version"] = CURRENT_READING_PROFILE_VERSION
+
+        # Keep annotation session immutable for now (avoids cross-book inconsistencies).
+        if self.instance is not None and "session" in attrs:
+            if getattr(attrs["session"], "id", None) != getattr(self.instance, "session_id", None):
+                raise serializers.ValidationError({"detail": "session cannot be changed."})
         return super().validate(attrs)
+
+    def _compact_from_profile(
+        self, *, target: dict, body: list[dict]
+    ) -> dict[str, str]:
+        selector = target.get("selector") if isinstance(target, dict) else None
+        selector_type = (
+            str(selector.get("type"))
+            if isinstance(selector, dict) and selector.get("type")
+            else "FragmentSelector"
+        )
+        selector_conforms_to = (
+            str(selector.get("conformsTo"))
+            if isinstance(selector, dict) and selector.get("conformsTo")
+            else "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
+        )
+        selector_value = (
+            str(selector.get("value"))
+            if isinstance(selector, dict) and selector.get("value")
+            else ""
+        )
+
+        highlight_text = ""
+        highlight_color = ""
+        comment_text = ""
+
+        for b in body or []:
+            if not isinstance(b, dict):
+                continue
+            if b.get("type") != "TextualBody":
+                continue
+            purpose = (b.get("purpose") or "").strip()
+            value = b.get("value") if isinstance(b.get("value"), str) else ""
+            color = b.get("color") if isinstance(b.get("color"), str) else ""
+
+            if purpose in ("highlighting", "describing") and (value or color):
+                if not highlight_text:
+                    highlight_text = value
+                if not highlight_color and color:
+                    highlight_color = color
+            elif purpose == "commenting" and value:
+                if not comment_text:
+                    comment_text = value
+
+        return {
+            "selector_type": selector_type,
+            "selector_conforms_to": selector_conforms_to,
+            "selector_value": selector_value,
+            "highlight_text": highlight_text,
+            "highlight_color": highlight_color,
+            "comment_text": comment_text,
+        }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        selector = {
+            "type": instance.selector_type or "FragmentSelector",
+            "conformsTo": instance.selector_conforms_to
+            or "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
+            "value": instance.selector_value,
+        }
+
+        source = build_publication_source(book=instance.book)
+        data["target"] = {"source": source, "selector": selector}
+
+        bodies: list[dict] = []
+        if instance.highlight_text or instance.highlight_color:
+            b: dict = {"type": "TextualBody", "purpose": "describing", "value": instance.highlight_text or ""}
+            if instance.highlight_color:
+                b["color"] = instance.highlight_color
+            bodies.append(b)
+        if instance.comment_text:
+            bodies.append(
+                {"type": "TextualBody", "purpose": "commenting", "value": instance.comment_text}
+            )
+        data["body"] = bodies
+        return data

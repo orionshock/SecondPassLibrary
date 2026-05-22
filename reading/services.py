@@ -124,16 +124,72 @@ def create_annotation(
     *,
     session: ReadingSession,
     motivation: str,
-    target: dict,
-    body,
+    selector_type: str,
+    selector_conforms_to: str,
+    selector_value: str,
+    highlight_text: str = "",
+    highlight_color: str = "",
+    comment_text: str = "",
 ) -> Annotation:
     assert_session_writable(session=session)
+    book = session.book
+    book_file = getattr(book, "file", None)
     return Annotation.objects.create(
         session=session,
+        book=book,
+        book_file=book_file,
         motivation=motivation,
-        target=target,
-        body=body,
+        selector_type=selector_type,
+        selector_conforms_to=selector_conforms_to,
+        selector_value=selector_value,
+        highlight_text=highlight_text or "",
+        highlight_color=highlight_color or "",
+        comment_text=comment_text or "",
         # `source_import` is internal/server-managed. Keep it empty for normal creates.
         source_import={},
         profile_version=CURRENT_READING_PROFILE_VERSION,
     )
+
+
+def update_annotation(
+    *,
+    annotation: Annotation,
+    motivation: str,
+    selector_type: str,
+    selector_conforms_to: str,
+    selector_value: str,
+    highlight_text: str = "",
+    highlight_color: str = "",
+    comment_text: str = "",
+) -> Annotation:
+    assert_session_writable(session=annotation.session)
+    annotation.motivation = motivation
+    annotation.selector_type = selector_type
+    annotation.selector_conforms_to = selector_conforms_to
+    annotation.selector_value = selector_value
+    annotation.highlight_text = highlight_text or ""
+    annotation.highlight_color = highlight_color or ""
+    annotation.comment_text = comment_text or ""
+    annotation.profile_version = CURRENT_READING_PROFILE_VERSION
+
+    # Keep book/book_file consistent with the session's book at write time.
+    book = annotation.session.book
+    annotation.book = book
+    annotation.book_file = getattr(book, "file", None)
+
+    annotation.save(
+        update_fields=[
+            "motivation",
+            "selector_type",
+            "selector_conforms_to",
+            "selector_value",
+            "highlight_text",
+            "highlight_color",
+            "comment_text",
+            "profile_version",
+            "book",
+            "book_file",
+            "updated_at",
+        ]
+    )
+    return annotation

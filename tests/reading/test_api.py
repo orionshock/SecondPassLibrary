@@ -12,7 +12,8 @@ from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
 from core import policies
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
-from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from django.core.files.base import ContentFile
+from library.models import Book, BookFile, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from reading.profile import (
     CURRENT_READING_PROFILE_VERSION,
@@ -62,8 +63,9 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.annotation2 = Annotation.objects.create(
             session=self.session2,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "secret"}],
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+            comment_text="secret",
         )
 
     def test_anonymous_cannot_access_reading_apis(self):
@@ -107,14 +109,16 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         keep = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"selector": {"value": "epubcfi(/6/2)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "keep"}],
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+            comment_text="keep",
         )
         deleted = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"selector": {"value": "epubcfi(/6/4)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "delete"}],
+            book=self.book,
+            selector_value="epubcfi(/6/4)",
+            comment_text="delete",
             is_deleted=True,
         )
 
@@ -242,8 +246,8 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         Annotation.objects.create(
             session=old,
             motivation=Annotation.MOTIVATION_BOOKMARKING,
-            target={"selector": {"value": "epubcfi(/6/2)"}},
-            body=[],
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
         )
 
         url = f"/api/v1/reading/books/{self.book.id}/start-over/"
@@ -276,8 +280,8 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         ann = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_BOOKMARKING,
-            target={"selector": {"value": "epubcfi(/6/2)"}},
-            body=[],
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
         )
 
         close1 = cast(Response, self.client.post(f"/api/v1/reading/sessions/{session.id}/close/", data={}, format="json"))
@@ -380,8 +384,8 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         a = Annotation.objects.create(
             session=s2,
             motivation=Annotation.MOTIVATION_BOOKMARKING,
-            target={"selector": {"value": "epubcfi(/6/4)"}},
-            body=[],
+            book=book2,
+            selector_value="epubcfi(/6/4)",
         )
         Annotation.objects.filter(pk=a.pk).update(updated_at=timezone.now() + timedelta(seconds=5))
 
@@ -435,6 +439,13 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_annotations_create_requires_motivation_target_body(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        BookFile.objects.create(
+            book=self.book,
+            checksum="0" * 64,
+            file=ContentFile(b"dummy epub", name="dummy.epub"),
+            format=BookFile.FORMAT_EPUB,
+            file_size=9,
+        )
 
         create = cast(
             Response,
@@ -456,6 +467,14 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertIn("body", payload)
         self.assertNotIn("source_import", payload)
         self.assertEqual(payload["profile_version"], CURRENT_READING_PROFILE_VERSION)
+
+        ann = Annotation.objects.get(pk=payload["id"])
+        self.assertEqual(ann.session_id, session.id)
+        self.assertEqual(ann.book_id, self.book.id)
+        self.assertEqual(ann.book_file_id, self.book.file.id)
+        self.assertEqual(ann.selector_value, "epubcfi(/6/6)")
+        self.assertEqual(ann.highlight_text, "hello")
+        self.assertEqual(ann.comment_text, "")
 
     def test_annotation_create_idempotency_key_allows_safe_retry(self):
         self.client.login(username="u1", password="pass1")
@@ -757,8 +776,9 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         self.annotation2 = Annotation.objects.create(
             session=self.session2,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "secret"}],
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+            comment_text="secret",
         )
 
         self.token = "spl_testtoken_reading"
@@ -1092,6 +1112,24 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_annotation_missing_selector_value_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_annotation_selector_value_length_limit_rejected(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -1157,14 +1195,16 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         a1 = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "keep"}],
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+            comment_text="keep",
         )
         a2 = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/4)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "delete"}],
+            book=self.book,
+            selector_value="epubcfi(/6/4)",
+            comment_text="delete",
         )
 
         deleted = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{a2.id}/"))

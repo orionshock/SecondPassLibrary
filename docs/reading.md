@@ -97,7 +97,7 @@ Notes:
 
 ## Annotations (highlights, notes, bookmarks)
 
-Annotations are stored as W3C-style `Annotation` records:
+Annotations are represented externally as W3C-style `Annotation` records, but stored internally in compact/queryable columns (selector + highlight/comment text). The API reconstructs the W3C-ish `target`/`body` shape from those columns at the boundary.
 
 - List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
 - Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`
@@ -115,7 +115,7 @@ Notes:
 
 - Annotations belong to exactly one reading session.
 - The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
-- `source_import` provenance is reserved for future server-side import work and is not exposed as a normal client-writable field via the public API.
+- `source_import` is reserved for server-side import/provenance. It is not exposed as a normal client-writable field via the public API.
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
 

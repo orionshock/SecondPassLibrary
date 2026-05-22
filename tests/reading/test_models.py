@@ -60,9 +60,10 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         annotation = Annotation.objects.create(
             session=session,
+            book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2[chap]!/4/2/6)"}},
-            body=[{"type": "TextualBody", "purpose": "describing", "value": "Hello world"}],
+            selector_value="epubcfi(/6/2[chap]!/4/2/6)",
+            highlight_text="Hello world",
         )
         self.assertIn("Highlighting", str(annotation))
         self.assertIn("Test Book", str(annotation))
@@ -72,21 +73,23 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
 
         highlight = Annotation.objects.create(
             session=session,
+            book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
-            body=[{"type": "TextualBody", "purpose": "highlighting", "value": "yellow"}],
+            selector_value="epubcfi(/6/2)",
+            highlight_text="yellow",
         )
         note = Annotation.objects.create(
             session=session,
+            book=self.book,
             motivation=Annotation.MOTIVATION_COMMENTING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/4)"}},
-            body=[{"type": "TextualBody", "purpose": "commenting", "value": "n"}],
+            selector_value="epubcfi(/6/4)",
+            comment_text="n",
         )
         bookmark = Annotation.objects.create(
             session=session,
+            book=self.book,
             motivation=Annotation.MOTIVATION_BOOKMARKING,
-            target={"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
-            body=[],
+            selector_value="epubcfi(/6/6)",
         )
 
         self.assertEqual(highlight.motivation, "highlighting")

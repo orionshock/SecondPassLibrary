@@ -223,7 +223,7 @@ Notes:
 - Bookmark and current reading location often point into the book similarly, but they differ by lifecycle/intent:
   - Progress/current location is mutable session state.
   - Bookmark is an intentionally saved user artifact (annotation history).
-- Annotation `body` is always stored/returned as a list of objects. If a client submits a single body object, the server coerces it to a list in responses.
+- Annotation `body` is always accepted/returned as a list of objects. If a client submits a single body object, the server coerces it to a list in responses.
 
 ## 6) Create highlight annotation
 

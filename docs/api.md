@@ -387,7 +387,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 Reading payload notes:
 
 - Progress uses `current_location` (JSON) as the canonical "where am I?" session state.
-- Annotations use canonical `motivation`, `target`, and `body` fields.
+- Annotation API payloads use canonical `motivation`, `target`, and `body` fields. Internally, annotations are stored in compact columns and the `target`/`body` profile shape is reconstructed at the API boundary.
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 
