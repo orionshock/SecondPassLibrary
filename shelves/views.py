@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.http import Http404
@@ -87,11 +87,12 @@ class ShelfViewSet(
             return ShelfCreateSerializer
         if self.action in {"partial_update", "update"}:
             return ShelfPatchSerializer
-        if self.action in {"items", "add_item"}:
-            return ShelfItemCreateSerializer
-        if self.action in {"patch_item"}:
-            return ShelfItemPatchSerializer
         return ShelfSerializer
+
+    def _raise_drf_validation(self, exc: DjangoValidationError) -> NoReturn:
+        raise serializers.ValidationError(
+            exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+        )
 
     def get_queryset(self):
         user = self.request.user
@@ -169,7 +170,7 @@ class ShelfViewSet(
                 visibility=data.get("visibility") or Shelf.VISIBILITY_PRIVATE,
             )
         except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
+            self._raise_drf_validation(exc)
         out = ShelfSerializer(shelf, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -187,7 +188,7 @@ class ShelfViewSet(
         try:
             updated = update_shelf(request.user, shelf, **data)
         except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
+            self._raise_drf_validation(exc)
         out = ShelfSerializer(updated, context={"request": request})
         return Response(out.data, status=status.HTTP_200_OK)
 
@@ -198,19 +199,16 @@ class ShelfViewSet(
         delete_shelf(request.user, shelf)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["get", "post"], url_path="items")
-    def items(self, request, *args, **kwargs):
-        shelf = self.get_object()
+    def _items_get(self, request, shelf: Shelf) -> Response:
+        qs = visible_shelf_items_for_user(request.user, shelf)
+        page = self.paginate_queryset(qs)
+        items = list(page) if page is not None else list(qs)
+        out = ShelfItemSerializer(items, many=True, context={"request": request})
+        if page is not None:
+            return self.get_paginated_response(out.data)
+        return Response(out.data)
 
-        if request.method == "GET":
-            qs = visible_shelf_items_for_user(request.user, shelf)
-            page = self.paginate_queryset(qs)
-            items = list(page) if page is not None else list(qs)
-            out = ShelfItemSerializer(items, many=True, context={"request": request})
-            if page is not None:
-                return self.get_paginated_response(out.data)
-            return Response(out.data)
-
+    def _items_post(self, request, shelf: Shelf) -> Response:
         if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
             raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
 
@@ -230,27 +228,28 @@ class ShelfViewSet(
                 position=data.get("position"),
             )
         except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
+            self._raise_drf_validation(exc)
         out = ShelfItemSerializer(item, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["patch", "delete"], url_path=r"items/(?P<item_id>[^/.]+)")
-    def item_detail(self, request, item_id: str | None = None, *args, **kwargs):
+    @action(detail=True, methods=["get", "post"], url_path="items")
+    def items(self, request, *args, **kwargs):
         shelf = self.get_object()
-        if request.method in {"PATCH", "DELETE"}:
-            if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
-                raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
-        if item_id is None:
-            raise Http404()
 
-        try:
-            item = ShelfItem.objects.select_related("book").get(pk=item_id, shelf=shelf)
-        except ShelfItem.DoesNotExist as exc:
-            raise Http404() from exc
+        if request.method == "GET":
+            return self._items_get(request, shelf)
 
-        if request.method == "DELETE":
-            remove_book_from_shelf(request.user, shelf=shelf, book_or_item=item)
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        return self._items_post(request, shelf)
+
+    def _item_delete(self, request, shelf: Shelf, item: ShelfItem) -> Response:
+        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
+        remove_book_from_shelf(request.user, shelf=shelf, book_or_item=item)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _item_patch(self, request, shelf: Shelf, item: ShelfItem) -> Response:
+        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
 
         serializer = cast(Any, ShelfItemPatchSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)
@@ -264,6 +263,22 @@ class ShelfViewSet(
         try:
             item.save(update_fields=["position", "updated_at"])
         except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
+            self._raise_drf_validation(exc)
         out = ShelfItemSerializer(item, context={"request": request})
         return Response(out.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["patch", "delete"], url_path=r"items/(?P<item_id>[^/.]+)")
+    def item_detail(self, request, item_id: str | None = None, *args, **kwargs):
+        shelf = self.get_object()
+        if item_id is None:
+            raise Http404()
+
+        try:
+            item = ShelfItem.objects.select_related("book").get(pk=item_id, shelf=shelf)
+        except ShelfItem.DoesNotExist as exc:
+            raise Http404() from exc
+
+        if request.method == "DELETE":
+            return self._item_delete(request, shelf, item)
+
+        return self._item_patch(request, shelf, item)
