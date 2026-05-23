@@ -4,7 +4,7 @@ import { mountCovers } from "./ui/covers.js";
 
 function bookFileHtml(file) {
   if (!file || !file.download_url) return "";
-  const label = file.format ? String(file.format).toUpperCase() : "Download";
+  const label = "Download";
   return `<div class="book__files"><a class="pill" href="${escapeHtml(
     file.download_url
   )}">${escapeHtml(label)}</a></div>`;

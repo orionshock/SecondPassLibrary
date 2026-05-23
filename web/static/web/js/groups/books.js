@@ -90,9 +90,8 @@ export async function initGroupBooksTab({
         const series = b.series && b.series.name ? b.series.name : "";
         const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
 
-        const fileBadge = b.file ? '<span class="pill">File</span>' : "";
         const inGroupBadge = inGroup ? '<span class="pill">Already in group</span>' : "";
-        const badges = [fileBadge, inGroupBadge].filter(truthy).join(" ");
+        const badges = [inGroupBadge].filter(truthy).join(" ");
 
         const metaBits = [];
         if (authors.length) metaBits.push(escapeHtml(authors.join(", ")));
