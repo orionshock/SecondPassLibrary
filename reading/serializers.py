@@ -235,15 +235,13 @@ class AnnotationSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
-        if instance.selector_kind != SELECTOR_KIND_EPUB_CFI:
-            # Keep behavior explicit: today we only support EPUB CFI selectors.
-            raise serializers.ValidationError({"detail": "Unsupported selector_kind."})
-
-        selector = {
-            "type": "FragmentSelector",
-            "conformsTo": EPUB_CFI_CONFORMS_TO,
-            "value": instance.selector_value,
-        }
+        selector: dict[str, str] = {"value": instance.selector_value}
+        if instance.selector_kind == SELECTOR_KIND_EPUB_CFI:
+            selector["type"] = "FragmentSelector"
+            selector["conformsTo"] = EPUB_CFI_CONFORMS_TO
+        else:
+            # Safety fallback: avoid crashing list/detail if a bad row exists.
+            selector["type"] = "UnknownSelector"
 
         source = build_publication_source(book=instance.book)
         data["target"] = {"source": source, "selector": selector}

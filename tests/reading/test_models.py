@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
+from django.core.exceptions import ValidationError
 
 from library.models import Book
 from reading.models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
@@ -99,3 +100,28 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
         self.assertEqual(highlight.motivation, "highlighting")
         self.assertEqual(note.motivation, "commenting")
         self.assertEqual(bookmark.motivation, "bookmarking")
+
+    def test_annotation_full_clean_rejects_unsupported_selector_kind(self):
+        session = ReadingSession.objects.create(user=self.user, book=self.book)
+        ann = Annotation(
+            session=session,
+            book=self.book,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            selector_kind="weird_kind",
+            selector_value="epubcfi(/6/2)",
+        )
+        with self.assertRaises(ValidationError):
+            ann.full_clean()
+
+    def test_annotation_full_clean_rejects_book_mismatch(self):
+        other = Book.objects.create(title="Other Book")
+        session = ReadingSession.objects.create(user=self.user, book=self.book)
+        ann = Annotation(
+            session=session,
+            book=other,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            selector_kind=SELECTOR_KIND_EPUB_CFI,
+            selector_value="epubcfi(/6/2)",
+        )
+        with self.assertRaises(ValidationError):
+            ann.full_clean()

@@ -26,6 +26,7 @@ from reading.profile import (
 )
 from tests.reading.utils import IsolatedUserdataMixin
 from core.models import IdempotencyRecord
+from reading.serializers import AnnotationSerializer
 
 
 User = get_user_model()
@@ -1137,6 +1138,21 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_serializer_representation_does_not_raise_for_unknown_selector_kind(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        ann = Annotation(
+            session=session,
+            book=self.book,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            selector_kind="weird_kind",
+            selector_value="epubcfi(/6/2)",
+        )
+        payload = AnnotationSerializer(ann, context={"request": None}).data
+        self.assertEqual(payload["target"]["selector"]["type"], "UnknownSelector")
+        self.assertEqual(payload["target"]["selector"]["value"], "epubcfi(/6/2)")
+        self.assertNotIn("conformsTo", payload["target"]["selector"])
 
     def test_annotation_selector_type_optional_or_fragmentselector_only(self):
         self.client.login(username="u1", password="pass1")

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -7,6 +8,9 @@ from library.models import Book, BookFile
 
 
 SELECTOR_KIND_EPUB_CFI = "epub_cfi"
+SELECTOR_KIND_CHOICES = [
+    (SELECTOR_KIND_EPUB_CFI, "EPUB CFI"),
+]
 
 
 class ReadingSession(TimeStampedModel):
@@ -102,7 +106,11 @@ class Annotation(TimeStampedModel):
         max_length=32, choices=MOTIVATION_CHOICES, null=True, blank=True
     )
 
-    selector_kind = models.CharField(max_length=32, default=SELECTOR_KIND_EPUB_CFI)
+    selector_kind = models.CharField(
+        max_length=32,
+        choices=SELECTOR_KIND_CHOICES,
+        default=SELECTOR_KIND_EPUB_CFI,
+    )
     selector_value = models.TextField()
 
     highlight_text = models.TextField(blank=True, default="")
@@ -127,3 +135,23 @@ class Annotation(TimeStampedModel):
     def __str__(self):
         # Django provides `get_<field>_display()` dynamically for choice fields.
         return f"{self.get_motivation_display()} on {self.session}"  # type: ignore[attr-defined]
+
+    def clean(self):
+        super().clean()
+
+        supported_kinds = {SELECTOR_KIND_EPUB_CFI}
+        if self.selector_kind and self.selector_kind not in supported_kinds:
+            raise ValidationError({"selector_kind": "Unsupported selector_kind."})
+
+        # Defensive integrity: annotation.book should match session.book.
+        # Enforced by services for normal writes; keep it true for admin/manual edits too.
+        if self.session_id and self.book_id and self.session.book_id != self.book_id:
+            raise ValidationError({"book": "book must match session.book."})
+
+    def save(self, *args, **kwargs):
+        # Ensure model-level invariants are enforced for normal saves (including admin).
+        # Callers can pass skip_full_clean=True for rare internal cases.
+        skip_full_clean = bool(kwargs.pop("skip_full_clean", False))
+        if not skip_full_clean:
+            self.full_clean()
+        return super().save(*args, **kwargs)
