@@ -427,6 +427,11 @@ a:hover { text-decoration: underline; }
   color: var(--text);
   cursor: pointer;
 }
+.tab-button:hover { background: rgba(255, 255, 255, 0.05); }
+.tab-button:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.5);
+  outline-offset: 2px;
+}
 .tab-button.is-active {
   background: rgba(255, 255, 255, 0.07);
 }

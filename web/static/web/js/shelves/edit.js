@@ -104,6 +104,10 @@ export async function initShelfEdit() {
     tabAdd.classList.toggle("is-active", isAdd);
     tabDetails.classList.toggle("is-active", isDetails);
 
+    tabBooks.setAttribute("aria-selected", isBooks ? "true" : "false");
+    tabAdd.setAttribute("aria-selected", isAdd ? "true" : "false");
+    tabDetails.setAttribute("aria-selected", isDetails ? "true" : "false");
+
     visible(panelBooks, isBooks);
     visible(panelAdd, isAdd);
     visible(panelDetails, isDetails);
