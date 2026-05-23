@@ -19,6 +19,11 @@ def app_dashboard(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+def reading_book_activity(request: HttpRequest, book_id: str) -> HttpResponse:
+    return render(request, "web/reading_book_activity.html", {"book_id": book_id})
+
+
+@login_required
 def library_browse(request: HttpRequest) -> HttpResponse:
     return render(request, "web/library.html")
 

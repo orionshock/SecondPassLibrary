@@ -21,6 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
     app: { importer: () => import("./app_page.js"), initExportName: "initDashboard", label: "App" },
     library: { importer: () => import("./library.js"), initExportName: "initLibraryBrowse", label: "Library" },
     "book-detail": { importer: () => import("./book_detail.js"), initExportName: "initBookDetail", label: "Book" },
+    "reading-book-activity": {
+      importer: () => import("./reading_book_activity.js"),
+      initExportName: "initReadingBookActivity",
+      label: "Reading activity",
+    },
     "book-edit": { importer: () => import("./book_edit/main.js"), initExportName: "initBookEdit", label: "Book edit" },
     imports: { importer: () => import("./imports.js"), initExportName: "initImports", label: "Imports" },
 

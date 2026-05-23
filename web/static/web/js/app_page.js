@@ -22,9 +22,11 @@ function formatWhen(value) {
 
 function renderRecentItem(item) {
   const wrap = el("a", "recent-reading__item", "");
+  const bookId = item && item.book && item.book.id ? String(item.book.id) : "";
+  const sessionId = item && item.session && item.session.id ? String(item.session.id) : "";
   wrap.setAttribute(
     "href",
-    `/library/books/${encodeURIComponent(String(item.book.id || ""))}/`,
+    `/reading/books/${encodeURIComponent(bookId)}/activity/${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`,
   );
 
   const titleText = item.book && item.book.title ? String(item.book.title) : "";

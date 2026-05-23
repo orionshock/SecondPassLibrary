@@ -369,6 +369,29 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/users/")
 
+    def test_unauthenticated_reading_activity_redirects_to_login(self):
+        book_id = uuid4()
+        response = self.client.get(f"/reading/books/{book_id}/activity/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f"/api-auth/login/?next=/reading/books/{book_id}/activity/",
+        )
+
+    def test_authenticated_reading_activity_returns_200_and_has_containers(self):
+        self.client.force_login(self.user)
+        book_id = uuid4()
+        response = self.client.get(f"/reading/books/{book_id}/activity/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-book-id="{book_id}"')
+        self.assertContains(response, 'id="reading-activity-status"')
+        self.assertContains(response, 'id="reading-activity-error"')
+        self.assertContains(response, 'id="reading-activity-cover"')
+        self.assertContains(response, 'id="reading-activity-book-meta"')
+        self.assertContains(response, 'id="reading-activity-session"')
+        self.assertContains(response, 'id="reading-activity-progress"')
+        self.assertContains(response, 'id="reading-activity-annotations"')
+
     def test_unauthenticated_profile_redirects_to_login(self):
         response = self.client.get("/profile/", follow=False)
         self.assertEqual(response.status_code, 302)

@@ -7,6 +7,11 @@ app_name = "web"
 urlpatterns = [
     path("", views.index, name="index"),
     path("app/", views.app_dashboard, name="app"),
+    path(
+        "reading/books/<str:book_id>/activity/",
+        views.reading_book_activity,
+        name="reading_book_activity",
+    ),
     path("server/", views.server_settings, name="server_settings"),
     path("profile/", views.profile, name="profile"),
     path("profile/password/", views.profile_password, name="profile_password"),
