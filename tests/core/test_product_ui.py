@@ -388,6 +388,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="reading-activity-error"')
         self.assertContains(response, 'id="reading-activity-cover"')
         self.assertContains(response, 'id="reading-activity-book-meta"')
+        self.assertContains(response, 'id="reading-activity-session-context"')
         self.assertContains(response, 'id="reading-activity-session"')
         self.assertContains(response, 'id="reading-activity-progress"')
         self.assertContains(response, 'id="reading-activity-annotations"')

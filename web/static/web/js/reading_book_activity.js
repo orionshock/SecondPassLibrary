@@ -89,23 +89,53 @@ function renderAnnotationRow(a) {
   const wrap = document.createElement("article");
   wrap.className = "card";
 
-  const motivation = a && a.motivation ? String(a.motivation) : "";
   const updatedAt = a && a.updated_at ? String(a.updated_at) : "";
   const createdAt = a && a.created_at ? String(a.created_at) : "";
-  const sessionId = a && a.session ? String(a.session) : "";
-
-  const header = el("div", "muted", "");
-  const metaBits = [];
-  if (motivation) metaBits.push(motivation);
-  if (updatedAt) metaBits.push(`Updated ${formatWhen(updatedAt)}`);
-  else if (createdAt) metaBits.push(`Created ${formatWhen(createdAt)}`);
-  if (sessionId) metaBits.push(`Session ${sessionId}`);
-  header.textContent = metaBits.join(" - ");
-  wrap.appendChild(header);
 
   const bodies = Array.isArray(a && a.body) ? a.body : [];
   const highlight = bodies.find((b) => b && b.type === "TextualBody" && (b.purpose === "describing" || b.purpose === "highlighting"));
   const comment = bodies.find((b) => b && b.type === "TextualBody" && b.purpose === "commenting");
+
+  const hasHighlight = !!(highlight && (highlight.value || highlight.color));
+  const hasComment = !!(comment && comment.value);
+  const motivation = a && a.motivation ? String(a.motivation) : "";
+  const selectorValue =
+    a && a.target && a.target.selector && typeof a.target.selector.value === "string"
+      ? a.target.selector.value
+      : "";
+
+  let kindLabel = "Annotation";
+  let kindIcon = "✎";
+  if (motivation === "bookmarking" && !hasHighlight && !hasComment) {
+    kindLabel = "Bookmark";
+    kindIcon = "🔖";
+  } else if (hasHighlight && hasComment) {
+    kindLabel = "Highlight with note";
+    kindIcon = "✎";
+  } else if (hasComment && !hasHighlight) {
+    kindLabel = "Note";
+    kindIcon = "🗒";
+  } else if (hasHighlight && !hasComment) {
+    kindLabel = "Highlight";
+    kindIcon = "✦";
+  }
+
+  const header = document.createElement("div");
+  header.className = "muted";
+
+  const icon = el("span", "", kindIcon);
+  icon.setAttribute("aria-hidden", "true");
+  const label = el("span", "sr-only", kindLabel);
+  const text = el("span", "", ` ${kindLabel}`);
+
+  const whenText = updatedAt ? formatWhen(updatedAt) : createdAt ? formatWhen(createdAt) : "";
+  const when = el("span", "", whenText ? ` - ${whenText}` : "");
+
+  header.appendChild(icon);
+  header.appendChild(label);
+  header.appendChild(text);
+  header.appendChild(when);
+  wrap.appendChild(header);
 
   if (highlight && (highlight.value || highlight.color)) {
     const v = typeof highlight.value === "string" ? highlight.value : "";
@@ -118,8 +148,8 @@ function renderAnnotationRow(a) {
     wrap.appendChild(line);
   }
 
-  if (!wrap.textContent || !wrap.textContent.trim()) {
-    wrap.appendChild(el("div", "muted", "(Empty annotation)"));
+  if (!hasHighlight && !hasComment && selectorValue) {
+    wrap.appendChild(el("div", "muted", selectorValue));
   }
 
   return wrap;
@@ -145,6 +175,7 @@ export async function initReadingBookActivity() {
   const root = $("#reading-activity");
   const titleEl = $("#reading-activity-title");
   const subtitleEl = $("#reading-activity-subtitle");
+  const sessionContextEl = $("#reading-activity-session-context");
   const bookMetaEl = $("#reading-activity-book-meta");
   const coverEl = $("#reading-activity-cover");
   const sessionEl = $("#reading-activity-session");
@@ -162,6 +193,7 @@ export async function initReadingBookActivity() {
     !root ||
     !titleEl ||
     !subtitleEl ||
+    !sessionContextEl ||
     !bookMetaEl ||
     !coverEl ||
     !sessionEl ||
@@ -193,9 +225,10 @@ export async function initReadingBookActivity() {
 
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
-    const titleText = book && book.title ? String(book.title) : "Reading activity";
-    titleEl.textContent = "Reading activity";
-    subtitleEl.textContent = titleText;
+    const titleText = book && book.title ? String(book.title) : "Book";
+    titleEl.textContent = `Marginalia for “${titleText}”`;
+    subtitleEl.textContent = "";
+    sessionContextEl.textContent = "";
 
     const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
     coverEl.dataset.coverUrl = coverUrl;
@@ -222,6 +255,11 @@ export async function initReadingBookActivity() {
       sessionId = String(session.id);
       sessionName = session && typeof session.name === "string" ? session.name : "";
       sessionIdEl.textContent = `Session ${sessionId}`;
+      if (sessionName && sessionName.trim()) {
+        sessionContextEl.textContent = `Session: “${sessionName.trim()}”`;
+      } else {
+        sessionContextEl.textContent = `Session: “${sessionId}”`;
+      }
       sessionNameEl.value = sessionName;
       sessionSaveBtn.disabled = true;
       sessionSaveStatusEl.textContent = "";
@@ -237,6 +275,7 @@ export async function initReadingBookActivity() {
       }
     } else {
       sessionIdEl.textContent = "No session.";
+      sessionContextEl.textContent = "";
       sessionNameEl.value = "";
       sessionSaveBtn.disabled = true;
       sessionSaveStatusEl.textContent = "";
@@ -268,6 +307,11 @@ export async function initReadingBookActivity() {
         const updated = await patchJSON(`/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/`, { name: desired });
         sessionName = updated && typeof updated.name === "string" ? updated.name : desired;
         sessionNameEl.value = sessionName;
+        if (sessionName && sessionName.trim()) {
+          sessionContextEl.textContent = `Session: “${sessionName.trim()}”`;
+        } else {
+          sessionContextEl.textContent = `Session: “${sessionId}”`;
+        }
         sessionSaveStatusEl.textContent = "Saved.";
       } catch (eSave) {
         const msg = extractApiErrorMessage(eSave);
