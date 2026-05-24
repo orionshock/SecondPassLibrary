@@ -55,6 +55,7 @@ GET /api/v1/library/imports/<id>/
 
 - Temporary staged imports live under `userdata/imports/`.
 - Final stored EPUB files are written to content-addressed storage under `userdata/media/books/<first2>/<next2>/<sha256>.epub`.
+- Product policy: Books are import-only and file-backed. In normal flows a `Book` is created together with its `BookFile` as one logical import operation; fileless metadata-only Books are not a supported state.
 
 ## Management command note
 

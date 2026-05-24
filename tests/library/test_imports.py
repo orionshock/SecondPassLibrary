@@ -11,6 +11,7 @@ from django.test import TestCase
 
 from library.models import Book, BookFile
 from library.services import ImportStatus, import_epub
+from tests.utils.books import create_file_backed_book
 
 from tests.library.utils import IsolatedMediaRootMixin
 
@@ -72,12 +73,11 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
             checksum = hashlib.sha256(f.read()).hexdigest()
 
         # Create a BookFile with the same checksum
-        book = Book.objects.create(title="Existing Book")
-        BookFile.objects.create(
-            book=book,
-            file="existing.epub",
-            checksum=checksum,
-            file_size=123,
+        with open(self.epub_path, "rb") as f:
+            epub_bytes = f.read()
+        create_file_backed_book(
+            title="Existing Book",
+            epub_bytes=epub_bytes,
             source_filename="existing.epub",
         )
 
@@ -91,4 +91,3 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
         book = result.book
         assert book is not None
         self.assertEqual(book.title, "Existing Book")
-

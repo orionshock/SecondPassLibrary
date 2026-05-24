@@ -10,6 +10,7 @@ from reading.services import (
     update_progress,
 )
 from tests.reading.utils import IsolatedUserdataMixin
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -20,7 +21,7 @@ class ReadingServicesTest(IsolatedUserdataMixin, TestCase):
         self.user = User.objects.create_user(
             username="reader", password="testpass", email="reader@example.com"
         )
-        self.book = Book.objects.create(title="Test Book")
+        self.book = create_file_backed_book(title="Test Book").book
 
     def test_get_or_create_active_session_is_idempotent(self):
         s1 = get_or_create_active_session(user=self.user, book=self.book)

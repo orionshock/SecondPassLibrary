@@ -16,6 +16,7 @@ from library.group_services import (
     remove_book_from_group,
 )
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -69,10 +70,10 @@ class GroupCurationServicesTest(TestCase):
             role=LibraryGroupMembership.ROLE_READER,
         )
 
-        self.book_public = Book.objects.create(title="Public")
+        self.book_public = create_file_backed_book(title="Public", assign_public=False).book
         ensure_book_public_assignment(book=self.book_public, added_by=None)
 
-        self.book_hidden = Book.objects.create(title="Hidden")
+        self.book_hidden = create_file_backed_book(title="Hidden", assign_public=False).book
         hidden_group = LibraryGroup.objects.create(name="Hidden")
         other_user = User.objects.create_user(username="other", email="other@example.com", password="pw")
         ensure_user_public_membership(user=other_user)
@@ -131,7 +132,7 @@ class GroupCurationServicesTest(TestCase):
             remove_book_from_group(actor=self.curator, book=self.book_public, group=self.group_reader_only)
 
     def test_removing_last_assignment_reassigns_public(self):
-        book = Book.objects.create(title="OnlyGroup")
+        book = create_file_backed_book(title="OnlyGroup", assign_public=False).book
         BookGroupAssignment.objects.create(book=book, group=self.group, added_by=self.owner)
         self.assertFalse(BookGroupAssignment.objects.filter(book=book, group=self.public).exists())
 
@@ -140,7 +141,7 @@ class GroupCurationServicesTest(TestCase):
         self.assertTrue(BookGroupAssignment.objects.filter(book=book, group=self.public).exists())
 
     def test_removing_one_of_multiple_assignments_does_not_add_public_unnecessarily(self):
-        book = Book.objects.create(title="Multi")
+        book = create_file_backed_book(title="Multi", assign_public=False).book
         group_a = LibraryGroup.objects.create(name="A")
         group_b = LibraryGroup.objects.create(name="B")
         BookGroupAssignment.objects.create(book=book, group=group_a, added_by=self.owner)
@@ -152,7 +153,7 @@ class GroupCurationServicesTest(TestCase):
         self.assertEqual(groups, {group_b.id})
 
     def test_manager_can_remove_public_assignment_when_other_assignment_remains(self):
-        book = Book.objects.create(title="TwoGroups")
+        book = create_file_backed_book(title="TwoGroups", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
         BookGroupAssignment.objects.create(book=book, group=self.group, added_by=self.owner)
 
@@ -162,7 +163,7 @@ class GroupCurationServicesTest(TestCase):
         self.assertEqual(groups, {self.group.id})
 
     def test_removing_public_only_assignment_restores_public(self):
-        book = Book.objects.create(title="OnlyPublic")
+        book = create_file_backed_book(title="OnlyPublic", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
         self.assertEqual(BookGroupAssignment.objects.filter(book=book).count(), 1)
 

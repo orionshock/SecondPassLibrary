@@ -15,6 +15,7 @@ from library.group_services import (
 from library.models import Book, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
 from shelves.services import add_book_to_shelf, create_shelf, visible_shelf_items_for_user
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -57,7 +58,7 @@ class ShelfModelTests(TestCase):
             owner_user=self.user,
             visibility=Shelf.VISIBILITY_PRIVATE,
         )
-        book = Book.objects.create(title="B")
+        book = create_file_backed_book(title="B", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
         ShelfItem.objects.create(shelf=shelf, book=book, position=0, added_by=self.user)
         with self.assertRaises(ValidationError):
@@ -83,10 +84,10 @@ class ShelfServicePolicyTests(TestCase):
         self.group = LibraryGroup.objects.create(name="Fantasy Club")
         LibraryGroupMembership.objects.create(user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER)
 
-        self.book_in_group = Book.objects.create(title="GBook")
+        self.book_in_group = create_file_backed_book(title="GBook", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
-        self.book_other = Book.objects.create(title="OtherBook")
+        self.book_other = create_file_backed_book(title="OtherBook", assign_public=False).book
         ensure_book_public_assignment(book=self.book_other, added_by=None)
 
     def test_user_cannot_create_shelf_for_other_user(self):
@@ -136,4 +137,3 @@ class ShelfServicePolicyTests(TestCase):
 
         remove_book_from_group(actor=self.owner, book=self.book_in_group, group=self.group)
         self.assertFalse(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
-

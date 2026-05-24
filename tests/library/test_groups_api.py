@@ -17,6 +17,7 @@ from library.group_services import (
 )
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from core.errors import ErrorCode
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -123,15 +124,15 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
             user=self.reader, group=self.visible_group, role=LibraryGroupMembership.ROLE_READER
         )
 
-        self.book_public = Book.objects.create(title="Public Book")
+        self.book_public = create_file_backed_book(title="Public Book", assign_public=False).book
         ensure_book_public_assignment(book=self.book_public, added_by=None)
 
-        self.book_only_group = Book.objects.create(title="OnlyGroup")
+        self.book_only_group = create_file_backed_book(title="OnlyGroup", assign_public=False).book
         BookGroupAssignment.objects.create(
             book=self.book_only_group, group=self.group, added_by=self.librarian
         )
 
-        self.book_inaccessible = Book.objects.create(title="Inaccessible")
+        self.book_inaccessible = create_file_backed_book(title="Inaccessible", assign_public=False).book
         hidden = LibraryGroup.objects.create(name="Hidden")
         other = User.objects.create_user(username="other", email="other@example.com", password="pw")
         ensure_user_public_membership(user=other)
@@ -347,7 +348,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         group = LibraryGroup.objects.create(name="ToDelete")
 
         # Book assigned only to this group.
-        book = Book.objects.create(title="B")
+        book = create_file_backed_book(title="B", assign_public=False).book
         BookGroupAssignment.objects.create(book=book, group=group, added_by=None)
         # Remove Public assignment if present; ensure only-group state.
         BookGroupAssignment.objects.filter(book=book, group=self.public).delete()

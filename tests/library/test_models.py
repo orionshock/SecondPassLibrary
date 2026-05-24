@@ -11,13 +11,15 @@ from library.group_services import ensure_book_public_assignment, ensure_user_pu
 from library.models import Author, Book, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
+from tests.utils.books import create_file_backed_book, create_fileless_book_for_integrity_edge_case
 
 
 class LibraryModelTest(TestCase):
     def setUp(self):
         self.author = Author.objects.create(name="Test Author")
         self.series = Series.objects.create(name="Test Series")
-        self.book = Book.objects.create(title="Test Book")
+        # Intentionally fileless: these tests manually exercise BookFile behavior.
+        self.book = create_fileless_book_for_integrity_edge_case(title="Test Book", assign_public=False)
         self.book.authors.add(self.author)
         self.book.series = self.series
         self.book.series_index = Decimal("1.0")
@@ -131,7 +133,7 @@ class BookGroupInvariantTest(TestCase):
         self.public = get_public_group()
         self.group_a = LibraryGroup.objects.create(name="A")
         self.group_b = LibraryGroup.objects.create(name="B")
-        self.book = Book.objects.create(title="B")
+        self.book = create_file_backed_book(title="B", assign_public=False).book
 
         self.a1 = BookGroupAssignment.objects.create(
             book=self.book, group=self.group_a, added_by=self.user

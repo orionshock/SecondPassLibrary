@@ -16,6 +16,7 @@ from library.cover_services import (
 from library.models import Book
 
 from tests.library.utils import IsolatedMediaRootMixin
+from tests.utils.books import create_file_backed_book
 
 
 def _image_bytes(*, fmt: str, size: tuple[int, int] = (64, 80)) -> bytes:
@@ -77,7 +78,7 @@ class CoverValidationTests(TestCase):
 
 class CoverStorageTests(IsolatedMediaRootMixin, TestCase):
     def test_sets_book_cover_and_metadata_and_path(self):
-        book = Book.objects.create(title="Has Cover")
+        book = create_file_backed_book(title="Has Cover").book
         data = _image_bytes(fmt="PNG", size=(40, 50))
         info = set_book_cover_from_bytes(book=book, data=data, source="manual")
 

@@ -13,6 +13,7 @@ from accounts.models import UserClientSession, UserProfile
 from accounts.services import get_or_create_profile
 from library.group_services import get_public_group
 from library.models import Book, LibraryGroup, LibraryGroupMembership
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -44,12 +45,12 @@ class ShelvesClientBearerTests(APITestCase):
         self.group = LibraryGroup.objects.create(name="G")
         LibraryGroupMembership.objects.create(user=self.user, group=self.group, role=LibraryGroupMembership.ROLE_READER)
 
-        self.book_public = Book.objects.create(title="Public book")
+        self.book_public = create_file_backed_book(title="Public book", assign_public=False).book
         cast(Any, self.book_public).group_assignments.create(group=self.public_group, added_by=self.user)
-        self.book_in_group = Book.objects.create(title="Group book")
+        self.book_in_group = create_file_backed_book(title="Group book", assign_public=False).book
         cast(Any, self.book_in_group).group_assignments.create(group=self.group, added_by=self.user)
 
-        self.book_hidden = Book.objects.create(title="Hidden")
+        self.book_hidden = create_file_backed_book(title="Hidden", assign_public=False).book
         hidden_group = LibraryGroup.objects.create(name="Hidden")
         cast(Any, self.book_hidden).group_assignments.create(group=hidden_group, added_by=self.user)
 

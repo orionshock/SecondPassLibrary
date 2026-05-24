@@ -14,6 +14,7 @@ from library.admin import BookAdmin
 from library.models import Book
 
 from tests.library.utils import IsolatedMediaRootMixin
+from tests.utils.books import create_file_backed_book
 
 
 class _DummySite(AdminSite):
@@ -40,7 +41,7 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
         )
 
     def test_admin_cover_upload_sets_cover_fields(self):
-        book = Book.objects.create(title="T")
+        book = create_file_backed_book(title="T").book
         request = self.factory.post("/admin/library/book/")
         request.user = self.staff
 
@@ -57,7 +58,7 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(book.cover_height, 22)
 
     def test_admin_clear_cover_removes_file_and_metadata(self):
-        book = Book.objects.create(title="T")
+        book = create_file_backed_book(title="T").book
         request = self.factory.post("/admin/library/book/")
         request.user = self.staff
 

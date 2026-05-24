@@ -18,6 +18,7 @@ from library.models import (
     LibraryGroupMembership,
     is_public_group,
 )
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -57,7 +58,7 @@ class PolicyTest(TestCase):
 
         ensure_user_public_membership(user=self.owner)
 
-        self.book = Book.objects.create(title="Public Book")
+        self.book = create_file_backed_book(title="Public Book", assign_public=False).book
         ensure_book_public_assignment(book=self.book)
 
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
@@ -67,7 +68,7 @@ class PolicyTest(TestCase):
             role=LibraryGroupMembership.ROLE_READER,
         )
 
-        self.hidden_book = Book.objects.create(title="Hidden Book")
+        self.hidden_book = create_file_backed_book(title="Hidden Book", assign_public=False).book
         BookGroupAssignment.objects.create(book=self.hidden_book, group=self.hidden_group)
 
     def test_owner_can_manage_library_and_users(self):
@@ -171,10 +172,10 @@ class PolicyTest(TestCase):
 
     def test_user_without_public_membership_cannot_view_public_only_books(self):
         fantasy = LibraryGroup.objects.create(name="Fantasy")
-        book_public_only = Book.objects.create(title="Public Only")
+        book_public_only = create_file_backed_book(title="Public Only", assign_public=False).book
         ensure_book_public_assignment(book=book_public_only)
 
-        book_fantasy = Book.objects.create(title="Fantasy Only")
+        book_fantasy = create_file_backed_book(title="Fantasy Only", assign_public=False).book
         BookGroupAssignment.objects.create(book=book_fantasy, group=fantasy)
 
         u = User.objects.create_user(username="fantasy", email="fantasy@example.com", password="pw")

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from library.models import Book
 from reading.models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from tests.reading.utils import IsolatedUserdataMixin
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -16,7 +17,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
         self.user = User.objects.create_user(
             username="reader", password="testpass", email="reader@example.com"
         )
-        self.book = Book.objects.create(title="Test Book")
+        self.book = create_file_backed_book(title="Test Book").book
 
     def test_create_reading_session(self):
         session = ReadingSession.objects.create(
@@ -114,7 +115,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             ann.full_clean()
 
     def test_annotation_full_clean_rejects_book_mismatch(self):
-        other = Book.objects.create(title="Other Book")
+        other = create_file_backed_book(title="Other Book").book
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         ann = Annotation(
             session=session,

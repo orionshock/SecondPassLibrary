@@ -95,6 +95,8 @@ userdata/
 
 EPUB files are stored content-addressed by checksum (SHA-256). Imported filenames are diagnostic context only; human-readable filenames are derived from metadata when downloading/exporting.
 
+Product policy: Books are import-only and file-backed. While the schema allows a `Book` row to exist without a `BookFile`, normal import flows create them together and the product does not support metadata-only/fileless Books.
+
 ## Library import services (current)
 
 The library import pipeline follows a facade + focused-module structure:

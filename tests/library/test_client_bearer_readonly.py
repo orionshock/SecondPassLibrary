@@ -21,6 +21,7 @@ from library.models import (
     LibraryGroup,
     Series,
 )
+from tests.utils.books import create_fileless_book_for_integrity_edge_case
 
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 
@@ -44,11 +45,11 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
         self.author = Author.objects.create(name="A Author")
         self.series = Series.objects.create(name="S Series")
 
-        self.public_book = Book.objects.create(
+        # Intentionally fileless: this test sets up BookFile rows with fixed checksums.
+        self.public_book = create_fileless_book_for_integrity_edge_case(
             title="Public Book",
-            language="en",
-            series=self.series,
-            series_index=1,
+            assign_public=False,
+            book_fields={"language": "en", "series": self.series, "series_index": 1},
         )
         self.public_book.authors.add(self.author)
         ensure_book_public_assignment(book=self.public_book, added_by=None)
@@ -66,7 +67,8 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
         )
 
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
-        self.hidden_book = Book.objects.create(title="Hidden Book")
+        # Intentionally fileless: this test sets up BookFile rows with fixed checksums.
+        self.hidden_book = create_fileless_book_for_integrity_edge_case(title="Hidden Book", assign_public=False)
         self.hidden_book.authors.add(self.author)
         BookGroupAssignment.objects.create(book=self.hidden_book, group=self.hidden_group)
         uploaded2 = SimpleUploadedFile(

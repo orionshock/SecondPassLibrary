@@ -18,6 +18,7 @@ from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
+from tests.utils.books import create_file_backed_book, create_fileless_book_for_integrity_edge_case
 
 
 class LibraryAPITest(APITestCase):
@@ -43,7 +44,12 @@ class BookListErgonomicsAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.author = Author.objects.create(name="A Author")
         self.series = Series.objects.create(name="S Series")
-        self.book = Book.objects.create(title="T", series=self.series, series_index=1)
+        # Intentionally fileless: this test sets up a BookFile row with a fixed checksum.
+        self.book = create_fileless_book_for_integrity_edge_case(
+            title="T",
+            assign_public=False,
+            book_fields={"series": self.series, "series_index": 1},
+        )
         self.book.authors.add(self.author)
         ensure_book_public_assignment(book=self.book, added_by=None)
         BookIdentifier.objects.create(
@@ -104,12 +110,22 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         self.author_b = Author.objects.create(name="Bob Writer")
         self.series_s = Series.objects.create(name="Saga Series")
 
-        self.book1 = Book.objects.create(title="Alpha", language="en", series=self.series_s)
+        # Intentionally fileless: this test suite exercises has_files filtering.
+        self.book1 = create_fileless_book_for_integrity_edge_case(
+            title="Alpha",
+            assign_public=False,
+            book_fields={"language": "en", "series": self.series_s},
+        )
         self.book1.authors.add(self.author_a)
         ensure_book_public_assignment(book=self.book1, added_by=None)
         BookIdentifier.objects.create(book=self.book1, scheme="other", value="ID-XYZ", source="epub")
 
-        self.book2 = Book.objects.create(title="Beta", language="fr")
+        # Intentionally fileless: this test sets up a BookFile row with a fixed checksum.
+        self.book2 = create_fileless_book_for_integrity_edge_case(
+            title="Beta",
+            assign_public=False,
+            book_fields={"language": "fr"},
+        )
         self.book2.authors.add(self.author_b)
         ensure_book_public_assignment(book=self.book2, added_by=None)
 
@@ -165,9 +181,17 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         self.book1.series_index = Decimal("0")
         self.book1.save(update_fields=["series_index", "updated_at"])
 
-        b2 = Book.objects.create(title="Gamma", series=self.series_s, series_index=2)
+        b2 = create_file_backed_book(
+            title="Gamma",
+            assign_public=False,
+            book_fields={"series": self.series_s, "series_index": 2},
+        ).book
         ensure_book_public_assignment(book=b2, added_by=None)
-        b0 = Book.objects.create(title="Zero", series=self.series_s, series_index=1)
+        b0 = create_file_backed_book(
+            title="Zero",
+            assign_public=False,
+            book_fields={"series": self.series_s, "series_index": 1},
+        ).book
         ensure_book_public_assignment(book=b0, added_by=None)
 
         response = cast(
@@ -203,7 +227,7 @@ class BookCoverUrlAPITest(IsolatedMediaRootMixin, APITestCase):
         self.client.login(username="testuser", password="testpass")
 
     def test_cover_url_null_when_no_cover(self):
-        book = Book.objects.create(title="No Cover")
+        book = create_file_backed_book(title="No Cover", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
 
         r = cast(Response, self.client.get(f"/api/v1/library/books/{book.id}/"))
@@ -217,7 +241,7 @@ class BookCoverUrlAPITest(IsolatedMediaRootMixin, APITestCase):
         from PIL import Image
         from library.cover_services import set_book_cover_from_bytes
 
-        book = Book.objects.create(title="Has Cover")
+        book = create_file_backed_book(title="Has Cover", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
 
         img = Image.new("RGB", (10, 12), color=(9, 9, 9))
@@ -246,7 +270,7 @@ class PaginationBasicsAPITest(APITestCase):
         self.client.login(username="reader", password="pw")
 
         for i in range(51):
-            book = Book.objects.create(title=f"Book {i:03d}")
+            book = create_file_backed_book(title=f"Book {i:03d}", assign_public=False).book
             ensure_book_public_assignment(book=book, added_by=None)
 
     def test_books_list_is_paginated_with_standard_shape(self):
@@ -274,7 +298,7 @@ class PaginationBasicsAPITest(APITestCase):
         self.assertEqual(len(cast(list[Any], p10["results"])), 10)
 
         for i in range(51, 256):
-            book = Book.objects.create(title=f"Book {i:03d}")
+            book = create_file_backed_book(title=f"Book {i:03d}", assign_public=False).book
             ensure_book_public_assignment(book=book, added_by=None)
 
         rmax = cast(Response, self.client.get("/api/v1/library/books/?page_size=9999"))
@@ -349,13 +373,14 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
             user=self.reader, group=self.group_a, role=LibraryGroupMembership.ROLE_READER
         )
 
-        self.public_book = Book.objects.create(title="Public Book")
+        self.public_book = create_file_backed_book(title="Public Book", assign_public=False).book
         ensure_book_public_assignment(book=self.public_book, added_by=None)
 
-        self.group_a_book = Book.objects.create(title="Group A Book")
+        self.group_a_book = create_file_backed_book(title="Group A Book", assign_public=False).book
         BookGroupAssignment.objects.create(book=self.group_a_book, group=self.group_a)
 
-        self.group_b_book = Book.objects.create(title="Group B Book")
+        # Intentionally fileless: this test sets up a BookFile row with a fixed checksum.
+        self.group_b_book = create_fileless_book_for_integrity_edge_case(title="Group B Book", assign_public=False)
         BookGroupAssignment.objects.create(book=self.group_b_book, group=self.group_b)
 
         uploaded = SimpleUploadedFile("b.epub", b"epub-bytes", content_type="application/epub+zip")
@@ -440,7 +465,7 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         )
 
         # Book is viewable via Public, but also assigned to an unlisted non-member group.
-        self.book = Book.objects.create(title="Public+Hidden")
+        self.book = create_file_backed_book(title="Public+Hidden", assign_public=False).book
         ensure_book_public_assignment(book=self.book, added_by=None)
         BookGroupAssignment.objects.create(book=self.book, group=self.hidden_group)
 
@@ -481,19 +506,31 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.author_public = Author.objects.create(name="Public Author")
         self.series_public = Series.objects.create(name="Public Series")
-        self.book_public = Book.objects.create(title="PB", series=self.series_public)
+        self.book_public = create_file_backed_book(
+            title="PB",
+            assign_public=False,
+            book_fields={"series": self.series_public},
+        ).book
         self.book_public.authors.add(self.author_public)
         ensure_book_public_assignment(book=self.book_public, added_by=None)
 
         self.author_x = Author.objects.create(name="X Author")
         self.series_x = Series.objects.create(name="X Series")
-        self.book_x = Book.objects.create(title="XB", series=self.series_x)
+        self.book_x = create_file_backed_book(
+            title="XB",
+            assign_public=False,
+            book_fields={"series": self.series_x},
+        ).book
         self.book_x.authors.add(self.author_x)
         BookGroupAssignment.objects.create(book=self.book_x, group=self.group_x)
 
         self.author_hidden = Author.objects.create(name="Hidden Author")
         self.series_hidden = Series.objects.create(name="Hidden Series")
-        self.book_hidden = Book.objects.create(title="HB", series=self.series_hidden)
+        self.book_hidden = create_file_backed_book(
+            title="HB",
+            assign_public=False,
+            book_fields={"series": self.series_hidden},
+        ).book
         self.book_hidden.authors.add(self.author_hidden)
         BookGroupAssignment.objects.create(book=self.book_hidden, group=self.group_y)
 
@@ -528,7 +565,8 @@ class BaseBookFileDownloadAPITest(IsolatedMediaRootMixin, APITestCase):
         self.client.login(username="testuser", password="testpass")
 
         self.author = Author.objects.create(name="Test Author")
-        self.book = Book.objects.create(title="Test Title")
+        # Intentionally fileless: this test sets up a BookFile row with a fixed path/checksum.
+        self.book = create_fileless_book_for_integrity_edge_case(title="Test Title", assign_public=False)
         self.book.authors.add(self.author)
         ensure_book_public_assignment(book=self.book, added_by=None)
 
@@ -555,7 +593,8 @@ class BookFileSerializerAPITest(APITestCase):
         self.user = User.objects.create_user(username="testuser", password="testpass")
         ensure_user_public_membership(user=self.user)
         self.author = Author.objects.create(name="Test Author")
-        self.book = Book.objects.create(title="Test Title")
+        # Intentionally fileless: this test sets up a BookFile row with a fixed path/checksum.
+        self.book = create_fileless_book_for_integrity_edge_case(title="Test Title", assign_public=False)
         self.book.authors.add(self.author)
         ensure_book_public_assignment(book=self.book, added_by=None)
         self.book_file = BookFile.objects.create(
@@ -590,7 +629,11 @@ class BookFileDownloadAPITest(BaseBookFileDownloadAPITest):
 class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.author = Author.objects.create(name="A Author")
-        self.book = Book.objects.create(title="Original title", language="en")
+        self.book = create_file_backed_book(
+            title="Original title",
+            assign_public=False,
+            book_fields={"language": "en"},
+        ).book
         self.book.authors.add(self.author)
         ensure_book_public_assignment(book=self.book, added_by=None)
 
@@ -743,7 +786,7 @@ class AuthorSeriesCreatePermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
         author = cast(dict[str, Any], cast(Response, self.client.post("/api/v1/library/authors/", data={"name": "A"}, format="json")).data)
         series = cast(dict[str, Any], cast(Response, self.client.post("/api/v1/library/series/", data={"name": "S"}, format="json")).data)
 
-        book = Book.objects.create(title="T")
+        book = create_file_backed_book(title="T", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
 
         resp = cast(
@@ -771,7 +814,7 @@ class BookIdentifierCrudAPITest(IsolatedMediaRootMixin, APITestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        self.book = Book.objects.create(title="Book With Idents")
+        self.book = create_file_backed_book(title="Book With Idents", assign_public=False).book
         ensure_book_public_assignment(book=self.book, added_by=None)
 
     def test_book_payload_identifiers_include_id(self):

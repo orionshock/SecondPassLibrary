@@ -13,6 +13,7 @@ from library.group_services import add_book_to_group, ensure_book_public_assignm
 from library.cover_services import set_book_cover_from_bytes
 from library.models import Book, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -50,14 +51,14 @@ class ShelvesAPITest(APITestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        self.book_in_group = Book.objects.create(title="B1")
+        self.book_in_group = create_file_backed_book(title="B1", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
-        self.book_public = Book.objects.create(title="PB")
+        self.book_public = create_file_backed_book(title="PB", assign_public=False).book
         ensure_book_public_assignment(book=self.book_public, added_by=None)
 
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
-        self.book_hidden = Book.objects.create(title="HB")
+        self.book_hidden = create_file_backed_book(title="HB", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.book_hidden, group=self.hidden_group)
 
     def _png_bytes(self, *, size=(12, 16)) -> bytes:

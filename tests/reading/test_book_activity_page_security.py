@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import Book
 from reading.models import Annotation, ReadingSession
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -25,7 +26,7 @@ class BookActivityPageSecurityTest(TestCase):
         ensure_user_public_membership(user=self.user1)
         ensure_user_public_membership(user=self.user2)
 
-        self.book = Book.objects.create(title="Book 1")
+        self.book = create_file_backed_book(title="Book 1", assign_public=False).book
         ensure_book_public_assignment(book=self.book, added_by=None)
 
         self.session1 = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -49,4 +50,3 @@ class BookActivityPageSecurityTest(TestCase):
         results = cast(list[dict[str, Any]], data.get("results") or [])
         # user2's annotation should not appear to user1.
         self.assertEqual(results, [])
-

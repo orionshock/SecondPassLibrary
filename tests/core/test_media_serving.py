@@ -16,6 +16,7 @@ from PIL import Image
 
 from library.cover_services import set_book_cover_from_bytes
 from library.models import Book
+from tests.utils.books import create_file_backed_book
 
 
 class DebugMediaServingSmokeTest(TestCase):
@@ -48,7 +49,7 @@ class DebugMediaServingSmokeTest(TestCase):
         # MEDIA_URL via Django only when DEBUG=True. It does not imply MEDIA_URL
         # is debug-only; production deployments should serve MEDIA_ROOT at
         # MEDIA_URL outside Django.
-        book = Book.objects.create(title="Has Cover")
+        book = create_file_backed_book(title="Has Cover").book
         set_book_cover_from_bytes(book=book, data=self._png_bytes(), source="manual")
         book.refresh_from_db()
         self.assertTrue(bool(book.cover_file))
