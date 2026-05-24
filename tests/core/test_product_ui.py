@@ -9,6 +9,7 @@ from core import server_settings
 from accounts.models import UserProfile
 from library.models import Book
 from reading.models import ReadingSession
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -386,7 +387,7 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
         session = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
 
         self.client.force_login(self.user)
@@ -418,8 +419,8 @@ class ProductUiSmokeTests(TestCase):
             username="u2", email="u2@example.com", password="pw"
         )
 
-        book = Book.objects.create(title="B1")
-        other_book = Book.objects.create(title="B2")
+        book = create_file_backed_book(title="B1").book
+        other_book = create_file_backed_book(title="B2").book
 
         mine = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
         ReadingSession.objects.create(user=self.user, book=other_book, name="Other book")
@@ -447,7 +448,7 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
 
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{book.id}/")
@@ -461,7 +462,7 @@ class ProductUiSmokeTests(TestCase):
 
         other = User.objects.create_user(username="u2", email="u2@example.com", password="pw")
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
         mine = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
         others = ReadingSession.objects.create(user=other, book=book, name="Other user")
 
@@ -494,7 +495,7 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
         session = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
 
         self.client.force_login(self.user)
@@ -522,7 +523,7 @@ class ProductUiSmokeTests(TestCase):
         profile.save(update_fields=["role", "updated_at"])
 
         other = User.objects.create_user(username="u2", email="u2@example.com", password="pw")
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
         session = ReadingSession.objects.create(user=other, book=book, name="Other")
 
         self.client.force_login(self.user)
@@ -534,8 +535,8 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
-        other_book = Book.objects.create(title="B2")
+        book = create_file_backed_book(title="B1").book
+        other_book = create_file_backed_book(title="B2").book
         session = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
 
         self.client.force_login(self.user)
@@ -554,7 +555,7 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
 
         self.client.force_login(self.user)
         session_id = uuid4()
@@ -567,7 +568,7 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
         session = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
 
         self.client.force_login(self.user)
@@ -580,7 +581,7 @@ class ProductUiSmokeTests(TestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        book = Book.objects.create(title="B1")
+        book = create_file_backed_book(title="B1").book
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/books/{book.id}/activity/", follow=False)
         self.assertEqual(response.status_code, 302)

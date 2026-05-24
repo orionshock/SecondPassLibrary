@@ -304,9 +304,9 @@ class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
                 format="json",
             ),
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    def test_librarian_can_create_book(self):
+    def test_librarian_cannot_create_book(self):
         self.client.login(username="librarian", password="pw")
         response = cast(
             Response,
@@ -316,7 +316,7 @@ class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
                 format="json",
             ),
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):

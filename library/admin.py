@@ -168,6 +168,11 @@ class BookAdmin(admin.ModelAdmin):
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
+    def has_add_permission(self, request):
+        # Books are file-backed and created via import only. Django admin remains
+        # a service hatch for editing existing records, not creating new books.
+        return False
+
     @admin.display(description="Authors")
     def author_list(self, obj):
         return obj.author_list()

@@ -27,6 +27,7 @@ from reading.profile import (
 from tests.reading.utils import IsolatedUserdataMixin
 from core.models import IdempotencyRecord
 from reading.serializers import AnnotationSerializer
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
@@ -58,7 +59,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.user2 = User.objects.create_user(
             username="u2", password="pass2", email="u2@example.com"
         )
-        self.book = Book.objects.create(title="Book 1")
+        self.book = create_file_backed_book(title="Book 1").book
         ensure_book_public_assignment(book=self.book, added_by=None)
 
         self.session2 = ReadingSession.objects.create(user=self.user2, book=self.book)
@@ -160,7 +161,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
             user=user, group=group, role=LibraryGroupMembership.ROLE_READER
         )
 
-        restricted = Book.objects.create(title="Restricted")
+        restricted = create_file_backed_book(title="Restricted", assign_public=False).book
         BookGroupAssignment.objects.create(book=restricted, group=group)
 
         session = ReadingSession.objects.create(user=user, book=restricted, is_active=True)
@@ -190,7 +191,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
             user=user, group=group, role=LibraryGroupMembership.ROLE_READER
         )
 
-        restricted = Book.objects.create(title="RestrictedOpen")
+        restricted = create_file_backed_book(title="RestrictedOpen", assign_public=False).book
         BookGroupAssignment.objects.create(book=restricted, group=group)
 
         session = ReadingSession.objects.create(user=user, book=restricted, is_active=True)
@@ -208,7 +209,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_active_session_404_for_inaccessible_book_without_existing_session(self):
         self.client.login(username="u1", password="pass1")
         group = LibraryGroup.objects.create(name="Hidden")
-        restricted = Book.objects.create(title="Restricted2")
+        restricted = create_file_backed_book(title="Restricted2", assign_public=False).book
         BookGroupAssignment.objects.create(book=restricted, group=group)
 
         url = f"/api/v1/reading/books/{restricted.id}/active-session/"
@@ -221,7 +222,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_open_404_for_inaccessible_book_without_existing_session(self):
         self.client.login(username="u1", password="pass1")
         group = LibraryGroup.objects.create(name="HiddenOpen")
-        restricted = Book.objects.create(title="RestrictedOpen404")
+        restricted = create_file_backed_book(title="RestrictedOpen404", assign_public=False).book
         BookGroupAssignment.objects.create(book=restricted, group=group)
 
         url = f"/api/v1/reading/books/{restricted.id}/open/"
@@ -234,7 +235,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_start_over_requires_book_access(self):
         self.client.login(username="u1", password="pass1")
         group = LibraryGroup.objects.create(name="Hidden")
-        restricted = Book.objects.create(title="Restricted3")
+        restricted = create_file_backed_book(title="Restricted3", assign_public=False).book
         BookGroupAssignment.objects.create(book=restricted, group=group)
 
         url = f"/api/v1/reading/books/{restricted.id}/start-over/"
@@ -360,7 +361,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_recent_sessions_endpoint_limits_filters_active_and_orders_by_last_activity(self):
         self.client.login(username="u1", password="pass1")
 
-        book2 = Book.objects.create(title="Book 2")
+        book2 = create_file_backed_book(title="Book 2").book
         ensure_book_public_assignment(book=book2, added_by=None)
 
         from io import BytesIO
@@ -443,13 +444,6 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
     def test_annotations_create_requires_motivation_target_body(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        BookFile.objects.create(
-            book=self.book,
-            checksum="0" * 64,
-            file=ContentFile(b"dummy epub", name="dummy.epub"),
-            format=BookFile.FORMAT_EPUB,
-            file_size=9,
-        )
 
         create = cast(
             Response,
@@ -658,7 +652,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         # Same key for a different user is independent.
         self.client.logout()
         self.client.login(username="u2", password="pass2")
-        other_book = Book.objects.create(title="Other Book")
+        other_book = create_file_backed_book(title="Other Book").book
         ensure_book_public_assignment(book=other_book, added_by=None)
         s2 = ReadingSession.objects.create(user=self.user2, book=other_book)
         r2 = cast(
@@ -779,7 +773,7 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         ensure_user_public_membership(user=self.user1)
         ensure_user_public_membership(user=self.user2)
 
-        self.book = Book.objects.create(title="Book 1")
+        self.book = create_file_backed_book(title="Book 1").book
         ensure_book_public_assignment(book=self.book, added_by=None)
 
         # Cross-user fixtures

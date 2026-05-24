@@ -232,10 +232,12 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         return queryset.distinct()
 
     def perform_create(self, serializer):
-        if not policies.can_manage_library(self.request.user):
-            raise PermissionDenied("Not allowed.")
-        book = serializer.save()
-        ensure_book_public_assignment(book=book, added_by=self.request.user)
+        # Books are file-backed and should be created via import only.
+        raise PermissionDenied("Books can only be created via import.")
+
+    def create(self, request, *args, **kwargs):
+        # Explicit 405: this is not a supported API surface.
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def perform_update(self, serializer):
         if not policies.can_manage_library(self.request.user):
@@ -243,9 +245,11 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         serializer.save()
 
     def perform_destroy(self, instance):
-        if not policies.can_manage_library(self.request.user):
-            raise PermissionDenied("Not allowed.")
-        instance.delete()
+        # Book deletion is not supported through this API.
+        raise PermissionDenied("Not allowed.")
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @action(detail=True, methods=["get", "post"], url_path="identifiers")
     def identifiers(self, request, *args, **kwargs):
