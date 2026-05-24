@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 from accounts import client_api
 from core import policies
 from library.models import Book
-from reading.services import list_sessions_for_book
+from reading.services import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
 
 
@@ -20,6 +20,12 @@ def index(request: HttpRequest) -> HttpResponse:
 @login_required
 def app_dashboard(request: HttpRequest) -> HttpResponse:
     return render(request, "web/app.html")
+
+
+@login_required
+def reading_sessions(request: HttpRequest) -> HttpResponse:
+    sessions = list_sessions_for_user(user=request.user)
+    return render(request, "web/reading_sessions.html", {"sessions": sessions})
 
 
 @login_required

@@ -9,6 +9,7 @@ urlpatterns = [
     path("app/", views.app_dashboard, name="app"),
 
     # Canonical reading session routes (sessions-first).
+    path("reading/sessions/", views.reading_sessions, name="reading_sessions"),
     path(
         "reading/sessions/books/<str:book_id>/<str:session_id>/",
         views.reading_session_marginalia,

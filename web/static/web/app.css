@@ -331,7 +331,7 @@ a:hover { text-decoration: underline; }
 .sessions-row {
   display: flex;
   gap: 10px;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: space-between;
   margin: 10px 0;
 }

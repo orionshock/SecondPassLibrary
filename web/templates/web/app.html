@@ -8,7 +8,10 @@
   <h1 class="page-title">Dashboard</h1>
 
   <section class="card">
-    <h2 class="card__title">Recent reading activity</h2>
+    <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+      <h2 class="card__title" style="margin: 0;">Recent reading activity</h2>
+      <a class="muted" href="/reading/sessions/">All reading sessions</a>
+    </div>
     <div id="recent-reading-section">
       <div id="recent-reading-status" class="muted">Loading...</div>
       <div id="recent-reading-list" class="recent-reading__row" aria-label="Recent reading activity"></div>

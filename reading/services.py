@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from library.models import Book
+from core import policies
 
 from .models import Annotation, ReadingProgress, ReadingSession
 from .locators import normalize_current_location
@@ -244,4 +245,87 @@ def list_sessions_for_book(*, user, book: Book) -> list[dict]:
                 "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
             }
         )
+    return rows
+
+
+def list_sessions_for_user(*, user) -> list[dict]:
+    """
+    Product UI helper: list all reading sessions for a user across visible books.
+
+    Visibility is evaluated using `policies.can_view_book()`.
+    """
+    ann_updated = Max(
+        "annotations__updated_at", filter=Q(annotations__is_deleted=False)
+    )
+    last_activity = Greatest(
+        F("updated_at"),
+        Coalesce(F("progress__updated_at"), F("updated_at")),
+        Coalesce(ann_updated, F("updated_at")),
+    )
+
+    qs = (
+        ReadingSession.objects.select_related("book", "book__series", "progress")
+        .prefetch_related("book__authors")
+        .filter(user=user)
+        .annotate(
+            last_activity_at=last_activity,
+            annotation_count=Count("annotations", filter=Q(annotations__is_deleted=False)),
+        )
+        .order_by("-last_activity_at", "-updated_at", "-started_at")
+    )
+
+    rows: list[dict] = []
+    for s in qs:
+        book = getattr(s, "book", None)
+        if book is None:
+            continue
+        if not policies.can_view_book(user=user, book=book):
+            continue
+
+        progress = getattr(s, "progress", None)
+        progression = (
+            getattr(progress, "progression", None) if progress is not None else None
+        )
+        progression_percent: float | None = None
+        if progression is not None:
+            try:
+                progression_percent = float(progression) * 100.0
+            except (TypeError, ValueError):
+                progression_percent = None
+
+        cover_url = ""
+        cover = getattr(book, "cover_file", None)
+        if cover:
+            try:
+                cover_url = str(cover.url)
+            except Exception:
+                cover_url = ""
+
+        authors = [a.name for a in book.authors.all()]
+        series_name = getattr(getattr(book, "series", None), "name", "") or ""
+
+        rows.append(
+            {
+                "id": str(s.id),
+                "name": (s.name or "").strip(),
+                "status": s.status,
+                "is_active": bool(s.is_active),
+                "started_at": s.started_at,
+                "updated_at": s.updated_at,
+                "completed_at": s.completed_at,
+                "progression_percent": progression_percent,
+                "annotation_count": int(getattr(s, "annotation_count", 0) or 0),
+                "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
+                "book": {
+                    "id": str(book.id),
+                    "title": book.title,
+                    "subtitle": getattr(book, "subtitle", "") or "",
+                    "authors": authors,
+                    "series_name": series_name,
+                    "series_index": getattr(book, "series_index", None),
+                    "cover_url": cover_url,
+                },
+            }
+        )
+
     return rows
