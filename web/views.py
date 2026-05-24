@@ -10,6 +10,7 @@ from accounts import client_api
 from core import policies
 from library.models import Book
 from reading.services import list_sessions_for_book
+from reading.models import ReadingSession
 
 
 def index(request: HttpRequest) -> HttpResponse:
@@ -22,12 +23,50 @@ def app_dashboard(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-def reading_book_activity(request: HttpRequest, book_id: str) -> HttpResponse:
-    return render(request, "web/reading_book_activity.html", {"book_id": book_id})
+def reading_session_marginalia(
+    request: HttpRequest, book_id: str, session_id: str
+) -> HttpResponse:
+    session = (
+        ReadingSession.objects.select_related("book")
+        .filter(id=session_id, user=request.user)
+        .first()
+    )
+    if session is None:
+        raise Http404()
+    if str(session.book_id) != str(book_id):
+        raise Http404()
+    if not policies.can_view_book(user=request.user, book=session.book):
+        raise Http404()
+
+    return render(
+        request,
+        "web/reading_book_activity.html",
+        {"book_id": str(book_id), "session_id": str(session_id)},
+    )
 
 
 @login_required
-def reading_book_sessions(request: HttpRequest, book_id: str) -> HttpResponse:
+def reading_book_activity_legacy(request: HttpRequest, book_id: str) -> HttpResponse:
+    book = Book.objects.filter(id=book_id).first()
+    if book is None:
+        raise Http404()
+    if not policies.can_view_book(user=request.user, book=book):
+        raise Http404()
+
+    preferred = str(request.GET.get("session") or "").strip()
+    if preferred:
+        return redirect(f"/reading/sessions/books/{book_id}/{preferred}/", permanent=False)
+
+    sessions = list_sessions_for_book(user=request.user, book=book)
+    if sessions:
+        return redirect(
+            f"/reading/sessions/books/{book_id}/{sessions[0]['id']}/", permanent=False
+        )
+    return redirect(f"/reading/sessions/books/{book_id}/", permanent=False)
+
+
+@login_required
+def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpResponse:
     book = (
         Book.objects.select_related("series")
         .prefetch_related("authors")
@@ -48,6 +87,11 @@ def reading_book_sessions(request: HttpRequest, book_id: str) -> HttpResponse:
         {"book": book, "sessions": sessions, "recent_session_id": recent_session_id},
     )
 
+
+@login_required
+def reading_book_sessions_legacy(request: HttpRequest, book_id: str) -> HttpResponse:
+    # Development redirect to the canonical sessions-first route family.
+    return redirect(f"/reading/sessions/books/{book_id}/", permanent=False)
 
 @login_required
 def library_browse(request: HttpRequest) -> HttpResponse:

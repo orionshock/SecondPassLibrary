@@ -7,14 +7,28 @@ app_name = "web"
 urlpatterns = [
     path("", views.index, name="index"),
     path("app/", views.app_dashboard, name="app"),
+
+    # Canonical reading session routes (sessions-first).
+    path(
+        "reading/sessions/books/<str:book_id>/<str:session_id>/",
+        views.reading_session_marginalia,
+        name="reading_session_marginalia",
+    ),
+    path(
+        "reading/sessions/books/<str:book_id>/",
+        views.reading_book_sessions_canonical,
+        name="reading_book_sessions_canonical",
+    ),
+
+    # Legacy routes (development): redirect to canonical sessions-first routes.
     path(
         "reading/books/<str:book_id>/activity/",
-        views.reading_book_activity,
+        views.reading_book_activity_legacy,
         name="reading_book_activity",
     ),
     path(
         "reading/books/<str:book_id>/sessions/",
-        views.reading_book_sessions,
+        views.reading_book_sessions_legacy,
         name="reading_book_sessions",
     ),
     path("server/", views.server_settings, name="server_settings"),

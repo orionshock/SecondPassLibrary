@@ -17,7 +17,4 @@ class DashboardRecentLinkTargetTest(TestCase):
             / "app_page.js"
         )
         text = js_path.read_text(encoding="utf-8")
-        self.assertIn("/reading/books/", text)
-        self.assertIn("/activity/", text)
-        self.assertIn("session=", text)
-
+        self.assertIn("/reading/sessions/books/", text)

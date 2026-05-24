@@ -221,6 +221,7 @@ export async function initReadingBookActivity() {
   }
 
   const bookId = root.dataset ? root.dataset.bookId : "";
+  const initialSessionId = root.dataset ? root.dataset.sessionId : "";
   if (!bookId) {
     statusEl.textContent = "Missing book id.";
     statusEl.classList.add("error");
@@ -247,7 +248,7 @@ export async function initReadingBookActivity() {
     renderBookMeta(bookMetaEl, book);
 
     const params = parseSearchParams();
-    const preferredSessionId = (params.get("session") || "").trim();
+    const preferredSessionId = (initialSessionId || params.get("session") || "").trim();
     let session = null;
 
     if (preferredSessionId) {

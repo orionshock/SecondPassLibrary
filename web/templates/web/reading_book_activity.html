@@ -35,7 +35,7 @@
       </div>
     </div>
     <div>
-      <a class="button" href="/reading/books/{{ book_id|escape }}/sessions/">All sessions</a>
+      <a class="button" href="/reading/sessions/books/{{ book_id|escape }}/">All sessions</a>
       <a id="reading-activity-book-link" class="button" href="/library/books/{{ book_id|escape }}/">Book details</a>
     </div>
   </div>
@@ -43,7 +43,7 @@
   <div id="reading-activity-status" class="muted">Loading...</div>
   <div id="reading-activity-error" class="error is-hidden"></div>
 
-  <section id="reading-activity" class="card is-hidden" data-book-id="{{ book_id|escape }}">
+  <section id="reading-activity" class="card is-hidden" data-book-id="{{ book_id|escape }}"{% if session_id %} data-session-id="{{ session_id|escape }}"{% endif %}>
     <div class="card" style="margin: 0;">
       <div class="book-hero">
         <div id="reading-activity-cover" class="edit-header__cover" aria-hidden="true">Cover</div>

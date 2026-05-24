@@ -26,7 +26,9 @@ function renderRecentItem(item) {
   const sessionId = item && item.session && item.session.id ? String(item.session.id) : "";
   wrap.setAttribute(
     "href",
-    `/reading/books/${encodeURIComponent(bookId)}/activity/${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`,
+    sessionId
+      ? `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`
+      : `/reading/sessions/books/${encodeURIComponent(bookId)}/`,
   );
 
   const titleText = item.book && item.book.title ? String(item.book.title) : "";
