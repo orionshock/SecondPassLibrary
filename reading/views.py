@@ -192,7 +192,7 @@ class RecentSessionsView(APIView):
         )
 
         qs = (
-            ReadingSession.objects.select_related("book")
+            ReadingSession.objects.select_related("book", "progress")
             .filter(
                 user=request.user,
                 is_active=True,
@@ -226,8 +226,12 @@ class RecentSessionsView(APIView):
                     "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
                     "session": {
                         "id": str(s.id),
+                        "name": (getattr(s, "name", "") or "").strip(),
                         "status": s.status,
                         "is_active": bool(s.is_active),
+                        "progression": (
+                            getattr(getattr(s, "progress", None), "progression", None)
+                        ),
                     },
                     "book": {
                         "id": book_id,

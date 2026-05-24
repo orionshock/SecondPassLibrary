@@ -154,6 +154,7 @@ a:hover { text-decoration: underline; }
   height: 72px;
   border-radius: 8px;
   border: 1px solid var(--border);
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,6 +189,24 @@ a:hover { text-decoration: underline; }
 
 .recent-reading__when {
   font-size: 12px;
+}
+
+.recent-reading__progress {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(11, 15, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 /* =====================

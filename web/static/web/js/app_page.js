@@ -45,6 +45,14 @@ function renderRecentItem(item) {
     cover.textContent = "Cover";
     cover.setAttribute("aria-hidden", "true");
   }
+
+  const progression = item && item.session ? item.session.progression : null;
+  const p = progression != null ? Number(progression) : null;
+  if (p != null && Number.isFinite(p)) {
+    const percent = Math.max(0, Math.min(100, Math.round(p * 100)));
+    const badge = el("div", "recent-reading__progress", `${percent}%`);
+    cover.appendChild(badge);
+  }
   wrap.appendChild(cover);
 
   const meta = el("div", "recent-reading__meta", "");
@@ -60,6 +68,19 @@ function renderRecentItem(item) {
   );
   meta.appendChild(title);
   meta.appendChild(when);
+
+  const sessionName = item && item.session && item.session.name ? String(item.session.name).trim() : "";
+  if (sessionName) {
+    wrap.title = `${sessionName}`;
+  }
+
+  const allSessions = el("a", "muted", "[All Sessions]");
+  allSessions.href = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
+  allSessions.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+  meta.appendChild(allSessions);
+
   wrap.appendChild(meta);
 
   if (item.session && item.session.id) {

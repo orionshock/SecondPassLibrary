@@ -18,3 +18,4 @@ class DashboardRecentLinkTargetTest(TestCase):
         )
         text = js_path.read_text(encoding="utf-8")
         self.assertIn("/reading/sessions/books/", text)
+        self.assertIn("[All Sessions]", text)

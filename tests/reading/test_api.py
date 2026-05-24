@@ -406,6 +406,8 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         # Ordered: s2 should come before s1 due to newer annotation.
         self.assertEqual(results[0]["session"]["id"], str(s2.id))
         self.assertEqual(results[1]["session"]["id"], str(s1.id))
+        self.assertIn("name", results[0]["session"])
+        self.assertIn("progression", results[0]["session"])
         self.assertIsInstance(results[0]["book"]["cover_url"], str)
         self.assertTrue(str(results[0]["book"]["cover_url"]).startswith("http://testserver/"))
         self.assertEqual(results[1]["book"]["cover_url"], None)
@@ -911,6 +913,10 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         results = cast(list[dict[str, Any]], payload["results"])
         ids = {row["session"]["id"] for row in results}
         self.assertIn(str(s1.id), ids)
+        # Shape includes session name and progress summary.
+        if results:
+            self.assertIn("name", results[0]["session"])
+            self.assertIn("progression", results[0]["session"])
         # Cross-user session should not appear.
         self.assertNotIn(str(self.session2.id), ids)
 
