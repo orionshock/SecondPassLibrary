@@ -22,9 +22,11 @@ from .models import (
 
 
 class AuthorSerializer(serializers.ModelSerializer):
+    book_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Author
-        fields = ["id", "name", "biography", "created_at", "updated_at"]
+        fields = ["id", "name", "biography", "book_count", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
@@ -36,9 +38,11 @@ class AuthorSummarySerializer(serializers.ModelSerializer):
 
 
 class SeriesSerializer(serializers.ModelSerializer):
+    book_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Series
-        fields = ["id", "name", "summary", "created_at", "updated_at"]
+        fields = ["id", "name", "summary", "book_count", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 

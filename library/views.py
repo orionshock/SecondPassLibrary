@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404
 from django.db.models import Prefetch
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db import IntegrityError
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
@@ -115,9 +115,17 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if policies.can_manage_library(self.request.user):
-            return queryset
-        return queryset.filter(books__group_assignments__group__memberships__user=self.request.user).distinct()
+        user = self.request.user
+        if policies.can_manage_library(user):
+            return queryset.annotate(book_count=Count("books", distinct=True)).order_by("name")
+
+        visible_books = Q(books__group_assignments__group__memberships__user=user)
+        return (
+            queryset.filter(visible_books)
+            .annotate(book_count=Count("books", filter=visible_books, distinct=True))
+            .distinct()
+            .order_by("name")
+        )
 
     def perform_create(self, serializer):
         if not policies.can_manage_library(self.request.user):
@@ -143,9 +151,17 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if policies.can_manage_library(self.request.user):
-            return queryset
-        return queryset.filter(books__group_assignments__group__memberships__user=self.request.user).distinct()
+        user = self.request.user
+        if policies.can_manage_library(user):
+            return queryset.annotate(book_count=Count("books", distinct=True)).order_by("name")
+
+        visible_books = Q(books__group_assignments__group__memberships__user=user)
+        return (
+            queryset.filter(visible_books)
+            .annotate(book_count=Count("books", filter=visible_books, distinct=True))
+            .distinct()
+            .order_by("name")
+        )
 
     def perform_create(self, serializer):
         if not policies.can_manage_library(self.request.user):

@@ -323,6 +323,10 @@ Client API bearer token support (read-only allow-list):
 
 All Library mutation endpoints (including imports, identifier CRUD, group memberships, and group book add/remove) reject Client API bearer tokens.
 
+Author/Series payload notes:
+
+- Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
+
 Book payload notes:
 
 - Books now include a read-only `groups[]` summary (assigned LibraryGroups).
