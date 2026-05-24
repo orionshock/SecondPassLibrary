@@ -54,7 +54,7 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   flex-wrap: wrap;
 }
-.page-title { margin: 8px 0 16px 0; font-size: 22px; }
+.page-title { margin: 8px 0 0 0; font-size: 22px; }
 
 .pager { margin: 14px 0; display: flex; gap: 10px; }
 .footer { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 12px; color: var(--muted); }
@@ -273,6 +273,17 @@ a:hover { text-decoration: underline; }
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.icon-button {
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1;
+}
+.icon-button:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 12px; }
 .kv__k { color: var(--muted); }

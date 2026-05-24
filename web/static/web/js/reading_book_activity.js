@@ -176,12 +176,16 @@ export async function initReadingBookActivity() {
   const titleEl = $("#reading-activity-title");
   const subtitleEl = $("#reading-activity-subtitle");
   const sessionContextEl = $("#reading-activity-session-context");
+  const sessionDisplayEl = $("#reading-activity-session-display");
+  const sessionEditBtn = $("#reading-activity-session-edit");
+  const sessionEditFormEl = $("#reading-activity-session-edit-form");
   const bookMetaEl = $("#reading-activity-book-meta");
   const coverEl = $("#reading-activity-cover");
   const sessionEl = $("#reading-activity-session");
   const sessionNameEl = $("#reading-activity-session-name");
   const sessionSaveBtn = $("#reading-activity-session-save");
   const sessionSaveStatusEl = $("#reading-activity-session-save-status");
+  const sessionCancelBtn = $("#reading-activity-session-cancel");
   const sessionIdEl = $("#reading-activity-session-id");
   const progressEl = $("#reading-activity-progress");
   const annEl = $("#reading-activity-annotations");
@@ -194,12 +198,16 @@ export async function initReadingBookActivity() {
     !titleEl ||
     !subtitleEl ||
     !sessionContextEl ||
+    !sessionDisplayEl ||
+    !sessionEditBtn ||
+    !sessionEditFormEl ||
     !bookMetaEl ||
     !coverEl ||
     !sessionEl ||
     !sessionNameEl ||
     !sessionSaveBtn ||
     !sessionSaveStatusEl ||
+    !sessionCancelBtn ||
     !sessionIdEl ||
     !progressEl ||
     !annEl ||
@@ -228,7 +236,8 @@ export async function initReadingBookActivity() {
     const titleText = book && book.title ? String(book.title) : "Book";
     titleEl.textContent = `Marginalia for “${titleText}”`;
     subtitleEl.textContent = "";
-    sessionContextEl.textContent = "";
+    sessionDisplayEl.textContent = "";
+    visible(sessionEditFormEl, false);
 
     const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
     coverEl.dataset.coverUrl = coverUrl;
@@ -251,15 +260,13 @@ export async function initReadingBookActivity() {
 
     let sessionId = "";
     let sessionName = "";
+    let sessionDisplayName = "";
     if (session && session.id) {
       sessionId = String(session.id);
       sessionName = session && typeof session.name === "string" ? session.name : "";
-      sessionIdEl.textContent = `Session ${sessionId}`;
-      if (sessionName && sessionName.trim()) {
-        sessionContextEl.textContent = `Session: “${sessionName.trim()}”`;
-      } else {
-        sessionContextEl.textContent = `Session: “${sessionId}”`;
-      }
+      sessionIdEl.textContent = `Session ID: ${sessionId}`;
+      sessionDisplayName = sessionName && sessionName.trim() ? sessionName.trim() : sessionId;
+      sessionDisplayEl.textContent = `Session: “${sessionDisplayName}”`;
       sessionNameEl.value = sessionName;
       sessionSaveBtn.disabled = true;
       sessionSaveStatusEl.textContent = "";
@@ -275,11 +282,30 @@ export async function initReadingBookActivity() {
       }
     } else {
       sessionIdEl.textContent = "No session.";
-      sessionContextEl.textContent = "";
+      sessionDisplayEl.textContent = "";
       sessionNameEl.value = "";
       sessionSaveBtn.disabled = true;
       sessionSaveStatusEl.textContent = "";
       progressEl.textContent = "No progress yet.";
+    }
+
+    function enterEditMode() {
+      if (!sessionId) return;
+      sessionSaveStatusEl.textContent = "";
+      sessionNameEl.value = sessionName;
+      visible(sessionEditBtn, false);
+      visible(sessionEditFormEl, true);
+      sessionNameEl.focus();
+      sessionNameEl.select();
+      updateSaveButtonState();
+    }
+
+    function exitEditMode() {
+      visible(sessionEditFormEl, false);
+      visible(sessionEditBtn, !!sessionId);
+      sessionSaveStatusEl.textContent = "";
+      sessionNameEl.value = sessionName;
+      updateSaveButtonState();
     }
 
     function updateSaveButtonState() {
@@ -297,6 +323,13 @@ export async function initReadingBookActivity() {
       updateSaveButtonState();
     });
 
+    sessionEditBtn.addEventListener("click", () => enterEditMode());
+    sessionCancelBtn.addEventListener("click", () => exitEditMode());
+
+    // Initial UI: display mode when a session exists.
+    visible(sessionEditBtn, !!sessionId);
+    visible(sessionEditFormEl, false);
+
     sessionSaveBtn.addEventListener("click", async () => {
       if (!sessionId) return;
       const desired = (sessionNameEl.value || "").trim();
@@ -307,12 +340,11 @@ export async function initReadingBookActivity() {
         const updated = await patchJSON(`/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/`, { name: desired });
         sessionName = updated && typeof updated.name === "string" ? updated.name : desired;
         sessionNameEl.value = sessionName;
-        if (sessionName && sessionName.trim()) {
-          sessionContextEl.textContent = `Session: “${sessionName.trim()}”`;
-        } else {
-          sessionContextEl.textContent = `Session: “${sessionId}”`;
-        }
+        sessionDisplayName = sessionName && sessionName.trim() ? sessionName.trim() : sessionId;
+        sessionDisplayEl.textContent = `Session: “${sessionDisplayName}”`;
         sessionSaveStatusEl.textContent = "Saved.";
+        // Return to display mode after a successful save.
+        exitEditMode();
       } catch (eSave) {
         const msg = extractApiErrorMessage(eSave);
         const fields = summarizeFieldErrors(eSave && eSave.body ? eSave.body : null);

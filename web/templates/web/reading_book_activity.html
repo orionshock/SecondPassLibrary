@@ -10,7 +10,29 @@
       <a href="/app/" class="pill">&larr; Back to Dashboard</a>
       <h1 class="page-title" id="reading-activity-title">Marginalia</h1>
       <div class="muted" id="reading-activity-subtitle"></div>
-      <div class="muted" id="reading-activity-session-context"></div>
+
+      <div id="reading-activity-session-context" class="muted">
+        <div id="reading-activity-session-display-wrap" style="display:flex; gap: 8px; align-items: center;">
+          <span id="reading-activity-session-display"></span>
+          <button id="reading-activity-session-edit" class="icon-button" type="button" title="Edit session name" aria-label="Edit session name">
+            ✎
+          </button>
+        </div>
+
+        <div id="reading-activity-session-edit-form" class="is-hidden" style="display:flex; gap: 8px; align-items: center; flex-wrap: nowrap; margin-top: 6px;">
+          <input
+            id="reading-activity-session-name"
+            class="form-control"
+            style="max-width: 420px;"
+            type="text"
+            placeholder="Session name (optional)"
+            autocomplete="off"
+          />
+          <button id="reading-activity-session-save" class="button" type="button" disabled>Save</button>
+          <button id="reading-activity-session-cancel" class="button" type="button">Cancel</button>
+          <span id="reading-activity-session-save-status" class="muted"></span>
+        </div>
+      </div>
     </div>
     <div>
       <a id="reading-activity-book-link" class="button" href="/library/books/{{ book_id|escape }}/">Book details</a>
@@ -21,38 +43,21 @@
   <div id="reading-activity-error" class="error is-hidden"></div>
 
   <section id="reading-activity" class="card is-hidden" data-book-id="{{ book_id|escape }}">
-    <div class="book-hero">
-      <div id="reading-activity-cover" class="edit-header__cover" aria-hidden="true">Cover</div>
+    <div class="card" style="margin: 0;">
+      <div class="book-hero">
+        <div id="reading-activity-cover" class="edit-header__cover" aria-hidden="true">Cover</div>
 
-      <div class="book-hero__main">
-        <div id="reading-activity-book-meta"></div>
-      </div>
-    </div>
-
-    <div class="book-meta-grid" style="margin-top: 12px;">
-      <div class="book-meta-grid__item">
-        <h2 class="card__title">Session</h2>
-        <div id="reading-activity-session">
-          <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <input
-              id="reading-activity-session-name"
-              class="form-control"
-              style="max-width: 520px;"
-              type="text"
-              placeholder="Session name (optional)"
-              autocomplete="off"
-            />
-            <button id="reading-activity-session-save" class="button" type="button" disabled>Save</button>
-            <span id="reading-activity-session-save-status" class="muted"></span>
+        <div class="book-hero__main">
+          <div id="reading-activity-book-meta"></div>
+          <div class="muted" style="margin-top: 10px;">
+            <div id="reading-activity-progress"></div>
+            <div id="reading-activity-session-id" class="muted" style="margin-top: 4px;"></div>
           </div>
-          <div id="reading-activity-session-id" class="muted" style="margin-top: 6px;"></div>
         </div>
       </div>
-      <div class="book-meta-grid__item">
-        <h2 class="card__title">Progress</h2>
-        <div id="reading-activity-progress" class="muted"></div>
-      </div>
     </div>
+
+    <div id="reading-activity-session" class="is-hidden" aria-hidden="true"></div>
 
     <div style="margin-top: 14px; display:flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap;">
       <h2 class="card__title" style="margin: 0;">Annotations</h2>
