@@ -7,6 +7,8 @@ from uuid import uuid4
 from accounts.services import get_or_create_profile
 from core import server_settings
 from accounts.models import UserProfile
+from library.models import Book
+from reading.models import ReadingSession
 
 
 User = get_user_model()
@@ -396,6 +398,62 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="reading-activity-session"')
         self.assertContains(response, 'id="reading-activity-progress"')
         self.assertContains(response, 'id="reading-activity-annotations"')
+        self.assertContains(response, f'/reading/books/{book_id}/sessions/')
+
+    def test_unauthenticated_reading_sessions_redirects_to_login(self):
+        book_id = uuid4()
+        response = self.client.get(f"/reading/books/{book_id}/sessions/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f"/api-auth/login/?next=/reading/books/{book_id}/sessions/",
+        )
+
+    def test_authenticated_reading_sessions_scopes_to_user_and_book(self):
+        # Make the user a librarian so book visibility is not dependent on group membership setup.
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+        other = User.objects.create_user(
+            username="u2", email="u2@example.com", password="pw"
+        )
+
+        book = Book.objects.create(title="B1")
+        other_book = Book.objects.create(title="B2")
+
+        mine = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
+        ReadingSession.objects.create(user=self.user, book=other_book, name="Other book")
+        others = ReadingSession.objects.create(user=other, book=book, name="Other user")
+
+        self.client.force_login(self.user)
+        response = self.client.get(f"/reading/books/{book.id}/sessions/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-book-id="{book.id}"')
+        self.assertContains(response, "Sessions for")
+        self.assertContains(response, "No sessions yet for this book.", count=0)
+
+        # Only the current user's sessions for this book appear.
+        self.assertContains(response, str(mine.id))
+        self.assertNotContains(response, str(others.id))
+
+        # Sessions link back to marginalia with ?session=.
+        self.assertContains(
+            response,
+            f"/reading/books/{book.id}/activity/?session={mine.id}",
+        )
+
+    def test_authenticated_reading_sessions_empty_state(self):
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+        book = Book.objects.create(title="B1")
+
+        self.client.force_login(self.user)
+        response = self.client.get(f"/reading/books/{book.id}/sessions/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No sessions yet for this book.")
 
     def test_unauthenticated_profile_redirects_to_login(self):
         response = self.client.get("/profile/", follow=False)

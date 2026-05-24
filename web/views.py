@@ -3,10 +3,13 @@ from __future__ import annotations
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.http import HttpResponseForbidden
+from django.http import Http404
 from django.shortcuts import redirect, render
 
 from accounts import client_api
 from core import policies
+from library.models import Book
+from reading.services import list_sessions_for_book
 
 
 def index(request: HttpRequest) -> HttpResponse:
@@ -21,6 +24,29 @@ def app_dashboard(request: HttpRequest) -> HttpResponse:
 @login_required
 def reading_book_activity(request: HttpRequest, book_id: str) -> HttpResponse:
     return render(request, "web/reading_book_activity.html", {"book_id": book_id})
+
+
+@login_required
+def reading_book_sessions(request: HttpRequest, book_id: str) -> HttpResponse:
+    book = (
+        Book.objects.select_related("series")
+        .prefetch_related("authors")
+        .filter(id=book_id)
+        .first()
+    )
+    if book is None:
+        raise Http404()
+    if not policies.can_view_book(user=request.user, book=book):
+        raise Http404()
+
+    sessions = list_sessions_for_book(user=request.user, book=book)
+    recent_session_id = sessions[0]["id"] if sessions else ""
+
+    return render(
+        request,
+        "web/reading_book_sessions.html",
+        {"book": book, "sessions": sessions, "recent_session_id": recent_session_id},
+    )
 
 
 @login_required

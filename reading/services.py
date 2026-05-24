@@ -9,6 +9,8 @@ from library.models import Book
 from .models import Annotation, ReadingProgress, ReadingSession
 from .locators import normalize_current_location
 from .profile import CURRENT_READING_PROFILE_VERSION
+from django.db.models import Count, Max, Q, F
+from django.db.models.functions import Coalesce, Greatest
 
 
 def is_session_closed(session: ReadingSession) -> bool:
@@ -188,3 +190,58 @@ def update_annotation(
         ]
     )
     return annotation
+
+
+def list_sessions_for_book(*, user, book: Book) -> list[dict]:
+    """
+    Product UI helper: list all reading sessions for a user+book with lightweight
+    progress/activity summary.
+
+    This is intentionally session-auth/UI scoped and should not broaden bearer-token
+    surfaces by itself.
+    """
+    ann_updated = Max(
+        "annotations__updated_at", filter=Q(annotations__is_deleted=False)
+    )
+    last_activity = Greatest(
+        F("updated_at"),
+        Coalesce(F("progress__updated_at"), F("updated_at")),
+        Coalesce(ann_updated, F("updated_at")),
+    )
+
+    qs = (
+        ReadingSession.objects.select_related("progress")
+        .filter(user=user, book=book)
+        .annotate(
+            last_activity_at=last_activity,
+            annotation_count=Count("annotations", filter=Q(annotations__is_deleted=False)),
+        )
+        .order_by("-last_activity_at", "-updated_at", "-started_at")
+    )
+
+    rows: list[dict] = []
+    for s in qs:
+        progress = getattr(s, "progress", None)
+        progression = getattr(progress, "progression", None) if progress is not None else None
+        progression_percent: float | None = None
+        if progression is not None:
+            try:
+                progression_percent = float(progression) * 100.0
+            except (TypeError, ValueError):
+                progression_percent = None
+        rows.append(
+            {
+                "id": str(s.id),
+                "name": (s.name or "").strip(),
+                "status": s.status,
+                "is_active": bool(s.is_active),
+                "started_at": s.started_at,
+                "updated_at": s.updated_at,
+                "completed_at": s.completed_at,
+                "progression": progression,
+                "progression_percent": progression_percent,
+                "annotation_count": int(getattr(s, "annotation_count", 0) or 0),
+                "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
+            }
+        )
+    return rows

@@ -1,0 +1,89 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}reading-book-sessions{% endblock %}
+
+{% block title %}Sessions - {{ server_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/app/" class="pill">&larr; Back to Dashboard</a>
+      <h1 class="page-title" id="reading-sessions-title">Sessions for &ldquo;{{ book.title|default:"Book"|escape }}&rdquo;</h1>
+    </div>
+    <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <a class="button" href="/library/books/{{ book.id|escape }}/">Book details</a>
+    </div>
+  </div>
+
+  <section id="reading-sessions" class="card" data-book-id="{{ book.id|escape }}">
+    <div class="book-hero">
+      <div class="sessions-cover" aria-hidden="true">
+        {% if book.cover_file %}
+          <img class="sessions-cover__img" src="{{ book.cover_file.url|escape }}" alt="Cover for {{ book.title|default:'Book'|escape }}" loading="lazy" />
+        {% else %}
+          Cover
+        {% endif %}
+      </div>
+
+      <div class="book-hero__main">
+        <div class="book-meta">
+          <div class="book-meta__line">{{ book.title|default:"Book"|escape }}</div>
+          {% if book.subtitle %}<div class="muted">{{ book.subtitle|escape }}</div>{% endif %}
+          {% if book.authors.all %}
+            <div class="book-meta__line">
+              {% for a in book.authors.all %}{{ a.name|escape }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+          {% endif %}
+          {% if book.series %}
+            <div class="muted">{{ book.series.name|escape }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 12px;">
+      {% if sessions %}
+        {% for s in sessions %}
+          <div class="card sessions-row">
+            <div class="sessions-row__main">
+              <div style="display:flex; gap: 10px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+                <div>
+                  <div>{% if s.name %}{{ s.name|escape }}{% else %}{{ s.id|escape }}{% endif %}</div>
+                  {% if s.name %}<div class="muted">Session ID: {{ s.id|escape }}</div>{% endif %}
+                </div>
+                <div class="muted">
+                  {% if s.is_active %}Active{% else %}Closed{% endif %}
+                </div>
+              </div>
+
+              <div class="muted" style="margin-top: 6px;">
+                <div>Started: {{ s.started_at }}</div>
+                {% if s.completed_at %}
+                  <div>Closed: {{ s.completed_at }}</div>
+                {% else %}
+                  <div>Updated: {{ s.updated_at }}</div>
+                {% endif %}
+                {% if s.progression_percent is not None %}
+                  <div>Progression: {{ s.progression_percent|floatformat:1 }}%</div>
+                {% else %}
+                  <div>Progression: —</div>
+                {% endif %}
+                <div>Annotations: {{ s.annotation_count }}</div>
+              </div>
+            </div>
+            <a
+              class="icon-button sessions-row__nav"
+              href="/reading/books/{{ book.id|escape }}/activity/?session={{ s.id|urlencode }}"
+              title="Open session marginalia"
+              aria-label="Open session marginalia"
+            >
+              &rarr;
+            </a>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="muted" id="reading-sessions-empty">No sessions yet for this book.</div>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

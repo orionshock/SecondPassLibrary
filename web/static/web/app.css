@@ -289,6 +289,44 @@ a:hover { text-decoration: underline; }
 .kv__k { color: var(--muted); }
 .kv__v { color: var(--text); overflow-wrap: anywhere; }
 
+.sessions-cover {
+  width: 84px;
+  height: 126px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+.sessions-cover__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sessions-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  justify-content: space-between;
+  margin: 10px 0;
+}
+.sessions-row__main { flex: 1; min-width: 0; }
+.sessions-row__nav {
+  align-self: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+}
+
 /* =====================
    Badges
    ===================== */
