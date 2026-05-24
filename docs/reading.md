@@ -37,6 +37,8 @@ POST /api/v1/reading/sessions/<session_id>/close/          (mark session complet
 
 This endpoint is intended for "Continue reading" style UIs. For full session history use `GET /api/v1/reading/sessions/`.
 
+The compact payload includes `session.name` (may be blank) and `session.progression` (float 0–1 or null) alongside the session id/status.
+
 ### Active session behavior
 
 - If the user already has an active session for the book, `active-session` returns it even if the user later loses current book access (reading data is user-owned and durable).

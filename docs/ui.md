@@ -23,6 +23,8 @@ The first minimal product UI shell now exists:
 - `/users/` provides functional user management for Manager/Owner only
 - `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
 - `/users/<user_id>/edit/` provides a dedicated user edit screen for Manager/Owner
+- `/reading/sessions/books/<book_id>/` shows the current user's reading sessions for a book
+- `/reading/sessions/books/<book_id>/<session_id>/` shows session-specific Marginalia (progress + annotations) for the current user
 
 Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
 
@@ -41,7 +43,7 @@ The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` 
 - Top panel shows cover art (or placeholder), title/series/authors, and a primary Download action when a file is available.
 - Tabs (default: Shelves) show Shelves, Groups, and Metadata. Secondary metadata includes identifiers and file details.
 
-Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box.
+Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box. Recent reading cards link to the session Marginalia page and include an `[All Sessions]` link for the book.
 
 Cover note: book lists/cards throughout the product UI render cover art when `cover_url` is present; placeholders remain when it is `null`.
 
