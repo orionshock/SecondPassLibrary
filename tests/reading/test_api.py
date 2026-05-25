@@ -473,6 +473,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(ann.selector_kind, "epub_cfi")
         self.assertEqual(ann.selector_value, "epubcfi(/6/6)")
         self.assertEqual(ann.highlight_text, "hello")
+        self.assertEqual(ann.highlight_color, "yellow")
         self.assertEqual(ann.comment_text, "")
 
         # Reconstructed selector should be a FragmentSelector with EPUB CFI conformsTo.
@@ -480,6 +481,10 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(selector["type"], "FragmentSelector")
         self.assertEqual(selector["conformsTo"], EPUB_CFI_CONFORMS_TO)
         self.assertEqual(selector["value"], "epubcfi(/6/6)")
+
+        # Highlight color defaults to yellow when omitted.
+        bodies = payload["body"]
+        self.assertEqual(bodies[0]["color"], "yellow")
 
     def test_annotation_create_idempotency_key_allows_safe_retry(self):
         self.client.login(username="u1", password="pass1")

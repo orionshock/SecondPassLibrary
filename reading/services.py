@@ -8,6 +8,7 @@ from library.models import Book
 from core import policies
 
 from .models import Annotation, ReadingProgress, ReadingSession
+from .models import HIGHLIGHT_COLOR_YELLOW
 from .locators import normalize_current_location
 from .profile import CURRENT_READING_PROFILE_VERSION
 from django.db.models import Count, Max, Q, F
@@ -136,6 +137,10 @@ def create_annotation(
     assert_session_writable(session=session)
     book = session.book
     book_file = getattr(book, "file", None)
+
+    if (highlight_text or highlight_color) and not highlight_color:
+        highlight_color = HIGHLIGHT_COLOR_YELLOW
+
     return Annotation.objects.create(
         session=session,
         book=book,
@@ -167,6 +172,8 @@ def update_annotation(
     annotation.selector_kind = selector_kind
     annotation.selector_value = selector_value
     annotation.highlight_text = highlight_text or ""
+    if (annotation.highlight_text or highlight_color) and not highlight_color:
+        highlight_color = HIGHLIGHT_COLOR_YELLOW
     annotation.highlight_color = highlight_color or ""
     annotation.comment_text = comment_text or ""
     annotation.profile_version = CURRENT_READING_PROFILE_VERSION

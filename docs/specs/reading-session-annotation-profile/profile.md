@@ -72,6 +72,12 @@ Supported motivations:
 - `commenting`
 - `bookmarking`
 
+Highlight color:
+
+- Highlights may include an optional `color` token.
+- Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
+- If omitted or blank for a highlight, it defaults to `yellow`.
+
 ### Targeting EPUB Content
 
 Every EPUB annotation target should use a `FragmentSelector` whose value is an EPUB CFI.

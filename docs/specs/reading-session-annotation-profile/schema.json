@@ -337,6 +337,18 @@
         },
         "language": {
           "type": "string"
+        },
+        "color": {
+          "type": "string",
+          "enum": [
+            "",
+            "yellow",
+            "green",
+            "blue",
+            "pink",
+            "purple",
+            "orange"
+          ]
         }
       },
       "additionalProperties": true

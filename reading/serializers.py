@@ -5,7 +5,14 @@ from rest_framework import serializers
 from core import policies
 from library.models import Author, Book, Series
 
-from .models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
+from .models import (
+    Annotation,
+    ReadingProgress,
+    ReadingSession,
+    SELECTOR_KIND_EPUB_CFI,
+    HIGHLIGHT_COLOR_TOKENS,
+    HIGHLIGHT_COLOR_YELLOW,
+)
 from .locators import normalize_current_location
 from .profile import (
     CURRENT_READING_PROFILE_VERSION,
@@ -325,10 +332,18 @@ class AnnotationSerializer(serializers.ModelSerializer):
                 if not highlight_text:
                     highlight_text = value
                 if not highlight_color and color:
-                    highlight_color = color
+                    highlight_color = color.strip()
             elif purpose == "commenting" and value:
                 if not comment_text:
                     comment_text = value
+
+        if highlight_text or highlight_color:
+            if not highlight_color:
+                highlight_color = HIGHLIGHT_COLOR_YELLOW
+            elif highlight_color not in HIGHLIGHT_COLOR_TOKENS:
+                raise serializers.ValidationError(
+                    {"body": "Unsupported highlight color token."}
+                )
 
         return {
             "selector_kind": SELECTOR_KIND_EPUB_CFI,
@@ -355,8 +370,8 @@ class AnnotationSerializer(serializers.ModelSerializer):
         bodies: list[dict] = []
         if instance.highlight_text or instance.highlight_color:
             b: dict = {"type": "TextualBody", "purpose": "describing", "value": instance.highlight_text or ""}
-            if instance.highlight_color:
-                b["color"] = instance.highlight_color
+            # Color token is part of the stable highlight contract; default to yellow.
+            b["color"] = (instance.highlight_color or HIGHLIGHT_COLOR_YELLOW)
             bodies.append(b)
         if instance.comment_text:
             bodies.append(

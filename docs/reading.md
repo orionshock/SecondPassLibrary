@@ -114,6 +114,12 @@ Annotations are represented externally as W3C-style `Annotation` records, but st
 
 The API reconstructs the W3C-ish `target`/`body` shape from those columns at the boundary.
 
+Highlight color:
+
+- `highlight_color` is a semantic token (not a CSS/hex color string).
+- Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
+- For highlight annotations, missing/blank color defaults to `yellow`.
+
 - List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
 - Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.

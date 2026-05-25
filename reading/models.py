@@ -12,6 +12,22 @@ SELECTOR_KIND_CHOICES = [
     (SELECTOR_KIND_EPUB_CFI, "EPUB CFI"),
 ]
 
+HIGHLIGHT_COLOR_YELLOW = "yellow"
+HIGHLIGHT_COLOR_GREEN = "green"
+HIGHLIGHT_COLOR_BLUE = "blue"
+HIGHLIGHT_COLOR_PINK = "pink"
+HIGHLIGHT_COLOR_PURPLE = "purple"
+HIGHLIGHT_COLOR_ORANGE = "orange"
+
+HIGHLIGHT_COLOR_TOKENS = {
+    HIGHLIGHT_COLOR_YELLOW,
+    HIGHLIGHT_COLOR_GREEN,
+    HIGHLIGHT_COLOR_BLUE,
+    HIGHLIGHT_COLOR_PINK,
+    HIGHLIGHT_COLOR_PURPLE,
+    HIGHLIGHT_COLOR_ORANGE,
+}
+
 
 class ReadingSession(TimeStampedModel):
     STATUS_ACTIVE = "active"
@@ -147,6 +163,13 @@ class Annotation(TimeStampedModel):
         # Enforced by services for normal writes; keep it true for admin/manual edits too.
         if self.session_id and self.book_id and self.session.book_id != self.book_id:
             raise ValidationError({"book": "book must match session.book."})
+
+        if self.highlight_color:
+            token = self.highlight_color.strip()
+            if token and token not in HIGHLIGHT_COLOR_TOKENS:
+                raise ValidationError(
+                    {"highlight_color": "Unsupported highlight_color token."}
+                )
 
     def save(self, *args, **kwargs):
         # Ensure model-level invariants are enforced for normal saves (including admin).

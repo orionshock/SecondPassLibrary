@@ -73,6 +73,16 @@ def _validate_optional_color(value: object, *, field: str) -> None:
     if len(value) > MAX_COLOR_CHARS:
         raise ValueError(f"{field} exceeds maximum length ({MAX_COLOR_CHARS} chars).")
 
+    v = value.strip()
+    if v == "":
+        return
+
+    allowed = {"yellow", "green", "blue", "pink", "purple", "orange"}
+    if v not in allowed:
+        raise ValueError(
+            f"{field} must be one of: {', '.join(sorted(allowed))}."
+        )
+
 
 def validate_profile_version(value: object) -> str:
     if value is None or value == "":

@@ -42,6 +42,12 @@ Internally, annotations are stored in compact/queryable columns:
 
 The API/export shape remains W3C-ish (`target`/`body`) and is reconstructed at the boundary.
 
+Highlight color:
+
+- `highlight_color` is a semantic token (not a CSS/hex color string).
+- Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
+- For highlight annotations, missing/blank color defaults to `yellow`.
+
 ### Current reading location vs bookmarks
 
 - Current reading location is mutable **ReadingSession state**, not necessarily an Annotation.
