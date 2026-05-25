@@ -42,3 +42,22 @@ class ReadingActivityJsRenderingTest(TestCase):
         # Annotations should be scoped to the selected session id, not book-wide.
         self.assertIn("/api/v1/reading/annotations/?session_id=", text)
         self.assertNotIn("book_id=", text)
+
+    def test_annotation_quote_and_note_use_purpose_not_order(self):
+        text = self._read_js()
+
+        self.assertIn('b.purpose === "describing"', text)
+        self.assertIn('b.purpose === "commenting"', text)
+        self.assertNotIn('b.purpose === "highlighting"', text)
+
+    def test_annotation_quote_renders_before_note_and_uses_color_token_class(self):
+        text = self._read_js()
+
+        # Quote-first then note.
+        self.assertIn("if (quoteText)", text)
+        self.assertIn("if (noteText)", text)
+
+        # Token is applied only via CSS class, not inline styles.
+        self.assertIn("annotation-quote--${token}", text)
+        self.assertNotIn(".style.", text)
+        self.assertNotIn("style=", text)

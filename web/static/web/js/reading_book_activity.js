@@ -69,17 +69,19 @@ function sortAnnotations(rows, sortKey) {
 
 function renderAnnotationRow(a) {
   const wrap = document.createElement("article");
-  wrap.className = "card";
+  wrap.className = "card annotation-card";
 
   const updatedAt = a && a.updated_at ? String(a.updated_at) : "";
   const createdAt = a && a.created_at ? String(a.created_at) : "";
 
   const bodies = Array.isArray(a && a.body) ? a.body : [];
-  const highlight = bodies.find((b) => b && b.type === "TextualBody" && (b.purpose === "describing" || b.purpose === "highlighting"));
-  const comment = bodies.find((b) => b && b.type === "TextualBody" && b.purpose === "commenting");
+  const quoteBody = bodies.find((b) => b && b.type === "TextualBody" && b.purpose === "describing");
+  const noteBody = bodies.find((b) => b && b.type === "TextualBody" && b.purpose === "commenting");
 
-  const hasHighlight = !!(highlight && (highlight.value || highlight.color));
-  const hasComment = !!(comment && comment.value);
+  const quoteText = quoteBody && typeof quoteBody.value === "string" ? quoteBody.value : "";
+  const noteText = noteBody && typeof noteBody.value === "string" ? noteBody.value : "";
+  const hasQuote = !!quoteText;
+  const hasNote = !!noteText;
   const motivation = a && a.motivation ? String(a.motivation) : "";
   const selectorValue =
     a && a.target && a.target.selector && typeof a.target.selector.value === "string"
@@ -88,51 +90,69 @@ function renderAnnotationRow(a) {
 
   let kindLabel = "Annotation";
   let kindIcon = "✎";
-  if (motivation === "bookmarking" && !hasHighlight && !hasComment) {
+  if (motivation === "bookmarking" && !hasQuote && !hasNote) {
     kindLabel = "Bookmark";
     kindIcon = "🔖";
-  } else if (hasHighlight && hasComment) {
+  } else if (hasQuote && hasNote) {
     kindLabel = "Highlight with note";
     kindIcon = "✎";
-  } else if (hasComment && !hasHighlight) {
+  } else if (hasNote && !hasQuote) {
     kindLabel = "Note";
     kindIcon = "🗒";
-  } else if (hasHighlight && !hasComment) {
+  } else if (hasQuote && !hasNote) {
     kindLabel = "Highlight";
     kindIcon = "✦";
   }
 
-  const header = document.createElement("div");
-  header.className = "muted";
+  // Normalize icons to stable Unicode values (avoid mojibake in source files).
+  const iconByKindLabel = {
+    Annotation: "\u270e",
+    Bookmark: "\ud83d\udd16",
+    Highlight: "\u2726",
+    Note: "\ud83d\uddd2",
+    "Highlight with note": "\u270e",
+  };
+  kindIcon = iconByKindLabel[kindLabel] || iconByKindLabel.Annotation;
 
+  const bodyWrap = document.createElement("div");
+  bodyWrap.className = "annotation-card__body";
+
+  const iconWrap = document.createElement("div");
+  iconWrap.className = "annotation-card__icon";
   const icon = el("span", "", kindIcon);
-  icon.setAttribute("aria-hidden", "true");
-  const label = el("span", "sr-only", kindLabel);
-  const text = el("span", "", ` ${kindLabel}`);
+  icon.setAttribute("title", kindLabel);
+  icon.setAttribute("aria-label", kindLabel);
+  iconWrap.appendChild(icon);
+
+  const contentWrap = document.createElement("div");
+  contentWrap.className = "annotation-card__content";
+
+  if (quoteText) {
+    let token = quoteBody && typeof quoteBody.color === "string" ? quoteBody.color : "";
+    token = (token || "").trim().toLowerCase();
+    const allowed = new Set(["yellow", "green", "blue", "pink", "purple", "orange"]);
+    if (!token || !allowed.has(token)) token = "yellow";
+
+    const quoteEl = el("div", `annotation-quote annotation-quote--${token}`, quoteText);
+    contentWrap.appendChild(quoteEl);
+  }
+
+  if (noteText) {
+    const noteEl = el("div", "annotation-note", noteText);
+    contentWrap.appendChild(noteEl);
+  }
+
+  if (!quoteText && !noteText) {
+    const fallback = selectorValue ? selectorValue : "Bookmark";
+    contentWrap.appendChild(el("div", "muted", fallback));
+  }
 
   const whenText = updatedAt ? formatWhen(updatedAt) : createdAt ? formatWhen(createdAt) : "";
-  const when = el("span", "", whenText ? ` - ${whenText}` : "");
+  contentWrap.appendChild(el("div", "muted annotation-meta", whenText));
 
-  header.appendChild(icon);
-  header.appendChild(label);
-  header.appendChild(text);
-  header.appendChild(when);
-  wrap.appendChild(header);
-
-  if (highlight && (highlight.value || highlight.color)) {
-    const v = typeof highlight.value === "string" ? highlight.value : "";
-    const line = el("div", "", v);
-    wrap.appendChild(line);
-  }
-  if (comment && comment.value) {
-    const v = typeof comment.value === "string" ? comment.value : "";
-    const line = el("div", "", v);
-    wrap.appendChild(line);
-  }
-
-  if (!hasHighlight && !hasComment && selectorValue) {
-    wrap.appendChild(el("div", "muted", selectorValue));
-  }
+  bodyWrap.appendChild(iconWrap);
+  bodyWrap.appendChild(contentWrap);
+  wrap.appendChild(bodyWrap);
 
   return wrap;
 }
