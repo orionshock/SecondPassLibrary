@@ -21,14 +21,6 @@ function formatWhen(value) {
   return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function parseSearchParams() {
-  try {
-    return new URLSearchParams(window.location.search);
-  } catch {
-    return new URLSearchParams();
-  }
-}
-
 function renderBookMeta(container, book) {
   clear(container);
   const title = book && book.title ? String(book.title) : "Book";
@@ -48,30 +40,20 @@ function renderBookMeta(container, book) {
   container.appendChild(wrap);
 }
 
-async function tryGetSession(sessionId) {
-  if (!sessionId) return null;
-  try {
-    return await fetchJSON(`/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/`);
-  } catch (e) {
-    return null;
-  }
-}
-
-async function getActiveSessionForBook(bookId) {
-  try {
-    return await fetchJSON(`/api/v1/reading/books/${encodeURIComponent(String(bookId))}/active-session/`);
-  } catch (e) {
-    return null;
-  }
+async function getSession(sessionId) {
+  if (!sessionId) throw new Error("Missing session id");
+  return await fetchJSON(`/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/`);
 }
 
 async function getProgressForSession(sessionId) {
   return await fetchJSON(`/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/progress/`);
 }
 
-async function getAnnotationsForBook(bookId) {
+async function getAnnotationsForSession(sessionId) {
   // Keep it simple for v1: grab up to 200 and sort client-side.
-  const payload = await fetchJSON(`/api/v1/reading/annotations/?book_id=${encodeURIComponent(String(bookId))}&page_size=200`);
+  const payload = await fetchJSON(
+    `/api/v1/reading/annotations/?session_id=${encodeURIComponent(String(sessionId))}&page_size=200`,
+  );
   return payload && Array.isArray(payload.results) ? payload.results : Array.isArray(payload) ? payload : [];
 }
 
@@ -247,16 +229,34 @@ export async function initReadingBookActivity() {
 
     renderBookMeta(bookMetaEl, book);
 
-    const params = parseSearchParams();
-    const preferredSessionId = (initialSessionId || params.get("session") || "").trim();
-    let session = null;
-
-    if (preferredSessionId) {
-      const maybe = await tryGetSession(preferredSessionId);
-      if (maybe && String(maybe.book) === String(bookId)) session = maybe;
+    const preferredSessionId = (initialSessionId || "").trim();
+    if (!preferredSessionId) {
+      statusEl.textContent = "Invalid session ID.";
+      setErr("Invalid session ID.");
+      return;
     }
-    if (!session) {
-      session = await getActiveSessionForBook(bookId);
+
+    let session = null;
+    try {
+      session = await getSession(preferredSessionId);
+    } catch (eSession) {
+      statusEl.textContent = "Invalid session ID.";
+      setErr("Invalid session ID.");
+      return;
+    }
+
+    const sessionBookId =
+      session && session.book_id
+        ? String(session.book_id)
+        : session && session.book && typeof session.book === "object" && session.book.id
+          ? String(session.book.id)
+          : session && session.book
+            ? String(session.book)
+            : "";
+    if (!sessionBookId || sessionBookId !== String(bookId)) {
+      statusEl.textContent = "Invalid session ID.";
+      setErr("Invalid session ID.");
+      return;
     }
 
     let sessionId = "";
@@ -363,7 +363,7 @@ export async function initReadingBookActivity() {
 
     let annotations = [];
     try {
-      annotations = await getAnnotationsForBook(bookId);
+      annotations = await getAnnotationsForSession(sessionId);
     } catch (e3) {
       console.error("Failed to load annotations", e3);
       annotations = [];

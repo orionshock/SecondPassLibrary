@@ -7,7 +7,7 @@ from django.test import TestCase
 
 
 class ReadingActivityJsRenderingTest(TestCase):
-    def test_annotation_cards_do_not_render_session_id(self):
+    def _read_js(self) -> str:
         js_path = (
             Path(settings.BASE_DIR)
             / "web"
@@ -16,24 +16,29 @@ class ReadingActivityJsRenderingTest(TestCase):
             / "js"
             / "reading_book_activity.js"
         )
-        text = js_path.read_text(encoding="utf-8")
+        return js_path.read_text(encoding="utf-8")
+
+    def test_annotation_cards_do_not_render_session_id(self):
+        text = self._read_js()
 
         # The per-annotation card should not include "Session <uuid>" metadata.
         # Session context remains visible in the page header/Session section.
         self.assertNotIn("metaBits.push(`Session", text)
 
     def test_session_edit_is_guarded_by_session_active_status(self):
-        js_path = (
-            Path(settings.BASE_DIR)
-            / "web"
-            / "static"
-            / "web"
-            / "js"
-            / "reading_book_activity.js"
-        )
-        text = js_path.read_text(encoding="utf-8")
+        text = self._read_js()
 
         # Closed sessions are historical/fixed; the UI should not show the edit affordance.
         self.assertIn("session.status", text)
         self.assertIn("session.is_active", text)
         self.assertIn("canEditSessionMetadata", text)
+
+    def test_canonical_session_marginalia_is_session_scoped(self):
+        text = self._read_js()
+
+        # The canonical page should not attempt to guess/fallback to an "active session" per book.
+        self.assertNotIn("/api/v1/reading/books/", text)
+
+        # Annotations should be scoped to the selected session id, not book-wide.
+        self.assertIn("/api/v1/reading/annotations/?session_id=", text)
+        self.assertNotIn("book_id=", text)
