@@ -1,4 +1,9 @@
+from typing import Any, cast
+
 from rest_framework import serializers
+
+from core import policies
+from library.models import Author, Book, Series
 
 from .models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from .locators import normalize_current_location
@@ -64,6 +69,103 @@ class ReadingSessionPatchSerializer(serializers.ModelSerializer):
                 }
             )
         return super().validate(attrs)
+
+
+class AuthorSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = ["id", "name"]
+        read_only_fields = fields
+
+
+class SeriesSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Series
+        fields = ["id", "name"]
+        read_only_fields = fields
+
+
+class ReadingSessionBookSummarySerializer(serializers.ModelSerializer):
+    authors = AuthorSummarySerializer(many=True, read_only=True)
+    series = SeriesSummarySerializer(read_only=True, allow_null=True)
+    cover_url = serializers.SerializerMethodField(read_only=True)
+
+    def get_cover_url(self, obj: Book) -> str | None:
+        cover = getattr(obj, "cover_file", None)
+        if not cover:
+            return None
+        request = self.context.get("request")
+        if request is not None:
+            try:
+                return request.build_absolute_uri(cover.url)
+            except Exception:
+                return None
+        return getattr(cover, "url", None)
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "authors", "series", "series_index", "cover_url"]
+        read_only_fields = fields
+
+
+class ReadingSessionSummarySerializer(serializers.ModelSerializer):
+    # Keep for compatibility during active development.
+    book_title = serializers.CharField(source="book.title", read_only=True)
+
+    book_id = serializers.UUIDField(read_only=True)
+    progression = serializers.FloatField(read_only=True, allow_null=True)
+    annotation_count = serializers.IntegerField(read_only=True)
+    book = serializers.SerializerMethodField(read_only=True)
+
+    def get_book(self, obj: ReadingSession) -> dict[str, Any]:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        book = cast(Book, getattr(obj, "book", None))
+        if book is None:
+            return {
+                "id": None,
+                "title": "",
+                "authors": [],
+                "series": None,
+                "series_index": None,
+                "cover_url": None,
+            }
+
+        # Don't leak hidden/inaccessible library metadata through user-owned sessions.
+        if user is None or not policies.can_view_book(user=user, book=book):
+            return {
+                "id": str(book.id),
+                "title": "",
+                "authors": [],
+                "series": None,
+                "series_index": None,
+                "cover_url": None,
+            }
+
+        return cast(
+            dict[str, Any],
+            ReadingSessionBookSummarySerializer(book, context={"request": request}).data,
+        )
+
+    class Meta:
+        model = ReadingSession
+        fields = [
+            "id",
+            "book_id",
+            "name",
+            "status",
+            "is_active",
+            "started_at",
+            "completed_at",
+            "created_at",
+            "updated_at",
+            "notes",
+            "progression",
+            "annotation_count",
+            "book_title",
+            "book",
+        ]
+        read_only_fields = fields
 
 
 class ReadingProgressSerializer(serializers.ModelSerializer):

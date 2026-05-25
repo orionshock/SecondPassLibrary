@@ -381,7 +381,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 - Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
-- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
+- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
 - Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`)
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
@@ -391,6 +391,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 Reading payload notes:
 
 - Progress uses `current_location` (JSON) as the canonical "where am I?" session state.
+- Session list/retrieve payloads include `progression`, `annotation_count`, and a compact `book` summary scoped to the caller’s current book visibility.
 - Annotation API payloads use canonical `motivation`, `target`, and `body` fields. Internally, annotations are stored in compact columns (`selector_kind`/`selector_value` plus highlight/comment fields) and the `target`/`body` profile shape is reconstructed at the API boundary.
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.

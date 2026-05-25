@@ -16,6 +16,13 @@ Design direction:
 Sessions are created through the dedicated endpoints below (not via `POST /sessions/`).
 The `/sessions/` API exists for listing/retrieving and limited client-safe metadata edits.
 
+Session list/retrieve payloads include a compact summary suitable for session-management UIs:
+
+- `progression` (float 0–1 or null)
+- `annotation_count` (non-deleted annotations)
+- `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller’s current book visibility (hidden/inaccessible books do not leak metadata)
+- Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`
+
 Endpoints:
 
 ```text

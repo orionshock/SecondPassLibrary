@@ -21,7 +21,7 @@ from rest_framework.renderers import JSONRenderer
 
 from accounts.authentication import ClientBearerAuthentication
 
-from django.db.models import Max, Q, F
+from django.db.models import Count, Max, Q, F
 from django.db.models.functions import Coalesce, Greatest
 
 from library.models import Book
@@ -44,6 +44,7 @@ from .serializers import (
     ReadingProgressSerializer,
     ReadingSessionPatchSerializer,
     ReadingSessionSerializer,
+    ReadingSessionSummarySerializer,
 )
 from core.models import IdempotencyRecord
 
@@ -85,14 +86,52 @@ class ReadingSessionViewSet(
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return ReadingSession.objects.select_related("book").filter(
-            user=self.request.user
+        request = cast(Request, self.request)
+        qs = (
+            ReadingSession.objects.select_related("book", "book__series", "progress")
+            .prefetch_related("book__authors")
+            .filter(user=request.user)
+            .annotate(
+                progression=F("progress__progression"),
+                annotation_count=Count(
+                    "annotations", filter=Q(annotations__is_deleted=False)
+                ),
+            )
         )
+
+        raw_book = (request.query_params.get("book") or "").strip()
+        if raw_book:
+            try:
+                # UUID validation (accepts canonical string only).
+                import uuid
+
+                book_id = uuid.UUID(raw_book)
+            except Exception:
+                raise DRFValidationError({"book": "Invalid book id."})
+            qs = qs.filter(book_id=book_id)
+
+        raw_status = (request.query_params.get("status") or "").strip()
+        if raw_status:
+            allowed = {c[0] for c in ReadingSession.STATUS_CHOICES}
+            if raw_status not in allowed:
+                raise DRFValidationError({"status": "Invalid status."})
+            qs = qs.filter(status=raw_status)
+
+        raw_is_active = (request.query_params.get("is_active") or "").strip().lower()
+        if raw_is_active:
+            if raw_is_active in {"1", "true", "t", "yes", "y", "on"}:
+                qs = qs.filter(is_active=True)
+            elif raw_is_active in {"0", "false", "f", "no", "n", "off"}:
+                qs = qs.filter(is_active=False)
+            else:
+                raise DRFValidationError({"is_active": "Invalid boolean."})
+
+        return qs.order_by("-started_at")
 
     def get_serializer_class(self):
         if self.action == "partial_update":
             return ReadingSessionPatchSerializer
-        return ReadingSessionSerializer
+        return ReadingSessionSummarySerializer
 
     def create(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
