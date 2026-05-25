@@ -32,7 +32,7 @@ POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name
 GET  /api/v1/reading/sessions/                            (paginated)
 GET  /api/v1/reading/sessions/recent/                     (compact recent list; active sessions only; default limit 10)
 GET  /api/v1/reading/sessions/<session_id>/
-PATCH /api/v1/reading/sessions/<session_id>/              (only: {"name": "...", "notes": "..."})
+PATCH /api/v1/reading/sessions/<session_id>/              (only while active: {"name": "...", "notes": "..."})
 POST /api/v1/reading/sessions/<session_id>/close/          (mark session completed/inactive; idempotent)
 ```
 

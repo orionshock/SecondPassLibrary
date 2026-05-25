@@ -142,6 +142,12 @@ class ReadingSessionViewSet(
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
+    def partial_update(self, request, *args, **kwargs):
+        # Session metadata is mutable only while the session is active/writable.
+        session = self.get_object()
+        assert_session_writable(session=session)
+        return super().partial_update(request, *args, **kwargs)
+
 
 class ActiveSessionView(APIView):
     authentication_classes = [

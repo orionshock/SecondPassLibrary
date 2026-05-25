@@ -262,12 +262,18 @@ export async function initReadingBookActivity() {
     let sessionId = "";
     let sessionName = "";
     let sessionDisplayName = "";
+    let canEditSessionMetadata = false;
     if (session && session.id) {
       sessionId = String(session.id);
       sessionName = session && typeof session.name === "string" ? session.name : "";
       sessionIdEl.textContent = `Session ID: ${sessionId}`;
       sessionDisplayName = sessionName && sessionName.trim() ? sessionName.trim() : sessionId;
       sessionDisplayEl.textContent = `Session: “${sessionDisplayName}”`;
+
+      const statusValue = session && typeof session.status === "string" ? session.status : "";
+      const isActive = !!(session && session.is_active);
+      canEditSessionMetadata = statusValue === "active" && isActive;
+
       sessionNameEl.value = sessionName;
       sessionSaveBtn.disabled = true;
       sessionSaveStatusEl.textContent = "";
@@ -303,7 +309,7 @@ export async function initReadingBookActivity() {
 
     function exitEditMode() {
       visible(sessionEditFormEl, false);
-      visible(sessionEditBtn, !!sessionId);
+      visible(sessionEditBtn, !!sessionId && canEditSessionMetadata);
       sessionSaveStatusEl.textContent = "";
       sessionNameEl.value = sessionName;
       updateSaveButtonState();
@@ -328,7 +334,7 @@ export async function initReadingBookActivity() {
     sessionCancelBtn.addEventListener("click", () => exitEditMode());
 
     // Initial UI: display mode when a session exists.
-    visible(sessionEditBtn, !!sessionId);
+    visible(sessionEditBtn, !!sessionId && canEditSessionMetadata);
     visible(sessionEditFormEl, false);
 
     sessionSaveBtn.addEventListener("click", async () => {
