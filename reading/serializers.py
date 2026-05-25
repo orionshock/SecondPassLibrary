@@ -295,27 +295,31 @@ class AnnotationSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def _compact_from_profile(
-        self, *, target: dict, body: list[dict]
+        self, *, target: dict[str, Any], body: list[dict[str, Any]]
     ) -> dict[str, str]:
-        selector = target.get("selector") if isinstance(target, dict) else None
-        selector_value = (
-            str(selector.get("value"))
-            if isinstance(selector, dict) and selector.get("value")
-            else ""
-        )
+        selector = target.get("selector")
+        selector_value: str = ""
+        if isinstance(selector, dict):
+            raw_value = selector.get("value")
+            if isinstance(raw_value, str) and raw_value:
+                selector_value = raw_value
+            elif raw_value is not None and raw_value != "":
+                selector_value = str(raw_value)
 
-        highlight_text = ""
-        highlight_color = ""
-        comment_text = ""
+        highlight_text: str = ""
+        highlight_color: str = ""
+        comment_text: str = ""
 
         for b in body or []:
             if not isinstance(b, dict):
                 continue
             if b.get("type") != "TextualBody":
                 continue
-            purpose = (b.get("purpose") or "").strip()
-            value = b.get("value") if isinstance(b.get("value"), str) else ""
-            color = b.get("color") if isinstance(b.get("color"), str) else ""
+            purpose = str(b.get("purpose") or "").strip()
+            raw_value = b.get("value")
+            value: str = raw_value if isinstance(raw_value, str) else ""
+            raw_color = b.get("color")
+            color: str = raw_color if isinstance(raw_color, str) else ""
 
             if purpose in ("highlighting", "describing") and (value or color):
                 if not highlight_text:
