@@ -394,7 +394,7 @@ Reading payload notes:
 - Session list/retrieve payloads include `progression`, `annotation_count`, and a compact `book` summary scoped to the caller’s current book visibility.
 - Annotation API payloads use canonical `motivation`, `target`, and `body` fields. Internally, annotations are stored in compact columns (`selector_kind`/`selector_value` plus highlight/comment fields) and the `target`/`body` profile shape is reconstructed at the API boundary.
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
-- Highlight color is a semantic token in `body[].color` (allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`; highlight defaults to `yellow` when omitted/blank).
+- Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 
 ## Core

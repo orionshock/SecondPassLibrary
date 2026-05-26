@@ -74,9 +74,19 @@ Supported motivations:
 
 Highlight color:
 
-- Highlights may include an optional `color` token.
+- `color` is highlight/quote-only metadata (not generic annotation metadata).
+- It applies only to selected text / quote bodies represented as `TextualBody` with:
+  - `purpose: "describing"`
+- Note/comment bodies (`purpose: "commenting"`) do not use `color`.
+- Bookmark-only annotations do not use `color`.
 - Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
-- If omitted or blank for a highlight, it defaults to `yellow`.
+- If omitted or blank on highlight input, it normalizes to `yellow`.
+- Normalized output/export highlight bodies should include a real token (no blank values).
+
+Future / v2 consideration:
+
+- A future profile version may introduce a generic `annotation_color` that can apply to highlights, and bookmarks.
+- That is intentionally not part of this profile version.
 
 ### Targeting EPUB Content
 

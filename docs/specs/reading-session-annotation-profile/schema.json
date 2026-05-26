@@ -316,6 +316,7 @@
       "required": [
         "type"
       ],
+      "description": "TextualBody payload. Second Pass Library semantics: `color` is highlight/quote-only metadata and applies only when `purpose` is `describing` (selected text). Note/comment bodies and bookmark-only annotations do not use `color`.",
       "properties": {
         "type": {
           "const": "TextualBody"
@@ -347,9 +348,32 @@
             "pink",
             "purple",
             "orange"
-          ]
+          ],
+          "description": "Highlight/quote color token. Only valid when `purpose` is `describing`."
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "purpose": {
+                "const": "describing"
+              }
+            },
+            "required": [
+              "purpose"
+            ]
+          },
+          "then": {},
+          "else": {
+            "not": {
+              "required": [
+                "color"
+              ]
+            }
+          }
+        }
+      ],
       "additionalProperties": true
     },
     "target": {

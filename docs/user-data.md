@@ -46,6 +46,8 @@ Highlight color:
 
 - `highlight_color` is a semantic token (not a CSS/hex color string).
 - Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
+- Color is highlight/quote-only metadata (it applies to the selected-text `TextualBody` with `purpose: "describing"`).
+- Note/comment bodies and bookmark-only annotations do not use color.
 - For highlight annotations, missing/blank color defaults to `yellow`.
 
 ### Current reading location vs bookmarks
