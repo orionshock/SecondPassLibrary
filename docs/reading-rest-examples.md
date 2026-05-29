@@ -185,6 +185,8 @@ Notes:
 
 - Shorthand `current_location.cfi` is preserved as submitted.
 - When `current_location.selector` is omitted but `current_location.cfi` is present, the server adds a `current_location.selector` and normalizes `current_location.selector.value` to the `epubcfi(...)` form.
+- `current_location` is the canonical "where am I?" session state. `progression` is derived/display metadata only (a normalized scalar hint); it should not be used as a source of truth for resume location or exact positioning.
+- When present, `0.0 <= progression <= 1.0` (inclusive). If described as whole-book progress, it is relative to the whole renderable EPUB reading span from first renderable location to last renderable location.
 - Closed sessions reject progress writes with `400` validation errors (session is immutable once closed/archived).
 - Oversized JSON or unknown fields return `400` validation errors.
 

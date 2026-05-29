@@ -51,6 +51,9 @@ class Series(TimeStampedModel):
 
 
 class Book(TimeStampedModel):
+    if TYPE_CHECKING:
+        file: "BookFile"
+
     title = models.CharField(max_length=512)
     subtitle = models.CharField(max_length=512, blank=True)
     summary = models.TextField(blank=True)

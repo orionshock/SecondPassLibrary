@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -30,6 +32,10 @@ HIGHLIGHT_COLOR_TOKENS = {
 
 
 class ReadingSession(TimeStampedModel):
+    if TYPE_CHECKING:
+        user_id: int
+        book_id: int
+
     STATUS_ACTIVE = "active"
     STATUS_COMPLETED = "completed"
     STATUS_ARCHIVED = "archived"
@@ -97,6 +103,11 @@ class ReadingProgress(TimeStampedModel):
 
 
 class Annotation(TimeStampedModel):
+    if TYPE_CHECKING:
+        session_id: int
+        book_id: int
+        book_file_id: int | None
+
     MOTIVATION_HIGHLIGHTING = "highlighting"
     MOTIVATION_COMMENTING = "commenting"
     MOTIVATION_BOOKMARKING = "bookmarking"

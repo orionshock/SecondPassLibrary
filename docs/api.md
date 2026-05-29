@@ -390,8 +390,9 @@ See `docs/permissions.md` for the visibility/curation rules.
 
 Reading payload notes:
 
-- Progress uses `current_location` (JSON) as the canonical "where am I?" session state.
-- Session list/retrieve payloads include `progression`, `annotation_count`, and a compact `book` summary scoped to the caller’s current book visibility.
+- Progress uses `current_location` (JSON) as the canonical "where am I?" session state (for EPUB, an EPUB CFI and/or href-based locator).
+- `progression` is derived/display metadata (a normalized scalar hint, `0.0 <= progression <= 1.0` when present), not canonical navigation state. It is useful for progress bars and summaries; it should not be used for resume location, annotation anchoring, CFI correctness validation, or cross-device exact positioning. If described as whole-book progress, it is relative to the whole renderable EPUB reading span from first renderable location to last renderable location (not page count, viewport count, chapter-local progress, or byte offset).
+- Session list/retrieve payloads include `progression`, `annotation_count`, and a compact `book` summary scoped to the caller's current book visibility.
 - Annotation API payloads use canonical `motivation`, `target`, and `body` fields. Internally, annotations are stored in compact columns (`selector_kind`/`selector_value` plus highlight/comment fields) and the `target`/`body` profile shape is reconstructed at the API boundary.
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
 - Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.

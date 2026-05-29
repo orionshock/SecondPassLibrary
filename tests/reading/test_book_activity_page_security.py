@@ -4,6 +4,7 @@ from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from rest_framework.response import Response
 from rest_framework.test import APIClient
 
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
@@ -44,7 +45,10 @@ class BookActivityPageSecurityTest(TestCase):
         client = APIClient()
         self.assertTrue(client.login(username="u1", password="pass1"))
 
-        resp = client.get(f"/api/v1/reading/annotations/?book_id={self.book.id}")
+        resp = cast(
+            Response,
+            client.get(f"/api/v1/reading/annotations/?book_id={self.book.id}"),
+        )
         self.assertEqual(resp.status_code, 200)
         data = cast(dict[str, Any], resp.data)
         results = cast(list[dict[str, Any]], data.get("results") or [])

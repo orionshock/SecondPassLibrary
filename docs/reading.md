@@ -18,9 +18,9 @@ The `/sessions/` API exists for listing/retrieving and limited client-safe metad
 
 Session list/retrieve payloads include a compact summary suitable for session-management UIs:
 
-- `progression` (float 0–1 or null)
+- `progression` (float 0-1 or null; derived/display metadata, not canonical location state)
 - `annotation_count` (non-deleted annotations)
-- `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller’s current book visibility (hidden/inaccessible books do not leak metadata)
+- `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller's current book visibility (hidden/inaccessible books do not leak metadata)
 - Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`
 
 Endpoints:
@@ -44,7 +44,7 @@ POST /api/v1/reading/sessions/<session_id>/close/          (mark session complet
 
 This endpoint is intended for "Continue reading" style UIs. For full session history use `GET /api/v1/reading/sessions/`.
 
-The compact payload includes `session.name` (may be blank) and `session.progression` (float 0–1 or null) alongside the session id/status.
+The compact payload includes `session.name` (may be blank) and `session.progression` (float 0-1 or null) alongside the session id/status.
 
 ### Active session behavior
 
@@ -84,6 +84,31 @@ Example payload:
 }
 ```
 
+Canonical vs derived state:
+
+- Canonical reading position is `current_location` (for EPUB, an EPUB CFI and/or href-based locator).
+- `progression` is a normalized scalar display hint (derived/summary metadata), not canonical navigation state.
+
+`progression` is useful for:
+
+- progress bars
+- dashboard cards
+- session summaries
+- friendly percentages
+
+`progression` should not be used as the source of truth for:
+
+- resume location
+- annotation anchoring
+- validation of CFI correctness
+- cross-device exact positioning
+
+If described as whole-book progress, treat `progression` as relative to the whole renderable EPUB reading span from first renderable location to last renderable location. It is not page count, viewport count, chapter-local progress, or byte offset.
+
+Validation:
+
+- When present, `0.0 <= progression <= 1.0` (inclusive).
+
 ## Current location (JSON conventions)
 
 Current location is flexible JSON. For EPUB, prefer:
@@ -101,7 +126,7 @@ Current location is flexible JSON. For EPUB, prefer:
 Notes:
 - `href` is the EPUB internal content document path when available.
 - `cfi` is preferred when the client can provide it.
-- `progression` is a float between 0 and 1 when available.
+- `progression` is optional derived/display metadata; when present, `0.0 <= progression <= 1.0` (inclusive).
 - PDF locators are not supported.
 
 ## Annotations (highlights, notes, bookmarks)

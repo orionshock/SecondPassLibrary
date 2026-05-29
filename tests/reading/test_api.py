@@ -1154,7 +1154,9 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
             selector_kind="weird_kind",
             selector_value="epubcfi(/6/2)",
         )
-        payload = AnnotationSerializer(ann, context={"request": None}).data
+        payload = cast(
+            dict[str, Any], AnnotationSerializer(ann, context={"request": None}).data
+        )
         self.assertEqual(payload["target"]["selector"]["type"], "UnknownSelector")
         self.assertEqual(payload["target"]["selector"]["value"], "epubcfi(/6/2)")
         self.assertNotIn("conformsTo", payload["target"]["selector"])
