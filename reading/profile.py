@@ -19,6 +19,7 @@ MAX_SELECTOR_VALUE_CHARS = 8 * 1024
 MAX_BODY_VALUE_CHARS = 64 * 1024
 MAX_SMALL_STRING_CHARS = 255
 MAX_COLOR_CHARS = 64
+MAX_TEXT_QUOTE_CONTEXT_CHARS = 500
 
 
 def normalize_epub_cfi(value: object) -> str:
@@ -130,6 +131,51 @@ def validate_fragment_selector(selector: object) -> dict[str, Any]:
     return selector_dict
 
 
+def validate_text_quote_selector(selector: object) -> dict[str, Any]:
+    selector_dict = _ensure_mapping(selector, field="selector")
+    if not selector_dict:
+        return {}
+
+    allowed_selector_keys = {"type", "exact", "prefix", "suffix"}
+    unknown = set(selector_dict.keys()).difference(allowed_selector_keys)
+    if unknown:
+        raise ValueError(
+            f"Unsupported selector fields: {', '.join(sorted(unknown))}."
+        )
+
+    selector_type = selector_dict.get("type")
+    if selector_type != "TextQuoteSelector":
+        raise ValueError("selector.type must be 'TextQuoteSelector'.")
+
+    exact = selector_dict.get("exact")
+    if not isinstance(exact, str) or not exact.strip():
+        raise ValueError("selector.exact must be a non-empty string.")
+    if len(exact) > MAX_BODY_VALUE_CHARS:
+        raise ValueError(
+            f"selector.exact exceeds maximum length ({MAX_BODY_VALUE_CHARS} chars)."
+        )
+
+    prefix = selector_dict.get("prefix")
+    if prefix is not None:
+        if not isinstance(prefix, str):
+            raise ValueError("selector.prefix must be a string.")
+        if len(prefix) > MAX_TEXT_QUOTE_CONTEXT_CHARS:
+            raise ValueError(
+                f"selector.prefix exceeds maximum length ({MAX_TEXT_QUOTE_CONTEXT_CHARS} chars)."
+            )
+
+    suffix = selector_dict.get("suffix")
+    if suffix is not None:
+        if not isinstance(suffix, str):
+            raise ValueError("selector.suffix must be a string.")
+        if len(suffix) > MAX_TEXT_QUOTE_CONTEXT_CHARS:
+            raise ValueError(
+                f"selector.suffix exceeds maximum length ({MAX_TEXT_QUOTE_CONTEXT_CHARS} chars)."
+            )
+
+    return selector_dict
+
+
 def validate_current_location(current_location: object) -> dict[str, Any]:
     loc = _ensure_mapping(current_location, field="current_location")
     if not loc:
@@ -212,7 +258,39 @@ def validate_annotation_target(target: object) -> dict[str, Any]:
         target_dict["source"] = source_dict
 
     if "selector" in target_dict:
-        target_dict["selector"] = validate_fragment_selector(target_dict.get("selector"))
+        selector = target_dict.get("selector")
+        if isinstance(selector, list):
+            fragment: dict[str, Any] | None = None
+            quote: dict[str, Any] | None = None
+            for idx, raw in enumerate(selector):
+                if not isinstance(raw, Mapping):
+                    raise ValueError(f"selector[{idx}] must be an object.")
+                item = dict(raw)
+                stype = item.get("type")
+                if stype is None or stype == "FragmentSelector":
+                    validated = validate_fragment_selector(item)
+                    if validated.get("value") and fragment is None:
+                        fragment = validated
+                elif stype == "TextQuoteSelector":
+                    validated = validate_text_quote_selector(item)
+                    if validated and quote is None:
+                        quote = validated
+                else:
+                    raise ValueError(
+                        f"Unsupported selector.type: {stype!r}. Expected 'FragmentSelector' or 'TextQuoteSelector'."
+                    )
+
+            if fragment is None or not fragment.get("value"):
+                raise ValueError(
+                    "selector must include a FragmentSelector with a non-empty value."
+                )
+
+            selectors_out: list[dict[str, Any]] = [fragment]
+            if quote is not None:
+                selectors_out.append(quote)
+            target_dict["selector"] = selectors_out
+        else:
+            target_dict["selector"] = validate_fragment_selector(selector)
 
     validate_json_size(value=target_dict, max_bytes=MAX_TARGET_JSON_BYTES, field="target")
     return target_dict

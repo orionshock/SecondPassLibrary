@@ -38,6 +38,7 @@ Internally, annotations are stored in compact/queryable columns:
 
 - `selector_kind` + `selector_value` (currently `epub_cfi`)
 - `highlight_text` / `highlight_color`
+- `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
 The API/export shape remains W3C-ish (`target`/`body`) and is reconstructed at the boundary.

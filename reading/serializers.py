@@ -257,9 +257,22 @@ class AnnotationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(str(e)) from e
 
         selector = validated.get("selector") if isinstance(validated, dict) else None
-        selector_value = selector.get("value") if isinstance(selector, dict) else None
+        selector_value: str | None = None
+        if isinstance(selector, dict):
+            raw = selector.get("value")
+            selector_value = raw if isinstance(raw, str) else None
+        elif isinstance(selector, list):
+            for item in selector:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("type") not in (None, "FragmentSelector"):
+                    continue
+                raw = item.get("value")
+                if isinstance(raw, str) and raw:
+                    selector_value = raw
+                    break
         if not selector_value:
-            raise serializers.ValidationError("selector.value is required.")
+            raise serializers.ValidationError("A FragmentSelector with selector.value is required.")
         return validated
 
     def validate_body(self, body):
@@ -302,16 +315,41 @@ class AnnotationSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def _compact_from_profile(
-        self, *, target: dict[str, Any], body: list[dict[str, Any]]
+        self, *, motivation: str, target: dict[str, Any], body: list[dict[str, Any]]
     ) -> dict[str, str]:
         selector = target.get("selector")
         selector_value: str = ""
+        quote_exact: str = ""
+        quote_prefix: str = ""
+        quote_suffix: str = ""
+
         if isinstance(selector, dict):
             raw_value = selector.get("value")
             if isinstance(raw_value, str) and raw_value:
                 selector_value = raw_value
             elif raw_value is not None and raw_value != "":
                 selector_value = str(raw_value)
+        elif isinstance(selector, list):
+            for item in selector:
+                if not isinstance(item, dict):
+                    continue
+                stype = item.get("type")
+                if stype == "TextQuoteSelector":
+                    raw_exact = item.get("exact")
+                    if isinstance(raw_exact, str) and raw_exact.strip() and not quote_exact:
+                        quote_exact = raw_exact
+                        raw_prefix = item.get("prefix")
+                        raw_suffix = item.get("suffix")
+                        quote_prefix = raw_prefix if isinstance(raw_prefix, str) else ""
+                        quote_suffix = raw_suffix if isinstance(raw_suffix, str) else ""
+                elif stype in (None, "FragmentSelector"):
+                    raw_value = item.get("value")
+                    if selector_value:
+                        continue
+                    if isinstance(raw_value, str) and raw_value:
+                        selector_value = raw_value
+                    elif raw_value is not None and raw_value != "":
+                        selector_value = str(raw_value)
 
         highlight_text: str = ""
         highlight_color: str = ""
@@ -337,6 +375,20 @@ class AnnotationSerializer(serializers.ModelSerializer):
                 if not comment_text:
                     comment_text = value
 
+        if quote_exact:
+            if highlight_text and highlight_text != quote_exact:
+                raise serializers.ValidationError(
+                    {"target": "TextQuoteSelector.exact must match describing body value."}
+                )
+            if not highlight_text and motivation == Annotation.MOTIVATION_HIGHLIGHTING:
+                highlight_text = quote_exact
+            elif not highlight_text:
+                # Only store quote context for highlight-style annotations. Other
+                # motivations may legitimately omit a describing quote body.
+                quote_exact = ""
+                quote_prefix = ""
+                quote_suffix = ""
+
         if highlight_text or highlight_color:
             if not highlight_color:
                 highlight_color = HIGHLIGHT_COLOR_YELLOW
@@ -349,6 +401,8 @@ class AnnotationSerializer(serializers.ModelSerializer):
             "selector_kind": SELECTOR_KIND_EPUB_CFI,
             "selector_value": selector_value,
             "highlight_text": highlight_text,
+            "quote_prefix": quote_prefix,
+            "quote_suffix": quote_suffix,
             "highlight_color": highlight_color,
             "comment_text": comment_text,
         }
@@ -356,16 +410,28 @@ class AnnotationSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
-        selector: dict[str, str] = {"value": instance.selector_value}
+        fragment: dict[str, str] = {"value": instance.selector_value}
         if instance.selector_kind == SELECTOR_KIND_EPUB_CFI:
-            selector["type"] = "FragmentSelector"
-            selector["conformsTo"] = EPUB_CFI_CONFORMS_TO
+            fragment["type"] = "FragmentSelector"
+            fragment["conformsTo"] = EPUB_CFI_CONFORMS_TO
         else:
             # Safety fallback: avoid crashing list/detail if a bad row exists.
-            selector["type"] = "UnknownSelector"
+            fragment["type"] = "UnknownSelector"
 
         source = build_publication_source(book=instance.book)
-        data["target"] = {"source": source, "selector": selector}
+        selector_out: object = fragment
+        if (
+            instance.highlight_text
+            and (getattr(instance, "quote_prefix", "") or getattr(instance, "quote_suffix", ""))
+        ):
+            quote: dict[str, str] = {"type": "TextQuoteSelector", "exact": instance.highlight_text}
+            if getattr(instance, "quote_prefix", ""):
+                quote["prefix"] = instance.quote_prefix
+            if getattr(instance, "quote_suffix", ""):
+                quote["suffix"] = instance.quote_suffix
+            selector_out = [fragment, quote]
+
+        data["target"] = {"source": source, "selector": selector_out}
 
         bodies: list[dict] = []
         if instance.highlight_text or instance.highlight_color:

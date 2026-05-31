@@ -131,6 +131,8 @@ def create_annotation(
     selector_kind: str,
     selector_value: str,
     highlight_text: str = "",
+    quote_prefix: str = "",
+    quote_suffix: str = "",
     highlight_color: str = "",
     comment_text: str = "",
 ) -> Annotation:
@@ -149,6 +151,8 @@ def create_annotation(
         selector_kind=selector_kind,
         selector_value=selector_value,
         highlight_text=highlight_text or "",
+        quote_prefix=quote_prefix or "",
+        quote_suffix=quote_suffix or "",
         highlight_color=highlight_color or "",
         comment_text=comment_text or "",
         # `source_import` is internal/server-managed. Keep it empty for normal creates.
@@ -164,6 +168,8 @@ def update_annotation(
     selector_kind: str,
     selector_value: str,
     highlight_text: str = "",
+    quote_prefix: str = "",
+    quote_suffix: str = "",
     highlight_color: str = "",
     comment_text: str = "",
 ) -> Annotation:
@@ -172,6 +178,8 @@ def update_annotation(
     annotation.selector_kind = selector_kind
     annotation.selector_value = selector_value
     annotation.highlight_text = highlight_text or ""
+    annotation.quote_prefix = quote_prefix or ""
+    annotation.quote_suffix = quote_suffix or ""
     if (annotation.highlight_text or highlight_color) and not highlight_color:
         highlight_color = HIGHLIGHT_COLOR_YELLOW
     annotation.highlight_color = highlight_color or ""
@@ -189,6 +197,8 @@ def update_annotation(
             "selector_kind",
             "selector_value",
             "highlight_text",
+            "quote_prefix",
+            "quote_suffix",
             "highlight_color",
             "comment_text",
             "profile_version",

@@ -141,6 +141,8 @@ class Annotation(TimeStampedModel):
     selector_value = models.TextField()
 
     highlight_text = models.TextField(blank=True, default="")
+    quote_prefix = models.TextField(blank=True, default="")
+    quote_suffix = models.TextField(blank=True, default="")
     highlight_color = models.CharField(max_length=32, blank=True, default="")
     comment_text = models.TextField(blank=True, default="")
 

@@ -486,6 +486,215 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         bodies = payload["body"]
         self.assertEqual(bodies[0]["color"], "yellow")
 
+    def test_annotation_create_with_text_quote_selector_stores_prefix_suffix_and_emits_selector_array(
+        self,
+    ):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {
+                        "source": {"id": f"urn:uuid:{self.book.id}"},
+                        "selector": [
+                            {
+                                "type": "FragmentSelector",
+                                "conformsTo": EPUB_CFI_CONFORMS_TO,
+                                "value": "epubcfi(/6/6)",
+                            },
+                            {
+                                "type": "TextQuoteSelector",
+                                "exact": "hello",
+                                "prefix": "pre-",
+                                "suffix": "-suf",
+                            },
+                        ],
+                    },
+                    "body": [
+                        {
+                            "type": "TextualBody",
+                            "purpose": "describing",
+                            "value": "hello",
+                        }
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        payload = _response_data_dict(create)
+
+        ann = Annotation.objects.get(pk=payload["id"])
+        self.assertEqual(ann.highlight_text, "hello")
+        self.assertEqual(ann.quote_prefix, "pre-")
+        self.assertEqual(ann.quote_suffix, "-suf")
+
+        selector = payload["target"]["selector"]
+        self.assertIsInstance(selector, list)
+        self.assertEqual(selector[0]["type"], "FragmentSelector")
+        self.assertEqual(selector[0]["value"], "epubcfi(/6/6)")
+        self.assertEqual(selector[1]["type"], "TextQuoteSelector")
+        self.assertEqual(selector[1]["exact"], "hello")
+        self.assertEqual(selector[1]["prefix"], "pre-")
+        self.assertEqual(selector[1]["suffix"], "-suf")
+
+    def test_annotation_create_text_quote_exact_mismatch_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {
+                        "source": {"id": f"urn:uuid:{self.book.id}"},
+                        "selector": [
+                            {
+                                "type": "FragmentSelector",
+                                "conformsTo": EPUB_CFI_CONFORMS_TO,
+                                "value": "epubcfi(/6/6)",
+                            },
+                            {
+                                "type": "TextQuoteSelector",
+                                "exact": "HELLO",
+                                "prefix": "pre-",
+                                "suffix": "-suf",
+                            },
+                        ],
+                    },
+                    "body": [
+                        {
+                            "type": "TextualBody",
+                            "purpose": "describing",
+                            "value": "hello",
+                        }
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_create_text_quote_prefix_len_500_accepted(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        prefix = "p" * 500
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {
+                        "selector": [
+                            {"value": "epubcfi(/6/6)"},
+                            {"type": "TextQuoteSelector", "exact": "hello", "prefix": prefix},
+                        ]
+                    },
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "hello"}
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        ann = Annotation.objects.get(pk=_response_data_dict(create)["id"])
+        self.assertEqual(ann.quote_prefix, prefix)
+
+    def test_annotation_create_text_quote_suffix_len_500_accepted(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        suffix = "s" * 500
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {
+                        "selector": [
+                            {"value": "epubcfi(/6/6)"},
+                            {"type": "TextQuoteSelector", "exact": "hello", "suffix": suffix},
+                        ]
+                    },
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "hello"}
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        ann = Annotation.objects.get(pk=_response_data_dict(create)["id"])
+        self.assertEqual(ann.quote_suffix, suffix)
+
+    def test_annotation_create_text_quote_prefix_len_501_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        prefix = "p" * 501
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {
+                        "selector": [
+                            {"value": "epubcfi(/6/6)"},
+                            {"type": "TextQuoteSelector", "exact": "hello", "prefix": prefix},
+                        ]
+                    },
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "hello"}
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_annotation_create_text_quote_suffix_len_501_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        suffix = "s" * 501
+        create = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
+                    "target": {
+                        "selector": [
+                            {"value": "epubcfi(/6/6)"},
+                            {"type": "TextQuoteSelector", "exact": "hello", "suffix": suffix},
+                        ]
+                    },
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "hello"}
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(create.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_annotation_create_idempotency_key_allows_safe_retry(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)

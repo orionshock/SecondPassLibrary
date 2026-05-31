@@ -90,9 +90,9 @@ Future / v2 consideration:
 
 ### Targeting EPUB Content
 
-Every EPUB annotation target should use a `FragmentSelector` whose value is an EPUB CFI.
+Every EPUB annotation target should use an EPUB CFI `FragmentSelector` as the primary anchor.
 
-Required selector shape:
+Required primary selector shape:
 
 ```json
 {
@@ -101,6 +101,40 @@ Required selector shape:
   "value": "epubcfi(...)"
 }
 ```
+
+Optional quote context (repair/export hint):
+
+- Implementations MAY also provide a W3C-style `TextQuoteSelector` as anchoring context.
+- This is intended to help re-anchor highlights when a CFI fails (different file, different CFI, or minor content shifts).
+- The EPUB CFI `FragmentSelector` remains the source of truth for exact positioning when it works.
+
+When quote context is present, `target.selector` MAY be an array:
+
+1. EPUB CFI `FragmentSelector` (required; first)
+2. `TextQuoteSelector` (optional; second)
+
+`TextQuoteSelector` shape:
+
+```json
+{
+  "type": "TextQuoteSelector",
+  "exact": "selected text",
+  "prefix": "optional preceding context",
+  "suffix": "optional following context"
+}
+```
+
+If both are provided, `TextQuoteSelector.exact` SHOULD match the highlight describing body text (`body[].purpose="describing"` value).
+
+Client guidance:
+
+- Clients SHOULD send only nearby text immediately before/after the selected text.
+- Quote context is anchoring/repair/export metadata, not display content.
+- Clients MAY adapt context length based on the selected text:
+  - Short selections may need more surrounding context.
+  - Long distinctive selections may need little or no surrounding context.
+- The server enforces shape and size limits only (it does not evaluate anchoring quality).
+- Maximum lengths: `prefix` <= 500 characters, `suffix` <= 500 characters.
 
 Page numbers should not be used as durable anchors.
 

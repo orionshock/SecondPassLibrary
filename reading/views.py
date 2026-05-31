@@ -553,7 +553,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
 
-        compact = serializer._compact_from_profile(target=target, body=body)  # type: ignore[attr-defined]
+        compact = serializer._compact_from_profile(  # type: ignore[attr-defined]
+            motivation=motivation, target=target, body=body
+        )
         annotation = create_annotation(session=session, motivation=motivation, **compact)
         serializer.instance = annotation
 
@@ -564,7 +566,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
 
-        compact = serializer._compact_from_profile(target=target, body=body)  # type: ignore[attr-defined]
+        compact = serializer._compact_from_profile(  # type: ignore[attr-defined]
+            motivation=motivation, target=target, body=body
+        )
         update_annotation(annotation=annotation, motivation=motivation, **compact)
 
     def destroy(self, request, *args, **kwargs):

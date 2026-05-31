@@ -135,6 +135,7 @@ Annotations are represented externally as W3C-style `Annotation` records, but st
 
 - `selector_kind` + `selector_value` (currently `epub_cfi`)
 - `highlight_text` / `highlight_color`
+- `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
 The API reconstructs the W3C-ish `target`/`body` shape from those columns at the boundary.

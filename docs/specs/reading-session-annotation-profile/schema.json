@@ -409,7 +409,52 @@
           ]
         },
         "selector": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/epubCfiSelector"
+            },
+            {
+              "$ref": "#/$defs/epubSelectorList"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "epubSelectorList": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "prefixItems": [
+        {
           "$ref": "#/$defs/epubCfiSelector"
+        },
+        {
+          "$ref": "#/$defs/textQuoteSelector"
+        }
+      ],
+      "items": false
+    },
+    "textQuoteSelector": {
+      "type": "object",
+      "required": [
+        "type",
+        "exact"
+      ],
+      "properties": {
+        "type": {
+          "const": "TextQuoteSelector"
+        },
+        "exact": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "suffix": {
+          "type": "string",
+          "maxLength": 500
         }
       },
       "additionalProperties": true
