@@ -43,6 +43,14 @@ Internally, annotations are stored in compact/queryable columns:
 
 The API/export shape remains W3C-ish (`target`/`body`) and is reconstructed at the boundary.
 
+Anchor immutability:
+
+- Annotation anchors are creation-time data and are immutable after creation:
+  - EPUB CFI selector (`FragmentSelector`)
+  - optional quote context (`TextQuoteSelector` exact/prefix/suffix)
+  - `session` and `motivation`
+- The API allows editing only user-facing content like note/comment text and highlight color tokens.
+
 Highlight color:
 
 - `highlight_color` is a semantic token (not a CSS/hex color string).

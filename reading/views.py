@@ -28,6 +28,7 @@ from library.models import Book
 from core import policies
 
 from .models import Annotation, ReadingProgress, ReadingSession
+from .models import HIGHLIGHT_COLOR_TOKENS
 from .services import (
     assert_session_writable,
     close_session,
@@ -35,10 +36,15 @@ from .services import (
     get_or_create_progress,
     create_annotation,
     update_annotation,
+    update_annotation_content,
     start_over_book,
     update_progress,
 )
-from .profile import CURRENT_READING_PROFILE_VERSION
+from .profile import (
+    CURRENT_READING_PROFILE_VERSION,
+    validate_annotation_body,
+    validate_profile_version,
+)
 from .serializers import (
     AnnotationSerializer,
     ReadingProgressSerializer,
@@ -409,13 +415,109 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         if not include_deleted:
             queryset = queryset.filter(is_deleted=False)
 
+        motivations = [
+            str(m).strip()
+            for m in request.query_params.getlist("motivation")
+            if str(m).strip()
+        ]
+        if motivations:
+            allowed = {c[0] for c in Annotation.MOTIVATION_CHOICES}
+            if any(m not in allowed for m in motivations):
+                raise DRFValidationError({"motivation": "Invalid motivation."})
+            queryset = queryset.filter(motivation__in=motivations)
+
         session_id = request.query_params.get("session_id")
         book_id = request.query_params.get("book_id")
         if session_id:
             queryset = queryset.filter(session_id=session_id)
         if book_id:
             queryset = queryset.filter(session__book_id=book_id)
-        return queryset
+
+        ordering = (request.query_params.get("ordering") or "").strip()
+        if ordering:
+            mapping = {
+                "created": ("created_at", "id"),
+                "-created": ("-created_at", "-id"),
+                "modified": ("updated_at", "id"),
+                "-modified": ("-updated_at", "-id"),
+            }
+            order_by = mapping.get(ordering)
+            if order_by is None:
+                raise DRFValidationError({"ordering": "Invalid ordering."})
+            return queryset.order_by(*order_by)
+
+        # Keep ordering deterministic even when timestamps tie.
+        return queryset.order_by("-created_at", "-id")
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Constrained PATCH semantics: anchors are immutable after creation.
+
+        Allowed updates:
+        - Comment/note text (TextualBody purpose=commenting value)
+        - Highlight color token (TextualBody purpose=describing color)
+        """
+        annotation = cast(Annotation, self.get_object())
+        assert_session_writable(session=annotation.session)
+
+        initial = cast(dict[str, Any], getattr(request, "data", None) or {})
+        allowed_keys = {"body", "profile_version"}
+        unknown = set(initial.keys()).difference(allowed_keys)
+        if unknown:
+            unknown_sorted = ", ".join(sorted(unknown))
+            raise DRFValidationError({"detail": f"Unsupported fields: {unknown_sorted}."})
+
+        try:
+            validate_profile_version(initial.get("profile_version"))
+        except ValueError as e:
+            raise DRFValidationError({"profile_version": str(e)}) from e
+
+        try:
+            bodies = validate_annotation_body(initial.get("body"))
+        except ValueError as e:
+            raise DRFValidationError({"body": str(e)}) from e
+
+        new_comment: str | None = None
+        new_color: str | None = None
+
+        for b in bodies:
+            if b.get("type") != "TextualBody":
+                continue
+            purpose = str(b.get("purpose") or "").strip()
+            value = b.get("value")
+            color = b.get("color")
+
+            if purpose == "commenting" and isinstance(value, str):
+                new_comment = value
+                continue
+
+            if purpose == "describing":
+                if (
+                    value is not None
+                    and isinstance(value, str)
+                    and value
+                    and value != (annotation.highlight_text or "")
+                ):
+                    raise DRFValidationError(
+                        {"body": "describing body value is immutable for an annotation."}
+                    )
+                if color is not None:
+                    if not isinstance(color, str):
+                        raise DRFValidationError({"body": "describing body color must be a string."})
+                    token = color.strip()
+                    if token == "":
+                        raise DRFValidationError({"body": "describing body color cannot be blank."})
+                    if token not in HIGHLIGHT_COLOR_TOKENS:
+                        raise DRFValidationError({"body": "Unsupported highlight color token."})
+                    new_color = token
+
+        update_annotation_content(
+            annotation=annotation,
+            comment_text=new_comment if new_comment is not None else None,
+            highlight_color=new_color if new_color is not None else None,
+        )
+
+        return Response(AnnotationSerializer(annotation).data, status=status.HTTP_200_OK)
 
     def _validate_idempotency_key(self, raw: str) -> str:
         key = (raw or "").strip()

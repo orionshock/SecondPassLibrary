@@ -210,6 +210,35 @@ def update_annotation(
     return annotation
 
 
+def update_annotation_content(
+    *,
+    annotation: Annotation,
+    comment_text: str | None = None,
+    highlight_color: str | None = None,
+) -> Annotation:
+    """
+    Update the user-editable content of an annotation without changing its anchor.
+
+    Allowed updates:
+    - comment_text (note/comment body)
+    - highlight_color (highlight token)
+    """
+    assert_session_writable(session=annotation.session)
+
+    update_fields: list[str] = []
+    if comment_text is not None:
+        annotation.comment_text = comment_text or ""
+        update_fields.append("comment_text")
+    if highlight_color is not None:
+        annotation.highlight_color = highlight_color or ""
+        update_fields.append("highlight_color")
+
+    if update_fields:
+        update_fields.extend(["updated_at"])
+        annotation.save(update_fields=update_fields)
+    return annotation
+
+
 def list_sessions_for_book(*, user, book: Book) -> list[dict]:
     """
     Product UI helper: list all reading sessions for a user+book with lightweight

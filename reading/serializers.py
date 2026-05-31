@@ -219,7 +219,7 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
-    target = serializers.JSONField(write_only=True)
+    target = serializers.JSONField(write_only=True, required=False)
     body = serializers.JSONField(write_only=True, required=False)
 
     def validate_session(self, session):
@@ -307,6 +307,12 @@ class AnnotationSerializer(serializers.ModelSerializer):
         # If the client omitted profile_version, set it to the current version.
         if "profile_version" not in attrs:
             attrs["profile_version"] = CURRENT_READING_PROFILE_VERSION
+
+        if self.instance is None:
+            if "target" not in attrs:
+                raise serializers.ValidationError({"target": "This field is required."})
+            if "body" not in attrs:
+                raise serializers.ValidationError({"body": "This field is required."})
 
         # Keep annotation session immutable for now (avoids cross-book inconsistencies).
         if self.instance is not None and "session" in attrs:

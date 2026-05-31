@@ -149,7 +149,11 @@ Highlight color:
 - For highlight annotations, missing/blank color defaults to `yellow`.
 
 - List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
-- Optional filters: `?book_id=<book_id>` and/or `?session_id=<session_id>`
+- Optional filters:
+  - `?book_id=<book_id>`
+  - `?session_id=<session_id>`
+  - `?motivation=highlighting|commenting|bookmarking` (may be repeated)
+  - `?ordering=created|-created|modified|-modified`
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.
 
@@ -164,6 +168,13 @@ Notes:
 
 - Annotations belong to exactly one reading session.
 - The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
+- Annotation anchors are immutable after creation:
+  - `target.selector` (EPUB CFI `FragmentSelector`)
+  - optional `TextQuoteSelector` quote context (`exact`/`prefix`/`suffix`)
+  - `session`, `book`, and `motivation`
+- `PATCH /api/v1/reading/annotations/<id>/` supports only:
+  - note/comment body text (`body[]` with `purpose="commenting"`)
+  - highlight color token (`body[]` with `purpose="describing"` and `color`)
 - `source_import` is reserved for server-side import/provenance. It is not exposed as a normal client-writable field via the public API.
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
