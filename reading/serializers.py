@@ -219,6 +219,7 @@ class ReadingProgressSerializer(serializers.ModelSerializer):
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
+    motivation = serializers.JSONField()
     target = serializers.JSONField(write_only=True, required=False)
     body = serializers.JSONField(write_only=True, required=False)
 
@@ -246,9 +247,29 @@ class AnnotationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "is_deleted", "created_at", "updated_at"]
 
     def validate_motivation(self, motivation):
-        if motivation is None or (isinstance(motivation, str) and not motivation.strip()):
+        if motivation is None:
             raise serializers.ValidationError("This field is required.")
-        return motivation
+        if isinstance(motivation, str):
+            v = motivation.strip()
+            if not v:
+                raise serializers.ValidationError("This field is required.")
+            items = [v]
+        elif isinstance(motivation, list):
+            items = []
+            for idx, m in enumerate(motivation):
+                if not isinstance(m, str):
+                    raise serializers.ValidationError(f"motivation[{idx}] must be a string.")
+                t = m.strip()
+                if not t:
+                    raise serializers.ValidationError(f"motivation[{idx}] cannot be blank.")
+                items.append(t)
+        else:
+            raise serializers.ValidationError("motivation must be a string or list of strings.")
+
+        allowed = {c[0] for c in Annotation.MOTIVATION_CHOICES}
+        if any(m not in allowed for m in items):
+            raise serializers.ValidationError("Invalid motivation.")
+        return items
 
     def validate_target(self, target):
         try:
@@ -321,7 +342,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def _compact_from_profile(
-        self, *, motivation: str, target: dict[str, Any], body: list[dict[str, Any]]
+        self, *, motivations: list[str], target: dict[str, Any], body: list[dict[str, Any]]
     ) -> dict[str, str]:
         selector = target.get("selector")
         selector_value: str = ""
@@ -381,19 +402,38 @@ class AnnotationSerializer(serializers.ModelSerializer):
                 if not comment_text:
                     comment_text = value
 
+        motivations_set = {m.strip() for m in motivations if isinstance(m, str)}
+        if Annotation.MOTIVATION_BOOKMARKING in motivations_set and (
+            Annotation.MOTIVATION_HIGHLIGHTING in motivations_set
+            or Annotation.MOTIVATION_COMMENTING in motivations_set
+        ):
+            raise serializers.ValidationError({"motivation": "Invalid motivation combination."})
+
+        if Annotation.MOTIVATION_BOOKMARKING in motivations_set:
+            anchor_kind = Annotation.ANCHOR_KIND_BOOKMARK
+        else:
+            anchor_kind = Annotation.ANCHOR_KIND_HIGHLIGHT
+
         if quote_exact:
             if highlight_text and highlight_text != quote_exact:
                 raise serializers.ValidationError(
                     {"target": "TextQuoteSelector.exact must match describing body value."}
                 )
-            if not highlight_text and motivation == Annotation.MOTIVATION_HIGHLIGHTING:
+            if not highlight_text:
                 highlight_text = quote_exact
-            elif not highlight_text:
-                # Only store quote context for highlight-style annotations. Other
-                # motivations may legitimately omit a describing quote body.
-                quote_exact = ""
-                quote_prefix = ""
-                quote_suffix = ""
+
+        if anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK:
+            if highlight_text or highlight_color or comment_text or quote_prefix or quote_suffix:
+                raise serializers.ValidationError(
+                    {"detail": "Bookmarks cannot include highlight/comment/quote context payload."}
+                )
+
+        if anchor_kind == Annotation.ANCHOR_KIND_HIGHLIGHT:
+            if not highlight_text.strip():
+                # Standalone comment-only annotations are not supported.
+                raise serializers.ValidationError(
+                    {"detail": "Highlights require describing body text (selected text)."}
+                )
 
         if highlight_text or highlight_color:
             if not highlight_color:
@@ -404,6 +444,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
                 )
 
         return {
+            "anchor_kind": anchor_kind,
             "selector_kind": SELECTOR_KIND_EPUB_CFI,
             "selector_value": selector_value,
             "highlight_text": highlight_text,
@@ -415,6 +456,15 @@ class AnnotationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+
+        motivations: list[str]
+        if instance.anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK:
+            motivations = [Annotation.MOTIVATION_BOOKMARKING]
+        else:
+            motivations = [Annotation.MOTIVATION_HIGHLIGHTING]
+            if (instance.comment_text or "").strip():
+                motivations.append(Annotation.MOTIVATION_COMMENTING)
+        data["motivation"] = motivations
 
         fragment: dict[str, str] = {"value": instance.selector_value}
         if instance.selector_kind == SELECTOR_KIND_EPUB_CFI:

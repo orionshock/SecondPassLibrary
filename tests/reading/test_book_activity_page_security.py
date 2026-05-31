@@ -36,8 +36,10 @@ class BookActivityPageSecurityTest(TestCase):
             session=self.session2,
             book=self.book,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             selector_kind="epub_cfi",
             selector_value="epubcfi(/6/2)",
+            highlight_text="secret",
             comment_text="secret",
         )
 

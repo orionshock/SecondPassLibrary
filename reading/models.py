@@ -112,6 +112,14 @@ class Annotation(TimeStampedModel):
     MOTIVATION_COMMENTING = "commenting"
     MOTIVATION_BOOKMARKING = "bookmarking"
 
+    ANCHOR_KIND_BOOKMARK = "bookmark"
+    ANCHOR_KIND_HIGHLIGHT = "highlight"
+
+    ANCHOR_KIND_CHOICES = [
+        (ANCHOR_KIND_BOOKMARK, "Bookmark"),
+        (ANCHOR_KIND_HIGHLIGHT, "Highlight"),
+    ]
+
     MOTIVATION_CHOICES = [
         (MOTIVATION_HIGHLIGHTING, "Highlighting"),
         (MOTIVATION_COMMENTING, "Commenting"),
@@ -131,6 +139,9 @@ class Annotation(TimeStampedModel):
     )
     motivation = models.CharField(
         max_length=32, choices=MOTIVATION_CHOICES, null=True, blank=True
+    )
+    anchor_kind = models.CharField(
+        max_length=16, choices=ANCHOR_KIND_CHOICES, default=ANCHOR_KIND_BOOKMARK
     )
 
     selector_kind = models.CharField(
@@ -171,6 +182,30 @@ class Annotation(TimeStampedModel):
         supported_kinds = {SELECTOR_KIND_EPUB_CFI}
         if self.selector_kind and self.selector_kind not in supported_kinds:
             raise ValidationError({"selector_kind": "Unsupported selector_kind."})
+
+        if self.anchor_kind == self.ANCHOR_KIND_HIGHLIGHT:
+            if not (self.highlight_text or "").strip():
+                raise ValidationError(
+                    {"highlight_text": "highlight_text is required for highlights."}
+                )
+            if not (self.highlight_color or "").strip():
+                self.highlight_color = HIGHLIGHT_COLOR_YELLOW
+        elif self.anchor_kind == self.ANCHOR_KIND_BOOKMARK:
+            # Bookmarks are point anchors; they should not carry highlight/comment payloads.
+            if (self.highlight_text or "").strip():
+                raise ValidationError({"highlight_text": "Bookmarks cannot include highlight_text."})
+            if (self.highlight_color or "").strip():
+                raise ValidationError({"highlight_color": "Bookmarks cannot include highlight_color."})
+            if (self.comment_text or "").strip():
+                raise ValidationError(
+                    {"comment_text": "Bookmarks cannot include comment_text."}
+                )
+            if (self.quote_prefix or "").strip() or (self.quote_suffix or "").strip():
+                raise ValidationError(
+                    {"target": "Bookmarks cannot include quote context."}
+                )
+        else:
+            raise ValidationError({"anchor_kind": "Unsupported anchor_kind."})
 
         # Defensive integrity: annotation.book should match session.book.
         # Enforced by services for normal writes; keep it true for admin/manual edits too.

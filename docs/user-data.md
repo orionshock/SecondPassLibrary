@@ -26,11 +26,18 @@ For practical current REST payload examples for reader-client development, see:
 
 ### Annotations (highlights, notes, bookmarks)
 
-Highlights, notes, and bookmarks are treated as W3C Annotations:
+Highlights and bookmarks are treated as W3C Annotations:
 
-- Highlight: motivation `highlighting`
-- Note: motivation `commenting`
 - Bookmark: motivation `bookmarking`
+- Highlight: motivation `highlighting`
+- Highlight with a user note/comment: motivations `["highlighting", "commenting"]`
+
+Standalone comment-only annotations are not part of the current reader workflow and are rejected on create.
+
+Motivation output:
+
+- The server may output `motivation` as an array for product semantics.
+- A highlight with a user note/comment is represented as motivations `["highlighting", "commenting"]`.
 
 Annotations point into a publication using an EPUB CFI selector, and are intentionally saved user artifacts.
 

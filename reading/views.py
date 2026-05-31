@@ -424,7 +424,17 @@ class AnnotationViewSet(viewsets.ModelViewSet):
             allowed = {c[0] for c in Annotation.MOTIVATION_CHOICES}
             if any(m not in allowed for m in motivations):
                 raise DRFValidationError({"motivation": "Invalid motivation."})
-            queryset = queryset.filter(motivation__in=motivations)
+            q = Q()
+            if Annotation.MOTIVATION_BOOKMARKING in motivations:
+                q |= Q(anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK)
+            if Annotation.MOTIVATION_HIGHLIGHTING in motivations:
+                q |= Q(anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT)
+            if Annotation.MOTIVATION_COMMENTING in motivations:
+                q |= Q(
+                    anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+                    comment_text__gt="",
+                )
+            queryset = queryset.filter(q)
 
         session_id = request.query_params.get("session_id")
         book_id = request.query_params.get("book_id")
@@ -518,6 +528,10 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         )
 
         return Response(AnnotationSerializer(annotation).data, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        # Disallow full PUT updates; PATCH has constrained semantics.
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def _validate_idempotency_key(self, raw: str) -> str:
         key = (raw or "").strip()
@@ -651,27 +665,29 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         validated = cast(dict[str, Any], serializer.validated_data)
         session = cast(ReadingSession, validated["session"])
-        motivation = cast(str, validated["motivation"])
+        motivations = cast(list[str], validated["motivation"])
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
 
         compact = serializer._compact_from_profile(  # type: ignore[attr-defined]
-            motivation=motivation, target=target, body=body
+            motivations=motivations, target=target, body=body
         )
-        annotation = create_annotation(session=session, motivation=motivation, **compact)
+        anchor_kind = cast(str, compact.pop("anchor_kind"))
+        annotation = create_annotation(session=session, anchor_kind=anchor_kind, **compact)
         serializer.instance = annotation
 
     def perform_update(self, serializer):
         annotation = cast(Annotation, serializer.instance)
         validated = cast(dict[str, Any], serializer.validated_data)
-        motivation = cast(str, validated.get("motivation") or annotation.motivation or "")
+        motivations = cast(list[str], validated.get("motivation") or [])
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
 
         compact = serializer._compact_from_profile(  # type: ignore[attr-defined]
-            motivation=motivation, target=target, body=body
+            motivations=motivations, target=target, body=body
         )
-        update_annotation(annotation=annotation, motivation=motivation, **compact)
+        anchor_kind = cast(str, compact.pop("anchor_kind"))
+        update_annotation(annotation=annotation, anchor_kind=anchor_kind, **compact)
 
     def destroy(self, request, *args, **kwargs):
         annotation = self.get_object()

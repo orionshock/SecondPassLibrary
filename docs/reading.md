@@ -159,7 +159,7 @@ Highlight color:
 
 Annotation payloads use canonical fields:
 
-- `motivation`: `highlighting|commenting|bookmarking`
+- `motivation`: a list of motivations (e.g. `["bookmarking"]`, `["highlighting"]`, `["highlighting", "commenting"]`)
 - `target`: W3C-ish `source` + `selector` (EPUB CFI `FragmentSelector`)
 - `body`: W3C-ish body/bodies (JSON)
 - `profile_version`: currently `0.1.0`

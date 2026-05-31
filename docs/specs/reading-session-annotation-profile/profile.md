@@ -72,6 +72,14 @@ Supported motivations:
 - `commenting`
 - `bookmarking`
 
+Motivation cardinality:
+
+- `motivation` MAY be a string or an array of strings.
+- For product semantics, highlights with a user note/comment SHOULD use motivations:
+  - `["highlighting", "commenting"]`
+- Plain highlights SHOULD use `["highlighting"]`.
+- Bookmarks SHOULD use `["bookmarking"]`.
+
 Highlight color:
 
 - `color` is highlight/quote-only metadata (not generic annotation metadata).

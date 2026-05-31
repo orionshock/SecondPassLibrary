@@ -127,7 +127,7 @@ def update_progress(
 def create_annotation(
     *,
     session: ReadingSession,
-    motivation: str,
+    anchor_kind: str,
     selector_kind: str,
     selector_value: str,
     highlight_text: str = "",
@@ -143,11 +143,18 @@ def create_annotation(
     if (highlight_text or highlight_color) and not highlight_color:
         highlight_color = HIGHLIGHT_COLOR_YELLOW
 
+    motivation = (
+        Annotation.MOTIVATION_BOOKMARKING
+        if anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK
+        else Annotation.MOTIVATION_HIGHLIGHTING
+    )
+
     return Annotation.objects.create(
         session=session,
         book=book,
         book_file=book_file,
         motivation=motivation,
+        anchor_kind=anchor_kind,
         selector_kind=selector_kind,
         selector_value=selector_value,
         highlight_text=highlight_text or "",
@@ -164,7 +171,7 @@ def create_annotation(
 def update_annotation(
     *,
     annotation: Annotation,
-    motivation: str,
+    anchor_kind: str,
     selector_kind: str,
     selector_value: str,
     highlight_text: str = "",
@@ -174,7 +181,13 @@ def update_annotation(
     comment_text: str = "",
 ) -> Annotation:
     assert_session_writable(session=annotation.session)
+    motivation = (
+        Annotation.MOTIVATION_BOOKMARKING
+        if anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK
+        else Annotation.MOTIVATION_HIGHLIGHTING
+    )
     annotation.motivation = motivation
+    annotation.anchor_kind = anchor_kind
     annotation.selector_kind = selector_kind
     annotation.selector_value = selector_value
     annotation.highlight_text = highlight_text or ""
@@ -194,6 +207,7 @@ def update_annotation(
     annotation.save(
         update_fields=[
             "motivation",
+            "anchor_kind",
             "selector_kind",
             "selector_value",
             "highlight_text",
@@ -227,9 +241,13 @@ def update_annotation_content(
 
     update_fields: list[str] = []
     if comment_text is not None:
+        if annotation.anchor_kind != Annotation.ANCHOR_KIND_HIGHLIGHT:
+            raise ValidationError("Comments are only supported on highlights.")
         annotation.comment_text = comment_text or ""
         update_fields.append("comment_text")
     if highlight_color is not None:
+        if annotation.anchor_kind != Annotation.ANCHOR_KIND_HIGHLIGHT:
+            raise ValidationError("Highlight color applies only to highlights.")
         annotation.highlight_color = highlight_color or ""
         update_fields.append("highlight_color")
 

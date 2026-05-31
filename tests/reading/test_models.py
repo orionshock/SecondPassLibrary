@@ -64,6 +64,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/2[chap]!/4/2/6)",
             highlight_text="Hello world",
@@ -78,29 +79,33 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/2)",
             highlight_text="yellow",
         )
-        note = Annotation.objects.create(
+        highlight_with_note = Annotation.objects.create(
             session=session,
             book=self.book,
-            motivation=Annotation.MOTIVATION_COMMENTING,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/4)",
+            highlight_text="sel",
             comment_text="n",
         )
         bookmark = Annotation.objects.create(
             session=session,
             book=self.book,
             motivation=Annotation.MOTIVATION_BOOKMARKING,
+            anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK,
             selector_kind=SELECTOR_KIND_EPUB_CFI,
             selector_value="epubcfi(/6/6)",
         )
 
-        self.assertEqual(highlight.motivation, "highlighting")
-        self.assertEqual(note.motivation, "commenting")
-        self.assertEqual(bookmark.motivation, "bookmarking")
+        self.assertEqual(highlight.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT)
+        self.assertEqual(highlight_with_note.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT)
+        self.assertEqual(bookmark.anchor_kind, Annotation.ANCHOR_KIND_BOOKMARK)
 
     def test_annotation_full_clean_rejects_unsupported_selector_kind(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)

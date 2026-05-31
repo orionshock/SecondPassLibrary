@@ -53,6 +53,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
             session=self.session_visible,
             book=self.book,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             selector_kind="epub_cfi",
             selector_value="epubcfi(/6/2)",
             highlight_text="hi",
@@ -61,8 +62,10 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
             session=self.session_visible,
             book=self.book,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             selector_kind="epub_cfi",
             selector_value="epubcfi(/6/4)",
+            highlight_text="deleted",
             comment_text="deleted",
             is_deleted=True,
         )

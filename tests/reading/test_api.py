@@ -66,8 +66,10 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.annotation2 = Annotation.objects.create(
             session=self.session2,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
+            highlight_text="secret",
             comment_text="secret",
         )
 
@@ -112,15 +114,19 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         keep = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
+            highlight_text="keep",
             comment_text="keep",
         )
         deleted = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/4)",
+            highlight_text="delete",
             comment_text="delete",
             is_deleted=True,
         )
@@ -460,7 +466,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
         payload = _response_data_dict(create)
-        self.assertEqual(payload["motivation"], Annotation.MOTIVATION_HIGHLIGHTING)
+        self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_HIGHLIGHTING])
         self.assertIn("target", payload)
         self.assertIn("body", payload)
         self.assertNotIn("source_import", payload)
@@ -485,6 +491,52 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         # Highlight color defaults to yellow when omitted.
         bodies = payload["body"]
         self.assertEqual(bodies[0]["color"], "yellow")
+
+    def test_annotation_create_bookmark_outputs_motivation_array(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        payload = _response_data_dict(resp)
+        self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
+
+    def test_annotation_create_highlight_with_comment_outputs_both_motivations(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
+                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "hello"},
+                        {"type": "TextualBody", "purpose": "commenting", "value": "note"},
+                    ],
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        payload = _response_data_dict(resp)
+        self.assertEqual(
+            payload["motivation"],
+            [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
+        )
 
     def test_annotation_create_with_text_quote_selector_stores_prefix_suffix_and_emits_selector_array(
         self,
@@ -701,8 +753,10 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         ann = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
+            highlight_text="hello",
             comment_text="old",
         )
 
@@ -735,6 +789,7 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         ann = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
             highlight_text="hello",
@@ -766,12 +821,62 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         self.assertTrue(describing)
         self.assertEqual(describing[0].get("color"), "blue")
 
+    def test_annotation_patch_add_and_remove_note_updates_motivations(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        ann = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+            highlight_text="hello",
+            highlight_color="yellow",
+            comment_text="",
+        )
+
+        add = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/annotations/{ann.id}/",
+                data={
+                    "body": [
+                        {"type": "TextualBody", "purpose": "commenting", "value": "note"}
+                    ]
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(add.status_code, status.HTTP_200_OK)
+        payload_add = _response_data_dict(add)
+        self.assertEqual(
+            payload_add["motivation"],
+            [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
+        )
+
+        remove = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/annotations/{ann.id}/",
+                data={
+                    "body": [
+                        {"type": "TextualBody", "purpose": "commenting", "value": ""}
+                    ]
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(remove.status_code, status.HTTP_200_OK)
+        payload_remove = _response_data_dict(remove)
+        self.assertEqual(payload_remove["motivation"], [Annotation.MOTIVATION_HIGHLIGHTING])
+
     def test_annotation_patch_invalid_color_rejected(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         ann = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
             highlight_text="hello",
@@ -836,12 +941,38 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_annotation_patch_comment_on_bookmark_rejected(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        ann = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK,
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+        )
+
+        resp = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/annotations/{ann.id}/",
+                data={
+                    "body": [
+                        {"type": "TextualBody", "purpose": "commenting", "value": "note"}
+                    ]
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_annotation_patch_text_quote_selector_change_rejected(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         ann = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
             highlight_text="hello",
@@ -1167,8 +1298,10 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         self.annotation2 = Annotation.objects.create(
             session=self.session2,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
+            highlight_text="secret",
             comment_text="secret",
         )
 
@@ -1500,7 +1633,10 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
                     "session": str(session.id),
                     "motivation": Annotation.MOTIVATION_COMMENTING,
                     "target": {"selector": {"value": "/6/2"}},
-                    "body": [{"type": "TextualBody", "purpose": "commenting", "value": big}],
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "sel"},
+                        {"type": "TextualBody", "purpose": "commenting", "value": big},
+                    ],
                 },
                 format="json",
             ),
@@ -1691,7 +1827,10 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
                     "session": str(session.id),
                     "motivation": Annotation.MOTIVATION_COMMENTING,
                     "target": {"selector": {"value": "/6/2"}},
-                    "body": [{"type": "TextualBody", "purpose": "commenting", "value": big}],
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "sel"},
+                        {"type": "TextualBody", "purpose": "commenting", "value": big},
+                    ],
                 },
                 format="json",
             ),
@@ -1712,7 +1851,10 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
                     "session": str(session.id),
                     "motivation": Annotation.MOTIVATION_COMMENTING,
                     "target": {"selector": {"value": "/6/2"}},
-                    "body": [{"type": "TextualBody", "purpose": "commenting", "value": ok_value}],
+                    "body": [
+                        {"type": "TextualBody", "purpose": "describing", "value": "sel"},
+                        {"type": "TextualBody", "purpose": "commenting", "value": ok_value},
+                    ],
                 },
                 format="json",
             ),
@@ -1725,15 +1867,19 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         a1 = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
+            highlight_text="keep",
             comment_text="keep",
         )
         a2 = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/4)",
+            highlight_text="delete",
             comment_text="delete",
         )
 
@@ -1783,6 +1929,7 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         a_highlight = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/4)",
             highlight_text="hello",
@@ -1791,8 +1938,10 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         a_comment = Annotation.objects.create(
             session=session,
             motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/6)",
+            highlight_text="hello",
             comment_text="note",
         )
 
@@ -1814,7 +1963,7 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         )
         self.assertEqual(r2.status_code, status.HTTP_200_OK)
         ids2 = {row["id"] for row in cast(list[dict[str, Any]], _response_data_list(r2))}
-        self.assertEqual(ids2, {str(a_highlight.id)})
+        self.assertEqual(ids2, {str(a_highlight.id), str(a_comment.id)})
 
         r3 = cast(
             Response,
@@ -1834,7 +1983,7 @@ class ReadingClientBearerAPITest(IsolatedUserdataMixin, APITestCase):
         )
         self.assertEqual(r4.status_code, status.HTTP_200_OK)
         ids4 = {row["id"] for row in cast(list[dict[str, Any]], _response_data_list(r4))}
-        self.assertEqual(ids4, {str(a_bookmark.id), str(a_highlight.id)})
+        self.assertEqual(ids4, {str(a_bookmark.id), str(a_highlight.id), str(a_comment.id)})
 
         bad = cast(
             Response,

@@ -23,7 +23,7 @@ class AnnotationHighlightColorTokenTests(APITestCase):
 
         self.session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-    def _create(self, *, motivation: str, body: list[dict[str, Any]]):
+    def _create(self, *, motivation: str | list[str], body: list[dict[str, Any]]):
         return cast(
             Response,
             self.client.post(
@@ -87,14 +87,7 @@ class AnnotationHighlightColorTokenTests(APITestCase):
             motivation=Annotation.MOTIVATION_COMMENTING,
             body=[{"type": "TextualBody", "purpose": "commenting", "value": "note"}],
         )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        payload = cast(dict[str, Any], resp.data)
-        bodies = cast(list[dict[str, Any]], payload["body"])
-        self.assertEqual(len(bodies), 1)
-        self.assertNotIn("color", bodies[0])
-
-        ann = Annotation.objects.get(pk=payload["id"])
-        self.assertEqual(ann.highlight_color, "")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_bookmark_without_highlight_color_is_accepted(self):
         resp = self._create(
