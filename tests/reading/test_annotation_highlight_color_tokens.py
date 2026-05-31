@@ -97,3 +97,4 @@ class AnnotationHighlightColorTokenTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         payload = cast(dict[str, Any], resp.data)
         self.assertEqual(payload["body"], [])
+        self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])

@@ -333,7 +333,9 @@ class AnnotationSerializer(serializers.ModelSerializer):
             if "target" not in attrs:
                 raise serializers.ValidationError({"target": "This field is required."})
             if "body" not in attrs:
-                raise serializers.ValidationError({"body": "This field is required."})
+                # Bookmarks do not require a body payload. Default to [] and enforce
+                # describing requirements later based on inferred anchor kind.
+                attrs["body"] = []
 
         # Keep annotation session immutable for now (avoids cross-book inconsistencies).
         if self.instance is not None and "session" in attrs:

@@ -512,6 +512,26 @@ class ReadingAPITest(IsolatedUserdataMixin, APITestCase):
         payload = _response_data_dict(resp)
         self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
 
+    def test_annotation_create_bookmark_body_omitted_defaults_empty_list(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": ["bookmarking"],
+                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        payload = _response_data_dict(resp)
+        self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
+        self.assertEqual(payload["body"], [])
+
     def test_annotation_create_highlight_with_comment_outputs_both_motivations(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
