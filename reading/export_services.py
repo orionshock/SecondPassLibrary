@@ -44,6 +44,8 @@ def _epub_unique_identifier(book: Book) -> str:
 
 def _book_payload(book: Book) -> dict[str, Any]:
     series = getattr(book, "series", None)
+    source = _book_source(book)
+    file_hash = _file_hash(book)
     payload: dict[str, Any] = {
         "title": book.title or "",
         "subtitle": book.subtitle or "",
@@ -53,14 +55,12 @@ def _book_payload(book: Book) -> dict[str, Any]:
         "language": book.language or "",
         "isbn": book.isbn or "",
         "epub_unique_identifier": _epub_unique_identifier(book),
-        "sessions": [],
     }
-    source = _book_source(book)
-    file_hash = _file_hash(book)
     if source:
         payload["source"] = source
     if file_hash:
         payload["file_hash"] = file_hash
+    payload["sessions"] = []
     return payload
 
 

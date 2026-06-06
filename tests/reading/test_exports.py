@@ -141,6 +141,8 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(book["title"], "Export Book")
         self.assertTrue(book["source"].startswith("book:sha256:"))
         self.assertTrue(book["file_hash"].startswith("sha256:"))
+        self.assertLess(list(book.keys()).index("source"), list(book.keys()).index("sessions"))
+        self.assertLess(list(book.keys()).index("file_hash"), list(book.keys()).index("sessions"))
         sessions = book["sessions"]
         self.assertEqual([s["export_session_id"] for s in sessions], ["session-1", "session-2"])
         self.assertEqual({s["name"] for s in sessions}, {"First pass", "Second pass"})
