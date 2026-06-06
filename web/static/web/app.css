@@ -220,6 +220,39 @@ a:hover { text-decoration: underline; }
   font-weight: 700;
 }
 
+.dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.dashboard-action-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.dashboard-action-card__icon {
+  color: var(--muted);
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.dashboard-action-card__body {
+  min-width: 0;
+}
+
+.dashboard-action-card__links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* =====================
    Forms / Buttons
    ===================== */
@@ -535,6 +568,7 @@ a:hover { text-decoration: underline; }
 }
 
 @media (max-width: 720px) {
+  .dashboard-actions { grid-template-columns: 1fr; }
   .book-hero { grid-template-columns: 92px 1fr; }
   .book-meta-grid { grid-template-columns: 1fr; }
 }

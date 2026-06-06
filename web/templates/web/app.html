@@ -2,7 +2,7 @@
 
 {% block page_id %}app{% endblock %}
 
-{% block title %}Dashboard · {{ server_name }}{% endblock %}
+{% block title %}Dashboard - {{ server_name }}{% endblock %}
 
 {% block content %}
   <h1 class="page-title">Dashboard</h1>
@@ -10,7 +10,7 @@
   <section class="card">
     <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
       <h2 class="card__title" style="margin: 0;">Recent reading activity</h2>
-      <a class="muted" href="/reading/sessions/">All reading sessions</a>
+      <a class="button" href="/reading/sessions/">All reading sessions</a>
     </div>
     <div id="recent-reading-section">
       <div id="recent-reading-status" class="muted">Loading...</div>
@@ -18,14 +18,42 @@
     </div>
   </section>
 
-  <section class="card">
-    <h2 class="card__title">Future activity dashboard</h2>
-    <ul id="future-activity-dashboard" class="muted">
-      <li>Recent reading → cover art</li>
-      <li>Recent reading → "continue" deep links</li>
-      <li>Progress/annotation UI screens (product UI) - later</li>
-      <li>Import quality-of-life</li>
-    </ul>
+  <section class="dashboard-actions" aria-label="Dashboard actions">
+    <article class="dashboard-action-card">
+      <div class="dashboard-action-card__icon" aria-hidden="true">
+        <span class="material-symbols-outlined">local_library</span>
+      </div>
+      <div class="dashboard-action-card__body">
+        <h2 class="card__title">Library</h2>
+        <div class="dashboard-action-card__links">
+          <a class="button" href="/library/">Browse library</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card">
+      <div class="dashboard-action-card__icon" aria-hidden="true">
+        <span class="material-symbols-outlined">shelves</span>
+      </div>
+      <div class="dashboard-action-card__body">
+        <h2 class="card__title">Shelves</h2>
+        <div class="dashboard-action-card__links">
+          <a class="button" href="/shelves/">View shelves</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="dashboard-action-card">
+      <div class="dashboard-action-card__icon" aria-hidden="true">
+        <span class="material-symbols-outlined">history</span>
+      </div>
+      <div class="dashboard-action-card__body">
+        <h2 class="card__title">Reading data</h2>
+        <div class="dashboard-action-card__links">
+          <a class="button" href="/reading/sessions/">Reading sessions</a>
+        </div>
+      </div>
+    </article>
   </section>
 
 {% endblock %}

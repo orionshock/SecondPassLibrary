@@ -98,7 +98,16 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="recent-reading-status"')
         self.assertContains(response, 'id="recent-reading-list"')
         self.assertContains(response, 'href="/reading/sessions/"')
-        self.assertContains(response, 'id="future-activity-dashboard"')
+        self.assertContains(response, "All reading sessions")
+        self.assertContains(response, 'aria-label="Dashboard actions"')
+        self.assertContains(response, 'href="/library/"')
+        self.assertContains(response, "Browse library")
+        self.assertNotContains(response, "Import books")
+        self.assertContains(response, 'href="/shelves/"')
+        self.assertContains(response, "View shelves")
+        self.assertContains(response, "Reading sessions")
+        self.assertNotContains(response, "Future activity dashboard")
+        self.assertNotContains(response, 'id="future-activity-dashboard"')
         self.assertContains(response, 'href="/profile/"')
 
     def test_favicon_ico_route_works(self):
