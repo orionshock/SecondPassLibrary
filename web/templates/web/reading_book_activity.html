@@ -35,9 +35,11 @@
       </div>
     </div>
     <div>
+      <button id="reading-activity-session-close" class="button button--danger is-hidden" type="button">Close session</button>
       <a class="button" href="/api/v1/reading/export/books/{{ book_id|escape }}/{{ session_id|escape }}/">Export this session</a>
       <a class="button" href="/reading/sessions/books/{{ book_id|escape }}/">All sessions</a>
       <a id="reading-activity-book-link" class="button" href="/library/books/{{ book_id|escape }}/">Book details</a>
+      <span id="reading-activity-session-close-status" class="muted"></span>
     </div>
   </div>
 

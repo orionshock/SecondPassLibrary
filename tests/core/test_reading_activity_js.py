@@ -33,6 +33,22 @@ class ReadingActivityJsRenderingTest(TestCase):
         self.assertIn("session.is_active", text)
         self.assertIn("canEditSessionMetadata", text)
 
+    def test_close_session_action_is_guarded_and_posts_to_close_endpoint(self):
+        text = self._read_js()
+
+        self.assertIn("sessionIsWritable()", text)
+        self.assertIn('sessionStatus === "active" && sessionIsActive === true', text)
+        self.assertIn("visible(sessionCloseBtn, !!sessionId && sessionIsWritable())", text)
+        self.assertIn("visible(sessionCloseBtn, false)", text)
+        self.assertIn("/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/close/", text)
+        self.assertIn("method: \"POST\"", text)
+
+    def test_close_session_confirm_warnings_are_present(self):
+        text = self._read_js()
+
+        self.assertIn("This session has no name. Closed sessions cannot be renamed later. Close anyway?", text)
+        self.assertIn("Close this reading session? Closed sessions cannot be edited.", text)
+
     def test_canonical_session_marginalia_is_session_scoped(self):
         text = self._read_js()
 

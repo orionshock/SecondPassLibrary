@@ -1,4 +1,4 @@
-import { fetchJSON, patchJSON, extractApiErrorMessage, summarizeFieldErrors } from "./api.js";
+import { fetchJSON, fetchJSONWithOptions, getCsrfToken, patchJSON, extractApiErrorMessage, summarizeFieldErrors } from "./api.js";
 import { $, loadMeAndInitShell, setGlobalErrorFromError, visible } from "./layout.js";
 import { mountCovers } from "./ui/covers.js";
 
@@ -47,6 +47,17 @@ async function getSession(sessionId) {
 
 async function getProgressForSession(sessionId) {
   return await fetchJSON(`/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/progress/`);
+}
+
+async function closeSession(sessionId) {
+  const csrf = getCsrfToken();
+  return await fetchJSONWithOptions(`/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/close/`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(csrf ? { "X-CSRFToken": csrf } : {}),
+    },
+  });
 }
 
 async function getAnnotationsForSession(sessionId) {
@@ -179,6 +190,8 @@ export async function initReadingBookActivity() {
   const sessionSaveBtn = $("#reading-activity-session-save");
   const sessionSaveStatusEl = $("#reading-activity-session-save-status");
   const sessionCancelBtn = $("#reading-activity-session-cancel");
+  const sessionCloseBtn = $("#reading-activity-session-close");
+  const sessionCloseStatusEl = $("#reading-activity-session-close-status");
   const sessionIdEl = $("#reading-activity-session-id");
   const progressEl = $("#reading-activity-progress");
   const annEl = $("#reading-activity-annotations");
@@ -201,6 +214,8 @@ export async function initReadingBookActivity() {
     !sessionSaveBtn ||
     !sessionSaveStatusEl ||
     !sessionCancelBtn ||
+    !sessionCloseBtn ||
+    !sessionCloseStatusEl ||
     !sessionIdEl ||
     !progressEl ||
     !annEl ||
@@ -272,18 +287,33 @@ export async function initReadingBookActivity() {
 
     let sessionId = "";
     let sessionName = "";
-    let sessionDisplayName = "";
+    let sessionStatus = "";
+    let sessionIsActive = false;
     let canEditSessionMetadata = false;
+
+    function sessionIsWritable() {
+      return sessionStatus === "active" && sessionIsActive === true;
+    }
+
+    function renderSessionDisplay() {
+      const sessionDisplayName = sessionName && sessionName.trim() ? sessionName.trim() : sessionId;
+      if (!sessionDisplayName) {
+        sessionDisplayEl.textContent = "";
+        return;
+      }
+      const suffix = sessionIsWritable() ? "" : ` (${sessionStatus || "closed"})`;
+      sessionDisplayEl.textContent = `Session: "${sessionDisplayName}"${suffix}`;
+    }
+
     if (session && session.id) {
       sessionId = String(session.id);
       sessionName = session && typeof session.name === "string" ? session.name : "";
       sessionIdEl.textContent = `Session ID: ${sessionId}`;
-      sessionDisplayName = sessionName && sessionName.trim() ? sessionName.trim() : sessionId;
-      sessionDisplayEl.textContent = `Session: “${sessionDisplayName}”`;
 
-      const statusValue = session && typeof session.status === "string" ? session.status : "";
-      const isActive = !!(session && session.is_active);
-      canEditSessionMetadata = statusValue === "active" && isActive;
+      sessionStatus = session && typeof session.status === "string" ? session.status : "";
+      sessionIsActive = !!(session && session.is_active);
+      canEditSessionMetadata = sessionIsWritable();
+      renderSessionDisplay();
 
       sessionNameEl.value = sessionName;
       sessionSaveBtn.disabled = true;
@@ -305,6 +335,8 @@ export async function initReadingBookActivity() {
       sessionSaveBtn.disabled = true;
       sessionSaveStatusEl.textContent = "";
       progressEl.textContent = "No progress yet.";
+      sessionStatus = "";
+      sessionIsActive = false;
     }
 
     function enterEditMode() {
@@ -347,6 +379,8 @@ export async function initReadingBookActivity() {
     // Initial UI: display mode when a session exists.
     visible(sessionEditBtn, !!sessionId && canEditSessionMetadata);
     visible(sessionEditFormEl, false);
+    visible(sessionCloseBtn, !!sessionId && sessionIsWritable());
+    sessionCloseStatusEl.textContent = "";
 
     sessionSaveBtn.addEventListener("click", async () => {
       if (!sessionId) return;
@@ -358,8 +392,7 @@ export async function initReadingBookActivity() {
         const updated = await patchJSON(`/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/`, { name: desired });
         sessionName = updated && typeof updated.name === "string" ? updated.name : desired;
         sessionNameEl.value = sessionName;
-        sessionDisplayName = sessionName && sessionName.trim() ? sessionName.trim() : sessionId;
-        sessionDisplayEl.textContent = `Session: “${sessionDisplayName}”`;
+        renderSessionDisplay();
         sessionSaveStatusEl.textContent = "Saved.";
         // Return to display mode after a successful save.
         exitEditMode();
@@ -369,6 +402,33 @@ export async function initReadingBookActivity() {
         sessionSaveStatusEl.textContent = fields ? `${msg} (${fields})` : msg;
       } finally {
         updateSaveButtonState();
+      }
+    });
+
+    sessionCloseBtn.addEventListener("click", async () => {
+      if (!sessionId || !sessionIsWritable()) return;
+      const message = (sessionName || "").trim()
+        ? "Close this reading session? Closed sessions cannot be edited."
+        : "This session has no name. Closed sessions cannot be renamed later. Close anyway?";
+      if (!window.confirm(message)) return;
+
+      sessionCloseBtn.disabled = true;
+      sessionCloseStatusEl.textContent = "Closing...";
+      try {
+        const closed = await closeSession(sessionId);
+        sessionStatus = closed && typeof closed.status === "string" ? closed.status : "completed";
+        sessionIsActive = !!(closed && closed.is_active);
+        sessionName = closed && typeof closed.name === "string" ? closed.name : sessionName;
+        sessionNameEl.value = sessionName;
+        canEditSessionMetadata = false;
+        renderSessionDisplay();
+        visible(sessionEditBtn, false);
+        visible(sessionEditFormEl, false);
+        visible(sessionCloseBtn, false);
+        sessionCloseStatusEl.textContent = "Session closed.";
+      } catch (eClose) {
+        sessionCloseStatusEl.textContent = extractApiErrorMessage(eClose);
+        sessionCloseBtn.disabled = false;
       }
     });
 
