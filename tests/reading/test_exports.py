@@ -120,6 +120,13 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.client.force_login(self.user)
         r = cast(Any, self.client.get(self._book_url()))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r["Content-Type"], "application/json")
+        self.assertEqual(
+            r["Content-Disposition"],
+            'attachment; filename="Export-Book-all-sessions-marginalia.json"',
+        )
+        self.assertIn(b'\n  "type"', r.content)
+        self.assertIn(b'\n  "books"', r.content)
 
         data = r.data
         self.assertEqual(data["type"], "SecondPassMarginaliaExport")
@@ -144,11 +151,28 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.client.force_login(self.user)
         r = cast(Any, self.client.get(self._session_url(self.session1)))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r["Content-Type"], "application/json")
+        self.assertEqual(
+            r["Content-Disposition"],
+            'attachment; filename="Export-Book-First-pass-marginalia.json"',
+        )
 
         sessions = r.data["books"][0]["sessions"]
         self.assertEqual(len(sessions), 1)
         self.assertEqual(sessions[0]["export_session_id"], "session-1")
         self.assertEqual(sessions[0]["name"], "First pass")
+
+    def test_session_export_filename_uses_generic_session_label_when_name_blank(self):
+        self.client.force_login(self.user)
+        blank_session = ReadingSession.objects.create(user=self.user, book=self.book)
+
+        r = self.client.get(self._session_url(blank_session))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            r["Content-Disposition"],
+            'attachment; filename="Export-Book-session-marginalia.json"',
+        )
+        self.assertNotIn(str(blank_session.id), r["Content-Disposition"])
 
     def test_cannot_export_another_users_session(self):
         self.client.force_login(self.user)
