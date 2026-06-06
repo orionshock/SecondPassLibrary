@@ -29,6 +29,31 @@ def reading_sessions(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+def reading_export(request: HttpRequest) -> HttpResponse:
+    rows_by_book: dict[str, dict] = {}
+    for row in list_sessions_for_user(user=request.user):
+        book = row.get("book") or {}
+        book_id = str(book.get("id") or "")
+        if not book_id:
+            continue
+        entry = rows_by_book.setdefault(
+            book_id,
+            {
+                "id": book_id,
+                "title": book.get("title") or "Book",
+                "authors": book.get("authors") or [],
+                "session_count": 0,
+                "annotation_count": 0,
+            },
+        )
+        entry["session_count"] += 1
+        entry["annotation_count"] += int(row.get("annotation_count") or 0)
+
+    books = sorted(rows_by_book.values(), key=lambda b: str(b.get("title") or "").lower())
+    return render(request, "web/reading_export.html", {"books": books})
+
+
+@login_required
 def reading_session_marginalia(
     request: HttpRequest, book_id: str, session_id: str
 ) -> HttpResponse:

@@ -11,6 +11,7 @@
       <h1 class="page-title" id="reading-sessions-title">Sessions for &ldquo;{{ book.title|default:"Book"|escape }}&rdquo;</h1>
     </div>
     <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <a class="button" href="/api/v1/reading/export/books/{{ book.id|escape }}/">Export all sessions</a>
       <a class="button" href="/library/books/{{ book.id|escape }}/">Book details</a>
     </div>
   </div>

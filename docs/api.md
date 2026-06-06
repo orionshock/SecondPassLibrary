@@ -97,6 +97,7 @@ The Client API provides a pairing flow (human code + browser approval) and beare
 - Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
+They are also not enabled for marginalia export endpoints; exports are product UI/session-authenticated only in the current slice.
 
 Discovery:
 
@@ -389,6 +390,9 @@ See `docs/permissions.md` for the visibility/curation rules.
   - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?motivation=highlighting|commenting|bookmarking` (may be repeated)
   - Ordering: `?ordering=created|-created|modified|-modified`
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
+- Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
+  - `GET /api/v1/reading/export/books/<book_id>/` exports all current-user sessions for one visible book.
+  - `GET /api/v1/reading/export/books/<book_id>/<session_id>/` exports one current-user session for one visible book.
 
 Reading payload notes:
 
@@ -399,6 +403,10 @@ Reading payload notes:
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
 - Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
+- Marginalia export is export-only. Import is future work.
+- Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.
+- Exported sessions use export-local ids such as `session-1`; annotations do not include SPL database annotation ids.
+- Deleted annotations are excluded from export.
 
 ## Core
 

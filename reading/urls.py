@@ -11,6 +11,7 @@ from .views import (
     RecentSessionsView,
     StartOverView,
 )
+from .export_views import BookMarginaliaExportView, SessionMarginaliaExportView
 
 app_name = "reading"
 
@@ -19,6 +20,16 @@ router.register(r"sessions", ReadingSessionViewSet, basename="readingsession")
 router.register(r"annotations", AnnotationViewSet, basename="annotation")
 
 urlpatterns = [
+    path(
+        "export/books/<uuid:book_id>/",
+        BookMarginaliaExportView.as_view(),
+        name="export_book_marginalia",
+    ),
+    path(
+        "export/books/<uuid:book_id>/<uuid:session_id>/",
+        SessionMarginaliaExportView.as_view(),
+        name="export_session_marginalia",
+    ),
     path(
         "sessions/recent/",
         RecentSessionsView.as_view(),

@@ -1,0 +1,43 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}reading-export{% endblock %}
+
+{% block title %}Export Marginalia - {{ server_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/app/" class="pill">&larr; Back to Dashboard</a>
+      <h1 class="page-title">Export Marginalia</h1>
+      <div class="muted">Export reading sessions, progress, bookmarks, highlights, and notes as JSON. Import is future work.</div>
+    </div>
+    <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <a class="button" href="/reading/sessions/">Reading sessions</a>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2 class="card__title">Books with reading data</h2>
+    {% if books %}
+      <div class="export-book-list">
+        {% for book in books %}
+          <article class="export-book-row">
+            <div class="export-book-row__main">
+              <div class="book-meta__line">{{ book.title|escape }}</div>
+              {% if book.authors %}
+                <div class="muted">{{ book.authors|join:", "|escape }}</div>
+              {% endif %}
+              <div class="muted">{{ book.session_count }} session{{ book.session_count|pluralize }} - {{ book.annotation_count }} annotation{{ book.annotation_count|pluralize }}</div>
+            </div>
+            <div class="export-book-row__actions">
+              <a class="button" href="/api/v1/reading/export/books/{{ book.id|urlencode }}/">Export all sessions</a>
+              <a class="button" href="/reading/sessions/books/{{ book.id|urlencode }}/">View sessions</a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="muted">No reading marginalia to export yet.</div>
+    {% endif %}
+  </section>
+{% endblock %}

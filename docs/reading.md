@@ -186,3 +186,36 @@ The Reading API does not model a separate `Device` object. Client/auth identity 
 Future possibilities:
 
 - Optional client-session attribution fields on reading data (without changing reading data ownership rules).
+
+## Marginalia export
+
+Current export support is export-only. Import is future work.
+
+Product UI:
+
+```text
+GET /reading/export/
+```
+
+Session-authenticated API exports:
+
+```text
+GET /api/v1/reading/export/books/<book_id>/
+GET /api/v1/reading/export/books/<book_id>/<session_id>/
+```
+
+Export endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. Mismatched book/session URLs return 404.
+
+The JSON shape is nested:
+
+```text
+export header
+  books[]
+    sessions[]
+      progress
+      annotations[]
+```
+
+Annotations inherit book and session context from that nesting, so the export does not repeat full book metadata inside every annotation. Session rows use export-local ids such as `session-1`; exported annotations do not include SPL database annotation ids. Deleted annotations are excluded.
+
+EPUB CFI annotation selectors export as `FragmentSelector` values without repeating `conformsTo`; the reading-session annotation profile defines EPUB CFI as the default FragmentSelector format. When quote context is present, export includes a `TextQuoteSelector` with `exact`, `prefix`, and/or `suffix`.

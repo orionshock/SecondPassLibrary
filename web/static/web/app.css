@@ -253,6 +253,33 @@ a:hover { text-decoration: underline; }
   flex-wrap: wrap;
 }
 
+.export-book-list {
+  display: grid;
+  gap: 10px;
+}
+
+.export-book-row {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.export-book-row__main {
+  min-width: 0;
+}
+
+.export-book-row__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 /* =====================
    Forms / Buttons
    ===================== */
@@ -569,6 +596,8 @@ a:hover { text-decoration: underline; }
 
 @media (max-width: 720px) {
   .dashboard-actions { grid-template-columns: 1fr; }
+  .export-book-row { flex-direction: column; }
+  .export-book-row__actions { justify-content: flex-start; }
   .book-hero { grid-template-columns: 92px 1fr; }
   .book-meta-grid { grid-template-columns: 1fr; }
 }

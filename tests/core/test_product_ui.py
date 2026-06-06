@@ -106,6 +106,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'href="/shelves/"')
         self.assertContains(response, "View shelves")
         self.assertContains(response, "Reading sessions")
+        self.assertContains(response, 'href="/reading/export/"')
+        self.assertContains(response, "Export marginalia")
         self.assertNotContains(response, "Future activity dashboard")
         self.assertNotContains(response, 'id="future-activity-dashboard"')
         self.assertContains(response, 'href="/profile/"')
@@ -419,6 +421,28 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/reading/sessions/")
 
+    def test_unauthenticated_reading_export_redirects_to_login(self):
+        response = self.client.get("/reading/export/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/reading/export/")
+
+    def test_authenticated_reading_export_returns_200(self):
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+        book = create_file_backed_book(title="B1").book
+        ReadingSession.objects.create(user=self.user, book=book, name="Mine")
+
+        self.client.force_login(self.user)
+        response = self.client.get("/reading/export/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Export Marginalia")
+        self.assertContains(response, "Import is future work.")
+        self.assertContains(response, 'href="/reading/sessions/"')
+        self.assertContains(response, f'href="/api/v1/reading/export/books/{book.id}/"')
+        self.assertContains(response, "Export all sessions")
+
     def test_authenticated_reading_sessions_scopes_to_user_and_book(self):
         # Make the user a librarian so book visibility is not dependent on group membership setup.
         profile = get_or_create_profile(user=self.user)
@@ -452,6 +476,8 @@ class ProductUiSmokeTests(TestCase):
             response,
             f"/reading/sessions/books/{book.id}/{mine.id}/",
         )
+        self.assertContains(response, f"/api/v1/reading/export/books/{book.id}/")
+        self.assertContains(response, "Export all sessions")
 
     def test_authenticated_reading_sessions_empty_state(self):
         profile = get_or_create_profile(user=self.user)
@@ -527,6 +553,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="reading-activity-progress"')
         self.assertContains(response, 'id="reading-activity-annotations"')
         self.assertContains(response, f"/reading/sessions/books/{book.id}/")
+        self.assertContains(
+            response,
+            f"/api/v1/reading/export/books/{book.id}/{session.id}/",
+        )
+        self.assertContains(response, "Export this session")
 
     def test_session_marginalia_404s_for_other_users_session(self):
         profile = get_or_create_profile(user=self.user)
