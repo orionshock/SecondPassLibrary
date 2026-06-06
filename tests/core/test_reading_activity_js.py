@@ -61,3 +61,13 @@ class ReadingActivityJsRenderingTest(TestCase):
         self.assertIn("annotation-quote--${token}", text)
         self.assertNotIn(".style.", text)
         self.assertNotIn("style=", text)
+
+    def test_annotation_icons_match_reader_client_semantics(self):
+        text = self._read_js()
+
+        self.assertIn('kindIcon = "bookmark"', text)
+        self.assertIn('kindIcon = "border_color"', text)
+        self.assertIn('kindIcon = "chat_bubble"', text)
+        self.assertIn('kindIcon = "edit_note"', text)
+        self.assertNotIn("ink_highlighter", text)
+        self.assertNotIn("sticky_note_2", text)

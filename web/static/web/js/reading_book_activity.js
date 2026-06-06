@@ -89,40 +89,31 @@ function renderAnnotationRow(a) {
       : "";
 
   let kindLabel = "Annotation";
-  let kindIcon = "✎";
+  let kindIcon = "edit_note";
   if (motivation === "bookmarking" && !hasQuote && !hasNote) {
     kindLabel = "Bookmark";
-    kindIcon = "🔖";
+    kindIcon = "bookmark";
   } else if (hasQuote && hasNote) {
     kindLabel = "Highlight with note";
-    kindIcon = "✎";
+    kindIcon = "chat_bubble";
   } else if (hasNote && !hasQuote) {
-    kindLabel = "Note";
-    kindIcon = "🗒";
+    kindLabel = "Annotation";
+    kindIcon = "edit_note";
   } else if (hasQuote && !hasNote) {
     kindLabel = "Highlight";
-    kindIcon = "✦";
+    kindIcon = "border_color";
   }
-
-  // Normalize icons to stable Unicode values (avoid mojibake in source files).
-  const iconByKindLabel = {
-    Annotation: "\u270e",
-    Bookmark: "\ud83d\udd16",
-    Highlight: "\u2726",
-    Note: "\ud83d\uddd2",
-    "Highlight with note": "\u270e",
-  };
-  kindIcon = iconByKindLabel[kindLabel] || iconByKindLabel.Annotation;
 
   const bodyWrap = document.createElement("div");
   bodyWrap.className = "annotation-card__body";
 
   const iconWrap = document.createElement("div");
   iconWrap.className = "annotation-card__icon";
-  const icon = el("span", "", kindIcon);
+  const icon = el("span", "material-symbols-outlined", kindIcon);
   icon.setAttribute("title", kindLabel);
-  icon.setAttribute("aria-label", kindLabel);
+  icon.setAttribute("aria-hidden", "true");
   iconWrap.appendChild(icon);
+  iconWrap.appendChild(el("span", "sr-only", kindLabel));
 
   const contentWrap = document.createElement("div");
   contentWrap.className = "annotation-card__content";
