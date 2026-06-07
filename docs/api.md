@@ -409,6 +409,7 @@ Reading payload notes:
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 - Marginalia import is preview-only. Apply/import writes are future work.
 - Server-side marginalia import is intended for SPL native marginalia exports only. Foreign/provider-specific formats should be normalized by a client through the normal reading APIs or converted by an external tool into the SPL native export shape first.
+- Future marginalia apply should import matched visible local books only, skip unmatched books, create new historical/imported sessions, never import exported active sessions as active local sessions, and treat duplicate findings as warnings rather than blockers. The import unit is a session; annotation-level selection is not supported.
 - Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.
 - All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
 - Selected book export uses `scope.type = "book"` with `scope.session_filter = "selected"`.

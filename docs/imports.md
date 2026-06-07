@@ -66,6 +66,17 @@ POST /api/v1/reading/import/preview/
 
 The preview endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It validates the uploaded JSON against `docs/specs/marginalia-export.schema.json`, summarizes books/sessions/annotations, reports visible local book matches, and does not write to the database.
 
+### Future marginalia apply policy
+
+Apply/import writes are future work. When implemented, server-side apply should follow these rules:
+
+- Import matched books only. A book is matched only when it maps to a visible local book for the requesting user.
+- Skip unmatched books and report them as unmatched/possibly foreign; do not create local books from marginalia imports.
+- Treat the import unit as a reading session. Annotation-level selection/import is not supported.
+- Create new historical/imported sessions for matched books. Exported active sessions must not become active local sessions; they should import as historical/inactive sessions.
+- Treat possible duplicates as warnings, not blockers. Do not silently de-duplicate or overwrite existing sessions/annotations without an explicit future policy.
+- Continue to reject Client API bearer tokens for server-side marginalia import.
+
 ## Models
 
 - `ImportJob`: tracks one upload (EPUB or ZIP), counts, and status
