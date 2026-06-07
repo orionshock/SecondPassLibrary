@@ -1,5 +1,5 @@
-import { getCsrfToken, fetchJSONWithOptions, extractApiErrorMessage } from "./api.js";
-import { $, loadMeAndInitShell, setGlobalError, setText, visible } from "./layout.js";
+import { getCsrfToken, fetchJSONWithOptions, extractApiErrorMessage } from "../api.js";
+import { $, loadMeAndInitShell, setGlobalError, setText, visible } from "../layout.js";
 
 function clear(node) {
   if (!node) return;

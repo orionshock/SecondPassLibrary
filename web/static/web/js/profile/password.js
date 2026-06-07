@@ -1,5 +1,5 @@
-import { fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "./api.js";
-import { $, loadMeAndInitShell, setGlobalError } from "./layout.js";
+import { fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
+import { $, loadMeAndInitShell, setGlobalError } from "../layout.js";
 
 export async function initProfilePassword() {
   const me = await loadMeAndInitShell();

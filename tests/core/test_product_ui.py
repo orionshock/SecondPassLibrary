@@ -492,7 +492,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, f'value="{mine.id}"')
 
     def test_reading_book_sessions_js_builds_selected_export_query(self):
-        js = Path("web/static/web/js/reading_book_sessions.js").read_text()
+        js = Path("web/static/web/js/reading/book_sessions.js").read_text()
         self.assertIn("initReadingBookSessions", js)
         self.assertIn("loadMeAndInitShell", js)
         self.assertIn('params.append("session", id)', js)

@@ -1,5 +1,5 @@
-import { fetchJSON } from "./api.js";
-import { $, loadMeAndInitShell, setText, visible } from "./layout.js";
+import { fetchJSON } from "../api.js";
+import { $, loadMeAndInitShell, setText, visible } from "../layout.js";
 
 function clear(node) {
   if (!node) return;

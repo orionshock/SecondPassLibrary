@@ -1,6 +1,6 @@
-import { fetchJSON, fetchJSONWithOptions, getCsrfToken, patchJSON, extractApiErrorMessage, summarizeFieldErrors } from "./api.js";
-import { $, loadMeAndInitShell, setGlobalErrorFromError, visible } from "./layout.js";
-import { mountCovers } from "./ui/covers.js";
+import { fetchJSON, fetchJSONWithOptions, getCsrfToken, patchJSON, extractApiErrorMessage, summarizeFieldErrors } from "../api.js";
+import { $, loadMeAndInitShell, setGlobalErrorFromError, visible } from "../layout.js";
+import { mountCovers } from "../ui/covers.js";
 
 function clear(el) {
   if (!el) return;

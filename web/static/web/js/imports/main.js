@@ -1,5 +1,5 @@
-import { fetchJSON, fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "./api.js";
-import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "./layout.js";
+import { fetchJSON, fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
+import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 
 function renderImportJobItems(items) {
   if (!Array.isArray(items) || items.length === 0) return "";
@@ -198,4 +198,3 @@ export async function initImports() {
     }
   });
 }
-

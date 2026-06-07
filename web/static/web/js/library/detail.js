@@ -1,6 +1,6 @@
-import { fetchJSON } from "./api.js";
-import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "./layout.js";
-import { mountCovers } from "./ui/covers.js";
+import { fetchJSON } from "../api.js";
+import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
+import { mountCovers } from "../ui/covers.js";
 
 function initTabs(root) {
   if (!root) return;

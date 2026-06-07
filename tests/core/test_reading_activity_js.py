@@ -14,7 +14,8 @@ class ReadingActivityJsRenderingTest(TestCase):
             / "static"
             / "web"
             / "js"
-            / "reading_book_activity.js"
+            / "reading"
+            / "activity.js"
         )
         return js_path.read_text(encoding="utf-8")
 

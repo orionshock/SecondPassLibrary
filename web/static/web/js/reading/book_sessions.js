@@ -1,4 +1,4 @@
-import { $, loadMeAndInitShell } from "./layout.js";
+import { $, loadMeAndInitShell } from "../layout.js";
 
 export async function initReadingBookSessions() {
   await loadMeAndInitShell();

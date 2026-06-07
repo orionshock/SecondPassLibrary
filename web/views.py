@@ -19,13 +19,13 @@ def index(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def app_dashboard(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/app.html")
+    return render(request, "web/dashboard/app.html")
 
 
 @login_required
 def reading_sessions(request: HttpRequest) -> HttpResponse:
     sessions = list_sessions_for_user(user=request.user)
-    return render(request, "web/reading_sessions.html", {"sessions": sessions})
+    return render(request, "web/reading/sessions.html", {"sessions": sessions})
 
 
 @login_required
@@ -51,7 +51,7 @@ def reading_export(request: HttpRequest) -> HttpResponse:
         entry["annotation_count"] += int(row.get("annotation_count") or 0)
 
     books = sorted(rows_by_book.values(), key=lambda b: str(b.get("title") or "").lower())
-    return render(request, "web/reading_export.html", {"books": books})
+    return render(request, "web/reading/export.html", {"books": books})
 
 
 @login_required
@@ -72,7 +72,7 @@ def reading_session_marginalia(
 
     return render(
         request,
-        "web/reading_book_activity.html",
+        "web/reading/book_activity.html",
         {"book_id": str(book_id), "session_id": str(session_id)},
     )
 
@@ -115,7 +115,7 @@ def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpR
 
     return render(
         request,
-        "web/reading_book_sessions.html",
+        "web/reading/book_sessions.html",
         {"book": book, "sessions": sessions, "recent_session_id": recent_session_id},
     )
 
@@ -127,87 +127,87 @@ def reading_book_sessions_legacy(request: HttpRequest, book_id: str) -> HttpResp
 
 @login_required
 def library_browse(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/library.html")
+    return render(request, "web/library/library.html")
 
 
 @login_required
 def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
-    return render(request, "web/book_detail.html", {"book_id": book_id})
+    return render(request, "web/library/book_detail.html", {"book_id": book_id})
 
 
 @login_required
 def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
-    return render(request, "web/book_edit.html", {"book_id": book_id})
+    return render(request, "web/library/book_edit.html", {"book_id": book_id})
 
 
 @login_required
 def imports(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/imports.html")
+    return render(request, "web/imports/imports.html")
 
 
 @login_required
 def groups(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/groups.html")
+    return render(request, "web/groups/groups.html")
 
 
 @login_required
 def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
-    return render(request, "web/group_detail.html", {"group_id": group_id})
+    return render(request, "web/groups/detail.html", {"group_id": group_id})
 
 
 @login_required
 def group_new(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/group_new.html")
+    return render(request, "web/groups/new.html")
 
 
 @login_required
 def group_edit(request: HttpRequest, group_id: str) -> HttpResponse:
-    return render(request, "web/group_edit.html", {"group_id": group_id})
+    return render(request, "web/groups/edit.html", {"group_id": group_id})
 
 
 @login_required
 def users(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/users.html")
+    return render(request, "web/users/users.html")
 
 
 @login_required
 def user_new(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/user_new.html")
+    return render(request, "web/users/new.html")
 
 
 @login_required
 def user_edit(request: HttpRequest, user_id: str) -> HttpResponse:
-    return render(request, "web/user_edit.html", {"user_id": user_id})
+    return render(request, "web/users/edit.html", {"user_id": user_id})
 
 
 @login_required
 def shelves(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/shelves.html")
+    return render(request, "web/shelves/shelves.html")
 
 
 @login_required
 def shelf_new(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/shelf_new.html")
+    return render(request, "web/shelves/new.html")
 
 
 @login_required
 def shelf_detail(request: HttpRequest, shelf_id: str) -> HttpResponse:
-    return render(request, "web/shelf_detail.html", {"shelf_id": shelf_id})
+    return render(request, "web/shelves/detail.html", {"shelf_id": shelf_id})
 
 
 @login_required
 def shelf_edit(request: HttpRequest, shelf_id: str) -> HttpResponse:
-    return render(request, "web/shelf_edit.html", {"shelf_id": shelf_id})
+    return render(request, "web/shelves/edit.html", {"shelf_id": shelf_id})
 
 
 @login_required
 def profile(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/profile.html")
+    return render(request, "web/profile/profile.html")
 
 
 @login_required
 def profile_password(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/profile_password.html")
+    return render(request, "web/profile/password.html")
 
 
 @login_required
@@ -268,7 +268,7 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 
         return render(
             request,
-            "web/client_api_authorize.html",
+            "web/client_api/authorize.html",
             {
                 "code": client_api.format_human_code(code),
                 "client_name": client_name,
@@ -288,7 +288,7 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        "web/client_api_authorize.html",
+        "web/client_api/authorize.html",
         {
             "code": client_api.format_human_code(code),
             "client_name": client_name,
@@ -304,4 +304,4 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 def server_settings(request: HttpRequest) -> HttpResponse:
     if not policies.is_owner(getattr(request, "user", None)):
         return HttpResponseForbidden("Not allowed.")
-    return render(request, "web/server_settings.html")
+    return render(request, "web/server/settings.html")

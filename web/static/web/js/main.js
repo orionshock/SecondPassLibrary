@@ -18,21 +18,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const page = document.body && document.body.dataset ? document.body.dataset.page : "";
 
   const registry = {
-    app: { importer: () => import("./app_page.js"), initExportName: "initDashboard", label: "App" },
-    library: { importer: () => import("./library.js"), initExportName: "initLibraryBrowse", label: "Library" },
-    "book-detail": { importer: () => import("./book_detail.js"), initExportName: "initBookDetail", label: "Book" },
+    app: { importer: () => import("./dashboard/main.js"), initExportName: "initDashboard", label: "App" },
+    library: { importer: () => import("./library/list.js"), initExportName: "initLibraryBrowse", label: "Library" },
+    "book-detail": { importer: () => import("./library/detail.js"), initExportName: "initBookDetail", label: "Book" },
     "reading-book-activity": {
-      importer: () => import("./reading_book_activity.js"),
+      importer: () => import("./reading/activity.js"),
       initExportName: "initReadingBookActivity",
       label: "Reading activity",
     },
     "reading-book-sessions": {
-      importer: () => import("./reading_book_sessions.js"),
+      importer: () => import("./reading/book_sessions.js"),
       initExportName: "initReadingBookSessions",
       label: "Reading sessions",
     },
     "book-edit": { importer: () => import("./book_edit/main.js"), initExportName: "initBookEdit", label: "Book edit" },
-    imports: { importer: () => import("./imports.js"), initExportName: "initImports", label: "Imports" },
+    imports: { importer: () => import("./imports/main.js"), initExportName: "initImports", label: "Imports" },
 
     shelves: { importer: () => import("./shelves/main.js"), initExportName: "initShelvesList", label: "Shelves" },
     "shelf-new": { importer: () => import("./shelves/main.js"), initExportName: "initShelfNew", label: "New shelf" },
@@ -48,14 +48,14 @@ document.addEventListener("DOMContentLoaded", () => {
     "user-new": { importer: () => import("./users/main.js"), initExportName: "initUserNew", label: "Create user" },
     "user-edit": { importer: () => import("./users/main.js"), initExportName: "initUserEdit", label: "Edit user" },
 
-    profile: { importer: () => import("./profile.js"), initExportName: "initProfile", label: "Profile" },
+    profile: { importer: () => import("./profile/main.js"), initExportName: "initProfile", label: "Profile" },
     "profile-password": {
-      importer: () => import("./profile_password.js"),
+      importer: () => import("./profile/password.js"),
       initExportName: "initProfilePassword",
       label: "Password",
     },
     "server-settings": {
-      importer: () => import("./server_settings.js"),
+      importer: () => import("./server/settings.js"),
       initExportName: "initServerSettings",
       label: "Server settings",
     },

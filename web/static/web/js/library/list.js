@@ -1,6 +1,6 @@
-import { fetchJSON } from "./api.js";
-import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "./layout.js";
-import { mountCovers } from "./ui/covers.js";
+import { fetchJSON } from "../api.js";
+import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
+import { mountCovers } from "../ui/covers.js";
 
 function bookFileHtml(file) {
   if (!file || !file.download_url) return "";

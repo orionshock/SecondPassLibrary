@@ -1,5 +1,5 @@
-import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "./layout.js";
-import { fetchJSON, patchJSON } from "./api.js";
+import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
+import { fetchJSON, patchJSON } from "../api.js";
 
 function setEditing(on) {
   visible($("#server-settings-edit-btn"), !on);

@@ -14,7 +14,8 @@ class DashboardRecentLinkTargetTest(TestCase):
             / "static"
             / "web"
             / "js"
-            / "app_page.js"
+            / "dashboard"
+            / "main.js"
         )
         text = js_path.read_text(encoding="utf-8")
         self.assertIn("/reading/sessions/books/", text)
