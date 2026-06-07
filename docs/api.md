@@ -395,6 +395,8 @@ See `docs/permissions.md` for the visibility/curation rules.
   - `GET /api/v1/reading/export/books/<book_id>/` exports all current-user sessions for one visible book.
   - `GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>` exports a selected subset of current-user sessions for one visible book.
   - `GET /api/v1/reading/export/books/<book_id>/<session_id>/` exports one current-user session for one visible book.
+- Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
+  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, summarizes contents, reports visible local book matches, and does not write data.
 
 Reading payload notes:
 
@@ -405,8 +407,8 @@ Reading payload notes:
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
 - Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
-- Marginalia export is export-only. Import is future work.
-- Future server-side marginalia import is intended for SPL native marginalia exports only. Foreign/provider-specific formats should be normalized by a client through the normal reading APIs or converted by an external tool into the SPL native export shape first.
+- Marginalia import is preview-only. Apply/import writes are future work.
+- Server-side marginalia import is intended for SPL native marginalia exports only. Foreign/provider-specific formats should be normalized by a client through the normal reading APIs or converted by an external tool into the SPL native export shape first.
 - Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.
 - All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
 - Selected book export uses `scope.type = "book"` with `scope.session_filter = "selected"`.

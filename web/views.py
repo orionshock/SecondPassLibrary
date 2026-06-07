@@ -55,6 +55,11 @@ def reading_export(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+def reading_import(request: HttpRequest) -> HttpResponse:
+    return render(request, "web/reading/import.html")
+
+
+@login_required
 def reading_session_marginalia(
     request: HttpRequest, book_id: str, session_id: str
 ) -> HttpResponse:

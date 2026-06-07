@@ -21,7 +21,7 @@ Second Pass Library note:
 
 - The current server export contract is the SPL nested marginalia format documented in `../marginalia-export.md`.
 - The current server implementation stores a strict W3C-inspired subset via REST/JSON.
-- Future server-side marginalia import should support SPL native marginalia exports only, not arbitrary foreign/provider-specific formats.
+- Server-side marginalia import preview supports SPL native marginalia exports only, not arbitrary foreign/provider-specific formats.
 - The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.
 
 It represents:
@@ -187,7 +187,7 @@ The old annotation remains immutable.
 
 The implemented server export format is the SPL nested marginalia format, not this draft JSON-LD profile. See `../marginalia-export.md`.
 
-Server-side marginalia import is future work. When implemented, server import should accept SPL native marginalia exports only.
+Server-side marginalia import is currently preview-only. Apply/import writes are future work. Server import should accept SPL native marginalia exports only.
 
 Foreign/provider-specific formats should be normalized outside the server:
 

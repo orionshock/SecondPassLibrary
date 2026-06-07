@@ -10,6 +10,7 @@ urlpatterns = [
 
     # Canonical reading session routes (sessions-first).
     path("reading/export/", views.reading_export, name="reading_export"),
+    path("reading/import/", views.reading_import, name="reading_import"),
     path("reading/sessions/", views.reading_sessions, name="reading_sessions"),
     path(
         "reading/sessions/books/<str:book_id>/<str:session_id>/",

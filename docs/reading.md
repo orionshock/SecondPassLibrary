@@ -189,7 +189,7 @@ Future possibilities:
 
 ## Marginalia export
 
-Current export support is export-only. Import is future work.
+Current export support is complete for session/book/all scopes. Import support is preview-only and does not write data.
 
 The baseline export contract is documented in `docs/specs/marginalia-export.md`.
 
@@ -197,6 +197,7 @@ Product UI:
 
 ```text
 GET /reading/export/
+GET /reading/import/
 ```
 
 Session-authenticated API exports:
@@ -206,9 +207,10 @@ GET /api/v1/reading/export/
 GET /api/v1/reading/export/books/<book_id>/
 GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>
 GET /api/v1/reading/export/books/<book_id>/<session_id>/
+POST /api/v1/reading/import/preview/
 ```
 
-Export endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
+Export and import preview endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
 
 The book export route exports all current-user sessions for the book when no `session` query parameters are provided. When repeated `session` parameters are present, it exports only that selected subset and uses `scope.session_filter = "selected"`.
 
@@ -226,4 +228,4 @@ Annotations inherit book and session context from that nesting, so the export do
 
 EPUB CFI annotation selectors export as `FragmentSelector` values without repeating `conformsTo`; the reading-session annotation profile defines EPUB CFI as the default FragmentSelector format. When quote context is present, export includes a `TextQuoteSelector` with `exact`, `prefix`, and/or `suffix`.
 
-Server-side marginalia import, when implemented, should accept SPL native marginalia exports only. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.
+Server-side marginalia import accepts SPL native marginalia exports only. The current endpoint is preview-only: it validates the uploaded JSON against the export schema, summarizes contents, reports visible local book matches, and does not create sessions or annotations. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.

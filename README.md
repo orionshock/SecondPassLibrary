@@ -18,6 +18,7 @@ It is EPUB-first, private by default, and designed around durable user-owned rea
 - Store bookmarks, highlights, and notes
 - View session marginalia in the product UI
 - Export marginalia as JSON for one session, selected sessions, one book, or the whole library
+- Preview SPL native marginalia imports without writing data
 - Provide a REST/JSON API for reader clients
 
 ## Product Direction
@@ -79,7 +80,7 @@ Marginalia export is available for:
 
 The export format is documented in [docs/specs/marginalia-export.md](docs/specs/marginalia-export.md), with a JSON Schema in [docs/specs/marginalia-export.schema.json](docs/specs/marginalia-export.schema.json).
 
-Importing marginalia back into the system is future work. The intended server import path is SPL native marginalia exports only; foreign annotation formats should be normalized by a client through the normal reading APIs or converted by an external tool into SPL native format first.
+Importing marginalia back into the system is currently preview-only. The intended server import path is SPL native marginalia exports only; foreign annotation formats should be normalized by a client through the normal reading APIs or converted by an external tool into SPL native format first.
 
 ## Documentation
 

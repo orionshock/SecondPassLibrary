@@ -1,0 +1,42 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}reading-import{% endblock %}
+
+{% block title %}Import Marginalia - {{ server_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <a href="/app/" class="pill">&larr; Back to Dashboard</a>
+      <h1 class="page-title">Import Marginalia</h1>
+      <div class="muted">Preview only. Nothing will be imported yet.</div>
+    </div>
+    <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <a class="button" href="/reading/export/">Export center</a>
+      <a class="button" href="/reading/sessions/">Reading sessions</a>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2 class="card__title">SPL native marginalia export</h2>
+    <p class="muted">
+      Upload a Second Pass Library marginalia JSON export to validate it and preview matching.
+      Foreign annotation formats should be normalized by a client or converted into SPL native format first.
+    </p>
+
+    <form id="reading-import-preview-form" class="form">
+      {% csrf_token %}
+      <label for="reading-import-file">JSON export file</label>
+      <input class="form-control" id="reading-import-file" name="file" type="file" accept="application/json,.json" required />
+      <div class="form-actions">
+        <button class="button" id="reading-import-preview-submit" type="submit">Preview import</button>
+        <span class="muted" id="reading-import-preview-status"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">Preview</h2>
+    <div id="reading-import-preview-results" class="muted">No preview yet.</div>
+  </section>
+{% endblock %}

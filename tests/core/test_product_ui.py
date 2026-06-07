@@ -428,6 +428,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/reading/export/")
 
+    def test_unauthenticated_reading_import_redirects_to_login(self):
+        response = self.client.get("/reading/import/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/reading/import/")
+
     def test_authenticated_reading_export_returns_200(self):
         profile = get_or_create_profile(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -440,14 +445,28 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get("/reading/export/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Export Marginalia")
-        self.assertContains(response, "Import is future work.")
+        self.assertContains(response, "Import is preview-only.")
         self.assertContains(response, 'href="/api/v1/reading/export/"')
         self.assertContains(response, "Export all marginalia")
+        self.assertContains(response, 'href="/reading/import/"')
+        self.assertContains(response, "Import preview")
         self.assertContains(response, 'href="/reading/sessions/"')
         self.assertContains(response, 'class="sessions-cover"')
         self.assertContains(response, "Cover")
         self.assertContains(response, f'href="/api/v1/reading/export/books/{book.id}/"')
         self.assertContains(response, "Export all sessions")
+
+    def test_authenticated_reading_import_returns_200(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/reading/import/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Import Marginalia")
+        self.assertContains(response, "Preview only. Nothing will be imported yet.")
+        self.assertContains(response, "SPL native marginalia export")
+        self.assertContains(response, "Foreign annotation formats")
+        self.assertContains(response, 'id="reading-import-preview-form"')
+        self.assertContains(response, 'id="reading-import-file"')
+        self.assertContains(response, 'href="/reading/export/"')
 
     def test_authenticated_reading_sessions_scopes_to_user_and_book(self):
         # Make the user a librarian so book visibility is not dependent on group membership setup.
