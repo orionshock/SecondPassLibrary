@@ -2,7 +2,7 @@
 
 This is the baseline Second Pass Library marginalia export contract.
 
-It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data for one book or one session.
+It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data for all visible books, one book, or one session.
 
 Current support is export-only. Import and import preview are future work.
 
@@ -17,6 +17,7 @@ GET /reading/export/
 JSON downloads:
 
 ```text
+GET /api/v1/reading/export/
 GET /api/v1/reading/export/books/<book_id>/
 GET /api/v1/reading/export/books/<book_id>/<session_id>/
 ```
@@ -45,9 +46,19 @@ Fields:
 - `generated_at`: export generation timestamp.
 - `generator`: exporting application name.
 - `scope`: describes the export route scope.
-- `books`: exported books. Current routes export exactly one book.
+- `books`: exported books. Books with no exported sessions are omitted.
 
 ## Scope
+
+All marginalia export:
+
+```json
+{
+  "type": "all"
+}
+```
+
+The all export includes current-user sessions grouped under visible books.
 
 Book export:
 

@@ -202,11 +202,12 @@ GET /reading/export/
 Session-authenticated API exports:
 
 ```text
+GET /api/v1/reading/export/
 GET /api/v1/reading/export/books/<book_id>/
 GET /api/v1/reading/export/books/<book_id>/<session_id>/
 ```
 
-Export endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. Mismatched book/session URLs return 404.
+Export endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
 
 The JSON shape is nested:
 

@@ -196,6 +196,41 @@ def export_book_marginalia(*, user, book: Book) -> dict[str, Any]:
     return payload
 
 
+def export_all_marginalia(*, user) -> dict[str, Any]:
+    payload = _base_export({"type": "all"})
+    sessions = (
+        ReadingSession.objects.select_related("book", "book__series", "progress")
+        .prefetch_related(
+            "book__authors",
+            "book__identifiers",
+            "book__group_assignments__group__memberships",
+            "annotations",
+        )
+        .filter(user=user)
+        .order_by("book__title", "book_id", "started_at", "created_at", "id")
+    )
+
+    books_by_id: dict[str, dict[str, Any]] = {}
+    session_counts: dict[str, int] = {}
+    for session in sessions:
+        book = session.book
+        if not policies.can_view_book(user=user, book=book):
+            continue
+
+        book_key = str(book.id)
+        if book_key not in books_by_id:
+            books_by_id[book_key] = _book_payload(book)
+            payload["books"].append(books_by_id[book_key])
+            session_counts[book_key] = 0
+
+        session_counts[book_key] += 1
+        books_by_id[book_key]["sessions"].append(
+            _session_payload(session, f"session-{session_counts[book_key]}")
+        )
+
+    return payload
+
+
 def export_session_marginalia(*, user, book: Book, session: ReadingSession) -> dict[str, Any]:
     if session.user_id != getattr(user, "id", None):
         raise PermissionError("Session not owned by user.")

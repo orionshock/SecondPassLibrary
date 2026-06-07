@@ -13,7 +13,11 @@ from rest_framework.exceptions import NotFound
 from core import policies
 from library.models import Book
 
-from .export_services import export_book_marginalia, export_session_marginalia
+from .export_services import (
+    export_all_marginalia,
+    export_book_marginalia,
+    export_session_marginalia,
+)
 from .models import ReadingSession
 
 
@@ -39,6 +43,16 @@ def _download_response(payload: dict, filename: str) -> Response:
     response = Response(payload)
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+class AllMarginaliaExportView(APIView):
+    authentication_classes = [SessionAuthentication]
+    renderer_classes = [PrettyJSONRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        payload = export_all_marginalia(user=request.user)
+        return _download_response(payload, "second-pass-marginalia.json")
 
 
 class BookMarginaliaExportView(APIView):
