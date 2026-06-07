@@ -406,6 +406,7 @@ Reading payload notes:
 - Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 - Marginalia export is export-only. Import is future work.
+- Future server-side marginalia import is intended for SPL native marginalia exports only. Foreign/provider-specific formats should be normalized by a client through the normal reading APIs or converted by an external tool into the SPL native export shape first.
 - Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.
 - All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
 - Selected book export uses `scope.type = "book"` with `scope.session_filter = "selected"`.

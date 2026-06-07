@@ -1,6 +1,6 @@
 # Reading Session Annotation Profile
 
-This package contains a portable JSON-LD profile for EPUB reading-session annotations.
+This package contains a draft portable JSON-LD profile for EPUB reading-session annotations.
 
 Project: Second Pass Library
 
@@ -22,11 +22,17 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 Second Pass Library currently stores reading data via REST/JSON APIs using W3C-inspired fields (`motivation`, `target`, `body`, `current_location`, `profile_version`).
 
-JSON-LD export/import using this profile is future work and is not implemented yet.
+The current server export contract is the SPL nested marginalia format in `../marginalia-export.md`. JSON-LD serialization using this profile is not the current server import/export contract.
 
-## Recommended Canonical Format (Future Export)
+## Server Import Policy
 
-Use W3C Web Annotation JSON-LD as the canonical export format.
+Server-side marginalia import is future work. When implemented, server import should support SPL native marginalia exports only.
+
+Foreign/provider-specific formats should be normalized by a client and sent through the normal reading APIs, or converted by an external tool into SPL native marginalia export format before server import.
+
+## Annotation Shape Direction
+
+Use W3C Web Annotation concepts for annotation shape.
 
 Use EPUB CFI as the selector format for EPUB text targets.
 
@@ -36,15 +42,9 @@ When importing highlights/notes from external providers (e.g. Kindle CSV exports
 
 In the current server implementation, import provenance is reserved for server-managed/internal use and is not accepted via normal public reading APIs.
 
-## Recommended Export Extension (Future)
+## Validation
 
-```text
-.reading-session.jsonld
-```
-
-## Validation (Future)
-
-Draft export validation lives in `schema.json`.
+Draft profile validation lives in `schema.json`.
 
 ## Notes
 

@@ -225,3 +225,5 @@ export header
 Annotations inherit book and session context from that nesting, so the export does not repeat full book metadata inside every annotation. Session rows use export-local ids such as `session-1`; exported annotations do not include SPL database annotation ids. Deleted annotations are excluded.
 
 EPUB CFI annotation selectors export as `FragmentSelector` values without repeating `conformsTo`; the reading-session annotation profile defines EPUB CFI as the default FragmentSelector format. When quote context is present, export includes a `TextQuoteSelector` with `exact`, `prefix`, and/or `suffix`.
+
+Server-side marginalia import, when implemented, should accept SPL native marginalia exports only. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.

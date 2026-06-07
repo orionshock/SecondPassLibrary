@@ -8,6 +8,8 @@ The machine-readable JSON Schema for this contract lives in `docs/specs/marginal
 
 Current support is export-only. Import and import preview are future work.
 
+When server-side marginalia import is added, this SPL nested marginalia format is the native server import format. The server should not import foreign/provider-specific annotation formats directly. Foreign imports should be normalized by a reader client and sent through the normal reading session/progress/annotation APIs, or converted by an external tool into this SPL native format before server import.
+
 ## Routes
 
 Product UI:

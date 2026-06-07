@@ -46,6 +46,12 @@ GET /api/v1/library/imports/<id>/
 - Calibre sync/import of `metadata.db` (Second Pass Library is not a Calibre sync target)
 - PDF
 
+## Marginalia import policy
+
+Server-side marginalia import is future work. When added, it should support SPL native marginalia exports only.
+
+Foreign/provider-specific annotation formats should not be imported directly by the server. A reader client should normalize foreign annotations and submit them through the normal reading session/progress/annotation APIs, or an external tool can convert them into the SPL native marginalia export format before server import.
+
 ## Models
 
 - `ImportJob`: tracks one upload (EPUB or ZIP), counts, and status

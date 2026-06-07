@@ -86,16 +86,16 @@ Highlight color:
 
 ## Export/import direction
 
-Second Pass Library's interoperability direction is JSON-LD exports in an `AnnotationCollection` shape.
+Second Pass Library's current server export contract is the SPL nested marginalia format documented in `docs/specs/marginalia-export.md`.
 
-The current draft export extension is:
+Server-side marginalia import is future work. When implemented, server import should accept SPL native marginalia exports only. The server should not become an importer for provider-specific formats such as Kindle/Calibre/vendor annotation dumps.
 
-```text
-.reading-session.jsonld
-```
+Foreign annotation sources should be normalized outside the server:
+
+- A reader client can convert foreign annotations into normal reading session/progress/annotation API writes.
+- An external tool can convert foreign annotations into the SPL native marginalia export shape for future server import.
 
 ## Future possibilities
 
-- JSON-LD export/import of `.reading-session.jsonld` in an `AnnotationCollection` shape.
 - Optional provenance (`sourceImport`) for imported annotations/sessions, without changing normal client write semantics.
 - Additional W3C-style serialization helpers, without changing the current REST API surface unexpectedly.

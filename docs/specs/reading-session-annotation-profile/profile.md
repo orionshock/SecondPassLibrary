@@ -15,11 +15,13 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 ## Purpose
 
-This profile defines a portable annotation/export format for a personal EPUB reading system.
+This profile defines portable annotation-shape guidance for a personal EPUB reading system.
 
 Second Pass Library note:
 
-- The current server implementation does not implement JSON-LD import/export yet; it stores a strict W3C-inspired subset via REST/JSON.
+- The current server export contract is the SPL nested marginalia format documented in `../marginalia-export.md`.
+- The current server implementation stores a strict W3C-inspired subset via REST/JSON.
+- Future server-side marginalia import should support SPL native marginalia exports only, not arbitrary foreign/provider-specific formats.
 - The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.
 
 It represents:
@@ -181,23 +183,20 @@ When/if a previous annotation is promoted into a current session in the future, 
 
 The old annotation remains immutable.
 
-## Export Format
+## Export And Import Policy
 
-The recommended export format is a JSON-LD `AnnotationCollection` with profile-specific metadata. Second Pass Library does not implement export/import yet.
+The implemented server export format is the SPL nested marginalia format, not this draft JSON-LD profile. See `../marginalia-export.md`.
 
-Recommended file extension:
+Server-side marginalia import is future work. When implemented, server import should accept SPL native marginalia exports only.
 
-```text
-.reading-session.jsonld
-```
+Foreign/provider-specific formats should be normalized outside the server:
 
-Recommended media type:
+- A reader client can convert foreign annotations into normal reading session/progress/annotation API writes.
+- An external tool can convert foreign annotations into the SPL native marginalia export shape before server import.
 
-```text
-application/ld+json
-```
+JSON-LD serialization may remain useful for interoperability experiments, but it is not the server import/export contract.
 
-## Required Export-Level Fields
+## Draft JSON-LD Collection Fields
 
 - `@context`
 - `id`
@@ -210,7 +209,7 @@ application/ld+json
 - `session`
 - `items`
 
-## Recommended Book Metadata
+## Draft JSON-LD Book Metadata
 
 - `id`
 - `title`
@@ -225,7 +224,7 @@ application/ld+json
 
 ## Import Matching Policy
 
-Recommended matching order:
+For tools that convert external data into SPL native marginalia exports, recommended matching order is:
 
 1. Exact `fileHash`
 2. EPUB unique identifier
@@ -274,9 +273,9 @@ This profile adds a small number of JSON-LD terms:
 
 These terms are defined in `context.jsonld`.
 
-## Source Import Metadata (Recommended)
+## Source Import Metadata (Future)
 
-When annotations originate from an external provider (such as a Kindle export), store import provenance on the annotation.
+When annotations originate from an external provider, provenance may be useful in a future server-managed import flow. It is not accepted through the current public reading APIs.
 
 Recommended shape:
 
@@ -305,4 +304,4 @@ Notes:
 
 This profile is designed to be compatible with W3C Web Annotation while remaining practical for an EPUB reader application.
 
-A renderer such as epub.js should be treated as an implementation detail. The canonical server and export representation should remain W3C-compatible JSON-LD.
+A renderer such as epub.js should be treated as an implementation detail. The canonical server representation should remain W3C-compatible in shape while the implemented server export/import contract remains the SPL native marginalia format.

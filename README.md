@@ -79,7 +79,7 @@ Marginalia export is available for:
 
 The export format is documented in [docs/specs/marginalia-export.md](docs/specs/marginalia-export.md), with a JSON Schema in [docs/specs/marginalia-export.schema.json](docs/specs/marginalia-export.schema.json).
 
-Importing marginalia back into the system is future work.
+Importing marginalia back into the system is future work. The intended server import path is SPL native marginalia exports only; foreign annotation formats should be normalized by a client through the normal reading APIs or converted by an external tool into SPL native format first.
 
 ## Documentation
 
