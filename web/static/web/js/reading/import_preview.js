@@ -33,7 +33,7 @@ function renderPreview(preview) {
     ? `<ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
     : "";
   const applyMessage = preview.can_apply
-    ? "Matched data is ready for import, but apply is not implemented yet."
+    ? "Matched data is ready for import."
     : "No matched local books. Nothing can be imported.";
 
   return `
@@ -52,6 +52,38 @@ function renderPreview(preview) {
   `;
 }
 
+function renderApplyControls(preview) {
+  if (!preview || !preview.valid) {
+    return "Preview a file to see whether it can be imported.";
+  }
+  if (!preview.can_apply) {
+    return "No matched local books can be imported.";
+  }
+  return `
+    <div class="book__meta">
+      <div>This will create new historical sessions for matched books. Existing sessions are not modified.</div>
+      <button class="button" id="reading-import-apply-submit" type="button">Apply import</button>
+    </div>
+  `;
+}
+
+function renderApplyResult(result) {
+  const summary = result && result.summary ? result.summary : {};
+  const warnings = Array.isArray(result && result.warnings) ? result.warnings : [];
+  const warningList = warnings.length
+    ? `<ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
+    : "";
+  return `
+    <div class="book__meta">
+      <div>Import completed.</div>
+      <div>${escapeHtml(summary.books_matched || 0)} book(s) matched, ${escapeHtml(summary.books_skipped || 0)} book(s) skipped.</div>
+      <div>${escapeHtml(summary.sessions_created || 0)} session(s), ${escapeHtml(summary.annotations_created || 0)} annotation(s) created.</div>
+      <div>${escapeHtml(summary.bookmarks_created || 0)} bookmark(s), ${escapeHtml(summary.highlights_created || 0)} highlight(s), ${escapeHtml(summary.commented_highlights_created || 0)} commented highlight(s) created.</div>
+      ${warningList}
+    </div>
+  `;
+}
+
 function renderErrors(error) {
   const body = error && error.body && typeof error.body === "object" ? error.body : {};
   const errors = Array.isArray(body.errors) ? body.errors : [];
@@ -65,21 +97,40 @@ export async function initReadingImportPreview() {
   const input = $("#reading-import-file");
   const statusEl = $("#reading-import-preview-status");
   const resultsEl = $("#reading-import-preview-results");
+  const applyControlsEl = $("#reading-import-apply-controls");
+  const applyResultsEl = $("#reading-import-apply-results");
   const submitBtn = $("#reading-import-preview-submit");
-  if (!form || !input || !statusEl || !resultsEl || !submitBtn) return;
+  if (!form || !input || !statusEl || !resultsEl || !applyControlsEl || !applyResultsEl || !submitBtn) return;
+
+  function selectedFile() {
+    return input.files && input.files.length ? input.files[0] : null;
+  }
+
+  function fileFormData() {
+    const file = selectedFile();
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append("file", file);
+    return formData;
+  }
+
+  input.addEventListener("change", () => {
+    applyControlsEl.textContent = "Preview a file to see whether it can be imported.";
+    applyResultsEl.innerHTML = "";
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const file = input.files && input.files.length ? input.files[0] : null;
-    if (!file) {
+    const formData = fileFormData();
+    if (!formData) {
       statusEl.textContent = "Choose a JSON export file.";
       return;
     }
 
-    const formData = new FormData();
-    formData.append("file", file);
     statusEl.textContent = "Validating...";
     resultsEl.innerHTML = "";
+    applyControlsEl.textContent = "Preview a file to see whether it can be imported.";
+    applyResultsEl.innerHTML = "";
     submitBtn.disabled = true;
     setGlobalError("");
 
@@ -97,14 +148,55 @@ export async function initReadingImportPreview() {
       resultsEl.classList.remove("error");
       resultsEl.classList.remove("muted");
       resultsEl.innerHTML = renderPreview(preview);
+      applyControlsEl.classList.remove("error");
+      applyControlsEl.classList.remove("muted");
+      applyControlsEl.innerHTML = renderApplyControls(preview);
     } catch (error) {
       statusEl.textContent = "Preview failed.";
       resultsEl.classList.add("error");
       resultsEl.classList.remove("muted");
       resultsEl.innerHTML = renderErrors(error);
+      applyControlsEl.textContent = "Preview a file to see whether it can be imported.";
       setGlobalError(extractApiErrorMessage(error));
     } finally {
       submitBtn.disabled = false;
+    }
+  });
+
+  applyControlsEl.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || target.id !== "reading-import-apply-submit") return;
+    const formData = fileFormData();
+    if (!formData) {
+      applyResultsEl.classList.add("error");
+      applyResultsEl.classList.remove("muted");
+      applyResultsEl.textContent = "Choose the JSON export file again before applying.";
+      return;
+    }
+
+    target.disabled = true;
+    applyResultsEl.classList.remove("error");
+    applyResultsEl.classList.remove("muted");
+    applyResultsEl.textContent = "Applying import...";
+    setGlobalError("");
+
+    try {
+      const csrf = getCsrfToken();
+      const result = await fetchJSONWithOptions("/api/v1/reading/import/apply/", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          ...(csrf ? { "X-CSRFToken": csrf } : {}),
+        },
+        body: formData,
+      });
+      applyResultsEl.innerHTML = renderApplyResult(result);
+    } catch (error) {
+      applyResultsEl.classList.add("error");
+      applyResultsEl.classList.remove("muted");
+      applyResultsEl.innerHTML = renderErrors(error);
+      setGlobalError(extractApiErrorMessage(error));
+      target.disabled = false;
     }
   });
 }

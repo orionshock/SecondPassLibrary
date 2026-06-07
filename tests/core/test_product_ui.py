@@ -467,7 +467,21 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "Foreign annotation formats")
         self.assertContains(response, 'id="reading-import-preview-form"')
         self.assertContains(response, 'id="reading-import-file"')
+        self.assertContains(response, 'id="reading-import-apply-controls"')
+        self.assertContains(response, 'id="reading-import-apply-results"')
         self.assertContains(response, 'href="/reading/export/"')
+
+    def test_reading_import_js_wires_apply_after_preview(self):
+        js = Path("web/static/web/js/reading/import_preview.js").read_text()
+        self.assertIn("renderApplyControls", js)
+        self.assertIn("Apply import", js)
+        self.assertIn("No matched local books can be imported.", js)
+        self.assertIn("/api/v1/reading/import/apply/", js)
+        self.assertIn("target.disabled = true", js)
+        self.assertIn("renderApplyResult", js)
+        self.assertIn("sessions_created", js)
+        self.assertIn("bookmarks_created", js)
+        self.assertIn("commented_highlights_created", js)
 
     def test_authenticated_reading_sessions_scopes_to_user_and_book(self):
         # Make the user a librarian so book visibility is not dependent on group membership setup.
