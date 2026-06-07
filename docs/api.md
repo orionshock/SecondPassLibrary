@@ -376,7 +376,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 
 ## Reading
 
-- Reading APIs follow the W3C-style direction described in `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/` (import/export is future work; not implemented yet).
+- Reading APIs follow the W3C-style direction described in `docs/user-data.md` and `docs/specs/reading-session-annotation-profile/`.
 - Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
 - Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
 - Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
@@ -397,6 +397,8 @@ See `docs/permissions.md` for the visibility/curation rules.
   - `GET /api/v1/reading/export/books/<book_id>/<session_id>/` exports one current-user session for one visible book.
 - Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
   - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, summarizes contents, reports visible local book matches, and does not write data.
+- Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
+  - `POST /api/v1/reading/import/apply/` accepts one uploaded SPL native marginalia JSON export file, re-validates it, imports all matched sessions for visible local books as historical sessions, skips unmatched books, and does not import foreign/provider formats.
 
 Reading payload notes:
 
@@ -407,7 +409,7 @@ Reading payload notes:
 - `source_import` is reserved for future server-side import provenance and is not accepted/exposed via normal annotation create/update payloads.
 - Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
-- Marginalia import is preview-only. Apply/import writes are future work.
+- Marginalia import apply is intentionally minimal: no stored import jobs, no selection UI, and no annotation-level selection.
 - Server-side marginalia import is intended for SPL native marginalia exports only. Foreign/provider-specific formats should be normalized by a client through the normal reading APIs or converted by an external tool into the SPL native export shape first.
 - Future marginalia apply should import matched visible local books only, skip unmatched books, create new historical/imported sessions, never import exported active sessions as active local sessions, and treat duplicate findings as warnings rather than blockers. The import unit is a session; annotation-level selection is not supported.
 - Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.

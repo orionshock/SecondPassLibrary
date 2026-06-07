@@ -93,7 +93,7 @@ def _json_path(parts) -> str:
 def _book_summary(*, user, exported: dict[str, Any]) -> dict[str, Any]:
     sessions = exported.get("sessions") or []
     annotation_counts = _annotation_counts(sessions)
-    local_book, match = _match_book(user=user, exported=exported)
+    local_book, match = match_exported_book(user=user, exported=exported)
     will_import = match["status"] == "matched"
     skipped_warning = (
         "No visible local book matched this export book. It will be skipped."
@@ -189,7 +189,7 @@ def _warnings(book_summaries: list[dict[str, Any]], apply_plan: dict[str, int]) 
     return warnings
 
 
-def _match_book(*, user, exported: dict[str, Any]) -> tuple[Book | None, dict[str, str | None]]:
+def match_exported_book(*, user, exported: dict[str, Any]) -> tuple[Book | None, dict[str, str | None]]:
     visible_books = [
         book
         for book in Book.objects.select_related("file")

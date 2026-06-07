@@ -48,7 +48,7 @@ GET /api/v1/library/imports/<id>/
 
 ## Marginalia import policy
 
-Server-side marginalia import starts as preview-only. The server supports SPL native marginalia export files only.
+Server-side marginalia import supports preview and a minimal apply path for SPL native marginalia export files only.
 
 Foreign/provider-specific annotation formats should not be imported directly by the server. A reader client should normalize foreign annotations and submit them through the normal reading session/progress/annotation APIs, or an external tool can convert them into the SPL native marginalia export format before server import.
 
@@ -66,9 +66,17 @@ POST /api/v1/reading/import/preview/
 
 The preview endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It validates the uploaded JSON against `docs/specs/marginalia-export.schema.json`, summarizes books/sessions/annotations, reports visible local book matches, and does not write to the database.
 
-### Future marginalia apply policy
+Apply API:
 
-Apply/import writes are future work. When implemented, server-side apply should follow these rules:
+```text
+POST /api/v1/reading/import/apply/
+```
+
+The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It accepts the same uploaded SPL native marginalia JSON export file as preview, re-validates it against the schema, and imports all matched sessions from matched visible local books. It does not create import jobs and does not support book/session selection yet.
+
+### Marginalia apply policy
+
+Server-side apply follows these rules:
 
 - Import matched books only. A book is matched only when it maps to a visible local book for the requesting user.
 - Skip unmatched books and report them as unmatched/possibly foreign; do not create local books from marginalia imports.

@@ -189,7 +189,7 @@ Future possibilities:
 
 ## Marginalia export
 
-Current export support is complete for session/book/all scopes. Import support is preview-only and does not write data.
+Current export support is complete for session/book/all scopes. Import support includes preview plus a minimal native apply path for matched visible books.
 
 The baseline export contract is documented in `docs/specs/marginalia-export.md`.
 
@@ -208,6 +208,7 @@ GET /api/v1/reading/export/books/<book_id>/
 GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>
 GET /api/v1/reading/export/books/<book_id>/<session_id>/
 POST /api/v1/reading/import/preview/
+POST /api/v1/reading/import/apply/
 ```
 
 Export and import preview endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
@@ -228,6 +229,6 @@ Annotations inherit book and session context from that nesting, so the export do
 
 EPUB CFI annotation selectors export as `FragmentSelector` values without repeating `conformsTo`; the reading-session annotation profile defines EPUB CFI as the default FragmentSelector format. When quote context is present, export includes a `TextQuoteSelector` with `exact`, `prefix`, and/or `suffix`.
 
-Server-side marginalia import accepts SPL native marginalia exports only. The current endpoint is preview-only: it validates the uploaded JSON against the export schema, summarizes contents, reports visible local book matches, and does not create sessions or annotations. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.
+Server-side marginalia import accepts SPL native marginalia exports only. Preview validates the uploaded JSON against the export schema, summarizes contents, reports visible local book matches, and does not create sessions or annotations. Apply re-uploads and re-validates the file, then imports matched visible books only. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.
 
-Future apply/import writes should import matched visible local books only. Unmatched books are skipped and flagged as unmatched/possibly foreign. The import unit is a reading session; annotation-level selection is not supported. Imported sessions should be created as new historical/imported sessions, and exported active sessions must not become active local sessions. Possible duplicate sessions/annotations are warnings, not blockers.
+Current apply creates new historical/imported sessions. Unmatched books are skipped and flagged as unmatched/possibly foreign. The import unit is a reading session; annotation-level selection is not supported. Exported active sessions do not become active local sessions. Possible duplicate sessions/annotations are warnings, not blockers.
