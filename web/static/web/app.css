@@ -409,6 +409,12 @@ a:hover { text-decoration: underline; }
   margin: 10px 0;
 }
 .sessions-row__main { flex: 1; min-width: 0; }
+.session-select {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+}
+.session-select input { margin: 0; }
 .sessions-row__nav {
   align-self: center;
   text-decoration: none;

@@ -26,6 +26,11 @@ document.addEventListener("DOMContentLoaded", () => {
       initExportName: "initReadingBookActivity",
       label: "Reading activity",
     },
+    "reading-book-sessions": {
+      importer: () => import("./reading_book_sessions.js"),
+      initExportName: "initReadingBookSessions",
+      label: "Reading sessions",
+    },
     "book-edit": { importer: () => import("./book_edit/main.js"), initExportName: "initBookEdit", label: "Book edit" },
     imports: { importer: () => import("./imports.js"), initExportName: "initImports", label: "Imports" },
 

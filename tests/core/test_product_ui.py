@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from uuid import uuid4
@@ -482,6 +484,20 @@ class ProductUiSmokeTests(TestCase):
         )
         self.assertContains(response, f"/api/v1/reading/export/books/{book.id}/")
         self.assertContains(response, "Export all sessions")
+        self.assertContains(response, 'id="reading-sessions-export-selected"')
+        self.assertContains(response, "Export selected")
+        self.assertContains(response, "disabled")
+        self.assertContains(response, "Select sessions to export a subset.")
+        self.assertContains(response, 'class="reading-session-select"')
+        self.assertContains(response, f'value="{mine.id}"')
+
+    def test_reading_book_sessions_js_builds_selected_export_query(self):
+        js = Path("web/static/web/js/reading_book_sessions.js").read_text()
+        self.assertIn("initReadingBookSessions", js)
+        self.assertIn("loadMeAndInitShell", js)
+        self.assertIn('params.append("session", id)', js)
+        self.assertIn("/api/v1/reading/export/books/", js)
+        self.assertIn("button.disabled = selectedIds().length === 0", js)
 
     def test_authenticated_reading_sessions_empty_state(self):
         profile = get_or_create_profile(user=self.user)

@@ -181,18 +181,38 @@ def _sessions_queryset(*, user, book: Book):
     )
 
 
-def export_book_marginalia(*, user, book: Book) -> dict[str, Any]:
-    if not policies.can_view_book(user=user, book=book):
-        raise PermissionError("Book not visible.")
+def selected_book_sessions(*, user, book: Book, session_ids) -> list[ReadingSession]:
+    unique_ids = list(dict.fromkeys(session_ids))
+    sessions = list(_sessions_queryset(user=user, book=book).filter(id__in=unique_ids))
+    sessions_by_id = {session.id: session for session in sessions}
+    if len(sessions_by_id) != len(unique_ids):
+        raise LookupError("One or more sessions were not found.")
+    return [sessions_by_id[session_id] for session_id in unique_ids]
 
-    sessions = list(_sessions_queryset(user=user, book=book))
-    payload = _base_export({"type": "book", "book": _book_source(book) or str(book.id)})
+
+def _book_payload_with_sessions(book: Book, sessions: list[ReadingSession]) -> dict[str, Any]:
     book_payload = _book_payload(book)
     book_payload["sessions"] = [
         _session_payload(session, f"session-{idx}")
         for idx, session in enumerate(sessions, start=1)
     ]
-    payload["books"] = [book_payload]
+    return book_payload
+
+
+def export_book_marginalia(
+    *, user, book: Book, sessions: list[ReadingSession] | None = None, selected: bool = False
+) -> dict[str, Any]:
+    if not policies.can_view_book(user=user, book=book):
+        raise PermissionError("Book not visible.")
+
+    if sessions is None:
+        sessions = list(_sessions_queryset(user=user, book=book))
+
+    scope = {"type": "book", "book": _book_source(book) or str(book.id)}
+    if selected:
+        scope["session_filter"] = "selected"
+    payload = _base_export(scope)
+    payload["books"] = [_book_payload_with_sessions(book, sessions)]
     return payload
 
 

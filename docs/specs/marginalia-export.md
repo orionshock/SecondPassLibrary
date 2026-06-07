@@ -22,6 +22,12 @@ GET /api/v1/reading/export/books/<book_id>/
 GET /api/v1/reading/export/books/<book_id>/<session_id>/
 ```
 
+`GET /api/v1/reading/export/books/<book_id>/` also accepts repeated `session` query parameters to export a selected subset of sessions for that book:
+
+```text
+GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>
+```
+
 The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export requires current book visibility and includes only sessions owned by the requesting user. A mismatched book/session URL returns 404.
 
 ## Top-Level Object
@@ -68,6 +74,18 @@ Book export:
   "book": "book:sha256:<hash>"
 }
 ```
+
+Selected sessions for one book:
+
+```json
+{
+  "type": "book",
+  "book": "book:sha256:<hash>",
+  "session_filter": "selected"
+}
+```
+
+Selected book exports are requested with repeated `session` query parameters. Each selected session must belong to the requesting user and requested book; invalid, missing, unauthorized, or mismatched session ids return 404.
 
 Session export:
 

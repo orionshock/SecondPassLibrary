@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from uuid import UUID
 
 from django.shortcuts import get_object_or_404
 from rest_framework.authentication import SessionAuthentication
@@ -17,6 +18,7 @@ from .export_services import (
     export_all_marginalia,
     export_book_marginalia,
     export_session_marginalia,
+    selected_book_sessions,
 )
 from .models import ReadingSession
 
@@ -45,6 +47,13 @@ def _download_response(payload: dict, filename: str) -> Response:
     return response
 
 
+def _parse_session_ids(raw_session_ids: list[str]) -> list[UUID]:
+    try:
+        return [UUID(value) for value in raw_session_ids]
+    except (TypeError, ValueError):
+        raise NotFound() from None
+
+
 class AllMarginaliaExportView(APIView):
     authentication_classes = [SessionAuthentication]
     renderer_classes = [PrettyJSONRenderer]
@@ -67,8 +76,26 @@ class BookMarginaliaExportView(APIView):
         )
         if not policies.can_view_book(user=request.user, book=book):
             raise NotFound()
-        filename = f"{_safe_filename_part(book.title, 'book')}-all-sessions-marginalia.json"
-        payload = export_book_marginalia(user=request.user, book=book)
+        raw_session_ids = request.query_params.getlist("session")
+        selected_sessions = None
+        if raw_session_ids:
+            try:
+                selected_sessions = selected_book_sessions(
+                    user=request.user,
+                    book=book,
+                    session_ids=_parse_session_ids(raw_session_ids),
+                )
+            except LookupError:
+                raise NotFound() from None
+
+        session_label = "selected-sessions" if raw_session_ids else "all-sessions"
+        filename = f"{_safe_filename_part(book.title, 'book')}-{session_label}-marginalia.json"
+        payload = export_book_marginalia(
+            user=request.user,
+            book=book,
+            sessions=selected_sessions,
+            selected=bool(raw_session_ids),
+        )
         return _download_response(payload, filename)
 
 
