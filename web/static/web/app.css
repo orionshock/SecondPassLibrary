@@ -270,6 +270,7 @@ a:hover { text-decoration: underline; }
 }
 
 .export-book-row__main {
+  flex: 1;
   min-width: 0;
 }
 

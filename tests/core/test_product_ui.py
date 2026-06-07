@@ -442,6 +442,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'href="/api/v1/reading/export/"')
         self.assertContains(response, "Export all marginalia")
         self.assertContains(response, 'href="/reading/sessions/"')
+        self.assertContains(response, 'class="sessions-cover"')
+        self.assertContains(response, "Cover")
         self.assertContains(response, f'href="/api/v1/reading/export/books/{book.id}/"')
         self.assertContains(response, "Export all sessions")
 

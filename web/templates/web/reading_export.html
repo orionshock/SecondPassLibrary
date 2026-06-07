@@ -23,6 +23,13 @@
       <div class="export-book-list">
         {% for book in books %}
           <article class="export-book-row">
+            <div class="sessions-cover" aria-hidden="true">
+              {% if book.cover_url %}
+                <img class="sessions-cover__img" src="{{ book.cover_url|escape }}" alt="Cover for {{ book.title|default:'Book'|escape }}" loading="lazy" />
+              {% else %}
+                Cover
+              {% endif %}
+            </div>
             <div class="export-book-row__main">
               <div class="book-meta__line">{{ book.title|escape }}</div>
               {% if book.authors %}

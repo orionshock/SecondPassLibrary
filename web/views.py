@@ -42,6 +42,7 @@ def reading_export(request: HttpRequest) -> HttpResponse:
                 "id": book_id,
                 "title": book.get("title") or "Book",
                 "authors": book.get("authors") or [],
+                "cover_url": book.get("cover_url") or "",
                 "session_count": 0,
                 "annotation_count": 0,
             },
