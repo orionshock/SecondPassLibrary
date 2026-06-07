@@ -4,11 +4,14 @@ import { $, escapeHtml, loadMeAndInitShell, setGlobalError } from "../layout.js"
 function renderPreview(preview) {
   if (!preview || !preview.valid) return "<div class=\"muted\">No preview yet.</div>";
   const summary = preview.summary || {};
+  const plan = preview.apply_plan || {};
+  const warnings = Array.isArray(preview.warnings) ? preview.warnings : [];
   const rows = Array.isArray(preview.books) ? preview.books : [];
   const bookRows = rows
     .map((book) => {
       const match = book.match || {};
       const authors = Array.isArray(book.authors) ? book.authors.join(", ") : "";
+      const importStatus = book.will_import ? "Will import" : "Will skip";
       return `
         <article class="book">
           <h3 class="book__title">${escapeHtml(book.title || "Book")}</h3>
@@ -18,17 +21,32 @@ function renderPreview(preview) {
             <div>${escapeHtml(book.bookmark_count)} bookmark(s), ${escapeHtml(book.highlight_count)} highlight(s), ${escapeHtml(book.commented_highlight_count)} commented highlight(s)</div>
             <div>Match: <span class="pill">${escapeHtml(match.status || "unmatched")}</span> ${escapeHtml(match.book_title || "")}</div>
             ${match.method ? `<div class="muted">Method: ${escapeHtml(match.method)} (${escapeHtml(match.confidence || "")})</div>` : ""}
+            <div>${escapeHtml(importStatus)}</div>
+            ${book.skip_reason ? `<div class="muted">Skip reason: ${escapeHtml(book.skip_reason)}</div>` : ""}
+            ${book.warning ? `<div class="muted">${escapeHtml(book.warning)}</div>` : ""}
           </div>
         </article>
       `.trim();
     })
     .join("");
+  const warningList = warnings.length
+    ? `<ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
+    : "";
+  const applyMessage = preview.can_apply
+    ? "Matched data is ready for import, but apply is not implemented yet."
+    : "No matched local books. Nothing can be imported.";
 
   return `
     <div class="book__meta">
       <div>Scope: ${escapeHtml(preview.scope && preview.scope.type ? preview.scope.type : "")}</div>
       <div>${escapeHtml(summary.books)} book(s), ${escapeHtml(summary.sessions)} session(s), ${escapeHtml(summary.annotations)} annotation(s)</div>
-      <div class="muted">Preview only. Apply/import is not available.</div>
+      <div>${escapeHtml(applyMessage)}</div>
+      <div class="muted">Preview only. Nothing will be imported yet.</div>
+      <div class="muted">
+        Plan: ${escapeHtml(plan.matched_books || 0)} matched book(s), ${escapeHtml(plan.skipped_books || 0)} skipped book(s),
+        ${escapeHtml(plan.sessions_to_create || 0)} session(s), ${escapeHtml(plan.annotations_to_create || 0)} annotation(s).
+      </div>
+      ${warningList}
     </div>
     <div class="books">${bookRows || '<div class="muted">No books in export.</div>'}</div>
   `;

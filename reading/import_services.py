@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
+from django.utils.dateparse import parse_datetime
 from jsonschema import Draft202012Validator
 
 from core import policies
 from library.models import Book, BookIdentifier
+from reading.models import ReadingSession
 
 
 class MarginaliaImportPreviewError(ValueError):
@@ -52,6 +54,8 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
 
     total_sessions = sum(book["session_count"] for book in book_summaries)
     total_annotations = sum(book["annotation_count"] for book in book_summaries)
+    apply_plan = _apply_plan(book_summaries)
+    warnings = _warnings(book_summaries, apply_plan)
     return {
         "valid": True,
         "type": payload.get("type"),
@@ -65,8 +69,9 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
             "annotations": total_annotations,
         },
         "books": book_summaries,
-        "warnings": [],
-        "can_apply": False,
+        "warnings": warnings,
+        "can_apply": apply_plan["matched_books"] > 0,
+        "apply_plan": apply_plan,
     }
 
 
@@ -88,6 +93,19 @@ def _json_path(parts) -> str:
 def _book_summary(*, user, exported: dict[str, Any]) -> dict[str, Any]:
     sessions = exported.get("sessions") or []
     annotation_counts = _annotation_counts(sessions)
+    local_book, match = _match_book(user=user, exported=exported)
+    will_import = match["status"] == "matched"
+    skipped_warning = (
+        "No visible local book matched this export book. It will be skipped."
+        if not will_import
+        else ""
+    )
+    active_sessions = _active_session_count(sessions)
+    duplicate_sessions = (
+        _possible_duplicate_count(user=user, book=local_book, sessions=sessions)
+        if local_book is not None
+        else 0
+    )
     return {
         "title": exported.get("title") or "",
         "authors": exported.get("authors") or [],
@@ -96,7 +114,12 @@ def _book_summary(*, user, exported: dict[str, Any]) -> dict[str, Any]:
         "isbn": exported.get("isbn") or "",
         "session_count": len(sessions),
         **annotation_counts,
-        "match": _match_book(user=user, exported=exported),
+        "match": match,
+        "will_import": will_import,
+        "skip_reason": None if will_import else "unmatched_book",
+        "warning": skipped_warning,
+        "active_sessions_will_import_as_historical": active_sessions if will_import else 0,
+        "possible_duplicate_sessions": duplicate_sessions,
     }
 
 
@@ -124,7 +147,49 @@ def _annotation_counts(sessions: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def _match_book(*, user, exported: dict[str, Any]) -> dict[str, str | None]:
+def _apply_plan(book_summaries: list[dict[str, Any]]) -> dict[str, int]:
+    plan = {
+        "matched_books": 0,
+        "skipped_books": 0,
+        "sessions_to_create": 0,
+        "annotations_to_create": 0,
+        "bookmarks_to_create": 0,
+        "highlights_to_create": 0,
+        "commented_highlights_to_create": 0,
+        "active_sessions_will_import_as_historical": 0,
+        "possible_duplicate_sessions": 0,
+    }
+    for book in book_summaries:
+        if book["will_import"]:
+            plan["matched_books"] += 1
+            plan["sessions_to_create"] += book["session_count"]
+            plan["annotations_to_create"] += book["annotation_count"]
+            plan["bookmarks_to_create"] += book["bookmark_count"]
+            plan["highlights_to_create"] += book["highlight_count"]
+            plan["commented_highlights_to_create"] += book["commented_highlight_count"]
+            plan["active_sessions_will_import_as_historical"] += book[
+                "active_sessions_will_import_as_historical"
+            ]
+            plan["possible_duplicate_sessions"] += book["possible_duplicate_sessions"]
+        else:
+            plan["skipped_books"] += 1
+    return plan
+
+
+def _warnings(book_summaries: list[dict[str, Any]], apply_plan: dict[str, int]) -> list[str]:
+    warnings = [
+        book["warning"]
+        for book in book_summaries
+        if book.get("warning")
+    ]
+    if apply_plan["active_sessions_will_import_as_historical"]:
+        warnings.append("Active exported sessions will be imported as historical sessions, not active sessions.")
+    if apply_plan["possible_duplicate_sessions"]:
+        warnings.append("Possible duplicate sessions were found. They are warnings only and do not block preview.")
+    return warnings
+
+
+def _match_book(*, user, exported: dict[str, Any]) -> tuple[Book | None, dict[str, str | None]]:
     visible_books = [
         book
         for book in Book.objects.select_related("file")
@@ -138,13 +203,13 @@ def _match_book(*, user, exported: dict[str, Any]) -> dict[str, str | None]:
         for book in visible_books:
             checksum = getattr(getattr(book, "file", None), "checksum", "") or ""
             if checksum.lower() == file_hash:
-                return _matched(book=book, method="file_hash")
+                return book, _matched(book=book, method="file_hash")
 
     exported_isbn = _normalize_isbn(exported.get("isbn") or "")
     if exported_isbn:
         for book in visible_books:
             if _book_isbns(book) & {exported_isbn}:
-                return _matched(book=book, method="isbn")
+                return book, _matched(book=book, method="isbn")
 
     title = _normalize_text(exported.get("title") or "")
     authors = {_normalize_text(author) for author in exported.get("authors") or [] if author}
@@ -152,9 +217,9 @@ def _match_book(*, user, exported: dict[str, Any]) -> dict[str, str | None]:
         for book in visible_books:
             book_authors = {_normalize_text(author.name) for author in book.authors.all()}
             if _normalize_text(book.title) == title and bool(book_authors & authors):
-                return _matched(book=book, method="title_author")
+                return book, _matched(book=book, method="title_author")
 
-    return {"status": "unmatched", "method": None, "confidence": "none", "book_title": None}
+    return None, {"status": "unmatched", "method": None, "confidence": "none", "book_title": None}
 
 
 def _matched(*, book: Book, method: str) -> dict[str, str]:
@@ -186,3 +251,26 @@ def _book_isbns(book: Book) -> set[str]:
         if identifier.scheme in {BookIdentifier.SCHEME_ISBN_10, BookIdentifier.SCHEME_ISBN_13}:
             values.add(_normalize_isbn(identifier.value))
     return {value for value in values if value}
+
+
+def _active_session_count(sessions: list[dict[str, Any]]) -> int:
+    return sum(1 for session in sessions if session.get("status") == ReadingSession.STATUS_ACTIVE)
+
+
+def _possible_duplicate_count(*, user, book: Book, sessions: list[dict[str, Any]]) -> int:
+    count = 0
+    for session in sessions:
+        started_at = parse_datetime(str(session.get("started_at") or ""))
+        completed_at = parse_datetime(str(session.get("completed_at") or ""))
+        if started_at is None:
+            continue
+        matches = ReadingSession.objects.filter(
+            user=user,
+            book=book,
+            name=session.get("name") or "",
+            started_at=started_at,
+            completed_at=completed_at,
+        )
+        if matches.exists():
+            count += 1
+    return count

@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -46,7 +47,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
     def _post_payload(self, payload):
         return self.client.post(self._url(), {"file": self._upload(payload)}, format="multipart")
 
-    def _payload(self, *, file_hash=None, title="Visible Match", authors=None):
+    def _payload(self, *, file_hash=None, title="Visible Match", authors=None, session_status="completed"):
         checksum = file_hash or self.visible.file.checksum
         authors = ["Author One"] if authors is None else authors
         return {
@@ -72,7 +73,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
                         {
                             "export_session_id": "session-1",
                             "name": "Imported session",
-                            "status": "completed",
+                            "status": session_status,
                             "started_at": "2026-06-01T12:00:00+00:00",
                             "completed_at": "2026-06-02T12:00:00+00:00",
                             "created_at": "2026-06-01T12:00:00+00:00",
@@ -166,10 +167,24 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["valid"])
-        self.assertFalse(r.data["can_apply"])
+        self.assertTrue(r.data["can_apply"])
         self.assertEqual(r.data["schema_version"], "0.1.0")
         self.assertEqual(r.data["scope"]["type"], "book")
         self.assertEqual(r.data["summary"], {"books": 1, "sessions": 1, "annotations": 3})
+        self.assertEqual(
+            r.data["apply_plan"],
+            {
+                "matched_books": 1,
+                "skipped_books": 0,
+                "sessions_to_create": 1,
+                "annotations_to_create": 3,
+                "bookmarks_to_create": 1,
+                "highlights_to_create": 2,
+                "commented_highlights_to_create": 1,
+                "active_sessions_will_import_as_historical": 0,
+                "possible_duplicate_sessions": 0,
+            },
+        )
 
         book = r.data["books"][0]
         self.assertEqual(book["session_count"], 1)
@@ -180,6 +195,8 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(book["match"]["status"], "matched")
         self.assertEqual(book["match"]["method"], "file_hash")
         self.assertEqual(book["match"]["book_title"], "Visible Match")
+        self.assertTrue(book["will_import"])
+        self.assertIsNone(book["skip_reason"])
 
     def test_preview_does_not_create_sessions_or_annotations(self):
         self.client.force_login(self.user)
@@ -207,7 +224,15 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         r = cast(Any, self._post_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertFalse(r.data["can_apply"])
+        self.assertEqual(r.data["apply_plan"]["matched_books"], 0)
+        self.assertEqual(r.data["apply_plan"]["skipped_books"], 1)
+        self.assertEqual(r.data["apply_plan"]["sessions_to_create"], 0)
         self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
+        self.assertFalse(r.data["books"][0]["will_import"])
+        self.assertEqual(r.data["books"][0]["skip_reason"], "unmatched_book")
+        self.assertIn("No visible local book matched", r.data["books"][0]["warning"])
+        self.assertIn("It will be skipped.", r.data["warnings"][0])
 
     def test_title_author_match_when_hash_does_not_match(self):
         self.client.force_login(self.user)
@@ -219,3 +244,36 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["books"][0]["match"]["method"], "title_author")
+
+    def test_active_exported_sessions_warn_but_can_apply(self):
+        self.client.force_login(self.user)
+        payload = self._payload(session_status="active")
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(r.data["can_apply"])
+        self.assertEqual(r.data["apply_plan"]["active_sessions_will_import_as_historical"], 1)
+        self.assertEqual(r.data["books"][0]["active_sessions_will_import_as_historical"], 1)
+        self.assertIn("not active sessions", r.data["warnings"][0])
+
+    def test_possible_duplicate_warning_does_not_block_apply(self):
+        session = ReadingSession.objects.create(
+            user=self.user,
+            book=self.visible,
+            name="Imported session",
+            status=ReadingSession.STATUS_COMPLETED,
+            completed_at=parse_datetime("2026-06-02T12:00:00+00:00"),
+            is_active=False,
+        )
+        session.started_at = parse_datetime("2026-06-01T12:00:00+00:00")
+        session.save(update_fields=["started_at", "updated_at"])
+
+        self.client.force_login(self.user)
+        r = cast(Any, self._post_payload(self._payload()))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(r.data["can_apply"])
+        self.assertEqual(r.data["apply_plan"]["possible_duplicate_sessions"], 1)
+        self.assertEqual(r.data["books"][0]["possible_duplicate_sessions"], 1)
+        self.assertIn("Possible duplicate sessions", r.data["warnings"][0])
