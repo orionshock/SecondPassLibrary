@@ -14,24 +14,33 @@ from library.models import Book, BookIdentifier
 from reading.models import ReadingSession
 
 
-class MarginaliaImportPreviewError(ValueError):
+class MarginaliaImportError(ValueError):
     def __init__(self, message: str, errors: list[dict[str, str]] | None = None):
         super().__init__(message)
         self.errors = errors or [{"path": "$", "message": message}]
+
+
+def read_uploaded_marginalia_json(uploaded) -> dict[str, Any]:
+    if uploaded is None:
+        raise MarginaliaImportError(
+            "Upload a JSON file.",
+            [{"path": "$.file", "message": "Upload a JSON file."}],
+        )
+    return parse_marginalia_json(uploaded.read())
 
 
 def parse_marginalia_json(raw: bytes) -> dict[str, Any]:
     try:
         payload = json.loads(raw.decode("utf-8"))
     except UnicodeDecodeError:
-        raise MarginaliaImportPreviewError("Upload must be UTF-8 JSON.") from None
+        raise MarginaliaImportError("Upload must be UTF-8 JSON.") from None
     except json.JSONDecodeError as exc:
-        raise MarginaliaImportPreviewError(
+        raise MarginaliaImportError(
             "Upload must be valid JSON.",
             [{"path": f"$.line:{exc.lineno}:column:{exc.colno}", "message": exc.msg}],
         ) from None
     if not isinstance(payload, dict):
-        raise MarginaliaImportPreviewError("Upload must be a JSON object.")
+        raise MarginaliaImportError("Upload must be a JSON object.")
     return payload
 
 
@@ -41,21 +50,38 @@ def validate_marginalia_export(payload: dict[str, Any]) -> None:
     validator = Draft202012Validator(schema)
     errors = sorted(validator.iter_errors(payload), key=lambda err: list(err.absolute_path))
     if errors:
-        raise MarginaliaImportPreviewError(
+        raise MarginaliaImportError(
             "Upload does not match the SPL marginalia export schema.",
             [{"path": _json_path(err.absolute_path), "message": err.message} for err in errors[:20]],
         )
 
 
-def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
+def plan_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
     validate_marginalia_export(payload)
     books = payload.get("books") or []
-    book_summaries = [_book_summary(user=user, exported=book) for book in books]
+    book_plans = [_book_plan(user=user, exported=book) for book in books]
+    book_summaries = [book["summary"] for book in book_plans]
 
     total_sessions = sum(book["session_count"] for book in book_summaries)
     total_annotations = sum(book["annotation_count"] for book in book_summaries)
     apply_plan = _apply_plan(book_summaries)
     warnings = _warnings(book_summaries, apply_plan)
+    return {
+        "summary": {
+            "books": len(books),
+            "sessions": total_sessions,
+            "annotations": total_annotations,
+        },
+        "books": book_summaries,
+        "book_plans": book_plans,
+        "warnings": warnings,
+        "can_apply": apply_plan["matched_books"] > 0,
+        "apply_plan": apply_plan,
+    }
+
+
+def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
+    plan = plan_marginalia_import(user=user, payload=payload)
     return {
         "valid": True,
         "type": payload.get("type"),
@@ -63,15 +89,11 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
         "profile": payload.get("profile"),
         "generated_at": payload.get("generated_at"),
         "scope": payload.get("scope") or {},
-        "summary": {
-            "books": len(books),
-            "sessions": total_sessions,
-            "annotations": total_annotations,
-        },
-        "books": book_summaries,
-        "warnings": warnings,
-        "can_apply": apply_plan["matched_books"] > 0,
-        "apply_plan": apply_plan,
+        "summary": plan["summary"],
+        "books": plan["books"],
+        "warnings": plan["warnings"],
+        "can_apply": plan["can_apply"],
+        "apply_plan": plan["apply_plan"],
     }
 
 
@@ -90,7 +112,7 @@ def _json_path(parts) -> str:
     return path
 
 
-def _book_summary(*, user, exported: dict[str, Any]) -> dict[str, Any]:
+def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
     sessions = exported.get("sessions") or []
     annotation_counts = _annotation_counts(sessions)
     local_book, match = match_exported_book(user=user, exported=exported)
@@ -106,7 +128,7 @@ def _book_summary(*, user, exported: dict[str, Any]) -> dict[str, Any]:
         if local_book is not None
         else 0
     )
-    return {
+    summary = {
         "title": exported.get("title") or "",
         "authors": exported.get("authors") or [],
         "source": exported.get("source") or "",
@@ -121,6 +143,7 @@ def _book_summary(*, user, exported: dict[str, Any]) -> dict[str, Any]:
         "active_sessions_will_import_as_historical": active_sessions if will_import else 0,
         "possible_duplicate_sessions": duplicate_sessions,
     }
+    return {"exported": exported, "local_book": local_book, "summary": summary}
 
 
 def _annotation_counts(sessions: list[dict[str, Any]]) -> dict[str, int]:

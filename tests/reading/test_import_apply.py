@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import Any, cast
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -10,6 +11,8 @@ from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
+from reading.import_apply_services import apply_marginalia_import
+from reading.import_services import preview_marginalia_import
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
@@ -217,6 +220,36 @@ class MarginaliaImportApplyApiTests(IsolatedUserdataMixin, APITestCase):
 
         commented = Annotation.objects.get(comment_text="note")
         self.assertEqual(commented.highlight_text, "commented highlight")
+
+    def test_apply_summary_matches_preview_plan_counts(self):
+        payload = self._payload()
+        preview = preview_marginalia_import(user=self.user, payload=payload)
+
+        self.client.force_login(self.user)
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["summary"]["books_matched"], preview["apply_plan"]["matched_books"])
+        self.assertEqual(r.data["summary"]["books_skipped"], preview["apply_plan"]["skipped_books"])
+        self.assertEqual(
+            r.data["summary"]["sessions_created"],
+            preview["apply_plan"]["sessions_to_create"],
+        )
+        self.assertEqual(
+            r.data["summary"]["annotations_created"],
+            preview["apply_plan"]["annotations_to_create"],
+        )
+
+    def test_apply_rolls_back_if_annotation_write_fails(self):
+        payload = self._payload()
+
+        with patch("reading.import_apply_services.Annotation.objects.create") as create:
+            create.side_effect = RuntimeError("simulated annotation write failure")
+            with self.assertRaises(RuntimeError):
+                apply_marginalia_import(user=self.user, payload=payload)
+
+        self.assertEqual(ReadingSession.objects.count(), 0)
+        self.assertEqual(Annotation.objects.count(), 0)
 
     def test_apply_skips_unmatched_books(self):
         self.client.force_login(self.user)

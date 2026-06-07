@@ -8,9 +8,9 @@ from rest_framework.views import APIView
 
 from .import_apply_services import apply_marginalia_import
 from .import_services import (
-    MarginaliaImportPreviewError,
-    parse_marginalia_json,
+    MarginaliaImportError,
     preview_marginalia_import,
+    read_uploaded_marginalia_json,
 )
 
 
@@ -20,21 +20,10 @@ class MarginaliaImportPreviewView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        uploaded = request.FILES.get("file")
-        if uploaded is None:
-            return Response(
-                {
-                    "valid": False,
-                    "errors": [{"path": "$.file", "message": "Upload a JSON file."}],
-                    "can_apply": False,
-                },
-                status=400,
-            )
-
         try:
-            payload = parse_marginalia_json(uploaded.read())
+            payload = read_uploaded_marginalia_json(request.FILES.get("file"))
             preview = preview_marginalia_import(user=request.user, payload=payload)
-        except MarginaliaImportPreviewError as exc:
+        except MarginaliaImportError as exc:
             return Response(
                 {"valid": False, "errors": exc.errors, "can_apply": False},
                 status=400,
@@ -49,20 +38,10 @@ class MarginaliaImportApplyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        uploaded = request.FILES.get("file")
-        if uploaded is None:
-            return Response(
-                {
-                    "applied": False,
-                    "errors": [{"path": "$.file", "message": "Upload a JSON file."}],
-                },
-                status=400,
-            )
-
         try:
-            payload = parse_marginalia_json(uploaded.read())
+            payload = read_uploaded_marginalia_json(request.FILES.get("file"))
             result = apply_marginalia_import(user=request.user, payload=payload)
-        except MarginaliaImportPreviewError as exc:
+        except MarginaliaImportError as exc:
             return Response(
                 {"applied": False, "valid": False, "errors": exc.errors},
                 status=400,

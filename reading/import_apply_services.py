@@ -6,21 +6,23 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .import_services import match_exported_book, validate_marginalia_export
+from .import_services import plan_marginalia_import
 from .models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from .profile import CURRENT_READING_PROFILE_VERSION
 
 
 def apply_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
-    validate_marginalia_export(payload)
+    plan = plan_marginalia_import(user=user, payload=payload)
     result = _empty_result()
 
     with transaction.atomic():
-        for exported_book in payload.get("books") or []:
-            local_book, match = match_exported_book(user=user, exported=exported_book)
+        for planned_book in plan["book_plans"]:
+            exported_book = planned_book["exported"]
+            local_book = planned_book["local_book"]
+            preview = planned_book["summary"]
             book_result = {
-                "title": exported_book.get("title") or "",
-                "match": match,
+                "title": preview["title"],
+                "match": preview["match"],
                 "sessions_created": 0,
                 "annotations_created": 0,
                 "skipped": local_book is None,
