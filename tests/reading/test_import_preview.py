@@ -197,6 +197,18 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(book["match"]["book_title"], "Visible Match")
         self.assertTrue(book["will_import"])
         self.assertIsNone(book["skip_reason"])
+        self.assertEqual(len(book["sessions"]), 1)
+        session = book["sessions"][0]
+        self.assertEqual(session["export_session_id"], "session-1")
+        self.assertEqual(session["name"], "Imported session")
+        self.assertEqual(session["notes"], "")
+        self.assertEqual(session["status"], "completed")
+        self.assertEqual(session["annotation_count"], 3)
+        self.assertEqual(session["bookmark_count"], 1)
+        self.assertEqual(session["highlight_count"], 2)
+        self.assertEqual(session["commented_highlight_count"], 1)
+        self.assertTrue(session["will_import"])
+        self.assertFalse(session["active_will_import_as_historical"])
 
     def test_preview_does_not_create_sessions_or_annotations(self):
         self.client.force_login(self.user)
@@ -231,6 +243,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
         self.assertFalse(r.data["books"][0]["will_import"])
         self.assertEqual(r.data["books"][0]["skip_reason"], "unmatched_book")
+        self.assertFalse(r.data["books"][0]["sessions"][0]["will_import"])
         self.assertIn("No visible local book matched", r.data["books"][0]["warning"])
         self.assertIn("It will be skipped.", r.data["warnings"][0])
 

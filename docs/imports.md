@@ -72,7 +72,29 @@ Apply API:
 POST /api/v1/reading/import/apply/
 ```
 
-The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It accepts the same uploaded SPL native marginalia JSON export file as preview, re-validates it against the schema, and imports all matched sessions from matched visible local books. It does not create import jobs and does not support book/session selection yet.
+The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It accepts the same uploaded SPL native marginalia JSON export file as preview, re-validates it against the schema, and imports matched sessions from matched visible local books. It does not create import jobs.
+
+Apply may include an optional multipart `selection` field containing JSON. If omitted, all matched sessions are imported. If present, only selected sessions are imported, and each selected session may override the imported session `name` and `notes`.
+
+```json
+{
+  "books": [
+    {
+      "source": "book:sha256:...",
+      "sessions": [
+        {
+          "export_session_id": "session-1",
+          "selected": true,
+          "name": "Imported session name",
+          "notes": "Imported session notes"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Selection uses export-local book/session identifiers from the uploaded file, not SPL database ids. Session selection is supported; annotation-level selection is not.
 
 ### Marginalia apply policy
 

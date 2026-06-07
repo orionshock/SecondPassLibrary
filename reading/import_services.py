@@ -142,8 +142,40 @@ def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
         "warning": skipped_warning,
         "active_sessions_will_import_as_historical": active_sessions if will_import else 0,
         "possible_duplicate_sessions": duplicate_sessions,
+        "sessions": [
+            _session_summary(
+                user=user,
+                book=local_book,
+                exported=session,
+                will_import=will_import,
+            )
+            for session in sessions
+        ],
     }
     return {"exported": exported, "local_book": local_book, "summary": summary}
+
+
+def _session_summary(*, user, book: Book | None, exported: dict[str, Any], will_import: bool) -> dict[str, Any]:
+    counts = _annotation_counts([exported])
+    is_active = exported.get("status") == ReadingSession.STATUS_ACTIVE
+    duplicate = (
+        _possible_duplicate_session(user=user, book=book, session=exported)
+        if book is not None
+        else False
+    )
+    return {
+        "export_session_id": exported.get("export_session_id") or "",
+        "name": exported.get("name") or "",
+        "notes": exported.get("notes") or "",
+        "status": exported.get("status") or "",
+        "started_at": exported.get("started_at"),
+        "completed_at": exported.get("completed_at"),
+        **counts,
+        "will_import": will_import,
+        "active_will_import_as_historical": bool(will_import and is_active),
+        "possible_duplicate": duplicate,
+        "warning": "Possible duplicate session." if duplicate else "",
+    }
 
 
 def _annotation_counts(sessions: list[dict[str, Any]]) -> dict[str, int]:
@@ -281,19 +313,22 @@ def _active_session_count(sessions: list[dict[str, Any]]) -> int:
 
 
 def _possible_duplicate_count(*, user, book: Book, sessions: list[dict[str, Any]]) -> int:
-    count = 0
-    for session in sessions:
-        started_at = parse_datetime(str(session.get("started_at") or ""))
-        completed_at = parse_datetime(str(session.get("completed_at") or ""))
-        if started_at is None:
-            continue
-        matches = ReadingSession.objects.filter(
-            user=user,
-            book=book,
-            name=session.get("name") or "",
-            started_at=started_at,
-            completed_at=completed_at,
-        )
-        if matches.exists():
-            count += 1
-    return count
+    return sum(
+        1
+        for session in sessions
+        if _possible_duplicate_session(user=user, book=book, session=session)
+    )
+
+
+def _possible_duplicate_session(*, user, book: Book, session: dict[str, Any]) -> bool:
+    started_at = parse_datetime(str(session.get("started_at") or ""))
+    completed_at = parse_datetime(str(session.get("completed_at") or ""))
+    if started_at is None:
+        return False
+    return ReadingSession.objects.filter(
+        user=user,
+        book=book,
+        name=session.get("name") or "",
+        started_at=started_at,
+        completed_at=completed_at,
+    ).exists()

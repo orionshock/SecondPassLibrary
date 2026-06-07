@@ -40,7 +40,11 @@ class MarginaliaImportApplyView(APIView):
     def post(self, request):
         try:
             payload = read_uploaded_marginalia_json(request.FILES.get("file"))
-            result = apply_marginalia_import(user=request.user, payload=payload)
+            result = apply_marginalia_import(
+                user=request.user,
+                payload=payload,
+                selection_raw=request.data.get("selection"),
+            )
         except MarginaliaImportError as exc:
             return Response(
                 {"applied": False, "valid": False, "errors": exc.errors},
