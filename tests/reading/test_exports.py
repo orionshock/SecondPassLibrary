@@ -212,6 +212,58 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertNotIn("session", annotation)
         self.assertNotIn("id", annotation)
 
+    def test_export_contract_key_sets(self):
+        self.client.force_login(self.user)
+        r = cast(Any, self.client.get(self._session_url(self.session1)))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+
+        top = r.data
+        self.assertEqual(
+            set(top.keys()),
+            {"type", "schema_version", "profile", "generated_at", "generator", "scope", "books"},
+        )
+        book = top["books"][0]
+        self.assertEqual(
+            set(book.keys()),
+            {
+                "title",
+                "subtitle",
+                "authors",
+                "series",
+                "series_index",
+                "language",
+                "isbn",
+                "epub_unique_identifier",
+                "source",
+                "file_hash",
+                "sessions",
+            },
+        )
+        session = book["sessions"][0]
+        self.assertEqual(
+            set(session.keys()),
+            {
+                "export_session_id",
+                "name",
+                "status",
+                "started_at",
+                "completed_at",
+                "created_at",
+                "updated_at",
+                "notes",
+                "progress",
+                "annotations",
+            },
+        )
+        self.assertEqual(
+            set(session["progress"].keys()),
+            {"current_location", "progression", "profile_version", "updated_at"},
+        )
+        self.assertEqual(
+            set(session["annotations"][0].keys()),
+            {"motivation", "target", "body", "is_deleted", "created_at", "updated_at"},
+        )
+
     def test_text_quote_selector_context_exports_when_present(self):
         self.client.force_login(self.user)
         r = cast(Any, self.client.get(self._session_url(self.session1)))

@@ -191,6 +191,8 @@ Future possibilities:
 
 Current export support is export-only. Import is future work.
 
+The baseline export contract is documented in `docs/specs/marginalia-export.md`.
+
 Product UI:
 
 ```text
