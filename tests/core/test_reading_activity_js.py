@@ -78,6 +78,16 @@ class ReadingActivityJsRenderingTest(TestCase):
         self.assertNotIn(".style.", text)
         self.assertNotIn("style=", text)
 
+    def test_bookmark_only_annotation_uses_friendly_text(self):
+        text = self._read_js()
+
+        self.assertIn('const isBookmarkOnly = motivation === "bookmarking" && !hasQuote && !hasNote', text)
+        self.assertIn('"Bookmark"', text)
+        self.assertIn('"Saved location"', text)
+        self.assertIn('titleEl.setAttribute("title", selectorValue)', text)
+        self.assertIn('locationEl.setAttribute("title", selectorValue)', text)
+        self.assertIn("} else if (!quoteText && !noteText) {", text)
+
     def test_annotation_icons_match_reader_client_semantics(self):
         text = self._read_js()
 

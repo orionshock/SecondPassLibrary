@@ -98,10 +98,11 @@ function renderAnnotationRow(a) {
     a && a.target && a.target.selector && typeof a.target.selector.value === "string"
       ? a.target.selector.value
       : "";
+  const isBookmarkOnly = motivation === "bookmarking" && !hasQuote && !hasNote;
 
   let kindLabel = "Annotation";
   let kindIcon = "edit_note";
-  if (motivation === "bookmarking" && !hasQuote && !hasNote) {
+  if (isBookmarkOnly) {
     kindLabel = "Bookmark";
     kindIcon = "bookmark";
   } else if (hasQuote && hasNote) {
@@ -144,7 +145,16 @@ function renderAnnotationRow(a) {
     contentWrap.appendChild(noteEl);
   }
 
-  if (!quoteText && !noteText) {
+  if (isBookmarkOnly) {
+    const titleEl = el("div", "", "Bookmark");
+    const locationEl = el("div", "muted", "Saved location");
+    if (selectorValue) {
+      titleEl.setAttribute("title", selectorValue);
+      locationEl.setAttribute("title", selectorValue);
+    }
+    contentWrap.appendChild(titleEl);
+    contentWrap.appendChild(locationEl);
+  } else if (!quoteText && !noteText) {
     const fallback = selectorValue ? selectorValue : "Bookmark";
     contentWrap.appendChild(el("div", "muted", fallback));
   }
