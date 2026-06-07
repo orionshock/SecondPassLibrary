@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any, cast
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from jsonschema import Draft202012Validator
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -13,6 +15,11 @@ from accounts.models import UserClientSession, UserProfile
 from accounts.services import get_or_create_profile
 from reading.models import ReadingSession
 from reading.services import create_annotation
+from tests.reading.export_schema import (
+    SchemaValidationError,
+    assert_valid_marginalia_export,
+    load_marginalia_export_schema,
+)
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 
@@ -74,6 +81,7 @@ class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
         r = cast(Any, self.client.get(self._url(self.session2.id)))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        assert_valid_marginalia_export(r.data)
         self.assertEqual(
             r["Content-Disposition"],
             'attachment; filename="Selected-Export-selected-sessions-marginalia.json"',
@@ -142,3 +150,15 @@ class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_export_schema_rejects_local_session_and_annotation_ids(self):
+        self.client.force_login(self.user)
+        r = cast(Any, self.client.get(self._url(self.session1.id)))
+        payload = deepcopy(r.data)
+        session = payload["books"][0]["sessions"][0]
+        annotation = session["annotations"][0]
+        session["id"] = str(self.session1.id)
+        annotation["database_id"] = "local-annotation-id"
+
+        with self.assertRaises(SchemaValidationError):
+            Draft202012Validator(load_marginalia_export_schema()).validate(payload)

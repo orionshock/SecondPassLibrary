@@ -12,6 +12,7 @@ from accounts.models import UserClientSession, UserProfile
 from accounts.services import get_or_create_profile
 from reading.models import ReadingProgress, ReadingSession
 from reading.services import create_annotation
+from tests.reading.export_schema import assert_valid_marginalia_export
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 
@@ -120,6 +121,7 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.client.force_login(self.user)
         r = cast(Any, self.client.get(self._book_url()))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],
@@ -153,6 +155,7 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.client.force_login(self.user)
         r = cast(Any, self.client.get(self._session_url(self.session1)))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],

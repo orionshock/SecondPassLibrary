@@ -4,6 +4,8 @@ This is the baseline Second Pass Library marginalia export contract.
 
 It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data for all visible books, one book, or one session.
 
+The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
+
 Current support is export-only. Import and import preview are future work.
 
 ## Routes
