@@ -1,12 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (
+from .annotation_views import AnnotationViewSet
+from .progress_views import ReadingProgressViewSet
+from .session_views import (
     ActiveSessionView,
-    AnnotationViewSet,
     CloseSessionView,
     OpenBookView,
-    ReadingProgressViewSet,
     ReadingSessionViewSet,
     RecentSessionsView,
     StartOverView,
