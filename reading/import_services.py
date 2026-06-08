@@ -137,6 +137,7 @@ def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
         "session_count": len(sessions),
         **annotation_counts,
         "match": match,
+        "cover_url": _cover_url(local_book) if local_book is not None else "",
         "will_import": will_import,
         "skip_reason": None if will_import else "unmatched_book",
         "warning": skipped_warning,
@@ -284,6 +285,16 @@ def _matched(*, book: Book, method: str) -> dict[str, str]:
         "confidence": "exact",
         "book_title": book.title or "",
     }
+
+
+def _cover_url(book: Book) -> str:
+    cover = getattr(book, "cover_file", None)
+    if not cover:
+        return ""
+    try:
+        return cover.url or ""
+    except ValueError:
+        return ""
 
 
 def _hash_value(value: str) -> str:

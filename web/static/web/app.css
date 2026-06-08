@@ -526,6 +526,70 @@ a:hover { text-decoration: underline; }
 .edit-header__title { margin: 8px 0 6px 0; font-size: 20px; }
 .edit-header__badges { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
+/* Reading: Import */
+.import-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.import-book__header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.import-book__select {
+  min-width: 34px;
+  padding-top: 34px;
+}
+.import-book-select--large {
+  width: 24px;
+  height: 24px;
+}
+.import-book__main {
+  flex: 1;
+  min-width: 0;
+}
+.import-session {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.import-session__main {
+  min-width: 0;
+  flex: 1;
+}
+.import-session__label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+}
+.modal[hidden] { display: none; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.62);
+}
+.modal__panel {
+  width: min(620px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--panel);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
 /* Reading: Marginalia */
 .annotation-card { padding: 12px 14px; }
 .annotation-card__body { display: flex; gap: 10px; align-items: flex-start; }
