@@ -88,12 +88,12 @@ Highlight color:
 
 Second Pass Library's current server export contract is the SPL nested marginalia format documented in `docs/specs/marginalia-export.md`.
 
-Server-side marginalia import is currently preview-only. Apply/import writes are future work. Server import should accept SPL native marginalia exports only. The server should not become an importer for provider-specific formats such as Kindle/Calibre/vendor annotation dumps.
+Server-side marginalia import supports SPL native marginalia exports only. Preview validates and stages the native export with a short-lived import token; apply imports matched visible books as historical sessions, optionally limited to selected export-local sessions. The server should not become an importer for provider-specific formats such as Kindle/Calibre/vendor annotation dumps.
 
 Foreign annotation sources should be normalized outside the server:
 
 - A reader client can convert foreign annotations into normal reading session/progress/annotation API writes.
-- An external tool can convert foreign annotations into the SPL native marginalia export shape for server preview and future apply/import.
+- An external tool can convert foreign annotations into the SPL native marginalia export shape for server preview/apply.
 
 ## Future possibilities
 

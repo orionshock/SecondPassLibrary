@@ -187,7 +187,7 @@ The old annotation remains immutable.
 
 The implemented server export format is the SPL nested marginalia format, not this draft JSON-LD profile. See `../marginalia-export.md`.
 
-Server-side marginalia import is currently preview-only. Apply/import writes are future work. Server import should accept SPL native marginalia exports only.
+Server-side marginalia import supports SPL native marginalia exports only. Preview validates and stages the native export with a short-lived import token; apply imports matched visible books as historical sessions, optionally limited to selected export-local sessions.
 
 Foreign/provider-specific formats should be normalized outside the server:
 

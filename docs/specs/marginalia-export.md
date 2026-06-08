@@ -6,7 +6,7 @@ It is distinct from the normal Reading API annotation response shape. The normal
 
 The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
 
-Current support includes export and import preview. Apply/import writes are future work.
+Current support includes export, import preview, and native import apply for matched visible books. Preview stages the validated payload with a short-lived import token; apply imports selected sessions as historical sessions.
 
 This SPL nested marginalia format is the native server import format. The server should not import foreign/provider-specific annotation formats directly. Foreign imports should be normalized by a reader client and sent through the normal reading session/progress/annotation APIs, or converted by an external tool into this SPL native format before server import.
 
@@ -26,6 +26,7 @@ GET /api/v1/reading/export/
 GET /api/v1/reading/export/books/<book_id>/
 GET /api/v1/reading/export/books/<book_id>/<session_id>/
 POST /api/v1/reading/import/preview/
+POST /api/v1/reading/import/apply/
 ```
 
 `GET /api/v1/reading/export/books/<book_id>/` also accepts repeated `session` query parameters to export a selected subset of sessions for that book:

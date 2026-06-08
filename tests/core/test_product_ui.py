@@ -447,7 +447,7 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get("/reading/export/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Export Marginalia")
-        self.assertContains(response, "Import is preview-only.")
+        self.assertContains(response, "Native SPL exports can be previewed and imported")
         self.assertContains(response, 'href="/api/v1/reading/export/"')
         self.assertContains(response, "Export all marginalia")
         self.assertNotContains(response, "Import preview")

@@ -26,7 +26,7 @@ The current server export contract is the SPL nested marginalia format in `../ma
 
 ## Server Import Policy
 
-Server-side marginalia import is currently preview-only. Apply/import writes are future work. Server import should support SPL native marginalia exports only.
+Server-side marginalia import supports SPL native marginalia exports only. Preview validates and stages the native export with a short-lived import token; apply imports matched visible books as historical sessions, optionally limited to selected export-local sessions.
 
 Foreign/provider-specific formats should be normalized by a client and sent through the normal reading APIs, or converted by an external tool into SPL native marginalia export format before server import.
 
