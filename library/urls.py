@@ -1,14 +1,10 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (
-    AuthorViewSet,
-    BookFileViewSet,
-    BookViewSet,
-    ImportJobViewSet,
-    LibraryGroupViewSet,
-    SeriesViewSet,
-)
+from .catalog_views import AuthorViewSet, BookViewSet, SeriesViewSet
+from .file_views import BookFileViewSet
+from .group_views import LibraryGroupViewSet
+from .import_views import ImportJobViewSet
 
 app_name = "library"
 
