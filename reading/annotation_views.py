@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from accounts.authentication import ClientBearerAuthentication
 from core.models import IdempotencyRecord
 
+from .annotation_profile_services import compact_annotation_from_profile
 from .models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingSession
 from .profile import validate_annotation_body, validate_profile_version
 from .serializers import AnnotationSerializer
@@ -306,9 +307,7 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
 
-        compact = serializer._compact_from_profile(  # type: ignore[attr-defined]
-            motivations=motivations, target=target, body=body
-        )
+        compact = compact_annotation_from_profile(motivations=motivations, target=target, body=body)
         anchor_kind = cast(str, compact.pop("anchor_kind"))
         annotation = create_annotation(session=session, anchor_kind=anchor_kind, **compact)
         serializer.instance = annotation
@@ -320,9 +319,7 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
 
-        compact = serializer._compact_from_profile(  # type: ignore[attr-defined]
-            motivations=motivations, target=target, body=body
-        )
+        compact = compact_annotation_from_profile(motivations=motivations, target=target, body=body)
         anchor_kind = cast(str, compact.pop("anchor_kind"))
         update_annotation(annotation=annotation, anchor_kind=anchor_kind, **compact)
 
