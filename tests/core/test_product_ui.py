@@ -489,6 +489,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("bookBox.indeterminate", js)
         self.assertIn("No matched local books can be imported.", js)
         self.assertIn("/api/v1/reading/import/apply/", js)
+        self.assertIn('formData.append("import_token", currentImportToken)', js)
         self.assertIn('formData.append("selection"', js)
         self.assertIn("buildSelection", js)
         self.assertIn("clearImportData", js)

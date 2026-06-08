@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -13,6 +15,7 @@ from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
 from reading.import_apply_services import apply_marginalia_import
 from reading.import_services import preview_marginalia_import
+from reading.import_staging import stage_marginalia_import, staged_import_path
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
@@ -47,6 +50,12 @@ class MarginaliaImportApplyApiTests(IsolatedUserdataMixin, APITestCase):
 
     def _post_payload(self, payload, *, selection=None):
         data = {"file": self._upload(payload)}
+        if selection is not None:
+            data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
+        return self.client.post(self._url(), data, format="multipart")
+
+    def _post_token(self, token, *, selection=None):
+        data = {"import_token": token}
         if selection is not None:
             data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
         return self.client.post(self._url(), data, format="multipart")
@@ -223,6 +232,57 @@ class MarginaliaImportApplyApiTests(IsolatedUserdataMixin, APITestCase):
 
         commented = Annotation.objects.get(comment_text="note")
         self.assertEqual(commented.highlight_text, "commented highlight")
+
+    def test_apply_with_valid_token_imports_and_consumes_staged_file(self):
+        payload = self._payload()
+        token = stage_marginalia_import(user=self.user, payload=payload)
+        path = staged_import_path(token)
+
+        self.client.force_login(self.user)
+        r = cast(Any, self._post_token(token))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["summary"]["sessions_created"], 1)
+        self.assertEqual(ReadingSession.objects.count(), 1)
+        self.assertFalse(path.exists())
+
+    def test_apply_with_another_users_token_returns_400_and_no_writes(self):
+        other = User.objects.create_user(username="other", password="pw")
+        token = stage_marginalia_import(user=other, payload=self._payload())
+
+        self.client.force_login(self.user)
+        r = cast(Any, self._post_token(token))
+
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(r.data["applied"])
+        self.assertEqual(ReadingSession.objects.count(), 0)
+        self.assertEqual(Annotation.objects.count(), 0)
+
+    def test_apply_with_invalid_or_traversal_token_returns_400_and_no_writes(self):
+        self.client.force_login(self.user)
+        for token in ["../bad", "bad.json", "short"]:
+            r = cast(Any, self._post_token(token))
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertFalse(r.data["applied"])
+        self.assertEqual(ReadingSession.objects.count(), 0)
+        self.assertEqual(Annotation.objects.count(), 0)
+
+    def test_apply_with_missing_or_expired_token_returns_400_and_no_writes(self):
+        token = stage_marginalia_import(user=self.user, payload=self._payload())
+        path = staged_import_path(token)
+        staged = json.loads(path.read_text(encoding="utf-8"))
+        staged["staged_at"] = (timezone.now() - timedelta(hours=25)).isoformat()
+        path.write_text(json.dumps(staged), encoding="utf-8")
+
+        self.client.force_login(self.user)
+        expired = cast(Any, self._post_token(token))
+        missing = cast(Any, self._post_token("A" * 40))
+
+        self.assertEqual(expired.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Import preview expired", expired.data["errors"][0]["message"])
+        self.assertEqual(ReadingSession.objects.count(), 0)
+        self.assertEqual(Annotation.objects.count(), 0)
 
     def test_apply_with_selection_imports_only_selected_sessions_with_overrides(self):
         payload = self._payload()

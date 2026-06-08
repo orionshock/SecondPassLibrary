@@ -186,6 +186,7 @@ export async function initReadingImportPreview() {
   const modalCancel = $("#reading-import-session-modal-cancel");
   if (!form || !input || !statusEl || !resultsEl || !applyControlsEl || !applyResultsEl || !submitBtn || !modal || !modalForm || !modalName || !modalNotes || !modalCancel) return;
   let currentPreview = null;
+  let currentImportToken = "";
   let editingSession = null;
 
   function fileFormData() {
@@ -198,6 +199,7 @@ export async function initReadingImportPreview() {
 
   input.addEventListener("change", () => {
     currentPreview = null;
+    currentImportToken = "";
     resultsEl.innerHTML = '<div class="muted">No preview yet.</div>';
     applyControlsEl.textContent = "Preview a file to see whether it can be imported.";
     applyResultsEl.innerHTML = "";
@@ -223,6 +225,7 @@ export async function initReadingImportPreview() {
         headers: { Accept: "application/json", ...(csrf ? { "X-CSRFToken": csrf } : {}) },
         body: formData,
       });
+      currentImportToken = currentPreview.import_token || "";
       statusEl.textContent = "Preview ready.";
       resultsEl.classList.remove("error", "muted");
       resultsEl.innerHTML = renderPreview(currentPreview);
@@ -292,12 +295,13 @@ export async function initReadingImportPreview() {
       return;
     }
     if (target.id !== "reading-import-apply-submit") return;
-    const formData = fileFormData();
-    if (!formData || !currentPreview) {
+    if (!currentImportToken || !currentPreview) {
       applyResultsEl.classList.add("error");
       applyResultsEl.textContent = "Choose and preview the JSON export file again before applying.";
       return;
     }
+    const formData = new FormData();
+    formData.append("import_token", currentImportToken);
     formData.append("selection", JSON.stringify(buildSelection(currentPreview, resultsEl)));
     target.disabled = true;
     applyResultsEl.classList.remove("error", "muted");
@@ -312,6 +316,7 @@ export async function initReadingImportPreview() {
       });
       applyResultsEl.innerHTML = renderApplyResult(result);
       currentPreview = null;
+      currentImportToken = "";
       clearImportData({ input, resultsEl, applyControlsEl, statusEl });
     } catch (error) {
       applyResultsEl.classList.add("error");

@@ -72,7 +72,9 @@ Apply API:
 POST /api/v1/reading/import/apply/
 ```
 
-The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It accepts the same uploaded SPL native marginalia JSON export file as preview, re-validates it against the schema, and imports matched sessions from matched visible local books. It does not create import jobs.
+Preview stores a short-lived staged copy under `userdata/imports/staged/` and returns an `import_token`. Staged files are filesystem-only, expire after roughly 24 hours, and are deleted after successful apply. No import jobs or import history are stored.
+
+The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It accepts the preview `import_token`, re-validates the staged payload against the schema, and imports matched sessions from matched visible local books. It does not create import jobs. The older file-upload apply path remains available for compatibility, but the product UI uses `import_token`.
 
 Apply may include an optional multipart `selection` field containing JSON. If omitted, all matched sessions are imported. If present, only selected sessions are imported, and each selected session may override the imported session `name` and `notes`.
 

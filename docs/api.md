@@ -396,9 +396,9 @@ See `docs/permissions.md` for the visibility/curation rules.
   - `GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>` exports a selected subset of current-user sessions for one visible book.
   - `GET /api/v1/reading/export/books/<book_id>/<session_id>/` exports one current-user session for one visible book.
 - Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, summarizes contents, reports visible local book matches, and does not write data.
+  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches.
 - Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/apply/` accepts one uploaded SPL native marginalia JSON export file, re-validates it, imports matched sessions for visible local books as historical sessions, skips unmatched books, and does not import foreign/provider formats.
+  - `POST /api/v1/reading/import/apply/` accepts an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not import foreign/provider formats.
   - Optional multipart `selection` JSON limits import to selected export-local sessions and may override imported session `name`/`notes`.
 
 Reading payload notes:

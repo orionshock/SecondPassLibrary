@@ -12,6 +12,11 @@ from .import_services import (
     preview_marginalia_import,
     read_uploaded_marginalia_json,
 )
+from .import_staging import (
+    delete_staged_marginalia_import,
+    load_staged_marginalia_import,
+    stage_marginalia_import,
+)
 
 
 class MarginaliaImportPreviewView(APIView):
@@ -23,6 +28,10 @@ class MarginaliaImportPreviewView(APIView):
         try:
             payload = read_uploaded_marginalia_json(request.FILES.get("file"))
             preview = preview_marginalia_import(user=request.user, payload=payload)
+            preview["import_token"] = stage_marginalia_import(
+                user=request.user,
+                payload=payload,
+            )
         except MarginaliaImportError as exc:
             return Response(
                 {"valid": False, "errors": exc.errors, "can_apply": False},
@@ -38,13 +47,19 @@ class MarginaliaImportApplyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        token = request.data.get("import_token")
         try:
-            payload = read_uploaded_marginalia_json(request.FILES.get("file"))
+            if token:
+                payload = load_staged_marginalia_import(user=request.user, token=token)
+            else:
+                payload = read_uploaded_marginalia_json(request.FILES.get("file"))
             result = apply_marginalia_import(
                 user=request.user,
                 payload=payload,
                 selection_raw=request.data.get("selection"),
             )
+            if token:
+                delete_staged_marginalia_import(token=token)
         except MarginaliaImportError as exc:
             return Response(
                 {"applied": False, "valid": False, "errors": exc.errors},

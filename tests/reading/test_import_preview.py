@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, cast
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.dateparse import parse_datetime
@@ -167,6 +169,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["valid"])
+        self.assertRegex(r.data["import_token"], r"^[A-Za-z0-9_-]{32,128}$")
         self.assertTrue(r.data["can_apply"])
         self.assertEqual(r.data["schema_version"], "0.1.0")
         self.assertEqual(r.data["scope"]["type"], "book")
@@ -209,6 +212,18 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(session["commented_highlight_count"], 1)
         self.assertTrue(session["will_import"])
         self.assertFalse(session["active_will_import_as_historical"])
+
+    def test_preview_creates_staged_file_with_user_and_payload(self):
+        self.client.force_login(self.user)
+        payload = self._payload()
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        path = Path(settings.IMPORTS_DIR) / "staged" / f"{r.data['import_token']}.json"
+        self.assertTrue(path.exists())
+        staged = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(staged["user_id"], self.user.id)
+        self.assertEqual(staged["payload"], payload)
 
     def test_preview_does_not_create_sessions_or_annotations(self):
         self.client.force_login(self.user)
