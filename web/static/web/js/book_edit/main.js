@@ -11,8 +11,12 @@ import { initTabs } from "./tabs.js";
 import { applyBookToMetadataForm, buildBookPatchPayload } from "./metadata.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";
 import { renderGroups, syncGroupsAddOptions } from "./groups.js";
-import { renderHeader, renderFileInfo, renderIdentifiersTable } from "./identifiers_file.js";
+import { renderHeader, renderFileInfo } from "./identifiers_file.js";
 import { refreshShelvesContext } from "./shelves.js";
+import { bindAuthorSeriesActions } from "./author_series_actions.js";
+import { bindGroupActions } from "./group_actions.js";
+import { bindIdentifierActions, refreshIdentifiersContext } from "./identifiers_actions.js";
+import { bindShelfActions } from "./shelf_actions.js";
 import { mountCovers } from "../ui/covers.js";
 
 export async function initBookEdit() {
@@ -164,13 +168,15 @@ export async function initBookEdit() {
     seriesSelectEl,
   };
 
-  let book = null;
-  let identifiers = [];
-  let allAuthors = [];
-  let allSeries = [];
-  let selectedAuthors = [];
-  let allGroups = [];
-  let groups = [];
+  const state = {
+    book: null,
+    identifiers: [],
+    allAuthors: [],
+    allSeries: [],
+    selectedAuthors: [],
+    allGroups: [],
+    groups: [],
+  };
 
   async function refreshShelves() {
     await refreshShelvesContext({
@@ -182,42 +188,29 @@ export async function initBookEdit() {
     });
   }
 
-  async function refreshIdentifiers() {
-    setInlineStatus(identifiersStatusEl, "Loading...", false);
-    try {
-      const list = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`);
-      identifiers = Array.isArray(list) ? list : [];
-      setInlineStatus(identifiersStatusEl, "", false);
-      renderIdentifiersTable({ identifiers, identifiersEl });
-    } catch (e) {
-      console.error("Failed to load identifiers", e);
-      setInlineStatus(identifiersStatusEl, "Failed to load.", true);
-      setError(`Failed to load identifiers: ${extractApiErrorMessage(e)}`);
-      identifiers = [];
-      renderIdentifiersTable({ identifiers, identifiersEl });
-    }
-  }
+  const refreshIdentifiers = () =>
+    refreshIdentifiersContext({ bookId, identifiersStatusEl, identifiersEl, state, setError });
 
   async function refreshBook() {
-    book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
-    selectedAuthors = uniqueById(Array.isArray(book.authors) ? book.authors : []);
-    groups = Array.isArray(book.groups) ? book.groups : [];
+    state.book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
+    state.selectedAuthors = uniqueById(Array.isArray(state.book.authors) ? state.book.authors : []);
+    state.groups = Array.isArray(state.book.groups) ? state.book.groups : [];
 
-    applyBookToMetadataForm({ book, dom, selectedAuthors });
+    applyBookToMetadataForm({ book: state.book, dom, selectedAuthors: state.selectedAuthors });
 
-    renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
+    renderHeader({ book: state.book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
 
-    const titleText = book && book.title ? String(book.title) : "";
-    const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
+    const titleText = state.book && state.book.title ? String(state.book.title) : "";
+    const coverUrl = state.book && state.book.cover_url ? String(state.book.cover_url) : "";
     headerCoverEl.dataset.coverUrl = coverUrl;
     headerCoverEl.dataset.coverTitle = titleText;
     mountCovers(headerEl);
-    renderFileInfo({ book, fileInfoEl });
-    renderSelectedAuthors({ selectedAuthors, authorsSelectedEl });
-    syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
-    syncSeriesSelectOptions({ allSeries, seriesSelectEl, selectedId: book.series && book.series.id ? String(book.series.id) : "" });
-    renderGroups({ groups, groupsEl });
-    syncGroupsAddOptions({ allGroups, groups, groupsAddSelectEl, groupsAddBtnEl });
+    renderFileInfo({ book: state.book, fileInfoEl });
+    renderSelectedAuthors({ selectedAuthors: state.selectedAuthors, authorsSelectedEl });
+    syncAuthorSelectOptions({ allAuthors: state.allAuthors, selectedAuthors: state.selectedAuthors, authorAddSelectEl, authorAddBtnEl });
+    syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
+    renderGroups({ groups: state.groups, groupsEl });
+    syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
     await refreshShelves();
   }
 
@@ -245,338 +238,76 @@ export async function initBookEdit() {
   // Load option lists.
   setInlineStatus(authorsStatusEl, "Loading...", false);
   try {
-    allAuthors = uniqueById(await fetchAllPages("/api/v1/library/authors/"));
+    state.allAuthors = uniqueById(await fetchAllPages("/api/v1/library/authors/"));
     setInlineStatus(authorsStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load authors", e);
     setInlineStatus(authorsStatusEl, "Failed to load.", true);
-    allAuthors = [];
+    state.allAuthors = [];
   }
-  syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
+  syncAuthorSelectOptions({ allAuthors: state.allAuthors, selectedAuthors: state.selectedAuthors, authorAddSelectEl, authorAddBtnEl });
 
   setInlineStatus(seriesStatusEl, "Loading...", false);
   try {
-    allSeries = uniqueById(await fetchAllPages("/api/v1/library/series/"));
+    state.allSeries = uniqueById(await fetchAllPages("/api/v1/library/series/"));
     setInlineStatus(seriesStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load series", e);
     setInlineStatus(seriesStatusEl, "Failed to load.", true);
-    allSeries = [];
+    state.allSeries = [];
   }
-  syncSeriesSelectOptions({ allSeries, seriesSelectEl, selectedId: book && book.series && book.series.id ? String(book.series.id) : "" });
+  syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book && state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
 
   setInlineStatus(groupsStatusEl, "Loading...", false);
   try {
-    allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
+    state.allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
     setInlineStatus(groupsStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load groups", e);
     setInlineStatus(groupsStatusEl, "Failed to load.", true);
-    allGroups = [];
+    state.allGroups = [];
   }
-  syncGroupsAddOptions({ allGroups, groups, groupsAddSelectEl, groupsAddBtnEl });
+  syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
 
   await refreshIdentifiers();
 
-  // Shelves interactions (remove book from shelf)
-  shelvesEl.addEventListener("click", async (e) => {
-    const target = e.target;
-    if (!target || target.nodeType !== 1) return;
-    if (target.getAttribute("data-action") !== "remove-from-shelf") return;
-    const shelfId = target.getAttribute("data-shelf-id");
-    const itemId = target.getAttribute("data-item-id");
-    if (!shelfId || !itemId) return;
-
-    const ok = window.confirm("Remove this book from this shelf?");
-    if (!ok) return;
-
-    setInlineStatus(shelvesStatusEl, "Removing...", false);
-    try {
-      const csrf = getCsrfToken();
-      const headers = { Accept: "application/json" };
-      if (csrf) headers["X-CSRFToken"] = csrf;
-      await fetchJSONWithOptions(
-        `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/${encodeURIComponent(String(itemId))}/`,
-        { method: "DELETE", headers }
-      );
-      await refreshShelves();
-      setInlineStatus(shelvesStatusEl, "", false);
-    } catch (e2) {
-      console.error("Failed to remove book from shelf", { shelfId, itemId, e2 });
-      setInlineStatus(shelvesStatusEl, extractApiErrorMessage(e2) || "Failed to remove.", true);
-    }
+  bindShelfActions({ shelvesEl, shelvesStatusEl, refreshShelves });
+  bindAuthorSeriesActions({
+    state,
+    authorsSelectedEl,
+    authorsStatusEl,
+    authorAddSelectEl,
+    authorAddBtnEl,
+    authorNewNameEl,
+    authorNewBtnEl,
+    seriesSelectEl,
+    seriesStatusEl,
+    seriesNewNameEl,
+    seriesNewBtnEl,
+    seriesIndexEl,
+    headerTitleEl,
+    headerAuthorsEl,
+    headerSeriesEl,
+    headerFileEl,
+    setError,
   });
-
-  // Authors interactions
-  authorsSelectedEl.addEventListener("click", (ev) => {
-    const t = ev.target;
-    if (!t || !t.getAttribute) return;
-    const id = t.getAttribute("data-remove-author-id");
-    if (!id) return;
-    selectedAuthors = selectedAuthors.filter((a) => String(a.id) !== String(id));
-    renderSelectedAuthors({ selectedAuthors, authorsSelectedEl });
-    syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
-    if (book) book.authors = selectedAuthors;
-    renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
+  bindGroupActions({
+    bookId,
+    groupsEl,
+    groupsStatusEl,
+    groupsAddFormEl,
+    groupsAddSelectEl,
+    groupsAddStatusEl,
+    refreshBook,
+    setError,
   });
-
-  authorAddBtnEl.addEventListener("click", () => {
-    const id = authorAddSelectEl.value || "";
-    if (!id) return;
-    const found = allAuthors.find((a) => String(a.id) === String(id));
-    if (!found) return;
-    selectedAuthors.push(found);
-    selectedAuthors = uniqueById(selectedAuthors);
-    renderSelectedAuthors({ selectedAuthors, authorsSelectedEl });
-    syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
-    if (book) book.authors = selectedAuthors;
-    renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
-  });
-
-  authorNewBtnEl.addEventListener("click", async () => {
-    setError("");
-    const name = (authorNewNameEl.value || "").trim();
-    if (!name) {
-      setError("Author name is required.");
-      return;
-    }
-    const csrf = getCsrfToken();
-    if (!csrf) {
-      setError("Missing CSRF token cookie. Reload the page and try again.");
-      return;
-    }
-    setInlineStatus(authorsStatusEl, "Creating...", false);
-    try {
-      const created = await fetchJSONWithOptions("/api/v1/library/authors/", {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-        body: JSON.stringify({ name }),
-      });
-      allAuthors.push(created);
-      allAuthors = uniqueById(allAuthors);
-      selectedAuthors.push(created);
-      selectedAuthors = uniqueById(selectedAuthors);
-      authorNewNameEl.value = "";
-      setInlineStatus(authorsStatusEl, "Created.", false);
-      renderSelectedAuthors({ selectedAuthors, authorsSelectedEl });
-      syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAddSelectEl, authorAddBtnEl });
-      if (book) book.authors = selectedAuthors;
-      renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
-    } catch (e2) {
-      console.error("Failed to create author", e2);
-      setInlineStatus(authorsStatusEl, "Create failed.", true);
-      setError(`Failed to create author: ${extractApiErrorMessage(e2)}`);
-    }
-  });
-
-  // Series interactions
-  seriesNewBtnEl.addEventListener("click", async () => {
-    setError("");
-    const name = (seriesNewNameEl.value || "").trim();
-    if (!name) {
-      setError("Series name is required.");
-      return;
-    }
-    const csrf = getCsrfToken();
-    if (!csrf) {
-      setError("Missing CSRF token cookie. Reload the page and try again.");
-      return;
-    }
-    setInlineStatus(seriesStatusEl, "Creating...", false);
-    try {
-      const created = await fetchJSONWithOptions("/api/v1/library/series/", {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-        body: JSON.stringify({ name }),
-      });
-      allSeries.push(created);
-      allSeries = uniqueById(allSeries);
-      seriesNewNameEl.value = "";
-      setInlineStatus(seriesStatusEl, "Created.", false);
-      syncSeriesSelectOptions({ allSeries, seriesSelectEl, selectedId: created && created.id ? String(created.id) : "" });
-      if (book) book.series = created;
-      renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
-    } catch (e2) {
-      console.error("Failed to create series", e2);
-      setInlineStatus(seriesStatusEl, "Create failed.", true);
-      setError(`Failed to create series: ${extractApiErrorMessage(e2)}`);
-    }
-  });
-
-  seriesSelectEl.addEventListener("change", () => {
-    const sid = seriesSelectEl.value || "";
-    if (book) book.series = sid ? allSeries.find((s) => String(s.id) === String(sid)) : null;
-    renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
-  });
-  seriesIndexEl.addEventListener("input", () => {
-    if (book) book.series_index = seriesIndexEl.value || null;
-    renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
-  });
-
-  // Groups interactions
-  groupsEl.addEventListener("click", async (ev) => {
-    const t = ev.target;
-    if (!t || !t.getAttribute) return;
-    const gid = t.getAttribute("data-group-remove-id");
-    if (!gid) return;
-    const csrf = getCsrfToken();
-    if (!csrf) {
-      setError("Missing CSRF token cookie. Reload the page and try again.");
-      return;
-    }
-    setInlineStatus(groupsStatusEl, "Removing...", false);
-    try {
-      await fetchJSONWithOptions(
-        `/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/${encodeURIComponent(String(bookId))}/`,
-        { method: "DELETE", headers: { Accept: "application/json", "X-CSRFToken": csrf } }
-      );
-      setInlineStatus(groupsStatusEl, "", false);
-      await refreshBook();
-    } catch (e) {
-      console.error("Remove group assignment failed", e);
-      setInlineStatus(groupsStatusEl, "Remove failed.", true);
-      setError(`Failed to remove from group: ${extractApiErrorMessage(e)}`);
-    }
-  });
-
-  groupsAddFormEl.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    setError("");
-    setInlineStatus(groupsAddStatusEl, "", false);
-    const gid = (groupsAddSelectEl.value || "").trim();
-    if (!gid) return;
-    const csrf = getCsrfToken();
-    if (!csrf) {
-      setError("Missing CSRF token cookie. Reload the page and try again.");
-      return;
-    }
-    setInlineStatus(groupsAddStatusEl, "Adding...", false);
-    try {
-      await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/`, {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-        body: JSON.stringify({ book: String(bookId) }),
-      });
-      setInlineStatus(groupsAddStatusEl, "Added.", false);
-      await refreshBook();
-    } catch (e) {
-      console.error("Add group assignment failed", e);
-      setInlineStatus(groupsAddStatusEl, "Add failed.", true);
-      const msg = extractApiErrorMessage(e);
-      const body = e && e.body ? e.body : null;
-      const fields = summarizeFieldErrors(body);
-      setError(fields ? `${msg} (${fields})` : msg);
-    }
-  });
-
-  // Identifiers interactions (table event delegation)
-  identifiersEl.addEventListener("click", async (ev) => {
-    const t = ev.target;
-    if (!t || !t.getAttribute) return;
-    const action = t.getAttribute("data-ident-action");
-    if (!action) return;
-
-    const csrf = getCsrfToken();
-    if (!csrf) {
-      setError("Missing CSRF token cookie. Reload the page and try again.");
-      return;
-    }
-
-    const row = t.closest ? t.closest("tr") : null;
-    if (!row) return;
-    const statusSpan = row.querySelector ? row.querySelector("[data-ident-status]") : null;
-    const setRowStatus = (text, isError) => setInlineStatus(statusSpan, text, isError);
-
-    if (action === "add") {
-      const schemeEl = row.querySelector('[data-ident-add-field="scheme"]');
-      const valueEl = row.querySelector('[data-ident-add-field="value"]');
-      const sourceEl = row.querySelector('[data-ident-add-field="source"]');
-      const primaryEl = row.querySelector('[data-ident-add-field="is_primary"]');
-      const payload = {
-        scheme: schemeEl && schemeEl.value != null ? String(schemeEl.value).trim() : "",
-        value: valueEl && valueEl.value != null ? String(valueEl.value).trim() : "",
-        source: sourceEl && sourceEl.value != null ? String(sourceEl.value).trim() : "",
-        is_primary: !!(primaryEl && primaryEl.checked),
-      };
-      setRowStatus("Adding...", false);
-      try {
-        await fetchJSONWithOptions(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`, {
-          method: "POST",
-          headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-          body: JSON.stringify(payload),
-        });
-        setRowStatus("Added.", false);
-        await refreshIdentifiers();
-      } catch (e) {
-        console.error("Add identifier failed", e);
-        setRowStatus("Add failed.", true);
-        const msg = extractApiErrorMessage(e);
-        const body = e && e.body ? e.body : null;
-        const fields = summarizeFieldErrors(body);
-        setError(fields ? `${msg} (${fields})` : msg);
-      }
-      return;
-    }
-
-    const identId = row.getAttribute("data-ident-id") || "";
-    if (!identId) return;
-
-    if (action === "delete") {
-      setRowStatus("Deleting...", false);
-      try {
-        await fetchJSONWithOptions(
-          `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/${encodeURIComponent(String(identId))}/`,
-          { method: "DELETE", headers: { Accept: "application/json", "X-CSRFToken": csrf } }
-        );
-        setRowStatus("Deleted.", false);
-        await refreshIdentifiers();
-      } catch (e) {
-        console.error("Delete identifier failed", e);
-        setRowStatus("Delete failed.", true);
-        setError(`Failed to delete identifier: ${extractApiErrorMessage(e)}`);
-      }
-      return;
-    }
-
-    if (action === "save") {
-      const schemeEl = row.querySelector('[data-ident-field="scheme"]');
-      const valueEl = row.querySelector('[data-ident-field="value"]');
-      const sourceEl = row.querySelector('[data-ident-field="source"]');
-      const primaryEl = row.querySelector('[data-ident-field="is_primary"]');
-      const payload = {
-        scheme: schemeEl && schemeEl.value != null ? String(schemeEl.value).trim() : "",
-        value: valueEl && valueEl.value != null ? String(valueEl.value).trim() : "",
-        source: sourceEl && sourceEl.value != null ? String(sourceEl.value).trim() : "",
-        is_primary: !!(primaryEl && primaryEl.checked),
-      };
-      setRowStatus("Saving...", false);
-      try {
-        await fetchJSONWithOptions(
-          `/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/${encodeURIComponent(String(identId))}/`,
-          {
-            method: "PATCH",
-            headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-            body: JSON.stringify(payload),
-          }
-        );
-        setRowStatus("Saved.", false);
-        await refreshIdentifiers();
-      } catch (e) {
-        console.error("Save identifier failed", e);
-        setRowStatus("Save failed.", true);
-        const msg = extractApiErrorMessage(e);
-        const body = e && e.body ? e.body : null;
-        const fields = summarizeFieldErrors(body);
-        setError(fields ? `${msg} (${fields})` : msg);
-      }
-    }
-  });
+  bindIdentifierActions({ bookId, identifiersEl, refreshIdentifiers, setError });
 
   async function saveBook() {
     setError("");
     setSaved(false);
 
-    const built = buildBookPatchPayload({ dom: { ...dom, seriesSelectEl }, selectedAuthors });
+    const built = buildBookPatchPayload({ dom: { ...dom, seriesSelectEl }, selectedAuthors: state.selectedAuthors });
     if (built && built.error) {
       setError(built.error);
       return;
@@ -596,7 +327,7 @@ export async function initBookEdit() {
         headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
         body: JSON.stringify(payload),
       });
-      book = updated;
+      state.book = updated;
       setSaved(true);
       setText(saveStatusEl, "");
       await refreshBook();
