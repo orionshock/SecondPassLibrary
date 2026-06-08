@@ -32,7 +32,7 @@ from .models import (
     is_public_group,
     BookGroupAssignment,
 )
-from .serializers import (
+from .catalog_serializers import (
     AuthorSerializer,
     BookFileSerializer,
     BookSerializer,
@@ -40,6 +40,8 @@ from .serializers import (
     BookIdentifierWriteSerializer,
     SeriesSerializer,
     ImportJobSerializer,
+)
+from .group_serializers import (
     LibraryGroupSerializer,
     LibraryGroupCreateSerializer,
     LibraryGroupPresentationUpdateSerializer,

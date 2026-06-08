@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from library.models import Book, LibraryGroup, is_public_group
-from library.serializers import AuthorSummarySerializer, SeriesSummarySerializer
+from library.catalog_serializers import AuthorSummarySerializer, SeriesSummarySerializer
 from accounts.models import UserClientSession
 
 from .models import Shelf, ShelfItem
