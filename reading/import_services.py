@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
@@ -278,7 +278,7 @@ def match_exported_book(*, user, exported: dict[str, Any]) -> tuple[Book | None,
     return None, {"status": "unmatched", "method": None, "confidence": "none", "book_title": None}
 
 
-def _matched(*, book: Book, method: str) -> dict[str, str]:
+def _matched(*, book: Book, method: str) -> dict[str, str | None]:
     return {
         "status": "matched",
         "method": method,
@@ -313,7 +313,7 @@ def _normalize_text(value: str) -> str:
 
 def _book_isbns(book: Book) -> set[str]:
     values = {_normalize_isbn(book.isbn)}
-    for identifier in book.identifiers.all():
+    for identifier in cast(Any, book).identifiers.all():
         if identifier.scheme in {BookIdentifier.SCHEME_ISBN_10, BookIdentifier.SCHEME_ISBN_13}:
             values.add(_normalize_isbn(identifier.value))
     return {value for value in values if value}
