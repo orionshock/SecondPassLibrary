@@ -8,16 +8,21 @@ from django.test import TestCase
 
 class ReadingActivityJsRenderingTest(TestCase):
     def _read_js(self) -> str:
-        js_path = (
+        js_dir = (
             Path(settings.BASE_DIR)
             / "web"
             / "static"
             / "web"
             / "js"
             / "reading"
-            / "activity.js"
         )
-        return js_path.read_text(encoding="utf-8")
+        return "\n".join(
+            [
+                (js_dir / "activity.js").read_text(encoding="utf-8"),
+                (js_dir / "activity_actions.js").read_text(encoding="utf-8"),
+                (js_dir / "activity_rendering.js").read_text(encoding="utf-8"),
+            ]
+        )
 
     def test_annotation_cards_do_not_render_session_id(self):
         text = self._read_js()
@@ -37,9 +42,9 @@ class ReadingActivityJsRenderingTest(TestCase):
     def test_close_session_action_is_guarded_and_posts_to_close_endpoint(self):
         text = self._read_js()
 
-        self.assertIn("sessionIsWritable()", text)
-        self.assertIn('sessionStatus === "active" && sessionIsActive === true', text)
-        self.assertIn("visible(sessionCloseBtn, !!sessionId && sessionIsWritable())", text)
+        self.assertIn("sessionIsWritable(state)", text)
+        self.assertIn('state.sessionStatus === "active" && state.sessionIsActive === true', text)
+        self.assertIn("visible(sessionCloseBtn, !!state.sessionId && sessionIsWritable(state))", text)
         self.assertIn("visible(sessionCloseBtn, false)", text)
         self.assertIn("/api/v1/reading/sessions/${encodeURIComponent(String(sessionId))}/close/", text)
         self.assertIn("method: \"POST\"", text)
