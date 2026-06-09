@@ -175,7 +175,6 @@ Notes:
 - `PATCH /api/v1/reading/annotations/<id>/` supports only:
   - note/comment body text (`body[]` with `purpose="commenting"`)
   - highlight color token (`body[]` with `purpose="describing"` and `color`)
-- `source_import` is reserved for server-side import/provenance. It is not exposed as a normal client-writable field via the public API.
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
 

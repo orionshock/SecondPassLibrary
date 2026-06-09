@@ -366,7 +366,6 @@ Examples of common `400` errors you should expect during client integration:
 - Invalid/empty `motivation` (required).
 - Writing progress or creating/updating annotations on a closed session:
   - `"This reading session is closed."`
-- `source_import` is not accepted via the public API (internal-only; unknown fields are rejected).
 
 ## 12) Minimal reader-client flow
 

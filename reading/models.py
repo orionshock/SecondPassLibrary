@@ -157,11 +157,6 @@ class Annotation(TimeStampedModel):
     highlight_color = models.CharField(max_length=32, blank=True, default="")
     comment_text = models.TextField(blank=True, default="")
 
-    # Internal/server-managed provenance for future import work. Not exposed as a
-    # normal client-writable field via the public reading API.
-    # TODO: Remove `source_import` from the long-term annotation model unless
-    # there is a clear server-side behavior that uses it.
-    source_import = models.JSONField(default=dict, blank=True)
     profile_version = models.CharField(max_length=16, default="0.1.0")
     is_deleted = models.BooleanField(default=False)
 

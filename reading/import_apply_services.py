@@ -140,7 +140,6 @@ def _create_annotation(
         quote_suffix=compact["quote_suffix"],
         highlight_color=compact["highlight_color"],
         comment_text=compact["comment_text"],
-        source_import={"format": "spl_native_marginalia", "export_session_id": export_session_id},
         profile_version=CURRENT_READING_PROFILE_VERSION,
     )
     created_at = _dt(exported_annotation.get("created_at"))

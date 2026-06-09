@@ -162,8 +162,6 @@ def create_annotation(
         quote_suffix=quote_suffix or "",
         highlight_color=highlight_color or "",
         comment_text=comment_text or "",
-        # `source_import` is internal/server-managed. Keep it empty for normal creates.
-        source_import={},
         profile_version=CURRENT_READING_PROFILE_VERSION,
     )
 
