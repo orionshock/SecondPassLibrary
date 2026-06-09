@@ -74,6 +74,7 @@ List/detail payloads also include:
 Invariants:
 
 - a given book appears at most once per shelf
+- stored positions are contiguous zero-based integers; duplicate requested/current positions are canonicalized by position, book title, then stable IDs
 - deleting a shelf deletes only the shelf and its items (never books or files)
 
 ## Permissions

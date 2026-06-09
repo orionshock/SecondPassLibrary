@@ -120,6 +120,16 @@ export async function initShelfItemsEditor({
     );
   }
 
+  async function patchShelfItemMove(itemId, move) {
+    const csrf = getCsrfToken();
+    const headers = { Accept: "application/json", "Content-Type": "application/json" };
+    if (csrf) headers["X-CSRFToken"] = csrf;
+    await fetchJSONWithOptions(
+      `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/${encodeURIComponent(String(itemId))}/`,
+      { method: "PATCH", headers, body: JSON.stringify({ move }) }
+    );
+  }
+
   itemsResults.addEventListener("click", async (e) => {
     const target = e.target;
     if (!target || target.nodeType !== 1) return;
@@ -167,17 +177,10 @@ export async function initShelfItemsEditor({
       const otherIdx = action === "move-up" ? idx - 1 : idx + 1;
       if (otherIdx < 0 || otherIdx >= currentItems.length) return;
 
-      const a = currentItems[idx];
-      const b = currentItems[otherIdx];
-      if (!a || !b) return;
-      const aPos = Number(a.position || 0);
-      const bPos = Number(b.position || 0);
-
       setGlobalError("");
       setStatus(itemsStatus, "Reordering...", false);
       try {
-        await patchShelfItemPosition(String(a.id), bPos);
-        await patchShelfItemPosition(String(b.id), aPos);
+        await patchShelfItemMove(itemId, action === "move-up" ? "up" : "down");
         await reloadItems();
       } catch (e2) {
         console.error("Failed to reorder shelf items", e2);

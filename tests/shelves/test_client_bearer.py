@@ -325,4 +325,4 @@ class ShelvesClientBearerTests(APITestCase):
             ),
         )
         self.assertEqual(patch.status_code, 200)
-        self.assertEqual(cast(dict[str, Any], patch.data)["position"], 5)
+        self.assertEqual(cast(dict[str, Any], patch.data)["position"], 0)

@@ -5,12 +5,42 @@ from typing import Any
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Max, QuerySet
+from django.utils import timezone
 
 from core import policies as core_policies
 from library.models import Book
 
 from . import policies
 from .models import Shelf, ShelfItem
+
+
+def _normalized_title(value: str | None) -> str:
+    return (value or "").casefold()
+
+
+def canonicalize_shelf_positions(shelf: Shelf) -> list[ShelfItem]:
+    items = list(ShelfItem.objects.select_related("book").filter(shelf=shelf))
+    items.sort(
+        key=lambda item: (
+            item.position,
+            _normalized_title(item.book.title),
+            str(item.book_id),
+            str(item.id),
+        )
+    )
+
+    changed: list[ShelfItem] = []
+    now = timezone.now()
+    for position, item in enumerate(items):
+        if item.position != position:
+            item.position = position
+            item.updated_at = now
+            changed.append(item)
+
+    if changed:
+        ShelfItem.objects.bulk_update(changed, ["position", "updated_at"])
+
+    return items
 
 
 def create_shelf(
@@ -76,6 +106,7 @@ def add_book_to_shelf(actor, shelf: Shelf, book: Book, position: int | None = No
 
     with transaction.atomic():
         if position is None:
+            canonicalize_shelf_positions(shelf)
             max_position = (
                 ShelfItem.objects.filter(shelf=shelf).aggregate(m=Max("position")).get("m")
             )
@@ -88,6 +119,8 @@ def add_book_to_shelf(actor, shelf: Shelf, book: Book, position: int | None = No
         )
         if not created:
             raise ValidationError("This book is already on the shelf.")
+        canonicalize_shelf_positions(shelf)
+        item.refresh_from_db()
         return item
 
 
@@ -108,8 +141,57 @@ def remove_book_from_shelf(actor, shelf: Shelf, book_or_item) -> bool:
     if item is None:
         return False
 
-    item.delete()
+    with transaction.atomic():
+        item.delete()
+        canonicalize_shelf_positions(shelf)
     return True
+
+
+def set_shelf_item_position(actor, shelf: Shelf, item: ShelfItem, position: int) -> ShelfItem:
+    if not policies.can_edit_shelf(user=actor, shelf=shelf):
+        raise PermissionDenied("Not allowed.")
+    if item.shelf_id != shelf.id:
+        raise ValidationError("Shelf item does not belong to this shelf.")
+
+    with transaction.atomic():
+        item.position = position
+        item.save(update_fields=["position", "updated_at"])
+        canonicalize_shelf_positions(shelf)
+        item.refresh_from_db()
+        return item
+
+
+def move_shelf_item(actor, shelf: Shelf, item: ShelfItem, direction: str) -> ShelfItem:
+    if not policies.can_edit_shelf(user=actor, shelf=shelf):
+        raise PermissionDenied("Not allowed.")
+    if item.shelf_id != shelf.id:
+        raise ValidationError("Shelf item does not belong to this shelf.")
+    if direction not in {"up", "down"}:
+        raise ValidationError("Invalid move direction.")
+
+    with transaction.atomic():
+        ordered = canonicalize_shelf_positions(shelf)
+        ids = [ordered_item.id for ordered_item in ordered]
+        try:
+            index = ids.index(item.id)
+        except ValueError as exc:
+            raise ValidationError("Shelf item does not belong to this shelf.") from exc
+
+        other_index = index - 1 if direction == "up" else index + 1
+        if other_index < 0 or other_index >= len(ordered):
+            item.refresh_from_db()
+            return item
+
+        moving = ordered[index]
+        other = ordered[other_index]
+        now = timezone.now()
+        moving.position, other.position = other.position, moving.position
+        moving.updated_at = now
+        other.updated_at = now
+        ShelfItem.objects.bulk_update([moving, other], ["position", "updated_at"])
+        canonicalize_shelf_positions(shelf)
+        item.refresh_from_db()
+        return item
 
 
 def visible_shelf_items_for_user(user, shelf: Shelf) -> QuerySet[ShelfItem]:

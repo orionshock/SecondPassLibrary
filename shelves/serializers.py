@@ -163,4 +163,11 @@ class ShelfItemCreateSerializer(serializers.Serializer):
 
 
 class ShelfItemPatchSerializer(serializers.Serializer):
-    position = serializers.IntegerField(required=True)
+    position = serializers.IntegerField(required=False)
+    move = serializers.ChoiceField(choices=["up", "down"], required=False)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if ("position" in attrs) == ("move" in attrs):
+            raise serializers.ValidationError("Provide exactly one of position or move.")
+        return attrs

@@ -31,7 +31,9 @@ from .services import (
     add_book_to_shelf,
     create_shelf,
     delete_shelf,
+    move_shelf_item,
     remove_book_from_shelf,
+    set_shelf_item_position,
     update_shelf,
     visible_shelf_items_for_user,
 )
@@ -253,15 +255,22 @@ class ShelfViewSet(
 
         serializer = cast(Any, ShelfItemPatchSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)
-        position = cast(int, serializer.validated_data["position"])
-
-        from .policies import can_edit_shelf
-
-        if not can_edit_shelf(user=request.user, shelf=shelf):
-            raise PermissionDenied("Not allowed.")
-        item.position = position
+        data = cast(dict[str, Any], serializer.validated_data)
         try:
-            item.save(update_fields=["position", "updated_at"])
+            if "move" in data:
+                item = move_shelf_item(
+                    request.user,
+                    shelf=shelf,
+                    item=item,
+                    direction=cast(str, data["move"]),
+                )
+            else:
+                item = set_shelf_item_position(
+                    request.user,
+                    shelf=shelf,
+                    item=item,
+                    position=cast(int, data["position"]),
+                )
         except DjangoValidationError as exc:
             self._raise_drf_validation(exc)
         out = ShelfItemSerializer(item, context={"request": request})

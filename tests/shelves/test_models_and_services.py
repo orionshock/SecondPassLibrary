@@ -14,7 +14,14 @@ from library.group_services import (
 )
 from library.models import Book, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
-from shelves.services import add_book_to_shelf, create_shelf, visible_shelf_items_for_user
+from shelves.services import (
+    add_book_to_shelf,
+    canonicalize_shelf_positions,
+    create_shelf,
+    move_shelf_item,
+    remove_book_from_shelf,
+    visible_shelf_items_for_user,
+)
 from tests.utils.books import create_file_backed_book
 
 
@@ -137,3 +144,101 @@ class ShelfServicePolicyTests(TestCase):
 
         remove_book_from_group(actor=self.owner, book=self.book_in_group, group=self.group)
         self.assertFalse(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
+
+
+class ShelfPositionServiceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="positions", password="pw")
+        ensure_user_public_membership(user=self.user)
+        self.shelf = create_shelf(
+            self.user,
+            name="Ordered",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+        )
+
+    def _book(self, title: str) -> Book:
+        book = create_file_backed_book(title=title, assign_public=False).book
+        ensure_book_public_assignment(book=book, added_by=None)
+        return book
+
+    def _items(self) -> list[ShelfItem]:
+        return list(ShelfItem.objects.select_related("book").filter(shelf=self.shelf).order_by("position"))
+
+    def _titles_and_positions(self) -> list[tuple[str, int]]:
+        return [(item.book.title, item.position) for item in self._items()]
+
+    def test_canonicalize_resolves_duplicate_positions_by_title_and_bumps_later_items(self):
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Zulu"), position=0, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Bravo"), position=1, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Alpha"), position=1, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Charlie"), position=2, added_by=self.user)
+
+        canonicalize_shelf_positions(self.shelf)
+
+        self.assertEqual(
+            self._titles_and_positions(),
+            [("Zulu", 0), ("Alpha", 1), ("Bravo", 2), ("Charlie", 3)],
+        )
+
+    def test_same_title_duplicate_position_uses_stable_book_id_fallback(self):
+        book_a = self._book("Same")
+        book_b = self._book("Same")
+        ShelfItem.objects.create(shelf=self.shelf, book=book_b, position=0, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=book_a, position=0, added_by=self.user)
+
+        canonicalize_shelf_positions(self.shelf)
+
+        items = self._items()
+        self.assertEqual([item.position for item in items], [0, 1])
+        self.assertEqual([str(item.book_id) for item in items], sorted([str(book_a.id), str(book_b.id)]))
+
+    def test_add_assigns_unique_contiguous_position_after_legacy_duplicates(self):
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Bravo"), position=0, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Alpha"), position=0, added_by=self.user)
+
+        item = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Charlie"))
+
+        self.assertEqual(item.position, 2)
+        self.assertEqual(self._titles_and_positions(), [("Alpha", 0), ("Bravo", 1), ("Charlie", 2)])
+
+    def test_add_with_explicit_duplicate_position_is_canonicalized_by_title(self):
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Zulu"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Bravo"))
+        item = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Alpha"), position=1)
+
+        self.assertEqual(item.position, 1)
+        self.assertEqual(self._titles_and_positions(), [("Zulu", 0), ("Alpha", 1), ("Bravo", 2)])
+
+    def test_remove_compacts_positions(self):
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
+        item_b = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
+
+        removed = remove_book_from_shelf(self.user, shelf=self.shelf, book_or_item=item_b)
+
+        self.assertTrue(removed)
+        self.assertEqual(self._titles_and_positions(), [("A", 0), ("C", 1)])
+
+    def test_move_canonicalizes_legacy_duplicates_before_swapping_true_neighbor(self):
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Gamma"), position=0, added_by=self.user)
+        target = ShelfItem.objects.create(shelf=self.shelf, book=self._book("Zulu"), position=1, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Alpha"), position=1, added_by=self.user)
+        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Omega"), position=3, added_by=self.user)
+
+        moved = move_shelf_item(self.user, shelf=self.shelf, item=target, direction="up")
+
+        self.assertEqual(moved.position, 1)
+        self.assertEqual(
+            self._titles_and_positions(),
+            [("Gamma", 0), ("Zulu", 1), ("Alpha", 2), ("Omega", 3)],
+        )
+
+    def test_boundary_move_canonicalizes_without_changing_order(self):
+        first = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
+
+        moved = move_shelf_item(self.user, shelf=self.shelf, item=first, direction="up")
+
+        self.assertEqual(moved.position, 0)
+        self.assertEqual(self._titles_and_positions(), [("A", 0), ("B", 1)])

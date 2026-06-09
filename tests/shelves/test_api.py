@@ -12,7 +12,7 @@ from accounts.models import UserProfile
 from library.group_services import add_book_to_group, ensure_book_public_assignment, ensure_user_public_membership, get_public_group
 from library.cover_services import set_book_cover_from_bytes
 from library.models import Book, LibraryGroup, LibraryGroupMembership
-from shelves.models import Shelf
+from shelves.models import Shelf, ShelfItem
 from tests.utils.books import create_file_backed_book
 
 
@@ -370,3 +370,71 @@ class ShelvesAPITest(APITestCase):
         self.assertIn("cover_url", book)
         self.assertIsInstance(book["cover_url"], str)
         self.assertTrue(str(book["cover_url"]).startswith("http://testserver/"))
+
+    def test_item_patch_duplicate_position_canonicalizes_response_and_list(self):
+        self.client.login(username="reader", password="pw")
+        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+
+        book_z = create_file_backed_book(title="Zulu", assign_public=False).book
+        ensure_book_public_assignment(book=book_z, added_by=None)
+        book_a = create_file_backed_book(title="Alpha", assign_public=False).book
+        ensure_book_public_assignment(book=book_a, added_by=None)
+
+        add_z = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(book_z.id)}, format="json"))
+        self.assertEqual(add_z.status_code, status.HTTP_201_CREATED)
+        add_a = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(book_a.id)}, format="json"))
+        self.assertEqual(add_a.status_code, status.HTTP_201_CREATED)
+        item_a_id = cast(Mapping[str, Any], add_a.data)["id"]
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/items/{item_a_id}/",
+                data={"position": 0},
+                format="json",
+            ),
+        )
+        self.assertEqual(patch.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], patch.data)["position"], 0)
+
+        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        self.assertEqual([(row["book"]["title"], row["position"]) for row in results], [("Alpha", 0), ("Zulu", 1)])
+
+    def test_item_patch_move_canonicalizes_legacy_duplicates_before_swapping(self):
+        self.client.login(username="reader", password="pw")
+        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        shelf = Shelf.objects.get(pk=cast(Mapping[str, Any], create.data)["id"])
+
+        books = [
+            create_file_backed_book(title=title, assign_public=False).book
+            for title in ["Gamma", "Zulu", "Alpha", "Omega"]
+        ]
+        for book in books:
+            ensure_book_public_assignment(book=book, added_by=None)
+
+        ShelfItem.objects.create(shelf=shelf, book=books[0], position=0, added_by=self.reader)
+        target = ShelfItem.objects.create(shelf=shelf, book=books[1], position=1, added_by=self.reader)
+        ShelfItem.objects.create(shelf=shelf, book=books[2], position=1, added_by=self.reader)
+        ShelfItem.objects.create(shelf=shelf, book=books[3], position=3, added_by=self.reader)
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf.id}/items/{target.id}/",
+                data={"move": "up"},
+                format="json",
+            ),
+        )
+        self.assertEqual(patch.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], patch.data)["position"], 1)
+
+        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf.id}/items/"))
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in results],
+            [("Gamma", 0), ("Zulu", 1), ("Alpha", 2), ("Omega", 3)],
+        )
