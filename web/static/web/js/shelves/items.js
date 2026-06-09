@@ -35,6 +35,8 @@ export async function initShelfItemsEditor({
           const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
           const series = b.series && b.series.name ? String(b.series.name) : "";
           const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
+          const storedPosition = Number(it.position);
+          const displayPosition = Number.isFinite(storedPosition) ? storedPosition + 1 : "";
           return `
             <article class="book book--with-cover">
               <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
@@ -45,11 +47,7 @@ export async function initShelfItemsEditor({
                   </h3>
                   ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
                   <div class="muted" style="margin-top: 6px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
-                    <label class="muted">Pos</label>
-                    <input type="number" value="${escapeHtml(it.position)}" style="width: 90px;" data-action="pos" data-item-id="${escapeHtml(
-                      it.id
-                    )}" />
-                    <button class="button" type="button" data-action="save-pos" data-item-id="${escapeHtml(it.id)}">Save</button>
+                    <span class="muted">#${escapeHtml(displayPosition)}</span>
                     <button class="button" type="button" data-action="move-up" data-item-id="${escapeHtml(it.id)}">Move up</button>
                     <button class="button" type="button" data-action="move-down" data-item-id="${escapeHtml(it.id)}">Move down</button>
                     <button class="button" type="button" data-action="remove-item" data-item-id="${escapeHtml(it.id)}">Remove</button>
@@ -110,16 +108,6 @@ export async function initShelfItemsEditor({
     reloadItems().catch((e) => setGlobalError(extractApiErrorMessage(e)));
   });
 
-  async function patchShelfItemPosition(itemId, position) {
-    const csrf = getCsrfToken();
-    const headers = { Accept: "application/json", "Content-Type": "application/json" };
-    if (csrf) headers["X-CSRFToken"] = csrf;
-    await fetchJSONWithOptions(
-      `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/${encodeURIComponent(String(itemId))}/`,
-      { method: "PATCH", headers, body: JSON.stringify({ position }) }
-    );
-  }
-
   async function patchShelfItemMove(itemId, move) {
     const csrf = getCsrfToken();
     const headers = { Accept: "application/json", "Content-Type": "application/json" };
@@ -151,21 +139,6 @@ export async function initShelfItemsEditor({
         await reloadItems();
       } catch (e2) {
         console.error("Failed to remove shelf item", e2);
-        setGlobalError(extractApiErrorMessage(e2));
-        setStatus(itemsStatus, "", true);
-      }
-    }
-
-    if (action === "save-pos") {
-      const input = itemsResults.querySelector(`input[data-action="pos"][data-item-id="${itemId}"]`);
-      const position = input ? Number(input.value) : 0;
-      setGlobalError("");
-      setStatus(itemsStatus, "Saving...", false);
-      try {
-        await patchShelfItemPosition(itemId, position);
-        await reloadItems();
-      } catch (e2) {
-        console.error("Failed to save position", e2);
         setGlobalError(extractApiErrorMessage(e2));
         setStatus(itemsStatus, "", true);
       }
