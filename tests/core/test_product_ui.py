@@ -384,32 +384,19 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="shelf-edit-danger"')
         self.assertContains(response, 'id="shelf-edit-delete-btn"')
 
+    def test_shelf_items_js_has_move_controls(self):
+        js = Path("web/static/web/js/shelves/items.js").read_text()
+        self.assertIn('data-action="move-up"', js)
+        self.assertIn('data-action="move-down"', js)
+        self.assertIn('data-action="move-to"', js)
+        self.assertIn('aria-label="Move ${escapeHtml(title)} to position"', js)
+        self.assertIn("patchShelfItemPosition", js)
+        self.assertIn("storedPosition >= currentItemTotal - 1", js)
+
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/users/")
-
-    def test_unauthenticated_reading_activity_redirects_to_login(self):
-        book_id = uuid4()
-        response = self.client.get(f"/reading/books/{book_id}/activity/", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response["Location"],
-            f"/api-auth/login/?next=/reading/books/{book_id}/activity/",
-        )
-
-    def test_authenticated_reading_activity_returns_200_and_has_containers(self):
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        book = create_file_backed_book(title="B1").book
-        session = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
-
-        self.client.force_login(self.user)
-        response = self.client.get(f"/reading/books/{book.id}/activity/", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], f"/reading/sessions/books/{book.id}/{session.id}/")
 
     def test_unauthenticated_reading_sessions_redirects_to_login(self):
         book_id = uuid4()
@@ -663,50 +650,6 @@ class ProductUiSmokeTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{other_book.id}/{session.id}/", follow=False)
         self.assertEqual(response.status_code, 404)
-
-    def test_legacy_reading_sessions_redirects_to_canonical(self):
-        self.client.force_login(self.user)
-        book_id = uuid4()
-        response = self.client.get(f"/reading/books/{book_id}/sessions/", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], f"/reading/sessions/books/{book_id}/")
-
-    def test_legacy_activity_with_session_redirects_to_canonical(self):
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        book = create_file_backed_book(title="B1").book
-
-        self.client.force_login(self.user)
-        session_id = uuid4()
-        response = self.client.get(f"/reading/books/{book.id}/activity/?session={session_id}", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], f"/reading/sessions/books/{book.id}/{session_id}/")
-
-    def test_legacy_activity_without_session_redirects_to_most_recent_session_when_one_exists(self):
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        book = create_file_backed_book(title="B1").book
-        session = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
-
-        self.client.force_login(self.user)
-        response = self.client.get(f"/reading/books/{book.id}/activity/", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], f"/reading/sessions/books/{book.id}/{session.id}/")
-
-    def test_legacy_activity_without_session_redirects_to_book_sessions_when_none_exist(self):
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        book = create_file_backed_book(title="B1").book
-        self.client.force_login(self.user)
-        response = self.client.get(f"/reading/books/{book.id}/activity/", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], f"/reading/sessions/books/{book.id}/")
 
     def test_unauthenticated_profile_redirects_to_login(self):
         response = self.client.get("/profile/", follow=False)

@@ -403,6 +403,45 @@ class ShelvesAPITest(APITestCase):
         results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
         self.assertEqual([(row["book"]["title"], row["position"]) for row in results], [("Alpha", 0), ("Zulu", 1)])
 
+    def test_item_patch_position_moves_item_down_and_shifts_intervening_items(self):
+        self.client.login(username="reader", password="pw")
+        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
+        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+
+        item_ids: dict[str, str] = {}
+        for title in ["A", "B", "C", "D"]:
+            book = create_file_backed_book(title=title, assign_public=False).book
+            ensure_book_public_assignment(book=book, added_by=None)
+            added = cast(
+                Response,
+                self.client.post(
+                    f"/api/v1/shelves/{shelf_id}/items/",
+                    data={"book": str(book.id)},
+                    format="json",
+                ),
+            )
+            self.assertEqual(added.status_code, status.HTTP_201_CREATED)
+            item_ids[title] = str(cast(Mapping[str, Any], added.data)["id"])
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/items/{item_ids['B']}/",
+                data={"position": 3},
+                format="json",
+            ),
+        )
+        self.assertEqual(patch.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(Mapping[str, Any], patch.data)["position"], 3)
+
+        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in results],
+            [("A", 0), ("C", 1), ("D", 2), ("B", 3)],
+        )
+
     def test_item_patch_move_canonicalizes_legacy_duplicates_before_swapping(self):
         self.client.login(username="reader", password="pw")
         create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))

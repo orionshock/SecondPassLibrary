@@ -83,26 +83,6 @@ def reading_session_marginalia(
 
 
 @login_required
-def reading_book_activity_legacy(request: HttpRequest, book_id: str) -> HttpResponse:
-    book = Book.objects.filter(id=book_id).first()
-    if book is None:
-        raise Http404()
-    if not policies.can_view_book(user=request.user, book=book):
-        raise Http404()
-
-    preferred = str(request.GET.get("session") or "").strip()
-    if preferred:
-        return redirect(f"/reading/sessions/books/{book_id}/{preferred}/", permanent=False)
-
-    sessions = list_sessions_for_book(user=request.user, book=book)
-    if sessions:
-        return redirect(
-            f"/reading/sessions/books/{book_id}/{sessions[0]['id']}/", permanent=False
-        )
-    return redirect(f"/reading/sessions/books/{book_id}/", permanent=False)
-
-
-@login_required
 def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpResponse:
     book = (
         Book.objects.select_related("series")
@@ -123,12 +103,6 @@ def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpR
         "web/reading/book_sessions.html",
         {"book": book, "sessions": sessions, "recent_session_id": recent_session_id},
     )
-
-
-@login_required
-def reading_book_sessions_legacy(request: HttpRequest, book_id: str) -> HttpResponse:
-    # Development redirect to the canonical sessions-first route family.
-    return redirect(f"/reading/sessions/books/{book_id}/", permanent=False)
 
 @login_required
 def library_browse(request: HttpRequest) -> HttpResponse:

@@ -20,6 +20,7 @@ from shelves.services import (
     create_shelf,
     move_shelf_item,
     remove_book_from_shelf,
+    set_shelf_item_position,
     visible_shelf_items_for_user,
 )
 from tests.utils.books import create_file_backed_book
@@ -242,3 +243,38 @@ class ShelfPositionServiceTests(TestCase):
 
         self.assertEqual(moved.position, 0)
         self.assertEqual(self._titles_and_positions(), [("A", 0), ("B", 1)])
+
+    def test_set_position_moves_item_down_and_shifts_intervening_items_up(self):
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
+        item_b = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("D"))
+
+        moved = set_shelf_item_position(self.user, shelf=self.shelf, item=item_b, position=3)
+
+        self.assertEqual(moved.position, 3)
+        self.assertEqual(self._titles_and_positions(), [("A", 0), ("C", 1), ("D", 2), ("B", 3)])
+
+    def test_set_position_moves_item_up_and_shifts_intervening_items_down(self):
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
+        item_d = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("D"))
+
+        moved = set_shelf_item_position(self.user, shelf=self.shelf, item=item_d, position=1)
+
+        self.assertEqual(moved.position, 1)
+        self.assertEqual(self._titles_and_positions(), [("A", 0), ("D", 1), ("B", 2), ("C", 3)])
+
+    def test_set_position_clamps_out_of_range_targets(self):
+        item_a = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
+        add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
+        item_c = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
+
+        moved_last = set_shelf_item_position(self.user, shelf=self.shelf, item=item_a, position=99)
+        self.assertEqual(moved_last.position, 2)
+        self.assertEqual(self._titles_and_positions(), [("B", 0), ("C", 1), ("A", 2)])
+
+        moved_first = set_shelf_item_position(self.user, shelf=self.shelf, item=item_c, position=-10)
+        self.assertEqual(moved_first.position, 0)
+        self.assertEqual(self._titles_and_positions(), [("C", 0), ("B", 1), ("A", 2)])

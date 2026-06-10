@@ -152,6 +152,7 @@ Notes:
 
 - Shelf item `book` summaries include `cover_url` when available.
 - Shelf item positions are stored zero-based and canonicalized as contiguous integers.
+- Patching an existing item with `position` uses list move-to semantics: remove the item from its current ordered position, insert it at the requested zero-based target position (clamped to list bounds), then renumber all items contiguously.
 - Product/UI displays may show one-based labels such as `#1`, `#2`, etc.
 - Shelves do not grant book access: `/items/` filters listed books through normal book access policy.
 - Client API bearer tokens may read visible shelves, but may create/edit/delete shelves and manage shelf items only for the token user's own personal shelves. Group shelves and other users' shelves remain read-only via bearer tokens.
@@ -168,7 +169,7 @@ Product UI routes:
 Behavior:
 
 - Shelf edit is the primary shelf management page. It uses tabs:
-  - Books in shelf (default): remove/reorder with `Move up` / `Move down`; changes apply immediately.
+  - Books in shelf (default): remove/reorder with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
   - Add books: search/add; changes apply immediately; books already in the shelf are hidden from results.
   - Details: edit name/description/visibility (user shelves only) and delete.
 - Book detail and book edit pages surface shelf context (shelves containing the book).

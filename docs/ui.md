@@ -330,11 +330,12 @@ UI behaviors:
 
 - Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
   - Uses tabs to reduce scroll:
-    - Books in shelf (default): remove and reorder items with `Move up` / `Move down`; changes apply immediately.
+    - Books in shelf (default): remove and reorder items with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
     - Add books: search and add; changes apply immediately; books already in shelf are hidden from results.
     - Details: edit name/description (and visibility for user-owned shelves only) and delete shelf.
   - Delete shelf removes the shelf and its shelf items only; it never deletes books or files.
 - Shelf item positions are stored zero-based and contiguous; UI labels may show one-based positions like `#1`.
+- First/last shelf items disable invalid edge moves; the `Move to` dropdown uses one-based labels and applies immediately.
 - Drag/drop and per-row numeric position inputs are not implemented in the current shelf edit UI.
 - Shelves are presentation/organization objects, not access control.
 

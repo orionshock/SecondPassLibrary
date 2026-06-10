@@ -10,6 +10,7 @@ Client API bearer tokens may be used for these endpoints:
 
 - Send `Authorization: Bearer <token>` (issued via the Client API code authorization flow).
 - Reading data access is strictly scoped to the token owner (sessions/progress/annotations are user-owned).
+- Reading session summary list/detail responses use `book_id` plus compact `book`; they do not include the old summary-only `book_title` compatibility field.
 
 ## 1) Overview
 

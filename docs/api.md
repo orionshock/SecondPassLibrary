@@ -231,7 +231,7 @@ Endpoints:
 - Items:
   - `GET /api/v1/shelves/<id>/items/` (paginated; books are filtered through access policy)
   - `POST /api/v1/shelves/<id>/items/` (add book)
-  - `PATCH /api/v1/shelves/<id>/items/<item_id>/` (position or move)
+  - `PATCH /api/v1/shelves/<id>/items/<item_id>/` (`{"move": "up|down"}` or `{"position": 0}`)
   - `DELETE /api/v1/shelves/<id>/items/<item_id>/`
 
 List filters:
@@ -245,8 +245,9 @@ Shelf payload notes:
 - Shelves include a read-only `can_edit` boolean computed for the current request user. This is a UI hint; API permissions remain authoritative.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
-- Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
-- Product/UI displays may show one-based labels such as `#1`, `#2`, etc.; the current shelf edit UI reorders with `Move up` / `Move down` buttons and has no drag/drop or per-row numeric position input.
+- Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
+- Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
+- Product/UI displays may show one-based labels such as `#1`, `#2`, etc.; the current shelf edit UI reorders with `Move up` / `Move down` buttons plus a one-based `Move to` dropdown and has no drag/drop or per-row numeric position input.
 - Client API bearer tokens:
   - may read any shelf the token user can view
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
@@ -386,7 +387,7 @@ See `docs/permissions.md` for the visibility/curation rules.
 - Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
-- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active sessions only)
+- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active sessions only). Summary list/detail payloads include `book_id` and compact `book`, not the legacy `book_title` field.
 - Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`)
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`

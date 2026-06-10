@@ -79,6 +79,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         by_id = {r["id"]: r for r in results}
 
         visible = by_id[str(self.session_visible.id)]
+        self.assertNotIn("book_title", visible)
         self.assertIn("progression", visible)
         self.assertEqual(visible["progression"], 0.25)
         self.assertEqual(visible["annotation_count"], 1)
@@ -88,6 +89,17 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         self.assertEqual(book["title"], "Visible")
         self.assertIsInstance(book["authors"], list)
         self.assertIn("cover_url", book)
+
+    def test_detail_omits_legacy_book_title_field(self):
+        resp = cast(
+            Response,
+            self.client.get(f"/api/v1/reading/sessions/{self.session_visible.id}/"),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        payload = cast(dict[str, Any], resp.data)
+        self.assertNotIn("book_title", payload)
+        self.assertEqual(payload["book_id"], str(self.book.id))
+        self.assertEqual(cast(dict[str, Any], payload["book"])["title"], "Visible")
 
     def test_list_does_not_leak_hidden_book_metadata(self):
         resp = cast(Response, self.client.get("/api/v1/reading/sessions/"))
@@ -152,6 +164,7 @@ class ReadingSessionSummaryBearerTests(APITestCase):
         results = _results(resp)
         self.assertEqual(len(results), 1)
         s0 = results[0]
+        self.assertNotIn("book_title", s0)
         self.assertIn("book", s0)
         book = cast(dict[str, Any], s0["book"])
         self.assertEqual(book["id"], str(self.book.id))

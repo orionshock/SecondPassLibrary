@@ -154,9 +154,28 @@ def set_shelf_item_position(actor, shelf: Shelf, item: ShelfItem, position: int)
         raise ValidationError("Shelf item does not belong to this shelf.")
 
     with transaction.atomic():
-        item.position = position
-        item.save(update_fields=["position", "updated_at"])
-        canonicalize_shelf_positions(shelf)
+        ordered = canonicalize_shelf_positions(shelf)
+        ids = [ordered_item.id for ordered_item in ordered]
+        try:
+            current_index = ids.index(item.id)
+        except ValueError as exc:
+            raise ValidationError("Shelf item does not belong to this shelf.") from exc
+
+        target_index = max(0, min(int(position), len(ordered) - 1))
+        if target_index != current_index:
+            moving = ordered.pop(current_index)
+            ordered.insert(target_index, moving)
+
+            now = timezone.now()
+            changed: list[ShelfItem] = []
+            for new_position, ordered_item in enumerate(ordered):
+                if ordered_item.position != new_position:
+                    ordered_item.position = new_position
+                    ordered_item.updated_at = now
+                    changed.append(ordered_item)
+            if changed:
+                ShelfItem.objects.bulk_update(changed, ["position", "updated_at"])
+
         item.refresh_from_db()
         return item
 
@@ -177,19 +196,24 @@ def move_shelf_item(actor, shelf: Shelf, item: ShelfItem, direction: str) -> She
         except ValueError as exc:
             raise ValidationError("Shelf item does not belong to this shelf.") from exc
 
-        other_index = index - 1 if direction == "up" else index + 1
-        if other_index < 0 or other_index >= len(ordered):
+        target_index = index - 1 if direction == "up" else index + 1
+        if target_index < 0 or target_index >= len(ordered):
             item.refresh_from_db()
             return item
 
-        moving = ordered[index]
-        other = ordered[other_index]
+        moving = ordered.pop(index)
+        ordered.insert(target_index, moving)
+
         now = timezone.now()
-        moving.position, other.position = other.position, moving.position
-        moving.updated_at = now
-        other.updated_at = now
-        ShelfItem.objects.bulk_update([moving, other], ["position", "updated_at"])
-        canonicalize_shelf_positions(shelf)
+        changed: list[ShelfItem] = []
+        for new_position, ordered_item in enumerate(ordered):
+            if ordered_item.position != new_position:
+                ordered_item.position = new_position
+                ordered_item.updated_at = now
+                changed.append(ordered_item)
+        if changed:
+            ShelfItem.objects.bulk_update(changed, ["position", "updated_at"])
+
         item.refresh_from_db()
         return item
 

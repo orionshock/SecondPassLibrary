@@ -23,17 +23,6 @@ urlpatterns = [
         name="reading_book_sessions_canonical",
     ),
 
-    # Legacy routes (development): redirect to canonical sessions-first routes.
-    path(
-        "reading/books/<str:book_id>/activity/",
-        views.reading_book_activity_legacy,
-        name="reading_book_activity",
-    ),
-    path(
-        "reading/books/<str:book_id>/sessions/",
-        views.reading_book_sessions_legacy,
-        name="reading_book_sessions",
-    ),
     path("server/", views.server_settings, name="server_settings"),
     path("profile/", views.profile, name="profile"),
     path("profile/password/", views.profile_password, name="profile_password"),

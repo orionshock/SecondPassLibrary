@@ -21,6 +21,7 @@ Session list/retrieve payloads include a compact summary suitable for session-ma
 - `progression` (float 0-1 or null; derived/display metadata, not canonical location state)
 - `annotation_count` (non-deleted annotations)
 - `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller's current book visibility (hidden/inaccessible books do not leak metadata)
+- `book_id` as the stable book identifier; the old summary-only `book_title` compatibility field is no longer returned
 - Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`
 
 Endpoints:

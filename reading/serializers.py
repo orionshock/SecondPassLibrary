@@ -112,9 +112,6 @@ class ReadingSessionBookSummarySerializer(serializers.ModelSerializer):
 
 
 class ReadingSessionSummarySerializer(serializers.ModelSerializer):
-    # Keep for compatibility during active development.
-    book_title = serializers.CharField(source="book.title", read_only=True)
-
     book_id = serializers.UUIDField(read_only=True)
     progression = serializers.FloatField(read_only=True, allow_null=True)
     annotation_count = serializers.IntegerField(read_only=True)
@@ -165,7 +162,6 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
             "notes",
             "progression",
             "annotation_count",
-            "book_title",
             "book",
         ]
         read_only_fields = fields
