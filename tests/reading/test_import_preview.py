@@ -222,7 +222,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         path = Path(settings.IMPORTS_DIR) / "staged" / f"{r.data['import_token']}.json"
         self.assertTrue(path.exists())
         staged = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(staged["user_id"], self.user.id)
+        self.assertEqual(staged["user_id"], cast(Any, self.user).id)
         self.assertEqual(staged["payload"], payload)
 
     def test_preview_does_not_create_sessions_or_annotations(self):
@@ -294,7 +294,9 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
             completed_at=parse_datetime("2026-06-02T12:00:00+00:00"),
             is_active=False,
         )
-        session.started_at = parse_datetime("2026-06-01T12:00:00+00:00")
+        started_at = parse_datetime("2026-06-01T12:00:00+00:00")
+        assert started_at is not None
+        session.started_at = started_at
         session.save(update_fields=["started_at", "updated_at"])
 
         self.client.force_login(self.user)

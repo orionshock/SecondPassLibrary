@@ -49,13 +49,13 @@ class MarginaliaImportApplyApiTests(IsolatedUserdataMixin, APITestCase):
         return SimpleUploadedFile("marginalia.json", content, content_type="application/json")
 
     def _post_payload(self, payload, *, selection=None):
-        data = {"file": self._upload(payload)}
+        data: dict[str, Any] = {"file": self._upload(payload)}
         if selection is not None:
             data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
         return self.client.post(self._url(), data, format="multipart")
 
     def _post_token(self, token, *, selection=None):
-        data = {"import_token": token}
+        data: dict[str, Any] = {"import_token": token}
         if selection is not None:
             data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
         return self.client.post(self._url(), data, format="multipart")

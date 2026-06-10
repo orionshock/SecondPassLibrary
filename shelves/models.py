@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -107,6 +109,10 @@ class Shelf(TimeStampedModel):
 
 
 class ShelfItem(TimeStampedModel):
+    if TYPE_CHECKING:
+        shelf_id: object
+        book_id: object
+
     shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, related_name="items")
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="shelf_items")
     position = models.IntegerField(default=0)
