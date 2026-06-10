@@ -8,7 +8,7 @@ See `docs/client-api-auth.md` for Client API pairing and bearer token semantics.
 
 - **Django web session**: the browser/product UI login session managed by Django's session framework (cookie + server-side session).
 - **UserWebSession**: companion model to track and revoke Django web sessions.
-- **UserClientSession**: bearer-token session for reader/API clients (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, and reading user-data endpoints).
+- **UserClientSession**: bearer-token session for reader/API clients (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
 - **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
 
 ## Web session policy
@@ -53,7 +53,7 @@ Notes:
 
 - Raw API tokens are **never** stored.
 - Only token hashes are stored (e.g., `token_hash`).
-- Planned reader-client auth flow is documented in `docs/client-api-auth.md`.
+- Implemented reader-client code authorization is documented in `docs/client-api-auth.md`.
 
 ## Session control module
 

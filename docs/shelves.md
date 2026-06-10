@@ -67,7 +67,7 @@ List/detail payloads also include:
 - `id` (UUID)
 - `shelf` (FK)
 - `book` (FK)
-- `position` (integer ordering)
+- `position` (stored zero-based integer ordering)
 - `added_by` (nullable FK)
 - timestamps
 
@@ -145,12 +145,16 @@ Shelves are under `/api/v1/shelves/`:
 - items:
   - `GET /api/v1/shelves/<id>/items/` (paginated)
   - `POST /api/v1/shelves/<id>/items/`
-  - `PATCH /api/v1/shelves/<id>/items/<item_id>/`
+  - `PATCH /api/v1/shelves/<id>/items/<item_id>/` (either `{"move": "up|down"}` or `{"position": 0}`)
   - `DELETE /api/v1/shelves/<id>/items/<item_id>/`
 
 Notes:
 
 - Shelf item `book` summaries include `cover_url` when available.
+- Shelf item positions are stored zero-based and canonicalized as contiguous integers.
+- Product/UI displays may show one-based labels such as `#1`, `#2`, etc.
+- Shelves do not grant book access: `/items/` filters listed books through normal book access policy.
+- Client API bearer tokens may read visible shelves, but may create/edit/delete shelves and manage shelf items only for the token user's own personal shelves. Group shelves and other users' shelves remain read-only via bearer tokens.
 
 ## Product UI
 
@@ -164,7 +168,7 @@ Product UI routes:
 Behavior:
 
 - Shelf edit is the primary shelf management page. It uses tabs:
-  - Books in shelf (default): remove/reorder; changes apply immediately.
+  - Books in shelf (default): remove/reorder with `Move up` / `Move down`; changes apply immediately.
   - Add books: search/add; changes apply immediately; books already in the shelf are hidden from results.
   - Details: edit name/description/visibility (user shelves only) and delete.
 - Book detail and book edit pages surface shelf context (shelves containing the book).
@@ -178,11 +182,11 @@ Django admin at `/admin/` is the service hatch and can inspect/edit shelf intern
 
 - Shelves are not access control.
 - No public/anonymous shelf browsing.
-- No drag/drop ordering UI (ordering is numeric inputs).
-- No group-shelf management via Client API bearer tokens (group shelves remain product UI/session-auth only).
+- No drag/drop ordering UI.
+- No per-row numeric position input UI in the current shelf edit page.
+- No group-shelf or other-user shelf writes via Client API bearer tokens; those shelves are read-only to bearer clients.
 
 ## Future possibilities
 
-- Reader-client shelves support (explicit allow-list; keep write rules conservative).
 - Server-side cleanup hooks when removing a book from a LibraryGroup (e.g. removing from shelves owned by that group).
 - Bulk reordering APIs.

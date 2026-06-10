@@ -8,7 +8,7 @@ All reading endpoints require authentication.
 
 Client API bearer tokens may be used for these endpoints:
 
-- Send `Authorization: Bearer <token>` (issued via the Client API PIN/code flow).
+- Send `Authorization: Bearer <token>` (issued via the Client API code authorization flow).
 - Reading data access is strictly scoped to the token owner (sessions/progress/annotations are user-owned).
 
 ## 1) Overview

@@ -34,7 +34,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
    - `authorize_url` (browser URL the user can open; may include the code as a query param)
    - `poll_url`
    - `expires_at`
-   - `poll_interval_seconds` (recommended)
+   - `interval` (recommended poll interval in seconds)
 4. Client displays the authorize URL and/or the code.
 
 ### Human / browser
@@ -105,8 +105,10 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
 - shelves endpoints:
   - bearer tokens may read any shelf the user can view
   - bearer tokens may create/edit/delete **only** the user's own personal shelves
+  - bearer tokens may add/remove/reorder items only in the user's own personal shelves
   - group-owned shelves are read-only via bearer tokens
   - other users' shelves are read-only when visible (listed)
+  - shelf item book lists still filter each book through normal book access; shelves do not grant book access
 - reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) for safe retries
   - for "continue reading" UIs: `GET /api/v1/reading/sessions/recent/?limit=10`

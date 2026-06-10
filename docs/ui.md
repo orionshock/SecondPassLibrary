@@ -51,7 +51,7 @@ Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). In develo
 
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers/Curators to only viewable groups) with links to the group pages.
 
-The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Author and series can be selected from existing records or created by name. Book identifiers can be added/edited/deleted here. LibraryGroup assignments can be added/removed here. The Shelves tab is a placeholder only. The Identifiers & File Info tab includes read-only BookFile info; the stored EPUB is not edited from this page.
+The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Author and series can be selected from existing records or created by name. Book identifiers can be added/edited/deleted here. LibraryGroup assignments can be added/removed here. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only BookFile info; the stored EPUB is not edited from this page.
 
 The imports page is API-driven using:
 
@@ -275,10 +275,11 @@ UI behaviors:
 - Presentation edits should be shown only when the user has broad capability (or scoped curator power for that group).
 - Curation controls (add/remove books) should be gated similarly.
 
-Constraints:
+Current implemented UI:
 
-- No membership management UI yet (no public API for adding/removing users or assigning curator roles).
-- No public UI for creating/deleting groups yet (admin/service hatch only).
+- Group creation exists at `/groups/new/` for Owner/Manager.
+- Group membership management exists on the Group Edit page for Manager/Owner.
+- Group deletion exists on the Group Edit page for Owner/Manager; Public cannot be deleted.
 
 ## 8. User management screen
 
@@ -329,10 +330,12 @@ UI behaviors:
 
 - Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
   - Uses tabs to reduce scroll:
-    - Books in shelf (default): remove and reorder items; changes apply immediately.
+    - Books in shelf (default): remove and reorder items with `Move up` / `Move down`; changes apply immediately.
     - Add books: search and add; changes apply immediately; books already in shelf are hidden from results.
     - Details: edit name/description (and visibility for user-owned shelves only) and delete shelf.
   - Delete shelf removes the shelf and its shelf items only; it never deletes books or files.
+- Shelf item positions are stored zero-based and contiguous; UI labels may show one-based positions like `#1`.
+- Drag/drop and per-row numeric position inputs are not implemented in the current shelf edit UI.
 - Shelves are presentation/organization objects, not access control.
 
 ## 11. Implementation options (non-binding)

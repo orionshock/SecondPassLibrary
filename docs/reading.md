@@ -30,7 +30,7 @@ POST /api/v1/reading/books/<book_id>/open/                    (recommended boots
 GET  /api/v1/reading/books/<book_id>/active-session/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
 GET  /api/v1/reading/sessions/                            (paginated)
-GET  /api/v1/reading/sessions/recent/                     (compact recent list; active sessions only; default limit 10)
+GET  /api/v1/reading/sessions/recent/                     (compact recent list; active sessions only; default limit 10, max 50)
 GET  /api/v1/reading/sessions/<session_id>/
 PATCH /api/v1/reading/sessions/<session_id>/              (only while active: {"name": "...", "notes": "..."})
 POST /api/v1/reading/sessions/<session_id>/close/          (mark session completed/inactive; idempotent)
@@ -51,6 +51,7 @@ The compact payload includes `session.name` (may be blank) and `session.progress
 - If the user already has an active session for the book, `active-session` returns it even if the user later loses current book access (reading data is user-owned and durable).
 - If no active session exists yet, `active-session` creates a new one only when the user can currently view the book.
 - If the user cannot view the book and there is no existing active session, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
+- `open` follows the same durability rule: it returns an existing active session even if current book access was later lost, but creates a missing active session only when the user can currently view the book.
 
 ### Start-over behavior
 
@@ -210,7 +211,7 @@ POST /api/v1/reading/import/preview/
 POST /api/v1/reading/import/apply/
 ```
 
-Export and import preview endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
+Export and import preview/apply endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
 
 The book export route exports all current-user sessions for the book when no `session` query parameters are provided. When repeated `session` parameters are present, it exports only that selected subset and uses `scope.session_filter = "selected"`.
 

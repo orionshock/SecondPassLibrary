@@ -22,7 +22,7 @@ Authentication non-goals (current):
 - No MFA
 - No OIDC/OAuth
 
-See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction. Planned session revocation and future web/client session tracking is documented in `docs/session-management.md`. Planned reader-client PIN/code authorization is documented in `docs/client-api-auth.md`.
+See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction. Session revocation and web/client session tracking are documented in `docs/session-management.md`. Implemented reader-client code authorization is documented in `docs/client-api-auth.md`.
 
 ## Error responses
 
@@ -110,6 +110,7 @@ Login request / authorization:
 - `GET/POST /client-api/authorize/` (browser; requires Django login)
 - `GET /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is an unguessable UUID)
   - `status=approved` always includes `access_token`; after the token is delivered once, polling returns `status=consumed`.
+  - Login request creation returns `interval`, the recommended poll interval in seconds.
 
 User-management payload notes:
 
@@ -200,6 +201,21 @@ Any attempt to patch other fields is rejected (400) using the project error enve
 
 Self password change endpoint.
 
+Request:
+
+```json
+{ "current_password": "...", "new_password": "...", "confirm_password": "..." }
+```
+
+Rules:
+
+- Requires authentication.
+- Verifies `current_password` via Django `check_password()`.
+- Sets the new password via Django `set_password()` and runs configured password validators.
+- Updates the current session hash so the user stays logged in.
+- Revokes all other Django web sessions for the user (keeps the current session).
+- Clears `UserProfile.must_change_password` when the change succeeds.
+
 ## Shelves
 
 Shelves are presentation/organization and **do not** grant book access. LibraryGroups still control access.
@@ -230,25 +246,12 @@ Shelf payload notes:
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
 - Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
+- Product/UI displays may show one-based labels such as `#1`, `#2`, etc.; the current shelf edit UI reorders with `Move up` / `Move down` buttons and has no drag/drop or per-row numeric position input.
 - Client API bearer tokens:
   - may read any shelf the token user can view
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
-  - group shelves are read-only via bearer tokens
-
-Request:
-
-```json
-{ "current_password": "...", "new_password": "...", "confirm_password": "..." }
-```
-
-Rules:
-
-- Requires authentication.
-- Verifies `current_password` via Django `check_password()`.
-- Sets the new password via Django `set_password()` and runs configured password validators.
-- Updates the current session hash so the user stays logged in.
-- Revokes all other Django web sessions for the user (keeps the current session).
-- Clears `UserProfile.must_change_password` when the change succeeds.
+  - group shelves and other users' shelves are read-only via bearer tokens
+  - do not bypass book access; `/items/` still filters listed books through normal book visibility
 
 ### `POST /api/v1/accounts/me/web-sessions/logout-others/`
 
