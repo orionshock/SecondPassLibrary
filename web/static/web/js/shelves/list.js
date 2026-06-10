@@ -1,21 +1,17 @@
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { pagedController } from "./shared.js";
+import { pagedController, shelfCreatedByDisplay, shelfOwnerDisplay } from "./shared.js";
 
-function renderShelfRow(s) {
+function renderShelfRow(s, me) {
   const id = s && s.id != null ? String(s.id) : "";
   const name = s && s.name ? String(s.name) : "(Unnamed shelf)";
   const desc = s && s.description ? String(s.description) : "";
   const ownerType = s && s.owner_type ? String(s.owner_type) : "";
   const visibility = s && s.visibility ? String(s.visibility) : "";
 
-  let ownerLine = "";
-  if (ownerType === "user" && s.owner_user) {
-    ownerLine = `User: ${escapeHtml(s.owner_user.username || "user")}`;
-  } else if (ownerType === "group" && s.owner_group) {
-    ownerLine = `Group: ${escapeHtml(s.owner_group.name || "group")}`;
-  }
-
-  const visLine = ownerType === "user" ? `  -  ${escapeHtml(visibility)}` : "";
+  const ownerLine = shelfOwnerDisplay(s, me);
+  const createdLine = ownerType === "group" ? shelfCreatedByDisplay(s) : "";
+  const visLine = ownerType === "user" && visibility ? ` - ${visibility}` : "";
+  const metaLine = [ownerLine ? `${ownerLine}${visLine}` : "", createdLine].filter(Boolean).join(" - ");
 
   return `
     <article class="book">
@@ -25,7 +21,7 @@ function renderShelfRow(s) {
             <a href="/shelves/${encodeURIComponent(id)}/">${escapeHtml(name)}</a>
           </h3>
           ${desc ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(desc)}</div>` : ""}
-          <div class="muted" style="margin-top: 4px;">${ownerLine}${visLine}</div>
+          ${metaLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(metaLine)}</div>` : ""}
         </div>
       </div>
     </article>
@@ -33,7 +29,7 @@ function renderShelfRow(s) {
 }
 
 export async function initShelvesList() {
-  await loadMeAndInitShell();
+  const me = await loadMeAndInitShell();
   setGlobalError("");
 
   const statusEl = $("#shelves-status");
@@ -51,7 +47,7 @@ export async function initShelvesList() {
     nextBtn,
     noteEl,
     initialUrl: "/api/v1/shelves/",
-    renderRow: renderShelfRow,
+    renderRow: (s) => renderShelfRow(s, me),
     emptyText: "No visible shelves.",
   });
 

@@ -5,7 +5,7 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { inferCanEditShelf, setStatus } from "./shared.js";
+import { inferCanEditShelf, shelfCreatedByDisplay, shelfOwnerDisplay, setStatus } from "./shared.js";
 import { initShelfItemsEditor } from "./items.js";
 import { initShelfBookSearch } from "./book_search.js";
 
@@ -149,24 +149,21 @@ export async function initShelfEdit() {
   }
 
   const ownerType = shelf && shelf.owner_type ? String(shelf.owner_type) : "";
-  const ownerUser = shelf && shelf.owner_user ? shelf.owner_user : null;
   const ownerGroup = shelf && shelf.owner_group ? shelf.owner_group : null;
   const ownerGroupId = ownerType === "group" && ownerGroup && ownerGroup.id ? String(ownerGroup.id) : "";
 
   titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
 
   if (ownerType === "user") {
-    const username = ownerUser && ownerUser.username ? String(ownerUser.username) : "user";
-    ownerContextEl.textContent = `User shelf by ${username}`;
+    ownerContextEl.textContent = shelfOwnerDisplay(shelf, me);
     const visibility = shelf && shelf.visibility ? String(shelf.visibility) : "private";
     visibilityContextEl.textContent = `Visibility: ${visibility}`;
     contextNoteEl.textContent =
       "User shelves do not grant book access. Books are shown only while you can access them. Listed shelves do not grant access.";
     visible(groupLinkEl, false);
   } else if (ownerType === "group") {
-    const groupName = ownerGroup && ownerGroup.name ? String(ownerGroup.name) : "group";
-    ownerContextEl.textContent = `Group shelf: ${groupName}`;
-    visibilityContextEl.textContent = "";
+    ownerContextEl.textContent = shelfOwnerDisplay(shelf, me);
+    visibilityContextEl.textContent = shelfCreatedByDisplay(shelf);
     contextNoteEl.textContent = "Only books assigned to this group can be added.";
     if (ownerGroupId) {
       groupLinkEl.setAttribute("href", `/groups/${encodeURIComponent(String(ownerGroupId))}/`);

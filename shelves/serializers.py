@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from accounts.user_payloads import compact_user_payload
 from library.models import Book, LibraryGroup, is_public_group
 from library.catalog_serializers import AuthorSummarySerializer, SeriesSummarySerializer
 from accounts.models import UserClientSession
@@ -39,7 +40,7 @@ class ShelfSerializer(serializers.ModelSerializer):
         user = obj.owner_user
         if user is None:
             return None
-        return {"id": cast(int, user.pk), "username": user.get_username()}
+        return compact_user_payload(user)
 
     def get_owner_group(self, obj: Shelf) -> dict[str, Any] | None:
         group = obj.owner_group
@@ -51,7 +52,7 @@ class ShelfSerializer(serializers.ModelSerializer):
         user = obj.created_by
         if user is None:
             return None
-        return {"id": cast(int, user.pk), "username": user.get_username()}
+        return compact_user_payload(user)
 
     def get_can_edit(self, obj: Shelf) -> bool:
         request = self.context.get("request")
@@ -141,7 +142,7 @@ class ShelfItemSerializer(serializers.ModelSerializer):
         user = obj.added_by
         if user is None:
             return None
-        return {"id": cast(int, user.pk), "username": user.get_username()}
+        return compact_user_payload(user)
 
     class Meta:
         model = ShelfItem

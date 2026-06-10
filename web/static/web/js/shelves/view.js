@@ -1,9 +1,9 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { inferCanEditShelf, setStatus } from "./shared.js";
+import { inferCanEditShelf, shelfCreatedByDisplay, shelfOwnerDisplay, setStatus } from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
 
-function renderShelfMeta(container, shelf) {
+function renderShelfMeta(container, shelf, me) {
   container.innerHTML = "";
   const kv = document.createElement("div");
   kv.className = "kv";
@@ -23,14 +23,16 @@ function renderShelfMeta(container, shelf) {
   if (shelf.description) row("Description", escapeHtml(shelf.description));
   row("Owner type", escapeHtml(shelf.owner_type || ""));
   if (shelf.owner_type === "user" && shelf.owner_user) {
-    row("Owner", escapeHtml(shelf.owner_user.username || ""));
+    row("Owner", escapeHtml(shelfOwnerDisplay(shelf, me) || ""));
     row("Visibility", escapeHtml(shelf.visibility || ""));
   }
   if (shelf.owner_type === "group" && shelf.owner_group) {
     const gid = shelf.owner_group.id ? String(shelf.owner_group.id) : "";
     const gname = shelf.owner_group.name || gid;
-    row("Owner group", `<a href="/groups/${encodeURIComponent(gid)}/">${escapeHtml(gname)}</a>`);
+    row("Owner", `<a href="/groups/${encodeURIComponent(gid)}/">${escapeHtml(shelfOwnerDisplay(shelf, me) || gname)}</a>`);
   }
+  const createdBy = shelfCreatedByDisplay(shelf);
+  if (createdBy) row("Created by", escapeHtml(createdBy.replace(/^Created by /, "")));
 
   container.appendChild(kv);
 }
@@ -103,7 +105,7 @@ export async function initShelfView() {
   try {
     const shelf = await fetchJSON(`/api/v1/shelves/${encodeURIComponent(String(shelfId))}/`);
     titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
-    renderShelfMeta(metaEl, shelf);
+    renderShelfMeta(metaEl, shelf, me);
     visible(wrapEl, true);
 
     const canEdit = shelf && shelf.can_edit != null ? !!shelf.can_edit : inferCanEditShelf({ me, shelf });

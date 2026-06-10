@@ -1,5 +1,6 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
+import { shelfCreatedByDisplay, shelfOwnerDisplay } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
 
 export function truthy(v) {
@@ -137,6 +138,8 @@ export function renderGroupShelvesCompact(payload, { canEdit }) {
 
       const descSnippet = desc && desc.length > 160 ? `${desc.slice(0, 160)}...` : desc;
       const countLine = itemCount != null ? `${itemCount} item${itemCount === 1 ? "" : "s"}` : "";
+      const ownerLine = shelfOwnerDisplay(s);
+      const createdLine = shelfCreatedByDisplay(s);
 
       const actions = [
         id ? `<a class="button" href="${escapeHtml(href)}">View</a>` : "",
@@ -151,6 +154,8 @@ export function renderGroupShelvesCompact(payload, { canEdit }) {
             <div style="flex: 1;">
               <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
               ${descSnippet ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(descSnippet)}</div>` : ""}
+              ${ownerLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(ownerLine)}</div>` : ""}
+              ${createdLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(createdLine)}</div>` : ""}
               ${countLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(countLine)}</div>` : ""}
             </div>
             ${actions ? `<div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">${actions}</div>` : ""}

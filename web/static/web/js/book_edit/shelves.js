@@ -1,4 +1,5 @@
 import { escapeHtml } from "../layout.js";
+import { shelfCreatedByDisplay, shelfOwnerDisplay } from "../shelves/shared.js";
 
 export async function refreshShelvesContext({
   bookId,
@@ -25,14 +26,10 @@ export async function refreshShelvesContext({
           const itemCount = s && s.item_count != null ? Number(s.item_count) : null;
           const matchedItemId = s && s.matched_item_id ? String(s.matched_item_id) : "";
 
-          let ownerLine = "";
-          if (ownerType === "user" && s.owner_user && s.owner_user.username) {
-            ownerLine = `User shelf by ${String(s.owner_user.username)}`;
-            if (s.visibility) ownerLine += ` · Visibility: ${String(s.visibility)}`;
-          }
-          if (ownerType === "group" && s.owner_group && s.owner_group.name) {
-            ownerLine = `Group shelf: ${String(s.owner_group.name)}`;
-          }
+          const ownerLine = shelfOwnerDisplay(s);
+          const visibilityLine = ownerType === "user" && s.visibility ? `Visibility: ${String(s.visibility)}` : "";
+          const createdLine = ownerType === "group" ? shelfCreatedByDisplay(s) : "";
+          const metaLine = [ownerLine, visibilityLine, createdLine].filter(Boolean).join(" - ");
 
           const countLine = itemCount != null ? `Items: ${itemCount}` : "";
           const removeBtn =
@@ -55,7 +52,7 @@ export async function refreshShelvesContext({
                 <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                   <div style="flex: 1;">
                     <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
-                    ${ownerLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(ownerLine)}</div>` : ""}
+                    ${metaLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(metaLine)}</div>` : ""}
                     ${countLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(countLine)}</div>` : ""}
                   </div>
                   <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -74,4 +71,3 @@ export async function refreshShelvesContext({
     shelvesEl.innerHTML = "";
   }
 }
-

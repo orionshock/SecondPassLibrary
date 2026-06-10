@@ -21,7 +21,13 @@ User = get_user_model()
 
 class ShelvesClientBearerTests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="u", email="u@example.com", password="pw")
+        self.user = User.objects.create_user(
+            username="u",
+            email="u@example.com",
+            password="pw",
+            first_name="Uma",
+            last_name="User",
+        )
         profile = get_or_create_profile(user=self.user)
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
@@ -70,6 +76,14 @@ class ShelvesClientBearerTests(APITestCase):
         owner_user = cast(dict[str, Any], data["owner_user"])
         user_id = cast(int, getattr(self.user, "pk"))
         self.assertEqual(owner_user["id"], user_id)
+        self.assertEqual(owner_user["first_name"], "Uma")
+        self.assertEqual(owner_user["last_name"], "User")
+        self.assertNotIn("email", owner_user)
+        created_by = cast(dict[str, Any], data["created_by"])
+        self.assertEqual(created_by["id"], user_id)
+        self.assertEqual(created_by["first_name"], "Uma")
+        self.assertEqual(created_by["last_name"], "User")
+        self.assertNotIn("email", created_by)
         self.assertTrue(data["can_edit"])
 
     def test_bearer_cannot_create_group_shelf(self):

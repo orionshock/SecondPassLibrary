@@ -8,6 +8,42 @@ export function setStatus(el, text, isError) {
   el.classList.toggle("error", !!isError);
 }
 
+export function friendlyUserDisplayName(user) {
+  if (!user) return "";
+  const first = user.first_name ? String(user.first_name).trim() : "";
+  const last = user.last_name ? String(user.last_name).trim() : "";
+  const fullName = [first, last].filter(Boolean).join(" ").trim();
+  if (fullName) return fullName;
+  return user.username ? String(user.username) : "";
+}
+
+export function shelfOwnerDisplay(shelf, me) {
+  if (!shelf) return "";
+  const ownerType = shelf.owner_type ? String(shelf.owner_type) : "";
+  if (ownerType === "user" && shelf.owner_user) {
+    const ownerId = shelf.owner_user.id != null ? String(shelf.owner_user.id) : "";
+    const meId = me && me.id != null ? String(me.id) : "";
+    const ownerUsername = shelf.owner_user.username ? String(shelf.owner_user.username) : "";
+    const meUsername = me && me.username ? String(me.username) : "";
+    if ((ownerId && meId && ownerId === meId) || (ownerUsername && meUsername && ownerUsername === meUsername)) {
+      return "Owned by you";
+    }
+    const name = friendlyUserDisplayName(shelf.owner_user) || "user";
+    return `Owned by ${name}`;
+  }
+  if (ownerType === "group" && shelf.owner_group) {
+    const name = shelf.owner_group.name ? String(shelf.owner_group.name) : "group";
+    return `Owned by ${name}`;
+  }
+  return "";
+}
+
+export function shelfCreatedByDisplay(shelf) {
+  if (!shelf || !shelf.created_by) return "";
+  const name = friendlyUserDisplayName(shelf.created_by);
+  return name ? `Created by ${name}` : "";
+}
+
 export async function pagedController({ statusEl, resultsEl, prevBtn, nextBtn, noteEl, initialUrl, renderRow, emptyText }) {
   let nextUrl = null;
   let prevUrl = null;

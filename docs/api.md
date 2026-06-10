@@ -244,6 +244,8 @@ Shelf payload notes:
 
 - Shelves include a read-only `can_edit` boolean computed for the current request user. This is a UI hint; API permissions remain authoritative.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
+- User-owned shelves include `owner_user` as a compact user object with `id`, `username`, `first_name`, and `last_name`; group-owned shelves have `owner_user: null`.
+- Shelves include `created_by` as the same compact user object when known. These compact user objects do not include email addresses or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
 - Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
 - Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
@@ -253,6 +255,27 @@ Shelf payload notes:
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
   - group shelves and other users' shelves are read-only via bearer tokens
   - do not bypass book access; `/items/` still filters listed books through normal book visibility
+
+Example user-owned shelf payload excerpt:
+
+```json
+{
+  "owner_type": "user",
+  "owner_user": {
+    "id": 2,
+    "username": "manager",
+    "first_name": "Mara",
+    "last_name": "Manager"
+  },
+  "owner_group": null,
+  "created_by": {
+    "id": 2,
+    "username": "manager",
+    "first_name": "Mara",
+    "last_name": "Manager"
+  }
+}
+```
 
 ### `POST /api/v1/accounts/me/web-sessions/logout-others/`
 

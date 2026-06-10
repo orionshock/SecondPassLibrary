@@ -393,6 +393,23 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("patchShelfItemPosition", js)
         self.assertIn("storedPosition >= currentItemTotal - 1", js)
 
+    def test_shelf_js_has_friendly_ownership_display(self):
+        shared_js = Path("web/static/web/js/shelves/shared.js").read_text()
+        list_js = Path("web/static/web/js/shelves/list.js").read_text()
+        view_js = Path("web/static/web/js/shelves/view.js").read_text()
+        edit_js = Path("web/static/web/js/shelves/edit.js").read_text()
+        book_edit_shelves_js = Path("web/static/web/js/book_edit/shelves.js").read_text()
+        groups_shared_js = Path("web/static/web/js/groups/shared.js").read_text()
+
+        self.assertIn("friendlyUserDisplayName", shared_js)
+        self.assertIn("Owned by you", shared_js)
+        self.assertIn("Created by", shared_js)
+        self.assertIn("shelfOwnerDisplay", list_js)
+        self.assertIn("shelfCreatedByDisplay", view_js)
+        self.assertIn("shelfCreatedByDisplay", edit_js)
+        self.assertIn("shelfOwnerDisplay", book_edit_shelves_js)
+        self.assertIn("shelfCreatedByDisplay", groups_shared_js)
+
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)
         self.assertEqual(response.status_code, 302)

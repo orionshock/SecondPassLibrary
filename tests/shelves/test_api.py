@@ -23,16 +23,28 @@ class ShelvesAPITest(APITestCase):
     def setUp(self):
         self.public = get_public_group()
 
-        self.owner = User.objects.create_superuser(username="owner", password="pw", email="o@example.com")
+        self.owner = User.objects.create_superuser(
+            username="owner",
+            password="pw",
+            email="o@example.com",
+            first_name="Olivia",
+            last_name="Owner",
+        )
         ensure_user_public_membership(user=self.owner)
 
-        self.reader = User.objects.create_user(username="reader", password="pw")
+        self.reader = User.objects.create_user(
+            username="reader",
+            password="pw",
+            email="reader@example.com",
+            first_name="Riley",
+            last_name="Reader",
+        )
         ensure_user_public_membership(user=self.reader)
         profile, _ = UserProfile.objects.get_or_create(user=self.reader)
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
 
-        self.other = User.objects.create_user(username="other", password="pw")
+        self.other = User.objects.create_user(username="other", password="pw", first_name="Owen", last_name="Other")
         ensure_user_public_membership(user=self.other)
 
         self.group = LibraryGroup.objects.create(name="G")
@@ -61,6 +73,18 @@ class ShelvesAPITest(APITestCase):
         self.book_hidden = create_file_backed_book(title="HB", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.book_hidden, group=self.hidden_group)
 
+    def _assert_compact_user_payload(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        user,
+    ) -> None:
+        self.assertEqual(payload["id"], user.pk)
+        self.assertEqual(payload["username"], user.get_username())
+        self.assertEqual(payload["first_name"], user.first_name or "")
+        self.assertEqual(payload["last_name"], user.last_name or "")
+        self.assertNotIn("email", payload)
+
     def _png_bytes(self, *, size=(12, 16)) -> bytes:
         from PIL import Image
         from io import BytesIO
@@ -75,6 +99,15 @@ class ShelvesAPITest(APITestCase):
         r1 = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "Private", "owner_type": "user"}, format="json"))
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
         private_id = cast(Mapping[str, Any], r1.data)["id"]
+        private_owner = cast(Mapping[str, Any], cast(Mapping[str, Any], r1.data)["owner_user"])
+        private_creator = cast(Mapping[str, Any], cast(Mapping[str, Any], r1.data)["created_by"])
+        self._assert_compact_user_payload(private_owner, user=self.reader)
+        self._assert_compact_user_payload(private_creator, user=self.reader)
+        private_detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
+        self.assertEqual(private_detail.status_code, status.HTTP_200_OK)
+        private_detail_payload = cast(Mapping[str, Any], private_detail.data)
+        self._assert_compact_user_payload(cast(Mapping[str, Any], private_detail_payload["owner_user"]), user=self.reader)
+        self._assert_compact_user_payload(cast(Mapping[str, Any], private_detail_payload["created_by"]), user=self.reader)
 
         r2 = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "Listed", "owner_type": "user", "visibility": "listed"}, format="json"))
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
@@ -89,6 +122,11 @@ class ShelvesAPITest(APITestCase):
         ids = {row["id"] for row in results}
         self.assertIn(listed_id, ids)
         self.assertNotIn(private_id, ids)
+        listed_row = next(row for row in results if row["id"] == listed_id)
+        owner_user = cast(Mapping[str, Any], listed_row["owner_user"])
+        created_by = cast(Mapping[str, Any], listed_row["created_by"])
+        self._assert_compact_user_payload(owner_user, user=self.reader)
+        self._assert_compact_user_payload(created_by, user=self.reader)
 
     def test_group_shelf_visibility(self):
         # Owner can create a group shelf.
@@ -96,6 +134,9 @@ class ShelvesAPITest(APITestCase):
         create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
         shelf_id = cast(Mapping[str, Any], create.data)["id"]
+        create_payload = cast(Mapping[str, Any], create.data)
+        self.assertIsNone(create_payload["owner_user"])
+        self._assert_compact_user_payload(cast(Mapping[str, Any], create_payload["created_by"]), user=self.owner)
 
         # Member can see it in list.
         self.client.logout()
@@ -104,6 +145,14 @@ class ShelvesAPITest(APITestCase):
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
         results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
         self.assertIn(shelf_id, {r["id"] for r in results})
+        group_row = next(row for row in results if row["id"] == shelf_id)
+        self.assertIsNone(group_row["owner_user"])
+        self._assert_compact_user_payload(cast(Mapping[str, Any], group_row["created_by"]), user=self.owner)
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        detail_payload = cast(Mapping[str, Any], detail.data)
+        self.assertIsNone(detail_payload["owner_user"])
+        self._assert_compact_user_payload(cast(Mapping[str, Any], detail_payload["created_by"]), user=self.owner)
 
         # Non-member cannot retrieve it (404).
         self.client.logout()
