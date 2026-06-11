@@ -1,5 +1,5 @@
 import { escapeHtml } from "../layout.js";
-import { shelfCreatedByDisplay, shelfOwnerDisplay } from "../shelves/shared.js";
+import { shelfMetadataLine } from "../shelves/shared.js";
 
 export async function refreshShelvesContext({
   bookId,
@@ -21,17 +21,10 @@ export async function refreshShelvesContext({
           const name = s && s.name ? String(s.name) : "(Shelf)";
           const href = sid ? `/shelves/${encodeURIComponent(sid)}/` : "#";
           const editHref = sid ? `/shelves/${encodeURIComponent(sid)}/edit/` : "#";
-          const ownerType = s && s.owner_type ? String(s.owner_type) : "";
           const canEdit = s && s.can_edit != null ? !!s.can_edit : false;
-          const itemCount = s && s.item_count != null ? Number(s.item_count) : null;
           const matchedItemId = s && s.matched_item_id ? String(s.matched_item_id) : "";
 
-          const ownerLine = shelfOwnerDisplay(s);
-          const visibilityLine = ownerType === "user" && s.visibility ? `Visibility: ${String(s.visibility)}` : "";
-          const createdLine = ownerType === "group" ? shelfCreatedByDisplay(s) : "";
-          const metaLine = [ownerLine, visibilityLine, createdLine].filter(Boolean).join(" - ");
-
-          const countLine = itemCount != null ? `Items: ${itemCount}` : "";
+          const metaLine = shelfMetadataLine(s);
           const removeBtn =
             canEdit && sid && matchedItemId
               ? `<button class="button" type="button" data-action="remove-from-shelf" data-shelf-id="${escapeHtml(
@@ -52,8 +45,7 @@ export async function refreshShelvesContext({
                 <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                   <div style="flex: 1;">
                     <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
-                    ${metaLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(metaLine)}</div>` : ""}
-                    ${countLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(countLine)}</div>` : ""}
+                    ${metaLine ? `<div class="muted" style="margin-top: 4px;">${metaLine}</div>` : ""}
                   </div>
                   <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     ${actions}

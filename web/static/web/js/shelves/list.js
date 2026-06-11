@@ -1,17 +1,11 @@
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { pagedController, shelfCreatedByDisplay, shelfOwnerDisplay } from "./shared.js";
+import { pagedController, shelfMetadataLine } from "./shared.js";
 
-function renderShelfRow(s, me) {
+function renderShelfRow(s) {
   const id = s && s.id != null ? String(s.id) : "";
   const name = s && s.name ? String(s.name) : "(Unnamed shelf)";
   const desc = s && s.description ? String(s.description) : "";
-  const ownerType = s && s.owner_type ? String(s.owner_type) : "";
-  const visibility = s && s.visibility ? String(s.visibility) : "";
-
-  const ownerLine = shelfOwnerDisplay(s, me);
-  const createdLine = ownerType === "group" ? shelfCreatedByDisplay(s) : "";
-  const visLine = ownerType === "user" && visibility ? ` - ${visibility}` : "";
-  const metaLine = [ownerLine ? `${ownerLine}${visLine}` : "", createdLine].filter(Boolean).join(" - ");
+  const metaLine = shelfMetadataLine(s);
 
   return `
     <article class="book">
@@ -21,7 +15,7 @@ function renderShelfRow(s, me) {
             <a href="/shelves/${encodeURIComponent(id)}/">${escapeHtml(name)}</a>
           </h3>
           ${desc ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(desc)}</div>` : ""}
-          ${metaLine ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(metaLine)}</div>` : ""}
+          ${metaLine ? `<div class="muted" style="margin-top: 4px;">${metaLine}</div>` : ""}
         </div>
       </div>
     </article>
@@ -29,7 +23,7 @@ function renderShelfRow(s, me) {
 }
 
 export async function initShelvesList() {
-  const me = await loadMeAndInitShell();
+  await loadMeAndInitShell();
   setGlobalError("");
 
   const statusEl = $("#shelves-status");
@@ -47,7 +41,7 @@ export async function initShelvesList() {
     nextBtn,
     noteEl,
     initialUrl: "/api/v1/shelves/",
-    renderRow: (s) => renderShelfRow(s, me),
+    renderRow: renderShelfRow,
     emptyText: "No visible shelves.",
   });
 

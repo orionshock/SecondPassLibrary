@@ -439,6 +439,19 @@ a:hover { text-decoration: underline; }
   font-size: 12px;
 }
 .pill--owner { color: var(--text); border-color: rgba(125, 211, 252, 0.45); }
+.shelf-owner-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+}
+.shelf-owner-identity .material-symbols-outlined {
+  color: var(--muted);
+  font-size: 18px;
+}
+.shelf-meta-separator {
+  margin: 0 7px;
+}
 
 /* =====================
    Lists / Tables

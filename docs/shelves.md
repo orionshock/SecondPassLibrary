@@ -191,7 +191,11 @@ Behavior:
   - Books in shelf (default): remove/reorder with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
   - Add books: search/add; changes apply immediately; books already in the shelf are hidden from results.
   - Details: edit name/description/visibility (user shelves only) and delete.
-- Shelf list/detail/edit views show friendly ownership context where useful: own shelves may say "Owned by you", other user-owned shelves use the user's first/last name when present with username fallback, and group-owned shelves show the owning group plus creator context when available.
+- Shelf list/detail/edit views place shelf ownership in the first metadata segment:
+  - user-owned shelves show the Material Symbols `person` icon followed by `First Last <@username>` when a first or last name exists, falling back to `<@username>` without an empty gap
+  - group-owned shelves show the Material Symbols `groups` icon followed by the group name
+  - visibility and item count follow with `·` separators, such as `person Owen Benji <@owner> · Private · 17 items` or `groups Public · Private · 6 items`
+  - `profile_id` is used for identity comparison only and is not displayed
 - Book detail and book edit pages surface shelf context (shelves containing the book).
 - Group pages include shelf tabs for group-owned shelves.
 

@@ -5,7 +5,7 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { inferCanEditShelf, shelfCreatedByDisplay, shelfOwnerDisplay, setStatus } from "./shared.js";
+import { inferCanEditShelf, shelfMetadataLine, setStatus } from "./shared.js";
 import { initShelfItemsEditor } from "./items.js";
 import { initShelfBookSearch } from "./book_search.js";
 
@@ -153,17 +153,17 @@ export async function initShelfEdit() {
   const ownerGroupId = ownerType === "group" && ownerGroup && ownerGroup.id ? String(ownerGroup.id) : "";
 
   titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
+  const metadata = shelfMetadataLine(shelf);
 
   if (ownerType === "user") {
-    ownerContextEl.textContent = shelfOwnerDisplay(shelf, me);
-    const visibility = shelf && shelf.visibility ? String(shelf.visibility) : "private";
-    visibilityContextEl.textContent = `Visibility: ${visibility}`;
+    ownerContextEl.innerHTML = metadata;
+    visibilityContextEl.textContent = "";
     contextNoteEl.textContent =
       "User shelves do not grant book access. Books are shown only while you can access them. Listed shelves do not grant access.";
     visible(groupLinkEl, false);
   } else if (ownerType === "group") {
-    ownerContextEl.textContent = shelfOwnerDisplay(shelf, me);
-    visibilityContextEl.textContent = shelfCreatedByDisplay(shelf);
+    ownerContextEl.innerHTML = metadata;
+    visibilityContextEl.textContent = "";
     contextNoteEl.textContent = "Only books assigned to this group can be added.";
     if (ownerGroupId) {
       groupLinkEl.setAttribute("href", `/groups/${encodeURIComponent(String(ownerGroupId))}/`);
