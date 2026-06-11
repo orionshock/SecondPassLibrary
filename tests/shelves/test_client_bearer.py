@@ -230,6 +230,12 @@ class ShelvesClientBearerTests(APITestCase):
         shelf_id = str(cast(dict[str, Any], created.data)["id"])
         self.client.logout()
 
+        list_resp = cast(Response, self.client.get("/api/v1/shelves/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(list_resp.status_code, 200)
+        list_data = cast(dict[str, Any], list_resp.data)
+        ids = {str(r["id"]) for r in cast(list[dict[str, Any]], list_data["results"])}
+        self.assertNotIn(shelf_id, ids)
+
         detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/", HTTP_AUTHORIZATION=self._auth))
         self.assertEqual(detail.status_code, 404)
 

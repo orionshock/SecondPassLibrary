@@ -63,6 +63,12 @@ class ShelvesAPITest(APITestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
+        self.manager = User.objects.create_user(username="manager", password="pw", is_staff=True)
+        ensure_user_public_membership(user=self.manager)
+        profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        profile.role = UserProfile.ROLE_MANAGER
+        profile.save(update_fields=["role", "updated_at"])
+
         self.book_in_group = create_file_backed_book(title="B1", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
@@ -128,6 +134,50 @@ class ShelvesAPITest(APITestCase):
         self._assert_compact_user_payload(owner_user, user=self.reader)
         self._assert_compact_user_payload(created_by, user=self.reader)
 
+    def test_list_and_detail_visibility_matrix_for_user_owned_shelves(self):
+        self.client.login(username="reader", password="pw")
+        private = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "Reader Private", "owner_type": "user"},
+                format="json",
+            ),
+        )
+        self.assertEqual(private.status_code, status.HTTP_201_CREATED)
+        private_id = cast(Mapping[str, Any], private.data)["id"]
+
+        listed = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "Reader Listed", "owner_type": "user", "visibility": "listed"},
+                format="json",
+            ),
+        )
+        self.assertEqual(listed.status_code, status.HTTP_201_CREATED)
+        listed_id = cast(Mapping[str, Any], listed.data)["id"]
+
+        owner_list = cast(Response, self.client.get("/api/v1/shelves/"))
+        self.assertEqual(owner_list.status_code, status.HTTP_200_OK)
+        owner_ids = {row["id"] for row in cast(list[dict[str, Any]], cast(Mapping[str, Any], owner_list.data)["results"])}
+        self.assertIn(private_id, owner_ids)
+        self.assertIn(listed_id, owner_ids)
+        owner_detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
+        self.assertEqual(owner_detail.status_code, status.HTTP_200_OK)
+
+        for username in ["other", "manager", "owner"]:
+            self.client.logout()
+            self.client.login(username=username, password="pw")
+            list_resp = cast(Response, self.client.get("/api/v1/shelves/"))
+            self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+            ids = {row["id"] for row in cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])}
+            self.assertNotIn(private_id, ids, f"{username} should not see another user's private shelf in list")
+            self.assertIn(listed_id, ids, f"{username} should see another user's listed shelf")
+
+            detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
+            self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_group_shelf_visibility(self):
         # Owner can create a group shelf.
         self.client.login(username="owner", password="pw")
@@ -157,6 +207,13 @@ class ShelvesAPITest(APITestCase):
         # Non-member cannot retrieve it (404).
         self.client.logout()
         self.client.login(username="other", password="pw")
+        list_for_non_member = cast(Response, self.client.get("/api/v1/shelves/"))
+        self.assertEqual(list_for_non_member.status_code, status.HTTP_200_OK)
+        non_member_ids = {
+            row["id"]
+            for row in cast(list[dict[str, Any]], cast(Mapping[str, Any], list_for_non_member.data)["results"])
+        }
+        self.assertNotIn(shelf_id, non_member_ids)
         detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 

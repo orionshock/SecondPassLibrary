@@ -410,6 +410,15 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("shelfOwnerDisplay", book_edit_shelves_js)
         self.assertIn("shelfCreatedByDisplay", groups_shared_js)
 
+    def test_shelves_product_ui_list_uses_visibility_scoped_api(self):
+        template = Path("web/templates/web/shelves/shelves.html").read_text(encoding="utf-8")
+        list_js = Path("web/static/web/js/shelves/list.js").read_text()
+
+        self.assertIn('id="shelves-results"', template)
+        self.assertIn('initialUrl: "/api/v1/shelves/"', list_js)
+        self.assertNotIn("owner_user__is_staff", list_js)
+        self.assertNotIn("is_superuser", list_js)
+
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)
         self.assertEqual(response.status_code, 302)

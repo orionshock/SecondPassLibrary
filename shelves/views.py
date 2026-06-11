@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, NoReturn, cast
 
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Count, OuterRef, Subquery
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
@@ -13,8 +13,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from core import policies as core_policies
-from library.models import Book, LibraryGroup, LibraryGroupMembership
+from library.models import Book, LibraryGroup
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 
@@ -37,7 +36,7 @@ from .services import (
     update_shelf,
     visible_shelf_items_for_user,
 )
-from .policies import can_client_bearer_edit_shelf
+from .policies import can_client_bearer_edit_shelf, visible_shelf_filter
 
 
 class ShelfViewSet(
@@ -105,17 +104,7 @@ class ShelfViewSet(
             .annotate(item_count=Count("items"))
         )
 
-        if core_policies.can_manage_library(user):
-            visible_qs = qs
-        else:
-            visible_qs = qs.filter(
-                Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
-                | Q(owner_type=Shelf.OWNER_TYPE_USER, visibility=Shelf.VISIBILITY_LISTED)
-                | Q(
-                    owner_type=Shelf.OWNER_TYPE_GROUP,
-                    owner_group__memberships__user=user,
-                )
-            ).distinct()
+        visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
 
         owner_group = self.request.query_params.get("owner_group")
         if owner_group:

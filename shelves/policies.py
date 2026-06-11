@@ -1,9 +1,29 @@
 from __future__ import annotations
 
+from django.db.models import Q
+
 from core import policies as core_policies
 from library.models import Book, BookGroupAssignment, LibraryGroupMembership, is_public_group
 
 from .models import Shelf
+
+
+def visible_shelf_filter(user) -> Q:
+    if getattr(user, "is_anonymous", False):
+        return Q(pk__isnull=True)
+
+    user_shelves = Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user) | Q(
+        owner_type=Shelf.OWNER_TYPE_USER,
+        visibility=Shelf.VISIBILITY_LISTED,
+    )
+    group_shelves = Q(
+        owner_type=Shelf.OWNER_TYPE_GROUP,
+        owner_group__memberships__user=user,
+    )
+    if core_policies.can_manage_library(user):
+        group_shelves = Q(owner_type=Shelf.OWNER_TYPE_GROUP)
+
+    return user_shelves | group_shelves
 
 
 def can_view_shelf(*, user, shelf: Shelf) -> bool:

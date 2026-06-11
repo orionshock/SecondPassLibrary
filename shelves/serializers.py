@@ -26,6 +26,8 @@ class ShelfOwnerGroupSummarySerializer(serializers.Serializer):
 class ShelfOwnerUserSummarySerializer(serializers.Serializer):
     id = serializers.IntegerField()
     username = serializers.CharField()
+    first_name = serializers.CharField(allow_blank=True)
+    last_name = serializers.CharField(allow_blank=True)
 
 
 class ShelfSerializer(serializers.ModelSerializer):
