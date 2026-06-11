@@ -94,6 +94,7 @@ The Client API provides a pairing flow (human code + browser approval) and beare
   - bearer tokens may read any shelf the token user can view
   - bearer tokens may create/edit/delete and manage items only in the token user's own personal shelves
   - group shelves and other users' shelves are read-only via bearer tokens
+  - shelf `can_edit` is computed for the current request context; group shelves report `can_edit: false` to bearer-token clients even when the same user could edit them in the product UI with session auth
 - Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
@@ -242,7 +243,7 @@ List filters:
 
 Shelf payload notes:
 
-- Shelves include a read-only `can_edit` boolean computed for the current request user. This is a UI hint; API permissions remain authoritative.
+- Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API permissions remain authoritative. Product UI/session-auth requests use normal shelf edit policy, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
 - User-owned shelves include `owner_user` as a compact user object with `id`, `username`, `first_name`, and `last_name`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. These compact user objects do not include email addresses or profile/admin metadata.
@@ -253,7 +254,7 @@ Shelf payload notes:
 - Client API bearer tokens:
   - may read any shelf the token user can view
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
-  - group shelves and other users' shelves are read-only via bearer tokens
+  - group shelves and other users' shelves are read-only via bearer tokens and report `can_edit: false`
   - do not bypass book access; `/items/` still filters listed books through normal book visibility
 
 Example user-owned shelf payload excerpt:

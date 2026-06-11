@@ -59,7 +59,7 @@ Group-owned shelves have no listed/public state. Visibility is derived from the 
 List/detail payloads also include:
 
 - `item_count`: number of shelf items
-- `can_edit`: whether the current caller can edit the shelf
+- `can_edit`: whether the current request context can edit the shelf
 - `matched_item_id`: included on list results when filtering by `?book=<book_id>`
 
 `owner_user` is included for user-owned shelves as a compact user object:
@@ -105,6 +105,12 @@ Public group shelves:
 
 - Public has no curators
 - Public group shelves are editable only by Owner/Manager/Librarian
+
+Client API bearer-token requests are narrower than product UI/session-auth requests:
+
+- bearer tokens may create/edit/delete shelves and manage shelf items only for the token user's own user-owned shelves
+- group-owned shelves and other users' shelves are read-only to bearer clients and return `can_edit: false`
+- the same user may still see `can_edit: true` for a group shelf when using product UI/session auth if normal group/product policy allows it
 
 ## Book access constraints (important)
 
@@ -168,7 +174,7 @@ Notes:
 - Patching an existing item with `position` uses list move-to semantics: remove the item from its current ordered position, insert it at the requested zero-based target position (clamped to list bounds), then renumber all items contiguously.
 - Product/UI displays may show one-based labels such as `#1`, `#2`, etc.
 - Shelves do not grant book access: `/items/` filters listed books through normal book access policy.
-- Client API bearer tokens may read visible shelves, but may create/edit/delete shelves and manage shelf items only for the token user's own personal shelves. Group shelves and other users' shelves remain read-only via bearer tokens.
+- Client API bearer tokens may read visible shelves, but may create/edit/delete shelves and manage shelf items only for the token user's own personal shelves. Group shelves and other users' shelves remain read-only via bearer tokens and report `can_edit: false`.
 
 ## Product UI
 

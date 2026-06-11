@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.db.models import Q
 
+from accounts.models import UserClientSession
 from core import policies as core_policies
 from library.models import Book, BookGroupAssignment, LibraryGroupMembership, is_public_group
 
@@ -80,6 +81,15 @@ def can_client_bearer_edit_shelf(*, user, shelf: Shelf) -> bool:
     if shelf.owner_type != Shelf.OWNER_TYPE_USER:
         return False
     return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
+
+
+def can_edit_shelf_for_request(*, request, shelf: Shelf) -> bool:
+    user = getattr(request, "user", None)
+    if user is None:
+        return False
+    if isinstance(getattr(request, "auth", None), UserClientSession):
+        return can_client_bearer_edit_shelf(user=user, shelf=shelf)
+    return can_edit_shelf(user=user, shelf=shelf)
 
 
 def can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:

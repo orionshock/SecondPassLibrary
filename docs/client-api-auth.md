@@ -106,8 +106,9 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
   - bearer tokens may read any shelf the user can view
   - bearer tokens may create/edit/delete **only** the user's own personal shelves
   - bearer tokens may add/remove/reorder items only in the user's own personal shelves
-  - group-owned shelves are read-only via bearer tokens
-  - other users' shelves are read-only when visible (listed)
+  - group-owned shelves are read-only via bearer tokens and report `can_edit: false`
+  - other users' shelves are read-only when visible (listed) and report `can_edit: false`
+  - `can_edit` is request-context-sensitive; product UI/session auth may allow group shelf edits according to normal group policy, but bearer auth never allows group shelf writes
   - shelf item book lists still filter each book through normal book access; shelves do not grant book access
 - reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) for safe retries

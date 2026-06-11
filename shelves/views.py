@@ -36,7 +36,7 @@ from .services import (
     update_shelf,
     visible_shelf_items_for_user,
 )
-from .policies import can_client_bearer_edit_shelf, visible_shelf_filter
+from .policies import can_edit_shelf_for_request, visible_shelf_filter
 
 
 class ShelfViewSet(
@@ -78,10 +78,15 @@ class ShelfViewSet(
             if request.method.upper() not in allowed:
                 raise PermissionDenied("Client API tokens are not allowed for this endpoint/action.")
 
-    def _client_bearer_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
-        if not isinstance(getattr(request, "auth", None), UserClientSession):
-            return True
-        return can_client_bearer_edit_shelf(user=request.user, shelf=shelf)
+    def _request_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
+        return can_edit_shelf_for_request(request=request, shelf=shelf)
+
+    def _write_denied_message(self, *, request, items: bool = False) -> str:
+        if isinstance(getattr(request, "auth", None), UserClientSession):
+            if items:
+                return "Client API tokens may only modify items in personal shelves you own."
+            return "Client API tokens may only edit personal shelves you own."
+        return "Not allowed."
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -171,8 +176,8 @@ class ShelfViewSet(
 
     def partial_update(self, request, *args, **kwargs):
         shelf = self.get_object()
-        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
-            raise PermissionDenied("Client API tokens may only edit personal shelves you own.")
+        if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied(self._write_denied_message(request=request))
         serializer = cast(Any, self.get_serializer(data=request.data or {}, partial=True))
         serializer.is_valid(raise_exception=True)
         data = cast(dict[str, Any], serializer.validated_data)
@@ -185,8 +190,8 @@ class ShelfViewSet(
 
     def destroy(self, request, *args, **kwargs):
         shelf = self.get_object()
-        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
-            raise PermissionDenied("Client API tokens may only delete personal shelves you own.")
+        if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied(self._write_denied_message(request=request))
         delete_shelf(request.user, shelf)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -200,8 +205,8 @@ class ShelfViewSet(
         return Response(out.data)
 
     def _items_post(self, request, shelf: Shelf) -> Response:
-        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
-            raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
+        if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied(self._write_denied_message(request=request, items=True))
 
         serializer = cast(Any, ShelfItemCreateSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)
@@ -233,14 +238,14 @@ class ShelfViewSet(
         return self._items_post(request, shelf)
 
     def _item_delete(self, request, shelf: Shelf, item: ShelfItem) -> Response:
-        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
-            raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
+        if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied(self._write_denied_message(request=request, items=True))
         remove_book_from_shelf(request.user, shelf=shelf, book_or_item=item)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _item_patch(self, request, shelf: Shelf, item: ShelfItem) -> Response:
-        if not self._client_bearer_write_allowed_for_shelf(request=request, shelf=shelf):
-            raise PermissionDenied("Client API tokens may only modify items in personal shelves you own.")
+        if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+            raise PermissionDenied(self._write_denied_message(request=request, items=True))
 
         serializer = cast(Any, ShelfItemPatchSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)

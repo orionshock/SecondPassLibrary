@@ -8,10 +8,9 @@ from rest_framework import serializers
 from accounts.user_payloads import compact_user_payload
 from library.models import Book, LibraryGroup, is_public_group
 from library.catalog_serializers import AuthorSummarySerializer, SeriesSummarySerializer
-from accounts.models import UserClientSession
 
 from .models import Shelf, ShelfItem
-from .policies import can_client_bearer_edit_shelf, can_edit_shelf
+from .policies import can_edit_shelf_for_request
 
 
 User = get_user_model()
@@ -58,13 +57,9 @@ class ShelfSerializer(serializers.ModelSerializer):
 
     def get_can_edit(self, obj: Shelf) -> bool:
         request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if user is None:
+        if request is None:
             return False
-        # Client API bearer tokens may only edit personal shelves owned by the token user.
-        if isinstance(getattr(request, "auth", None), UserClientSession):
-            return can_client_bearer_edit_shelf(user=user, shelf=obj)
-        return can_edit_shelf(user=user, shelf=obj)
+        return can_edit_shelf_for_request(request=request, shelf=obj)
 
     class Meta:
         model = Shelf

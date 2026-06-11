@@ -49,7 +49,7 @@ class ShelvesClientBearerTests(APITestCase):
 
         self.public_group = get_public_group()
         self.group = LibraryGroup.objects.create(name="G")
-        LibraryGroupMembership.objects.create(user=self.user, group=self.group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=self.user, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR)
 
         self.book_public = create_file_backed_book(title="Public book", assign_public=False).book
         cast(Any, self.book_public).group_assignments.create(group=self.public_group, added_by=self.user)
@@ -111,6 +111,32 @@ class ShelvesClientBearerTests(APITestCase):
         self.assertEqual(resp.status_code, 201)
         data = cast(dict[str, Any], resp.data)
         return str(data["id"])
+
+    def _create_group_shelf_with_item_as_session_user(self) -> tuple[str, str]:
+        self.client.force_login(self.user)
+        created = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(created.status_code, 201)
+        shelf_id = str(cast(dict[str, Any], created.data)["id"])
+
+        added = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+            ),
+        )
+        self.assertEqual(added.status_code, 201)
+        item_id = str(cast(dict[str, Any], added.data)["id"])
+        self.client.logout()
+        return shelf_id, item_id
 
     def test_bearer_can_patch_own_personal_shelf(self):
         shelf_id = self._create_personal_shelf_as_owner()
@@ -216,8 +242,11 @@ class ShelvesClientBearerTests(APITestCase):
         list_resp = cast(Response, self.client.get("/api/v1/shelves/", HTTP_AUTHORIZATION=self._auth))
         self.assertEqual(list_resp.status_code, 200)
         list_data = cast(dict[str, Any], list_resp.data)
-        ids = {str(r["id"]) for r in cast(list[dict[str, Any]], list_data["results"])}
+        results = cast(list[dict[str, Any]], list_data["results"])
+        ids = {str(r["id"]) for r in results}
         self.assertIn(shelf_id, ids)
+        row = next(r for r in results if str(r["id"]) == shelf_id)
+        self.assertFalse(row["can_edit"])
 
         detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/", HTTP_AUTHORIZATION=self._auth))
         self.assertEqual(detail.status_code, 200)
@@ -240,20 +269,14 @@ class ShelvesClientBearerTests(APITestCase):
         self.assertEqual(detail.status_code, 404)
 
     def test_bearer_can_read_visible_group_shelf_but_not_edit(self):
-        # Create a group shelf using owner session auth.
-        owner = User.objects.create_user(username="owner", password="pw", is_superuser=True, is_staff=True)
-        self.client.force_login(owner)
-        created = cast(
-            Response,
-            self.client.post(
-                "/api/v1/shelves/",
-                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
-                format="json",
-            ),
-        )
-        self.assertEqual(created.status_code, 201)
-        shelf_id = str(cast(dict[str, Any], created.data)["id"])
-        self.client.logout()
+        shelf_id, _item_id = self._create_group_shelf_with_item_as_session_user()
+
+        list_resp = cast(Response, self.client.get("/api/v1/shelves/", HTTP_AUTHORIZATION=self._auth))
+        self.assertEqual(list_resp.status_code, 200)
+        list_data = cast(dict[str, Any], list_resp.data)
+        results = cast(list[dict[str, Any]], list_data["results"])
+        row = next(r for r in results if str(r["id"]) == shelf_id)
+        self.assertFalse(row["can_edit"])
 
         detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/", HTTP_AUTHORIZATION=self._auth))
         self.assertEqual(detail.status_code, 200)
@@ -280,6 +303,77 @@ class ShelvesClientBearerTests(APITestCase):
             ),
         )
         self.assertEqual(put.status_code, 403)
+
+        delete = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(delete.status_code, 403)
+
+    def test_bearer_cannot_manage_items_on_visible_group_shelf(self):
+        shelf_id, item_id = self._create_group_shelf_with_item_as_session_user()
+
+        add = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_public.id)},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(add.status_code, 403)
+
+        move = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                data={"position": 0},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(move.status_code, 403)
+
+        remove = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(remove.status_code, 403)
+
+    def test_session_auth_curator_can_edit_group_shelf(self):
+        shelf_id, item_id = self._create_group_shelf_with_item_as_session_user()
+
+        self.client.force_login(self.user)
+        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(detail.status_code, 200)
+        self.assertTrue(cast(dict[str, Any], detail.data)["can_edit"])
+
+        patch = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"name": "Session allowed"},
+                format="json",
+            ),
+        )
+        self.assertEqual(patch.status_code, 200)
+
+        move = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                data={"position": 0},
+                format="json",
+            ),
+        )
+        self.assertEqual(move.status_code, 200)
 
     def test_bearer_can_add_and_remove_accessible_book_on_own_shelf(self):
         shelf_id = self._create_personal_shelf_as_owner()
