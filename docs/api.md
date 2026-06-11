@@ -245,8 +245,8 @@ Shelf payload notes:
 
 - Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API permissions remain authoritative. Product UI/session-auth requests use normal shelf edit policy, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
-- User-owned shelves include `owner_user` as a compact user object with `id`, `username`, `first_name`, and `last_name`; group-owned shelves have `owner_user: null`.
-- Shelves include `created_by` as the same compact user object when known. These compact user objects do not include email addresses or profile/admin metadata.
+- User-owned shelves include `owner_user` as a compact user object with `profile_id`, `username`, `first_name`, and `last_name`; group-owned shelves have `owner_user: null`.
+- Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
 - Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
 - Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
@@ -263,14 +263,14 @@ Example user-owned shelf payload excerpt:
 {
   "owner_type": "user",
   "owner_user": {
-    "id": 2,
+    "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
     "username": "manager",
     "first_name": "Mara",
     "last_name": "Manager"
   },
   "owner_group": null,
   "created_by": {
-    "id": 2,
+    "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
     "username": "manager",
     "first_name": "Mara",
     "last_name": "Manager"

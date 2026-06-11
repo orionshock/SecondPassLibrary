@@ -66,14 +66,14 @@ List/detail payloads also include:
 
 ```json
 {
-  "id": 2,
+  "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
   "username": "manager",
   "first_name": "Mara",
   "last_name": "Manager"
 }
 ```
 
-`created_by` uses the same compact user shape when known, including for group-owned shelves. These compact user payloads do not include email addresses or profile/admin metadata.
+`created_by` and shelf item `added_by` use the same compact user shape when known. These compact user payloads do not include Django auth user database ids, email addresses, or profile/admin metadata.
 
 ### `ShelfItem`
 

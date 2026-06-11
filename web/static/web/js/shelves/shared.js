@@ -21,11 +21,14 @@ export function shelfOwnerDisplay(shelf, me) {
   if (!shelf) return "";
   const ownerType = shelf.owner_type ? String(shelf.owner_type) : "";
   if (ownerType === "user" && shelf.owner_user) {
-    const ownerId = shelf.owner_user.id != null ? String(shelf.owner_user.id) : "";
-    const meId = me && me.id != null ? String(me.id) : "";
+    const ownerProfileId = shelf.owner_user.profile_id != null ? String(shelf.owner_user.profile_id) : "";
+    const meProfileId = me && me.profile_id != null ? String(me.profile_id) : "";
     const ownerUsername = shelf.owner_user.username ? String(shelf.owner_user.username) : "";
     const meUsername = me && me.username ? String(me.username) : "";
-    if ((ownerId && meId && ownerId === meId) || (ownerUsername && meUsername && ownerUsername === meUsername)) {
+    if (
+      (ownerProfileId && meProfileId && ownerProfileId === meProfileId) ||
+      (ownerUsername && meUsername && ownerUsername === meUsername)
+    ) {
       return "Owned by you";
     }
     const name = friendlyUserDisplayName(shelf.owner_user) || "user";

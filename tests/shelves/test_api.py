@@ -85,10 +85,12 @@ class ShelvesAPITest(APITestCase):
         *,
         user,
     ) -> None:
-        self.assertEqual(payload["id"], user.pk)
+        profile, _created = UserProfile.objects.get_or_create(user=user)
+        self.assertEqual(payload["profile_id"], profile.id)
         self.assertEqual(payload["username"], user.get_username())
         self.assertEqual(payload["first_name"], user.first_name or "")
         self.assertEqual(payload["last_name"], user.last_name or "")
+        self.assertNotIn("id", payload)
         self.assertNotIn("email", payload)
 
     def _png_bytes(self, *, size=(12, 16)) -> bytes:
@@ -456,6 +458,8 @@ class ShelvesAPITest(APITestCase):
         items_payload = cast(Mapping[str, Any], items.data)
         results = cast(list[dict[str, Any]], items_payload["results"])
         self.assertEqual(len(results), 1)
+        added_by = cast(Mapping[str, Any], results[0]["added_by"])
+        self._assert_compact_user_payload(added_by, user=self.reader)
 
     def test_shelf_items_include_book_cover_url_when_present(self):
         self.client.login(username="reader", password="pw")

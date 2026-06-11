@@ -82,3 +82,15 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         )
         self.assertTrue(form.is_valid(), form.errors)
 
+    def test_profile_id_is_visible_in_admin(self):
+        self.assertIn("profile_id", self.admin.list_display)
+        self.assertIn("profile_id", self.admin.readonly_fields)
+        self.assertEqual(self.admin.profile_id(self.profile), self.profile.id)
+        self.assertEqual(self.admin.profile_id.short_description, "Profile ID")
+
+    def test_username_is_primary_clickable_sort_column(self):
+        self.assertEqual(self.admin.list_display[0], "username")
+        self.assertEqual(self.admin.list_display_links, ["username"])
+        self.assertEqual(self.admin.username(self.profile), "target")
+        self.assertEqual(self.admin.username.short_description, "Username")
+        self.assertEqual(self.admin.username.admin_order_field, "user__username")

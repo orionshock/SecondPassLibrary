@@ -29,8 +29,9 @@ def managed_user_group_payloads(user) -> list[dict[str, Any]]:
 
 
 def compact_user_payload(user) -> dict[str, Any]:
+    profile = get_or_create_profile(user=user)
     return {
-        "id": cast(int, user.pk),
+        "profile_id": profile.id,
         "username": user.get_username(),
         "first_name": user.first_name or "",
         "last_name": user.last_name or "",

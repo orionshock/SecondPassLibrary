@@ -38,10 +38,20 @@ class UserProfileAdminForm(forms.ModelForm):
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     form = UserProfileAdminForm
-    list_display = ["user", "role", "external_subject_id", "created_at"]
+    list_display = ["username", "profile_id", "role", "external_subject_id", "created_at"]
+    list_display_links = ["username"]
     search_fields = ["user__username", "user__email", "external_subject_id"]
     list_filter = ["role"]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["profile_id", "created_at", "updated_at"]
+    list_select_related = ["user"]
+
+    @admin.display(ordering="user__username", description="Username")
+    def username(self, obj: UserProfile):
+        return obj.user.get_username()
+
+    @admin.display(description="Profile ID")
+    def profile_id(self, obj: UserProfile):
+        return obj.id
 
     def get_form(self, request, obj=None, **kwargs):
         Form = super().get_form(request, obj, **kwargs)

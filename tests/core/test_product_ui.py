@@ -403,6 +403,7 @@ class ProductUiSmokeTests(TestCase):
 
         self.assertIn("friendlyUserDisplayName", shared_js)
         self.assertIn("Owned by you", shared_js)
+        self.assertIn("profile_id", shared_js)
         self.assertIn("Created by", shared_js)
         self.assertIn("shelfOwnerDisplay", list_js)
         self.assertIn("shelfCreatedByDisplay", view_js)

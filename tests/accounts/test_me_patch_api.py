@@ -66,6 +66,8 @@ class CurrentUserMePatchAPITest(APITestCase):
 
         self.assertEqual(data["username"], "reader")
         self.assertEqual(data["email"], "new@example.test")
+        self.assertEqual(data["profile_id"], str(self.user.profile.id))
+        self.assertNotIn("id", data)
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "new@example.test")
@@ -127,4 +129,3 @@ class CurrentUserMePatchAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(cast(Mapping[str, Any], data["error"])["code"], "UNSAFE_FIELD")
-
