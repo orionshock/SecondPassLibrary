@@ -13,7 +13,10 @@
   <body data-page="{% block page_id %}{% endblock %}">
     <header class="topbar">
       <div class="container topbar__inner">
-        <a class="brand" href="/app/">{{ server_name }}</a>
+        <a class="brand" href="/app/">
+          <img class="brand__icon" src="{% static 'web/favicon.png' %}" alt="" aria-hidden="true" />
+          <span>{{ server_name }}</span>
+        </a>
         <nav class="nav" aria-label="Primary">
           <a class="nav__item" href="/library/" data-nav="library">Library</a>
           <a class="nav__item" href="/shelves/" data-nav="shelves">Shelves</a>

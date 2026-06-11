@@ -87,9 +87,17 @@ a:hover { text-decoration: underline; }
   gap: 16px;
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.2px;
+}
+.brand__icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
 }
 .nav {
   display: flex;

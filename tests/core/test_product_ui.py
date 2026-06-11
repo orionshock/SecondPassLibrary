@@ -91,6 +91,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, "fonts.googleapis.com/css2?family=Material+Symbols+Outlined")
         self.assertContains(response, "/static/web/favicon.png")
+        self.assertContains(response, 'class="brand__icon"')
+        self.assertContains(response, 'aria-hidden="true"')
         self.assertNotContains(response, "/static/web/js/groups.js")
         self.assertNotContains(response, "/static/web/js/shelves.js")
         self.assertNotContains(response, "/static/web/js/users.js")
