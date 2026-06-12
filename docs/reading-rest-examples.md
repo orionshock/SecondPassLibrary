@@ -38,6 +38,78 @@ Notes:
 - Ordered by `last_activity_at = max(session.updated_at, progress.updated_at if exists, latest non-deleted annotation.updated_at if any)`.
 - Each book includes `cover_url` (string URL) or `null` when no cover is available.
 
+## 1.6) Sessions for one book, including empty context
+
+`GET /api/v1/reading/sessions/?book=<book_id>`
+
+When the book id is valid and visible, the paginated response includes `context.book` even if the current user has no sessions for that book:
+
+```json
+{
+  "count": 0,
+  "next": null,
+  "previous": null,
+  "context": {
+    "book": {
+      "id": "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
+      "title": "Blood Rites",
+      "authors": ["Jim Butcher"],
+      "series": {
+        "id": "6b9d2c11-7f4e-4f40-9c3f-3ee21c2eae33",
+        "name": "Dresden Files"
+      },
+      "series_index": "6.0",
+      "cover_url": null
+    }
+  },
+  "results": []
+}
+```
+
+Malformed book ids return `400`; nonexistent or inaccessible book ids return `404`. No `q`/search filter is implemented for sessions yet.
+
+## 1.7) Batch book reading activity summary
+
+`POST /api/v1/reading/books/activity-summary/`
+
+Request:
+
+```json
+{
+  "books": [
+    "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
+    "2f0f4598-2467-4c5c-bf85-44cb3560ad88"
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "results": [
+    {
+      "book": "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
+      "session_count": 3,
+      "active_session_count": 1,
+      "active_session_id": "9f2f2c5d-8c7e-4f3d-a7c8-8c5b8c0c9c2f",
+      "latest_session_id": "9f2f2c5d-8c7e-4f3d-a7c8-8c5b8c0c9c2f",
+      "latest_session_updated_at": "2026-05-11T01:32:12Z"
+    },
+    {
+      "book": "2f0f4598-2467-4c5c-bf85-44cb3560ad88",
+      "session_count": 0,
+      "active_session_count": 0,
+      "active_session_id": null,
+      "latest_session_id": null,
+      "latest_session_updated_at": null
+    }
+  ]
+}
+```
+
+The endpoint returns rows only for requested visible books, includes zero-count rows for visible books with no sessions, omits well-formed nonexistent/inaccessible ids, rejects malformed ids, and accepts at most 100 ids. Reading activity overlays live under `/api/v1/reading/`; `/api/v1/library/books/` payloads do not include session counts, progress, latest session ids, or annotation counts.
+
 ## 2) Get or create active session
 
 Get the current active session for a given book (creating one lazily if needed):

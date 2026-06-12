@@ -1,4 +1,5 @@
 from typing import Any, cast
+from uuid import UUID
 
 from django.db.models import Count, F, Max, Q
 from django.db.models.functions import Coalesce, Greatest
@@ -28,9 +29,11 @@ from .serializers import (
 )
 from .services import (
     assert_session_writable,
+    book_context_payload,
     close_session,
     get_or_create_active_session,
     get_or_create_progress,
+    reading_activity_summary_for_books,
     start_over_book,
 )
 
@@ -70,6 +73,32 @@ class ReadingSessionViewSet(
     ]
     permission_classes = [IsAuthenticated]
 
+    def _book_filter_from_request(self) -> Book | None:
+        request = cast(Request, self.request)
+        raw_book = (request.query_params.get("book") or "").strip()
+        if not raw_book:
+            return None
+
+        if hasattr(self, "_validated_book_filter"):
+            return cast(Book | None, getattr(self, "_validated_book_filter"))
+
+        try:
+            book_id = UUID(raw_book)
+        except Exception:
+            raise DRFValidationError({"book": "Invalid book id."})
+
+        book = (
+            Book.objects.select_related("series")
+            .prefetch_related("authors")
+            .filter(id=book_id)
+            .first()
+        )
+        if book is None or not policies.can_view_book(user=request.user, book=book):
+            raise NotFound()
+
+        self._validated_book_filter = book
+        return book
+
     def get_queryset(self):
         request = cast(Request, self.request)
         qs = (
@@ -84,16 +113,9 @@ class ReadingSessionViewSet(
             )
         )
 
-        raw_book = (request.query_params.get("book") or "").strip()
-        if raw_book:
-            try:
-                # UUID validation (accepts canonical string only).
-                import uuid
-
-                book_id = uuid.UUID(raw_book)
-            except Exception:
-                raise DRFValidationError({"book": "Invalid book id."})
-            qs = qs.filter(book_id=book_id)
+        book_filter = self._book_filter_from_request()
+        if book_filter is not None:
+            qs = qs.filter(book_id=book_filter.id)
 
         raw_status = (request.query_params.get("status") or "").strip()
         if raw_status:
@@ -112,6 +134,30 @@ class ReadingSessionViewSet(
                 raise DRFValidationError({"is_active": "Invalid boolean."})
 
         return qs.order_by("-started_at")
+
+    def list(self, request, *args, **kwargs):
+        book_filter = self._book_filter_from_request()
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            if book_filter is not None:
+                results = response.data.pop("results")
+                response.data["context"] = {
+                    "book": book_context_payload(book=book_filter, request=request)
+                }
+                response.data["results"] = results
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        payload: dict[str, Any] = {"results": serializer.data}
+        if book_filter is not None:
+            payload["context"] = {
+                "book": book_context_payload(book=book_filter, request=request)
+            }
+        return Response(payload)
 
     def get_serializer_class(self):
         if self.action == "partial_update":
@@ -274,6 +320,62 @@ class RecentSessionsView(APIView):
                 break
 
         return Response({"count": len(results), "results": results}, status=status.HTTP_200_OK)
+
+
+class ReadingActivitySummaryView(APIView):
+    authentication_classes = [
+        SessionAuthentication,
+        BasicAuthentication,
+        ClientBearerAuthentication,
+    ]
+    permission_classes = [IsAuthenticated]
+
+    max_books = 100
+
+    def post(self, request):
+        raw_books = request.data.get("books") if isinstance(request.data, dict) else None
+        if raw_books is None:
+            raise DRFValidationError({"books": "This field is required."})
+        if not isinstance(raw_books, list):
+            raise DRFValidationError({"books": "Must be a list of book ids."})
+        if len(raw_books) > self.max_books:
+            raise DRFValidationError({"books": f"Maximum {self.max_books} book ids."})
+
+        ordered_ids: list[UUID] = []
+        seen: set[str] = set()
+        for raw in raw_books:
+            try:
+                book_id = UUID(str(raw))
+            except Exception:
+                raise DRFValidationError({"books": "Invalid book id."})
+            key = str(book_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered_ids.append(book_id)
+
+        if not ordered_ids:
+            return Response({"results": []}, status=status.HTTP_200_OK)
+
+        books_by_id = {
+            book.id: book
+            for book in Book.objects.filter(id__in=ordered_ids).prefetch_related(
+                "group_assignments"
+            )
+        }
+        visible_books: list[Book] = []
+        for book_id in ordered_ids:
+            book = books_by_id.get(book_id)
+            if book is None:
+                continue
+            if not policies.can_view_book(user=request.user, book=book):
+                continue
+            visible_books.append(book)
+
+        return Response(
+            {"results": reading_activity_summary_for_books(user=request.user, books=visible_books)},
+            status=status.HTTP_200_OK,
+        )
 
 
 class OpenBookView(APIView):

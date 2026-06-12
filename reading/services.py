@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Any
+
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -94,6 +97,98 @@ def get_or_create_progress(*, session: ReadingSession) -> ReadingProgress:
         session=session, defaults={"current_location": {}}
     )
     return progress
+
+
+def book_context_payload(*, book: Book, request=None) -> dict[str, Any]:
+    cover_url: str | None = None
+    cover = getattr(book, "cover_file", None)
+    if cover:
+        try:
+            url = cover.url
+            cover_url = request.build_absolute_uri(url) if request is not None else url
+        except Exception:
+            cover_url = None
+
+    series = getattr(book, "series", None)
+    return {
+        "id": str(book.id),
+        "title": book.title,
+        "authors": list(book.authors.order_by("name").values_list("name", flat=True)),
+        "series": (
+            {"id": str(series.id), "name": series.name}
+            if series is not None
+            else None
+        ),
+        "series_index": str(book.series_index) if book.series_index is not None else None,
+        "cover_url": cover_url,
+    }
+
+
+def reading_activity_summary_for_books(
+    *, user, books: Iterable[Book]
+) -> list[dict[str, Any]]:
+    books_by_id = {str(book.id): book for book in books}
+    ordered_book_ids = list(books_by_id.keys())
+    if not ordered_book_ids:
+        return []
+
+    counts_by_book = {
+        str(row["book_id"]): row
+        for row in (
+            ReadingSession.objects.filter(user=user, book_id__in=ordered_book_ids)
+            .values("book_id")
+            .annotate(
+                session_count=Count("id"),
+                active_session_count=Count(
+                    "id",
+                    filter=Q(
+                        is_active=True,
+                        status=ReadingSession.STATUS_ACTIVE,
+                    ),
+                ),
+            )
+        )
+    }
+
+    latest_by_book: dict[str, ReadingSession] = {}
+    for session in (
+        ReadingSession.objects.filter(user=user, book_id__in=ordered_book_ids)
+        .only("id", "book_id", "updated_at", "started_at")
+        .order_by("book_id", "-updated_at", "-started_at", "-id")
+    ):
+        latest_by_book.setdefault(str(session.book_id), session)
+
+    active_by_book: dict[str, ReadingSession] = {}
+    for session in (
+        ReadingSession.objects.filter(
+            user=user,
+            book_id__in=ordered_book_ids,
+            is_active=True,
+            status=ReadingSession.STATUS_ACTIVE,
+        )
+        .only("id", "book_id", "updated_at", "started_at")
+        .order_by("book_id", "-updated_at", "-started_at", "-id")
+    ):
+        active_by_book.setdefault(str(session.book_id), session)
+
+    results: list[dict[str, Any]] = []
+    for book_id in ordered_book_ids:
+        count_row = counts_by_book.get(book_id, {})
+        active = active_by_book.get(book_id)
+        latest = latest_by_book.get(book_id)
+        results.append(
+            {
+                "book": book_id,
+                "session_count": int(count_row.get("session_count") or 0),
+                "active_session_count": int(count_row.get("active_session_count") or 0),
+                "active_session_id": str(active.id) if active is not None else None,
+                "latest_session_id": str(latest.id) if latest is not None else None,
+                "latest_session_updated_at": (
+                    latest.updated_at if latest is not None else None
+                ),
+            }
+        )
+    return results
 
 
 def update_progress(

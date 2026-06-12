@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -15,7 +15,7 @@ from library.group_services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
 )
-from library.models import LibraryGroup, LibraryGroupMembership
+from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from tests.utils.books import create_file_backed_book
 
@@ -130,6 +130,51 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         self.assertEqual(r_active.status_code, 200)
         self.assertIn(str(self.session_visible.id), {s["id"] for s in _results(r_active)})
 
+    def test_book_filter_includes_context_for_visible_book(self):
+        author = Author.objects.create(name="Jim Butcher")
+        series = Series.objects.create(name="Dresden Files")
+        self.book.title = "Blood Rites"
+        self.book.series = series
+        self.book.series_index = "6.0" # type: ignore
+        self.book.save(update_fields=["title", "series", "series_index", "updated_at"])
+        self.book.authors.add(author)
+
+        resp = cast(Response, self.client.get(f"/api/v1/reading/sessions/?book={self.book.id}"))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        payload = cast(dict[str, Any], resp.data)
+        context = cast(dict[str, Any], payload["context"])
+        book = cast(dict[str, Any], context["book"])
+        self.assertEqual(book["id"], str(self.book.id))
+        self.assertEqual(book["title"], "Blood Rites")
+        self.assertEqual(book["authors"], ["Jim Butcher"])
+        self.assertEqual(book["series"], {"id": str(series.id), "name": "Dresden Files"})
+        self.assertEqual(book["series_index"], "6.0")
+        self.assertIn("cover_url", book)
+        self.assertEqual({s["id"] for s in _results(resp)}, {str(self.session_visible.id)})
+
+    def test_book_filter_context_present_when_visible_book_has_zero_sessions(self):
+        zero = create_file_backed_book(title="No Sessions", assign_public=False).book
+        ensure_book_public_assignment(book=zero, added_by=None)
+
+        resp = cast(Response, self.client.get(f"/api/v1/reading/sessions/?book={zero.id}"))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        payload = cast(dict[str, Any], resp.data)
+        self.assertEqual(payload["count"], 0)
+        self.assertEqual(payload["results"], [])
+        self.assertEqual(cast(dict[str, Any], payload["context"])["book"]["title"], "No Sessions")
+
+    def test_book_filter_404s_for_nonexistent_or_inaccessible_book(self):
+        nonexistent = cast(Response, self.client.get(f"/api/v1/reading/sessions/?book={uuid4()}"))
+        self.assertEqual(nonexistent.status_code, status.HTTP_404_NOT_FOUND)
+
+        inaccessible = cast(Response, self.client.get(f"/api/v1/reading/sessions/?book={self.hidden_book.id}"))
+        self.assertEqual(inaccessible.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unfiltered_sessions_list_has_no_context(self):
+        resp = cast(Response, self.client.get("/api/v1/reading/sessions/"))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertNotIn("context", cast(dict[str, Any], resp.data))
+
     def test_invalid_filters_return_400(self):
         bad_book = cast(Response, self.client.get("/api/v1/reading/sessions/?book=not-a-uuid"))
         self.assertEqual(bad_book.status_code, status.HTTP_400_BAD_REQUEST)
@@ -139,6 +184,103 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
 
         bad_active = cast(Response, self.client.get("/api/v1/reading/sessions/?is_active=maybe"))
         self.assertEqual(bad_active.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_activity_summary_counts_current_user_visible_books_in_request_order(self):
+        zero = create_file_backed_book(title="No Sessions", assign_public=False).book
+        ensure_book_public_assignment(book=zero, added_by=None)
+        other_session = ReadingSession.objects.create(user=self.owner, book=self.book, is_active=True)
+        completed = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            is_active=False,
+            status=ReadingSession.STATUS_COMPLETED,
+        )
+        active = self.session_visible
+        active.status = ReadingSession.STATUS_ACTIVE
+        active.is_active = True
+        active.save(update_fields=["status", "is_active", "updated_at"])
+
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/books/activity-summary/",
+                data={
+                    "books": [
+                        str(zero.id),
+                        str(self.book.id),
+                        str(self.book.id),
+                        str(self.hidden_book.id),
+                        str(uuid4()),
+                    ]
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        rows = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data)["results"])
+        self.assertEqual([row["book"] for row in rows], [str(zero.id), str(self.book.id)])
+        self.assertEqual(rows[0]["session_count"], 0)
+        self.assertEqual(rows[0]["active_session_count"], 0)
+        self.assertIsNone(rows[0]["active_session_id"])
+        self.assertIsNone(rows[0]["latest_session_id"])
+        self.assertIsNone(rows[0]["latest_session_updated_at"])
+
+        self.assertEqual(rows[1]["session_count"], 2)
+        self.assertEqual(rows[1]["active_session_count"], 1)
+        self.assertEqual(rows[1]["active_session_id"], str(active.id))
+        self.assertIn(rows[1]["latest_session_id"], {str(active.id), str(completed.id)})
+        self.assertIsNotNone(rows[1]["latest_session_updated_at"])
+        self.assertNotEqual(rows[1]["session_count"], 3)
+        self.assertIsNotNone(other_session.id)
+
+    def test_activity_summary_validation_errors(self):
+        missing = cast(Response, self.client.post("/api/v1/reading/books/activity-summary/", data={}, format="json"))
+        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+
+        invalid_type = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/books/activity-summary/",
+                data={"books": "not-a-list"},
+                format="json",
+            ),
+        )
+        self.assertEqual(invalid_type.status_code, status.HTTP_400_BAD_REQUEST)
+
+        malformed = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/books/activity-summary/",
+                data={"books": ["not-a-uuid"]},
+                format="json",
+            ),
+        )
+        self.assertEqual(malformed.status_code, status.HTTP_400_BAD_REQUEST)
+
+        too_many = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/books/activity-summary/",
+                data={"books": [str(uuid4()) for _ in range(101)]},
+                format="json",
+            ),
+        )
+        self.assertEqual(too_many.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_activity_summary_does_not_enrich_library_book_payloads(self):
+        resp = cast(Response, self.client.get(f"/api/v1/library/books/{self.book.id}/"))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        payload = cast(dict[str, Any], resp.data)
+        for key in [
+            "session_count",
+            "active_session_count",
+            "active_session_id",
+            "latest_session_id",
+            "latest_session_updated_at",
+            "progress",
+            "annotation_count",
+        ]:
+            self.assertNotIn(key, payload)
 
 
 class ReadingSessionSummaryBearerTests(APITestCase):
@@ -168,3 +310,28 @@ class ReadingSessionSummaryBearerTests(APITestCase):
         self.assertIn("book", s0)
         book = cast(dict[str, Any], s0["book"])
         self.assertEqual(book["id"], str(self.book.id))
+
+    def test_bearer_book_filter_context_and_activity_summary(self):
+        list_resp = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/reading/sessions/?book={self.book.id}",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(cast(dict[str, Any], cast(dict[str, Any], list_resp.data)["context"])["book"]["id"], str(self.book.id))
+
+        summary_resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/books/activity-summary/",
+                data={"books": [str(self.book.id)]},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        self.assertEqual(summary_resp.status_code, status.HTTP_200_OK)
+        rows = cast(list[dict[str, Any]], cast(dict[str, Any], summary_resp.data)["results"])
+        self.assertEqual(rows[0]["book"], str(self.book.id))
+        self.assertEqual(rows[0]["session_count"], 1)

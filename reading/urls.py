@@ -7,6 +7,7 @@ from .session_views import (
     ActiveSessionView,
     CloseSessionView,
     OpenBookView,
+    ReadingActivitySummaryView,
     ReadingSessionViewSet,
     RecentSessionsView,
     StartOverView,
@@ -54,6 +55,11 @@ urlpatterns = [
         "sessions/recent/",
         RecentSessionsView.as_view(),
         name="sessions_recent",
+    ),
+    path(
+        "books/activity-summary/",
+        ReadingActivitySummaryView.as_view(),
+        name="books_activity_summary",
     ),
     path("", include(router.urls)),
     path(

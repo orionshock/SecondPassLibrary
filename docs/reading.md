@@ -23,12 +23,17 @@ Session list/retrieve payloads include a compact summary suitable for session-ma
 - `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller's current book visibility (hidden/inaccessible books do not leak metadata)
 - `book_id` as the stable book identifier; the old summary-only `book_title` compatibility field is no longer returned
 - Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`
+- When `?book=<book_id>` is present for a visible book, the paginated response includes `context.book` even when no sessions exist. Malformed book ids return 400; nonexistent or inaccessible book ids return 404.
+- There is no sessions `q`/search filter yet.
+
+Reading activity overlays are intentionally exposed under `/api/v1/reading/`, not under `/api/v1/library/books/`. Library/catalog payloads stay focused on book metadata and visibility.
 
 Endpoints:
 
 ```text
 POST /api/v1/reading/books/<book_id>/open/                    (recommended bootstrap: session + progress + annotations)
 GET  /api/v1/reading/books/<book_id>/active-session/
+POST /api/v1/reading/books/activity-summary/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
 GET  /api/v1/reading/sessions/                            (paginated)
 GET  /api/v1/reading/sessions/recent/                     (compact recent list; active sessions only; default limit 10, max 50)
@@ -36,6 +41,72 @@ GET  /api/v1/reading/sessions/<session_id>/
 PATCH /api/v1/reading/sessions/<session_id>/              (only while active: {"name": "...", "notes": "..."})
 POST /api/v1/reading/sessions/<session_id>/close/          (mark session completed/inactive; idempotent)
 ```
+
+### Book-filter context
+
+`GET /api/v1/reading/sessions/?book=<book_id>` returns the normal paginated session list plus a `context` object when the book id is valid and visible:
+
+```json
+{
+  "count": 0,
+  "next": null,
+  "previous": null,
+  "context": {
+    "book": {
+      "id": "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
+      "title": "Blood Rites",
+      "authors": ["Jim Butcher"],
+      "series": {
+        "id": "6b9d2c11-7f4e-4f40-9c3f-3ee21c2eae33",
+        "name": "Dresden Files"
+      },
+      "series_index": "6.0",
+      "cover_url": null
+    }
+  },
+  "results": []
+}
+```
+
+### Activity summary
+
+`POST /api/v1/reading/books/activity-summary/` accepts up to 100 book ids:
+
+```json
+{
+  "books": [
+    "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
+    "2f0f4598-2467-4c5c-bf85-44cb3560ad88"
+  ]
+}
+```
+
+It returns one row for each requested, well-formed, visible book, deduplicated in first-request order. Well-formed nonexistent or inaccessible ids are omitted to avoid existence leaks; malformed ids, missing/invalid `books`, and batches over 100 return 400.
+
+```json
+{
+  "results": [
+    {
+      "book": "7f4d7d8b-4b9f-4b3f-8c4c-5f7a8b9c0d1e",
+      "session_count": 3,
+      "active_session_count": 1,
+      "active_session_id": "9f2f2c5d-8c7e-4f3d-a7c8-8c5b8c0c9c2f",
+      "latest_session_id": "9f2f2c5d-8c7e-4f3d-a7c8-8c5b8c0c9c2f",
+      "latest_session_updated_at": "2026-05-11T01:32:12Z"
+    },
+    {
+      "book": "2f0f4598-2467-4c5c-bf85-44cb3560ad88",
+      "session_count": 0,
+      "active_session_count": 0,
+      "active_session_id": null,
+      "latest_session_id": null,
+      "latest_session_updated_at": null
+    }
+  ]
+}
+```
+
+If multiple active sessions somehow exist for the same user/book despite the model invariant, `active_session_id` is the most recently updated active session.
 
 ### Recent sessions
 
