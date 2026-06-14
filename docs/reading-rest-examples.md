@@ -42,6 +42,22 @@ Notes:
 
 `GET /api/v1/reading/sessions/?book=<book_id>`
 
+Session history also supports lightweight search:
+
+`GET /api/v1/reading/sessions/?q=reread`
+
+`GET /api/v1/reading/sessions/?q=dresden&status=active`
+
+`GET /api/v1/reading/sessions/?book=<book_id>&q=notes`
+
+Search notes:
+
+- `q` is trimmed; empty/whitespace-only `q` behaves like no search.
+- Session-owned metadata is always searchable: `name`, `notes`.
+- Book metadata is searchable only when the book is currently visible to the caller: title, subtitle, authors, series.
+- Annotation bodies, ISBNs, identifiers, marginalia export payloads, and arbitrary client blobs are not searched.
+- If a user has a session for a book that later becomes inaccessible, `q` may still match that session by the user's own session name/notes. It must not match hidden book title/subtitle/author/series, and hidden book metadata remains redacted in response payloads.
+
 When the book id is valid and visible, the paginated response includes `context.book` even if the current user has no sessions for that book:
 
 ```json
@@ -66,7 +82,7 @@ When the book id is valid and visible, the paginated response includes `context.
 }
 ```
 
-Malformed book ids return `400`; nonexistent or inaccessible book ids return `404`. No `q`/search filter is implemented for sessions yet.
+Malformed book ids return `400`; nonexistent or inaccessible book ids return `404`. When a valid visible `book` filter is combined with `q`, `context.book` remains present even if the search narrows `results` to an empty list.
 
 ## 1.7) Batch book reading activity summary
 

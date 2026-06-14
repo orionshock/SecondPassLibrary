@@ -22,9 +22,9 @@ Session list/retrieve payloads include a compact summary suitable for session-ma
 - `annotation_count` (non-deleted annotations)
 - `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller's current book visibility (hidden/inaccessible books do not leak metadata)
 - `book_id` as the stable book identifier; the old summary-only `book_title` compatibility field is no longer returned
-- Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`
+- Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`
 - When `?book=<book_id>` is present for a visible book, the paginated response includes `context.book` even when no sessions exist. Malformed book ids return 400; nonexistent or inaccessible book ids return 404.
-- There is no sessions `q`/search filter yet.
+- `q` searches session `name` and `notes`, plus currently visible book metadata (`title`, `subtitle`, authors, series). It does not search annotation bodies, ISBNs, identifiers, marginalia export payloads, or arbitrary client blobs. A session can match by its own name/notes even if the related book is no longer visible, but hidden/inaccessible book metadata is not searchable and remains redacted in results.
 
 Reading activity overlays are intentionally exposed under `/api/v1/reading/`, not under `/api/v1/library/books/`. Library/catalog payloads stay focused on book metadata and visibility.
 

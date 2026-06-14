@@ -117,6 +117,22 @@ class ReadingSessionViewSet(
         if book_filter is not None:
             qs = qs.filter(book_id=book_filter.id)
 
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            session_match = Q(name__icontains=q) | Q(notes__icontains=q)
+            book_match = (
+                Q(book__title__icontains=q)
+                | Q(book__subtitle__icontains=q)
+                | Q(book__authors__name__icontains=q)
+                | Q(book__series__name__icontains=q)
+            )
+            visible_book_match = Q()
+            if not policies.can_manage_library(request.user):
+                visible_book_match = Q(
+                    book__group_assignments__group__memberships__user=request.user
+                )
+            qs = qs.filter(session_match | (visible_book_match & book_match))
+
         raw_status = (request.query_params.get("status") or "").strip()
         if raw_status:
             allowed = {c[0] for c in ReadingSession.STATUS_CHOICES}
@@ -133,7 +149,7 @@ class ReadingSessionViewSet(
             else:
                 raise DRFValidationError({"is_active": "Invalid boolean."})
 
-        return qs.order_by("-started_at")
+        return qs.distinct().order_by("-started_at")
 
     def list(self, request, *args, **kwargs):
         book_filter = self._book_filter_from_request()
