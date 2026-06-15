@@ -1,6 +1,7 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { canEditGroupPage, initTabs, pagedListController, renderBooksCompact, renderGroupShelvesCompact, renderMembersReadOnly, setStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
+import { canEditGroupPage, initTabs, pagedListController, renderBooksCompact, renderGroupShelvesCompact, renderMembersReadOnly } from "./shared.js";
 
 export async function initGroupView() {
   const me = await loadMeAndInitShell();
@@ -141,4 +142,3 @@ export async function initGroupView() {
     });
   }
 }
-

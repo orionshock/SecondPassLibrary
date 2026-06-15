@@ -5,7 +5,7 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { setStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 
 export async function initShelfNew() {
   await loadMeAndInitShell();
@@ -97,4 +97,3 @@ export async function initShelfNew() {
     }
   });
 }
-

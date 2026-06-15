@@ -2,6 +2,7 @@ import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
+import { setStatus } from "../ui/status.js";
 import { initTabs as initSharedTabs } from "../ui/tabs.js";
 
 export function truthy(v) {
@@ -45,12 +46,6 @@ export function canManageGroupMemberships(me) {
 
 export function initTabs(root) {
   initSharedTabs(root);
-}
-
-export function setStatus(el, text, isError) {
-  if (!el) return;
-  el.textContent = text || "";
-  el.classList.toggle("error", !!isError);
 }
 
 export async function pagedListController({ statusEl, resultsEl, nextBtn, prevBtn, initialUrl, emptyText, render }) {

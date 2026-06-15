@@ -416,6 +416,29 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('from "../ui/tabs.js"', book_detail_js)
         self.assertNotIn("function initTabs(root)", book_detail_js)
 
+    def test_product_ui_status_helpers_use_shared_helper(self):
+        helper_js = Path("web/static/web/js/ui/status.js").read_text(encoding="utf-8")
+        group_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
+        shelves_shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
+        book_edit_shared_js = Path("web/static/web/js/book_edit/shared.js").read_text(encoding="utf-8")
+
+        self.assertIn("export function setStatus", helper_js)
+        self.assertIn("export function clearStatus", helper_js)
+        self.assertIn("document.querySelector", helper_js)
+        self.assertIn("textContent", helper_js)
+        self.assertIn("classList.toggle", helper_js)
+        self.assertIn("errorClass", helper_js)
+        self.assertIn('typeof options === "boolean"', helper_js)
+
+        self.assertIn('from "../ui/status.js"', group_shared_js)
+        self.assertNotIn("export function setStatus", group_shared_js)
+        self.assertNotIn("setSharedStatus", group_shared_js)
+        self.assertIn('from "../ui/status.js"', shelves_shared_js)
+        self.assertNotIn("export function setStatus", shelves_shared_js)
+        self.assertNotIn("setSharedStatus", shelves_shared_js)
+        self.assertNotIn("export function setInlineStatus", book_edit_shared_js)
+        self.assertNotIn("setSharedStatus", book_edit_shared_js)
+
     def test_shelf_js_has_friendly_ownership_display(self):
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
         list_js = Path("web/static/web/js/shelves/list.js").read_text(encoding="utf-8")

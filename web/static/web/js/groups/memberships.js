@@ -6,8 +6,8 @@ import {
   pagedListController,
   renderMembersManage,
   renderMembersReadOnly,
-  setStatus,
 } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 
 export async function initGroupMembershipsTab({
   me,
@@ -158,4 +158,3 @@ export async function initGroupMembershipsTab({
 
   return { membersCtl };
 }
-

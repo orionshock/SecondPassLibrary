@@ -1,6 +1,7 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { inferCanEditShelf, shelfCreatedByDisplay, shelfMetadataLine, setStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
+import { inferCanEditShelf, shelfCreatedByDisplay, shelfMetadataLine } from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
 
 function renderShelfMeta(container, shelf) {

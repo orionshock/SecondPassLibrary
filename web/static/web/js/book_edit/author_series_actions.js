@@ -1,7 +1,8 @@
 import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { renderHeader } from "./identifiers_file.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";
-import { setInlineStatus, uniqueById } from "./shared.js";
+import { setStatus as setInlineStatus } from "../ui/status.js";
+import { uniqueById } from "./shared.js";
 
 function rerenderHeader({ state, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl }) {
   renderHeader({

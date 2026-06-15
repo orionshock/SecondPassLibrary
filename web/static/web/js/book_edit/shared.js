@@ -79,12 +79,6 @@ export async function fetchAllPages(url) {
   return out;
 }
 
-export function setInlineStatus(node, text, isError) {
-  if (!node) return;
-  node.textContent = text || "";
-  node.classList.toggle("error", !!isError);
-}
-
 export function uniqueById(items) {
   const seen = new Set();
   const out = [];
@@ -123,4 +117,3 @@ export function fillSchemeOptions(selectEl, selectedValue) {
     selectEl.appendChild(opt);
   }
 }
-

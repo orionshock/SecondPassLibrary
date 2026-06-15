@@ -5,7 +5,8 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { inferCanEditShelf, shelfMetadataLine, setStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
+import { inferCanEditShelf, shelfMetadataLine } from "./shared.js";
 import { initShelfItemsEditor } from "./items.js";
 import { initShelfBookSearch } from "./book_search.js";
 

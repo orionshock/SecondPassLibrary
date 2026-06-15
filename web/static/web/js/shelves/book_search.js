@@ -5,7 +5,7 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
-import { setStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 import { mountCovers } from "../ui/covers.js";
 
 export function initShelfBookSearch({

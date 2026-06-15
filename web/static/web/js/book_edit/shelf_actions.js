@@ -1,5 +1,5 @@
 import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
-import { setInlineStatus } from "./shared.js";
+import { setStatus as setInlineStatus } from "../ui/status.js";
 
 export function bindShelfActions({ shelvesEl, shelvesStatusEl, refreshShelves }) {
   shelvesEl.addEventListener("click", async (e) => {

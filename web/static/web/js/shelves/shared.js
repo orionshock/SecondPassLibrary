@@ -1,12 +1,7 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
 import { mountCovers } from "../ui/covers.js";
-
-export function setStatus(el, text, isError) {
-  if (!el) return;
-  el.textContent = text || "";
-  el.classList.toggle("error", !!isError);
-}
+import { setStatus } from "../ui/status.js";
 
 export function formatUserDisplayName(user) {
   if (!user) return "";

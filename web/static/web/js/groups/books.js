@@ -5,7 +5,8 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
-import { isLibrarian, isManagerOrOwner, pagedListController, renderBooksCompact, setStatus, truthy } from "./shared.js";
+import { setStatus } from "../ui/status.js";
+import { isLibrarian, isManagerOrOwner, pagedListController, renderBooksCompact, truthy } from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
 
 export async function initGroupBooksTab({

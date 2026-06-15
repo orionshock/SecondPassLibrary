@@ -6,7 +6,8 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
-import { fetchAllPages, setInlineStatus, uniqueById } from "./shared.js";
+import { setStatus as setInlineStatus } from "../ui/status.js";
+import { fetchAllPages, uniqueById } from "./shared.js";
 import { initTabs } from "../ui/tabs.js";
 import { applyBookToMetadataForm, buildBookPatchPayload } from "./metadata.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";

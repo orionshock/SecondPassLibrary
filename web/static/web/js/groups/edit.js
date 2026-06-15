@@ -11,8 +11,8 @@ import {
   canManageGroupBooks,
   isManagerOrOwner,
   initTabs,
-  setStatus,
 } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 import { initGroupBooksTab } from "./books.js";
 import { initGroupMembershipsTab } from "./memberships.js";
 import { initGroupShelvesTab } from "./shelves.js";

@@ -4,7 +4,7 @@ import {
   getCsrfToken,
   summarizeFieldErrors,
 } from "../api.js";
-import { setInlineStatus } from "./shared.js";
+import { setStatus as setInlineStatus } from "../ui/status.js";
 
 export function bindGroupActions({
   bookId,

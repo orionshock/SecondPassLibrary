@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { renderIdentifiersTable } from "./identifiers_file.js";
-import { setInlineStatus } from "./shared.js";
+import { setStatus as setInlineStatus } from "../ui/status.js";
 
 export async function refreshIdentifiersContext({
   bookId,
