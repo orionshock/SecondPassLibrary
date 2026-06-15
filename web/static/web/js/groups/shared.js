@@ -2,6 +2,7 @@ import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { escapeHtml, setGlobalError } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
+import { initTabs as initSharedTabs } from "../ui/tabs.js";
 
 export function truthy(v) {
   return !!v;
@@ -43,22 +44,7 @@ export function canManageGroupMemberships(me) {
 }
 
 export function initTabs(root) {
-  if (!root) return;
-  const buttons = Array.from(root.querySelectorAll("[data-tab]"));
-  const panels = Array.from(root.querySelectorAll("[data-tab-panel]"));
-  if (!buttons.length || !panels.length) return;
-
-  function setActive(key) {
-    for (const b of buttons) b.classList.toggle("is-active", b.getAttribute("data-tab") === key);
-    for (const p of panels) p.classList.toggle("is-hidden", p.getAttribute("data-tab-panel") !== key);
-  }
-
-  for (const b of buttons) {
-    b.addEventListener("click", () => {
-      const key = b.getAttribute("data-tab") || "";
-      if (key) setActive(key);
-    });
-  }
+  initSharedTabs(root);
 }
 
 export function setStatus(el, text, isError) {

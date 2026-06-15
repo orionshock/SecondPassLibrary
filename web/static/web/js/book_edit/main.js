@@ -7,7 +7,7 @@ import {
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
 import { fetchAllPages, setInlineStatus, uniqueById } from "./shared.js";
-import { initTabs } from "./tabs.js";
+import { initTabs } from "../ui/tabs.js";
 import { applyBookToMetadataForm, buildBookPatchPayload } from "./metadata.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";
 import { renderGroups, syncGroupsAddOptions } from "./groups.js";
@@ -21,7 +21,7 @@ import { mountCovers } from "../ui/covers.js";
 
 export async function initBookEdit() {
   const me = await loadMeAndInitShell();
-  initTabs();
+  initTabs(document, { defaultTab: "metadata" });
 
   const headerEl = $("#book-edit-header");
   const headerTitleEl = $("#book-edit-header-title");

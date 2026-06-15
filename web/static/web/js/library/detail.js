@@ -1,29 +1,7 @@
 import { fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
 import { mountCovers } from "../ui/covers.js";
-
-function initTabs(root) {
-  if (!root) return;
-  const buttons = Array.from(root.querySelectorAll(".tab-button"));
-  const panels = Array.from(root.querySelectorAll("[data-tab-panel]"));
-  if (!buttons.length || !panels.length) return;
-
-  function activate(tabName) {
-    for (const b of buttons) {
-      b.classList.toggle("is-active", b.getAttribute("data-tab") === tabName);
-    }
-    for (const p of panels) {
-      p.classList.toggle("is-hidden", p.getAttribute("data-tab-panel") !== tabName);
-    }
-  }
-
-  for (const b of buttons) {
-    b.addEventListener("click", () => activate(b.getAttribute("data-tab") || ""));
-  }
-
-  // Default tab: Shelves
-  activate("shelves");
-}
+import { initTabs } from "../ui/tabs.js";
 
 function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
   if (!summaryWrapEl || !summaryEl || !toggleEl) return;

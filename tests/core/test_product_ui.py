@@ -395,6 +395,27 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("patchShelfItemPosition", js)
         self.assertIn("storedPosition >= currentItemTotal - 1", js)
 
+    def test_product_ui_tabs_use_shared_helper(self):
+        helper_js = Path("web/static/web/js/ui/tabs.js").read_text(encoding="utf-8")
+        book_edit_main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
+        group_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
+        book_detail_js = Path("web/static/web/js/library/detail.js").read_text(encoding="utf-8")
+
+        self.assertIn("export function initTabs", helper_js)
+        self.assertIn(".tab-button[data-tab]", helper_js)
+        self.assertIn("[data-tab-panel]", helper_js)
+        self.assertIn("aria-selected", helper_js)
+        self.assertIn("aria-hidden", helper_js)
+        self.assertIn("is-active", helper_js)
+        self.assertIn("is-hidden", helper_js)
+
+        self.assertIn('from "../ui/tabs.js"', book_edit_main_js)
+        self.assertIn('defaultTab: "metadata"', book_edit_main_js)
+        self.assertNotIn('from "./tabs.js"', book_edit_main_js)
+        self.assertIn('from "../ui/tabs.js"', group_shared_js)
+        self.assertIn('from "../ui/tabs.js"', book_detail_js)
+        self.assertNotIn("function initTabs(root)", book_detail_js)
+
     def test_shelf_js_has_friendly_ownership_display(self):
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
         list_js = Path("web/static/web/js/shelves/list.js").read_text(encoding="utf-8")
