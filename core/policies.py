@@ -224,11 +224,6 @@ def can_view_library_group(*, user, group: LibraryGroup) -> bool:
     return LibraryGroupMembership.objects.filter(user=user, group=group).exists()
 
 
-def can_manage_library_group(*, user, group: LibraryGroup) -> bool:
-    # Legacy helper retained for call sites; use more specific helpers for new code.
-    return can_manage_library(user)
-
-
 def can_curate_group(*, user, group: LibraryGroup) -> bool:
     if is_public_group(group):
         return False
