@@ -38,7 +38,7 @@ Use EPUB CFI as the selector format for EPUB text targets.
 
 ## Source Import Metadata (Future)
 
-When importing highlights/notes from external providers (e.g. Kindle CSV exports), attach provenance to each annotation using `sourceImport`.
+Future/profile-level direction: when highlights/notes are normalized from external providers (e.g. Kindle CSV exports) into portable profile documents, provenance may be attached to each annotation using `sourceImport`.
 
 In the current server implementation, import provenance is reserved for server-managed/internal use and is not accepted via normal public reading APIs.
 

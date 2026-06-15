@@ -1,8 +1,8 @@
 {
   "folders": [
     {
-      "path": ".",
-    },
+      "path": "."
+    }
   ],
   "settings": {
     "chat.tools.terminal.autoApprove": {
@@ -12,18 +12,30 @@
       "true": true,
     },
     "LineCount.excludes": [
+      "*.md",
+      "*.png",
+      "**/__pycache__/**",
+      "**/TestFiles/**",
       "**/.ruff_cache/**",
       "**/.venv/**",
       "**/.vscode/**",
+      "**/migrations/*.py",
       "**/node_modules/**",
-      "**/TestFiles/**",
+      "**/out/**",
+      "**/test/**",
       "**/tests/**",
       "**/userdata/**",
-      "**/__pycache__/**",
-      "**/out/**",
-      "*.md",
-      "**/tests/**",
-      "**/test/**"
-    ],
+      ".env.example",
+      ".gitattributes",
+      ".git",
+      ".gitignore",
+      "SecondPassLibrary.code-workspace",
+      "**/docs/**",
+      "pyrightconfig.json",
+      "requirements-dev.txt",
+      "requirements.txt",
+      "**/tools/**",
+      "web/static/web/favicon.png"
+    ]
   },
 }

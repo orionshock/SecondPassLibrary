@@ -83,7 +83,7 @@ export function shelfMetadataLine(shelf) {
   const metadataSegments = shelfMetadataParts(shelf).map((part) => escapeHtml(part));
   return [ownerSegment, ...metadataSegments]
     .filter(Boolean)
-    .join('<span class="shelf-meta-separator" aria-hidden="true"> · </span>');
+    .join('<span class="shelf-meta-separator" aria-hidden="true"> &middot; </span>');
 }
 
 export function shelfOwnerDisplay(shelf, me) {

@@ -2,31 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.user_payloads import compact_user_payload
-from library.models import Book, LibraryGroup, is_public_group
+from library.models import Book, is_public_group
 from library.catalog_serializers import AuthorSummarySerializer, SeriesSummarySerializer
 
 from .models import Shelf, ShelfItem
 from .policies import can_edit_shelf_for_request
-
-
-User = get_user_model()
-
-
-class ShelfOwnerGroupSummarySerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    name = serializers.CharField()
-    is_public_group = serializers.BooleanField()
-
-
-class ShelfOwnerUserSummarySerializer(serializers.Serializer):
-    profile_id = serializers.UUIDField()
-    username = serializers.CharField()
-    first_name = serializers.CharField(allow_blank=True)
-    last_name = serializers.CharField(allow_blank=True)
 
 
 class ShelfSerializer(serializers.ModelSerializer):
