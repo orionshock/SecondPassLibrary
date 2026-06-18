@@ -13,8 +13,8 @@ User = get_user_model()
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ["id", "role", "external_subject_id", "created_at", "updated_at"]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        fields = ["id", "role", "created_at", "updated_at"]
+        read_only_fields = fields
 
 
 class CurrentUserSerializer(serializers.Serializer):

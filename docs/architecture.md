@@ -69,6 +69,22 @@ Expected future options include external authentication (OIDC), reverse-proxy/au
 
 If/when external auth is added, it is expected to map into the same canonical Django `User` record (not replace it).
 
+`accounts.ExternalIdentity` is reserved infrastructure for future external
+authentication. It is not used by any active login flow. Future identity
+resolution must use the normalized OIDC issuer plus opaque subject (`iss` +
+`sub`), never email or username alone. A local user may have multiple external
+identities, including identities from multiple providers.
+
+Username remains the local display handle. Email is contact/display data and
+may participate only in a future explicit linking policy; accounts must never
+be auto-linked solely by an unverified email claim. First and last name may be
+populated from claims under a future documented synchronization policy.
+
+External providers authenticate identity only. SPL global roles and
+LibraryGroup memberships remain local authorization data. Provider groups or
+claims do not grant SPL roles by default. Local password authentication remains
+supported alongside any future external login.
+
 Notes for future browser UI:
 
 - Session/CSRF behavior matters; any future web UI should account for CSRF when using session auth.

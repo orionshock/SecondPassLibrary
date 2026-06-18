@@ -2,7 +2,13 @@ from django.contrib import admin
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import ClientLoginRequest, UserClientSession, UserProfile, UserWebSession
+from .models import (
+    ClientLoginRequest,
+    ExternalIdentity,
+    UserClientSession,
+    UserProfile,
+    UserWebSession,
+)
 
 
 class UserProfileAdminForm(forms.ModelForm):
@@ -42,7 +48,12 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display_links = ["username"]
     search_fields = ["user__username", "user__email", "external_subject_id"]
     list_filter = ["role"]
-    readonly_fields = ["profile_id", "created_at", "updated_at"]
+    readonly_fields = [
+        "profile_id",
+        "external_subject_id",
+        "created_at",
+        "updated_at",
+    ]
     list_select_related = ["user"]
 
     @admin.display(ordering="user__username", description="Username")
@@ -62,6 +73,54 @@ class UserProfileAdmin(admin.ModelAdmin):
                 super().__init__(*args, **inner_kwargs)
 
         return RequestForm
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ExternalIdentity)
+class ExternalIdentityAdmin(admin.ModelAdmin):
+    list_display = [
+        "provider",
+        "issuer",
+        "subject",
+        "user",
+        "email_at_login",
+        "email_verified",
+        "last_seen_at",
+    ]
+    search_fields = [
+        "provider",
+        "issuer",
+        "subject",
+        "user__username",
+        "user__email",
+        "email_at_login",
+    ]
+    list_filter = ["provider", "email_verified"]
+    readonly_fields = [
+        "id",
+        "user",
+        "provider",
+        "issuer",
+        "subject",
+        "email_at_login",
+        "email_verified",
+        "selected_claims",
+        "last_seen_at",
+        "created_at",
+        "updated_at",
+    ]
+    list_select_related = ["user"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(UserWebSession)

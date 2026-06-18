@@ -9,7 +9,6 @@ from uuid import uuid4
 from accounts.services import get_or_create_profile
 from core import server_settings
 from accounts.models import UserProfile
-from library.models import Book
 from reading.models import ReadingSession
 from tests.utils.books import create_file_backed_book
 
@@ -139,6 +138,18 @@ class ProductUiSmokeTests(TestCase):
         profile.save(update_fields=["must_change_password", "updated_at"])
         self.client.force_login(self.user)
         response = self.client.get("/profile/password/", follow=False)
+        self.assertEqual(response.status_code, 200)
+
+    def test_unusable_password_user_is_not_forced_to_local_password_change(self):
+        self.user.set_unusable_password()
+        self.user.save(update_fields=["password"])
+        profile = get_or_create_profile(user=self.user)
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password", "updated_at"])
+        self.client.force_login(self.user)
+
+        response = self.client.get("/app/", follow=False)
+
         self.assertEqual(response.status_code, 200)
 
     def test_unauthenticated_library_redirects_to_login(self):

@@ -3,6 +3,8 @@ from __future__ import annotations
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 
+from accounts.services import user_supports_local_password
+
 
 class ForcePasswordChangeMiddleware:
     """
@@ -37,7 +39,10 @@ class ForcePasswordChangeMiddleware:
         except Exception:
             return self.get_response(request)
 
-        if getattr(profile, "must_change_password", False):
+        if (
+            getattr(profile, "must_change_password", False)
+            and user_supports_local_password(user)
+        ):
             return redirect("/profile/password/")
 
         return self.get_response(request)

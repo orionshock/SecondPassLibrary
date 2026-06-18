@@ -76,7 +76,9 @@ Response shape:
 - Current user's Client API sessions:
   - `GET /api/v1/accounts/me/client-sessions/` (active only)
   - `DELETE /api/v1/accounts/me/client-sessions/<id>/` (revoke; sets `revoked_at`)
-- Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated)
+- Profiles (current user only): `GET /api/v1/accounts/profiles/` (paginated,
+  read-only). Profile role, password state, and external identity data cannot be
+  changed or deleted through this endpoint.
 - Users (Owner/Manager only):
   - `GET /api/v1/accounts/users/` (paginated)
   - `GET /api/v1/accounts/users/<id>/`

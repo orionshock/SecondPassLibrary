@@ -47,6 +47,13 @@ def get_or_create_profile(*, user) -> UserProfile:
     return profile
 
 
+def user_supports_local_password(user) -> bool:
+    if not user or getattr(user, "is_anonymous", False):
+        return False
+    has_usable_password = getattr(user, "has_usable_password", None)
+    return bool(callable(has_usable_password) and has_usable_password())
+
+
 def _generate_temporary_password() -> str:
     # Short, URL-safe, cryptographically secure; shown once on create response only.
     return secrets.token_urlsafe(18)

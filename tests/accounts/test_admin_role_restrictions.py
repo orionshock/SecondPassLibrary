@@ -85,6 +85,10 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
     def test_profile_id_is_visible_in_admin(self):
         self.assertIn("profile_id", self.admin.list_display)
         self.assertIn("profile_id", self.admin.readonly_fields)
+        self.assertIn("external_subject_id", self.admin.readonly_fields)
+        self.assertFalse(
+            self.admin.has_delete_permission(self.factory.get("/"), self.profile)
+        )
         self.assertEqual(self.admin.profile_id(self.profile), self.profile.id)
         self.assertEqual(self.admin.profile_id.short_description, "Profile ID")
 
