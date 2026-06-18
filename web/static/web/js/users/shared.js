@@ -39,9 +39,3 @@ export function passesFilter(user, filter) {
   return true;
 }
 
-export function setElStatus(el, text, isError) {
-  if (!el) return;
-  el.textContent = text || "";
-  el.classList.toggle("error", !!isError);
-}
-

@@ -1,5 +1,6 @@
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
 import { fetchJSON, patchJSON } from "../api.js";
+import { setStatus } from "../ui/status.js";
 
 function setEditing(on) {
   visible($("#server-settings-edit-btn"), !on);
@@ -9,10 +10,6 @@ function setEditing(on) {
   visible($("#server-settings-description-display"), !on);
   visible($("#server-settings-name-input"), on);
   visible($("#server-settings-description-input"), on);
-}
-
-function setStatus(text) {
-  setText($("#server-settings-status"), text || "");
 }
 
 function fill(identity) {
@@ -31,7 +28,7 @@ export async function initServerSettings() {
   if (!me || !me.is_owner) return;
 
   setEditing(false);
-  setStatus("Loading...");
+  setStatus("#server-settings-status", "Loading...");
 
   let identity;
   try {
@@ -39,12 +36,12 @@ export async function initServerSettings() {
   } catch (e) {
     console.error("Failed to load server settings", e);
     setGlobalErrorFromError(e, "Failed to load server settings:");
-    setStatus("Failed to load.");
+    setStatus("#server-settings-status", "Failed to load.");
     return;
   }
 
   fill(identity);
-  setStatus("");
+  setStatus("#server-settings-status", "");
 
   const editBtn = $("#server-settings-edit-btn");
   const cancelBtn = $("#server-settings-cancel-btn");
@@ -52,14 +49,14 @@ export async function initServerSettings() {
   if (editBtn) {
     editBtn.addEventListener("click", () => {
       setEditing(true);
-      setStatus("");
+      setStatus("#server-settings-status", "");
     });
   }
   if (cancelBtn) {
     cancelBtn.addEventListener("click", () => {
       fill(identity);
       setEditing(false);
-      setStatus("");
+      setStatus("#server-settings-status", "");
     });
   }
   if (form) {
@@ -69,7 +66,7 @@ export async function initServerSettings() {
       const descInput = $("#server-settings-description-input");
       const server_name = nameInput ? nameInput.value : "";
       const server_description = descInput ? descInput.value : "";
-      setStatus("Saving...");
+      setStatus("#server-settings-status", "Saving...");
       try {
         const payload = {};
         payload.server_name = server_name;
@@ -77,11 +74,11 @@ export async function initServerSettings() {
         identity = await patchJSON("/api/v1/server/settings/", payload);
         fill(identity);
         setEditing(false);
-        setStatus("Saved.");
+        setStatus("#server-settings-status", "Saved.");
       } catch (e) {
         console.error("Failed to save server settings", e);
         setGlobalErrorFromError(e, "Failed to save:");
-        setStatus("Failed to save.");
+        setStatus("#server-settings-status", "Failed to save.");
       }
     });
   }

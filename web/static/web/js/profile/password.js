@@ -1,5 +1,6 @@
 import { fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError } from "../layout.js";
+import { setStatus } from "../ui/status.js";
 
 export async function initProfilePassword() {
   const me = await loadMeAndInitShell();
@@ -23,11 +24,6 @@ export async function initProfilePassword() {
 
   if (!form || !currentInput || !newInput || !confirmInput || !submitBtn || !statusEl) return;
 
-  function setStatus(text, isError) {
-    statusEl.textContent = text || "";
-    statusEl.classList.toggle("error", !!isError);
-  }
-
   function setEnabled(on) {
     const disabled = !on;
     currentInput.disabled = disabled;
@@ -45,19 +41,19 @@ export async function initProfilePassword() {
     const confirm = String(confirmInput.value || "");
 
     if (!current_password) {
-      setStatus("Current password is required.", true);
+      setStatus(statusEl, "Current password is required.", true);
       return;
     }
     if (!new_password) {
-      setStatus("New password is required.", true);
+      setStatus(statusEl, "New password is required.", true);
       return;
     }
     if (new_password !== confirm) {
-      setStatus("New passwords do not match.", true);
+      setStatus(statusEl, "New passwords do not match.", true);
       return;
     }
 
-    setStatus("Saving...", false);
+    setStatus(statusEl, "Saving...", false);
     setEnabled(false);
 
     try {
@@ -75,7 +71,7 @@ export async function initProfilePassword() {
       newInput.value = "";
       confirmInput.value = "";
 
-      setStatus("Saved. Redirecting", false);
+      setStatus(statusEl, "Saved. Redirecting", false);
       if (noteEl) {
         noteEl.textContent = "";
         noteEl.classList.remove("error");
@@ -87,7 +83,7 @@ export async function initProfilePassword() {
     } catch (e2) {
       console.error("Failed to change password", e2);
       const msg = extractApiErrorMessage(e2);
-      setStatus(msg, true);
+      setStatus(statusEl, msg, true);
       setGlobalError(msg);
     } finally {
       setEnabled(true);

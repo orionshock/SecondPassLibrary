@@ -1,6 +1,7 @@
 import { fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
 import { mountCovers } from "../ui/covers.js";
+import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 
 function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
@@ -254,8 +255,7 @@ export async function initBookDetail() {
 
   const bookId = detailEl.dataset ? detailEl.dataset.bookId : "";
   if (!bookId) {
-    statusEl.textContent = "Missing book id.";
-    statusEl.classList.add("error");
+    setStatus(statusEl, "Missing book id.", true);
     return;
   }
 
@@ -265,12 +265,7 @@ export async function initBookDetail() {
     editLinkEl.setAttribute("href", `/library/books/${encodeURIComponent(String(bookId))}/edit/`);
   }
 
-  function setStatus(text, isError) {
-    statusEl.textContent = text;
-    statusEl.classList.toggle("error", !!isError);
-  }
-
-  setStatus("Loading...", false);
+  setStatus(statusEl, "Loading...", false);
   // Initialize tab state immediately so only Shelves is visible on first paint.
   initTabs(detailEl);
   visible(detailEl, false);
@@ -321,13 +316,13 @@ export async function initBookDetail() {
     }
 
     visible(detailEl, true);
-    setStatus("", false);
+    setStatus(statusEl, "", false);
   } catch (e) {
     console.error("Failed to load book detail", { bookId, e });
     if (e && e.status === 404) {
-      setStatus("Book not found or not accessible.", true);
+      setStatus(statusEl, "Book not found or not accessible.", true);
     } else {
-      setStatus("Error loading book.", true);
+      setStatus(statusEl, "Error loading book.", true);
       setGlobalErrorFromError(e, "Failed to load book:");
     }
   }

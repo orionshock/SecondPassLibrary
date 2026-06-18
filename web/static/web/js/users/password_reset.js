@@ -1,6 +1,6 @@
 import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { setGlobalError, visible } from "../layout.js";
-import { setElStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 
 export function initManagedPasswordReset({
   userId,
@@ -11,18 +11,14 @@ export function initManagedPasswordReset({
   resetCopy,
   refreshUserAndMemberships,
 }) {
-  function setResetStatus(text, isError) {
-    setElStatus(resetStatus, text, isError);
-  }
-
   resetBtn.addEventListener("click", async () => {
     setGlobalError("");
-    setResetStatus("Resetting...", false);
+    setStatus(resetStatus, "Resetting...", false);
     visible(resetResult, false);
     resetCopy.value = "";
 
     if (!canResetPassword) {
-      setResetStatus("Not allowed.", true);
+      setStatus(resetStatus, "Not allowed.", true);
       return;
     }
 
@@ -41,16 +37,15 @@ export function initManagedPasswordReset({
 
       resetCopy.value = copyBlock;
       visible(resetResult, true);
-      setResetStatus("Reset.", false);
+      setStatus(resetStatus, "Reset.", false);
 
       // Refresh user to show must_change_password=true.
       await refreshUserAndMemberships();
     } catch (e2) {
       console.error("Failed to reset password", { userId, e2 });
       const msg = extractApiErrorMessage(e2);
-      setResetStatus(msg, true);
+      setStatus(resetStatus, msg, true);
       setGlobalError(msg);
     }
   });
 }
-

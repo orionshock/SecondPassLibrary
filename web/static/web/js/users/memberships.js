@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
-import { setElStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 
 export function renderGroupsReadOnly(groups) {
   if (!Array.isArray(groups) || groups.length === 0) return '<div class="muted">No group memberships.</div>';
@@ -112,13 +112,6 @@ export function initUserMembershipsManager({
   canManageMemberships,
   refreshUserAndMemberships,
 }) {
-  function setMembershipsStatus(text, isError) {
-    setElStatus(membershipsStatus, text, isError);
-  }
-  function setAddStatus(text, isError) {
-    setElStatus(addStatus, text, isError);
-  }
-
   function setAddFormEnabled(on) {
     const disabled = !on;
     addGroupSelect.disabled = disabled;
@@ -128,7 +121,7 @@ export function initUserMembershipsManager({
 
   if (!canManageMemberships) {
     visible(membershipsCard, false);
-    return { setMembershipsStatus, setAddStatus };
+    return;
   }
 
   membershipsResults.addEventListener("click", async (e) => {
@@ -140,12 +133,12 @@ export function initUserMembershipsManager({
     const groupId = target.getAttribute("data-group-id") || "";
     const membershipId = target.getAttribute("data-membership-id") || "";
     if (!groupId || !membershipId) {
-      setMembershipsStatus("Missing membership identifiers.", true);
+      setStatus(membershipsStatus, "Missing membership identifiers.", true);
       return;
     }
 
     try {
-      setMembershipsStatus(action === "membership-save" ? "Saving role..." : "Removing...", false);
+      setStatus(membershipsStatus, action === "membership-save" ? "Saving role..." : "Removing...", false);
       setGlobalError("");
 
       const csrf = getCsrfToken();
@@ -172,11 +165,11 @@ export function initUserMembershipsManager({
       }
 
       await refreshUserAndMemberships();
-      setMembershipsStatus(action === "membership-save" ? "Saved." : "Removed.", false);
+      setStatus(membershipsStatus, action === "membership-save" ? "Saved." : "Removed.", false);
     } catch (e2) {
       console.error("Membership action failed", { action, groupId, membershipId, e2 });
       const msg = extractApiErrorMessage(e2);
-      setMembershipsStatus(msg, true);
+      setStatus(membershipsStatus, msg, true);
       setGlobalError(msg);
     }
   });
@@ -184,13 +177,13 @@ export function initUserMembershipsManager({
   addForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     setGlobalError("");
-    setAddStatus("Adding...", false);
+    setStatus(addStatus, "Adding...", false);
     setAddFormEnabled(false);
 
     const groupId = addGroupSelect.value || "";
     const role = addRoleSelect.value || "reader";
     if (!groupId) {
-      setAddStatus("Select a group.", true);
+      setStatus(addStatus, "Select a group.", true);
       setAddFormEnabled(true);
       return;
     }
@@ -207,18 +200,15 @@ export function initUserMembershipsManager({
       });
 
       await refreshUserAndMemberships();
-      setAddStatus("Added.", false);
+      setStatus(addStatus, "Added.", false);
     } catch (e2) {
       console.error("Failed to add membership", { userId, e2 });
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
-      setAddStatus(fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
+      setStatus(addStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
       setGlobalError(msg);
     } finally {
       setAddFormEnabled(true);
     }
   });
-
-  return { setMembershipsStatus, setAddStatus };
 }
-

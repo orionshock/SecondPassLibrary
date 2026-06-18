@@ -1,5 +1,6 @@
 import { fetchJSON, fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { setStatus } from "../ui/status.js";
 
 function renderImportJobItems(items) {
   if (!Array.isArray(items) || items.length === 0) return "";
@@ -101,11 +102,6 @@ export async function initImports() {
   let prevUrl = null;
   const firstUrl = "/api/v1/library/imports/";
 
-  function setStatus(text, isError) {
-    statusEl.textContent = text;
-    statusEl.classList.toggle("error", !!isError);
-  }
-
   function setUploadStatus(text, isError) {
     uploadStatus.textContent = text || "\u00a0";
     uploadStatus.classList.toggle("error", !!isError);
@@ -113,13 +109,13 @@ export async function initImports() {
 
   async function load(url) {
     setGlobalError("");
-    setStatus("Loading...", false);
+    setStatus(statusEl, "Loading...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;
 
     if (!allowed) {
-      setStatus("Not allowed.", true);
+      setStatus(statusEl, "Not allowed.", true);
       return;
     }
 
@@ -127,13 +123,17 @@ export async function initImports() {
       const payload = await fetchJSON(url);
       const results = Array.isArray(payload && payload.results) ? payload.results : [];
       if (results.length === 0) {
-        setStatus("No import jobs yet.", false);
+        setStatus(statusEl, "No import jobs yet.", false);
         nextUrl = null;
         prevUrl = null;
         return;
       }
 
-      setStatus(payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "", false);
+      setStatus(
+        statusEl,
+        payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "",
+        false
+      );
       resultsEl.innerHTML = renderImportJobs(payload);
 
       nextUrl = payload.next || null;
@@ -142,7 +142,7 @@ export async function initImports() {
       prevBtn.disabled = !prevUrl;
     } catch (e) {
       console.error("Failed to load import jobs", { url, e });
-      setStatus("Error loading import jobs.", true);
+      setStatus(statusEl, "Error loading import jobs.", true);
       setGlobalError(extractApiErrorMessage(e));
       nextUrl = null;
       prevUrl = null;

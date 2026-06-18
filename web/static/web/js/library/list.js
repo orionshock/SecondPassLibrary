@@ -1,6 +1,7 @@
 import { fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
 import { mountCovers } from "../ui/covers.js";
+import { setStatus } from "../ui/status.js";
 
 function bookFileHtml(file) {
   if (!file || !file.download_url) return "";
@@ -73,13 +74,8 @@ export async function initLibraryBrowse() {
   let nextUrl = null;
   let prevUrl = null;
 
-  function setStatus(text, isError) {
-    statusEl.textContent = text;
-    statusEl.classList.toggle("error", !!isError);
-  }
-
   async function load(url) {
-    setStatus("Loading...", false);
+    setStatus(statusEl, "Loading...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;
@@ -92,13 +88,13 @@ export async function initLibraryBrowse() {
           : Array.isArray(payload.results) && payload.results.length > 0;
 
       if (!hasAny) {
-        setStatus("Empty library.", false);
+        setStatus(statusEl, "Empty library.", false);
         nextUrl = null;
         prevUrl = null;
         return;
       }
 
-      setStatus("", false);
+      setStatus(statusEl, "", false);
       resultsEl.innerHTML = renderBooks(payload);
       mountCovers(resultsEl);
 
@@ -108,7 +104,7 @@ export async function initLibraryBrowse() {
       prevBtn.disabled = !prevUrl;
     } catch (e) {
       console.error("Failed to load books", { url, e });
-      setStatus("Error loading data.", true);
+      setStatus(statusEl, "Error loading data.", true);
       setGlobalErrorFromError(e, "Failed to load library:");
       nextUrl = null;
       prevUrl = null;

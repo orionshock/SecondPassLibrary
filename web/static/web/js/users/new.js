@@ -5,7 +5,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { setElStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 
 export async function initUserNew() {
   const me = await loadMeAndInitShell();
@@ -55,23 +55,17 @@ export async function initUserNew() {
   visible(formCard, allowed);
 
   if (!allowed) {
-    statusEl.textContent = "Not allowed.";
-    statusEl.classList.add("error");
+    setStatus(statusEl, "Not allowed.", true);
     return;
   }
 
-  statusEl.textContent = "";
-  statusEl.classList.remove("error");
+  setStatus(statusEl, "", false);
 
   const canCreateManager = !!(me && me.is_owner);
   const mgrOpt = roleSelect.querySelector('option[value="manager"]');
   if (mgrOpt) mgrOpt.disabled = !canCreateManager;
   if (!canCreateManager && roleSelect.value === "manager") {
     roleSelect.value = "reader";
-  }
-
-  function setSubmitStatus(text, isError) {
-    setElStatus(submitStatus, text, isError);
   }
 
   function setFormEnabled(on) {
@@ -88,7 +82,7 @@ export async function initUserNew() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     setGlobalError("");
-    setSubmitStatus("Creating...", false);
+    setStatus(submitStatus, "Creating...", false);
     setFormEnabled(false);
 
     const payload = {
@@ -101,13 +95,13 @@ export async function initUserNew() {
     };
 
     if (!payload.username) {
-      setSubmitStatus("Username is required.", true);
+      setStatus(submitStatus, "Username is required.", true);
       setFormEnabled(true);
       return;
     }
 
     if (!canCreateManager && payload.role === "manager") {
-      setSubmitStatus("Only Owner can create Managers.", true);
+      setStatus(submitStatus, "Only Owner can create Managers.", true);
       setFormEnabled(true);
       return;
     }
@@ -135,15 +129,14 @@ export async function initUserNew() {
 
       visible(formCard, false);
       visible(successCard, true);
-      setSubmitStatus("", false);
+      setStatus(submitStatus, "", false);
     } catch (e2) {
       console.error("Failed to create user", { e2 });
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
-      setSubmitStatus(fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
+      setStatus(submitStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
       setGlobalError(msg);
       setFormEnabled(true);
     }
   });
 }
-

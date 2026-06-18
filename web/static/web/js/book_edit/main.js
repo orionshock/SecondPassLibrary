@@ -122,11 +122,6 @@ export async function initBookEdit() {
   )
     return;
 
-  function setStatus(text, isError) {
-    setText(statusEl, text || "");
-    statusEl.classList.toggle("error", !!isError);
-  }
-
   function setError(text) {
     setText(errorEl, text || "");
     visible(errorEl, !!text);
@@ -144,13 +139,13 @@ export async function initBookEdit() {
 
   const bookId = rootEl.dataset ? rootEl.dataset.bookId : "";
   if (!bookId) {
-    setStatus("Missing book id.", true);
+    setInlineStatus(statusEl, "Missing book id.", true);
     return;
   }
 
   const canManage = !!(me && me.capabilities && me.capabilities.can_manage_library);
   if (!canManage) {
-    setStatus("Not allowed.", true);
+    setInlineStatus(statusEl, "Not allowed.", true);
     visible(rootEl, false);
     visible(headerEl, false);
     return;
@@ -215,7 +210,7 @@ export async function initBookEdit() {
     await refreshShelves();
   }
 
-  setStatus("Loading...", false);
+  setInlineStatus(statusEl, "Loading...", false);
   setError("");
   setSaved(false);
   visible(rootEl, false);
@@ -225,12 +220,12 @@ export async function initBookEdit() {
     await refreshBook();
     visible(headerEl, true);
     visible(rootEl, true);
-    setStatus("", false);
+    setInlineStatus(statusEl, "", false);
   } catch (e) {
     console.error("Failed to load book for edit", { bookId, e });
-    if (e && e.status === 404) setStatus("Book not found or not accessible.", true);
+    if (e && e.status === 404) setInlineStatus(statusEl, "Book not found or not accessible.", true);
     else {
-      setStatus("Error loading book.", true);
+      setInlineStatus(statusEl, "Error loading book.", true);
       setGlobalErrorFromError(e, "Failed to load book:");
     }
     return;

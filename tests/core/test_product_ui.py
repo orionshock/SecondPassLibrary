@@ -431,6 +431,24 @@ class ProductUiSmokeTests(TestCase):
         shelves_view_js = Path("web/static/web/js/shelves/view.js").read_text(encoding="utf-8")
         book_edit_shared_js = Path("web/static/web/js/book_edit/shared.js").read_text(encoding="utf-8")
         book_edit_main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
+        migrated_status_modules = [
+            Path(path).read_text(encoding="utf-8")
+            for path in (
+                "web/static/web/js/profile/password.js",
+                "web/static/web/js/library/list.js",
+                "web/static/web/js/library/detail.js",
+                "web/static/web/js/groups/new.js",
+                "web/static/web/js/groups/edit.js",
+                "web/static/web/js/imports/main.js",
+                "web/static/web/js/server/settings.js",
+                "web/static/web/js/users/list.js",
+                "web/static/web/js/users/edit.js",
+                "web/static/web/js/users/new.js",
+                "web/static/web/js/users/memberships.js",
+                "web/static/web/js/users/password_reset.js",
+            )
+        ]
+        users_shared_js = Path("web/static/web/js/users/shared.js").read_text(encoding="utf-8")
 
         self.assertIn("export function setStatus", helper_js)
         self.assertIn("export function clearStatus", helper_js)
@@ -449,6 +467,14 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('from "../ui/status.js"', book_edit_main_js)
         self.assertNotIn("export function setInlineStatus", book_edit_shared_js)
         self.assertNotIn("setSharedStatus", book_edit_shared_js)
+        for module_js in migrated_status_modules:
+            self.assertIn('from "../ui/status.js"', module_js)
+        self.assertNotIn("function setStatus(", "\n".join(migrated_status_modules))
+        self.assertNotIn("function setSaveStatus(", "\n".join(migrated_status_modules))
+        self.assertNotIn("function setResetStatus(", "\n".join(migrated_status_modules))
+        self.assertNotIn("function setMembershipsStatus(", "\n".join(migrated_status_modules))
+        self.assertNotIn("function setAddStatus(", "\n".join(migrated_status_modules))
+        self.assertNotIn("setElStatus", users_shared_js)
 
     def test_shelves_and_groups_use_shared_paged_list_helper(self):
         helper_js = Path("web/static/web/js/ui/paged_list.js").read_text(encoding="utf-8")

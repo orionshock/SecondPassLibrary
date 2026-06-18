@@ -1,5 +1,6 @@
 import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { setStatus } from "../ui/status.js";
 import { isManagerOrOwner } from "./shared.js";
 
 export async function initGroupNew() {
@@ -24,14 +25,9 @@ export async function initGroupNew() {
   visible(notAllowedEl, false);
   visible(root, true);
 
-  function setStatus(text, isError) {
-    statusEl.textContent = text || "";
-    statusEl.classList.toggle("error", !!isError);
-  }
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setStatus("Creating...", false);
+    setStatus(statusEl, "Creating...", false);
     setGlobalError("");
 
     try {
@@ -52,16 +48,15 @@ export async function initGroupNew() {
 
       const id = created && created.id ? String(created.id) : "";
       if (!id) {
-        setStatus("Created, but response was missing id.", true);
+        setStatus(statusEl, "Created, but response was missing id.", true);
         return;
       }
       window.location.href = `/groups/${encodeURIComponent(id)}/edit/`;
     } catch (err) {
       console.error("Failed to create group", err);
       const msg = extractApiErrorMessage(err) || "Failed to create group.";
-      setStatus(msg, true);
+      setStatus(statusEl, msg, true);
       setGlobalError(msg);
     }
   });
 }
-

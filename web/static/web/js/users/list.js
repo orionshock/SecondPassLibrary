@@ -1,6 +1,7 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { curatedGroupsFromUser, formatDateTime, groupsSummary, passesFilter, setElStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
+import { curatedGroupsFromUser, formatDateTime, groupsSummary, passesFilter } from "./shared.js";
 
 export async function initUsersList() {
   const me = await loadMeAndInitShell();
@@ -32,21 +33,17 @@ export async function initUsersList() {
   let totalUsersCount = null;
   let activeFilter = "all";
 
-  function setStatus(text, isError) {
-    setElStatus(statusEl, text, isError);
-  }
-
   function updateStatusLabel() {
     if (!allowed) return;
     const total = totalUsersCount != null ? Number(totalUsersCount) : null;
     const pageCount = Array.isArray(currentResults) ? currentResults.length : 0;
     const filteredCount = (currentResults || []).filter((u) => passesFilter(u, activeFilter)).length;
     if (total != null && activeFilter && activeFilter !== "all") {
-      setStatus(`Showing ${filteredCount} filtered users on this page. Total users: ${total}.`, false);
+      setStatus(statusEl, `Showing ${filteredCount} filtered users on this page. Total users: ${total}.`, false);
     } else if (total != null) {
-      setStatus(`Showing ${pageCount} of ${total}.`, false);
+      setStatus(statusEl, `Showing ${pageCount} of ${total}.`, false);
     } else {
-      setStatus("", false);
+      setStatus(statusEl, "", false);
     }
   }
 
@@ -124,7 +121,7 @@ export async function initUsersList() {
 
   async function load(url) {
     setGlobalError("");
-    setStatus("Loading users...", false);
+    setStatus(statusEl, "Loading users...", false);
     resultsEl.innerHTML = "";
     nextBtn.disabled = true;
     prevBtn.disabled = true;
@@ -132,7 +129,7 @@ export async function initUsersList() {
     currentUrl = url;
 
     if (!allowed) {
-      setStatus("Not allowed.", true);
+      setStatus(statusEl, "Not allowed.", true);
       return;
     }
 
@@ -143,7 +140,7 @@ export async function initUsersList() {
       totalUsersCount = payload && payload.count != null ? payload.count : null;
 
       if (results.length === 0) {
-        setStatus("No users.", false);
+        setStatus(statusEl, "No users.", false);
         nextUrl = null;
         prevUrl = null;
         render();
@@ -159,7 +156,7 @@ export async function initUsersList() {
       updateStatusLabel();
     } catch (e) {
       console.error("Failed to load users", { url, e });
-      setStatus("Error loading users.", true);
+      setStatus(statusEl, "Error loading users.", true);
       setGlobalError(extractApiErrorMessage(e));
       nextUrl = null;
       prevUrl = null;

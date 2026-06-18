@@ -184,7 +184,7 @@ export async function initGroupEdit() {
     visible(deleteRoot, allowDelete);
     deleteConfirm.value = "";
     deleteBtn.disabled = true;
-    deleteStatus.textContent = "";
+    setStatus(deleteStatus, "", false);
 
     function syncDeleteEnabled() {
       const typed = String(deleteConfirm.value || "").trim();
@@ -195,8 +195,7 @@ export async function initGroupEdit() {
     deleteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (deleteBtn.disabled) return;
-      deleteStatus.textContent = "Deleting...";
-      deleteStatus.classList.remove("error");
+      setStatus(deleteStatus, "Deleting...", false);
       setGlobalError("");
 
       try {
@@ -212,8 +211,7 @@ export async function initGroupEdit() {
       } catch (e2) {
         console.error("Failed to delete group", { groupId, e2 });
         const msg = extractApiErrorMessage(e2) || "Failed to delete group.";
-        deleteStatus.textContent = msg;
-        deleteStatus.classList.add("error");
+        setStatus(deleteStatus, msg, true);
         setGlobalError(msg);
       }
     });
@@ -221,14 +219,10 @@ export async function initGroupEdit() {
     visible(deleteRoot, false);
   }
 
-  function setSaveStatus(text, isError) {
-    setStatus(saveStatus, text, isError);
-  }
-
   if (allowDescriptionEdit) {
     editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      setSaveStatus("Saving...", false);
+      setStatus(saveStatus, "Saving...", false);
       setGlobalError("");
 
       try {
@@ -241,10 +235,10 @@ export async function initGroupEdit() {
           headers,
           body: JSON.stringify({ description: descInput.value || "" }),
         });
-        setSaveStatus("Saved.", false);
+        setStatus(saveStatus, "Saved.", false);
       } catch (e2) {
         console.error("Failed to save group description", { groupId, e2 });
-        setSaveStatus(extractApiErrorMessage(e2), true);
+        setStatus(saveStatus, extractApiErrorMessage(e2), true);
         setGlobalError(extractApiErrorMessage(e2));
       }
     });

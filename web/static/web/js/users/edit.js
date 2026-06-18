@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { setElStatus } from "./shared.js";
+import { setStatus } from "../ui/status.js";
 import {
   initUserMembershipsManager,
   loadAllGroups,
@@ -86,8 +86,7 @@ export async function initUserEdit() {
 
   const userId = root.dataset ? root.dataset.userId : "";
   if (!userId) {
-    statusEl.textContent = "Missing user id.";
-    statusEl.classList.add("error");
+    setStatus(statusEl, "Missing user id.", true);
     return;
   }
 
@@ -99,26 +98,6 @@ export async function initUserEdit() {
   visible(cardEl, allowed);
   visible(membershipsCard, allowed && canManageMemberships);
 
-  function setStatus(text, isError) {
-    setElStatus(statusEl, text, isError);
-  }
-
-  function setSaveStatus(text, isError) {
-    setElStatus(saveStatus, text, isError);
-  }
-
-  function setResetStatus(text, isError) {
-    setElStatus(resetStatus, text, isError);
-  }
-
-  function setMembershipsStatus(text, isError) {
-    setElStatus(membershipsStatus, text, isError);
-  }
-
-  function setAddStatus(text, isError) {
-    setElStatus(addStatus, text, isError);
-  }
-
   function setFormEnabled(on, message) {
     const disabled = !on;
     emailInput.disabled = disabled;
@@ -128,7 +107,7 @@ export async function initUserEdit() {
     activeSelect.disabled = disabled;
     mustChangeInput.disabled = disabled;
     submitBtn.disabled = disabled;
-    if (message) setSaveStatus(message, true);
+    if (message) setStatus(saveStatus, message, true);
   }
 
   function applyRoleOptions() {
@@ -141,13 +120,13 @@ export async function initUserEdit() {
   }
 
   if (!allowed) {
-    setStatus("Not allowed.", true);
+    setStatus(statusEl, "Not allowed.", true);
     visible(cardEl, false);
     visible(membershipsCard, false);
     return;
   }
 
-  setStatus("Loading...", false);
+  setStatus(statusEl, "Loading...", false);
   let original = null;
   let allGroups = null;
   let canResetPassword = false;
@@ -166,8 +145,8 @@ export async function initUserEdit() {
 
     applyRoleOptions();
 
-    setStatus("", false);
-    setSaveStatus("", false);
+    setStatus(statusEl, "", false);
+    setStatus(saveStatus, "", false);
 
     if (payload.is_owner) {
       setFormEnabled(false, "Owner cannot be edited here.");
@@ -195,18 +174,18 @@ export async function initUserEdit() {
     visible(passwordCard, canResetPassword);
     visible(resetResult, false);
     resetCopy.value = "";
-    setResetStatus("", false);
+    setStatus(resetStatus, "", false);
 
     if (canManageMemberships) {
-      setMembershipsStatus("", false);
+      setStatus(membershipsStatus, "", false);
       membershipsResults.innerHTML = renderMembershipControls(payload.groups);
       allGroups = await loadAllGroups();
       refreshAddGroupOptions({ allGroups, userGroups: payload.groups, addGroupSelect, addSubmitBtn });
-      setAddStatus("", false);
+      setStatus(addStatus, "", false);
     }
   } catch (e) {
     console.error("Failed to load user", { userId, e });
-    setStatus(extractApiErrorMessage(e), true);
+    setStatus(statusEl, extractApiErrorMessage(e), true);
     visible(cardEl, false);
     visible(membershipsCard, false);
     return;
@@ -260,19 +239,19 @@ export async function initUserEdit() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     setGlobalError("");
-    setSaveStatus("Saving...", false);
+    setStatus(saveStatus, "Saving...", false);
 
     if (!original) {
-      setSaveStatus("User not loaded.", true);
+      setStatus(saveStatus, "User not loaded.", true);
       return;
     }
 
     if (original.is_owner) {
-      setSaveStatus("Owner cannot be edited here.", true);
+      setStatus(saveStatus, "Owner cannot be edited here.", true);
       return;
     }
     if (!me.is_owner && original.role === "manager") {
-      setSaveStatus("Only Owner can edit Managers.", true);
+      setStatus(saveStatus, "Only Owner can edit Managers.", true);
       return;
     }
 
@@ -293,12 +272,12 @@ export async function initUserEdit() {
     }
 
     if (Object.keys(patch).length === 0) {
-      setSaveStatus("No changes.", false);
+      setStatus(saveStatus, "No changes.", false);
       return;
     }
 
     if (!me.is_owner && patch.role === "manager") {
-      setSaveStatus("Only Owner can assign manager.", true);
+      setStatus(saveStatus, "Only Owner can assign manager.", true);
       return;
     }
 
@@ -323,12 +302,12 @@ export async function initUserEdit() {
       activeSelect.value = updated.is_active === false ? "false" : "true";
       applyRoleOptions();
 
-      setSaveStatus("Saved.", false);
+      setStatus(saveStatus, "Saved.", false);
     } catch (e2) {
       console.error("Failed to save user", { userId, e2 });
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
-      setSaveStatus(fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
+      setStatus(saveStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
       setGlobalError(msg);
     }
   });
