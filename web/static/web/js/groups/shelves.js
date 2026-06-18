@@ -1,5 +1,6 @@
 import { visible } from "../layout.js";
-import { pagedListController, renderGroupShelvesCompact } from "./shared.js";
+import { createPagedListController } from "../ui/paged_list.js";
+import { renderGroupShelvesCompact } from "./shared.js";
 
 export async function initGroupShelvesTab({
   groupId,
@@ -26,7 +27,7 @@ export async function initGroupShelvesTab({
   }
 
   if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
-    await pagedListController({
+    await createPagedListController({
       statusEl: shelvesStatus,
       resultsEl: shelvesResults,
       nextBtn: shelvesNext,

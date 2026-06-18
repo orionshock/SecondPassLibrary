@@ -1,7 +1,4 @@
-import { extractApiErrorMessage, fetchJSON } from "../api.js";
-import { escapeHtml, setGlobalError } from "../layout.js";
-import { mountCovers } from "../ui/covers.js";
-import { setStatus } from "../ui/status.js";
+import { escapeHtml } from "../layout.js";
 
 export function formatUserDisplayName(user) {
   if (!user) return "";
@@ -98,54 +95,6 @@ export function shelfCreatedByDisplay(shelf) {
   if (!shelf || !shelf.created_by) return "";
   const name = formatUserDisplay(shelf.created_by);
   return name ? `Created by ${name}` : "";
-}
-
-export async function pagedController({ statusEl, resultsEl, prevBtn, nextBtn, noteEl, initialUrl, renderRow, emptyText }) {
-  let nextUrl = null;
-  let prevUrl = null;
-  let currentUrl = initialUrl;
-
-  async function load(url) {
-    setStatus(statusEl, "Loading...", false);
-    const payload = await fetchJSON(url);
-    const rows = Array.isArray(payload && payload.results) ? payload.results : [];
-    resultsEl.innerHTML = rows.length ? rows.map(renderRow).join("") : `<div class="muted">${escapeHtml(emptyText)}</div>`;
-    mountCovers(resultsEl);
-    nextUrl = payload && payload.next ? String(payload.next) : null;
-    prevUrl = payload && payload.previous ? String(payload.previous) : null;
-    currentUrl = url;
-
-    if (prevBtn) prevBtn.disabled = !prevUrl;
-    if (nextBtn) nextBtn.disabled = !nextUrl;
-    if (noteEl) {
-      const count = payload && payload.count != null ? Number(payload.count) : null;
-      noteEl.textContent = count != null ? `${count} total` : "";
-    }
-
-    setStatus(statusEl, "", false);
-    return payload;
-  }
-
-  if (prevBtn) {
-    prevBtn.addEventListener("click", () => {
-      if (!prevUrl) return;
-      load(prevUrl).catch((e) => {
-        console.error("Pagination prev failed", e);
-        setGlobalError(extractApiErrorMessage(e));
-      });
-    });
-  }
-  if (nextBtn) {
-    nextBtn.addEventListener("click", () => {
-      if (!nextUrl) return;
-      load(nextUrl).catch((e) => {
-        console.error("Pagination next failed", e);
-        setGlobalError(extractApiErrorMessage(e));
-      });
-    });
-  }
-
-  return { loadFirst: () => load(initialUrl), reload: () => load(currentUrl) };
 }
 
 export function inferCanEditShelf({ me, shelf }) {

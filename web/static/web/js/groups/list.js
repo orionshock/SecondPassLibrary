@@ -1,5 +1,6 @@
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { pagedListController, truthy } from "./shared.js";
+import { createPagedListController } from "../ui/paged_list.js";
+import { truthy } from "./shared.js";
 
 function renderGroupsList(payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
@@ -50,7 +51,7 @@ export async function initGroupsList() {
   const prevBtn = $("#groups-prev");
   if (!statusEl || !resultsEl || !nextBtn || !prevBtn) return;
 
-  await pagedListController({
+  await createPagedListController({
     statusEl,
     resultsEl,
     nextBtn,

@@ -1,8 +1,6 @@
-import { extractApiErrorMessage, fetchJSON } from "../api.js";
-import { escapeHtml, setGlobalError } from "../layout.js";
+import { fetchJSON } from "../api.js";
+import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
-import { mountCovers } from "../ui/covers.js";
-import { setStatus } from "../ui/status.js";
 import { initTabs as initSharedTabs } from "../ui/tabs.js";
 
 export function truthy(v) {
@@ -46,61 +44,6 @@ export function canManageGroupMemberships(me) {
 
 export function initTabs(root) {
   initSharedTabs(root);
-}
-
-export async function pagedListController({ statusEl, resultsEl, nextBtn, prevBtn, initialUrl, emptyText, render }) {
-  let nextUrl = null;
-  let prevUrl = null;
-
-  async function load(url) {
-    setStatus(statusEl, "Loading...", false);
-    resultsEl.innerHTML = "";
-    nextBtn.disabled = true;
-    prevBtn.disabled = true;
-
-    try {
-      const payload = await fetchJSON(url);
-      const results = Array.isArray(payload && payload.results) ? payload.results : [];
-      if (results.length === 0) {
-        setStatus(statusEl, emptyText, false);
-        nextUrl = null;
-        prevUrl = null;
-        return;
-      }
-
-      setStatus(
-        statusEl,
-        payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "",
-        false
-      );
-      resultsEl.innerHTML = render(payload);
-      mountCovers(resultsEl);
-
-      nextUrl = payload.next || null;
-      prevUrl = payload.previous || null;
-      nextBtn.disabled = !nextUrl;
-      prevBtn.disabled = !prevUrl;
-    } catch (e) {
-      console.error("Failed to load list", { url, e });
-      if (e && e.status === 403) setStatus(statusEl, "Permission denied.", true);
-      else if (e && e.status === 404) setStatus(statusEl, "Not found.", true);
-      else setStatus(statusEl, "Error loading.", true);
-      setGlobalError(extractApiErrorMessage(e));
-      nextUrl = null;
-      prevUrl = null;
-    }
-  }
-
-  nextBtn.addEventListener("click", async () => {
-    if (nextUrl) await load(nextUrl);
-  });
-  prevBtn.addEventListener("click", async () => {
-    if (prevUrl) await load(prevUrl);
-  });
-
-  await load(initialUrl);
-
-  return { reloadFirstPage: async () => load(initialUrl) };
 }
 
 export function renderGroupShelvesCompact(payload, { canEdit }) {

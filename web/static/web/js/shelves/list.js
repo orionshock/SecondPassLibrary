@@ -1,5 +1,6 @@
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
-import { pagedController, shelfMetadataLine } from "./shared.js";
+import { createPagedListController } from "../ui/paged_list.js";
+import { shelfMetadataLine } from "./shared.js";
 
 function renderShelfRow(s) {
   const id = s && s.id != null ? String(s.id) : "";
@@ -34,15 +35,23 @@ export async function initShelvesList() {
   const noteEl = $("#shelves-page-note");
   if (!statusEl || !listEl || !resultsEl) return;
 
-  const ctl = await pagedController({
+  const ctl = await createPagedListController({
     statusEl,
     resultsEl,
     prevBtn,
     nextBtn,
     noteEl,
     initialUrl: "/api/v1/shelves/",
-    renderRow: renderShelfRow,
     emptyText: "No visible shelves.",
+    autoLoad: false,
+    clearResultsOnLoad: false,
+    render: (payload, rows, emptyText) =>
+      rows.length
+        ? rows.map(renderShelfRow).join("")
+        : `<div class="muted">${escapeHtml(emptyText)}</div>`,
+    formatStatus: () => "",
+    formatNote: (payload) =>
+      payload && payload.count != null ? `${Number(payload.count)} total` : "",
   });
 
   visible(listEl, true);

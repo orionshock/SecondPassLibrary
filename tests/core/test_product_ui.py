@@ -258,7 +258,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="groups-status"')
         self.assertContains(response, 'id="groups-results"')
+        self.assertContains(response, 'id="groups-prev"')
+        self.assertContains(response, 'id="groups-next"')
 
     def test_unauthenticated_group_detail_redirects_to_login(self):
         group_id = uuid4()
@@ -331,7 +334,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'id="shelves-status"')
         self.assertContains(response, 'id="shelves-results"')
+        self.assertContains(response, 'id="shelves-prev"')
+        self.assertContains(response, 'id="shelves-next"')
+        self.assertContains(response, 'id="shelves-page-note"')
 
     def test_unauthenticated_shelf_new_redirects_to_login(self):
         response = self.client.get("/shelves/new/", follow=False)
@@ -419,8 +426,11 @@ class ProductUiSmokeTests(TestCase):
     def test_product_ui_status_helpers_use_shared_helper(self):
         helper_js = Path("web/static/web/js/ui/status.js").read_text(encoding="utf-8")
         group_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
+        group_view_js = Path("web/static/web/js/groups/view.js").read_text(encoding="utf-8")
         shelves_shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
+        shelves_view_js = Path("web/static/web/js/shelves/view.js").read_text(encoding="utf-8")
         book_edit_shared_js = Path("web/static/web/js/book_edit/shared.js").read_text(encoding="utf-8")
+        book_edit_main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
 
         self.assertIn("export function setStatus", helper_js)
         self.assertIn("export function clearStatus", helper_js)
@@ -430,14 +440,41 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("errorClass", helper_js)
         self.assertIn('typeof options === "boolean"', helper_js)
 
-        self.assertIn('from "../ui/status.js"', group_shared_js)
+        self.assertIn('from "../ui/status.js"', group_view_js)
         self.assertNotIn("export function setStatus", group_shared_js)
         self.assertNotIn("setSharedStatus", group_shared_js)
-        self.assertIn('from "../ui/status.js"', shelves_shared_js)
+        self.assertIn('from "../ui/status.js"', shelves_view_js)
         self.assertNotIn("export function setStatus", shelves_shared_js)
         self.assertNotIn("setSharedStatus", shelves_shared_js)
+        self.assertIn('from "../ui/status.js"', book_edit_main_js)
         self.assertNotIn("export function setInlineStatus", book_edit_shared_js)
         self.assertNotIn("setSharedStatus", book_edit_shared_js)
+
+    def test_shelves_and_groups_use_shared_paged_list_helper(self):
+        helper_js = Path("web/static/web/js/ui/paged_list.js").read_text(encoding="utf-8")
+        shelves_list_js = Path("web/static/web/js/shelves/list.js").read_text(encoding="utf-8")
+        shelves_shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
+        groups_list_js = Path("web/static/web/js/groups/list.js").read_text(encoding="utf-8")
+        groups_view_js = Path("web/static/web/js/groups/view.js").read_text(encoding="utf-8")
+        groups_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
+        main_js = Path("web/static/web/js/main.js").read_text(encoding="utf-8")
+
+        self.assertIn("export async function createPagedListController", helper_js)
+        self.assertIn("fetchJSON", helper_js)
+        self.assertIn("setStatus", helper_js)
+        self.assertIn("nextBtn.addEventListener", helper_js)
+        self.assertIn("prevBtn.addEventListener", helper_js)
+        self.assertIn("reloadFirstPage", helper_js)
+
+        self.assertIn('from "../ui/paged_list.js"', shelves_list_js)
+        self.assertIn("createPagedListController", shelves_list_js)
+        self.assertNotIn("pagedController", shelves_shared_js)
+        self.assertIn('from "../ui/paged_list.js"', groups_list_js)
+        self.assertIn('from "../ui/paged_list.js"', groups_view_js)
+        self.assertNotIn("pagedListController", groups_shared_js)
+
+        self.assertIn('shelves: { importer: () => import("./shelves/main.js")', main_js)
+        self.assertIn('groups: { importer: () => import("./groups/main.js")', main_js)
 
     def test_shelf_js_has_friendly_ownership_display(self):
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")

@@ -1,7 +1,8 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
-import { canEditGroupPage, initTabs, pagedListController, renderBooksCompact, renderGroupShelvesCompact, renderMembersReadOnly } from "./shared.js";
+import { canEditGroupPage, initTabs, renderBooksCompact, renderGroupShelvesCompact, renderMembersReadOnly } from "./shared.js";
 
 export async function initGroupView() {
   const me = await loadMeAndInitShell();
@@ -109,7 +110,7 @@ export async function initGroupView() {
   visible(root, true);
   setStatus(statusEl, "", false);
 
-  await pagedListController({
+  await createPagedListController({
     statusEl: booksStatus,
     resultsEl: booksResults,
     nextBtn: booksNext,
@@ -120,7 +121,7 @@ export async function initGroupView() {
   });
 
   membersNote.textContent = "";
-  await pagedListController({
+  await createPagedListController({
     statusEl: membersStatus,
     resultsEl: membersResults,
     nextBtn: membersNext,
@@ -131,7 +132,7 @@ export async function initGroupView() {
   });
 
   if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
-    await pagedListController({
+    await createPagedListController({
       statusEl: shelvesStatus,
       resultsEl: shelvesResults,
       nextBtn: shelvesNext,

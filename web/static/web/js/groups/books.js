@@ -5,8 +5,9 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
+import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
-import { isLibrarian, isManagerOrOwner, pagedListController, renderBooksCompact, truthy } from "./shared.js";
+import { isLibrarian, isManagerOrOwner, renderBooksCompact, truthy } from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
 
 export async function initGroupBooksTab({
@@ -35,7 +36,7 @@ export async function initGroupBooksTab({
   visible(uuidDebugDetails, allowBookManage && (isManagerOrOwner(me) || isLibrarian(me)));
   visible(addBookForm, false);
 
-  const booksCtl = await pagedListController({
+  const booksCtl = await createPagedListController({
     statusEl: booksStatus,
     resultsEl: booksResults,
     nextBtn: booksNext,
