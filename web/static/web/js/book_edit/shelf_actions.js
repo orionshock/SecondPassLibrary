@@ -1,5 +1,5 @@
 import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
-import { setStatus as setInlineStatus } from "../ui/status.js";
+import { setStatus } from "../ui/status.js";
 
 export function bindShelfActions({ shelvesEl, shelvesStatusEl, refreshShelves }) {
   shelvesEl.addEventListener("click", async (e) => {
@@ -13,7 +13,7 @@ export function bindShelfActions({ shelvesEl, shelvesStatusEl, refreshShelves })
     const ok = window.confirm("Remove this book from this shelf?");
     if (!ok) return;
 
-    setInlineStatus(shelvesStatusEl, "Removing...", false);
+    setStatus(shelvesStatusEl, "Removing...", false);
     try {
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json" };
@@ -23,10 +23,10 @@ export function bindShelfActions({ shelvesEl, shelvesStatusEl, refreshShelves })
         { method: "DELETE", headers }
       );
       await refreshShelves();
-      setInlineStatus(shelvesStatusEl, "", false);
+      setStatus(shelvesStatusEl, "", false);
     } catch (e2) {
       console.error("Failed to remove book from shelf", { shelfId, itemId, e2 });
-      setInlineStatus(shelvesStatusEl, extractApiErrorMessage(e2) || "Failed to remove.", true);
+      setStatus(shelvesStatusEl, extractApiErrorMessage(e2) || "Failed to remove.", true);
     }
   });
 }

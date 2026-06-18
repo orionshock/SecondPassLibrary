@@ -10,9 +10,9 @@ import {
   canEditGroupPage,
   canManageGroupBooks,
   isManagerOrOwner,
-  initTabs,
 } from "./shared.js";
 import { setStatus } from "../ui/status.js";
+import { initTabs } from "../ui/tabs.js";
 import { initGroupBooksTab } from "./books.js";
 import { initGroupMembershipsTab } from "./memberships.js";
 import { initGroupShelvesTab } from "./shelves.js";

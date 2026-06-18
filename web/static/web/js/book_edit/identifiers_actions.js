@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { renderIdentifiersTable } from "./identifiers_file.js";
-import { setStatus as setInlineStatus } from "../ui/status.js";
+import { setStatus } from "../ui/status.js";
 
 export async function refreshIdentifiersContext({
   bookId,
@@ -15,15 +15,15 @@ export async function refreshIdentifiersContext({
   state,
   setError,
 }) {
-  setInlineStatus(identifiersStatusEl, "Loading...", false);
+  setStatus(identifiersStatusEl, "Loading...", false);
   try {
     const list = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/identifiers/`);
     state.identifiers = Array.isArray(list) ? list : [];
-    setInlineStatus(identifiersStatusEl, "", false);
+    setStatus(identifiersStatusEl, "", false);
     renderIdentifiersTable({ identifiers: state.identifiers, identifiersEl });
   } catch (e) {
     console.error("Failed to load identifiers", e);
-    setInlineStatus(identifiersStatusEl, "Failed to load.", true);
+    setStatus(identifiersStatusEl, "Failed to load.", true);
     setError(`Failed to load identifiers: ${extractApiErrorMessage(e)}`);
     state.identifiers = [];
     renderIdentifiersTable({ identifiers: state.identifiers, identifiersEl });
@@ -59,7 +59,7 @@ export function bindIdentifierActions({ bookId, identifiersEl, refreshIdentifier
     const row = t.closest ? t.closest("tr") : null;
     if (!row) return;
     const statusSpan = row.querySelector ? row.querySelector("[data-ident-status]") : null;
-    const setRowStatus = (text, isError) => setInlineStatus(statusSpan, text, isError);
+    const setRowStatus = (text, isError) => setStatus(statusSpan, text, isError);
 
     if (action === "add") {
       const payload = identifierPayload(row, "data-ident-add-field");

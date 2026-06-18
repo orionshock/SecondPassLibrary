@@ -1,4 +1,4 @@
-export function getCookie(name) {
+function getCookie(name) {
   const cookies = document.cookie ? document.cookie.split(";") : [];
   for (const cookie of cookies) {
     const trimmed = cookie.trim();

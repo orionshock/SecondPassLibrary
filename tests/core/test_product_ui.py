@@ -406,6 +406,8 @@ class ProductUiSmokeTests(TestCase):
         helper_js = Path("web/static/web/js/ui/tabs.js").read_text(encoding="utf-8")
         book_edit_main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
         group_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
+        group_edit_js = Path("web/static/web/js/groups/edit.js").read_text(encoding="utf-8")
+        group_view_js = Path("web/static/web/js/groups/view.js").read_text(encoding="utf-8")
         book_detail_js = Path("web/static/web/js/library/detail.js").read_text(encoding="utf-8")
 
         self.assertIn("export function initTabs", helper_js)
@@ -419,7 +421,9 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('from "../ui/tabs.js"', book_edit_main_js)
         self.assertIn('defaultTab: "metadata"', book_edit_main_js)
         self.assertNotIn('from "./tabs.js"', book_edit_main_js)
-        self.assertIn('from "../ui/tabs.js"', group_shared_js)
+        self.assertNotIn("initTabs", group_shared_js)
+        self.assertIn('from "../ui/tabs.js"', group_edit_js)
+        self.assertIn('from "../ui/tabs.js"', group_view_js)
         self.assertIn('from "../ui/tabs.js"', book_detail_js)
         self.assertNotIn("function initTabs(root)", book_detail_js)
 
@@ -431,6 +435,17 @@ class ProductUiSmokeTests(TestCase):
         shelves_view_js = Path("web/static/web/js/shelves/view.js").read_text(encoding="utf-8")
         book_edit_shared_js = Path("web/static/web/js/book_edit/shared.js").read_text(encoding="utf-8")
         book_edit_main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
+        book_edit_status_modules = [
+            Path(path).read_text(encoding="utf-8")
+            for path in (
+                "web/static/web/js/book_edit/main.js",
+                "web/static/web/js/book_edit/author_series_actions.js",
+                "web/static/web/js/book_edit/group_actions.js",
+                "web/static/web/js/book_edit/identifiers_actions.js",
+                "web/static/web/js/book_edit/shelf_actions.js",
+                "web/static/web/js/book_edit/shelves.js",
+            )
+        ]
         migrated_status_modules = [
             Path(path).read_text(encoding="utf-8")
             for path in (
@@ -467,6 +482,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('from "../ui/status.js"', book_edit_main_js)
         self.assertNotIn("export function setInlineStatus", book_edit_shared_js)
         self.assertNotIn("setSharedStatus", book_edit_shared_js)
+        self.assertNotIn("setInlineStatus", "\n".join(book_edit_status_modules))
         for module_js in migrated_status_modules:
             self.assertIn('from "../ui/status.js"', module_js)
         self.assertNotIn("function setStatus(", "\n".join(migrated_status_modules))

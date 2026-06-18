@@ -4,7 +4,7 @@ import {
   getCsrfToken,
   summarizeFieldErrors,
 } from "../api.js";
-import { setStatus as setInlineStatus } from "../ui/status.js";
+import { setStatus } from "../ui/status.js";
 
 export function bindGroupActions({
   bookId,
@@ -26,17 +26,17 @@ export function bindGroupActions({
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(groupsStatusEl, "Removing...", false);
+    setStatus(groupsStatusEl, "Removing...", false);
     try {
       await fetchJSONWithOptions(
         `/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/${encodeURIComponent(String(bookId))}/`,
         { method: "DELETE", headers: { Accept: "application/json", "X-CSRFToken": csrf } }
       );
-      setInlineStatus(groupsStatusEl, "", false);
+      setStatus(groupsStatusEl, "", false);
       await refreshBook();
     } catch (e) {
       console.error("Remove group assignment failed", e);
-      setInlineStatus(groupsStatusEl, "Remove failed.", true);
+      setStatus(groupsStatusEl, "Remove failed.", true);
       setError(`Failed to remove from group: ${extractApiErrorMessage(e)}`);
     }
   });
@@ -44,7 +44,7 @@ export function bindGroupActions({
   groupsAddFormEl.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     setError("");
-    setInlineStatus(groupsAddStatusEl, "", false);
+    setStatus(groupsAddStatusEl, "", false);
     const gid = (groupsAddSelectEl.value || "").trim();
     if (!gid) return;
     const csrf = getCsrfToken();
@@ -52,18 +52,18 @@ export function bindGroupActions({
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(groupsAddStatusEl, "Adding...", false);
+    setStatus(groupsAddStatusEl, "Adding...", false);
     try {
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/`, {
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
         body: JSON.stringify({ book: String(bookId) }),
       });
-      setInlineStatus(groupsAddStatusEl, "Added.", false);
+      setStatus(groupsAddStatusEl, "Added.", false);
       await refreshBook();
     } catch (e) {
       console.error("Add group assignment failed", e);
-      setInlineStatus(groupsAddStatusEl, "Add failed.", true);
+      setStatus(groupsAddStatusEl, "Add failed.", true);
       const msg = extractApiErrorMessage(e);
       const body = e && e.body ? e.body : null;
       const fields = summarizeFieldErrors(body);

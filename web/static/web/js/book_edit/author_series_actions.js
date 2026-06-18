@@ -1,7 +1,7 @@
 import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { renderHeader } from "./identifiers_file.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";
-import { setStatus as setInlineStatus } from "../ui/status.js";
+import { setStatus } from "../ui/status.js";
 import { uniqueById } from "./shared.js";
 
 function rerenderHeader({ state, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl }) {
@@ -80,7 +80,7 @@ export function bindAuthorSeriesActions({
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(authorsStatusEl, "Creating...", false);
+    setStatus(authorsStatusEl, "Creating...", false);
     try {
       const created = await fetchJSONWithOptions("/api/v1/library/authors/", {
         method: "POST",
@@ -92,7 +92,7 @@ export function bindAuthorSeriesActions({
       state.selectedAuthors.push(created);
       state.selectedAuthors = uniqueById(state.selectedAuthors);
       authorNewNameEl.value = "";
-      setInlineStatus(authorsStatusEl, "Created.", false);
+      setStatus(authorsStatusEl, "Created.", false);
       renderSelectedAuthors({ selectedAuthors: state.selectedAuthors, authorsSelectedEl });
       syncAuthorSelectOptions({
         allAuthors: state.allAuthors,
@@ -104,7 +104,7 @@ export function bindAuthorSeriesActions({
       rerenderHeader({ state, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
     } catch (e2) {
       console.error("Failed to create author", e2);
-      setInlineStatus(authorsStatusEl, "Create failed.", true);
+      setStatus(authorsStatusEl, "Create failed.", true);
       setError(`Failed to create author: ${extractApiErrorMessage(e2)}`);
     }
   });
@@ -121,7 +121,7 @@ export function bindAuthorSeriesActions({
       setError("Missing CSRF token cookie. Reload the page and try again.");
       return;
     }
-    setInlineStatus(seriesStatusEl, "Creating...", false);
+    setStatus(seriesStatusEl, "Creating...", false);
     try {
       const created = await fetchJSONWithOptions("/api/v1/library/series/", {
         method: "POST",
@@ -131,7 +131,7 @@ export function bindAuthorSeriesActions({
       state.allSeries.push(created);
       state.allSeries = uniqueById(state.allSeries);
       seriesNewNameEl.value = "";
-      setInlineStatus(seriesStatusEl, "Created.", false);
+      setStatus(seriesStatusEl, "Created.", false);
       syncSeriesSelectOptions({
         allSeries: state.allSeries,
         seriesSelectEl,
@@ -141,7 +141,7 @@ export function bindAuthorSeriesActions({
       rerenderHeader({ state, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
     } catch (e2) {
       console.error("Failed to create series", e2);
-      setInlineStatus(seriesStatusEl, "Create failed.", true);
+      setStatus(seriesStatusEl, "Create failed.", true);
       setError(`Failed to create series: ${extractApiErrorMessage(e2)}`);
     }
   });

@@ -1,4 +1,4 @@
-export function resolveStatusTarget(target) {
+function resolveStatusTarget(target) {
   if (!target) return null;
   if (typeof target === "string") return document.querySelector(target);
   return target;

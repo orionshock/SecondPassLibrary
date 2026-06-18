@@ -91,7 +91,7 @@ export function uniqueById(items) {
   return out;
 }
 
-export const IDENT_SCHEMES = [
+const IDENT_SCHEMES = [
   ["isbn_10", "ISBN-10"],
   ["isbn_13", "ISBN-13"],
   ["asin", "ASIN"],

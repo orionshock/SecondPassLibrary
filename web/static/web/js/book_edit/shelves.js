@@ -1,14 +1,14 @@
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
+import { setStatus } from "../ui/status.js";
 
 export async function refreshShelvesContext({
   bookId,
   fetchJSON,
   shelvesStatusEl,
   shelvesEl,
-  setInlineStatus,
 }) {
-  setInlineStatus(shelvesStatusEl, "Loading...", false);
+  setStatus(shelvesStatusEl, "Loading...", false);
   try {
     const payload = await fetchJSON(`/api/v1/shelves/?book=${encodeURIComponent(String(bookId))}`);
     const results = payload && Array.isArray(payload.results) ? payload.results : [];
@@ -56,10 +56,10 @@ export async function refreshShelvesContext({
         })
         .join("");
     }
-    setInlineStatus(shelvesStatusEl, "", false);
+    setStatus(shelvesStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load shelves for book", e);
-    setInlineStatus(shelvesStatusEl, "Failed to load shelves.", true);
+    setStatus(shelvesStatusEl, "Failed to load shelves.", true);
     shelvesEl.innerHTML = "";
   }
 }

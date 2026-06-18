@@ -35,11 +35,6 @@ export function setGlobalErrorFromError(error, prefix) {
   setGlobalError(prefix ? `${prefix} ${message}` : message);
 }
 
-export function formatRole(role) {
-  if (!role) return "";
-  return role.charAt(0).toUpperCase() + role.slice(1);
-}
-
 function navShouldShowGroups(me) {
   if (!me) return false;
   const groups = Array.isArray(me.groups) ? me.groups : [];

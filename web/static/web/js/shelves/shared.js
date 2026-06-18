@@ -21,18 +21,14 @@ export function formatUserDisplay(user) {
   return "Unknown user";
 }
 
-export function friendlyUserDisplayName(user) {
-  return formatUserDisplay(user);
-}
-
-export function shelfVisibilityLabel(shelf) {
+function shelfVisibilityLabel(shelf) {
   const value = shelf && shelf.visibility ? String(shelf.visibility) : "private";
   if (value === "listed") return "Listed";
   if (value === "private") return "Private";
   return value ? `${value.slice(0, 1).toUpperCase()}${value.slice(1)}` : "";
 }
 
-export function shelfItemCountLabel(shelf) {
+function shelfItemCountLabel(shelf) {
   if (!shelf || shelf.item_count == null) return "";
   const count = Number(shelf.item_count);
   if (!Number.isFinite(count)) return "";
@@ -63,7 +59,7 @@ export function shelfOwnerIdentitySegment(shelf) {
   return "";
 }
 
-export function shelfMetadataParts(shelf) {
+function shelfMetadataParts(shelf) {
   if (!shelf) return [];
   const visibility = shelfVisibilityLabel(shelf);
   const itemCount = shelfItemCountLabel(shelf);
@@ -76,19 +72,6 @@ export function shelfMetadataLine(shelf) {
   return [ownerSegment, ...metadataSegments]
     .filter(Boolean)
     .join('<span class="shelf-meta-separator" aria-hidden="true"> &middot; </span>');
-}
-
-export function shelfOwnerDisplay(shelf, me) {
-  if (!shelf) return "";
-  const ownerType = shelf.owner_type ? String(shelf.owner_type) : "";
-  if (ownerType === "user" && shelf.owner_user) {
-    return formatUserDisplay(shelf.owner_user);
-  }
-  if (ownerType === "group" && shelf.owner_group) {
-    const name = shelf.owner_group.name ? String(shelf.owner_group.name) : "group";
-    return name;
-  }
-  return "";
 }
 
 export function shelfCreatedByDisplay(shelf) {

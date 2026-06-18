@@ -1,7 +1,6 @@
 import { fetchJSON } from "../api.js";
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
-import { initTabs as initSharedTabs } from "../ui/tabs.js";
 
 export function truthy(v) {
   return !!v;
@@ -40,10 +39,6 @@ export function canManageGroupBooks({ me, group }) {
 export function canManageGroupMemberships(me) {
   const caps = me && me.capabilities ? me.capabilities : {};
   return !!caps.can_manage_group_memberships;
-}
-
-export function initTabs(root) {
-  initSharedTabs(root);
 }
 
 export function renderGroupShelvesCompact(payload, { canEdit }) {

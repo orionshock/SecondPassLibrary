@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
-import { setStatus as setInlineStatus } from "../ui/status.js";
+import { setStatus } from "../ui/status.js";
 import { fetchAllPages, uniqueById } from "./shared.js";
 import { initTabs } from "../ui/tabs.js";
 import { applyBookToMetadataForm, buildBookPatchPayload } from "./metadata.js";
@@ -139,13 +139,13 @@ export async function initBookEdit() {
 
   const bookId = rootEl.dataset ? rootEl.dataset.bookId : "";
   if (!bookId) {
-    setInlineStatus(statusEl, "Missing book id.", true);
+    setStatus(statusEl, "Missing book id.", true);
     return;
   }
 
   const canManage = !!(me && me.capabilities && me.capabilities.can_manage_library);
   if (!canManage) {
-    setInlineStatus(statusEl, "Not allowed.", true);
+    setStatus(statusEl, "Not allowed.", true);
     visible(rootEl, false);
     visible(headerEl, false);
     return;
@@ -180,7 +180,6 @@ export async function initBookEdit() {
       fetchJSON,
       shelvesStatusEl,
       shelvesEl,
-      setInlineStatus,
     });
   }
 
@@ -210,7 +209,7 @@ export async function initBookEdit() {
     await refreshShelves();
   }
 
-  setInlineStatus(statusEl, "Loading...", false);
+  setStatus(statusEl, "Loading...", false);
   setError("");
   setSaved(false);
   visible(rootEl, false);
@@ -220,47 +219,47 @@ export async function initBookEdit() {
     await refreshBook();
     visible(headerEl, true);
     visible(rootEl, true);
-    setInlineStatus(statusEl, "", false);
+    setStatus(statusEl, "", false);
   } catch (e) {
     console.error("Failed to load book for edit", { bookId, e });
-    if (e && e.status === 404) setInlineStatus(statusEl, "Book not found or not accessible.", true);
+    if (e && e.status === 404) setStatus(statusEl, "Book not found or not accessible.", true);
     else {
-      setInlineStatus(statusEl, "Error loading book.", true);
+      setStatus(statusEl, "Error loading book.", true);
       setGlobalErrorFromError(e, "Failed to load book:");
     }
     return;
   }
 
   // Load option lists.
-  setInlineStatus(authorsStatusEl, "Loading...", false);
+  setStatus(authorsStatusEl, "Loading...", false);
   try {
     state.allAuthors = uniqueById(await fetchAllPages("/api/v1/library/authors/"));
-    setInlineStatus(authorsStatusEl, "", false);
+    setStatus(authorsStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load authors", e);
-    setInlineStatus(authorsStatusEl, "Failed to load.", true);
+    setStatus(authorsStatusEl, "Failed to load.", true);
     state.allAuthors = [];
   }
   syncAuthorSelectOptions({ allAuthors: state.allAuthors, selectedAuthors: state.selectedAuthors, authorAddSelectEl, authorAddBtnEl });
 
-  setInlineStatus(seriesStatusEl, "Loading...", false);
+  setStatus(seriesStatusEl, "Loading...", false);
   try {
     state.allSeries = uniqueById(await fetchAllPages("/api/v1/library/series/"));
-    setInlineStatus(seriesStatusEl, "", false);
+    setStatus(seriesStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load series", e);
-    setInlineStatus(seriesStatusEl, "Failed to load.", true);
+    setStatus(seriesStatusEl, "Failed to load.", true);
     state.allSeries = [];
   }
   syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book && state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
 
-  setInlineStatus(groupsStatusEl, "Loading...", false);
+  setStatus(groupsStatusEl, "Loading...", false);
   try {
     state.allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
-    setInlineStatus(groupsStatusEl, "", false);
+    setStatus(groupsStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load groups", e);
-    setInlineStatus(groupsStatusEl, "Failed to load.", true);
+    setStatus(groupsStatusEl, "Failed to load.", true);
     state.allGroups = [];
   }
   syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
