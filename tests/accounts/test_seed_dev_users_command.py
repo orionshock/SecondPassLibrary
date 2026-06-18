@@ -22,25 +22,47 @@ class SeedDevUsersCommandTests(TestCase):
     @override_settings(DEBUG=True)
     def test_idempotent_creates_expected_users_groups_and_memberships(self):
         call_command("seed_dev_users")
+
+        owner = User.objects.get(username="owner")
+        owner.first_name = "Stale"
+        owner.last_name = "Name"
+        owner.email = "stale@example.test"
+        owner.save(update_fields=["first_name", "last_name", "email"])
+
         call_command("seed_dev_users")
 
-        for username, role in (
-            ("owner", UserProfile.ROLE_MANAGER),
-            ("manager", UserProfile.ROLE_MANAGER),
-            ("librarian", UserProfile.ROLE_LIBRARIAN),
-            ("reader", UserProfile.ROLE_READER),
-            ("curator", UserProfile.ROLE_READER),
-            ("outsider", UserProfile.ROLE_READER),
+        for username, first_name, last_name, email, role in (
+            ("owner", "Lorem", "Ipsum", "lorem.ipsum@example.test", UserProfile.ROLE_MANAGER),
+            ("manager", "Dolor", "Sit", "dolor.sit@example.test", UserProfile.ROLE_MANAGER),
+            (
+                "librarian",
+                "Amet",
+                "Consectetur",
+                "amet.consectetur@example.test",
+                UserProfile.ROLE_LIBRARIAN,
+            ),
+            ("reader", "Adipiscing", "Elit", "adipiscing.elit@example.test", UserProfile.ROLE_READER),
+            ("curator", "Sed", "Eiusmod", "sed.eiusmod@example.test", UserProfile.ROLE_READER),
+            (
+                "outsider",
+                "Tempor",
+                "Incididunt",
+                "tempor.incididunt@example.test",
+                UserProfile.ROLE_READER,
+            ),
         ):
             user = User.objects.get(username=username)
             profile = UserProfile.objects.get(user=user)
+            self.assertEqual(user.first_name, first_name)
+            self.assertEqual(user.last_name, last_name)
+            self.assertEqual(user.email, email)
             self.assertEqual(profile.role, role)
 
         public = get_public_group()
         self.assertEqual(public.name, "Public")
 
         fantasy = LibraryGroup.objects.get(name="Fantasy Club")
-        kids = LibraryGroup.objects.get(name="Kids Books")
+        self.assertTrue(LibraryGroup.objects.filter(name="Kids Books").exists())
 
         curator = User.objects.get(username="curator")
         reader = User.objects.get(username="reader")

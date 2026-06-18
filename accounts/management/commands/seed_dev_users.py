@@ -18,6 +18,8 @@ User = get_user_model()
 @dataclass(frozen=True)
 class SeedUserSpec:
     username: str
+    first_name: str
+    last_name: str
     email: str
     password: str
     is_superuser: bool = False
@@ -28,7 +30,9 @@ class SeedUserSpec:
 SEED_USERS: list[SeedUserSpec] = [
     SeedUserSpec(
         username="owner",
-        email="owner@example.test",
+        first_name="Lorem",
+        last_name="Ipsum",
+        email="lorem.ipsum@example.test",
         password="changeme123",
         is_superuser=True,
         is_staff=True,
@@ -36,7 +40,9 @@ SEED_USERS: list[SeedUserSpec] = [
     ),
     SeedUserSpec(
         username="manager",
-        email="manager@example.test",
+        first_name="Dolor",
+        last_name="Sit",
+        email="dolor.sit@example.test",
         password="changeme123",
         is_superuser=False,
         is_staff=False,
@@ -44,7 +50,9 @@ SEED_USERS: list[SeedUserSpec] = [
     ),
     SeedUserSpec(
         username="librarian",
-        email="librarian@example.test",
+        first_name="Amet",
+        last_name="Consectetur",
+        email="amet.consectetur@example.test",
         password="changeme123",
         is_superuser=False,
         is_staff=False,
@@ -52,7 +60,9 @@ SEED_USERS: list[SeedUserSpec] = [
     ),
     SeedUserSpec(
         username="reader",
-        email="reader@example.test",
+        first_name="Adipiscing",
+        last_name="Elit",
+        email="adipiscing.elit@example.test",
         password="changeme123",
         is_superuser=False,
         is_staff=False,
@@ -60,7 +70,9 @@ SEED_USERS: list[SeedUserSpec] = [
     ),
     SeedUserSpec(
         username="curator",
-        email="curator@example.test",
+        first_name="Sed",
+        last_name="Eiusmod",
+        email="sed.eiusmod@example.test",
         password="changeme123",
         is_superuser=False,
         is_staff=False,
@@ -68,7 +80,9 @@ SEED_USERS: list[SeedUserSpec] = [
     ),
     SeedUserSpec(
         username="outsider",
-        email="outsider@example.test",
+        first_name="Tempor",
+        last_name="Incididunt",
+        email="tempor.incididunt@example.test",
         password="changeme123",
         is_superuser=False,
         is_staff=False,
@@ -118,6 +132,8 @@ class Command(BaseCommand):
             user, created = User.objects.get_or_create(
                 username=spec.username,
                 defaults={
+                    "first_name": spec.first_name,
+                    "last_name": spec.last_name,
                     "email": spec.email,
                     "is_superuser": spec.is_superuser,
                     "is_staff": spec.is_staff,
@@ -125,6 +141,10 @@ class Command(BaseCommand):
                 },
             )
             updates: dict[str, object] = {}
+            if user.first_name != spec.first_name:
+                updates["first_name"] = spec.first_name
+            if user.last_name != spec.last_name:
+                updates["last_name"] = spec.last_name
             if user.email != spec.email:
                 updates["email"] = spec.email
             if bool(getattr(user, "is_superuser", False)) != spec.is_superuser:
@@ -153,9 +173,12 @@ class Command(BaseCommand):
             (created_users if created else updated_users).append(spec.username)
 
         self.stdout.write("")
-        self.stdout.write("Users (username / password):")
+        self.stdout.write("Users (name / username / password):")
         for spec in SEED_USERS:
-            self.stdout.write(f"- {spec.username} / {spec.password} ({spec.email})")
+            self.stdout.write(
+                f"- {spec.first_name} {spec.last_name} / "
+                f"{spec.username} / {spec.password} ({spec.email})"
+            )
 
         if created_users:
             self.stdout.write(f"Created users: {', '.join(created_users)}")
