@@ -41,13 +41,13 @@ export async function refreshShelvesContext({
             .join(" ");
 
           return `
-              <article class="book">
-                <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-                  <div style="flex: 1;">
+              <article class="book card-row--compact">
+                <div class="identity-row">
+                  <div class="inline-metadata-row identity-row__main">
                     <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
-                    ${metaLine ? `<div class="muted" style="margin-top: 4px;">${metaLine}</div>` : ""}
+                    ${metaLine ? `<span class="muted">${metaLine}</span>` : ""}
                   </div>
-                  <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <div class="badge-row">
                     ${actions}
                   </div>
                 </div>

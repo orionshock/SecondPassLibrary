@@ -129,12 +129,10 @@ export function renderMembersReadOnly(payload) {
       const roleLabel = `${role.slice(0, 1).toUpperCase()}${role.slice(1)}`;
       const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
       return `
-        <article class="book">
-          <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-            <div>
-              <h3 class="book__title" style="display:inline;">${identity}${ownerBadge}</h3>
-              <div style="margin-top: 8px;"><span class="pill">${escapeHtml(roleLabel)}</span></div>
-            </div>
+        <article class="book card-row--compact">
+          <div class="identity-row">
+            <h3 class="book__title identity-row__main">${identity}${ownerBadge}</h3>
+            <div class="badge-row"><span class="pill">${escapeHtml(roleLabel)}</span></div>
           </div>
         </article>
       `.trim();
@@ -159,20 +157,20 @@ export function renderMembersManage(payload, { isPublicGroup }) {
         : "";
 
       return `
-        <article class="book">
-          <h3 class="book__title">${identity}${ownerBadge}</h3>
-            <div class="book__meta">
-              <div>Role: <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}" ${selectDisabled}>
+        <article class="book card-row--compact">
+          <div class="identity-row">
+            <h3 class="book__title identity-row__main">${identity}${ownerBadge}</h3>
+            <div class="badge-row">
+              <label>Role <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}" ${selectDisabled}>
                 <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
                 <option value="curator" ${role === "curator" ? "selected" : ""} ${curatorDisabled}>curator</option>
-              </select></div>
-              ${note}
-            </div>
-            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              </select></label>
               <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}" ${saveDisabled}>Save role</button>
               <button class="icon-button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
             </div>
-          </article>
+          </div>
+          ${note ? `<div class="book__meta">${note}</div>` : ""}
+        </article>
         `.trim();
     })
     .join("");

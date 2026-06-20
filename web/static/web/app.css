@@ -509,6 +509,41 @@ a:hover { text-decoration: underline; }
 .group-badge--public .group-badge__icon {
   color: rgb(134, 239, 172);
 }
+.identity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.identity-row__main {
+  min-width: 0;
+}
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.card-row--compact {
+  padding: 8px 12px;
+}
+.compact-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.compact-list__item,
+.inline-metadata-row {
+  display: flex;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
 .shelf-owner-identity {
   display: inline-flex;
   align-items: center;
@@ -564,11 +599,11 @@ a:hover { text-decoration: underline; }
 .user-row {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: rgba(255, 255, 255, 0.03);
   display: grid;
   grid-template-columns: 1.1fr 1.6fr auto;
-  gap: 10px 12px;
+  gap: 6px 12px;
   align-items: start;
 }
 .user-row__main { min-width: 0; }
@@ -579,9 +614,10 @@ a:hover { text-decoration: underline; }
 .user-row__groups {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   flex-wrap: wrap;
 }
+.user-row__badges { margin-top: 4px; }
 .user-identity--shell {
   max-width: 100%;
 }

@@ -133,9 +133,9 @@ function renderBookGroups(container, groups) {
     container.appendChild(el("div", "muted", "No visible groups."));
     return;
   }
-  const ul = document.createElement("ul");
+  const ul = el("ul", "compact-list");
   for (const g of groups) {
-    const li = document.createElement("li");
+    const li = el("li", "compact-list__item");
     const gid = g && g.id != null ? String(g.id) : "";
     const a = el("a", "");
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
@@ -154,9 +154,9 @@ function renderBookShelves(container, shelves) {
     container.appendChild(el("div", "muted", "No visible shelves."));
     return;
   }
-  const ul = document.createElement("ul");
+  const ul = el("ul", "compact-list");
   for (const s of results) {
-    const li = document.createElement("li");
+    const li = el("li", "compact-list__item");
     const sid = s && s.id != null ? String(s.id) : "";
     const name = s && s.name ? String(s.name) : "";
     const a = el("a", "", name || "(Shelf)");
@@ -165,7 +165,7 @@ function renderBookShelves(container, shelves) {
 
     const metadata = renderShelfMetadata(s);
     if (metadata.childNodes.length) {
-      const meta = el("div", "muted");
+      const meta = el("span", "muted");
       meta.appendChild(metadata);
       li.appendChild(meta);
     }

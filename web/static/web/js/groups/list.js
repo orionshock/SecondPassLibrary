@@ -16,18 +16,16 @@ function renderGroupsList(payload) {
         membershipRole ? `<span class="pill">Your role: ${escapeHtml(membershipRole)}</span>` : "",
       ].filter(truthy);
 
-      const badges = badgeBits.length ? `<span class="edit-header__badges">${badgeBits.join(" ")}</span>` : "";
+      const badges = badgeBits.length ? `<span class="badge-row">${badgeBits.join(" ")}</span>` : "";
       const groupBadge = renderGroupBadge(g).outerHTML;
 
       return `
-        <article class="book">
-          <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-            <div>
-              <h3 class="book__title" style="display:inline;">
-                <a href="${escapeHtml(href)}">${groupBadge}</a>
-              </h3>
-              ${badges ? ` <span style="margin-left: 8px;">${badges}</span>` : ""}
-            </div>
+        <article class="book card-row--compact">
+          <div class="identity-row">
+            <h3 class="book__title identity-row__main">
+              <a href="${escapeHtml(href)}">${groupBadge}</a>
+            </h3>
+            ${badges}
           </div>
         </article>
       `.trim();

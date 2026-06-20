@@ -108,7 +108,7 @@ export async function initUsersList() {
       <article class="user-row">
         <div class="user-row__main">
           <div class="user-row__title">${identityMarkup}</div>
-          <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <div class="badge-row user-row__badges">
             ${roleBadge}
             ${inactiveBadge}
           </div>

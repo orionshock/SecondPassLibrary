@@ -7,10 +7,10 @@ export function renderGroups({ groups, groupsEl }) {
     groupsEl.appendChild(el("div", "muted", "No visible groups."));
     return;
   }
-  const ul = document.createElement("ul");
+  const ul = el("ul", "compact-list");
   const items = groups.slice().sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
   for (const g of items) {
-    const li = document.createElement("li");
+    const li = el("li", "compact-list__item");
     const gid = g && g.id != null ? String(g.id) : "";
     const a = el("a", "");
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
