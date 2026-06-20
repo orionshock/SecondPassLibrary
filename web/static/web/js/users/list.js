@@ -1,5 +1,6 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 import { curatedGroupsFromUser, formatDateTime, groupsSummary, passesFilter } from "./shared.js";
 
@@ -60,7 +61,6 @@ export async function initUsersList() {
 
   function renderRow(user) {
     const id = user && user.id != null ? String(user.id) : "";
-    const username = user.username || "";
     const email = user.email || "";
     const role = user.is_owner ? "manager" : user.role || "reader";
     const isOwner = !!user.is_owner;
@@ -84,18 +84,21 @@ export async function initUsersList() {
       : '<div class="user-row__line muted">Last login: (never)</div>';
 
     const editHref = id ? `/users/${encodeURIComponent(String(id))}/edit/` : "#";
+    const identityMarkup = renderUserIdentity(user, {
+      includeEmail: true,
+    }).outerHTML;
 
     return `
       <article class="user-row">
         <div class="user-row__main">
-          <div class="user-row__title">${escapeHtml(username)}${ownerBadge}</div>
+          <div class="user-row__title">${identityMarkup}${ownerBadge}</div>
           <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
             ${roleBadge}
             ${activeBadge}
           </div>
         </div>
         <div class="user-row__meta">
-          ${email ? `<div class="user-row__line">${escapeHtml(email)}</div>` : '<div class="user-row__line muted">(no email)</div>'}
+          ${email ? "" : '<div class="user-row__line muted">(no email)</div>'}
           ${lastLoginLine}
           ${groupsLine}
           ${curatesLine}

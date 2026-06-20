@@ -1,25 +1,5 @@
 import { escapeHtml } from "../layout.js";
-
-export function formatUserDisplayName(user) {
-  if (!user) return "";
-  const first = user.first_name ? String(user.first_name).trim() : "";
-  const last = user.last_name ? String(user.last_name).trim() : "";
-  return [first, last].filter(Boolean).join(" ").trim();
-}
-
-export function formatUserHandle(user) {
-  if (!user || !user.username) return "";
-  return `<@${String(user.username).trim()}>`;
-}
-
-export function formatUserDisplay(user) {
-  const displayName = formatUserDisplayName(user);
-  const handle = formatUserHandle(user);
-  if (displayName && handle) return `${displayName} ${handle}`;
-  if (handle) return handle;
-  if (displayName) return displayName;
-  return "Unknown user";
-}
+import { renderUserIdentity, userIdentityText } from "../ui/identity.js";
 
 function shelfVisibilityLabel(shelf) {
   const value = shelf && shelf.visibility ? String(shelf.visibility) : "private";
@@ -39,13 +19,11 @@ export function shelfOwnerIdentitySegment(shelf) {
   if (!shelf) return "";
   const ownerType = shelf.owner_type ? String(shelf.owner_type) : "";
   if (ownerType === "user") {
-    const text = formatUserDisplay(shelf.owner_user);
-    return `
-      <span class="shelf-owner-identity" data-owner-type="user">
-        <span class="material-symbols-outlined" aria-hidden="true">person</span>
-        <span>${escapeHtml(text)}</span>
-      </span>
-    `.trim();
+    const identity = renderUserIdentity(shelf.owner_user, {
+      className: "shelf-owner-identity",
+    });
+    identity.dataset.ownerType = "user";
+    return identity.outerHTML;
   }
   if (ownerType === "group") {
     const text = shelf.owner_group && shelf.owner_group.name ? String(shelf.owner_group.name) : "Group";
@@ -76,7 +54,7 @@ export function shelfMetadataLine(shelf) {
 
 export function shelfCreatedByDisplay(shelf) {
   if (!shelf || !shelf.created_by) return "";
-  const name = formatUserDisplay(shelf.created_by);
+  const name = userIdentityText(shelf.created_by);
   return name ? `Created by ${name}` : "";
 }
 

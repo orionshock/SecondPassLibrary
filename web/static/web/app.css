@@ -447,13 +447,42 @@ a:hover { text-decoration: underline; }
   font-size: 12px;
 }
 .pill--owner { color: var(--text); border-color: rgba(125, 211, 252, 0.45); }
+.user-identity {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--text);
+}
+.user-identity__icon {
+  flex: 0 0 auto;
+  margin-right: 5px;
+  color: var(--muted);
+  font-size: 18px;
+}
+.user-identity__piece {
+  display: inline-flex;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.user-identity__piece + .user-identity__piece::before {
+  width: 4px;
+  height: 4px;
+  margin: 0 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  opacity: 0.55;
+}
+.user-identity__display-name { font-weight: 600; }
+.user-identity__handle,
+.user-identity__email { color: var(--muted); }
 .shelf-owner-identity {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--text);
+  vertical-align: middle;
 }
-.shelf-owner-identity .material-symbols-outlined {
+.shelf-owner-identity[data-owner-type="group"] { gap: 5px; }
+.shelf-owner-identity[data-owner-type="group"] .material-symbols-outlined {
   color: var(--muted);
   font-size: 18px;
 }
