@@ -58,6 +58,36 @@ Position:
 
 API endpoints under `/api/v1/` require authentication unless an endpoint explicitly documents otherwise.
 
+### Account and security posture
+
+Second Pass Library is a self-hosted library and reading server. Its security
+target is standard account and session hygiene appropriate for protecting
+private library, shelf, group, and reading data. SPL should prevent obvious
+privilege escalation, cross-user access, sensitive metadata leaks, and unsafe
+session or bearer-token handling. It is not intended to become a general
+enterprise IAM platform without a concrete product need.
+
+The primary account lifecycle paths are Owner/Manager-managed local users,
+local username/password login, and a future optional SSO/OIDC login or
+just-in-time provisioning flow. Django `User` remains the canonical local
+account, `UserProfile.id` remains the stable server-local public `profile_id`,
+and SPL roles and LibraryGroup memberships remain local authorization data.
+Django admin remains an acceptable service hatch for account recovery in
+self-hosted deployments.
+
+Email is optional contact and management metadata:
+
+- SMTP and email are not required for core SPL operation or local login.
+- Email is not an identity key and is not required for future OIDC linking.
+- Email may appear in existing management/admin contexts, but compact/public
+  user payloads must not expose it.
+- Accounts must not be linked solely by email, especially unverified email.
+
+Invite-by-email, email verification, and SMTP-dependent password-reset or
+account-recovery workflows are not current core requirements. Future versions
+may add them under an explicit policy, but self-hosted deployments must not be
+assumed to have working SMTP.
+
 ### Future direction (intentionally deferred)
 
 The production/self-hosted client authentication story is intentionally not settled yet. Near-term priorities are:
@@ -79,6 +109,8 @@ Username remains the local display handle. Email is contact/display data and
 may participate only in a future explicit linking policy; accounts must never
 be auto-linked solely by an unverified email claim. First and last name may be
 populated from claims under a future documented synchronization policy.
+`UserProfile.id` remains the server-local public user identifier exposed as
+`profile_id`.
 
 External providers authenticate identity only. SPL global roles and
 LibraryGroup memberships remain local authorization data. Provider groups or

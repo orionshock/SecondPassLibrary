@@ -60,6 +60,11 @@ User management is intentionally limited:
 - `GET /api/v1/accounts/users/<id>/`
 - `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no password reset/invite/delete endpoints)
 
+Invite-by-email is not a core account lifecycle requirement. Self-hosted
+installations may use Owner/Manager-managed local users and the Django admin
+service hatch without configuring SMTP. See `docs/architecture.md` for the
+canonical account, email, and future external-auth posture.
+
 Creation rules:
 
 - Owner can create `manager`, `librarian`, or `reader` users.

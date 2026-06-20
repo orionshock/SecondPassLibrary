@@ -3,6 +3,8 @@
 This document describes **authentication/login sessions** vs **reading sessions** and the current revocation rules.
 
 See `docs/client-api-auth.md` for Client API pairing and bearer token semantics.
+See the account and security posture in `docs/architecture.md` for canonical
+identity, email, recovery, and future OIDC policy.
 
 ## Terminology
 
@@ -81,6 +83,7 @@ The Product UI exposes basic session controls inside the **Profile** page:
 ## Non-goals
 
 - No MFA
+- No invite-by-email or SMTP-dependent account lifecycle requirement
 - No email-based password reset
 - No OIDC
 - No bearer-token access to product UI/admin endpoints

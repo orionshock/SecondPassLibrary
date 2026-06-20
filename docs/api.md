@@ -120,6 +120,9 @@ User-management payload notes:
 - Managed users now include a read-only `groups[]` membership summary for that user (membership_id, group id/name, membership_role, is_public_group).
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 - User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
+- Email is optional contact/management metadata. It is not required for local
+  login, is not an account identity key, and remains excluded from compact
+  public user payloads.
 
 ### `POST /api/v1/accounts/users/`
 
@@ -128,7 +131,7 @@ Create a local Django user (Manager/Owner only) and return a temporary password 
 Request fields:
 
 - `username` (required; unique)
-- `email` (optional; blank allowed)
+- `email` (optional contact/management metadata; blank allowed)
 - `first_name` (optional)
 - `last_name` (optional)
 - `role` (optional; `manager|librarian|reader`; default `reader`)

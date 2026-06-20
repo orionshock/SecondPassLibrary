@@ -40,7 +40,9 @@ High-level: the reader client creates a login request, a human authorizes it in 
 ### Human / browser
 
 1. User opens `authorize_url` in a browser.
-2. If needed, user logs in via normal Django session auth.
+2. If needed, user logs in through any supported flow that establishes a
+   normal authenticated Django browser session. This is local password login
+   today and may include optional external login in the future.
 3. Server shows an approval screen: "Authorize this device/app?".
 4. User approves or denies.
 
