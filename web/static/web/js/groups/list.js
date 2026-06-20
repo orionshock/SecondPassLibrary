@@ -10,11 +10,9 @@ function renderGroupsList(payload) {
   return results
     .map((g) => {
       const membershipRole = g.membership_role || "";
-      const isPublic = !!g.is_public_group;
       const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
 
       const badgeBits = [
-        isPublic ? '<span class="pill pill--owner">Public</span>' : "",
         membershipRole ? `<span class="pill">Your role: ${escapeHtml(membershipRole)}</span>` : "",
       ].filter(truthy);
 

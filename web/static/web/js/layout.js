@@ -96,7 +96,10 @@ export async function loadMeAndInitShell() {
     const identityTarget = $('[data-ui="username"]');
     if (identityTarget) {
       identityTarget.replaceChildren(
-        renderUserIdentity(me, { className: "user-identity--shell" })
+        renderUserIdentity(me, {
+          className: "user-identity--shell",
+          includeDisplayName: false,
+        })
       );
     }
     updateNavVisibility(me);

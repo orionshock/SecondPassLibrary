@@ -103,8 +103,10 @@ export async function initGroupMembershipsTab({
   });
 
   membersResults.addEventListener("click", async (e) => {
-    const target = e.target;
-    if (!target || target.nodeType !== 1) return;
+    const source = e.target;
+    if (!source || source.nodeType !== 1) return;
+    const target = source.closest("[data-action]");
+    if (!target || !membersResults.contains(target)) return;
     const action = target.getAttribute("data-action");
     const membershipId = target.getAttribute("data-membership-id");
     if (!action || !membershipId) return;

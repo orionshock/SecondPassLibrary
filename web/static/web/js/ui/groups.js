@@ -11,13 +11,15 @@ export function groupBadgeText(group) {
 export function renderGroupBadge(group, options = {}) {
   const badge = document.createElement(options.element || "span");
   badge.className = "group-badge";
+  const isPublicGroup = !!(group && group.is_public_group);
+  if (isPublicGroup) badge.classList.add("group-badge--public");
   if (options.compact === true) badge.classList.add("group-badge--compact");
   if (options.className) badge.classList.add(String(options.className));
 
   const icon = document.createElement("span");
   icon.className = "material-symbols-outlined group-badge__icon";
   icon.setAttribute("aria-hidden", "true");
-  icon.textContent = "groups";
+  icon.textContent = isPublicGroup ? "public" : "groups";
   badge.appendChild(icon);
 
   const name = document.createElement("span");

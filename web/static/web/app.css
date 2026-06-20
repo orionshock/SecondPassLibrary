@@ -502,6 +502,13 @@ a:hover { text-decoration: underline; }
 .group-badge--compact {
   padding: 2px 7px;
 }
+.group-badge--public {
+  border-color: rgba(74, 222, 128, 0.5);
+  background: rgba(74, 222, 128, 0.1);
+}
+.group-badge--public .group-badge__icon {
+  color: rgb(134, 239, 172);
+}
 .shelf-owner-identity {
   display: inline-flex;
   align-items: center;
@@ -577,9 +584,6 @@ a:hover { text-decoration: underline; }
 }
 .user-identity--shell {
   max-width: 100%;
-}
-.user-identity--shell .user-identity__display-name {
-  display: none;
 }
 
 /* Book edit header / tabs */

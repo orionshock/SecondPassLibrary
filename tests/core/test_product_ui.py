@@ -556,9 +556,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("export function renderUserIdentity", identity_js)
         self.assertIn('[firstName, lastName].filter(Boolean).join(" ")', identity_js)
         self.assertIn("`<@${username}>`", identity_js)
-        self.assertIn('parts.join(" • ")', identity_js)
+        self.assertIn(r'parts.join(" \u2022 ")', identity_js)
         self.assertIn('"Unknown user"', identity_js)
         self.assertIn("options.includeEmail === true", identity_js)
+        self.assertIn("options.includeDisplayName === false", identity_js)
         self.assertIn('icon.textContent = "person"', identity_js)
         self.assertIn("piece.textContent = text", identity_js)
         self.assertIn("document.createElement", identity_js)
@@ -571,7 +572,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("export function groupBadgeText", group_badge_js)
         self.assertIn("export function renderGroupBadge", group_badge_js)
         self.assertIn('"Unknown group"', group_badge_js)
-        self.assertIn('icon.textContent = "groups"', group_badge_js)
+        self.assertIn('badge.classList.add("group-badge--public")', group_badge_js)
+        self.assertIn('isPublicGroup ? "public" : "groups"', group_badge_js)
         self.assertIn("name.textContent = groupDisplayName(group)", group_badge_js)
         self.assertIn("document.createElement", group_badge_js)
         self.assertNotIn("innerHTML", group_badge_js)
@@ -583,6 +585,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("renderGroupBadge(shelf.owner_group", shared_js)
         self.assertIn("shelfOwnerIdentitySegment", shared_js)
         self.assertIn("shelfMetadataLine", shared_js)
+        self.assertIn("renderShelfMetadata", shared_js)
         self.assertIn("groups", shared_js)
         self.assertIn("&middot;", shared_js)
         self.assertNotIn("\u00c2\u00b7", shared_js)
@@ -633,6 +636,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".group-badge__icon", css)
         self.assertIn(".group-badge__name", css)
         self.assertIn(".group-badge--compact", css)
+        self.assertIn(".group-badge--public", css)
         self.assertIn(".shelf-owner-identity", css)
         self.assertIn(".shelf-meta-separator", css)
 
@@ -651,7 +655,6 @@ class ProductUiSmokeTests(TestCase):
             for path in (
                 "web/static/web/js/layout.js",
                 "web/static/web/js/profile/main.js",
-                "web/static/web/js/library/detail.js",
                 "web/static/web/js/users/list.js",
                 "web/static/web/js/users/edit.js",
                 "web/static/web/js/users/new.js",
@@ -679,6 +682,20 @@ class ProductUiSmokeTests(TestCase):
         user_memberships_js = Path(
             "web/static/web/js/users/memberships.js"
         ).read_text(encoding="utf-8")
+        layout_js = user_identity_modules["web/static/web/js/layout.js"]
+        library_detail_js = group_badge_modules[
+            "web/static/web/js/library/detail.js"
+        ]
+        book_edit_groups_js = group_badge_modules[
+            "web/static/web/js/book_edit/groups.js"
+        ]
+        groups_list_js = group_badge_modules[
+            "web/static/web/js/groups/list.js"
+        ]
+        groups_shared_js = user_identity_modules[
+            "web/static/web/js/groups/shared.js"
+        ]
+        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
 
         for module_js in user_identity_modules.values():
             self.assertIn("renderUserIdentity", module_js)
@@ -686,18 +703,37 @@ class ProductUiSmokeTests(TestCase):
             self.assertIn("renderGroupBadge", module_js)
 
         self.assertIn("includeEmail: true", user_identity_modules["web/static/web/js/users/list.js"])
-        self.assertIn("includeEmail: true", user_identity_modules["web/static/web/js/groups/shared.js"])
-        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/layout.js"])
+        self.assertIn("includeEmail: true", groups_shared_js)
+        self.assertNotIn("includeEmail: true", layout_js)
         self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/profile/main.js"])
-        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/library/detail.js"])
         self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/users/edit.js"])
         self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/users/new.js"])
 
-        self.assertNotIn("(user:", user_identity_modules["web/static/web/js/library/detail.js"])
-        self.assertNotIn("(group:", group_badge_modules["web/static/web/js/library/detail.js"])
+        self.assertIn("includeDisplayName: false", layout_js)
+        self.assertNotIn(
+            ".user-identity--shell .user-identity__display-name",
+            css,
+        )
+        self.assertIn("renderShelfMetadata(s)", library_detail_js)
+        self.assertNotIn("meta.innerHTML", library_detail_js)
+        self.assertNotIn("(user:", library_detail_js)
+        self.assertNotIn("(group:", library_detail_js)
+        self.assertNotIn('pill pill--owner", "Public"', library_detail_js)
+        self.assertNotIn('pill pill--owner", "Public"', book_edit_groups_js)
+        self.assertNotIn("pill--owner\">Public", groups_list_js)
+        self.assertIn("renderUserIdentity(m, { includeEmail: true })", groups_shared_js)
+        self.assertNotIn("Role: <code>", groups_shared_js)
+        self.assertIn("remove_circle", groups_shared_js)
+        self.assertIn('aria-label="Remove member"', groups_shared_js)
+        self.assertIn("remove_circle", book_edit_groups_js)
+        self.assertIn('aria-label", "Remove from group"', book_edit_groups_js)
+        self.assertIn("remove_circle", user_memberships_js)
+        self.assertIn('aria-label="Remove membership"', user_memberships_js)
+        self.assertIn('closest("[data-action]")', group_memberships_js)
+        self.assertIn('closest("[data-action]")', user_memberships_js)
         self.assertNotIn("groupsSummary", users_shared_js)
         self.assertNotIn("curatedGroupsFromUser", users_shared_js)
-        self.assertNotIn("escapeHtml(username)", user_identity_modules["web/static/web/js/groups/shared.js"])
+        self.assertNotIn("escapeHtml(username)", groups_shared_js)
 
         # Select controls remain plain text because badges cannot be children of option.
         self.assertIn("opt.textContent", group_memberships_js)

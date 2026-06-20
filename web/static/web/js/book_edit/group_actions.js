@@ -17,8 +17,10 @@ export function bindGroupActions({
   setError,
 }) {
   groupsEl.addEventListener("click", async (ev) => {
-    const t = ev.target;
-    if (!t || !t.getAttribute) return;
+    const source = ev.target;
+    if (!source || !source.closest) return;
+    const t = source.closest("[data-group-remove-id]");
+    if (!t || !groupsEl.contains(t)) return;
     const gid = t.getAttribute("data-group-remove-id");
     if (!gid) return;
     const csrf = getCsrfToken();

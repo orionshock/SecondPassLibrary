@@ -14,9 +14,8 @@ export function renderGroupsReadOnly(groups) {
   return groups
     .map((g) => {
       const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
-      const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
       const groupBadge = renderGroupBadge(g, { compact: true }).outerHTML;
-      return `<div><a href="${escapeHtml(href)}">${groupBadge}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
+      return `<div><a href="${escapeHtml(href)}">${groupBadge}</a> <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
     })
     .join("");
 }
@@ -32,7 +31,6 @@ export function renderMembershipControls(groups) {
       const role = g.membership_role || "reader";
       const isPublic = !!g.is_public_group;
 
-      const publicBadge = isPublic ? ' <span class="pill pill--owner">Public</span>' : "";
       const roleDisabled = isPublic ? "disabled" : "";
       const saveDisabled = isPublic ? "disabled" : "";
       const note = isPublic
@@ -41,7 +39,7 @@ export function renderMembershipControls(groups) {
 
       return `
           <article class="book">
-            <h3 class="book__title">${renderGroupBadge(g).outerHTML}${publicBadge}</h3>
+            <h3 class="book__title">${renderGroupBadge(g).outerHTML}</h3>
             <div class="book__meta">
               <div>Role: <select data-action="membership-role" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${roleDisabled}>
                 <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
@@ -51,7 +49,7 @@ export function renderMembershipControls(groups) {
             </div>
             <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="button" type="button" data-action="membership-save" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${saveDisabled}>Save role</button>
-              <button class="button" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}">Remove</button>
+              <button class="icon-button" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" aria-label="Remove membership" title="Remove membership"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
             </div>
           </article>
         `.trim();
@@ -126,8 +124,10 @@ export function initUserMembershipsManager({
   }
 
   membershipsResults.addEventListener("click", async (e) => {
-    const target = e.target;
-    if (!target || target.nodeType !== 1) return;
+    const source = e.target;
+    if (!source || source.nodeType !== 1) return;
+    const target = source.closest("[data-action]");
+    if (!target || !membershipsResults.contains(target)) return;
     const action = target.getAttribute("data-action");
     if (action !== "membership-save" && action !== "membership-remove") return;
 

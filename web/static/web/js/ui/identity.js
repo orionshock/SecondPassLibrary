@@ -13,11 +13,12 @@ export function userHandle(user) {
 
 export function userIdentityText(user, options = {}) {
   const includeEmail = options.includeEmail === true;
-  const displayName = userDisplayName(user);
+  const displayName =
+    options.includeDisplayName === false ? "" : userDisplayName(user);
   const handle = userHandle(user);
   const email = includeEmail && user && user.email ? String(user.email).trim() : "";
   const parts = [displayName, handle, email].filter(Boolean);
-  return parts.length ? parts.join(" • ") : "Unknown user";
+  return parts.length ? parts.join(" \u2022 ") : "Unknown user";
 }
 
 function appendIdentityPiece(container, className, text) {
@@ -39,7 +40,8 @@ export function renderUserIdentity(user, options = {}) {
   icon.textContent = "person";
   container.appendChild(icon);
 
-  const displayName = userDisplayName(user);
+  const displayName =
+    options.includeDisplayName === false ? "" : userDisplayName(user);
   const handle = userHandle(user);
   const email =
     options.includeEmail === true && user && user.email

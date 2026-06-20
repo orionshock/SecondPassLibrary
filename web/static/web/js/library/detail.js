@@ -1,8 +1,8 @@
 import { fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
+import { renderShelfMetadata } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
-import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 
@@ -137,17 +137,10 @@ function renderBookGroups(container, groups) {
   for (const g of groups) {
     const li = document.createElement("li");
     const gid = g && g.id != null ? String(g.id) : "";
-    const isPublic = !!(g && g.is_public_group);
-
     const a = el("a", "");
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
     a.appendChild(renderGroupBadge(g, { compact: true }));
     li.appendChild(a);
-
-    if (isPublic) {
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(el("span", "pill pill--owner", "Public"));
-    }
 
     ul.appendChild(li);
   }
@@ -170,14 +163,11 @@ function renderBookShelves(container, shelves) {
     a.setAttribute("href", sid ? `/shelves/${encodeURIComponent(sid)}/` : "#");
     li.appendChild(a);
 
-    const ownerType = s && s.owner_type ? String(s.owner_type) : "";
-    if (ownerType === "user" && s.owner_user) {
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(renderUserIdentity(s.owner_user));
-    }
-    if (ownerType === "group" && s.owner_group) {
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(renderGroupBadge(s.owner_group, { compact: true }));
+    const metadata = renderShelfMetadata(s);
+    if (metadata.childNodes.length) {
+      const meta = el("div", "muted");
+      meta.appendChild(metadata);
+      li.appendChild(meta);
     }
 
     ul.appendChild(li);

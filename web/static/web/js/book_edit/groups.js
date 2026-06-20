@@ -16,15 +16,16 @@ export function renderGroups({ groups, groupsEl }) {
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
     a.appendChild(renderGroupBadge(g, { compact: true }));
     li.appendChild(a);
-    if (g && g.is_public_group) {
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(el("span", "pill pill--owner", "Public"));
-    }
     if (gid) {
       li.appendChild(document.createTextNode(" "));
-      const btn = el("button", "linklike", "Remove");
+      const btn = el("button", "icon-button");
       btn.type = "button";
       btn.setAttribute("data-group-remove-id", gid);
+      btn.setAttribute("aria-label", "Remove from group");
+      btn.setAttribute("title", "Remove from group");
+      const icon = el("span", "material-symbols-outlined", "remove_circle");
+      icon.setAttribute("aria-hidden", "true");
+      btn.appendChild(icon);
       li.appendChild(btn);
     }
     ul.appendChild(li);

@@ -126,13 +126,14 @@ export function renderMembersReadOnly(payload) {
     .map((m) => {
       const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
       const role = m.role || "reader";
+      const roleLabel = `${role.slice(0, 1).toUpperCase()}${role.slice(1)}`;
       const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
       return `
         <article class="book">
           <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
             <div>
               <h3 class="book__title" style="display:inline;">${identity}${ownerBadge}</h3>
-              <div class="muted">Role: <code>${escapeHtml(role)}</code></div>
+              <div style="margin-top: 8px;"><span class="pill">${escapeHtml(roleLabel)}</span></div>
             </div>
           </div>
         </article>
@@ -169,7 +170,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
             </div>
             <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}" ${saveDisabled}>Save role</button>
-              <button class="button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}">Remove</button>
+              <button class="icon-button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
             </div>
           </article>
         `.trim();

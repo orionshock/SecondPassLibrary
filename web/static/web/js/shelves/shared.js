@@ -16,15 +16,15 @@ function shelfItemCountLabel(shelf) {
   return `${count} item${count === 1 ? "" : "s"}`;
 }
 
-export function shelfOwnerIdentitySegment(shelf) {
-  if (!shelf) return "";
+function renderShelfOwnerIdentity(shelf) {
+  if (!shelf) return null;
   const ownerType = shelf.owner_type ? String(shelf.owner_type) : "";
   if (ownerType === "user") {
     const identity = renderUserIdentity(shelf.owner_user, {
       className: "shelf-owner-identity",
     });
     identity.dataset.ownerType = "user";
-    return identity.outerHTML;
+    return identity;
   }
   if (ownerType === "group") {
     const badge = renderGroupBadge(shelf.owner_group, {
@@ -32,9 +32,14 @@ export function shelfOwnerIdentitySegment(shelf) {
       className: "shelf-owner-identity",
     });
     badge.dataset.ownerType = "group";
-    return badge.outerHTML;
+    return badge;
   }
-  return "";
+  return null;
+}
+
+export function shelfOwnerIdentitySegment(shelf) {
+  const identity = renderShelfOwnerIdentity(shelf);
+  return identity ? identity.outerHTML : "";
 }
 
 function shelfMetadataParts(shelf) {
@@ -50,6 +55,34 @@ export function shelfMetadataLine(shelf) {
   return [ownerSegment, ...metadataSegments]
     .filter(Boolean)
     .join('<span class="shelf-meta-separator" aria-hidden="true"> &middot; </span>');
+}
+
+export function renderShelfMetadata(shelf) {
+  const container = document.createElement("span");
+  container.className = "shelf-metadata";
+  const segments = [
+    renderShelfOwnerIdentity(shelf),
+    ...shelfMetadataParts(shelf),
+  ].filter(Boolean);
+
+  segments.forEach((segment, index) => {
+    if (index > 0) {
+      const separator = document.createElement("span");
+      separator.className = "shelf-meta-separator";
+      separator.setAttribute("aria-hidden", "true");
+      separator.textContent = " \u00b7 ";
+      container.appendChild(separator);
+    }
+    if (typeof segment === "string") {
+      const text = document.createElement("span");
+      text.textContent = segment;
+      container.appendChild(text);
+    } else {
+      container.appendChild(segment);
+    }
+  });
+
+  return container;
 }
 
 export function shelfCreatedByDisplay(shelf) {
