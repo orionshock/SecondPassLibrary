@@ -1,6 +1,8 @@
 import { fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
 import { mountCovers } from "../ui/covers.js";
+import { renderGroupBadge } from "../ui/groups.js";
+import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 
@@ -135,11 +137,11 @@ function renderBookGroups(container, groups) {
   for (const g of groups) {
     const li = document.createElement("li");
     const gid = g && g.id != null ? String(g.id) : "";
-    const name = g && g.name ? String(g.name) : "";
     const isPublic = !!(g && g.is_public_group);
 
-    const a = el("a", "", name);
+    const a = el("a", "");
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
+    a.appendChild(renderGroupBadge(g, { compact: true }));
     li.appendChild(a);
 
     if (isPublic) {
@@ -169,13 +171,13 @@ function renderBookShelves(container, shelves) {
     li.appendChild(a);
 
     const ownerType = s && s.owner_type ? String(s.owner_type) : "";
-    if (ownerType === "user" && s.owner_user && s.owner_user.username) {
+    if (ownerType === "user" && s.owner_user) {
       li.appendChild(document.createTextNode(" "));
-      li.appendChild(el("span", "muted", `(user: ${String(s.owner_user.username)})`));
+      li.appendChild(renderUserIdentity(s.owner_user));
     }
-    if (ownerType === "group" && s.owner_group && s.owner_group.name) {
+    if (ownerType === "group" && s.owner_group) {
       li.appendChild(document.createTextNode(" "));
-      li.appendChild(el("span", "muted", `(group: ${String(s.owner_group.name)})`));
+      li.appendChild(renderGroupBadge(s.owner_group, { compact: true }));
     }
 
     ul.appendChild(li);

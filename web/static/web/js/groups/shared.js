@@ -1,6 +1,7 @@
 import { fetchJSON } from "../api.js";
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
+import { renderUserIdentity } from "../ui/identity.js";
 
 export function truthy(v) {
   return !!v;
@@ -124,15 +125,14 @@ export function renderMembersReadOnly(payload) {
   return results
     .map((m) => {
       const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
-      const username = m.username || "";
       const role = m.role || "reader";
-      const email = m.email || "";
+      const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
       return `
         <article class="book">
           <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
             <div>
-              <h3 class="book__title" style="display:inline;">${escapeHtml(username)}${ownerBadge}</h3>
-              <div class="muted">Role: <code>${escapeHtml(role)}</code>${email ? `  -  ${escapeHtml(email)}` : ""}</div>
+              <h3 class="book__title" style="display:inline;">${identity}${ownerBadge}</h3>
+              <div class="muted">Role: <code>${escapeHtml(role)}</code></div>
             </div>
           </div>
         </article>
@@ -148,9 +148,8 @@ export function renderMembersManage(payload, { isPublicGroup }) {
   return results
     .map((m) => {
       const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
-      const username = m.username || "";
       const role = m.role || "reader";
-      const email = m.email || "";
+      const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
       const curatorDisabled = isPublicGroup ? "disabled" : "";
       const selectDisabled = isPublicGroup ? "disabled" : "";
       const saveDisabled = isPublicGroup ? "disabled" : "";
@@ -160,9 +159,8 @@ export function renderMembersManage(payload, { isPublicGroup }) {
 
       return `
         <article class="book">
-          <h3 class="book__title">${escapeHtml(username)}${ownerBadge}</h3>
+          <h3 class="book__title">${identity}${ownerBadge}</h3>
             <div class="book__meta">
-              ${email ? `<div>${escapeHtml(email)}</div>` : ""}
               <div>Role: <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}" ${selectDisabled}>
                 <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
                 <option value="curator" ${role === "curator" ? "selected" : ""} ${curatorDisabled}>curator</option>

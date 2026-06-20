@@ -569,6 +569,18 @@ a:hover { text-decoration: underline; }
 .user-row__actions { display: flex; justify-content: flex-end; align-items: flex-start; }
 .user-row__title { font-weight: 700; margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .user-row__line { overflow-wrap: anywhere; }
+.user-row__groups {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.user-identity--shell {
+  max-width: 100%;
+}
+.user-identity--shell .user-identity__display-name {
+  display: none;
+}
 
 /* Book edit header / tabs */
 .edit-header {

@@ -1,4 +1,5 @@
 import { fetchJSON } from "./api.js";
+import { renderUserIdentity } from "./ui/identity.js";
 
 export function $(selector, root) {
   return (root || document).querySelector(selector);
@@ -92,7 +93,12 @@ export async function loadMeAndInitShell() {
 
   try {
     const me = await fetchJSON("/api/v1/accounts/me/");
-    setText($('[data-ui="username"]'), me.username || "User");
+    const identityTarget = $('[data-ui="username"]');
+    if (identityTarget) {
+      identityTarget.replaceChildren(
+        renderUserIdentity(me, { className: "user-identity--shell" })
+      );
+    }
     updateNavVisibility(me);
     return me;
   } catch (e) {

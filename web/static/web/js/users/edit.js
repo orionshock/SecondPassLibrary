@@ -6,6 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 import {
   initUserMembershipsManager,
@@ -134,7 +135,7 @@ export async function initUserEdit() {
   try {
     const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`);
     original = payload;
-    usernameEl.textContent = payload.username || "";
+    usernameEl.replaceChildren(renderUserIdentity(payload));
     groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
     emailInput.value = payload.email || "";
     firstInput.value = payload.first_name || "";
@@ -194,7 +195,7 @@ export async function initUserEdit() {
   async function refreshUserAndMemberships() {
     const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`);
     original = payload;
-    usernameEl.textContent = payload.username || "";
+    usernameEl.replaceChildren(renderUserIdentity(payload));
     groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
     emailInput.value = payload.email || "";
     firstInput.value = payload.first_name || "";
@@ -293,7 +294,7 @@ export async function initUserEdit() {
       });
 
       original = updated;
-      usernameEl.textContent = updated.username || "";
+      usernameEl.replaceChildren(renderUserIdentity(updated));
       groupsEl.innerHTML = renderGroupsReadOnly(updated.groups);
       emailInput.value = updated.email || "";
       firstInput.value = updated.first_name || "";

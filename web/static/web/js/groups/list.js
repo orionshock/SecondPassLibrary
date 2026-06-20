@@ -1,4 +1,5 @@
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { renderGroupBadge } from "../ui/groups.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import { truthy } from "./shared.js";
 
@@ -8,7 +9,6 @@ function renderGroupsList(payload) {
 
   return results
     .map((g) => {
-      const name = g.name || "";
       const membershipRole = g.membership_role || "";
       const isPublic = !!g.is_public_group;
       const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
@@ -19,13 +19,14 @@ function renderGroupsList(payload) {
       ].filter(truthy);
 
       const badges = badgeBits.length ? `<span class="edit-header__badges">${badgeBits.join(" ")}</span>` : "";
+      const groupBadge = renderGroupBadge(g).outerHTML;
 
       return `
         <article class="book">
           <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
             <div>
               <h3 class="book__title" style="display:inline;">
-                <a href="${escapeHtml(href)}">${escapeHtml(name)}</a>
+                <a href="${escapeHtml(href)}">${groupBadge}</a>
               </h3>
               ${badges ? ` <span style="margin-left: 8px;">${badges}</span>` : ""}
             </div>

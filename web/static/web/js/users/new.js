@@ -5,6 +5,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 
 export async function initUserNew() {
@@ -124,7 +125,7 @@ export async function initUserNew() {
         throw new Error("Unexpected response from server.");
       }
 
-      createdUsername.textContent = u.username || payload.username;
+      createdUsername.replaceChildren(renderUserIdentity(u));
       createdPassword.textContent = pw;
 
       visible(formCard, false);

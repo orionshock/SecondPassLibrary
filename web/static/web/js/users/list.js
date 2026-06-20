@@ -1,8 +1,9 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
-import { curatedGroupsFromUser, formatDateTime, groupsSummary, passesFilter } from "./shared.js";
+import { formatDateTime, passesFilter } from "./shared.js";
 
 export async function initUsersList() {
   const me = await loadMeAndInitShell();
@@ -71,13 +72,28 @@ export async function initUsersList() {
     const roleBadge = `<span class="pill">${escapeHtml(role)}</span>`;
     const activeBadge = isActive ? '<span class="pill">active</span>' : '<span class="pill">inactive</span>';
 
-    const curated = curatedGroupsFromUser(user);
-    const curatesLine = curated.length ? `<div class="user-row__line">Curates: ${escapeHtml(curated.join(", "))}</div>` : "";
-
-    const groupText = groupsSummary(user);
-    const groupsLine = groupText
-      ? `<div class="user-row__line">Groups: ${escapeHtml(groupText)}</div>`
+    const groups = Array.isArray(user && user.groups) ? user.groups : [];
+    const groupBadges = groups
+      .map((group) => {
+        const badge = renderGroupBadge(group, { compact: true }).outerHTML;
+        const role = group && group.membership_role ? String(group.membership_role) : "";
+        return `${badge}${role ? ` <span class="muted">(${escapeHtml(role)})</span>` : ""}`;
+      })
+      .join(" ");
+    const groupsLine = groupBadges
+      ? `<div class="user-row__line user-row__groups">Groups: ${groupBadges}</div>`
       : `<div class="user-row__line muted">Groups: (none)</div>`;
+    const curatedGroupBadges = groups
+      .filter(
+        (group) => group && group.membership_role === "curator"
+      )
+      .map((group) =>
+        renderGroupBadge(group, { compact: true }).outerHTML
+      )
+      .join(" ");
+    const curatesLine = curatedGroupBadges
+      ? `<div class="user-row__line user-row__groups">Curates: ${curatedGroupBadges}</div>`
+      : "";
 
     const lastLoginLine = lastLogin
       ? `<div class="user-row__line">Last login: ${escapeHtml(lastLogin)}</div>`

@@ -29,7 +29,6 @@ export function renderMembershipControls(groups) {
     .map((g) => {
       const groupId = g.id ? String(g.id) : "";
       const membershipId = g.membership_id ? String(g.membership_id) : "";
-      const name = g.name || String(g.id || "");
       const role = g.membership_role || "reader";
       const isPublic = !!g.is_public_group;
 
@@ -42,7 +41,7 @@ export function renderMembershipControls(groups) {
 
       return `
           <article class="book">
-            <h3 class="book__title">${escapeHtml(name)}${publicBadge}</h3>
+            <h3 class="book__title">${renderGroupBadge(g).outerHTML}${publicBadge}</h3>
             <div class="book__meta">
               <div>Role: <select data-action="membership-role" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${roleDisabled}>
                 <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>

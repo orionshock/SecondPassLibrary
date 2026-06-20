@@ -637,6 +637,64 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn("owner_user__is_staff", list_js)
         self.assertNotIn("is_superuser", list_js)
 
+    def test_product_ui_display_sites_use_shared_identity_helpers(self):
+        user_identity_modules = {
+            path: Path(path).read_text(encoding="utf-8")
+            for path in (
+                "web/static/web/js/layout.js",
+                "web/static/web/js/profile/main.js",
+                "web/static/web/js/library/detail.js",
+                "web/static/web/js/users/list.js",
+                "web/static/web/js/users/edit.js",
+                "web/static/web/js/users/new.js",
+                "web/static/web/js/groups/shared.js",
+            )
+        }
+        group_badge_modules = {
+            path: Path(path).read_text(encoding="utf-8")
+            for path in (
+                "web/static/web/js/profile/main.js",
+                "web/static/web/js/library/detail.js",
+                "web/static/web/js/book_edit/groups.js",
+                "web/static/web/js/groups/list.js",
+                "web/static/web/js/users/list.js",
+                "web/static/web/js/users/memberships.js",
+                "web/static/web/js/shelves/shared.js",
+            )
+        }
+        users_shared_js = Path("web/static/web/js/users/shared.js").read_text(
+            encoding="utf-8"
+        )
+        group_memberships_js = Path(
+            "web/static/web/js/groups/memberships.js"
+        ).read_text(encoding="utf-8")
+        user_memberships_js = Path(
+            "web/static/web/js/users/memberships.js"
+        ).read_text(encoding="utf-8")
+
+        for module_js in user_identity_modules.values():
+            self.assertIn("renderUserIdentity", module_js)
+        for module_js in group_badge_modules.values():
+            self.assertIn("renderGroupBadge", module_js)
+
+        self.assertIn("includeEmail: true", user_identity_modules["web/static/web/js/users/list.js"])
+        self.assertIn("includeEmail: true", user_identity_modules["web/static/web/js/groups/shared.js"])
+        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/layout.js"])
+        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/profile/main.js"])
+        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/library/detail.js"])
+        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/users/edit.js"])
+        self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/users/new.js"])
+
+        self.assertNotIn("(user:", user_identity_modules["web/static/web/js/library/detail.js"])
+        self.assertNotIn("(group:", group_badge_modules["web/static/web/js/library/detail.js"])
+        self.assertNotIn("groupsSummary", users_shared_js)
+        self.assertNotIn("curatedGroupsFromUser", users_shared_js)
+        self.assertNotIn("escapeHtml(username)", user_identity_modules["web/static/web/js/groups/shared.js"])
+
+        # Select controls remain plain text because badges cannot be children of option.
+        self.assertIn("opt.textContent", group_memberships_js)
+        self.assertIn("opt.textContent", user_memberships_js)
+
     def test_unauthenticated_users_redirects_to_login(self):
         response = self.client.get("/users/", follow=False)
         self.assertEqual(response.status_code, 302)

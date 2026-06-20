@@ -1,4 +1,5 @@
 import { clear, el } from "./shared.js";
+import { renderGroupBadge } from "../ui/groups.js";
 
 export function renderGroups({ groups, groupsEl }) {
   clear(groupsEl);
@@ -11,8 +12,9 @@ export function renderGroups({ groups, groupsEl }) {
   for (const g of items) {
     const li = document.createElement("li");
     const gid = g && g.id != null ? String(g.id) : "";
-    const a = el("a", "", g && g.name ? g.name : "");
+    const a = el("a", "");
     a.setAttribute("href", gid ? `/groups/${encodeURIComponent(gid)}/` : "#");
+    a.appendChild(renderGroupBadge(g, { compact: true }));
     li.appendChild(a);
     if (g && g.is_public_group) {
       li.appendChild(document.createTextNode(" "));
@@ -54,4 +56,3 @@ export function syncGroupsAddOptions({ allGroups, groups, groupsAddSelectEl, gro
   }
   groupsAddBtnEl.disabled = false;
 }
-

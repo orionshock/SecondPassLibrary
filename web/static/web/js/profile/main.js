@@ -1,5 +1,7 @@
 import { getCsrfToken, fetchJSONWithOptions, extractApiErrorMessage } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, setText, visible } from "../layout.js";
+import { renderGroupBadge } from "../ui/groups.js";
+import { renderUserIdentity } from "../ui/identity.js";
 
 function clear(node) {
   if (!node) return;
@@ -22,8 +24,7 @@ function renderGroups(container, groups) {
   const ul = document.createElement("ul");
   for (const g of groups) {
     const li = document.createElement("li");
-    const name = g && g.name ? String(g.name) : "";
-    li.appendChild(el("span", "", name));
+    li.appendChild(renderGroupBadge(g, { compact: true }));
     const bits = [];
     if (g && g.is_public_group) bits.push("Public");
     if (g && g.membership_role) bits.push(String(g.membership_role));
@@ -183,7 +184,7 @@ export async function initProfile() {
   }
 
   function syncDisplayFromMe() {
-    usernameEl.textContent = me.username || "";
+    usernameEl.replaceChildren(renderUserIdentity(me));
     emailDisplayEl.textContent = me.email || "";
     firstDisplayEl.textContent = me.first_name || "";
     lastDisplayEl.textContent = me.last_name || "";
