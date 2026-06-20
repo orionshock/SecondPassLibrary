@@ -1,4 +1,8 @@
-import { loadMeAndInitShell, setGlobalErrorFromError } from "./layout.js";
+import {
+  initAppHeaderLayout,
+  loadMeAndInitShell,
+  setGlobalErrorFromError,
+} from "./layout.js";
 
 async function runPageInit({ importer, initExportName, label }) {
   try {
@@ -15,6 +19,7 @@ async function runPageInit({ importer, initExportName, label }) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initAppHeaderLayout();
   const page = document.body && document.body.dataset ? document.body.dataset.page : "";
 
   const registry = {

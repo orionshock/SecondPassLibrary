@@ -11,12 +11,24 @@
   --border: rgba(255, 255, 255, 0.12);
   --focus: #60a5fa;
   --danger: #fb7185;
+  --control-bg: #18212c;
+  --control-text: var(--text);
+  --control-border: rgba(255, 255, 255, 0.18);
+  --control-disabled-bg: #10161e;
+  --control-placeholder: #7f8b9b;
+  --app-header-height: 69px;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html {
+  height: 100%;
+  scroll-padding-top: calc(var(--app-header-height) + 8px);
+}
+body { height: 100%; }
 body {
   margin: 0;
+  padding-top: var(--app-header-height);
   background: var(--bg);
   color: var(--text);
   font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -75,11 +87,16 @@ a:hover { text-decoration: underline; }
    ===================== */
 
 .topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  background: rgba(11, 15, 20, 0.9);
+  right: 0;
+  left: 0;
+  z-index: 100;
+  isolation: isolate;
+  background: rgba(11, 15, 20, 0.96);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 .topbar__inner {
   display: flex;
@@ -293,6 +310,72 @@ a:hover { text-decoration: underline; }
    Forms / Buttons
    ===================== */
 
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  select,
+  textarea
+) {
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  accent-color: var(--focus);
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  select,
+  textarea
+):focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+:where(input, textarea)::placeholder {
+  color: var(--control-placeholder);
+  opacity: 1;
+}
+
+:where(input, select, textarea):disabled {
+  border-color: var(--border);
+  background: var(--control-disabled-bg);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+:where(input, textarea)[readonly] {
+  border-color: var(--border);
+  background: var(--control-disabled-bg);
+  color: var(--muted);
+}
+
+select option {
+  background: var(--control-bg);
+  color: var(--control-text);
+}
+
+input[type="file"] {
+  padding: 5px;
+}
+input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 6px 9px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--control-text);
+  cursor: pointer;
+  font: inherit;
+}
+input[type="file"]:disabled::file-selector-button {
+  cursor: not-allowed;
+}
+
 .linklike {
   border: none;
   background: transparent;
@@ -313,13 +396,7 @@ a:hover { text-decoration: underline; }
   min-width: 280px;
   max-width: 560px;
   width: min(560px, 65vw);
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
 }
-.search__input:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .form { margin-top: 10px; }
 .form-actions {
@@ -332,13 +409,7 @@ a:hover { text-decoration: underline; }
 
 .form-control {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
 }
-.form-control:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 .form-control--textarea { resize: vertical; min-height: 92px; }
 
 .button {

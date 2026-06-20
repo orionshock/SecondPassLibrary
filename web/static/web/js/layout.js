@@ -1,6 +1,8 @@
 import { fetchJSON } from "./api.js";
 import { renderUserIdentity } from "./ui/identity.js";
 
+let headerResizeObserver = null;
+
 export function $(selector, root) {
   return (root || document).querySelector(selector);
 }
@@ -34,6 +36,30 @@ export function setGlobalError(message) {
 export function setGlobalErrorFromError(error, prefix) {
   const message = error && error.message ? String(error.message) : "Unknown error.";
   setGlobalError(prefix ? `${prefix} ${message}` : message);
+}
+
+export function initAppHeaderLayout() {
+  const header = $(".topbar");
+  if (!header) return;
+
+  const updateHeaderHeight = () => {
+    const height = Math.ceil(header.getBoundingClientRect().height);
+    if (height > 0) {
+      document.documentElement.style.setProperty(
+        "--app-header-height",
+        `${height}px`
+      );
+    }
+  };
+
+  updateHeaderHeight();
+  if (typeof ResizeObserver === "function") {
+    if (headerResizeObserver) headerResizeObserver.disconnect();
+    headerResizeObserver = new ResizeObserver(updateHeaderHeight);
+    headerResizeObserver.observe(header);
+  } else {
+    window.addEventListener("resize", updateHeaderHeight);
+  }
 }
 
 function navShouldShowGroups(me) {
