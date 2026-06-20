@@ -476,15 +476,36 @@ a:hover { text-decoration: underline; }
 .user-identity__display-name { font-weight: 600; }
 .user-identity__handle,
 .user-identity__email { color: var(--muted); }
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+.group-badge__icon {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 16px;
+}
+.group-badge__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.group-badge--compact {
+  padding: 2px 7px;
+}
 .shelf-owner-identity {
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
-}
-.shelf-owner-identity[data-owner-type="group"] { gap: 5px; }
-.shelf-owner-identity[data-owner-type="group"] .material-symbols-outlined {
-  color: var(--muted);
-  font-size: 18px;
 }
 .shelf-meta-separator {
   margin: 0 7px;

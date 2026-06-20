@@ -533,10 +533,16 @@ class ProductUiSmokeTests(TestCase):
         identity_js = Path("web/static/web/js/ui/identity.js").read_text(
             encoding="utf-8"
         )
+        group_badge_js = Path("web/static/web/js/ui/groups.js").read_text(
+            encoding="utf-8"
+        )
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
         users_list_js = Path("web/static/web/js/users/list.js").read_text(
             encoding="utf-8"
         )
+        user_memberships_js = Path(
+            "web/static/web/js/users/memberships.js"
+        ).read_text(encoding="utf-8")
         list_js = Path("web/static/web/js/shelves/list.js").read_text(encoding="utf-8")
         view_js = Path("web/static/web/js/shelves/view.js").read_text(encoding="utf-8")
         edit_js = Path("web/static/web/js/shelves/edit.js").read_text(encoding="utf-8")
@@ -561,8 +567,20 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn("user.id", identity_js)
         self.assertNotIn("user.pk", identity_js)
 
+        self.assertIn("export function groupDisplayName", group_badge_js)
+        self.assertIn("export function groupBadgeText", group_badge_js)
+        self.assertIn("export function renderGroupBadge", group_badge_js)
+        self.assertIn('"Unknown group"', group_badge_js)
+        self.assertIn('icon.textContent = "groups"', group_badge_js)
+        self.assertIn("name.textContent = groupDisplayName(group)", group_badge_js)
+        self.assertIn("document.createElement", group_badge_js)
+        self.assertNotIn("innerHTML", group_badge_js)
+        self.assertNotIn("group.id", group_badge_js)
+
+        self.assertIn('from "../ui/groups.js"', shared_js)
         self.assertIn('from "../ui/identity.js"', shared_js)
         self.assertIn("renderUserIdentity(shelf.owner_user", shared_js)
+        self.assertIn("renderGroupBadge(shelf.owner_group", shared_js)
         self.assertIn("shelfOwnerIdentitySegment", shared_js)
         self.assertIn("shelfMetadataLine", shared_js)
         self.assertIn("groups", shared_js)
@@ -580,6 +598,13 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("includeEmail: true", users_list_js)
         self.assertNotIn("${escapeHtml(username)}", users_list_js)
 
+        self.assertIn('from "../ui/groups.js"', user_memberships_js)
+        self.assertIn("renderGroupBadge(g", user_memberships_js)
+        self.assertNotIn(
+            "${escapeHtml(g.name || String(g.id || \"\"))}",
+            user_memberships_js,
+        )
+
         self.assertIn("shelfMetadataLine", list_js)
         self.assertIn("shelfMetadataLine", view_js)
         self.assertIn("shelfMetadataLine", edit_js)
@@ -596,6 +621,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".user-identity__handle", css)
         self.assertIn(".user-identity__email", css)
         self.assertIn(".user-identity__piece + .user-identity__piece::before", css)
+        self.assertIn(".group-badge", css)
+        self.assertIn(".group-badge__icon", css)
+        self.assertIn(".group-badge__name", css)
+        self.assertIn(".group-badge--compact", css)
         self.assertIn(".shelf-owner-identity", css)
         self.assertIn(".shelf-meta-separator", css)
 

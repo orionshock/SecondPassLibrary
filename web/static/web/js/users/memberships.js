@@ -6,6 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
+import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
 
 export function renderGroupsReadOnly(groups) {
@@ -14,7 +15,8 @@ export function renderGroupsReadOnly(groups) {
     .map((g) => {
       const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
       const badge = g.is_public_group ? ' <span class="pill pill--owner">Public</span>' : "";
-      return `<div><a href="${escapeHtml(href)}">${escapeHtml(g.name || String(g.id || ""))}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
+      const groupBadge = renderGroupBadge(g, { compact: true }).outerHTML;
+      return `<div><a href="${escapeHtml(href)}">${groupBadge}</a>${badge} <span class="muted">(${escapeHtml(g.membership_role || "")})</span></div>`;
     })
     .join("");
 }

@@ -1,4 +1,5 @@
 import { escapeHtml } from "../layout.js";
+import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity, userIdentityText } from "../ui/identity.js";
 
 function shelfVisibilityLabel(shelf) {
@@ -26,13 +27,12 @@ export function shelfOwnerIdentitySegment(shelf) {
     return identity.outerHTML;
   }
   if (ownerType === "group") {
-    const text = shelf.owner_group && shelf.owner_group.name ? String(shelf.owner_group.name) : "Group";
-    return `
-      <span class="shelf-owner-identity" data-owner-type="group">
-        <span class="material-symbols-outlined" aria-hidden="true">groups</span>
-        <span>${escapeHtml(text)}</span>
-      </span>
-    `.trim();
+    const badge = renderGroupBadge(shelf.owner_group, {
+      compact: true,
+      className: "shelf-owner-identity",
+    });
+    badge.dataset.ownerType = "group";
+    return badge.outerHTML;
   }
   return "";
 }
