@@ -63,25 +63,25 @@ export async function initUsersList() {
   function renderRow(user) {
     const id = user && user.id != null ? String(user.id) : "";
     const email = user.email || "";
-    const role = user.is_owner ? "manager" : user.role || "reader";
+    const role = user.role || "reader";
     const isOwner = !!user.is_owner;
     const isActive = user.is_active !== false;
     const lastLogin = user.last_login ? formatDateTime(user.last_login) : "";
 
-    const ownerBadge = isOwner ? ' <span class="pill pill--owner">Owner</span>' : "";
-    const roleBadge = `<span class="pill">${escapeHtml(role)}</span>`;
-    const activeBadge = isActive ? '<span class="pill">active</span>' : '<span class="pill">inactive</span>';
+    const roleBadge = isOwner
+      ? '<span class="pill pill--owner">Owner</span>'
+      : `<span class="pill">${escapeHtml(role)}</span>`;
+    const inactiveBadge = isActive ? "" : '<span class="pill">inactive</span>';
 
     const groups = Array.isArray(user && user.groups) ? user.groups : [];
-    const groupBadges = groups
-      .map((group) => {
-        const badge = renderGroupBadge(group, { compact: true }).outerHTML;
-        const role = group && group.membership_role ? String(group.membership_role) : "";
-        return `${badge}${role ? ` <span class="muted">(${escapeHtml(role)})</span>` : ""}`;
-      })
+    const memberGroupBadges = groups
+      .filter((group) => group && group.membership_role !== "curator")
+      .map((group) =>
+        renderGroupBadge(group, { compact: true }).outerHTML
+      )
       .join(" ");
-    const groupsLine = groupBadges
-      ? `<div class="user-row__line user-row__groups">Groups: ${groupBadges}</div>`
+    const groupsLine = memberGroupBadges
+      ? `<div class="user-row__line user-row__groups">Groups: ${memberGroupBadges}</div>`
       : `<div class="user-row__line muted">Groups: (none)</div>`;
     const curatedGroupBadges = groups
       .filter(
@@ -107,10 +107,10 @@ export async function initUsersList() {
     return `
       <article class="user-row">
         <div class="user-row__main">
-          <div class="user-row__title">${identityMarkup}${ownerBadge}</div>
+          <div class="user-row__title">${identityMarkup}</div>
           <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
             ${roleBadge}
-            ${activeBadge}
+            ${inactiveBadge}
           </div>
         </div>
         <div class="user-row__meta">
