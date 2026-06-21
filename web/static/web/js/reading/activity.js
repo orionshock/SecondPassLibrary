@@ -104,7 +104,7 @@ export async function initReadingBookActivity() {
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     const titleText = book && book.title ? String(book.title) : "Book";
-    titleEl.textContent = `Marginalia for “${titleText}”`;
+    titleEl.textContent = `Marginalia for \u201c${titleText}\u201d`;
     subtitleEl.textContent = "";
     sessionDisplayEl.textContent = "";
     visible(sessionEditFormEl, false);

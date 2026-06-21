@@ -337,7 +337,7 @@ UI behaviors:
 - Shelf metadata displays put the owner identity segment first:
   - User-owned shelves use the Material Symbols `person` icon followed by `First Last <@username>` when a name exists, or `<@username>` without an empty gap when it does not.
   - Group-owned shelves use the Material Symbols `groups` icon followed by the group name.
-  - Visibility and item count follow the owner identity segment with `·` separators, for example `person Owen Benji <@owner> · Private · 17 items` or `groups Public · Private · 6 items`.
+  - Visibility and item count follow the owner identity segment with separators, for example `person Owen Benji <@owner> - Private - 17 items` or `groups Public - Private - 6 items`.
   - `profile_id` is used only for identity comparison and is never displayed.
 - Shelf item positions are stored zero-based and contiguous; UI labels may show one-based positions like `#1`.
 - First/last shelf items disable invalid edge moves; the `Move to` dropdown uses one-based labels and applies immediately.

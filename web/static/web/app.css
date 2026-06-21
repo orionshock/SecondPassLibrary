@@ -488,6 +488,48 @@ input[type="file"]:disabled::file-selector-button {
   margin: 10px 0;
 }
 .sessions-row__main { flex: 1; min-width: 0; }
+.sessions-card {
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.sessions-card:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  background: rgba(255, 255, 255, 0.045);
+}
+.sessions-card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.sessions-card__title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sessions-card__metadata {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.sessions-card__separator {
+  color: rgba(255, 255, 255, 0.35);
+}
+.sessions-card__trailing {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  align-self: stretch;
+  justify-content: space-between;
+}
+.sessions-card__status {
+  color: var(--text);
+}
+.sessions-card__open-icon {
+  color: var(--muted);
+  font-size: 20px;
+}
 .session-select {
   display: inline-flex;
   align-items: center;
@@ -547,16 +589,9 @@ input[type="file"]:disabled::file-selector-button {
 }
 .sessions-row__id {
   color: rgba(255, 255, 255, 0.35);
-}
-.sessions-row__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-end;
-  justify-content: flex-start;
-}
-.sessions-row__state {
-  text-align: right;
+  font-style: italic;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 720px) {
@@ -568,6 +603,9 @@ input[type="file"]:disabled::file-selector-button {
   }
   .sessions-controls__page-size {
     flex-wrap: wrap;
+  }
+  .sessions-card__trailing {
+    gap: 8px;
   }
 }
 

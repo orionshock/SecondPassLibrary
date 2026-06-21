@@ -78,7 +78,7 @@
                 {% if s.progression_percent is not None %}
                   <div>Progression: {{ s.progression_percent|floatformat:1 }}%</div>
                 {% else %}
-                  <div>Progression: —</div>
+                  <div>Progression: &mdash;</div>
                 {% endif %}
                 <div>Annotations: {{ s.annotation_count }}</div>
               </div>

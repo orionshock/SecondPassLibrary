@@ -1017,11 +1017,14 @@ class ProductUiSmokeTests(TestCase):
         # Other user's session not shown.
         self.assertNotContains(response, str(others.id))
 
-        # Session row links to marginalia and per-book sessions.
+        # The entire session card links to marginalia.
         self.assertContains(response, f"/reading/sessions/books/{book.id}/{mine.id}/")
-        self.assertContains(response, f"/reading/sessions/books/{book.id}/")
-        self.assertContains(response, "View session marginalia")
-        self.assertContains(response, "View book sessions")
+        self.assertContains(response, 'class="card sessions-row sessions-card"')
+        self.assertContains(response, "Open session marginalia")
+        self.assertContains(response, "open_in_new")
+        self.assertNotContains(response, "View session marginalia")
+        self.assertNotContains(response, "View book sessions")
+        self.assertContains(response, "Active")
 
     def test_reading_sessions_js_wires_filters_search_page_size_and_book_context(self):
         js = Path("web/static/web/js/reading/sessions.js").read_text(encoding="utf-8")
@@ -1041,10 +1044,19 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("writeQueryState", js)
         self.assertIn('button.setAttribute("aria-pressed", active ? "true" : "false")', js)
         self.assertIn("Reading sessions for ${String(book.title)}", js)
-        self.assertIn("No reading sessions for ${escapeHtml(book.title)} yet.", js)
+        self.assertIn("sessionCardTitle(session, bookTitle)", js)
+        self.assertIn("appendSeparatedParts", js)
+        self.assertIn('el("a", "card sessions-row sessions-card")', js)
+        self.assertIn('card.setAttribute(', js)
+        self.assertIn("`Open session marginalia:", js)
+        self.assertIn('openIcon.setAttribute("title", "Open session marginalia")', js)
+        self.assertIn('el("div", "muted sessions-row__id", sessionId)', js)
+        self.assertIn('session && session.is_active ? "Active" : "Closed"', js)
+        self.assertNotIn("View session marginalia", js)
+        self.assertNotIn("View book sessions", js)
+        self.assertNotIn("bookSessionsHref", js)
+        self.assertIn("No reading sessions for ${String(book.title)} yet.", js)
         self.assertNotIn("/api/v1/library/books/", js)
-        self.assertIn("View session marginalia", js)
-        self.assertIn("View book sessions", js)
         self.assertIn('import("./reading/sessions.js")', main_js)
         self.assertIn('initExportName: "initReadingSessions"', main_js)
         self.assertIn(".sessions-controls .sessions-status-filters", css)

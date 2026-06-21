@@ -27,84 +27,74 @@ TEXT_EXTS = {
     ".toml",
 }
 
-MOJIBAKE_MARKERS = ("\u00c3", "\u00c2", "\u00e2")  # Ã  â
+MOJIBAKE_MARKERS = ("\u00c3", "\u00c2", "\u00e2")
 
-# Normalize a small set of punctuation to plain ASCII (not required for correctness,
-# but avoids accidental mojibake-on-mojibake in future edits).
+# Normalize punctuation to ASCII after repairing encoding. Keeping this source
+# ASCII-only prevents the repair tool itself from becoming an encoding test case.
 PUNCT_REPLACEMENTS: dict[str, str] = {
-    "\u2026": "...",  # ...
-    "\u2014": "-",  # -
-    "\u2013": "-",  # -
-    "\u2019": "'",  # '
-    "\u2018": "'",  # '
-    "\u201c": '"',  # "
-    "\u201d": '"',  # "
-    "\u00a0": " ",  # non-breaking space
+    "\u2026": "...",
+    "\u2014": "-",
+    "\u2013": "-",
+    "\u2019": "'",
+    "\u2018": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u00a0": " ",
 }
 
-# Common CP1252/UTF-8 mojibake sequences as literal Unicode strings.
-# These appear when UTF-8 bytes are mis-decoded as CP1252.
+# Common CP1252/UTF-8 mojibake sequences. Build them from escaped code points so
+# editors and shells never need to decode literal broken text in this file.
 MOJIBAKE_SEQ_REPLACEMENTS: dict[str, str] = {
-    "...": "...",  # ...
-    "â€\"": "-",  # -
-    "-": "-",  # -
-    "'": "'",  # '
-    "'": "'",  # '
-    """: '"',  # "
-    "â€\u009d": '"',  # " (occasionally comes through as a control char)
-    """: '"',  # "
-    " ": " ",  # NBSP
-    "-": "-",  # middle dot
+    "\u00e2\u20ac\u00a6": "...",
+    "\u00e2\u20ac\u201d": "-",
+    "\u00e2\u20ac\u201c": "-",
+    "\u00e2\u20ac\u2122": "'",
+    "\u00e2\u20ac\u02dc": "'",
+    "\u00e2\u20ac\u0153": '"',
+    "\u00e2\u20ac\u009d": '"',
+    "\u00e2\u20ac\u017e": '"',
+    "\u00c2\u00a0": " ",
+    "\u00c2\u00b7": "-",
 }
 
 
 def _iter_text_files(root: Path) -> list[Path]:
     out: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
-        # Prune skipped directories in-place for os.walk.
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
+        dirnames[:] = [name for name in dirnames if name not in SKIP_DIR_NAMES]
         for name in filenames:
-            p = Path(dirpath) / name
-            if p.suffix.lower() in TEXT_EXTS:
-                out.append(p)
+            path = Path(dirpath) / name
+            if path.suffix.lower() in TEXT_EXTS:
+                out.append(path)
     return out
 
 
 def _decode_best_effort(data: bytes) -> str | None:
-    for enc in ("utf-8", "cp1252", "latin-1"):
+    for encoding in ("utf-8", "cp1252", "latin-1"):
         try:
-            return data.decode(enc)
+            return data.decode(encoding)
         except UnicodeDecodeError:
             continue
     return None
 
 
 def _fix_mojibake(text: str) -> str:
-    # Common case: UTF-8 bytes were decoded as Latin-1/CP1252, resulting in Ã¢â‚¬Â¦ etc.
-    if any(m in text for m in MOJIBAKE_MARKERS):
-        try:
-            # Prefer CP1252 for round-tripping because many mojibake strings include
-            # characters like the Euro sign (U+20AC) which aren't in Latin-1.
-            candidate = text.encode("cp1252").decode("utf-8")
-        except UnicodeError:
+    candidate = text
+    if any(marker in text for marker in MOJIBAKE_MARKERS):
+        for encoding in ("cp1252", "latin-1"):
             try:
-                candidate = text.encode("latin-1").decode("utf-8")
+                candidate = text.encode(encoding).decode("utf-8")
+                break
             except UnicodeError:
-                candidate = text
-    else:
-        candidate = text
+                continue
 
-    # If we couldn't safely round-trip the whole file (e.g. it contains characters
-    # not representable in CP1252), apply targeted sequence fixes.
-    for k, v in MOJIBAKE_SEQ_REPLACEMENTS.items():
-        candidate = candidate.replace(k, v)
+    for source, replacement in MOJIBAKE_SEQ_REPLACEMENTS.items():
+        candidate = candidate.replace(source, replacement)
 
-    for k, v in PUNCT_REPLACEMENTS.items():
-        candidate = candidate.replace(k, v)
+    for source, replacement in PUNCT_REPLACEMENTS.items():
+        candidate = candidate.replace(source, replacement)
 
-    # Normalize line endings to LF.
-    candidate = candidate.replace("\r\n", "\n").replace("\r", "\n")
-    return candidate
+    return candidate.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def main() -> int:
@@ -114,8 +104,7 @@ def main() -> int:
 
     for path in _iter_text_files(repo_root):
         scanned += 1
-        data = path.read_bytes()
-        text = _decode_best_effort(data)
+        text = _decode_best_effort(path.read_bytes())
         if text is None:
             continue
 

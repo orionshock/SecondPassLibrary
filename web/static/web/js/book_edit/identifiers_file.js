@@ -9,7 +9,7 @@ export function renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSerie
 
   const seriesName = book && book.series && book.series.name ? String(book.series.name) : "";
   const seriesIdx = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
-  headerSeriesEl.textContent = seriesName ? `Series: ${seriesName}${seriesIdx ? " · " + seriesIdx : ""}` : "Series: (none)";
+  headerSeriesEl.textContent = seriesName ? `Series: ${seriesName}${seriesIdx ? " \u00b7 " + seriesIdx : ""}` : "Series: (none)";
 
   clear(headerFileEl);
   const file = book && book.file ? book.file : null;
@@ -180,4 +180,3 @@ export function renderIdentifiersTable({ identifiers, identifiersEl }) {
   wrap.appendChild(table);
   identifiersEl.appendChild(wrap);
 }
-

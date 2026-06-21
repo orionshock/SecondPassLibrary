@@ -59,7 +59,11 @@
     <div id="reading-sessions-results">
     {% if sessions %}
       {% for s in sessions %}
-        <div class="card sessions-row">
+        <a
+          class="card sessions-row sessions-card"
+          href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
+          aria-label="Open session marginalia: {{ s.name|default:s.book.title|default:'Book'|escape }}"
+        >
           <div class="sessions-cover" aria-hidden="true">
             {% if s.book.cover_url %}
               <img class="sessions-cover__img" src="{{ s.book.cover_url|escape }}" alt="Cover for {{ s.book.title|default:'Book'|escape }}" loading="lazy" />
@@ -69,45 +73,37 @@
           </div>
 
           <div class="sessions-row__main">
-            <div style="display:flex; gap: 10px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-              <div class="book-meta__line">
-                <span>{{ s.book.title|default:"Book"|escape }}</span>
-                {% if s.book.authors %}<span class="muted"> · {{ s.book.authors|join:", "|escape }}</span>{% endif %}
-                {% if s.book.series_name %}
-                  <span class="muted"> · {{ s.book.series_name|escape }}{% if s.book.series_index %} #{{ s.book.series_index }}{% endif %}</span>
-                {% endif %}
-              </div>
+            <div class="sessions-card__title">
+              {{ s.name|default:s.book.title|default:"Book"|escape }}
             </div>
-
-            <div class="muted" style="margin-top: 6px;">
-              {% if s.name %}
-                <span>Session: {{ s.name|escape }} · <em style="color: rgba(255, 255, 255, 0.35); font-style: italic;">{{ s.id|escape }}</em></span>
-              {% else %}
-                <em style="color: rgba(255, 255, 255, 0.35); font-style: italic;">{{ s.id|escape }}</em>
-              {% endif %}
+            <div class="muted sessions-card__metadata">
+              <span>{{ s.book.title|default:"Book"|escape }}</span>
+              {% if s.book.authors %}<span class="sessions-card__separator">&bull;</span><span>{{ s.book.authors|join:", "|escape }}</span>{% endif %}
+              {% if s.book.series_name %}<span class="sessions-card__separator">&bull;</span><span>{{ s.book.series_name|escape }}{% if s.book.series_index %} {{ s.book.series_index }}{% endif %}</span>{% endif %}
             </div>
-
-            <div class="muted" style="margin-top: 6px;">
-              {% if s.completed_at %}
-                <span>Closed: {{ s.completed_at }}</span>
-              {% else %}
-                <span>Updated: {{ s.updated_at }}</span>
-              {% endif %}
-              <span> · Started: {{ s.started_at }}</span>
+            <div class="muted sessions-row__id">{{ s.id|escape }}</div>
+            <div class="muted sessions-card__metadata">
+              <span>Started: {{ s.started_at }}</span>
+              <span class="sessions-card__separator">&bull;</span>
+              {% if s.completed_at %}<span>Closed: {{ s.completed_at }}</span>{% else %}<span>Updated: {{ s.updated_at }}</span>{% endif %}
             </div>
-
-            <div class="muted" style="margin-top: 6px;">
+            <div class="muted sessions-card__metadata">
               <span>Annotations: {{ s.annotation_count }}</span>
-              <span> · Progression: {% if s.progression_percent is not None %}{{ s.progression_percent|floatformat:1 }}%{% else %}—{% endif %}</span>
+              <span class="sessions-card__separator">&bull;</span>
+              <span>Progression: {% if s.progression_percent is not None %}{{ s.progression_percent|floatformat:1 }}%{% else %}&mdash;{% endif %}</span>
             </div>
           </div>
 
-          <div class="sessions-row__nav" style="display:flex; flex-direction: column; gap: 8px; align-items: flex-end; justify-content: flex-start;">
-            <div class="muted" style="text-align: right;">{% if s.is_active %}Active{% else %}Closed{% endif %}</div>
-            <a class="button" href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/">View session marginalia</a>
-            <a class="button" href="/reading/sessions/books/{{ s.book.id|escape }}/">View book sessions</a>
+          <div class="sessions-card__trailing">
+            <span class="pill sessions-card__status">{% if s.is_active %}Active{% else %}Closed{% endif %}</span>
+            <span
+              class="material-symbols-outlined sessions-card__open-icon"
+              aria-hidden="true"
+              title="Open session marginalia"
+            >open_in_new</span>
+            <span class="sr-only">Open session marginalia</span>
           </div>
-        </div>
+        </a>
       {% endfor %}
     {% else %}
       <div class="muted" id="reading-sessions-all-empty">No reading sessions yet.</div>

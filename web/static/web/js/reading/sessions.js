@@ -1,7 +1,6 @@
 import { fetchJSON } from "../api.js";
 import {
   $,
-  escapeHtml,
   loadMeAndInitShell,
   setGlobalErrorFromError,
   visible,
@@ -70,17 +69,47 @@ function authorNames(book) {
     .map(String);
 }
 
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+
+function appendSeparatedParts(container, parts) {
+  const values = parts
+    .filter((part) => part !== null && part !== undefined)
+    .map((part) => String(part).trim())
+    .filter(Boolean);
+
+  values.forEach((part, index) => {
+    if (index > 0) container.appendChild(el("span", "sessions-card__separator", "\u2022"));
+    container.appendChild(el("span", "", part));
+  });
+}
+
+function sessionCardTitle(session, bookTitle) {
+  const name = session && typeof session.name === "string" ? session.name.trim() : "";
+  return name || bookTitle;
+}
+
+function seriesLabel(book) {
+  const name = book && book.series && book.series.name ? String(book.series.name).trim() : "";
+  const index =
+    book && book.series_index != null && book.series_index !== ""
+      ? String(book.series_index).trim()
+      : "";
+  if (!name) return "";
+  return index ? `${name} ${index}` : name;
+}
+
 function renderSessionCard(session) {
   const book = session && session.book && typeof session.book === "object" ? session.book : {};
   const bookId = String((book && book.id) || (session && session.book_id) || "");
   const sessionId = String((session && session.id) || "");
-  const title = String((book && book.title) || "Book");
+  const bookTitle = String((book && book.title) || "Book");
   const authors = authorNames(book);
-  const seriesName = book && book.series && book.series.name ? String(book.series.name) : "";
-  const seriesIndex =
-    book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
   const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
-  const name = session && session.name ? String(session.name) : "";
   const completedAt = session && session.completed_at ? formatWhen(session.completed_at) : "";
   const updatedAt = session && session.updated_at ? formatWhen(session.updated_at) : "";
   const startedAt = session && session.started_at ? formatWhen(session.started_at) : "";
@@ -91,40 +120,58 @@ function renderSessionCard(session) {
   const progressionText =
     progression != null && Number.isFinite(progression)
       ? `${Math.round(progression * 1000) / 10}%`
-      : "—";
+      : "\u2014";
   const marginaliaHref =
     `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`;
-  const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
 
-  return `
-    <div class="card sessions-row">
-      <div class="sessions-cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}" aria-hidden="true"></div>
-      <div class="sessions-row__main">
-        <div class="book-meta__line">
-          <span>${escapeHtml(title)}</span>
-          ${authors.length ? `<span class="muted"> · ${escapeHtml(authors.join(", "))}</span>` : ""}
-          ${seriesName ? `<span class="muted"> · ${escapeHtml(seriesName)}${seriesIndex ? ` #${escapeHtml(seriesIndex)}` : ""}</span>` : ""}
-        </div>
-        <div class="muted sessions-row__detail">
-          ${name ? `<span>Session: ${escapeHtml(name)} · </span>` : ""}
-          <em class="sessions-row__id">${escapeHtml(sessionId)}</em>
-        </div>
-        <div class="muted sessions-row__detail">
-          <span>${completedAt ? `Closed: ${escapeHtml(completedAt)}` : `Updated: ${escapeHtml(updatedAt)}`}</span>
-          <span> · Started: ${escapeHtml(startedAt)}</span>
-        </div>
-        <div class="muted sessions-row__detail">
-          <span>Annotations: ${escapeHtml(annotationCount)}</span>
-          <span> · Progression: ${escapeHtml(progressionText)}</span>
-        </div>
-      </div>
-      <div class="sessions-row__actions">
-        <div class="muted sessions-row__state">${session && session.is_active ? "Active" : "Closed"}</div>
-        <a class="button" href="${escapeHtml(marginaliaHref)}">View session marginalia</a>
-        <a class="button" href="${escapeHtml(bookSessionsHref)}">View book sessions</a>
-      </div>
-    </div>
-  `.trim();
+  const card = el("a", "card sessions-row sessions-card");
+  card.href = marginaliaHref;
+  card.setAttribute(
+    "aria-label",
+    `Open session marginalia: ${sessionCardTitle(session, bookTitle)}`
+  );
+
+  const cover = el("div", "sessions-cover");
+  cover.dataset.coverUrl = coverUrl;
+  cover.dataset.coverTitle = bookTitle;
+  cover.setAttribute("aria-hidden", "true");
+  card.appendChild(cover);
+
+  const main = el("div", "sessions-row__main");
+  main.appendChild(el("div", "sessions-card__title", sessionCardTitle(session, bookTitle)));
+
+  const bookMeta = el("div", "muted sessions-card__metadata");
+  appendSeparatedParts(bookMeta, [bookTitle, authors.join(", "), seriesLabel(book)]);
+  main.appendChild(bookMeta);
+  main.appendChild(el("div", "muted sessions-row__id", sessionId));
+
+  const dates = el("div", "muted sessions-card__metadata");
+  appendSeparatedParts(dates, [
+    startedAt ? `Started: ${startedAt}` : "",
+    completedAt ? `Closed: ${completedAt}` : updatedAt ? `Updated: ${updatedAt}` : "",
+  ]);
+  main.appendChild(dates);
+
+  const stats = el("div", "muted sessions-card__metadata");
+  appendSeparatedParts(stats, [
+    `Annotations: ${annotationCount}`,
+    `Progression: ${progressionText}`,
+  ]);
+  main.appendChild(stats);
+  card.appendChild(main);
+
+  const trailing = el("div", "sessions-card__trailing");
+  trailing.appendChild(
+    el("span", "pill sessions-card__status", session && session.is_active ? "Active" : "Closed")
+  );
+  const openIcon = el("span", "material-symbols-outlined sessions-card__open-icon", "open_in_new");
+  openIcon.setAttribute("aria-hidden", "true");
+  openIcon.setAttribute("title", "Open session marginalia");
+  trailing.appendChild(openIcon);
+  trailing.appendChild(el("span", "sr-only", "Open session marginalia"));
+  card.appendChild(trailing);
+
+  return card;
 }
 
 function contextBook(payload) {
@@ -133,14 +180,23 @@ function contextBook(payload) {
   return context && context.book && typeof context.book === "object" ? context.book : null;
 }
 
-function renderResults(payload, results, state) {
-  if (results.length) return results.map(renderSessionCard).join("");
-
-  const book = contextBook(payload);
-  if (state.book && book && book.title) {
-    return `<div class="muted" id="reading-sessions-all-empty">No reading sessions for ${escapeHtml(book.title)} yet.</div>`;
+function renderResults(container, payload, results, state) {
+  container.replaceChildren();
+  if (results.length) {
+    const fragment = document.createDocumentFragment();
+    results.forEach((session) => fragment.appendChild(renderSessionCard(session)));
+    container.appendChild(fragment);
+    return;
   }
-  return '<div class="muted" id="reading-sessions-all-empty">No reading sessions yet.</div>';
+
+  const empty = el("div", "muted");
+  empty.id = "reading-sessions-all-empty";
+  const book = contextBook(payload);
+  empty.textContent =
+    state.book && book && book.title
+      ? `No reading sessions for ${String(book.title)} yet.`
+      : "No reading sessions yet.";
+  container.appendChild(empty);
 }
 
 export async function initReadingSessions() {
@@ -189,7 +245,7 @@ export async function initReadingSessions() {
   async function load(url) {
     root.setAttribute("aria-busy", "true");
     setStatus(statusEl, "Loading sessions...", false);
-    resultsEl.innerHTML = "";
+    resultsEl.replaceChildren();
     prevBtn.disabled = true;
     nextBtn.disabled = true;
 
@@ -201,7 +257,7 @@ export async function initReadingSessions() {
       subtitleEl.textContent =
         state.book && book && book.title ? `Reading sessions for ${String(book.title)}` : "";
       visible(subtitleEl, !!subtitleEl.textContent);
-      resultsEl.innerHTML = renderResults(payload, results, state);
+      renderResults(resultsEl, payload, results, state);
       mountCovers(resultsEl);
 
       nextUrl = payload && payload.next ? String(payload.next) : null;
@@ -213,7 +269,8 @@ export async function initReadingSessions() {
       setStatus(statusEl, count ? `Showing ${results.length} of ${count} sessions.` : "", false);
     } catch (error) {
       console.error("Failed to load reading sessions", { url, error });
-      resultsEl.innerHTML = '<div class="muted error">Could not load reading sessions.</div>';
+      const errorEl = el("div", "muted error", "Could not load reading sessions.");
+      resultsEl.replaceChildren(errorEl);
       subtitleEl.textContent = "";
       visible(subtitleEl, false);
       setStatus(statusEl, "Error loading sessions.", true);

@@ -194,7 +194,7 @@ Behavior:
 - Shelf list/detail/edit views place shelf ownership in the first metadata segment:
   - user-owned shelves show the Material Symbols `person` icon followed by `First Last <@username>` when a first or last name exists, falling back to `<@username>` without an empty gap
   - group-owned shelves show the Material Symbols `groups` icon followed by the group name
-  - visibility and item count follow with `·` separators, such as `person Owen Benji <@owner> · Private · 17 items` or `groups Public · Private · 6 items`
+  - visibility and item count follow with separators, such as `person Owen Benji <@owner> - Private - 17 items` or `groups Public - Private - 6 items`
   - `profile_id` is used for identity comparison only and is not displayed
 - Book detail and book edit pages surface shelf context (shelves containing the book).
 - Group pages include shelf tabs for group-owned shelves.
