@@ -1,34 +1,96 @@
 from __future__ import annotations
 
+from functools import wraps
+
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.http import HttpResponseForbidden
 from django.http import Http404
 from django.shortcuts import redirect, render
 
 from accounts import client_api
+from accounts.bootstrap import (
+    SetupAlreadyComplete,
+    create_first_owner,
+    has_active_owner,
+)
+from accounts.forms import FirstOwnerSetupForm
 from core import policies
 from library.models import Book
 from reading.services import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
 
 
+def product_login_required(view_func):
+    login_view = login_required(view_func)
+
+    @wraps(view_func)
+    def wrapped(request: HttpRequest, *args, **kwargs):
+        if not has_active_owner():
+            return redirect("web:setup")
+        return login_view(request, *args, **kwargs)
+
+    return wrapped
+
+
 def index(request: HttpRequest) -> HttpResponse:
+    if not has_active_owner():
+        return redirect("web:setup")
     return redirect("/app/")
 
 
-@login_required
+def login(request: HttpRequest) -> HttpResponse:
+    if not has_active_owner():
+        return redirect("web:setup")
+    return auth_views.LoginView.as_view(
+        template_name="rest_framework/login.html"
+    )(request)
+
+
+def setup(request: HttpRequest) -> HttpResponse:
+    if has_active_owner():
+        return redirect("login")
+
+    form = FirstOwnerSetupForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            create_first_owner(
+                username=form.cleaned_data["username"],
+                first_name=form.cleaned_data.get("first_name", ""),
+                last_name=form.cleaned_data.get("last_name", ""),
+                email=form.cleaned_data.get("email", ""),
+                password=form.cleaned_data["password1"],
+            )
+        except SetupAlreadyComplete:
+            return redirect("login")
+        except ValidationError as exc:
+            if hasattr(exc, "error_dict"):
+                for field, errors in exc.error_dict.items():
+                    target = field if field in form.fields else None
+                    for error in errors:
+                        form.add_error(target, error)
+            else:
+                form.add_error(None, exc)
+        else:
+            return redirect("login")
+
+    return render(request, "web/setup.html", {"form": form})
+
+
+@product_login_required
 def app_dashboard(request: HttpRequest) -> HttpResponse:
     return render(request, "web/dashboard/app.html")
 
 
-@login_required
+@product_login_required
 def reading_sessions(request: HttpRequest) -> HttpResponse:
     sessions = list_sessions_for_user(user=request.user)
     return render(request, "web/reading/sessions.html", {"sessions": sessions})
 
 
-@login_required
+@product_login_required
 def reading_export(request: HttpRequest) -> HttpResponse:
     rows_by_book: dict[str, dict] = {}
     for row in list_sessions_for_user(user=request.user):
@@ -54,12 +116,12 @@ def reading_export(request: HttpRequest) -> HttpResponse:
     return render(request, "web/reading/export.html", {"books": books})
 
 
-@login_required
+@product_login_required
 def reading_import(request: HttpRequest) -> HttpResponse:
     return render(request, "web/reading/import.html")
 
 
-@login_required
+@product_login_required
 def reading_session_marginalia(
     request: HttpRequest, book_id: str, session_id: str
 ) -> HttpResponse:
@@ -82,7 +144,7 @@ def reading_session_marginalia(
     )
 
 
-@login_required
+@product_login_required
 def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpResponse:
     book = (
         Book.objects.select_related("series")
@@ -104,92 +166,92 @@ def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpR
         {"book": book, "sessions": sessions, "recent_session_id": recent_session_id},
     )
 
-@login_required
+@product_login_required
 def library_browse(request: HttpRequest) -> HttpResponse:
     return render(request, "web/library/library.html")
 
 
-@login_required
+@product_login_required
 def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
     return render(request, "web/library/book_detail.html", {"book_id": book_id})
 
 
-@login_required
+@product_login_required
 def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
     return render(request, "web/library/book_edit.html", {"book_id": book_id})
 
 
-@login_required
+@product_login_required
 def imports(request: HttpRequest) -> HttpResponse:
     return render(request, "web/imports/imports.html")
 
 
-@login_required
+@product_login_required
 def groups(request: HttpRequest) -> HttpResponse:
     return render(request, "web/groups/groups.html")
 
 
-@login_required
+@product_login_required
 def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
     return render(request, "web/groups/detail.html", {"group_id": group_id})
 
 
-@login_required
+@product_login_required
 def group_new(request: HttpRequest) -> HttpResponse:
     return render(request, "web/groups/new.html")
 
 
-@login_required
+@product_login_required
 def group_edit(request: HttpRequest, group_id: str) -> HttpResponse:
     return render(request, "web/groups/edit.html", {"group_id": group_id})
 
 
-@login_required
+@product_login_required
 def users(request: HttpRequest) -> HttpResponse:
     return render(request, "web/users/users.html")
 
 
-@login_required
+@product_login_required
 def user_new(request: HttpRequest) -> HttpResponse:
     return render(request, "web/users/new.html")
 
 
-@login_required
+@product_login_required
 def user_edit(request: HttpRequest, user_id: str) -> HttpResponse:
     return render(request, "web/users/edit.html", {"user_id": user_id})
 
 
-@login_required
+@product_login_required
 def shelves(request: HttpRequest) -> HttpResponse:
     return render(request, "web/shelves/shelves.html")
 
 
-@login_required
+@product_login_required
 def shelf_new(request: HttpRequest) -> HttpResponse:
     return render(request, "web/shelves/new.html")
 
 
-@login_required
+@product_login_required
 def shelf_detail(request: HttpRequest, shelf_id: str) -> HttpResponse:
     return render(request, "web/shelves/detail.html", {"shelf_id": shelf_id})
 
 
-@login_required
+@product_login_required
 def shelf_edit(request: HttpRequest, shelf_id: str) -> HttpResponse:
     return render(request, "web/shelves/edit.html", {"shelf_id": shelf_id})
 
 
-@login_required
+@product_login_required
 def profile(request: HttpRequest) -> HttpResponse:
     return render(request, "web/profile/profile.html")
 
 
-@login_required
+@product_login_required
 def profile_password(request: HttpRequest) -> HttpResponse:
     return render(request, "web/profile/password.html")
 
 
-@login_required
+@product_login_required
 def client_api_authorize(request: HttpRequest) -> HttpResponse:
     code = str(request.GET.get("code") or "").strip()
     client_name = ""
@@ -279,7 +341,7 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
     )
 
 
-@login_required
+@product_login_required
 def server_settings(request: HttpRequest) -> HttpResponse:
     if not policies.is_owner(getattr(request, "user", None)):
         return HttpResponseForbidden("Not allowed.")

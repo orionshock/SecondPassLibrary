@@ -16,8 +16,82 @@ from tests.utils.books import create_file_backed_book
 User = get_user_model()
 
 
+class FirstRunProductUiTests(TestCase):
+    setup_data = {
+        "username": "owner",
+        "first_name": "Ada",
+        "last_name": "Lovelace",
+        "email": "",
+        "password1": "Correct-Horse-Battery-47",
+        "password2": "Correct-Horse-Battery-47",
+    }
+
+    def test_setup_page_is_available_without_active_owner(self):
+        response = self.client.get("/setup/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Set up SecondPassLibrary")
+        self.assertContains(response, "Create the first Owner account")
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="first_name"')
+        self.assertContains(response, 'name="last_name"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="password1"')
+        self.assertContains(response, 'name="password2"')
+
+    def test_root_app_and_login_direct_to_setup_without_active_owner(self):
+        for path in ("/", "/app/", "/api-auth/login/"):
+            with self.subTest(path=path):
+                response = self.client.get(path, follow=False)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response["Location"], "/setup/")
+
+    def test_successful_setup_redirects_to_login_and_login_works(self):
+        response = self.client.post("/setup/", self.setup_data, follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/")
+
+        login_response = self.client.post(
+            "/api-auth/login/",
+            {
+                "username": "owner",
+                "password": "Correct-Horse-Battery-47",
+                "next": "/app/",
+            },
+            follow=False,
+        )
+        self.assertEqual(login_response.status_code, 302)
+        self.assertEqual(login_response["Location"], "/app/")
+
+    def test_setup_redirects_to_login_after_completion(self):
+        User.objects.create_superuser(username="owner", password="pw")
+        response = self.client.get("/setup/", follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/")
+
+    def test_second_setup_post_does_not_create_another_owner(self):
+        first = self.client.post("/setup/", self.setup_data, follow=False)
+        self.assertEqual(first.status_code, 302)
+
+        second_data = {
+            **self.setup_data,
+            "username": "owner-two",
+            "password1": "Another-Correct-Password-48",
+            "password2": "Another-Correct-Password-48",
+        }
+        second = self.client.post("/setup/", second_data, follow=False)
+
+        self.assertEqual(second.status_code, 302)
+        self.assertEqual(second["Location"], "/api-auth/login/")
+        self.assertEqual(User.objects.filter(is_superuser=True).count(), 1)
+
+
 class ProductUiSmokeTests(TestCase):
     def setUp(self):
+        self.bootstrap_owner = User.objects.create_superuser(
+            username="bootstrap-owner",
+            email="bootstrap-owner@example.com",
+            password="pw",
+        )
         self.user = User.objects.create_user(
             username="u", email="u@example.com", password="pw"
         )

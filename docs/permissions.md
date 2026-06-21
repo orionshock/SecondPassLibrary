@@ -24,6 +24,9 @@ Global roles live on `UserProfile.role`:
 - Owner can do everything.
 - Only Owner can promote users to Manager or demote existing Managers.
 - Owner may use Django admin/service hatches for recovery.
+- The first-run setup page creates the initial active superuser and an
+  associated Manager `UserProfile`; it does not add an `owner` profile role.
+- The setup page is unavailable once any active superuser exists.
 
 ### Manager
 
@@ -188,6 +191,8 @@ Public is special.
 Default/fallback behavior:
 
 - Public is the default group in simple mode.
+- First-run Owner setup creates/repairs Public and adds the Owner as a reader
+  member.
 - New users default to Public (reader membership).
 - New/imported books default to Public (book assignment).
 - Users/books must belong to at least one LibraryGroup.

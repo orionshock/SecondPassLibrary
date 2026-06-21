@@ -80,6 +80,12 @@ The Product UI exposes basic session controls inside the **Profile** page:
 - "Log out other web sessions" (revoke other Django web sessions; keeps the current session)
 - Client API sessions list + revoke (UserClientSession)
 
+On a fresh install with no active Owner, Product UI entry points and the login
+page direct to `/setup/`. Successful setup creates the local Owner account and
+then returns the operator to the existing Django login flow. Setup does not
+create a login session automatically and does not introduce email/SMTP
+requirements.
+
 ## Non-goals
 
 - No MFA

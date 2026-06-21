@@ -30,7 +30,10 @@ Implementation note: the product UI lives in the dedicated Django app `web` (not
 
 UI JavaScript is split into page-focused vanilla ES modules under `web/static/web/js/` and loaded via a single `<script type="module">` entrypoint (`web/static/web/js/main.js`). There is no frontend build step.
 
-Authentication for product UI pages is currently delegated to DRF's built-in login at `/api-auth/login/` (custom login is intentionally deferred).
+Fresh installs first use the server-rendered `/setup/` page to create the
+initial Owner account. Setup is available only while no active Django
+superuser exists. After setup, authentication for Product UI pages continues
+to use the existing login at `/api-auth/login/`.
 
 Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logout/`.
 

@@ -17,6 +17,12 @@ User = get_user_model()
 
 
 class ClientApiPhase1Tests(APITestCase):
+    def setUp(self):
+        self.bootstrap_owner = User.objects.create_superuser(
+            username="bootstrap-owner",
+            password="pw",
+        )
+
     def test_create_login_request_is_anonymous_and_stores_only_hash(self):
         r = cast(
             Any,

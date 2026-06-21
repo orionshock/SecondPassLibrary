@@ -24,6 +24,7 @@ from django.views.generic.base import RedirectView
 from django.views.static import serve as static_serve
 
 from core.views import secondpass_well_known
+from web import views as web_views
 
 urlpatterns = [
     path(".well-known/secondpass", secondpass_well_known, name="secondpass_well_known"),
@@ -34,6 +35,7 @@ urlpatterns = [
     ),
     # Product UI (Django templates; capability-driven client-side nav)
     path("", include(("web.urls", "web"), namespace="web")),
+    path("api-auth/login/", web_views.login, name="login"),
     path("admin/", admin.site.urls),
     # API v1 (versioned, REST/JSON)
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),

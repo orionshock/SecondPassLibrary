@@ -30,17 +30,17 @@ Optional: copy `.env.example` to `.env` and set environment variables for your s
 python manage.py migrate
 ```
 
-## Create superuser
-
-```powershell
-python manage.py createsuperuser
-```
-
 ## Run server
 
 ```powershell
 python manage.py runserver
 ```
+
+On a fresh database, open `/` and complete the first-run setup page. The setup
+page creates the first active Owner account with a local password, creates its
+`UserProfile`, and ensures the protected Public group and membership exist.
+Email is optional metadata. Once an active Owner exists, `/setup/` is disabled
+and normal login at `/api-auth/login/` is used.
 
 ## Standalone reader dev (React)
 
@@ -66,7 +66,9 @@ This supports standalone reader clients from arbitrary origins. Cross-origin coo
 - Create user: `/users/new/` (Manager/Owner; temporary password shown once)
 - Edit user: `/users/<user_id>/edit/` (Manager/Owner)
 
-If you are not authenticated, these pages redirect to `/api-auth/login/?next=...`.
+Before first-run setup is complete, unauthenticated Product UI routes direct to
+`/setup/`. After setup, unauthenticated pages redirect to
+`/api-auth/login/?next=...` as usual.
 
 Logout is POST-based via `/api-auth/logout/` (no GET logout links in the product UI).
 
@@ -104,7 +106,7 @@ Test helpers:
 
 ## Dev seed users (local only)
 
-Create predictable development users/groups for manual UI testing:
+Create predictable development/demo users and groups for manual UI testing:
 
 ```powershell
 python manage.py seed_dev_users
@@ -118,6 +120,8 @@ Credentials (DEV ONLY):
 Safety:
 
 - The command refuses to run unless `DEBUG=True` (use `--force` only for local development).
+- This command is not the normal installation bootstrap path. Fresh installs
+  should use the first-run setup page.
 
 ## Common commands
 

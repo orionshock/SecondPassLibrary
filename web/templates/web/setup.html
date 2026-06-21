@@ -1,0 +1,48 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Set up SecondPassLibrary</title>
+    <link rel="icon" href="{% static 'web/favicon.png' %}" type="image/png" />
+    <link rel="stylesheet" href="{% static 'web/app.css' %}" />
+  </head>
+  <body class="setup-page">
+    <main class="setup-shell">
+      <section class="card setup-card">
+        <div class="setup-brand">
+          <img class="brand__icon" src="{% static 'web/favicon.png' %}" alt="" aria-hidden="true" />
+          <span>{{ server_name }}</span>
+        </div>
+        <h1 class="page-title">Set up SecondPassLibrary</h1>
+        <p class="muted">Create the first Owner account for this server.</p>
+
+        <form method="post" class="form setup-form">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="error" role="alert">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          {% for field in form %}
+            <div class="setup-field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <div class="muted setup-help">{{ field.help_text|safe }}</div>
+              {% endif %}
+              {% if field.errors %}
+                <div class="error" role="alert">{{ field.errors }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+
+          <div class="form-actions">
+            <button class="button" type="submit">Create Owner account</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

@@ -6,6 +6,7 @@ app_name = "web"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("setup/", views.setup, name="setup"),
     path("app/", views.app_dashboard, name="app"),
 
     # Canonical reading session routes (sessions-first).

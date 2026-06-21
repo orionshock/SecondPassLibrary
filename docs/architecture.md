@@ -56,6 +56,24 @@ Position:
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
 - Email verification, password reset flows, MFA, and invite systems are not implemented yet.
 
+### First-run bootstrap
+
+The normal fresh-install bootstrap path is the server-rendered Product UI at
+`/setup/`. It is available only while no active Django superuser exists. Owner
+authority remains represented by Django `is_superuser`; the associated
+`UserProfile` uses the existing Manager app role rather than introducing a
+separate Owner role.
+
+Owner creation is performed by `accounts.bootstrap.create_first_owner()` inside
+a transaction. The service checks the active-owner condition again immediately
+before creation, sets a usable local password, and ensures the protected Public
+group and reader membership exist. Email is optional metadata and no email,
+invite, or SMTP flow is involved.
+
+After an active Owner exists, `/setup/` redirects to normal login and cannot be
+used to create additional Owners. `seed_dev_users` remains a local
+development/demo convenience and is not an installation bootstrap mechanism.
+
 API endpoints under `/api/v1/` require authentication unless an endpoint explicitly documents otherwise.
 
 ### Account and security posture

@@ -420,6 +420,43 @@ input[type="file"]:disabled::file-selector-button {
 }
 .form-control--textarea { resize: vertical; min-height: 92px; }
 
+.setup-page {
+  padding-top: 0;
+}
+.setup-shell {
+  width: min(520px, 100%);
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+.setup-card {
+  padding: 22px;
+}
+.setup-brand {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+}
+.setup-form {
+  display: grid;
+  gap: 14px;
+}
+.setup-field {
+  display: grid;
+  gap: 6px;
+}
+.setup-field input {
+  width: 100%;
+}
+.setup-help {
+  font-size: 12px;
+}
+.setup-help ul,
+.setup-field .error ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
 .button {
   padding: 8px 10px;
   border-radius: 10px;
