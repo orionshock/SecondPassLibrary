@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import UserProfile
@@ -119,6 +120,13 @@ class Command(BaseCommand):
             self.style.WARNING(
                 "WARNING: This command is for local development only. It creates predictable users with a known password."
             )
+        )
+
+        self.stdout.write("Applying pending database migrations...")
+        call_command(
+            "migrate",
+            interactive=False,
+            verbosity=int(options.get("verbosity", 1)),
         )
 
         public = get_public_group()

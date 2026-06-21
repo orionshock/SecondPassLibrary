@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -16,8 +18,27 @@ User = get_user_model()
 class SeedDevUsersCommandTests(TestCase):
     @override_settings(DEBUG=False)
     def test_refuses_when_debug_false(self):
-        with self.assertRaises(CommandError):
-            call_command("seed_dev_users")
+        with patch(
+            "accounts.management.commands.seed_dev_users.call_command"
+        ) as migrate_command:
+            with self.assertRaises(CommandError):
+                call_command("seed_dev_users")
+
+        migrate_command.assert_not_called()
+
+    @override_settings(DEBUG=True)
+    def test_applies_migrations_before_seeding(self):
+        with patch(
+            "accounts.management.commands.seed_dev_users.call_command",
+            wraps=call_command,
+        ) as migrate_command:
+            call_command("seed_dev_users", verbosity=0)
+
+        migrate_command.assert_called_once_with(
+            "migrate",
+            interactive=False,
+            verbosity=0,
+        )
 
     @override_settings(DEBUG=True)
     def test_idempotent_creates_expected_users_groups_and_memberships(self):
