@@ -63,6 +63,10 @@ Runtime and user data live under `userdata/`:
 
 EPUB files are stored by SHA-256 checksum for deduplication. Human-readable filenames are derived from book metadata when files are downloaded or exported.
 
+Production startup collects Product UI assets into `userdata/static/`, which
+WhiteNoise serves under `/static/`. WhiteNoise does not serve `userdata/media/`,
+books, covers, imports, exports, marginalia, or other protected user data.
+
 ## Import And Export
 
 Imports currently support:

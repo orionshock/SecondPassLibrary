@@ -20,7 +20,9 @@ Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/
 
 In local development (`DEBUG=True`), Django serves `MEDIA_ROOT` at `MEDIA_URL` so cover images render in the product UI.
 
-Production deployments should serve `MEDIA_ROOT` at `MEDIA_URL` via the front-end web server/reverse proxy/static file layer (Django should not serve media in production).
+Production deployments must handle `MEDIA_ROOT` separately from WhiteNoise.
+WhiteNoise serves packaged Product UI assets under `/static/` only; it does not
+serve books, covers, imports, exports, marginalia, or other user data.
 
 Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
 

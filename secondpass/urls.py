@@ -19,18 +19,23 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.conf import settings
 from django.http import Http404
+from django.shortcuts import redirect
 from django.templatetags.static import static
-from django.views.generic.base import RedirectView
 from django.views.static import serve as static_serve
 
 from core.views import secondpass_well_known
 from web import views as web_views
 
+
+def favicon(request):
+    return redirect(static("web/favicon.png"), permanent=True)
+
+
 urlpatterns = [
     path(".well-known/secondpass", secondpass_well_known, name="secondpass_well_known"),
     path(
         "favicon.ico",
-        RedirectView.as_view(url=static("web/favicon.png"), permanent=True),
+        favicon,
         name="favicon",
     ),
     # Product UI (Django templates; capability-driven client-side nav)

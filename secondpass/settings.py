@@ -34,6 +34,12 @@ def _env_csv(name: str, default: list[str]) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _staticfiles_backend(*, debug: bool) -> str:
+    if debug:
+        return "django.contrib.staticfiles.storage.StaticFilesStorage"
+    return "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
 # User data directory for runtime data
 USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
 
@@ -84,6 +90,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -182,6 +189,14 @@ REST_FRAMEWORK = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = USERDATA_DIR / "static"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": _staticfiles_backend(debug=DEBUG),
+    },
+}
 
 # Product UI pages reuse DRF's built-in login views.
 LOGIN_URL = "/api-auth/login/"

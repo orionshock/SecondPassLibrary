@@ -27,9 +27,19 @@ Environment variables:
 - `WEB_CONCURRENCY`: Gunicorn worker count, default `2`
 - `GUNICORN_CONFIG`: optional Gunicorn configuration file
 
-Static files collected under `STATIC_ROOT` and media under `MEDIA_ROOT` must be
-served by the deployment's web server, reverse proxy, or static/media layer.
-Gunicorn does not serve them.
+WhiteNoise serves only application assets under `/static/` from the collected
+`STATIC_ROOT`: Product UI CSS, JavaScript, icons, favicon assets, and other
+packaged static files. WhiteNoise runs inside the Django/Gunicorn application,
+so a separate static-file web server is not required for these assets.
+Production (`DEBUG=False`) uses compressed manifest storage for hashed,
+cacheable filenames. Development keeps Django's normal `runserver` static-file
+behavior and does not require `collectstatic`.
+
+WhiteNoise does not serve `MEDIA_ROOT` or any user/library data. Books, EPUB
+files, covers, imports, exports, or marginalia continue to use their existing
+storage and authenticated Django/API paths. Do not point WhiteNoise at
+`userdata/media/`, `userdata/imports/`, or any directory containing protected
+content.
 
 After the first startup, visit `/`. With a migrated database and no active
 Django superuser, `/`, Product UI routes, and login direct to `/setup/`.
