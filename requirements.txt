@@ -4,3 +4,4 @@ EbookLib==0.20
 django-cors-headers==4.9.0
 Pillow==12.2.0
 jsonschema==4.25.1
+gunicorn==23.0.0

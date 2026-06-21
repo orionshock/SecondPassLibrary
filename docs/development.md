@@ -24,27 +24,33 @@ Production deployments should serve `MEDIA_ROOT` at `MEDIA_URL` via the front-en
 
 Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
 
-## Migrate
-
-```powershell
-python manage.py migrate
-```
-
 ## Run server
 
+Windows:
+
 ```powershell
-python manage.py devserver
+.\scripts\start-dev.ps1
 ```
 
-`devserver` is the normal local development startup command. It refuses to run
-when `DEBUG=False` unless `--force` is supplied, applies pending migrations
-with `migrate --noinput`, and then delegates to Django's development server.
+POSIX:
+
+```sh
+sh scripts/start-dev.sh
+```
+
+Both scripts run `python manage.py migrate --noinput` and only then start
+Django's development server. Set `PYTHON` to override the Python executable.
+Additional arguments are passed through to `runserver`, for example:
+
+```powershell
+.\scripts\start-dev.ps1 127.0.0.1:8080 --noreload
+```
 
 For a clean local reset:
 
 1. Stop the server.
 2. Delete `userdata/` if the database and all local runtime/user data may be discarded.
-3. Run `python manage.py devserver`.
+3. Run the development startup script for the operating system.
 4. Visit `/`.
 5. Complete the first-run setup wizard.
 
@@ -57,6 +63,9 @@ Raw `python manage.py runserver` remains available, but it does not create or
 migrate the database schema. If using raw `runserver`, run
 `python manage.py migrate --noinput` first. The setup wizard assumes migrations
 already exist; it does not create database tables during an HTTP request.
+
+The setup wizard is not development-only. The same migrated-database/no-active-
+Owner condition is used in production. See `docs/deployment.md`.
 
 ## Standalone reader dev (React)
 

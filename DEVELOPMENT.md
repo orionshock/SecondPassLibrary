@@ -13,9 +13,10 @@ Developer documentation has moved under `docs/`:
 Common commands:
 
 ```powershell
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py devserver
+.\scripts\start-dev.ps1
 python manage.py check
 python manage.py test
 ```
+
+The startup script applies migrations before `runserver`. The first-run setup
+wizard creates the initial Owner account after the schema exists.

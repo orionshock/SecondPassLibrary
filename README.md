@@ -88,6 +88,7 @@ Useful docs:
 
 - [Project overview](PROJECT.md)
 - [Development setup](docs/development.md)
+- [Production startup](docs/deployment.md)
 - [Architecture](docs/architecture.md)
 - [API index](docs/api.md)
 - [Imports](docs/imports.md)
@@ -100,9 +101,11 @@ Useful docs:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py devserver
+.\scripts\start-dev.ps1
 ```
+
+The startup script applies migrations before starting Django. Visit `/` and
+complete the first-run setup wizard to create the initial Owner account.
+On POSIX systems, use `sh scripts/start-dev.sh`.
 
 Development-only test dependencies live in `requirements-dev.txt`.

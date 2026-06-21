@@ -73,6 +73,8 @@ invite, or SMTP flow is involved.
 After an active Owner exists, `/setup/` redirects to normal login and cannot be
 used to create additional Owners. `seed_dev_users` remains a local
 development/demo convenience and is not an installation bootstrap mechanism.
+Development and production startup wrappers apply migrations before starting
+the web server; the setup view itself never creates or migrates schema.
 
 API endpoints under `/api/v1/` require authentication unless an endpoint explicitly documents otherwise.
 
