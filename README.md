@@ -102,7 +102,7 @@ python -m venv .venv
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver
+python manage.py devserver
 ```
 
 Development-only test dependencies live in `requirements-dev.txt`.

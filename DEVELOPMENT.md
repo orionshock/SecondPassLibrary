@@ -15,7 +15,7 @@ Common commands:
 ```powershell
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver
+python manage.py devserver
 python manage.py check
 python manage.py test
 ```

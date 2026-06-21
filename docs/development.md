@@ -33,14 +33,30 @@ python manage.py migrate
 ## Run server
 
 ```powershell
-python manage.py runserver
+python manage.py devserver
 ```
 
-On a fresh database, open `/` and complete the first-run setup page. The setup
-page creates the first active Owner account with a local password, creates its
-`UserProfile`, and ensures the protected Public group and membership exist.
-Email is optional metadata. Once an active Owner exists, `/setup/` is disabled
-and normal login at `/api-auth/login/` is used.
+`devserver` is the normal local development startup command. It refuses to run
+when `DEBUG=False` unless `--force` is supplied, applies pending migrations
+with `migrate --noinput`, and then delegates to Django's development server.
+
+For a clean local reset:
+
+1. Stop the server.
+2. Delete `userdata/` if the database and all local runtime/user data may be discarded.
+3. Run `python manage.py devserver`.
+4. Visit `/`.
+5. Complete the first-run setup wizard.
+
+The setup page creates the first active Owner account with a local password,
+creates its `UserProfile`, and ensures the protected Public group and
+membership exist. Email is optional metadata. Once an active Owner exists,
+`/setup/` is disabled and normal login at `/api-auth/login/` is used.
+
+Raw `python manage.py runserver` remains available, but it does not create or
+migrate the database schema. If using raw `runserver`, run
+`python manage.py migrate --noinput` first. The setup wizard assumes migrations
+already exist; it does not create database tables during an HTTP request.
 
 ## Standalone reader dev (React)
 
