@@ -44,6 +44,14 @@ body {
     "GRAD" 0,
     "opsz" 20;
 }
+.back-link {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.back-link .material-symbols-outlined {
+  font-size: 16px;
+}
 
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -507,12 +515,13 @@ input[type="file"]:disabled::file-selector-button {
 }
 .sessions-card__metadata {
   display: flex;
-  gap: 6px;
   align-items: baseline;
   flex-wrap: wrap;
   margin-top: 6px;
 }
-.sessions-card__separator {
+.metadata-piece + .metadata-piece::before {
+  content: "\2022";
+  margin: 0 6px;
   color: rgba(255, 255, 255, 0.35);
 }
 .sessions-card__trailing {
@@ -725,8 +734,10 @@ input[type="file"]:disabled::file-selector-button {
   align-items: center;
   vertical-align: middle;
 }
-.shelf-meta-separator {
+.shelf-metadata-piece + .shelf-metadata-piece::before {
+  content: "\2022";
   margin: 0 7px;
+  color: var(--muted);
 }
 
 /* =====================

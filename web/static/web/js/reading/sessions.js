@@ -82,9 +82,8 @@ function appendSeparatedParts(container, parts) {
     .map((part) => String(part).trim())
     .filter(Boolean);
 
-  values.forEach((part, index) => {
-    if (index > 0) container.appendChild(el("span", "sessions-card__separator", "\u2022"));
-    container.appendChild(el("span", "", part));
+  values.forEach((part) => {
+    container.appendChild(el("span", "metadata-piece", part));
   });
 }
 
@@ -120,7 +119,7 @@ function renderSessionCard(session) {
   const progressionText =
     progression != null && Number.isFinite(progression)
       ? `${Math.round(progression * 1000) / 10}%`
-      : "\u2014";
+      : "Not available";
   const marginaliaHref =
     `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`;
 

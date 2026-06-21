@@ -23,7 +23,7 @@ function renderBooks(payload) {
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const series = b.series && b.series.name ? b.series.name : "";
       const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
-      const seriesLine = series ? `${series}${seriesIndex ? " \u00b7 " + seriesIndex : ""}` : "";
+      const seriesLine = series ? `${series}${seriesIndex ? ` ${seriesIndex}` : ""}` : "";
       const language = b.language || "";
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
 

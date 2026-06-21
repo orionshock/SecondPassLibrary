@@ -126,6 +126,50 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('<header class="topbar">', base_template)
         self.assertIn('<div class="container topbar__inner">', base_template)
 
+    def test_product_ui_avoids_legacy_decorative_entities(self):
+        source_paths = [
+            *Path("web/templates/web").rglob("*.html"),
+            *Path("web/static/web/js").rglob("*.js"),
+        ]
+        sources = {
+            str(path): path.read_text(encoding="utf-8")
+            for path in source_paths
+        }
+        forbidden = (
+            "&middot;",
+            "&larr;",
+            "&rarr;",
+            "&mdash;",
+            "&ndash;",
+            "\u00c2\u00b7",
+            "\u00b7",
+            "\u2190",
+            "\u2192",
+            "\u2014",
+            "\u2013",
+        )
+
+        for path, text in sources.items():
+            for token in forbidden:
+                self.assertNotIn(token, text, msg=f"{token!r} remains in {path}")
+
+        template_text = "\n".join(
+            text for path, text in sources.items() if path.endswith(".html")
+        )
+        self.assertIn('class="pill back-link"', template_text)
+        self.assertIn(
+            '<span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>',
+            template_text,
+        )
+
+        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
+        self.assertIn(".back-link", css)
+        self.assertIn(".metadata-piece + .metadata-piece::before", css)
+        self.assertIn(
+            ".shelf-metadata-piece + .shelf-metadata-piece::before",
+            css,
+        )
+
     def test_authenticated_app_returns_200_and_title(self):
         self.client.force_login(self.user)
         response = self.client.get("/app/")
@@ -601,7 +645,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("export function renderUserIdentity", identity_js)
         self.assertIn('[firstName, lastName].filter(Boolean).join(" ")', identity_js)
         self.assertIn("`<@${username}>`", identity_js)
-        self.assertIn(r'parts.join(" \u2022 ")', identity_js)
+        self.assertIn('parts.join(", ")', identity_js)
         self.assertIn('"Unknown user"', identity_js)
         self.assertIn("options.includeEmail === true", identity_js)
         self.assertIn("options.includeDisplayName === false", identity_js)
@@ -632,7 +676,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("shelfMetadataLine", shared_js)
         self.assertIn("renderShelfMetadata", shared_js)
         self.assertIn("groups", shared_js)
-        self.assertIn("&middot;", shared_js)
+        self.assertIn("shelf-metadata-piece", shared_js)
+        self.assertNotIn("&middot;", shared_js)
         self.assertNotIn("\u00c2\u00b7", shared_js)
         self.assertIn("profile_id", shared_js)
         self.assertNotIn("Owned by you", shared_js)
@@ -690,7 +735,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".compact-list__item", css)
         self.assertIn(".inline-metadata-row", css)
         self.assertIn(".shelf-owner-identity", css)
-        self.assertIn(".shelf-meta-separator", css)
+        self.assertIn(".shelf-metadata-piece + .shelf-metadata-piece::before", css)
 
     def test_shelves_product_ui_list_uses_visibility_scoped_api(self):
         template = Path("web/templates/web/shelves/shelves.html").read_text(encoding="utf-8")
@@ -1046,6 +1091,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("Reading sessions for ${String(book.title)}", js)
         self.assertIn("sessionCardTitle(session, bookTitle)", js)
         self.assertIn("appendSeparatedParts", js)
+        self.assertIn('el("span", "metadata-piece", part)', js)
         self.assertIn('el("a", "card sessions-row sessions-card")', js)
         self.assertIn('card.setAttribute(', js)
         self.assertIn("`Open session marginalia:", js)
@@ -1061,6 +1107,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('initExportName: "initReadingSessions"', main_js)
         self.assertIn(".sessions-controls .sessions-status-filters", css)
         self.assertIn("border-bottom: 0", css)
+        self.assertIn(".metadata-piece + .metadata-piece::before", css)
 
     def test_authenticated_reading_sessions_all_empty_state(self):
         profile = get_or_create_profile(user=self.user)

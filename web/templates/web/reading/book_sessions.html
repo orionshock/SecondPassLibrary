@@ -7,8 +7,8 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/app/" class="pill">&larr; Back to Dashboard</a>
-      <h1 class="page-title" id="reading-sessions-title">Sessions for &ldquo;{{ book.title|default:"Book"|escape }}&rdquo;</h1>
+      <a href="/app/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Dashboard</span></a>
+      <h1 class="page-title" id="reading-sessions-title">Sessions for {{ book.title|default:"Book"|escape }}</h1>
     </div>
     <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <button class="button" id="reading-sessions-export-selected" type="button" disabled>Export selected</button>
@@ -78,7 +78,7 @@
                 {% if s.progression_percent is not None %}
                   <div>Progression: {{ s.progression_percent|floatformat:1 }}%</div>
                 {% else %}
-                  <div>Progression: &mdash;</div>
+                  <div>Progression: Not available</div>
                 {% endif %}
                 <div>Annotations: {{ s.annotation_count }}</div>
               </div>

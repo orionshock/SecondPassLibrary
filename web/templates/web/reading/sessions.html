@@ -7,7 +7,7 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/app/" class="pill">&larr; Back to Dashboard</a>
+      <a href="/app/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Dashboard</span></a>
       <h1 class="page-title" id="reading-sessions-all-title">Sessions</h1>
       <div class="muted is-hidden" id="reading-sessions-subtitle"></div>
     </div>
@@ -77,20 +77,18 @@
               {{ s.name|default:s.book.title|default:"Book"|escape }}
             </div>
             <div class="muted sessions-card__metadata">
-              <span>{{ s.book.title|default:"Book"|escape }}</span>
-              {% if s.book.authors %}<span class="sessions-card__separator">&bull;</span><span>{{ s.book.authors|join:", "|escape }}</span>{% endif %}
-              {% if s.book.series_name %}<span class="sessions-card__separator">&bull;</span><span>{{ s.book.series_name|escape }}{% if s.book.series_index %} {{ s.book.series_index }}{% endif %}</span>{% endif %}
+              <span class="metadata-piece">{{ s.book.title|default:"Book"|escape }}</span>
+              {% if s.book.authors %}<span class="metadata-piece">{{ s.book.authors|join:", "|escape }}</span>{% endif %}
+              {% if s.book.series_name %}<span class="metadata-piece">{{ s.book.series_name|escape }}{% if s.book.series_index %} {{ s.book.series_index }}{% endif %}</span>{% endif %}
             </div>
             <div class="muted sessions-row__id">{{ s.id|escape }}</div>
             <div class="muted sessions-card__metadata">
-              <span>Started: {{ s.started_at }}</span>
-              <span class="sessions-card__separator">&bull;</span>
-              {% if s.completed_at %}<span>Closed: {{ s.completed_at }}</span>{% else %}<span>Updated: {{ s.updated_at }}</span>{% endif %}
+              <span class="metadata-piece">Started: {{ s.started_at }}</span>
+              {% if s.completed_at %}<span class="metadata-piece">Closed: {{ s.completed_at }}</span>{% else %}<span class="metadata-piece">Updated: {{ s.updated_at }}</span>{% endif %}
             </div>
             <div class="muted sessions-card__metadata">
-              <span>Annotations: {{ s.annotation_count }}</span>
-              <span class="sessions-card__separator">&bull;</span>
-              <span>Progression: {% if s.progression_percent is not None %}{{ s.progression_percent|floatformat:1 }}%{% else %}&mdash;{% endif %}</span>
+              <span class="metadata-piece">Annotations: {{ s.annotation_count }}</span>
+              <span class="metadata-piece">Progression: {% if s.progression_percent is not None %}{{ s.progression_percent|floatformat:1 }}%{% else %}Not available{% endif %}</span>
             </div>
           </div>
 

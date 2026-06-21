@@ -2,13 +2,13 @@
 
 {% block page_id %}book-edit{% endblock %}
 
-{% block title %}Edit book &middot; {{ server_name }}{% endblock %}
+{% block title %}Edit book - {{ server_name }}{% endblock %}
 
 {% block content %}
   <div id="book-edit-header" class="edit-header is-hidden" data-book-id="{{ book_id|escape }}">
     <div class="edit-header__cover" aria-hidden="true">Cover</div>
     <div class="edit-header__main">
-      <a id="book-edit-back" href="/library/books/{{ book_id|escape }}/" class="pill">&larr; Back to Book</a>
+      <a id="book-edit-back" href="/library/books/{{ book_id|escape }}/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Book</span></a>
       <h1 class="edit-header__title" id="book-edit-header-title">Book</h1>
       <div class="edit-header__meta">
         <div id="book-edit-header-authors" class="muted"></div>

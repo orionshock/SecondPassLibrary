@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import os
 from pathlib import Path
 
@@ -97,8 +98,42 @@ def _fix_mojibake(text: str) -> str:
     return candidate.replace("\r\n", "\n").replace("\r", "\n")
 
 
+def _check_repository(repo_root: Path) -> int:
+    scanned = 0
+    failures: list[str] = []
+
+    for path in _iter_text_files(repo_root):
+        scanned += 1
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            failures.append(f"{path}: invalid UTF-8 ({exc})")
+            continue
+
+        if any(marker in text for marker in MOJIBAKE_MARKERS):
+            failures.append(f"{path}: contains mojibake marker")
+
+    if failures:
+        print("\n".join(failures))
+        print(f"Scanned {scanned} files, found {len(failures)} encoding issue(s).")
+        return 1
+
+    print(f"Scanned {scanned} files, found no encoding issues.")
+    return 0
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Audit UTF-8 and mojibake markers without modifying files.",
+    )
+    args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
+    if args.check:
+        return _check_repository(repo_root)
+
     changed = 0
     scanned = 0
 

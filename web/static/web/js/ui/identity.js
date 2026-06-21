@@ -18,7 +18,7 @@ export function userIdentityText(user, options = {}) {
   const handle = userHandle(user);
   const email = includeEmail && user && user.email ? String(user.email).trim() : "";
   const parts = [displayName, handle, email].filter(Boolean);
-  return parts.length ? parts.join(" \u2022 ") : "Unknown user";
+  return parts.length ? parts.join(", ") : "Unknown user";
 }
 
 function appendIdentityPiece(container, className, text) {

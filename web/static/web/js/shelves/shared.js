@@ -51,10 +51,15 @@ function shelfMetadataParts(shelf) {
 
 export function shelfMetadataLine(shelf) {
   const ownerSegment = shelfOwnerIdentitySegment(shelf);
-  const metadataSegments = shelfMetadataParts(shelf).map((part) => escapeHtml(part));
-  return [ownerSegment, ...metadataSegments]
+  const metadataSegments = shelfMetadataParts(shelf).map(
+    (part) => `<span class="shelf-metadata-piece">${escapeHtml(part)}</span>`
+  );
+  const wrappedOwner = ownerSegment
+    ? `<span class="shelf-metadata-piece">${ownerSegment}</span>`
+    : "";
+  return [wrappedOwner, ...metadataSegments]
     .filter(Boolean)
-    .join('<span class="shelf-meta-separator" aria-hidden="true"> &middot; </span>');
+    .join("");
 }
 
 export function renderShelfMetadata(shelf) {
@@ -65,21 +70,15 @@ export function renderShelfMetadata(shelf) {
     ...shelfMetadataParts(shelf),
   ].filter(Boolean);
 
-  segments.forEach((segment, index) => {
-    if (index > 0) {
-      const separator = document.createElement("span");
-      separator.className = "shelf-meta-separator";
-      separator.setAttribute("aria-hidden", "true");
-      separator.textContent = " \u00b7 ";
-      container.appendChild(separator);
-    }
+  segments.forEach((segment) => {
+    const piece = document.createElement("span");
+    piece.className = "shelf-metadata-piece";
     if (typeof segment === "string") {
-      const text = document.createElement("span");
-      text.textContent = segment;
-      container.appendChild(text);
+      piece.textContent = segment;
     } else {
-      container.appendChild(segment);
+      piece.appendChild(segment);
     }
+    container.appendChild(piece);
   });
 
   return container;
