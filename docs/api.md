@@ -249,6 +249,10 @@ List filters:
 - `GET /api/v1/shelves/?owner_group=<group_id>` filters to group-owned shelves for that group (still visibility-scoped to the caller).
 - `GET /api/v1/shelves/?book=<book_id>` filters to shelves containing the given book (still visibility-scoped to the caller).
   - When `?book=<book_id>` is provided, shelf rows include `matched_item_id` (the `ShelfItem.id` for that book on that shelf) to support UI removal without extra item lookups.
+- `scope` accepts only `personal` or `shared`; other supplied values return `400`.
+- `owner_group` and `book` must be valid UUIDs when supplied; malformed values return `400`.
+- `scope=personal` cannot be combined with `owner_group` and returns `400`.
+- `scope=shared` may be combined with `owner_group`.
 
 Shelf payload notes:
 

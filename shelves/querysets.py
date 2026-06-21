@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+from uuid import UUID
+
+from django.db.models import OuterRef, QuerySet, Subquery
+from rest_framework.exceptions import ValidationError
+
+from .models import Shelf, ShelfItem
+from .policies import visible_shelf_filter
+
+
+@dataclass(frozen=True)
+class ShelfListFilters:
+    scope: str | None = None
+    owner_group_id: UUID | None = None
+    book_id: UUID | None = None
+
+
+def _parse_uuid_query_param(query_params, name: str) -> UUID | None:
+    if name not in query_params:
+        return None
+
+    raw_value = str(query_params.get(name) or "").strip()
+    try:
+        return UUID(raw_value)
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValidationError({name: f"Must be a valid UUID."}) from exc
+
+
+def parse_shelf_list_filters(query_params) -> ShelfListFilters:
+    scope: str | None = None
+    if "scope" in query_params:
+        scope = str(query_params.get("scope") or "").strip().lower()
+        if scope not in {"personal", "shared"}:
+            raise ValidationError(
+                {"scope": "Must be one of: personal, shared."}
+            )
+
+    owner_group_id = _parse_uuid_query_param(query_params, "owner_group")
+    book_id = _parse_uuid_query_param(query_params, "book")
+
+    if scope == "personal" and owner_group_id is not None:
+        raise ValidationError(
+            {
+                "owner_group": (
+                    "Cannot be combined with scope=personal because personal "
+                    "shelves are user-owned."
+                )
+            }
+        )
+
+    return ShelfListFilters(
+        scope=scope,
+        owner_group_id=owner_group_id,
+        book_id=book_id,
+    )
+
+
+def build_visible_shelf_list_queryset(
+    *,
+    queryset: QuerySet[Shelf],
+    user: Any,
+    query_params,
+) -> QuerySet[Shelf]:
+    filters = parse_shelf_list_filters(query_params)
+    visible_qs = queryset.filter(visible_shelf_filter(user)).distinct()
+
+    if filters.scope == "personal":
+        visible_qs = visible_qs.filter(
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=user,
+        )
+    elif filters.scope == "shared":
+        visible_qs = visible_qs.exclude(
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=user,
+        )
+
+    if filters.owner_group_id is not None:
+        visible_qs = visible_qs.filter(
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group_id=filters.owner_group_id,
+        )
+
+    if filters.book_id is not None:
+        visible_qs = visible_qs.filter(
+            items__book_id=filters.book_id,
+        ).distinct()
+        visible_qs = visible_qs.annotate(
+            matched_item_id=Subquery(
+                ShelfItem.objects.filter(
+                    shelf_id=OuterRef("pk"),
+                    book_id=filters.book_id,
+                ).values("id")[:1]
+            )
+        )
+
+    return visible_qs

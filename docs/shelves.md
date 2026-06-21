@@ -158,6 +158,12 @@ Shelves are under `/api/v1/shelves/`:
     - `?scope=shared` (visible shelves not owned by the current user)
     - `?owner_group=<group_id>` (group-owned shelves for a group)
     - `?book=<book_id>` (shelves containing the book; includes `matched_item_id` when applicable)
+  - validation/combinations:
+    - `scope` accepts only `personal` or `shared`
+    - `owner_group` and `book` must be valid UUIDs
+    - `scope=personal&owner_group=<group_id>` is invalid and returns `400`
+    - `scope=shared&owner_group=<group_id>` is valid
+    - malformed or incompatible supplied filters return `400`
 - `POST /api/v1/shelves/` (create)
 - `GET /api/v1/shelves/<id>/`
 - `PATCH /api/v1/shelves/<id>/` (partial update; name/description/visibility only)

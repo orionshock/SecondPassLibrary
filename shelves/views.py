@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, NoReturn, cast
 
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
@@ -37,6 +37,7 @@ from .services import (
     visible_shelf_items_for_user,
 )
 from .policies import can_edit_shelf_for_request, visible_shelf_filter
+from .querysets import build_visible_shelf_list_queryset
 
 
 class ShelfViewSet(
@@ -109,34 +110,14 @@ class ShelfViewSet(
             .annotate(item_count=Count("items"))
         )
 
-        visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
-
-        scope = (self.request.query_params.get("scope") or "").strip().lower()
-        if scope == "personal":
-            visible_qs = visible_qs.filter(
-                owner_type=Shelf.OWNER_TYPE_USER,
-                owner_user=user,
+        if self.action == "list":
+            visible_qs = build_visible_shelf_list_queryset(
+                queryset=qs,
+                user=user,
+                query_params=self.request.query_params,
             )
-        elif scope == "shared":
-            visible_qs = visible_qs.exclude(
-                owner_type=Shelf.OWNER_TYPE_USER,
-                owner_user=user,
-            )
-
-        owner_group = self.request.query_params.get("owner_group")
-        if owner_group:
-            visible_qs = visible_qs.filter(owner_type=Shelf.OWNER_TYPE_GROUP, owner_group_id=owner_group)
-
-        book = self.request.query_params.get("book")
-        if book:
-            visible_qs = visible_qs.filter(items__book_id=book).distinct()
-            visible_qs = visible_qs.annotate(
-                matched_item_id=Subquery(
-                    ShelfItem.objects.filter(shelf_id=OuterRef("pk"), book_id=book)
-                    .values("id")[:1]
-                )
-            )
-
+        else:
+            visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
         return visible_qs.order_by("name", "created_at")
 
     def get_object(self):

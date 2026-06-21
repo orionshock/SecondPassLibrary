@@ -345,6 +345,60 @@ class ShelvesAPITest(APITestCase):
         results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
         self.assertIn(shelf_id, {r["id"] for r in results})
 
+        shared_response = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/shelves/?scope=shared&owner_group={self.group.id}"
+            ),
+        )
+        self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
+        shared_results = cast(
+            list[dict[str, Any]],
+            cast(Mapping[str, Any], shared_response.data)["results"],
+        )
+        self.assertIn(shelf_id, {row["id"] for row in shared_results})
+
+    def test_list_filters_reject_invalid_scope_and_malformed_uuids(self):
+        self.client.login(username="reader", password="pw")
+
+        invalid_scope = cast(
+            Response,
+            self.client.get("/api/v1/shelves/?scope=unknown"),
+        )
+        self.assertEqual(invalid_scope.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("scope", cast(Mapping[str, Any], invalid_scope.data))
+
+        malformed_owner_group = cast(
+            Response,
+            self.client.get("/api/v1/shelves/?owner_group=not-a-uuid"),
+        )
+        self.assertEqual(
+            malformed_owner_group.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertIn(
+            "owner_group",
+            cast(Mapping[str, Any], malformed_owner_group.data),
+        )
+
+        malformed_book = cast(
+            Response,
+            self.client.get("/api/v1/shelves/?book=not-a-uuid"),
+        )
+        self.assertEqual(malformed_book.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("book", cast(Mapping[str, Any], malformed_book.data))
+
+    def test_list_filter_rejects_personal_scope_with_owner_group(self):
+        self.client.login(username="reader", password="pw")
+        response = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/shelves/?scope=personal&owner_group={self.group.id}"
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("owner_group", cast(Mapping[str, Any], response.data))
+
     def test_list_filter_book_does_not_leak_private_user_shelves(self):
         # Create a private user shelf for reader and add book_in_group.
         self.client.login(username="reader", password="pw")
