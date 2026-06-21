@@ -59,23 +59,30 @@
     <div id="reading-sessions-results">
     {% if sessions %}
       {% for s in sessions %}
-        <a
+        <div
           class="card sessions-row sessions-card"
-          href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
-          aria-label="Open session marginalia: {{ s.name|default:s.book.title|default:'Book'|escape }}"
         >
-          <div class="sessions-cover" aria-hidden="true">
-            {% if s.book.cover_url %}
-              <img class="sessions-cover__img" src="{{ s.book.cover_url|escape }}" alt="Cover for {{ s.book.title|default:'Book'|escape }}" loading="lazy" />
-            {% else %}
-              Cover
-            {% endif %}
-          </div>
+          <a
+            class="sessions-card__cover-link"
+            href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
+            aria-label="Open session"
+          >
+            <div class="sessions-cover" aria-hidden="true">
+              {% if s.book.cover_url %}
+                <img class="sessions-cover__img" src="{{ s.book.cover_url|escape }}" alt="Cover for {{ s.book.title|default:'Book'|escape }}" loading="lazy" />
+              {% else %}
+                Cover
+              {% endif %}
+            </div>
+          </a>
 
           <div class="sessions-row__main">
-            <div class="sessions-card__title">
+            <a
+              class="sessions-card__title"
+              href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
+            >
               {{ s.name|default:s.book.title|default:"Book"|escape }}
-            </div>
+            </a>
             <div class="muted sessions-card__metadata">
               <span class="metadata-piece">{{ s.book.title|default:"Book"|escape }}</span>
               {% if s.book.authors %}<span class="metadata-piece">{{ s.book.authors|join:", "|escape }}</span>{% endif %}
@@ -94,14 +101,26 @@
 
           <div class="sessions-card__trailing">
             <span class="pill sessions-card__status">{% if s.is_active %}Active{% else %}Closed{% endif %}</span>
-            <span
-              class="material-symbols-outlined sessions-card__open-icon"
-              aria-hidden="true"
-              title="Open session marginalia"
-            >open_in_new</span>
-            <span class="sr-only">Open session marginalia</span>
+            <div class="sessions-card__actions">
+              <a
+                class="icon-button sessions-card__action"
+                href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
+                aria-label="Open session"
+                title="Open session"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+              </a>
+              <a
+                class="icon-button sessions-card__action"
+                href="/reading/sessions/?book={{ s.book.id|urlencode }}"
+                aria-label="View sessions for this book"
+                title="View sessions for this book"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">auto_stories</span>
+              </a>
+            </div>
           </div>
-        </a>
+        </div>
       {% endfor %}
     {% else %}
       <div class="muted" id="reading-sessions-all-empty">No reading sessions yet.</div>

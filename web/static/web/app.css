@@ -498,18 +498,19 @@ input[type="file"]:disabled::file-selector-button {
 .sessions-row__main { flex: 1; min-width: 0; }
 .sessions-card {
   color: var(--text);
-  text-decoration: none;
-  transition: border-color 120ms ease, background 120ms ease;
+  cursor: default;
 }
-.sessions-card:hover {
-  border-color: rgba(125, 211, 252, 0.42);
-  background: rgba(255, 255, 255, 0.045);
+.sessions-card__cover-link {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 10px;
 }
-.sessions-card:focus-visible {
+.sessions-card__cover-link:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 .sessions-card__title {
+  display: inline;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
@@ -535,9 +536,18 @@ input[type="file"]:disabled::file-selector-button {
 .sessions-card__status {
   color: var(--text);
 }
-.sessions-card__open-icon {
+.sessions-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sessions-card__action {
   color: var(--muted);
-  font-size: 20px;
+  text-decoration: none;
+}
+.sessions-card__action:hover {
+  color: var(--text);
+  text-decoration: none;
 }
 .session-select {
   display: inline-flex;

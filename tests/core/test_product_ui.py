@@ -1062,13 +1062,24 @@ class ProductUiSmokeTests(TestCase):
         # Other user's session not shown.
         self.assertNotContains(response, str(others.id))
 
-        # The entire session card links to marginalia.
+        # Selectable card text is separate from explicit session/book links.
         self.assertContains(response, f"/reading/sessions/books/{book.id}/{mine.id}/")
         self.assertContains(response, 'class="card sessions-row sessions-card"')
-        self.assertContains(response, "Open session marginalia")
+        self.assertContains(response, 'class="sessions-card__cover-link"')
+        self.assertContains(response, 'class="sessions-card__title"')
+        self.assertContains(response, 'aria-label="Open session"')
+        self.assertContains(response, 'aria-label="View sessions for this book"')
         self.assertContains(response, "open_in_new")
+        self.assertContains(response, "auto_stories")
+        self.assertContains(response, f"/reading/sessions/?book={book.id}")
+        self.assertNotContains(
+            response,
+            '<a class="card sessions-row sessions-card"',
+        )
+        self.assertNotContains(response, 'role="link"')
+        self.assertNotContains(response, 'tabindex="0"')
         self.assertNotContains(response, "View session marginalia")
-        self.assertNotContains(response, "View book sessions")
+        self.assertNotContains(response, ">View book sessions</")
         self.assertContains(response, "Active")
 
     def test_reading_sessions_js_wires_filters_search_page_size_and_book_context(self):
@@ -1092,15 +1103,22 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("sessionCardTitle(session, bookTitle)", js)
         self.assertIn("appendSeparatedParts", js)
         self.assertIn('el("span", "metadata-piece", part)', js)
-        self.assertIn('el("a", "card sessions-row sessions-card")', js)
-        self.assertIn('card.setAttribute(', js)
-        self.assertIn("`Open session marginalia:", js)
-        self.assertIn('openIcon.setAttribute("title", "Open session marginalia")', js)
+        self.assertIn('el("div", "card sessions-row sessions-card")', js)
+        self.assertIn('el("a", "sessions-card__cover-link")', js)
+        self.assertIn('el("a", "sessions-card__title"', js)
+        self.assertNotIn("bindCardInteraction", js)
+        self.assertNotIn("window.location.assign", js)
+        self.assertNotIn('card.setAttribute("role", "link")', js)
+        self.assertNotIn("card.tabIndex", js)
+        self.assertIn('label: "Open session"', js)
+        self.assertIn('label: "View sessions for this book"', js)
+        self.assertIn('icon: "open_in_new"', js)
+        self.assertIn('icon: "auto_stories"', js)
+        self.assertIn("bookSessionsHref", js)
         self.assertIn('el("div", "muted sessions-row__id", sessionId)', js)
         self.assertIn('session && session.is_active ? "Active" : "Closed"', js)
         self.assertNotIn("View session marginalia", js)
-        self.assertNotIn("View book sessions", js)
-        self.assertNotIn("bookSessionsHref", js)
+        self.assertNotIn(">View book sessions</", js)
         self.assertIn("No reading sessions for ${String(book.title)} yet.", js)
         self.assertNotIn("/api/v1/library/books/", js)
         self.assertIn('import("./reading/sessions.js")', main_js)

@@ -102,6 +102,17 @@ function seriesLabel(book) {
   return index ? `${name} ${index}` : name;
 }
 
+function sessionActionLink({ href, icon, label }) {
+  const link = el("a", "icon-button sessions-card__action");
+  link.href = href;
+  link.setAttribute("aria-label", label);
+  link.setAttribute("title", label);
+  const iconEl = el("span", "material-symbols-outlined", icon);
+  iconEl.setAttribute("aria-hidden", "true");
+  link.appendChild(iconEl);
+  return link;
+}
+
 function renderSessionCard(session) {
   const book = session && session.book && typeof session.book === "object" ? session.book : {};
   const bookId = String((book && book.id) || (session && session.book_id) || "");
@@ -122,22 +133,24 @@ function renderSessionCard(session) {
       : "Not available";
   const marginaliaHref =
     `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`;
+  const bookSessionsHref = `/reading/sessions/?book=${encodeURIComponent(bookId)}`;
 
-  const card = el("a", "card sessions-row sessions-card");
-  card.href = marginaliaHref;
-  card.setAttribute(
-    "aria-label",
-    `Open session marginalia: ${sessionCardTitle(session, bookTitle)}`
-  );
+  const card = el("div", "card sessions-row sessions-card");
 
+  const coverLink = el("a", "sessions-card__cover-link");
+  coverLink.href = marginaliaHref;
+  coverLink.setAttribute("aria-label", "Open session");
   const cover = el("div", "sessions-cover");
   cover.dataset.coverUrl = coverUrl;
   cover.dataset.coverTitle = bookTitle;
   cover.setAttribute("aria-hidden", "true");
-  card.appendChild(cover);
+  coverLink.appendChild(cover);
+  card.appendChild(coverLink);
 
   const main = el("div", "sessions-row__main");
-  main.appendChild(el("div", "sessions-card__title", sessionCardTitle(session, bookTitle)));
+  const titleLink = el("a", "sessions-card__title", sessionCardTitle(session, bookTitle));
+  titleLink.href = marginaliaHref;
+  main.appendChild(titleLink);
 
   const bookMeta = el("div", "muted sessions-card__metadata");
   appendSeparatedParts(bookMeta, [bookTitle, authors.join(", "), seriesLabel(book)]);
@@ -163,11 +176,22 @@ function renderSessionCard(session) {
   trailing.appendChild(
     el("span", "pill sessions-card__status", session && session.is_active ? "Active" : "Closed")
   );
-  const openIcon = el("span", "material-symbols-outlined sessions-card__open-icon", "open_in_new");
-  openIcon.setAttribute("aria-hidden", "true");
-  openIcon.setAttribute("title", "Open session marginalia");
-  trailing.appendChild(openIcon);
-  trailing.appendChild(el("span", "sr-only", "Open session marginalia"));
+  const actions = el("div", "sessions-card__actions");
+  actions.appendChild(
+    sessionActionLink({
+      href: marginaliaHref,
+      icon: "open_in_new",
+      label: "Open session",
+    })
+  );
+  actions.appendChild(
+    sessionActionLink({
+      href: bookSessionsHref,
+      icon: "auto_stories",
+      label: "View sessions for this book",
+    })
+  );
+  trailing.appendChild(actions);
   card.appendChild(trailing);
 
   return card;
