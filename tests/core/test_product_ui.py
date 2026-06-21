@@ -18,6 +18,10 @@ User = get_user_model()
 
 class FirstRunProductUiTests(TestCase):
     setup_data = {
+        "server_name": "Second Pass Library",
+        "server_description": "",
+        "public_group_name": "Common Room",
+        "public_group_description": "Main Public Library Room for everyone",
         "username": "owner",
         "first_name": "Ada",
         "last_name": "Lovelace",
@@ -30,13 +34,32 @@ class FirstRunProductUiTests(TestCase):
         response = self.client.get("/setup/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Set up SecondPassLibrary")
-        self.assertContains(response, "Create the first Owner account")
+        self.assertContains(response, "Server")
+        self.assertContains(response, "Public Space")
+        self.assertContains(response, "Owner Account")
+        self.assertContains(response, "Advanced")
+        self.assertContains(response, 'name="server_name"')
+        self.assertContains(response, 'value="Second Pass Library"')
+        self.assertContains(response, 'name="server_description"')
+        self.assertContains(response, 'name="public_group_name"')
+        self.assertContains(response, 'value="Common Room"')
+        self.assertContains(response, 'name="public_group_description"')
+        self.assertContains(response, "Main Public Library Room for everyone")
+        self.assertContains(response, 'name="advanced_library_groups_enabled"')
+        self.assertContains(
+            response,
+            "Advanced library groups let you create multiple shared library rooms",
+        )
         self.assertContains(response, 'name="username"')
         self.assertContains(response, 'name="first_name"')
         self.assertContains(response, 'name="last_name"')
         self.assertContains(response, 'name="email"')
         self.assertContains(response, 'name="password1"')
         self.assertContains(response, 'name="password2"')
+        self.assertNotContains(
+            response,
+            'name="advanced_library_groups_enabled" checked',
+        )
 
     @override_settings(DEBUG=False)
     def test_setup_page_is_available_in_production_mode(self):
@@ -131,6 +154,9 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Server Settings")
         self.assertContains(response, 'id="server-settings-form"')
+        self.assertContains(response, 'id="server-settings-public-name-input"')
+        self.assertContains(response, 'id="server-settings-public-description-input"')
+        self.assertContains(response, 'id="server-settings-advanced-groups-input"')
         self.assertContains(response, 'href="/admin/"')
 
     def test_manager_server_settings_is_not_allowed(self):

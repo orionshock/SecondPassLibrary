@@ -1,0 +1,12 @@
+<div class="setup-field{% if field.field.widget.input_type == 'checkbox' %} setup-field--checkbox{% endif %}">
+  <label for="{{ field.id_for_label }}">
+    {{ field.label }}{% if optional %} <span class="muted">(optional)</span>{% endif %}
+  </label>
+  {{ field }}
+  {% if field.help_text %}
+    <div class="muted setup-help">{{ field.help_text|safe }}</div>
+  {% endif %}
+  {% if field.errors %}
+    <div class="error" role="alert">{{ field.errors }}</div>
+  {% endif %}
+</div>

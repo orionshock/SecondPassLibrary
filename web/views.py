@@ -57,6 +57,15 @@ def setup(request: HttpRequest) -> HttpResponse:
     if request.method == "POST" and form.is_valid():
         try:
             create_first_owner(
+                server_name=form.cleaned_data["server_name"],
+                server_description=form.cleaned_data.get("server_description", ""),
+                public_group_name=form.cleaned_data["public_group_name"],
+                public_group_description=form.cleaned_data.get(
+                    "public_group_description", ""
+                ),
+                advanced_library_groups_enabled=form.cleaned_data.get(
+                    "advanced_library_groups_enabled", False
+                ),
                 username=form.cleaned_data["username"],
                 first_name=form.cleaned_data.get("first_name", ""),
                 last_name=form.cleaned_data.get("last_name", ""),

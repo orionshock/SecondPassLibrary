@@ -9,6 +9,7 @@ from accounts.bootstrap import (
     has_active_owner,
 )
 from accounts.models import UserProfile
+from core import server_settings
 from library.group_services import get_public_group
 from library.models import LibraryGroupMembership
 
@@ -52,6 +53,14 @@ class FirstOwnerBootstrapServiceTests(TestCase):
         self.assertEqual(owner.email, "ada@example.com")
         self.assertEqual(profile.role, UserProfile.ROLE_MANAGER)
         self.assertFalse(profile.must_change_password)
+        self.assertEqual(server_settings.get_server_name(), "Second Pass Library")
+        self.assertEqual(server_settings.get_server_description(), "")
+        self.assertFalse(server_settings.get_advanced_library_groups_enabled())
+        self.assertEqual(public.name, "Common Room")
+        self.assertEqual(
+            public.description,
+            "Main Public Library Room for everyone",
+        )
         self.assertTrue(
             LibraryGroupMembership.objects.filter(
                 user=owner,
@@ -66,6 +75,27 @@ class FirstOwnerBootstrapServiceTests(TestCase):
             password="Correct-Horse-Battery-47",
         )
         self.assertEqual(owner.email, "")
+
+    def test_create_first_owner_saves_configured_server_and_public_space(self):
+        create_first_owner(
+            username="owner",
+            password="Correct-Horse-Battery-47",
+            server_name="Family Library",
+            server_description="Shared at home.",
+            public_group_name="Reading Room",
+            public_group_description="Books for everyone.",
+            advanced_library_groups_enabled=True,
+        )
+
+        public = get_public_group()
+        self.assertEqual(server_settings.get_server_name(), "Family Library")
+        self.assertEqual(
+            server_settings.get_server_description(),
+            "Shared at home.",
+        )
+        self.assertTrue(server_settings.get_advanced_library_groups_enabled())
+        self.assertEqual(public.name, "Reading Room")
+        self.assertEqual(public.description, "Books for everyone.")
 
     def test_second_create_is_rejected(self):
         create_first_owner(

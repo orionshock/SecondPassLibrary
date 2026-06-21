@@ -80,7 +80,7 @@ class ServerSettingsServiceTests(TestCase):
         clear_server_settings_cache()
 
         public = get_public_group()
-        self.assertEqual(public.name, "Public")
+        self.assertEqual(public.name, "Common Room")
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         self.assertEqual(setting.value, str(public.id))
 
@@ -102,7 +102,7 @@ class ServerSettingsServiceTests(TestCase):
         self.assertEqual(repaired.id, public.id)
         self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id))
 
-    def test_get_public_group_normalizes_name(self):
+    def test_get_public_group_preserves_configured_display_name(self):
         group = get_public_group()
         group.name = "Shared"
         group.save(update_fields=["name", "updated_at"])
@@ -110,7 +110,7 @@ class ServerSettingsServiceTests(TestCase):
         repaired = get_public_group()
         self.assertEqual(repaired.id, group.id)
         repaired.refresh_from_db()
-        self.assertEqual(repaired.name, "Public")
+        self.assertEqual(repaired.name, "Shared")
 
     def test_public_group_setting_save_triggers_repair_invalid_string(self):
         public = get_public_group()

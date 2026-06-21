@@ -441,9 +441,38 @@ input[type="file"]:disabled::file-selector-button {
   display: grid;
   gap: 14px;
 }
+.setup-section {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.setup-section legend {
+  padding: 0 6px;
+  color: var(--text);
+  font-weight: 700;
+}
 .setup-field {
   display: grid;
   gap: 6px;
+}
+.setup-field--checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+.setup-field--checkbox label {
+  grid-column: 2;
+}
+.setup-field--checkbox input {
+  grid-row: 1;
+  grid-column: 1;
+  width: auto;
+  margin-top: 3px;
+}
+.setup-field--checkbox .setup-help,
+.setup-field--checkbox .error {
+  grid-column: 2;
 }
 .setup-field input {
   width: 100%;

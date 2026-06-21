@@ -38,17 +38,29 @@ class ServerIdentitySettingsTests(TestCase):
         self.client.force_login(owner)
         resp = self.client.get("/api/v1/server/settings/")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()["server_name"], "Second Pass Library")
+        data = resp.json()
+        self.assertEqual(data["server_name"], "Second Pass Library")
+        self.assertEqual(data["public_group_name"], "Common Room")
+        self.assertFalse(data["advanced_library_groups_enabled"])
 
         resp = self.client.patch(
             "/api/v1/server/settings/",
-            data={"server_name": "My Library", "server_description": "Private."},
+            data={
+                "server_name": "My Library",
+                "server_description": "Private.",
+                "public_group_name": "Reading Room",
+                "public_group_description": "Shared books.",
+                "advanced_library_groups_enabled": True,
+            },
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["server_name"], "My Library")
         self.assertEqual(data["server_description"], "Private.")
+        self.assertEqual(data["public_group_name"], "Reading Room")
+        self.assertEqual(data["public_group_description"], "Shared books.")
+        self.assertTrue(data["advanced_library_groups_enabled"])
 
     def test_patch_rejects_unknown_fields(self):
         owner = User.objects.create_user(

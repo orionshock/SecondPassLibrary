@@ -11,6 +11,8 @@ from core.server_settings import get_server_setting, set_server_setting
 from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
 
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
+DEFAULT_PUBLIC_GROUP_NAME = "Common Room"
+DEFAULT_PUBLIC_GROUP_DESCRIPTION = "Main Public Library Room for everyone"
 
 
 def _parse_uuid_setting_value(value) -> str | None:
@@ -46,8 +48,9 @@ def get_public_group() -> LibraryGroup:
     """
     Return the server-wide Public LibraryGroup (default/fallback access scope).
 
-    Public is identified by the ServerSetting `public_group_id` rather than a slug.
-    If missing or invalid, this function repairs the setting and/or creates a Public group.
+    Public is identified by the ServerSetting `public_group_id` rather than a
+    slug or display name. If missing or invalid, this function repairs the
+    setting and/or creates the default public group.
     """
     public_id = get_public_group_id()
     if public_id is not None:
@@ -57,19 +60,38 @@ def get_public_group() -> LibraryGroup:
             group = None
 
         if group is not None:
-            if group.name != "Public":
-                group.name = "Public"
-                group.save(update_fields=["name", "updated_at"])
             return group
 
-    # Repair path: prefer an existing group named exactly "Public".
-    existing = LibraryGroup.objects.filter(name="Public").order_by("created_at", "id").first()
+    # Repair path for existing installs: prefer the legacy display name before
+    # the new default display name. Identity remains the setting value.
+    existing = (
+        LibraryGroup.objects.filter(name__in=["Public", DEFAULT_PUBLIC_GROUP_NAME])
+        .order_by("created_at", "id")
+        .first()
+    )
     if existing is not None:
         set_public_group_id(str(existing.id))
         return existing
 
-    group = LibraryGroup.objects.create(name="Public", description="Default shared library group.")
+    group = LibraryGroup.objects.create(
+        name=DEFAULT_PUBLIC_GROUP_NAME,
+        description=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
+    )
     set_public_group_id(str(group.id))
+    return group
+
+
+def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
+    normalized_name = str(name or "").strip()
+    normalized_description = str(description or "").strip()
+    if not normalized_name:
+        raise ValidationError({"public_group_name": "Public group name is required."})
+
+    group = get_public_group()
+    group.name = normalized_name
+    group.description = normalized_description
+    group.full_clean()
+    group.save(update_fields=["name", "description", "updated_at"])
     return group
 
 

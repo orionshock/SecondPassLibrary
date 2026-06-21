@@ -16,7 +16,7 @@
           <span>{{ server_name }}</span>
         </div>
         <h1 class="page-title">Set up SecondPassLibrary</h1>
-        <p class="muted">Create the first Owner account for this server.</p>
+        <p class="muted">Configure this server and create the first Owner account.</p>
 
         <form method="post" class="form setup-form">
           {% csrf_token %}
@@ -25,21 +25,35 @@
             <div class="error" role="alert">{{ form.non_field_errors }}</div>
           {% endif %}
 
-          {% for field in form %}
-            <div class="setup-field">
-              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {{ field }}
-              {% if field.help_text %}
-                <div class="muted setup-help">{{ field.help_text|safe }}</div>
-              {% endif %}
-              {% if field.errors %}
-                <div class="error" role="alert">{{ field.errors }}</div>
-              {% endif %}
-            </div>
-          {% endfor %}
+          <fieldset class="setup-section">
+            <legend>Server</legend>
+            {% include "web/setup_field.html" with field=form.server_name %}
+            {% include "web/setup_field.html" with field=form.server_description optional=True %}
+          </fieldset>
+
+          <fieldset class="setup-section">
+            <legend>Public Space</legend>
+            {% include "web/setup_field.html" with field=form.public_group_name %}
+            {% include "web/setup_field.html" with field=form.public_group_description optional=True %}
+          </fieldset>
+
+          <fieldset class="setup-section">
+            <legend>Owner Account</legend>
+            {% include "web/setup_field.html" with field=form.username %}
+            {% include "web/setup_field.html" with field=form.first_name optional=True %}
+            {% include "web/setup_field.html" with field=form.last_name optional=True %}
+            {% include "web/setup_field.html" with field=form.email optional=True %}
+            {% include "web/setup_field.html" with field=form.password1 %}
+            {% include "web/setup_field.html" with field=form.password2 %}
+          </fieldset>
+
+          <fieldset class="setup-section">
+            <legend>Advanced</legend>
+            {% include "web/setup_field.html" with field=form.advanced_library_groups_enabled %}
+          </fieldset>
 
           <div class="form-actions">
-            <button class="button" type="submit">Create Owner account</button>
+            <button class="button" type="submit">Complete setup</button>
           </div>
         </form>
       </section>

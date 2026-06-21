@@ -80,7 +80,7 @@ class SeedDevUsersCommandTests(TestCase):
             self.assertEqual(profile.role, role)
 
         public = get_public_group()
-        self.assertEqual(public.name, "Public")
+        self.assertEqual(public.name, "Common Room")
 
         fantasy = LibraryGroup.objects.get(name="Fantasy Club")
         self.assertTrue(LibraryGroup.objects.filter(name="Kids Books").exists())

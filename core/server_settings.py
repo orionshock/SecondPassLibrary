@@ -14,6 +14,7 @@ SERVER_DESCRIPTION_SETTING = "server_description"
 SERVER_NAME_MAX_LEN = 120
 SERVER_DESCRIPTION_MAX_LEN = 1000
 DEFAULT_SERVER_NAME = "Second Pass Library"
+ADVANCED_LIBRARY_GROUPS_SETTING = "advanced_library_groups_enabled"
 
 
 def clear_server_settings_cache() -> None:
@@ -100,4 +101,20 @@ def set_server_description(value: str) -> None:
         key=SERVER_DESCRIPTION_SETTING,
         value=normalized,
         description="Optional server description used in discovery.",
+    )
+
+
+def get_advanced_library_groups_enabled() -> bool:
+    value = get_server_setting(ADVANCED_LIBRARY_GROUPS_SETTING, default=False)
+    return value is True
+
+
+def set_advanced_library_groups_enabled(value: bool) -> None:
+    set_server_setting(
+        key=ADVANCED_LIBRARY_GROUPS_SETTING,
+        value=bool(value),
+        description=(
+            "Whether advanced multi-group management should be presented as a "
+            "first-class Product UI feature."
+        ),
     )
