@@ -42,11 +42,14 @@ export function shelfOwnerIdentitySegment(shelf) {
   return identity ? identity.outerHTML : "";
 }
 
-function shelfMetadataParts(shelf) {
+function shelfMetadataParts(shelf, options = {}) {
   if (!shelf) return [];
   const visibility = shelfVisibilityLabel(shelf);
   const itemCount = shelfItemCountLabel(shelf);
-  return [visibility, itemCount].filter(Boolean);
+  return [
+    options.includeVisibility === false ? "" : visibility,
+    options.includeItemCount === false ? "" : itemCount,
+  ].filter(Boolean);
 }
 
 export function shelfMetadataLine(shelf) {
@@ -62,12 +65,12 @@ export function shelfMetadataLine(shelf) {
     .join("");
 }
 
-export function renderShelfMetadata(shelf) {
+export function renderShelfMetadata(shelf, options = {}) {
   const container = document.createElement("span");
   container.className = "shelf-metadata";
   const segments = [
     renderShelfOwnerIdentity(shelf),
-    ...shelfMetadataParts(shelf),
+    ...shelfMetadataParts(shelf, options),
   ].filter(Boolean);
 
   segments.forEach((segment) => {

@@ -812,6 +812,39 @@ input[type="file"]:disabled::file-selector-button {
   margin: 0 7px;
   color: var(--muted);
 }
+.shelf-view-heading {
+  display: flex;
+  gap: 8px 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.shelf-view-summary {
+  color: var(--muted);
+}
+.shelf-view-summary .shelf-metadata {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.shelf-view-context {
+  margin-top: 12px;
+}
+.shelf-view-description {
+  max-width: 72ch;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.shelf-view-created-by {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.shelf-view-items {
+  margin-top: 12px;
+}
+.shelf-view-items #shelf-view-items-results {
+  margin-top: 8px;
+}
 
 /* =====================
    Lists / Tables

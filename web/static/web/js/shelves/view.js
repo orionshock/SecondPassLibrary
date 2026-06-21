@@ -1,63 +1,64 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
-import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
-import { inferCanEditShelf, shelfCreatedByDisplay, shelfMetadataLine } from "./shared.js";
+import {
+  inferCanEditShelf,
+  renderShelfMetadata,
+  shelfCreatedByDisplay,
+} from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
 
-function renderShelfMeta(container, shelf) {
-  container.innerHTML = "";
-  const kv = document.createElement("div");
-  kv.className = "kv";
-
-  function row(k, v) {
-    const kk = document.createElement("div");
-    kk.className = "kv__k";
-    kk.textContent = k;
-    const vv = document.createElement("div");
-    vv.className = "kv__v";
-    vv.innerHTML = v;
-    kv.appendChild(kk);
-    kv.appendChild(vv);
-  }
-
-  row("Name", escapeHtml(shelf.name || ""));
-  if (shelf.description) row("Description", escapeHtml(shelf.description));
-  row("Owner type", escapeHtml(shelf.owner_type || ""));
-  const metadata = shelfMetadataLine(shelf);
-  if (metadata) row("Metadata", metadata);
-  const createdBy = shelfCreatedByDisplay(shelf);
-  if (createdBy) row("Created by", escapeHtml(createdBy.replace(/^Created by /, "")));
-
-  container.appendChild(kv);
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
 }
 
-function renderShelfItems(payload) {
+function renderShelfItem(item) {
+  const book = item && item.book ? item.book : {};
+  const bookId = book.id ? String(book.id) : "";
+  const title = book.title ? String(book.title) : "(Untitled)";
+  const coverUrl = book.cover_url ? String(book.cover_url) : "";
+  const authors = Array.isArray(book.authors)
+    ? book.authors.map((author) => author && author.name).filter(Boolean)
+    : [];
+  const series = book.series && book.series.name ? String(book.series.name) : "";
+
+  const article = el("article", "book book--with-cover");
+  const cover = el("div", "book__cover");
+  cover.dataset.coverUrl = coverUrl;
+  cover.dataset.coverTitle = title;
+  article.appendChild(cover);
+
+  const content = document.createElement("div");
+  const heading = el("h3", "book__title");
+  const link = el("a", "", title);
+  link.href = `/library/books/${encodeURIComponent(bookId)}/`;
+  heading.appendChild(link);
+  content.appendChild(heading);
+
+  const metadata = el("div", "muted inline-metadata-row");
+  for (const part of [authors.join(", "), series].filter(Boolean)) {
+    metadata.appendChild(el("span", "metadata-piece", part));
+  }
+  if (metadata.childNodes.length) content.appendChild(metadata);
+
+  article.appendChild(content);
+  return article;
+}
+
+function renderShelfItems(container, payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
-  if (!results.length) return `<div class="muted">No visible books.</div>`;
-  return results
-    .map((it) => {
-      const b = it.book || {};
-      const bid = b.id ? String(b.id) : "";
-      const title = b.title ? String(b.title) : "(Untitled)";
-      const coverUrl = b.cover_url ? String(b.cover_url) : "";
-      const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
-      const series = b.series && b.series.name ? String(b.series.name) : "";
-      const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
-      return `
-        <article class="book book--with-cover">
-          <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
-          <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-            <div>
-              <h3 class="book__title">
-                <a href="/library/books/${encodeURIComponent(bid)}/">${escapeHtml(title)}</a>
-              </h3>
-              ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
-            </div>
-          </div>
-        </article>
-      `.trim();
-    })
-    .join("");
+  container.replaceChildren();
+  if (!results.length) {
+    container.appendChild(el("div", "muted", "No visible books."));
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  results.forEach((item) => fragment.appendChild(renderShelfItem(item)));
+  container.appendChild(fragment);
 }
 
 export async function initShelfView() {
@@ -67,8 +68,10 @@ export async function initShelfView() {
   const statusEl = $("#shelf-view-status");
   const errEl = $("#shelf-view-error");
   const wrapEl = $("#shelf-view");
-  const metaEl = $("#shelf-view-meta");
-  const itemsCard = $("#shelf-view-items");
+  const summaryEl = $("#shelf-view-summary");
+  const descriptionEl = $("#shelf-view-description");
+  const createdByEl = $("#shelf-view-created-by");
+  const itemsWrap = $("#shelf-view-items");
   const itemsStatus = $("#shelf-view-items-status");
   const itemsResults = $("#shelf-view-items-results");
   const prevBtn = $("#shelf-view-items-prev");
@@ -77,11 +80,29 @@ export async function initShelfView() {
   const titleEl = $("#shelf-title");
   const editWrap = $("#shelf-view-edit-wrap");
   const editLink = $("#shelf-view-edit-link");
-  if (!statusEl || !errEl || !wrapEl || !metaEl || !itemsCard || !itemsStatus || !itemsResults || !titleEl || !editWrap || !editLink) return;
+  if (
+    !statusEl ||
+    !errEl ||
+    !wrapEl ||
+    !summaryEl ||
+    !descriptionEl ||
+    !createdByEl ||
+    !itemsWrap ||
+    !itemsStatus ||
+    !itemsResults ||
+    !prevBtn ||
+    !nextBtn ||
+    !noteEl ||
+    !titleEl ||
+    !editWrap ||
+    !editLink
+  ) {
+    return;
+  }
 
-  function setErr(msg) {
-    errEl.textContent = msg || "";
-    visible(errEl, !!msg);
+  function setErr(message) {
+    errEl.textContent = message || "";
+    visible(errEl, !!message);
   }
 
   const shelfId = wrapEl.dataset ? wrapEl.dataset.shelfId : "";
@@ -93,18 +114,36 @@ export async function initShelfView() {
   setStatus(statusEl, "Loading...", false);
   setErr("");
   visible(wrapEl, false);
-  visible(itemsCard, false);
+  visible(itemsWrap, false);
   visible(editWrap, false);
 
   try {
     const shelf = await fetchJSON(`/api/v1/shelves/${encodeURIComponent(String(shelfId))}/`);
     titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
-    renderShelfMeta(metaEl, shelf);
-    visible(wrapEl, true);
+    summaryEl.replaceChildren(
+      renderShelfMetadata(shelf, { includeVisibility: false })
+    );
 
-    const canEdit = shelf && shelf.can_edit != null ? !!shelf.can_edit : inferCanEditShelf({ me, shelf });
+    const description = shelf && shelf.description ? String(shelf.description).trim() : "";
+    descriptionEl.textContent = description;
+    visible(descriptionEl, !!description);
+
+    const createdBy = shelfCreatedByDisplay(shelf);
+    createdByEl.textContent = createdBy;
+    visible(createdByEl, !!createdBy);
+    visible(wrapEl, !!description || !!createdBy);
+
+    const canEdit =
+      shelf && shelf.can_edit != null
+        ? !!shelf.can_edit
+        : inferCanEditShelf({ me, shelf });
     visible(editWrap, canEdit);
-    if (canEdit) editLink.setAttribute("href", `/shelves/${encodeURIComponent(String(shelfId))}/edit/`);
+    if (canEdit) {
+      editLink.setAttribute(
+        "href",
+        `/shelves/${encodeURIComponent(String(shelfId))}/edit/`
+      );
+    }
 
     let nextUrl = null;
     let prevUrl = null;
@@ -113,36 +152,42 @@ export async function initShelfView() {
     async function loadItems(url) {
       setStatus(itemsStatus, "Loading...", false);
       const payload = await fetchJSON(url);
-      itemsResults.innerHTML = renderShelfItems(payload);
+      renderShelfItems(itemsResults, payload);
       mountCovers(itemsResults);
       nextUrl = payload && payload.next ? String(payload.next) : null;
       prevUrl = payload && payload.previous ? String(payload.previous) : null;
       prevBtn.disabled = !prevUrl;
       nextBtn.disabled = !nextUrl;
       noteEl.textContent = payload && payload.count != null ? `${payload.count} total` : "";
-      visible(itemsCard, true);
+      visible(itemsWrap, true);
       setStatus(itemsStatus, "", false);
     }
 
     prevBtn.addEventListener("click", () => {
       if (!prevUrl) return;
       currentUrl = prevUrl;
-      loadItems(currentUrl).catch((e) => setGlobalError(extractApiErrorMessage(e)));
+      loadItems(currentUrl).catch((error) =>
+        setGlobalError(extractApiErrorMessage(error))
+      );
     });
     nextBtn.addEventListener("click", () => {
       if (!nextUrl) return;
       currentUrl = nextUrl;
-      loadItems(currentUrl).catch((e) => setGlobalError(extractApiErrorMessage(e)));
+      loadItems(currentUrl).catch((error) =>
+        setGlobalError(extractApiErrorMessage(error))
+      );
     });
 
     await loadItems(currentUrl);
-
     setStatus(statusEl, "", false);
-  } catch (e) {
-    console.error("Failed to load shelf view", { shelfId, e });
-    const msg = e && e.status === 404 ? "Shelf not found or not accessible." : extractApiErrorMessage(e);
-    setErr(msg);
+  } catch (error) {
+    console.error("Failed to load shelf view", { shelfId, error });
+    const message =
+      error && error.status === 404
+        ? "Shelf not found or not accessible."
+        : extractApiErrorMessage(error);
+    setErr(message);
     setStatus(statusEl, "Error.", true);
-    setGlobalError(msg);
+    setGlobalError(message);
   }
 }
