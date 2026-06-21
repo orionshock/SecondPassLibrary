@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from uuid import uuid4
 
 from accounts.services import get_or_create_profile
@@ -37,6 +37,13 @@ class FirstRunProductUiTests(TestCase):
         self.assertContains(response, 'name="email"')
         self.assertContains(response, 'name="password1"')
         self.assertContains(response, 'name="password2"')
+
+    @override_settings(DEBUG=False)
+    def test_setup_page_is_available_in_production_mode(self):
+        response = self.client.get("/setup/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Set up SecondPassLibrary")
 
     def test_root_app_and_login_direct_to_setup_without_active_owner(self):
         for path in ("/", "/app/", "/api-auth/login/"):

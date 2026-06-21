@@ -6,14 +6,13 @@ from typing import Any, cast
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
-from library.models import Author, Book, BookFile, Series
+from library.models import Author, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 

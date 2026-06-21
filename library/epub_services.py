@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 from enum import Enum
 from pathlib import Path
 import re
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional
 
 from .book_import_services import persist_new_imported_book
 from .cover_services import extract_epub_embedded_cover_to_book

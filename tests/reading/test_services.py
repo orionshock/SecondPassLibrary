@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from library.models import Book
 from reading.models import ReadingProgress, ReadingSession
 from reading.services import (
     get_or_create_active_session,

@@ -9,8 +9,8 @@ import uuid
 from django.conf import settings
 from django.test import TestCase
 
-from library.models import Book, BookFile
-from library.services import ImportStatus, import_epub
+from library.epub_services import ImportStatus
+from library.services import import_epub
 from tests.utils.books import create_file_backed_book
 
 from tests.library.utils import IsolatedMediaRootMixin

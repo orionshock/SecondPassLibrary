@@ -26,7 +26,7 @@ def _parse_uuid_query_param(query_params, name: str) -> UUID | None:
     try:
         return UUID(raw_value)
     except (TypeError, ValueError, AttributeError) as exc:
-        raise ValidationError({name: f"Must be a valid UUID."}) from exc
+        raise ValidationError({name: "Must be a valid UUID."}) from exc
 
 
 def parse_shelf_list_filters(query_params) -> ShelfListFilters:

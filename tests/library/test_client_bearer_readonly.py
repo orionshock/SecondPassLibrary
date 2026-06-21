@@ -15,7 +15,6 @@ from accounts.models import UserClientSession
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import (
     Author,
-    Book,
     BookFile,
     BookGroupAssignment,
     LibraryGroup,

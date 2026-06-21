@@ -15,7 +15,6 @@ from django.utils.functional import empty
 from PIL import Image
 
 from library.cover_services import set_book_cover_from_bytes
-from library.models import Book
 from tests.utils.books import create_file_backed_book
 
 

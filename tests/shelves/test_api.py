@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 from accounts.models import UserProfile
 from library.group_services import add_book_to_group, ensure_book_public_assignment, ensure_user_public_membership, get_public_group
 from library.cover_services import set_book_cover_from_bytes
-from library.models import Book, LibraryGroup, LibraryGroupMembership
+from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
 from tests.utils.books import create_file_backed_book
 

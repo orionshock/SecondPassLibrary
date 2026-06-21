@@ -13,8 +13,6 @@ from library.cover_services import (
     set_book_cover_from_bytes,
     validate_cover_image_bytes,
 )
-from library.models import Book
-
 from tests.library.utils import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 

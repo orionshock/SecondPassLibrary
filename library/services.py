@@ -1,9 +1,9 @@
 """
-Public service facade for the library app.
+Import orchestration facade for the library app.
 
 Historically, import + metadata helpers lived directly in this module. It now
-re-exports the public service functions/types while delegating implementation to
-focused modules:
+keeps stable orchestration entry points while delegating focused implementation
+details to:
 
 - library/import_services.py (ImportJob orchestration)
 - library/epub_services.py (EPUB import + metadata extraction)
@@ -16,7 +16,7 @@ from __future__ import annotations
 from ebooklib import epub  # NOTE: tests patch library.services.epub.read_epub
 
 from .cover_services import MAX_COVER_BYTES
-from .epub_services import ImportResult, ImportStatus, generate_epub_download_filename
+from .epub_services import ImportResult
 from .epub_services import import_epub_impl as _import_epub_impl
 from .import_services import create_import_job_from_upload as _create_import_job_from_upload
 from .import_services import process_import_job as _process_import_job
@@ -52,4 +52,3 @@ def process_import_job(*, job):
         max_opf_xml_bytes=MAX_OPF_SIDECAR_XML_BYTES,
         max_cover_bytes=MAX_COVER_BYTES,
     )
-

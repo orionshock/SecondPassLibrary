@@ -12,8 +12,9 @@ from django.test import TestCase
 
 from PIL import Image
 
+from library.epub_services import ImportStatus
 from library.models import BookFile
-from library.services import ImportStatus, import_epub
+from library.services import import_epub
 
 from tests.library.utils import IsolatedMediaRootMixin
 
@@ -265,4 +266,3 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         existing_file = BookFile.objects.get(checksum=r2.checksum)
         existing_file.book.refresh_from_db()
         self.assertEqual(existing_file.book.cover_file.name, first_cover_name)
-

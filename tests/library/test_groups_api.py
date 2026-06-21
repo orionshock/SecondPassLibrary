@@ -4,7 +4,6 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -15,7 +14,7 @@ from library.group_services import (
     ensure_user_public_membership,
     get_public_group,
 )
-from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from core.errors import ErrorCode
 from tests.utils.books import create_file_backed_book
 

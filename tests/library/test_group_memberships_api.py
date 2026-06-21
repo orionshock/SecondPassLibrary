@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
+from typing import cast
 
 from django.contrib.auth import get_user_model
 from rest_framework import status

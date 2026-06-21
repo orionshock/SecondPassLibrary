@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from rest_framework.test import APIClient
 
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
-from library.models import Book
 from reading.models import Annotation, ReadingSession
 from tests.utils.books import create_file_backed_book
 

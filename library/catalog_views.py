@@ -1,5 +1,3 @@
-from typing import Any
-
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import Http404

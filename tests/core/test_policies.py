@@ -12,7 +12,6 @@ from library.group_services import (
     get_public_group,
 )
 from library.models import (
-    Book,
     BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,

@@ -3,7 +3,6 @@ from django.db import IntegrityError
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 
-from library.models import Book
 from reading.models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book

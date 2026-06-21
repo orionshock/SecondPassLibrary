@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.test import TestCase
 
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_user_public_membership
 from library.models import Author, Book, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier

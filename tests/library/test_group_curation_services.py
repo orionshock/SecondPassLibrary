@@ -15,7 +15,7 @@ from library.group_services import (
     get_public_group,
     remove_book_from_group,
 )
-from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
+from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
 from tests.utils.books import create_file_backed_book
 
 

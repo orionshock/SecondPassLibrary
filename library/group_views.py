@@ -35,7 +35,6 @@ from .group_services import (
 )
 from .models import (
     Book,
-    BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,
     is_public_group,

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from library.group_services import ensure_book_public_assignment
-from library.models import Book, BookFile
+from library.models import BookFile
 from reading.w3c import build_fragment_selector, build_publication_source, build_target, normalize_epub_cfi
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book

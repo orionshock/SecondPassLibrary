@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any, cast
-from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -12,7 +11,7 @@ from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from accounts.services import get_or_create_profile
 from library.group_services import get_public_group
-from library.models import Book, LibraryGroup, LibraryGroupMembership
+from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.books import create_file_backed_book
 
 
