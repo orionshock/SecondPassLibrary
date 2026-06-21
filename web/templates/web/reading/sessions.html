@@ -55,6 +55,18 @@
       </label>
     </div>
 
+    <div
+      class="sessions-view-toggle"
+      id="reading-sessions-view-toggle"
+      role="group"
+      aria-label="Reading sessions view"
+    >
+      <span class="muted">View</span>
+      <button class="tab-button is-active" type="button" data-view-mode="session" aria-pressed="true">By Session</button>
+      <button class="tab-button" type="button" data-view-mode="book" aria-pressed="false">By Book</button>
+    </div>
+    <div class="muted is-hidden" id="reading-sessions-view-note"></div>
+
     <div class="muted" id="reading-sessions-status" role="status">Loading sessions...</div>
     <div id="reading-sessions-results">
     {% if sessions %}
@@ -108,7 +120,7 @@
                 aria-label="Open session"
                 title="Open session"
               >
-                <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+                <span class="material-symbols-outlined" aria-hidden="true">article</span>
               </a>
               <a
                 class="icon-button sessions-card__action"

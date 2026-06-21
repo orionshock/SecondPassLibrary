@@ -11,6 +11,7 @@ import { setStatus } from "../ui/status.js";
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = new Set(["10", "20", "50"]);
 const STATUS_FILTERS = new Set(["all", "active", "closed"]);
+const VIEW_MODES = new Set(["session", "book"]);
 
 function formatWhen(value) {
   if (!value) return "";
@@ -32,11 +33,13 @@ function normalizeStatusFilter(params) {
 function readQueryState() {
   const params = new URLSearchParams(window.location.search);
   const rawPageSize = (params.get("page_size") || "").trim();
+  const rawView = (params.get("view") || "").trim().toLowerCase();
   return {
     book: (params.get("book") || "").trim(),
     q: (params.get("q") || "").trim(),
     status: normalizeStatusFilter(params),
     pageSize: PAGE_SIZE_OPTIONS.has(rawPageSize) ? Number(rawPageSize) : DEFAULT_PAGE_SIZE,
+    view: VIEW_MODES.has(rawView) ? rawView : "session",
   };
 }
 
@@ -57,6 +60,7 @@ function writeQueryState(state, { replace = false } = {}) {
   if (state.q) params.set("q", state.q);
   if (state.status !== "all") params.set("status", state.status);
   if (state.pageSize !== DEFAULT_PAGE_SIZE) params.set("page_size", String(state.pageSize));
+  if (state.view !== "session") params.set("view", state.view);
   url.search = params.toString();
   window.history[replace ? "replaceState" : "pushState"]({}, "", url.toString());
 }
@@ -180,7 +184,7 @@ function renderSessionCard(session) {
   actions.appendChild(
     sessionActionLink({
       href: marginaliaHref,
-      icon: "open_in_new",
+      icon: "article",
       label: "Open session",
     })
   );
@@ -197,6 +201,128 @@ function renderSessionCard(session) {
   return card;
 }
 
+function bookGroupKey(session) {
+  const book = session && session.book && typeof session.book === "object" ? session.book : {};
+  return String((book && book.id) || (session && session.book_id) || "unknown");
+}
+
+function groupSessionsByBook(results) {
+  const groups = new Map();
+  results.forEach((session) => {
+    const key = bookGroupKey(session);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(session);
+  });
+  return Array.from(groups.values());
+}
+
+function renderCompactSessionRow(session, bookTitle) {
+  const book = session && session.book && typeof session.book === "object" ? session.book : {};
+  const bookId = String((book && book.id) || (session && session.book_id) || "");
+  const sessionId = String((session && session.id) || "");
+  const completedAt = session && session.completed_at ? formatWhen(session.completed_at) : "";
+  const updatedAt = session && session.updated_at ? formatWhen(session.updated_at) : "";
+  const startedAt = session && session.started_at ? formatWhen(session.started_at) : "";
+  const annotationCount = Number.isFinite(Number(session && session.annotation_count))
+    ? Number(session.annotation_count)
+    : 0;
+  const progression = session && session.progression != null ? Number(session.progression) : null;
+  const progressionText =
+    progression != null && Number.isFinite(progression)
+      ? `${Math.round(progression * 1000) / 10}%`
+      : "Not available";
+  const marginaliaHref =
+    `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`;
+
+  const row = el("article", "sessions-book-group__session");
+  const content = el("div", "sessions-book-group__session-main");
+  const titleLink = el(
+    "a",
+    "sessions-book-group__session-title",
+    sessionCardTitle(session, bookTitle)
+  );
+  titleLink.href = marginaliaHref;
+  content.appendChild(titleLink);
+  content.appendChild(el("div", "muted sessions-row__id", sessionId));
+
+  const dates = el("div", "muted sessions-card__metadata");
+  appendSeparatedParts(dates, [
+    startedAt ? `Started: ${startedAt}` : "",
+    completedAt ? `Closed: ${completedAt}` : updatedAt ? `Updated: ${updatedAt}` : "",
+  ]);
+  content.appendChild(dates);
+
+  const stats = el("div", "muted sessions-card__metadata");
+  appendSeparatedParts(stats, [
+    `Annotations: ${annotationCount}`,
+    `Progression: ${progressionText}`,
+  ]);
+  content.appendChild(stats);
+  row.appendChild(content);
+
+  const actions = el("div", "sessions-book-group__session-actions");
+  actions.appendChild(
+    el("span", "pill sessions-card__status", session && session.is_active ? "Active" : "Closed")
+  );
+  actions.appendChild(
+    sessionActionLink({
+      href: marginaliaHref,
+      icon: "article",
+      label: "Open session",
+    })
+  );
+  row.appendChild(actions);
+  return row;
+}
+
+function renderBookGroup(sessions) {
+  const first = sessions[0] || {};
+  const book = first && first.book && typeof first.book === "object" ? first.book : {};
+  const bookId = String((book && book.id) || (first && first.book_id) || "");
+  const bookTitle = String((book && book.title) || "Book");
+  const authors = authorNames(book);
+  const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
+  const bookSessionsHref = `/reading/sessions/?book=${encodeURIComponent(bookId)}&view=book`;
+
+  const group = el("section", "card sessions-book-group");
+  const header = el("div", "sessions-book-group__header");
+
+  const cover = el("div", "sessions-cover");
+  cover.dataset.coverUrl = coverUrl;
+  cover.dataset.coverTitle = bookTitle;
+  cover.setAttribute("aria-hidden", "true");
+  header.appendChild(cover);
+
+  const identity = el("div", "sessions-book-group__identity");
+  identity.appendChild(el("h2", "sessions-book-group__title", bookTitle));
+  const metadata = el("div", "muted sessions-card__metadata");
+  appendSeparatedParts(metadata, [authors.join(", "), seriesLabel(book)]);
+  if (metadata.childNodes.length) identity.appendChild(metadata);
+  identity.appendChild(
+    el(
+      "div",
+      "muted sessions-book-group__count",
+      `${sessions.length} session${sessions.length === 1 ? "" : "s"} on this page`
+    )
+  );
+  header.appendChild(identity);
+  header.appendChild(
+    sessionActionLink({
+      href: bookSessionsHref,
+      icon: "auto_stories",
+      label: "View sessions for this book",
+    })
+  );
+  group.appendChild(header);
+
+  const sessionList = el("div", "sessions-book-group__sessions");
+  sessions.forEach((session) => {
+    sessionList.appendChild(renderCompactSessionRow(session, bookTitle));
+  });
+  group.appendChild(sessionList);
+  return group;
+}
+
 function contextBook(payload) {
   const context =
     payload && payload.context && typeof payload.context === "object" ? payload.context : null;
@@ -207,7 +333,13 @@ function renderResults(container, payload, results, state) {
   container.replaceChildren();
   if (results.length) {
     const fragment = document.createDocumentFragment();
-    results.forEach((session) => fragment.appendChild(renderSessionCard(session)));
+    if (state.view === "book") {
+      groupSessionsByBook(results).forEach((sessions) => {
+        fragment.appendChild(renderBookGroup(sessions));
+      });
+    } else {
+      results.forEach((session) => fragment.appendChild(renderSessionCard(session)));
+    }
     container.appendChild(fragment);
     return;
   }
@@ -228,6 +360,8 @@ export async function initReadingSessions() {
   const root = $("#reading-sessions-all");
   const subtitleEl = $("#reading-sessions-subtitle");
   const filtersEl = $("#reading-sessions-status-filters");
+  const viewToggleEl = $("#reading-sessions-view-toggle");
+  const viewNoteEl = $("#reading-sessions-view-note");
   const searchForm = $("#reading-sessions-search-form");
   const searchInput = $("#reading-sessions-search");
   const pageSizeSelect = $("#reading-sessions-page-size");
@@ -240,6 +374,8 @@ export async function initReadingSessions() {
     !root ||
     !subtitleEl ||
     !filtersEl ||
+    !viewToggleEl ||
+    !viewNoteEl ||
     !searchForm ||
     !searchInput ||
     !pageSizeSelect ||
@@ -263,6 +399,14 @@ export async function initReadingSessions() {
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
     }
+    for (const button of viewToggleEl.querySelectorAll("[data-view-mode]")) {
+      const active = button.dataset.viewMode === state.view;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+    viewNoteEl.textContent =
+      state.view === "book" ? "Grouped by book for this page of results." : "";
+    visible(viewNoteEl, !!viewNoteEl.textContent);
   }
 
   async function load(url) {
@@ -317,6 +461,15 @@ export async function initReadingSessions() {
     const nextStatus = button.dataset.statusFilter || "all";
     if (!STATUS_FILTERS.has(nextStatus) || nextStatus === state.status) return;
     state = { ...state, status: nextStatus };
+    await reloadFirstPage();
+  });
+
+  viewToggleEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-view-mode]");
+    if (!button) return;
+    const nextView = button.dataset.viewMode || "session";
+    if (!VIEW_MODES.has(nextView) || nextView === state.view) return;
+    state = { ...state, view: nextView };
     await reloadFirstPage();
   });
 

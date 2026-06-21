@@ -603,6 +603,61 @@ input[type="file"]:disabled::file-selector-button {
 .sessions-controls__page-size {
   flex: 0 0 auto;
 }
+.sessions-view-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+}
+.sessions-book-group {
+  margin: 10px 0;
+}
+.sessions-book-group__header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.sessions-book-group__identity {
+  flex: 1;
+  min-width: 0;
+}
+.sessions-book-group__title {
+  margin: 0;
+  font-size: 17px;
+}
+.sessions-book-group__count {
+  margin-top: 6px;
+}
+.sessions-book-group__sessions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.sessions-book-group__session {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.sessions-book-group__session-main {
+  flex: 1;
+  min-width: 0;
+}
+.sessions-book-group__session-title {
+  display: inline;
+  font-weight: 650;
+}
+.sessions-book-group__session-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
 .sessions-row__detail {
   margin-top: 6px;
 }
@@ -625,6 +680,14 @@ input[type="file"]:disabled::file-selector-button {
   }
   .sessions-card__trailing {
     gap: 8px;
+  }
+  .sessions-book-group__header,
+  .sessions-book-group__session {
+    flex-wrap: wrap;
+  }
+  .sessions-book-group__session-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
