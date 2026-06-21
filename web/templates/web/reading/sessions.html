@@ -8,11 +8,48 @@
   <div class="page-header">
     <div>
       <a href="/app/" class="pill">&larr; Back to Dashboard</a>
-      <h1 class="page-title" id="reading-sessions-all-title">Reading Sessions</h1>
+      <h1 class="page-title" id="reading-sessions-all-title">Sessions</h1>
+      <div class="muted is-hidden" id="reading-sessions-subtitle"></div>
     </div>
   </div>
 
-  <section id="reading-sessions-all">
+  <section id="reading-sessions-all" aria-busy="true">
+    <div class="sessions-list-controls" id="reading-sessions-controls">
+      <div
+        class="tabs sessions-status-filters"
+        id="reading-sessions-status-filters"
+        role="group"
+        aria-label="Filter reading sessions by status"
+      >
+        <button class="tab-button is-active" type="button" data-status-filter="all" aria-pressed="true">All</button>
+        <button class="tab-button" type="button" data-status-filter="active" aria-pressed="false">Active</button>
+        <button class="tab-button" type="button" data-status-filter="closed" aria-pressed="false">Closed</button>
+      </div>
+
+      <form id="reading-sessions-search-form" class="search sessions-search" autocomplete="off">
+        <label class="search__label" for="reading-sessions-search">Search</label>
+        <input
+          id="reading-sessions-search"
+          name="q"
+          type="search"
+          class="search__input"
+          placeholder="Session name, notes, or visible book metadata..."
+        />
+        <button id="reading-sessions-search-button" class="button" type="submit">Search</button>
+      </form>
+
+      <label class="sessions-page-size" for="reading-sessions-page-size">
+        <span class="muted">Results per page</span>
+        <select id="reading-sessions-page-size" name="page_size">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="muted" id="reading-sessions-status" role="status">Loading sessions...</div>
+    <div id="reading-sessions-results">
     {% if sessions %}
       {% for s in sessions %}
         <div class="card sessions-row">
@@ -68,5 +105,11 @@
     {% else %}
       <div class="muted" id="reading-sessions-all-empty">No reading sessions yet.</div>
     {% endif %}
+    </div>
+
+    <div class="pager" aria-label="Reading sessions pagination">
+      <button id="reading-sessions-prev" class="button" type="button" disabled>Previous</button>
+      <button id="reading-sessions-next" class="button" type="button" disabled>Next</button>
+    </div>
   </section>
 {% endblock %}

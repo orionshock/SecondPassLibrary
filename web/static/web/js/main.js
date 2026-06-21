@@ -36,6 +36,11 @@ document.addEventListener("DOMContentLoaded", () => {
       initExportName: "initReadingBookSessions",
       label: "Reading sessions",
     },
+    "reading-sessions": {
+      importer: () => import("./reading/sessions.js"),
+      initExportName: "initReadingSessions",
+      label: "Reading sessions",
+    },
     "reading-import": {
       importer: () => import("./reading/import_preview.js"),
       initExportName: "initReadingImportPreview",
