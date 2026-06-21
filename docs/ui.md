@@ -328,6 +328,10 @@ UI behaviors:
 
 ## 10. Shelves UI
 
+- The top-level shelves page (`/shelves/`) has two independently paginated sections:
+  - Personal Shelves uses `GET /api/v1/shelves/?scope=personal`.
+  - Shared Shelves uses `GET /api/v1/shelves/?scope=shared`.
+  - Shared includes visible group shelves and other users' listed shelves; normal visibility rules continue to exclude other users' private shelves.
 - Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
   - Uses tabs to reduce scroll:
     - Books in shelf (default): remove and reorder items with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.

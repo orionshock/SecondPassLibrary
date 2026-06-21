@@ -111,6 +111,18 @@ class ShelfViewSet(
 
         visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
 
+        scope = (self.request.query_params.get("scope") or "").strip().lower()
+        if scope == "personal":
+            visible_qs = visible_qs.filter(
+                owner_type=Shelf.OWNER_TYPE_USER,
+                owner_user=user,
+            )
+        elif scope == "shared":
+            visible_qs = visible_qs.exclude(
+                owner_type=Shelf.OWNER_TYPE_USER,
+                owner_user=user,
+            )
+
         owner_group = self.request.query_params.get("owner_group")
         if owner_group:
             visible_qs = visible_qs.filter(owner_type=Shelf.OWNER_TYPE_GROUP, owner_group_id=owner_group)

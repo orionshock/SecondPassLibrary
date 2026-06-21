@@ -845,6 +845,27 @@ input[type="file"]:disabled::file-selector-button {
 .shelf-view-items #shelf-view-items-results {
   margin-top: 8px;
 }
+.shelves-sections {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+}
+.shelves-section {
+  min-width: 0;
+}
+.shelves-section__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.shelves-section__results {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+.shelf-list-card__description,
+.shelf-list-card__metadata {
+  margin-top: 4px;
+}
 
 /* =====================
    Lists / Tables

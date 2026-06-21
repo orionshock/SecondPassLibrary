@@ -180,6 +180,114 @@ class ShelvesAPITest(APITestCase):
             detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
             self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_list_scope_personal_and_shared_preserve_visibility_rules(self):
+        own_private = Shelf.objects.create(
+            name="Own Private",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.reader,
+        )
+        own_listed = Shelf.objects.create(
+            name="Own Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.reader,
+        )
+        other_private = Shelf.objects.create(
+            name="Other Private",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.other,
+        )
+        other_listed = Shelf.objects.create(
+            name="Other Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        group_shelf = Shelf.objects.create(
+            name="Group Shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.group,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.owner,
+        )
+
+        self.client.login(username="reader", password="pw")
+
+        default_response = cast(Response, self.client.get("/api/v1/shelves/"))
+        self.assertEqual(default_response.status_code, status.HTTP_200_OK)
+        default_ids = {
+            row["id"]
+            for row in cast(
+                list[dict[str, Any]],
+                cast(Mapping[str, Any], default_response.data)["results"],
+            )
+        }
+        self.assertEqual(
+            default_ids,
+            {
+                str(own_private.id),
+                str(own_listed.id),
+                str(other_listed.id),
+                str(group_shelf.id),
+            },
+        )
+
+        personal_response = cast(
+            Response,
+            self.client.get("/api/v1/shelves/?scope=personal"),
+        )
+        self.assertEqual(personal_response.status_code, status.HTTP_200_OK)
+        personal_ids = {
+            row["id"]
+            for row in cast(
+                list[dict[str, Any]],
+                cast(Mapping[str, Any], personal_response.data)["results"],
+            )
+        }
+        self.assertEqual(personal_ids, {str(own_private.id), str(own_listed.id)})
+
+        shared_response = cast(
+            Response,
+            self.client.get("/api/v1/shelves/?scope=shared"),
+        )
+        self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
+        shared_ids = {
+            row["id"]
+            for row in cast(
+                list[dict[str, Any]],
+                cast(Mapping[str, Any], shared_response.data)["results"],
+            )
+        }
+        self.assertEqual(shared_ids, {str(other_listed.id), str(group_shelf.id)})
+        self.assertNotIn(str(other_private.id), shared_ids)
+
+        for username in ("manager", "owner"):
+            self.client.logout()
+            self.client.login(username=username, password="pw")
+            for scope in ("personal", "shared"):
+                response = cast(
+                    Response,
+                    self.client.get(f"/api/v1/shelves/?scope={scope}"),
+                )
+                ids = {
+                    row["id"]
+                    for row in cast(
+                        list[dict[str, Any]],
+                        cast(Mapping[str, Any], response.data)["results"],
+                    )
+                }
+                self.assertNotIn(
+                    str(other_private.id),
+                    ids,
+                    f"{username} should not see another user's private shelf in {scope} scope",
+                )
+
     def test_group_shelf_visibility(self):
         # Owner can create a group shelf.
         self.client.login(username="owner", password="pw")

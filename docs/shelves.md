@@ -154,6 +154,8 @@ Shelves are under `/api/v1/shelves/`:
 
 - `GET /api/v1/shelves/` (paginated)
   - filters:
+    - `?scope=personal` (visible user-owned shelves owned by the current user)
+    - `?scope=shared` (visible shelves not owned by the current user)
     - `?owner_group=<group_id>` (group-owned shelves for a group)
     - `?book=<book_id>` (shelves containing the book; includes `matched_item_id` when applicable)
 - `POST /api/v1/shelves/` (create)
@@ -169,6 +171,8 @@ Shelves are under `/api/v1/shelves/`:
 
 Notes:
 
+- Omitting `scope` preserves the combined visible-shelves list.
+- Scope filters do not bypass visibility policy. Other users' private shelves are excluded from personal, shared, and unscoped lists, including for Manager and Owner users.
 - Shelf item `book` summaries include `cover_url` when available.
 - Shelf item positions are stored zero-based and canonicalized as contiguous integers.
 - Patching an existing item with `position` uses list move-to semantics: remove the item from its current ordered position, insert it at the requested zero-based target position (clamped to list bounds), then renumber all items contiguously.
@@ -180,7 +184,7 @@ Notes:
 
 Product UI routes:
 
-- `GET /shelves/` (list)
+- `GET /shelves/` (independently paginated Personal Shelves and Shared Shelves lists)
 - `GET /shelves/new/` (create)
 - `GET /shelves/<shelf_id>/` (view)
 - `GET /shelves/<shelf_id>/edit/` (edit/manage items)

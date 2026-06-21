@@ -242,6 +242,10 @@ Endpoints:
 
 List filters:
 
+- `GET /api/v1/shelves/?scope=personal` returns visible user-owned shelves owned by the current user.
+- `GET /api/v1/shelves/?scope=shared` returns visible shelves not owned by the current user, including visible group shelves and other users' listed shelves.
+- Omitting `scope` preserves the existing combined visible-shelves list.
+- Scope filtering is applied after normal visibility policy; other users' private shelves are excluded from every normal list scope.
 - `GET /api/v1/shelves/?owner_group=<group_id>` filters to group-owned shelves for that group (still visibility-scoped to the caller).
 - `GET /api/v1/shelves/?book=<book_id>` filters to shelves containing the given book (still visibility-scoped to the caller).
   - When `?book=<book_id>` is provided, shelf rows include `matched_item_id` (the `ShelfItem.id` for that book on that shelf) to support UI removal without extra item lookups.

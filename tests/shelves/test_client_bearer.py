@@ -254,6 +254,71 @@ class ShelvesClientBearerTests(APITestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertFalse(cast(dict[str, Any], detail.data)["can_edit"])
 
+    def test_bearer_scope_filters_preserve_visibility_and_edit_contracts(self):
+        personal_shelf_id = self._create_personal_shelf_as_owner()
+
+        self.client.logout()
+        self.client.login(username="o", password="pw")
+        listed = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Other Listed",
+                    "owner_type": "user",
+                    "visibility": "listed",
+                },
+                format="json",
+            ),
+        )
+        listed_shelf_id = str(cast(dict[str, Any], listed.data)["id"])
+        private = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "Other Private", "owner_type": "user"},
+                format="json",
+            ),
+        )
+        private_shelf_id = str(cast(dict[str, Any], private.data)["id"])
+        self.client.logout()
+        group_shelf_id, _item_id = self._create_group_shelf_with_item_as_session_user()
+
+        personal_response = cast(
+            Response,
+            self.client.get(
+                "/api/v1/shelves/?scope=personal",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        personal_rows = cast(
+            list[dict[str, Any]],
+            cast(dict[str, Any], personal_response.data)["results"],
+        )
+        self.assertEqual(
+            {str(row["id"]) for row in personal_rows},
+            {personal_shelf_id},
+        )
+        self.assertTrue(personal_rows[0]["can_edit"])
+
+        shared_response = cast(
+            Response,
+            self.client.get(
+                "/api/v1/shelves/?scope=shared",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        shared_rows = cast(
+            list[dict[str, Any]],
+            cast(dict[str, Any], shared_response.data)["results"],
+        )
+        shared_by_id = {str(row["id"]): row for row in shared_rows}
+        self.assertIn(listed_shelf_id, shared_by_id)
+        self.assertIn(group_shelf_id, shared_by_id)
+        self.assertNotIn(private_shelf_id, shared_by_id)
+        self.assertFalse(shared_by_id[listed_shelf_id]["can_edit"])
+        self.assertFalse(shared_by_id[group_shelf_id]["can_edit"])
+
     def test_bearer_cannot_read_private_other_users_shelf(self):
         self.client.logout()
         self.client.login(username="o", password="pw")

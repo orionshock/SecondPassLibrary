@@ -16,13 +16,27 @@
     </div>
   </div>
 
-  <div id="shelves-status" class="muted">Loading...</div>
-  <section id="shelves-list" class="card is-hidden">
-    <div id="shelves-results" class="muted"></div>
-    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <button id="shelves-prev" class="button" type="button">Previous</button>
-      <button id="shelves-next" class="button" type="button">Next</button>
-      <span id="shelves-page-note" class="muted"></span>
-    </div>
-  </section>
+  <div class="shelves-sections">
+    <section id="personal-shelves" class="shelves-section">
+      <h2 class="shelves-section__title">Personal Shelves</h2>
+      <div id="personal-shelves-status" class="muted">Loading...</div>
+      <div id="personal-shelves-results" class="shelves-section__results"></div>
+      <div class="pager">
+        <button id="personal-shelves-prev" class="button" type="button">Previous</button>
+        <button id="personal-shelves-next" class="button" type="button">Next</button>
+        <span id="personal-shelves-page-note" class="muted"></span>
+      </div>
+    </section>
+
+    <section id="shared-shelves" class="shelves-section">
+      <h2 class="shelves-section__title">Shared Shelves</h2>
+      <div id="shared-shelves-status" class="muted">Loading...</div>
+      <div id="shared-shelves-results" class="shelves-section__results"></div>
+      <div class="pager">
+        <button id="shared-shelves-prev" class="button" type="button">Previous</button>
+        <button id="shared-shelves-next" class="button" type="button">Next</button>
+        <span id="shared-shelves-page-note" class="muted"></span>
+      </div>
+    </section>
+  </div>
 {% endblock %}
