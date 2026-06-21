@@ -14,9 +14,9 @@
   </div>
 
   <section id="reading-sessions-all" aria-busy="true">
-    <div class="sessions-list-controls" id="reading-sessions-controls">
+    <div class="sessions-controls" id="reading-sessions-controls">
       <div
-        class="tabs sessions-status-filters"
+        class="tabs sessions-controls__group sessions-status-filters"
         id="reading-sessions-status-filters"
         role="group"
         aria-label="Filter reading sessions by status"
@@ -26,8 +26,12 @@
         <button class="tab-button" type="button" data-status-filter="closed" aria-pressed="false">Closed</button>
       </div>
 
-      <form id="reading-sessions-search-form" class="search sessions-search" autocomplete="off">
-        <label class="search__label" for="reading-sessions-search">Search</label>
+      <form
+        id="reading-sessions-search-form"
+        class="search sessions-controls__group sessions-controls__search"
+        autocomplete="off"
+      >
+        <label class="sr-only" for="reading-sessions-search">Search sessions</label>
         <input
           id="reading-sessions-search"
           name="q"
@@ -38,7 +42,10 @@
         <button id="reading-sessions-search-button" class="button" type="submit">Search</button>
       </form>
 
-      <label class="sessions-page-size" for="reading-sessions-page-size">
+      <label
+        class="sessions-controls__group sessions-controls__page-size"
+        for="reading-sessions-page-size"
+      >
         <span class="muted">Results per page</span>
         <select id="reading-sessions-page-size" name="page_size">
           <option value="10">10</option>

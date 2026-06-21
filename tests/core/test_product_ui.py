@@ -977,14 +977,34 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="reading-sessions-all-title">Sessions</h1>')
         self.assertContains(response, 'id="reading-sessions-subtitle"')
+        self.assertContains(response, 'class="sessions-controls"')
         self.assertContains(response, 'id="reading-sessions-controls"')
+        self.assertContains(response, 'class="tabs sessions-controls__group sessions-status-filters"')
         self.assertContains(response, 'id="reading-sessions-status-filters"')
         self.assertContains(response, 'data-status-filter="all"')
+        self.assertContains(response, 'aria-pressed="true"')
         self.assertContains(response, 'data-status-filter="active"')
         self.assertContains(response, 'data-status-filter="closed"')
         self.assertContains(response, 'id="reading-sessions-search-form"')
         self.assertContains(response, 'id="reading-sessions-search"')
+        self.assertContains(
+            response,
+            '<label class="sr-only" for="reading-sessions-search">Search sessions</label>',
+        )
+        self.assertNotContains(
+            response,
+            '<label class="search__label" for="reading-sessions-search">Search</label>',
+        )
+        self.assertContains(
+            response,
+            'placeholder="Session name, notes, or visible book metadata..."',
+        )
         self.assertContains(response, 'id="reading-sessions-search-button"')
+        self.assertContains(
+            response,
+            'id="reading-sessions-search-button" class="button" type="submit">Search</button>',
+        )
+        self.assertContains(response, 'class="sessions-controls__group sessions-controls__page-size"')
         self.assertContains(response, 'id="reading-sessions-page-size"')
         self.assertContains(response, '<option value="20" selected>20</option>')
         self.assertContains(response, 'id="reading-sessions-results"')
@@ -1006,6 +1026,7 @@ class ProductUiSmokeTests(TestCase):
     def test_reading_sessions_js_wires_filters_search_page_size_and_book_context(self):
         js = Path("web/static/web/js/reading/sessions.js").read_text(encoding="utf-8")
         main_js = Path("web/static/web/js/main.js").read_text(encoding="utf-8")
+        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
 
         self.assertIn("const DEFAULT_PAGE_SIZE = 20", js)
         self.assertIn('params.get("book")', js)
@@ -1018,6 +1039,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('url.searchParams.set("page_size", String(state.pageSize))', js)
         self.assertIn('url.searchParams.set("book", state.book)', js)
         self.assertIn("writeQueryState", js)
+        self.assertIn('button.setAttribute("aria-pressed", active ? "true" : "false")', js)
         self.assertIn("Reading sessions for ${String(book.title)}", js)
         self.assertIn("No reading sessions for ${escapeHtml(book.title)} yet.", js)
         self.assertNotIn("/api/v1/library/books/", js)
@@ -1025,6 +1047,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("View book sessions", js)
         self.assertIn('import("./reading/sessions.js")', main_js)
         self.assertIn('initExportName: "initReadingSessions"', main_js)
+        self.assertIn(".sessions-controls .sessions-status-filters", css)
+        self.assertIn("border-bottom: 0", css)
 
     def test_authenticated_reading_sessions_all_empty_state(self):
         profile = get_or_create_profile(user=self.user)
