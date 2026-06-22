@@ -522,22 +522,25 @@ class Command(BaseCommand):
         counts: SeedCounts,
     ) -> None:
         for shelf in shelves:
-            owner_key = (
-                shelf.owner_user.username
-                if shelf.owner_type == Shelf.OWNER_TYPE_USER
-                else shelf.owner_group.name
-            )
+            if shelf.owner_type == Shelf.OWNER_TYPE_USER:
+                shelf_owner = shelf.owner_user
+                if shelf_owner is None:
+                    raise ValueError("User-owned shelf is missing owner_user.")
+                owner_key = shelf_owner.username
+                actor = shelf_owner
+            else:
+                shelf_group = shelf.owner_group
+                if shelf_group is None:
+                    raise ValueError("Group-owned shelf is missing owner_group.")
+                owner_key = shelf_group.name
+                actor = owner
+
             rng = _stable_random(
                 seed,
                 f"{shelf.owner_type}:{owner_key}:{shelf.name}",
             )
             target_count = min(len(books), rng.randint(5, 10))
             selected = rng.sample(books, target_count)
-            actor = (
-                shelf.owner_user
-                if shelf.owner_type == Shelf.OWNER_TYPE_USER
-                else owner
-            )
 
             for book in selected:
                 if ShelfItem.objects.filter(shelf=shelf, book=book).exists():
@@ -560,7 +563,10 @@ class Command(BaseCommand):
         book: Book,
     ) -> None:
         if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
-            add_book_to_group(actor=owner, book=book, group=shelf.owner_group)
+            shelf_group = shelf.owner_group
+            if shelf_group is None:
+                raise ValueError("Group-owned shelf is missing owner_group.")
+            add_book_to_group(actor=owner, book=book, group=shelf_group)
             return
 
         profile = get_or_create_profile(user=actor)
