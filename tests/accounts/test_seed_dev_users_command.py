@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import StringIO
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -10,21 +11,33 @@ from django.test import TestCase, override_settings
 from accounts.models import UserProfile
 from library.group_services import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
+from shelves.models import Shelf, ShelfItem
+from tests.library.utils import IsolatedMediaRootMixin
+from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
 
 
-class SeedDevUsersCommandTests(TestCase):
+class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
     @override_settings(DEBUG=False)
-    def test_refuses_when_debug_false(self):
+    def test_refuses_when_debug_false_unless_forced(self):
         with patch(
             "accounts.management.commands.seed_dev_users.call_command"
         ) as migrate_command:
             with self.assertRaises(CommandError):
                 call_command("seed_dev_users")
-
         migrate_command.assert_not_called()
+
+        call_command(
+            "seed_dev_users",
+            force=True,
+            users=1,
+            groups=1,
+            skip_shelves=True,
+            verbosity=0,
+        )
+        self.assertTrue(User.objects.filter(is_superuser=True, is_active=True).exists())
 
     @override_settings(DEBUG=True)
     def test_applies_migrations_before_seeding(self):
@@ -32,7 +45,13 @@ class SeedDevUsersCommandTests(TestCase):
             "accounts.management.commands.seed_dev_users.call_command",
             wraps=call_command,
         ) as migrate_command:
-            call_command("seed_dev_users", verbosity=0)
+            call_command(
+                "seed_dev_users",
+                users=1,
+                groups=1,
+                skip_shelves=True,
+                verbosity=0,
+            )
 
         migrate_command.assert_called_once_with(
             "migrate",
@@ -41,60 +60,300 @@ class SeedDevUsersCommandTests(TestCase):
         )
 
     @override_settings(DEBUG=True)
-    def test_idempotent_creates_expected_users_groups_and_memberships(self):
-        call_command("seed_dev_users")
+    def test_creates_owner_only_when_no_active_superuser_exists(self):
+        call_command(
+            "seed_dev_users",
+            users=1,
+            groups=1,
+            skip_shelves=True,
+            verbosity=0,
+        )
 
-        owner = User.objects.get(username="owner")
-        owner.first_name = "Stale"
-        owner.last_name = "Name"
-        owner.email = "stale@example.test"
-        owner.save(update_fields=["first_name", "last_name", "email"])
+        owner = User.objects.get(is_active=True, is_superuser=True)
+        self.assertEqual(owner.username, "lorem-admin")
+        self.assertTrue(owner.is_staff)
+        self.assertTrue(owner.check_password("changeme123"))
+        self.assertEqual(owner.profile.role, UserProfile.ROLE_MANAGER)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=owner,
+                group=get_public_group(),
+                role=LibraryGroupMembership.ROLE_READER,
+            ).exists()
+        )
 
-        call_command("seed_dev_users")
+    @override_settings(DEBUG=True)
+    def test_existing_active_superuser_is_left_unchanged(self):
+        owner = User.objects.create_superuser(
+            username="existing-admin",
+            password="private-password",
+            email="private@example.test",
+        )
+        owner.first_name = "Existing"
+        owner.last_name = "Operator"
+        owner.is_staff = False
+        owner.save(update_fields=["first_name", "last_name", "is_staff"])
+        profile = owner.profile
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        password_hash = owner.password
 
-        for username, first_name, last_name, email, role in (
-            ("owner", "Lorem", "Ipsum", "lorem.ipsum@example.test", UserProfile.ROLE_MANAGER),
-            ("manager", "Dolor", "Sit", "dolor.sit@example.test", UserProfile.ROLE_MANAGER),
-            (
-                "librarian",
-                "Amet",
-                "Consectetur",
-                "amet.consectetur@example.test",
-                UserProfile.ROLE_LIBRARIAN,
-            ),
-            ("reader", "Adipiscing", "Elit", "adipiscing.elit@example.test", UserProfile.ROLE_READER),
-            ("curator", "Sed", "Eiusmod", "sed.eiusmod@example.test", UserProfile.ROLE_READER),
-            (
-                "outsider",
-                "Tempor",
-                "Incididunt",
-                "tempor.incididunt@example.test",
-                UserProfile.ROLE_READER,
-            ),
-        ):
-            user = User.objects.get(username=username)
-            profile = UserProfile.objects.get(user=user)
-            self.assertEqual(user.first_name, first_name)
-            self.assertEqual(user.last_name, last_name)
-            self.assertEqual(user.email, email)
-            self.assertEqual(profile.role, role)
+        output = StringIO()
+        call_command(
+            "seed_dev_users",
+            users=1,
+            groups=1,
+            skip_shelves=True,
+            verbosity=0,
+            stdout=output,
+        )
+
+        owner.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual(owner.first_name, "Existing")
+        self.assertEqual(owner.last_name, "Operator")
+        self.assertEqual(owner.email, "private@example.test")
+        self.assertFalse(owner.is_staff)
+        self.assertEqual(owner.password, password_hash)
+        self.assertEqual(profile.role, UserProfile.ROLE_READER)
+        self.assertEqual(User.objects.filter(is_superuser=True).count(), 1)
+        self.assertIn("existing active superuser existing-admin found; skipped", output.getvalue())
+
+    @override_settings(DEBUG=True)
+    def test_existing_demo_user_is_not_overwritten(self):
+        existing = User.objects.create_user(
+            username="lorem",
+            password="private-password",
+            first_name="Existing",
+            last_name="Person",
+            email="existing@example.test",
+            is_active=False,
+            is_staff=True,
+        )
+        profile = existing.profile
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        fantasy = LibraryGroup.objects.create(
+            name="Fantasy Club",
+            description="Existing group description.",
+        )
+        membership = LibraryGroupMembership.objects.create(
+            user=existing,
+            group=fantasy,
+            role=LibraryGroupMembership.ROLE_READER,
+        )
+        shelf = Shelf.objects.create(
+            name="Reading Queue",
+            description="Existing shelf description.",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=existing,
+            created_by=existing,
+        )
+        password_hash = existing.password
+
+        call_command(
+            "seed_dev_users",
+            users=1,
+            groups=1,
+            verbosity=0,
+        )
+
+        existing.refresh_from_db()
+        profile.refresh_from_db()
+        fantasy.refresh_from_db()
+        membership.refresh_from_db()
+        shelf.refresh_from_db()
+        self.assertEqual(existing.first_name, "Existing")
+        self.assertEqual(existing.last_name, "Person")
+        self.assertEqual(existing.email, "existing@example.test")
+        self.assertFalse(existing.is_active)
+        self.assertTrue(existing.is_staff)
+        self.assertFalse(existing.is_superuser)
+        self.assertEqual(existing.password, password_hash)
+        self.assertEqual(profile.role, UserProfile.ROLE_READER)
+        self.assertEqual(fantasy.description, "Existing group description.")
+        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
+        self.assertEqual(shelf.description, "Existing shelf description.")
+
+    @override_settings(DEBUG=True)
+    def test_default_world_has_users_groups_and_varied_memberships(self):
+        call_command("seed_dev_users", skip_shelves=True, verbosity=0)
 
         public = get_public_group()
         self.assertEqual(public.name, "Common Room")
+        self.assertEqual(
+            public.description,
+            "Main Public Library Room for everyone",
+        )
+        self.assertEqual(
+            User.objects.filter(username__in=[
+                "lorem",
+                "ipsum",
+                "dolor",
+                "sit",
+                "amet",
+                "consectetur",
+                "adipiscing",
+                "elit",
+                "sed",
+                "eiusmod",
+                "tempor",
+                "incididunt",
+                "labore",
+                "dolore",
+                "magna",
+                "aliqua",
+                "enim",
+                "minim",
+                "veniam",
+                "nostrud",
+            ]).count(),
+            20,
+        )
+        self.assertEqual(
+            LibraryGroup.objects.filter(
+                name__in=[
+                    "Fantasy Club",
+                    "Mystery Annex",
+                    "Kids Books",
+                    "Sci-Fi Stack",
+                    "History Corner",
+                ]
+            ).count(),
+            5,
+        )
 
-        fantasy = LibraryGroup.objects.get(name="Fantasy Club")
-        self.assertTrue(LibraryGroup.objects.filter(name="Kids Books").exists())
+        lorem = User.objects.get(username="lorem")
+        dolor = User.objects.get(username="dolor")
+        elit = User.objects.get(username="elit")
+        self.assertGreaterEqual(
+            LibraryGroupMembership.objects.filter(user=lorem).count(),
+            3,
+        )
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=lorem,
+                role=LibraryGroupMembership.ROLE_CURATOR,
+            ).exists()
+        )
+        self.assertEqual(
+            list(
+                LibraryGroupMembership.objects.filter(user=dolor).values_list(
+                    "group__name",
+                    flat=True,
+                )
+            ),
+            ["Kids Books"],
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(user=dolor, group=public).exists()
+        )
+        self.assertEqual(
+            list(
+                LibraryGroupMembership.objects.filter(user=elit).values_list(
+                    "group__name",
+                    flat=True,
+                )
+            ),
+            ["Common Room"],
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                group=public,
+                role=LibraryGroupMembership.ROLE_CURATOR,
+            ).exists()
+        )
 
-        curator = User.objects.get(username="curator")
-        reader = User.objects.get(username="reader")
+    @override_settings(DEBUG=True)
+    def test_creates_user_group_and_public_shelves_without_books(self):
+        output = StringIO()
+        call_command(
+            "seed_dev_users",
+            users=4,
+            groups=2,
+            verbosity=0,
+            stdout=output,
+        )
 
-        curator_role = LibraryGroupMembership.objects.get(user=curator, group=fantasy).role
-        reader_role = LibraryGroupMembership.objects.get(user=reader, group=fantasy).role
-        self.assertEqual(curator_role, LibraryGroupMembership.ROLE_CURATOR)
-        self.assertEqual(reader_role, LibraryGroupMembership.ROLE_READER)
+        self.assertEqual(
+            Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_USER).count(),
+            8,
+        )
+        self.assertEqual(
+            Shelf.objects.filter(
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group__name__in=["Fantasy Club", "Mystery Annex"],
+            ).count(),
+            4,
+        )
+        self.assertEqual(
+            Shelf.objects.filter(
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group=get_public_group(),
+            ).count(),
+            2,
+        )
+        self.assertEqual(ShelfItem.objects.count(), 0)
+        self.assertIn("No books found; shelf item population skipped.", output.getvalue())
+        self.assertIn("Book population: skipped because no books exist.", output.getvalue())
 
-        # Public membership exists for all seed users (role reader).
-        for username in ("owner", "manager", "librarian", "reader", "curator", "outsider"):
-            user = User.objects.get(username=username)
-            role = LibraryGroupMembership.objects.get(user=user, group=public).role
-            self.assertEqual(role, LibraryGroupMembership.ROLE_READER)
+    @override_settings(DEBUG=True)
+    def test_populates_shelves_deterministically_and_reruns_without_duplicates(self):
+        for index in range(12):
+            create_file_backed_book(
+                title=f"Fixture Book {index:02d}",
+                epub_bytes=f"book-{index}".encode(),
+                source_filename=f"book-{index}.epub",
+            )
+
+        first_output = StringIO()
+        call_command(
+            "seed_dev_users",
+            users=4,
+            groups=2,
+            seed="fixture-seed",
+            verbosity=0,
+            stdout=first_output,
+        )
+
+        shelf_ids = list(Shelf.objects.values_list("id", flat=True))
+        first_items = set(
+            ShelfItem.objects.values_list("shelf_id", "book_id")
+        )
+        self.assertTrue(first_items)
+        for shelf_id in shelf_ids:
+            items = list(
+                ShelfItem.objects.filter(shelf_id=shelf_id).values_list(
+                    "book_id",
+                    flat=True,
+                )
+            )
+            self.assertGreaterEqual(len(items), 5)
+            self.assertLessEqual(len(items), 10)
+            self.assertEqual(len(items), len(set(items)))
+
+        second_output = StringIO()
+        call_command(
+            "seed_dev_users",
+            users=4,
+            groups=2,
+            seed="fixture-seed",
+            verbosity=0,
+            stdout=second_output,
+        )
+
+        self.assertEqual(
+            Shelf.objects.count(),
+            len(shelf_ids),
+        )
+        self.assertEqual(
+            set(ShelfItem.objects.values_list("shelf_id", "book_id")),
+            first_items,
+        )
+        self.assertEqual(
+            LibraryGroupMembership.objects.count(),
+            LibraryGroupMembership.objects.values("user_id", "group_id").distinct().count(),
+        )
+        self.assertIn("Shelf items added: 0", second_output.getvalue())
+        self.assertIn("Users: 0 created, 4 existing/skipped", second_output.getvalue())
+        self.assertIn("Groups: 0 created, 2 existing/skipped", second_output.getvalue())

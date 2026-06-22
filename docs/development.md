@@ -143,22 +143,43 @@ Test helpers:
 - Prefer `tests/utils/books.py::create_file_backed_book()` when a test needs a normal valid Book. The product invariant is that Books are file-backed.
 - Use `create_fileless_book_for_integrity_edge_case()` only for tests that intentionally model inconsistent/out-of-band states.
 
-## Dev seed users (local only)
+## Dev/demo fixture world (local only)
 
-Create predictable development/demo users and groups for manual UI testing:
+Create a richer development/demo world for manual UI testing:
 
 ```powershell
 python manage.py seed_dev_users
 ```
 
-Credentials (DEV ONLY):
+The command:
 
-- Users: `owner`, `manager`, `librarian`, `reader`, `curator`, `outsider`
-- Password: `changeme123`
+- applies pending migrations before reading the database
+- creates a predictable lorem-named Owner only when no active superuser exists
+- ensures the configured Public group exists (`Common Room` on a default server)
+- ensures about 20 lorem-named demo users and five non-Public library groups
+- creates varied reader/curator memberships without removing existing memberships
+- creates personal, group-owned, and Common Room shelves
+- deterministically adds 5-10 existing books to each shelf when books are available
+
+The command is non-destructive by default. Existing users with matching
+usernames retain their names, email addresses, passwords, flags, and profile
+roles. Existing groups and shelves are reused without overwriting their
+descriptions or other fields. Re-running with the same seed does not duplicate
+memberships, shelves, or shelf items.
+
+Useful options:
+
+```powershell
+python manage.py seed_dev_users --seed family-demo
+python manage.py seed_dev_users --users 12 --groups 3
+python manage.py seed_dev_users --skip-shelves
+```
 
 Safety:
 
-- The command refuses to run unless `DEBUG=True` (use `--force` only for local development).
+- Newly created demo accounts use the predictable password `changeme123`.
+- The command refuses to run unless `DEBUG=True` (use `--force` only for local
+  development).
 - This command is not the normal installation bootstrap path. Fresh installs
   should use the first-run setup page. It remains a development/demo helper
   only.
