@@ -599,6 +599,32 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="shelf-new-form"')
         self.assertContains(response, 'id="shelf-new-owner-type"')
         self.assertContains(response, 'id="shelf-new-owner-group"')
+        self.assertContains(response, 'id="shelf-new-owner-type-row"')
+        self.assertContains(response, 'id="shelf-new-owner-group-row"')
+
+    def test_shelf_create_js_gates_group_owner_controls_by_current_user(self):
+        new_js = Path("web/static/web/js/shelves/new.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("const me = await loadMeAndInitShell()", new_js)
+        self.assertIn("export function canCreateGroupShelves(me)", new_js)
+        self.assertIn("me.is_owner", new_js)
+        self.assertIn("capabilities.can_manage_library", new_js)
+        self.assertIn("me.curated_group_ids", new_js)
+        self.assertIn('group.membership_role === "curator"', new_js)
+        self.assertNotIn("can_create_library_groups", new_js)
+        self.assertIn("export function manageableShelfGroups(me, groups)", new_js)
+        self.assertIn("availableGroups.filter", new_js)
+        self.assertIn("visible(ownerTypeRow, canCreateGroupShelf)", new_js)
+        self.assertIn("visible(ownerGroupRow, canCreateGroupShelf)", new_js)
+        self.assertIn('ownerTypeEl.value = "user"', new_js)
+        self.assertIn(
+            'canCreateGroupShelf && ownerTypeEl.value === "group"',
+            new_js,
+        )
+        self.assertIn("owner_type: ownerType", new_js)
+        self.assertIn('if (ownerType === "user")', new_js)
 
     def test_unauthenticated_shelf_detail_redirects_to_login(self):
         shelf_id = uuid4()

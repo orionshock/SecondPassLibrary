@@ -7,8 +7,48 @@ import {
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 
+export function canCreateGroupShelves(me) {
+  if (!me) return false;
+  const capabilities = me.capabilities || {};
+  if (me.is_owner || capabilities.can_manage_library) return true;
+
+  const curatedGroupIds = Array.isArray(me.curated_group_ids)
+    ? me.curated_group_ids
+    : [];
+  if (curatedGroupIds.length > 0) return true;
+
+  const groups = Array.isArray(me.groups) ? me.groups : [];
+  return groups.some(
+    (group) => group && group.membership_role === "curator"
+  );
+}
+
+export function manageableShelfGroups(me, groups) {
+  const availableGroups = Array.isArray(groups) ? groups : [];
+  if (!me) return [];
+
+  const capabilities = me.capabilities || {};
+  if (me.is_owner || capabilities.can_manage_library) return availableGroups;
+
+  const curatedIds = new Set(
+    [
+      ...(Array.isArray(me.curated_group_ids) ? me.curated_group_ids : []),
+      ...(Array.isArray(me.groups)
+        ? me.groups
+            .filter(
+              (group) => group && group.membership_role === "curator"
+            )
+            .map((group) => group.id)
+        : []),
+    ].map(String)
+  );
+  return availableGroups.filter(
+    (group) => group && curatedIds.has(String(group.id))
+  );
+}
+
 export async function initShelfNew() {
-  await loadMeAndInitShell();
+  const me = await loadMeAndInitShell();
   setGlobalError("");
 
   const statusEl = $("#shelf-new-status");
@@ -20,8 +60,27 @@ export async function initShelfNew() {
   const ownerTypeEl = $("#shelf-new-owner-type");
   const visibilityEl = $("#shelf-new-visibility");
   const ownerGroupEl = $("#shelf-new-owner-group");
+  const ownerTypeRow = $("#shelf-new-owner-type-row");
+  const ownerTypeRowValue = $("#shelf-new-owner-type-row-v");
+  const ownerGroupRow = $("#shelf-new-owner-group-row");
+  const ownerGroupRowValue = $("#shelf-new-owner-group-row-v");
   const submitStatusEl = $("#shelf-new-submit-status");
-  if (!statusEl || !cardEl || !errEl || !formEl || !nameEl || !descEl || !ownerTypeEl || !visibilityEl || !ownerGroupEl) return;
+  if (
+    !statusEl ||
+    !cardEl ||
+    !errEl ||
+    !formEl ||
+    !nameEl ||
+    !descEl ||
+    !ownerTypeEl ||
+    !visibilityEl ||
+    !ownerGroupEl ||
+    !ownerTypeRow ||
+    !ownerTypeRowValue ||
+    !ownerGroupRow ||
+    !ownerGroupRowValue
+  )
+    return;
 
   function setErr(msg) {
     errEl.textContent = msg || "";
@@ -30,10 +89,24 @@ export async function initShelfNew() {
 
   setStatus(statusEl, "Loading...", false);
   setErr("");
-  visible(cardEl, true);
 
-  const groups = await fetchJSON("/api/v1/library/groups/");
-  const results = Array.isArray(groups && groups.results) ? groups.results : [];
+  const canCreateGroupShelf = canCreateGroupShelves(me);
+  ownerTypeEl.value = "user";
+  ownerGroupEl.disabled = true;
+  visible(ownerTypeRow, canCreateGroupShelf);
+  visible(ownerTypeRowValue, canCreateGroupShelf);
+  visible(ownerGroupRow, canCreateGroupShelf);
+  visible(ownerGroupRowValue, canCreateGroupShelf);
+
+  let results = [];
+  if (canCreateGroupShelf) {
+    const groups = await fetchJSON("/api/v1/library/groups/");
+    const availableGroups = Array.isArray(groups && groups.results)
+      ? groups.results
+      : [];
+    results = manageableShelfGroups(me, availableGroups);
+  }
+
   ownerGroupEl.textContent = "";
   for (const g of results) {
     const opt = document.createElement("option");
@@ -45,12 +118,15 @@ export async function initShelfNew() {
   const qs = new URLSearchParams(window.location.search || "");
   const preOwnerType = qs.get("owner_type");
   const preOwnerGroup = qs.get("owner_group");
-  if (preOwnerType === "group") ownerTypeEl.value = "group";
-  else if (preOwnerGroup) ownerTypeEl.value = "group";
-  if (preOwnerGroup) ownerGroupEl.value = preOwnerGroup;
+  if (canCreateGroupShelf) {
+    if (preOwnerType === "group") ownerTypeEl.value = "group";
+    else if (preOwnerGroup) ownerTypeEl.value = "group";
+    if (preOwnerGroup) ownerGroupEl.value = preOwnerGroup;
+  }
 
   function syncOwnerUI() {
-    const isGroup = ownerTypeEl.value === "group";
+    const isGroup =
+      canCreateGroupShelf && ownerTypeEl.value === "group";
     visibilityEl.disabled = isGroup;
     ownerGroupEl.disabled = !isGroup;
     if (isGroup) visibilityEl.value = "private";
@@ -58,6 +134,7 @@ export async function initShelfNew() {
   ownerTypeEl.addEventListener("change", syncOwnerUI);
   syncOwnerUI();
 
+  visible(cardEl, true);
   setStatus(statusEl, "", false);
 
   formEl.addEventListener("submit", async (e) => {
@@ -66,13 +143,17 @@ export async function initShelfNew() {
     setErr("");
     setStatus(submitStatusEl, "Creating...", false);
 
+    const ownerType =
+      canCreateGroupShelf && ownerTypeEl.value === "group"
+        ? "group"
+        : "user";
     const body = {
       name: nameEl.value || "",
       description: descEl.value || "",
-      owner_type: ownerTypeEl.value,
+      owner_type: ownerType,
     };
-    if (ownerTypeEl.value === "user") body.visibility = visibilityEl.value;
-    if (ownerTypeEl.value === "group") body.owner_group = ownerGroupEl.value;
+    if (ownerType === "user") body.visibility = visibilityEl.value;
+    if (ownerType === "group") body.owner_group = ownerGroupEl.value;
 
     try {
       const csrf = getCsrfToken();
