@@ -1427,6 +1427,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="users-results"')
         self.assertContains(response, 'id="users-filters"')
         self.assertContains(response, 'id="users-create-link"')
+        self.assertContains(
+            response,
+            "Manage local users, roles, and group memberships.",
+        )
+        self.assertNotContains(response, "Django users")
 
     def test_authenticated_user_new_returns_200_and_has_form(self):
         self.client.force_login(self.user)
