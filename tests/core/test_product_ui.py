@@ -560,6 +560,14 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="group-edit-shelves-results"')
         self.assertContains(response, 'id="group-edit-shelves-actions"')
         self.assertContains(response, 'id="group-delete-root"')
+        self.assertContains(
+            response,
+            "Managers, librarians, and owners can already access and manage books globally.",
+        )
+        self.assertContains(response, "Group membership is mainly for readers.")
+        self.assertContains(
+            response, "group’s books and shelves."
+        )
 
     def test_unauthenticated_shelves_redirects_to_login(self):
         response = self.client.get("/shelves/", follow=False)
@@ -1482,6 +1490,14 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="user-reset-password-btn"')
         self.assertContains(response, 'id="user-memberships-card"')
         self.assertContains(response, 'id="user-memberships-add-form"')
+        self.assertContains(
+            response,
+            "Managers, librarians, and owners can already access and manage books globally.",
+        )
+        self.assertContains(response, "Group membership is mainly for readers.")
+        self.assertContains(
+            response, "group’s books and shelves."
+        )
 
     def test_authenticated_profile_returns_200_and_has_containers(self):
         self.client.force_login(self.user)
