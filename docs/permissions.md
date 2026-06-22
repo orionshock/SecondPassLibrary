@@ -9,6 +9,14 @@ Key principles:
 - Access to a book is determined by `LibraryGroupMembership` + `BookGroupAssignment`.
 - Business rules should be centralized in policy helpers and service modules (avoid scattered per-view logic).
 
+In plain language:
+
+- Readers live in groups.
+- Curators are trusted readers within a group.
+- Librarians manage the collection globally.
+- Managers manage people globally.
+- Owners manage the installation.
+
 ## Roles (global)
 
 Global roles live on `UserProfile.role`:

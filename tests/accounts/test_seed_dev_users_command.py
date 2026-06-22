@@ -226,7 +226,8 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
 
         lorem = User.objects.get(username="lorem")
         dolor = User.objects.get(username="dolor")
-        elit = User.objects.get(username="elit")
+        manager = User.objects.get(username="consectetur")
+        librarian = User.objects.get(username="elit")
         self.assertGreaterEqual(
             LibraryGroupMembership.objects.filter(user=lorem).count(),
             3,
@@ -249,14 +250,11 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertFalse(
             LibraryGroupMembership.objects.filter(user=dolor, group=public).exists()
         )
-        self.assertEqual(
-            list(
-                LibraryGroupMembership.objects.filter(user=elit).values_list(
-                    "group__name",
-                    flat=True,
-                )
-            ),
-            ["Common Room"],
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(user=manager).exists()
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(user=librarian).exists()
         )
         self.assertFalse(
             LibraryGroupMembership.objects.filter(
@@ -284,6 +282,15 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
             LibraryGroupMembership.objects.filter(
                 role=LibraryGroupMembership.ROLE_CURATOR,
                 user__profile__role=UserProfile.ROLE_LIBRARIAN,
+            ).exists()
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                user__profile__role__in=[
+                    UserProfile.ROLE_MANAGER,
+                    UserProfile.ROLE_LIBRARIAN,
+                ],
+                user__is_superuser=False,
             ).exists()
         )
         for group in LibraryGroup.objects.exclude(pk=public.pk):
@@ -321,6 +328,40 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
 
         membership.refresh_from_db()
         self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
+
+    @override_settings(DEBUG=True)
+    def test_existing_broad_role_membership_is_preserved(self):
+        existing = User.objects.create_user(
+            username="consectetur",
+            password="private-password",
+        )
+        profile = UserProfile.objects.get(user=existing)
+        profile.role = UserProfile.ROLE_MANAGER
+        profile.save(update_fields=["role", "updated_at"])
+        fantasy = LibraryGroup.objects.create(name="Fantasy Club")
+        membership = LibraryGroupMembership.objects.create(
+            user=existing,
+            group=fantasy,
+            role=LibraryGroupMembership.ROLE_READER,
+        )
+
+        call_command(
+            "seed_dev_users",
+            users=6,
+            groups=1,
+            skip_shelves=True,
+            verbosity=0,
+        )
+
+        membership.refresh_from_db()
+        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=existing,
+                group=get_public_group(),
+                role=LibraryGroupMembership.ROLE_READER,
+            ).exists()
+        )
 
     @override_settings(DEBUG=True)
     def test_creates_user_group_and_public_shelves_without_books(self):

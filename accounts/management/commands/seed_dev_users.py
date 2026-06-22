@@ -412,10 +412,14 @@ class Command(BaseCommand):
         counts: SeedCounts,
     ) -> None:
         user_items = list(users.items())
+        profiles = {
+            username: UserProfile.objects.get(user=user)
+            for username, user in user_items
+        }
         reader_users = [
             user
-            for _username, user in user_items
-            if UserProfile.objects.get(user=user).role == UserProfile.ROLE_READER
+            for username, user in user_items
+            if profiles[username].role == UserProfile.ROLE_READER
         ]
         self._ensure_each_group_has_curator(
             users=reader_users,
@@ -424,6 +428,17 @@ class Command(BaseCommand):
         )
 
         for index, (username, user) in enumerate(user_items):
+            if profiles[username].role != UserProfile.ROLE_READER:
+                if username in created_usernames:
+                    # User creation normally adds Public via a signal. Broad-role
+                    # demo users already have server-wide access and intentionally
+                    # carry no fixture memberships. Bypass the membership fallback
+                    # signal only for these newly created fixture accounts.
+                    LibraryGroupMembership.objects.filter(user=user)._raw_delete(
+                        LibraryGroupMembership.objects.db
+                    )
+                continue
+
             desired: list[tuple[LibraryGroup, str]] = []
             if index % 4 != 2:
                 desired.append((public, LibraryGroupMembership.ROLE_READER))
