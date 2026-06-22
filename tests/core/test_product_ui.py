@@ -35,7 +35,8 @@ class FirstRunProductUiTests(TestCase):
     def test_setup_page_is_available_without_active_owner(self):
         response = self.client.get("/setup/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Set up SecondPassLibrary")
+        self.assertContains(response, "Set up your library")
+        self.assertContains(response, 'class="setup-layout"')
         self.assertContains(response, "Server")
         self.assertContains(response, "Public Space")
         self.assertContains(response, "Owner Account")
@@ -73,7 +74,7 @@ class FirstRunProductUiTests(TestCase):
         response = self.client.get("/setup/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Set up SecondPassLibrary")
+        self.assertContains(response, "Set up your library")
 
     def test_root_app_and_login_direct_to_setup_without_active_owner(self):
         for path in ("/", "/app/", "/api-auth/login/"):

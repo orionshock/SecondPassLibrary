@@ -424,9 +424,9 @@ input[type="file"]:disabled::file-selector-button {
   padding-top: 0;
 }
 .setup-shell {
-  width: min(520px, 100%);
+  width: min(960px, 100%);
   margin: 0 auto;
-  padding: 48px 16px;
+  padding: 32px 16px;
 }
 .setup-card {
   padding: 22px;
@@ -441,6 +441,16 @@ input[type="file"]:disabled::file-selector-button {
   display: grid;
   gap: 14px;
 }
+.setup-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  grid-template-areas:
+    "owner server"
+    "owner public"
+    "owner advanced";
+  gap: 14px;
+  align-items: start;
+}
 .setup-section {
   display: grid;
   gap: 14px;
@@ -448,6 +458,10 @@ input[type="file"]:disabled::file-selector-button {
   border: 1px solid var(--border);
   border-radius: 12px;
 }
+.setup-section--server { grid-area: server; }
+.setup-section--public { grid-area: public; }
+.setup-section--owner { grid-area: owner; }
+.setup-section--advanced { grid-area: advanced; }
 .setup-section legend {
   padding: 0 6px;
   color: var(--text);
@@ -484,6 +498,20 @@ input[type="file"]:disabled::file-selector-button {
 .setup-field .error ul {
   margin: 4px 0 0;
   padding-left: 20px;
+}
+
+@media (max-width: 760px) {
+  .setup-shell {
+    padding-top: 20px;
+  }
+  .setup-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "server"
+      "public"
+      "owner"
+      "advanced";
+  }
 }
 
 .button {
