@@ -9,6 +9,32 @@ from library.models import Book, BookGroupAssignment, LibraryGroupMembership, is
 from .models import Shelf
 
 
+def can_create_shelf(
+    *,
+    user,
+    owner_type: str,
+    owner_user=None,
+    owner_group=None,
+) -> bool:
+    if getattr(user, "is_anonymous", False):
+        return False
+
+    if owner_type == Shelf.OWNER_TYPE_USER:
+        target_user = owner_user or user
+        return getattr(target_user, "id", None) == getattr(user, "id", None)
+
+    if owner_type == Shelf.OWNER_TYPE_GROUP:
+        if owner_group is None:
+            return False
+        if core_policies.can_manage_library(user):
+            return True
+        if is_public_group(owner_group):
+            return False
+        return core_policies.can_curate_group(user=user, group=owner_group)
+
+    return False
+
+
 def visible_shelf_filter(user) -> Q:
     if getattr(user, "is_anonymous", False):
         return Q(pk__isnull=True)
@@ -60,10 +86,10 @@ def can_edit_shelf(*, user, shelf: Shelf) -> bool:
         group = shelf.owner_group
         if group is None:
             return False
-        if is_public_group(group):
-            return core_policies.can_manage_library(user)
-        return core_policies.can_manage_library(user) or core_policies.can_curate_group(
-            user=user, group=group
+        return can_create_shelf(
+            user=user,
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=group,
         )
 
     return False

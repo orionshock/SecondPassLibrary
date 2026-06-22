@@ -55,8 +55,14 @@ def create_shelf(
 ) -> Shelf:
     if owner_type == Shelf.OWNER_TYPE_USER:
         owner_user = owner_user or actor
-        if getattr(owner_user, "id", None) != getattr(actor, "id", None):
-            raise PermissionDenied("Not allowed.")
+
+    if not policies.can_create_shelf(
+        user=actor,
+        owner_type=owner_type,
+        owner_user=owner_user,
+        owner_group=owner_group,
+    ):
+        raise PermissionDenied("Not allowed.")
 
     shelf = Shelf(
         name=name,
@@ -67,8 +73,6 @@ def create_shelf(
         visibility=visibility,
         created_by=actor,
     )
-    if not policies.can_edit_shelf(user=actor, shelf=shelf):
-        raise PermissionDenied("Not allowed.")
 
     shelf.save()
     return shelf

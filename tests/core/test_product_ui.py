@@ -613,6 +613,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("capabilities.can_manage_library", new_js)
         self.assertIn("me.curated_group_ids", new_js)
         self.assertIn('group.membership_role === "curator"', new_js)
+        self.assertIn("!group.is_public_group", new_js)
         self.assertNotIn("can_create_library_groups", new_js)
         self.assertIn("export function manageableShelfGroups(me, groups)", new_js)
         self.assertIn("availableGroups.filter", new_js)

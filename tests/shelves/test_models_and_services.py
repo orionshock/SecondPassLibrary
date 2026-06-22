@@ -23,6 +23,7 @@ from shelves.services import (
     set_shelf_item_position,
     visible_shelf_items_for_user,
 )
+from shelves.policies import can_create_shelf
 from tests.utils.books import create_file_backed_book
 
 
@@ -91,6 +92,13 @@ class ShelfServicePolicyTests(TestCase):
 
         self.group = LibraryGroup.objects.create(name="Fantasy Club")
         LibraryGroupMembership.objects.create(user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER)
+        self.curated_group = LibraryGroup.objects.create(name="Curated")
+        self.curator = User.objects.create_user(username="curator", password="pw")
+        LibraryGroupMembership.objects.create(
+            user=self.curator,
+            group=self.curated_group,
+            role=LibraryGroupMembership.ROLE_CURATOR,
+        )
 
         self.book_in_group = create_file_backed_book(title="GBook", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
@@ -106,6 +114,29 @@ class ShelfServicePolicyTests(TestCase):
                 owner_type=Shelf.OWNER_TYPE_USER,
                 owner_user=self.other,
             )
+
+    def test_group_shelf_create_policy_is_group_specific(self):
+        self.assertTrue(
+            can_create_shelf(
+                user=self.curator,
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group=self.curated_group,
+            )
+        )
+        self.assertFalse(
+            can_create_shelf(
+                user=self.curator,
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group=self.group,
+            )
+        )
+        self.assertFalse(
+            can_create_shelf(
+                user=self.curator,
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group=self.public,
+            )
+        )
 
     def test_group_shelf_only_allows_books_assigned_to_group(self):
         shelf = create_shelf(

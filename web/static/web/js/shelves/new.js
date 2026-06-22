@@ -19,7 +19,10 @@ export function canCreateGroupShelves(me) {
 
   const groups = Array.isArray(me.groups) ? me.groups : [];
   return groups.some(
-    (group) => group && group.membership_role === "curator"
+    (group) =>
+      group &&
+      !group.is_public_group &&
+      group.membership_role === "curator"
   );
 }
 
@@ -43,7 +46,10 @@ export function manageableShelfGroups(me, groups) {
     ].map(String)
   );
   return availableGroups.filter(
-    (group) => group && curatedIds.has(String(group.id))
+    (group) =>
+      group &&
+      !group.is_public_group &&
+      curatedIds.has(String(group.id))
   );
 }
 

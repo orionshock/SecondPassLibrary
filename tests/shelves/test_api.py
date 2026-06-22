@@ -562,10 +562,74 @@ class ShelvesAPITest(APITestCase):
         self.assertEqual(detail2.status_code, status.HTTP_200_OK)
         self.assertEqual(cast(Mapping[str, Any], detail2.data)["can_edit"], True)
 
-    def test_reader_cannot_create_group_shelf(self):
+    def test_reader_cannot_create_group_shelf_for_reader_membership(self):
         self.client.login(username="reader", password="pw")
         resp = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))
-        self.assertIn(resp.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_400_BAD_REQUEST})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_curator_can_create_shelf_only_for_curated_non_public_group(self):
+        self.client.login(username="curator", password="pw")
+
+        allowed = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Curated Shelf",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(allowed.status_code, status.HTTP_201_CREATED)
+
+        unrelated = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Unrelated Shelf",
+                    "owner_type": "group",
+                    "owner_group": str(self.hidden_group.id),
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(unrelated.status_code, status.HTTP_403_FORBIDDEN)
+
+        public = cast(
+            Response,
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Public Shelf",
+                    "owner_type": "group",
+                    "owner_group": str(self.public.id),
+                },
+                format="json",
+            ),
+        )
+        self.assertEqual(public.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_broad_roles_can_create_public_group_shelves(self):
+        for username in ("librarian", "manager", "owner"):
+            with self.subTest(username=username):
+                self.client.logout()
+                self.client.login(username=username, password="pw")
+                response = cast(
+                    Response,
+                    self.client.post(
+                        "/api/v1/shelves/",
+                        data={
+                            "name": f"{username} Public Shelf",
+                            "owner_type": "group",
+                            "owner_group": str(self.public.id),
+                        },
+                        format="json",
+                    ),
+                )
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_group_shelf_with_listed_visibility_returns_400(self):
         self.client.login(username="owner", password="pw")
