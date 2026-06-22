@@ -174,29 +174,38 @@ Presentation/configuration fields:
 Rules:
 
 - Name should be treated as immutable in normal product workflows after group creation.
-- Public name is fixed (see below).
+- The Public display name is configured during first-run setup or by the Owner
+  through server settings.
 - Description is a presentation/configuration field and may be editable according to role policy.
 
 ## Public group
 
-Public is special.
+Public is special. `Common Room` is its default display name, not its internal
+identity.
 
 - Public is identified by `ServerSetting(public_group_id)`.
 - Public is the only special built-in LibraryGroup.
 - Public behavior is based on `is_public_group()` / `get_public_group()` (not boolean flags).
-- Public name is fixed.
+- Renaming the Public display name does not change its identity or protections.
 - Public cannot be deleted.
 - Public cannot have Curators.
 
 Default/fallback behavior:
 
-- Public is the default group in simple mode.
-- First-run Owner setup creates/repairs Public and adds the Owner as a reader
-  member.
+- Public, displayed as `Common Room` by default, is the shared public library
+  space managed by librarians and managers.
+- First-run Owner setup creates/repairs Public, saves its configured name and
+  description, and adds the Owner as a reader member.
 - New users default to Public (reader membership).
 - New/imported books default to Public (book assignment).
 - Users/books must belong to at least one LibraryGroup.
 - Public is fallback only: if a user/book would otherwise have zero groups, it is restored to Public.
+
+`advanced_library_groups_enabled` is currently a Product UI preference.
+Disabled means the server is centered on Common Room. Enabled presents
+additional curator-managed rooms, each with its own memberships and group-owned
+shelves, as a first-class workflow. It does not alter permissions or block
+group APIs.
 
 Role constraints:
 

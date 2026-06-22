@@ -56,10 +56,22 @@ For a clean local reset:
 4. Visit `/`.
 5. Complete the first-run setup wizard.
 
-The setup page creates the first active Owner account with a local password,
-creates its `UserProfile`, and ensures the protected Public group and
-membership exist. Email is optional metadata. Once an active Owner exists,
-`/setup/` is disabled and normal login at `/api-auth/login/` is used.
+The setup page initializes:
+
+- Server Name: `Second Pass Library`
+- Server Description: blank
+- Public Group Name: `Common Room`
+- Public Group Description: `Main Public Library Room for everyone`
+- Enable Advanced Library Group Usage: off
+- The first active Owner account, its Manager `UserProfile`, and its reader
+  membership in the Public group
+
+Email and the display-name fields are optional account metadata. `Common Room`
+is the default display name for the protected shared public library space
+managed by librarians and managers. Enabling advanced library groups presents
+separate curator-managed rooms as a first-class UI feature; it does not change
+permissions in this pass. Once an active Owner exists, `/setup/` is disabled
+and normal login at `/api-auth/login/` is used.
 
 Raw `python manage.py runserver` remains available, but it does not create or
 migrate the database schema. If using raw `runserver`, run
@@ -148,7 +160,8 @@ Safety:
 
 - The command refuses to run unless `DEBUG=True` (use `--force` only for local development).
 - This command is not the normal installation bootstrap path. Fresh installs
-  should use the first-run setup page.
+  should use the first-run setup page. It remains a development/demo helper
+  only.
 
 ## Common commands
 

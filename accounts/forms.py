@@ -45,9 +45,10 @@ class FirstOwnerSetupForm(UserCreationForm):
         required=False,
         initial=False,
         help_text=(
-            "Advanced library groups let you create multiple shared library rooms "
-            "with separate memberships, curators, and group-owned shelves. Leave "
-            "this off if you only want one common public library space."
+            "Advanced library groups let you create separate curator-managed "
+            "library rooms with their own memberships and group-owned shelves. "
+            "Leave this off if you only need the Common Room, managed by librarians "
+            "as the shared public library space."
         ),
     )
 

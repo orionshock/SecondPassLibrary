@@ -475,7 +475,7 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         payload = cast(Mapping[str, Any], response.data)
         groups = cast(list[dict[str, Any]], payload["groups"])
         names = {g["name"] for g in groups}
-        self.assertIn("Public", names)
+        self.assertIn("Common Room", names)
         self.assertIn("Hidden", names)
 
     def test_reader_only_sees_viewable_groups(self):
@@ -485,7 +485,7 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         payload = cast(Mapping[str, Any], response.data)
         groups = cast(list[dict[str, Any]], payload["groups"])
         names = {g["name"] for g in groups}
-        self.assertIn("Public", names)
+        self.assertIn("Common Room", names)
         self.assertNotIn("Hidden", names)
 
 

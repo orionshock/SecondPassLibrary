@@ -52,7 +52,7 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
         self.assertGreaterEqual(len(groups), 1)
 
         names = {g["name"] for g in groups}
-        self.assertIn("Public", names)
+        self.assertIn("Common Room", names)
         self.assertIn("G", names)
 
         g_row = next(g for g in groups if g["name"] == "G")

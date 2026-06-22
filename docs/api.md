@@ -467,5 +467,11 @@ Reading payload notes:
 
 - Health check: `GET /api/v1/health/`
 - Owner server settings: `GET/PATCH /api/v1/server/settings/`
+  - `server_name`
+  - `server_description`
+  - `public_group_name`
+  - `public_group_description`
+  - `advanced_library_groups_enabled` (UI preference only; it does not change
+    group permissions)
 
 See `docs/reading.md` for details.

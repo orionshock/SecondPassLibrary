@@ -204,7 +204,7 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(groups.status_code, status.HTTP_200_OK)
         # Only Public should be visible to this user.
         group_names = [g["name"] for g in paginated_results(groups)]
-        self.assertIn("Public", group_names)
+        self.assertIn("Common Room", group_names)
         self.assertNotIn("Hidden", group_names)
 
     def test_bearer_mutations_are_rejected(self):

@@ -109,7 +109,10 @@ pip install -r requirements.txt
 ```
 
 The startup script applies migrations before starting Django. Visit `/` and
-complete the first-run setup wizard to create the initial Owner account.
-On POSIX systems, use `sh scripts/start-dev.sh`.
+complete the first-run setup wizard. It initializes the server identity, the
+shared Public group (displayed as `Common Room` by default), the advanced-groups
+UI preference, and the initial Owner account. `seed_dev_users` remains optional
+development/demo data and is not required for setup. On POSIX systems, use
+`sh scripts/start-dev.sh`.
 
 Development-only test dependencies live in `requirements-dev.txt`.

@@ -30,10 +30,17 @@ Implementation note: the product UI lives in the dedicated Django app `web` (not
 
 UI JavaScript is split into page-focused vanilla ES modules under `web/static/web/js/` and loaded via a single `<script type="module">` entrypoint (`web/static/web/js/main.js`). There is no frontend build step.
 
-Fresh installs first use the server-rendered `/setup/` page to create the
-initial Owner account. Setup is available only while no active Django
-superuser exists. After setup, authentication for Product UI pages continues
-to use the existing login at `/api-auth/login/`.
+Fresh installs first use the server-rendered `/setup/` page to configure the
+server name and optional description, the Public group's display name and
+description, the advanced-groups UI preference, and the initial Owner account.
+Defaults are `Second Pass Library`, a blank server description, `Common Room`,
+`Main Public Library Room for everyone`, and advanced groups disabled. Common
+Room remains the internally special Public group and shared public library
+space managed by librarians and managers. Advanced groups present separate
+curator-managed rooms; the preference does not change permissions. Setup is
+available only while no active Django superuser exists. After setup,
+authentication for Product UI pages continues to use the existing login at
+`/api-auth/login/`.
 
 Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logout/`.
 

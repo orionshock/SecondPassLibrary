@@ -43,9 +43,15 @@ content.
 
 After the first startup, visit `/`. With a migrated database and no active
 Django superuser, `/`, Product UI routes, and login direct to `/setup/`.
-Complete setup to create the first active staff/superuser, Manager profile, and
-Public membership. Subsequent starts use normal login because the bootstrap
-Owner already exists.
+Complete setup to save the server name and optional description, configure the
+Public group's display name and description, save the advanced-groups UI
+preference, and create the first active staff/superuser, Manager profile, and
+Public membership. The defaults are `Second Pass Library`, a blank server
+description, `Common Room`, `Main Public Library Room for everyone`, and
+advanced groups disabled. Common Room is the shared public library space
+managed by librarians and managers. Advanced groups expose separate
+curator-managed rooms without changing the underlying permission model.
+Subsequent starts use normal login because the bootstrap Owner already exists.
 
 `seed_dev_users` is an optional local development/demo command. It is not part
 of production startup and is not required for normal first-run setup.

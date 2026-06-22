@@ -9,6 +9,8 @@ from uuid import uuid4
 from accounts.services import get_or_create_profile
 from core import server_settings
 from accounts.models import UserProfile
+from library.group_services import get_public_group
+from library.models import LibraryGroupMembership
 from reading.models import ReadingSession
 from tests.utils.books import create_file_backed_book
 
@@ -48,7 +50,12 @@ class FirstRunProductUiTests(TestCase):
         self.assertContains(response, 'name="advanced_library_groups_enabled"')
         self.assertContains(
             response,
-            "Advanced library groups let you create multiple shared library rooms",
+            (
+                "Advanced library groups let you create separate curator-managed "
+                "library rooms with their own memberships and group-owned shelves. "
+                "Leave this off if you only need the Common Room, managed by librarians "
+                "as the shared public library space."
+            ),
         )
         self.assertContains(response, 'name="username"')
         self.assertContains(response, 'name="first_name"')
@@ -79,6 +86,29 @@ class FirstRunProductUiTests(TestCase):
         response = self.client.post("/setup/", self.setup_data, follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/")
+
+        owner = User.objects.get(username="owner")
+        profile = UserProfile.objects.get(user=owner)
+        public_group = get_public_group()
+        self.assertTrue(owner.is_active)
+        self.assertTrue(owner.is_staff)
+        self.assertTrue(owner.is_superuser)
+        self.assertEqual(profile.role, UserProfile.ROLE_MANAGER)
+        self.assertEqual(server_settings.get_server_name(), "Second Pass Library")
+        self.assertEqual(server_settings.get_server_description(), "")
+        self.assertEqual(public_group.name, "Common Room")
+        self.assertEqual(
+            public_group.description,
+            "Main Public Library Room for everyone",
+        )
+        self.assertFalse(server_settings.get_advanced_library_groups_enabled())
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=owner,
+                group=public_group,
+                role=LibraryGroupMembership.ROLE_READER,
+            ).exists()
+        )
 
         login_response = self.client.post(
             "/api-auth/login/",

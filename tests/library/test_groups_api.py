@@ -58,7 +58,7 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         payload = cast(Mapping[str, Any], response.data)
         data = cast(list[dict[str, Any]], payload["results"])
         names = {g["name"] for g in data}
-        self.assertIn("Public", names)
+        self.assertIn("Common Room", names)
         self.assertIn("MemberGroup", names)
         self.assertNotIn("OtherGroup", names)
 
@@ -80,7 +80,7 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         payload = cast(Mapping[str, Any], response.data)
         data = cast(list[dict[str, Any]], payload["results"])
         names = {g["name"] for g in data}
-        self.assertTrue({"Public", "MemberGroup", "OtherGroup"}.issubset(names))
+        self.assertTrue({"Common Room", "MemberGroup", "OtherGroup"}.issubset(names))
 
 
 class LibraryGroupBooksAndCurationAPITest(APITestCase):
