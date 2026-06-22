@@ -157,8 +157,10 @@ The command:
 - creates a predictable lorem-named Owner only when no active superuser exists
 - ensures the configured Public group exists (`Common Room` on a default server)
 - ensures about 20 lorem-named demo users and five non-Public library groups
-- creates varied reader/curator memberships without removing existing memberships
-- creates personal, group-owned, and Common Room shelves
+- creates varied reader/curator memberships without removing existing
+  memberships, with at least one curator for every demo non-Public group
+- creates personal, group-owned, and Common Room shelves; shared shelf names
+  include the owning group name so they remain distinguishable in combined lists
 - deterministically adds 5-10 existing books to each shelf when books are available
 
 The command is non-destructive by default. Existing users with matching

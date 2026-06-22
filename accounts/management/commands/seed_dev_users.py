@@ -241,6 +241,7 @@ class Command(BaseCommand):
         users, created_usernames = self._ensure_demo_users(user_specs, counts)
         groups = self._ensure_groups(_expanded_group_specs(group_count), counts)
         self._ensure_memberships(
+            owner=owner,
             users=users,
             created_usernames=created_usernames,
             groups=groups,
@@ -405,26 +406,29 @@ class Command(BaseCommand):
     def _ensure_memberships(
         self,
         *,
+        owner: Any,
         users: dict[str, Any],
         created_usernames: set[str],
         groups: list[LibraryGroup],
         public: LibraryGroup,
         counts: SeedCounts,
     ) -> None:
-        for index, (username, user) in enumerate(users.items()):
+        user_items = list(users.items())
+        for index, (username, user) in enumerate(user_items):
             desired: list[tuple[LibraryGroup, str]] = []
             if index % 4 != 2:
                 desired.append((public, LibraryGroupMembership.ROLE_READER))
 
             if index % 8 != 7:
+                primary_role = (
+                    LibraryGroupMembership.ROLE_CURATOR
+                    if index < len(groups)
+                    else LibraryGroupMembership.ROLE_READER
+                )
                 desired.append(
                     (
                         groups[index % len(groups)],
-                        (
-                            LibraryGroupMembership.ROLE_CURATOR
-                            if index % 5 == 0
-                            else LibraryGroupMembership.ROLE_READER
-                        ),
+                        primary_role,
                     )
                 )
                 if index % 3 == 0:
@@ -452,6 +456,44 @@ class Command(BaseCommand):
                     group=public,
                 ).delete()
 
+        curator_candidates = [user for _username, user in user_items]
+        if owner not in curator_candidates:
+            curator_candidates.append(owner)
+        self._ensure_each_group_has_curator(
+            users=curator_candidates,
+            groups=groups,
+            counts=counts,
+        )
+
+    @staticmethod
+    def _ensure_each_group_has_curator(
+        *,
+        users: list[Any],
+        groups: list[LibraryGroup],
+        counts: SeedCounts,
+    ) -> None:
+        for group_index, group in enumerate(groups):
+            if LibraryGroupMembership.objects.filter(
+                group=group,
+                role=LibraryGroupMembership.ROLE_CURATOR,
+            ).exists():
+                continue
+
+            rotated_users = users[group_index:] + users[:group_index]
+            for user in rotated_users:
+                if LibraryGroupMembership.objects.filter(
+                    user=user,
+                    group=group,
+                ).exists():
+                    continue
+                LibraryGroupMembership.objects.create(
+                    user=user,
+                    group=group,
+                    role=LibraryGroupMembership.ROLE_CURATOR,
+                )
+                counts.memberships_created += 1
+                break
+
     def _ensure_shelves(
         self,
         *,
@@ -478,20 +520,23 @@ class Command(BaseCommand):
                 self._record_shelf(shelf, created, shelves, counts)
 
         for group in groups:
-            for name in GROUP_SHELF_NAMES:
+            for shelf_label in GROUP_SHELF_NAMES:
+                name = f"{group.name}: {shelf_label}"
                 shelf, created = _get_or_create_shelf(
                     actor=owner,
                     name=name,
-                    description=f"A shared {name.lower()} shelf for {group.name}.",
+                    description=(
+                        f"A shared {shelf_label.lower()} shelf for {group.name}."
+                    ),
                     owner_type=Shelf.OWNER_TYPE_GROUP,
                     owner_group=group,
                 )
                 self._record_shelf(shelf, created, shelves, counts)
 
-        for name, description in PUBLIC_SHELVES:
+        for shelf_label, description in PUBLIC_SHELVES:
             shelf, created = _get_or_create_shelf(
                 actor=owner,
-                name=name,
+                name=f"{public.name}: {shelf_label}",
                 description=description,
                 owner_type=Shelf.OWNER_TYPE_GROUP,
                 owner_group=public,

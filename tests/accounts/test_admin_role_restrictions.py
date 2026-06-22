@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import cast
 
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 
 from accounts.admin import UserProfileAdmin
-from accounts.models import UserProfile
+from accounts.models import ExternalIdentity, UserProfile
+from library.models import LibraryGroupMembership
 
 
 class _DummySite(AdminSite):
@@ -86,15 +88,69 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         self.assertIn("profile_id", self.admin.list_display)
         self.assertIn("profile_id", self.admin.readonly_fields)
         self.assertIn("external_subject_id", self.admin.readonly_fields)
-        self.assertFalse(
-            self.admin.has_delete_permission(self.factory.get("/"), self.profile)
-        )
         self.assertEqual(self.admin.profile_id(self.profile), self.profile.id)
-        self.assertEqual(self.admin.profile_id.short_description, "Profile ID")
+        self.assertEqual(
+            UserProfileAdmin.profile_id.short_description,
+            "Profile ID",
+        )
+
+    def test_profile_delete_permission_uses_standard_admin_permissions(self):
+        owner_request = self.factory.get("/")
+        owner_request.user = self.owner
+        self.assertTrue(
+            self.admin.has_delete_permission(owner_request, self.profile)
+        )
+
+        staff_request = self.factory.get("/")
+        staff_request.user = self.staff
+        self.assertFalse(
+            self.admin.has_delete_permission(staff_request, self.profile)
+        )
+
+    def test_owner_can_delete_user_through_django_admin(self):
+        ExternalIdentity.objects.create(
+            user=self.target,
+            provider="test",
+            issuer="https://issuer.example.test",
+            subject="target-subject",
+        )
+        target_id = self.target.pk
+        self.client.force_login(self.owner)
+
+        confirmation = self.client.post(
+            "/admin/auth/user/",
+            {
+                "action": "delete_selected",
+                ACTION_CHECKBOX_NAME: [target_id],
+            },
+        )
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertContains(confirmation, "Are you sure")
+
+        response = self.client.post(
+            "/admin/auth/user/",
+            {
+                "action": "delete_selected",
+                ACTION_CHECKBOX_NAME: [target_id],
+                "post": "yes",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(User.objects.filter(pk=target_id).exists())
+        self.assertFalse(UserProfile.objects.filter(user_id=target_id).exists())
+        self.assertFalse(ExternalIdentity.objects.filter(user_id=target_id).exists())
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(user_id=target_id).exists()
+        )
 
     def test_username_is_primary_clickable_sort_column(self):
         self.assertEqual(self.admin.list_display[0], "username")
         self.assertEqual(self.admin.list_display_links, ["username"])
         self.assertEqual(self.admin.username(self.profile), "target")
-        self.assertEqual(self.admin.username.short_description, "Username")
-        self.assertEqual(self.admin.username.admin_order_field, "user__username")
+        self.assertEqual(UserProfileAdmin.username.short_description, "Username")
+        self.assertEqual(
+            UserProfileAdmin.username.admin_order_field,
+            "user__username",
+        )

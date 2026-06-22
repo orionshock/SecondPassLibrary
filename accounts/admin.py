@@ -74,10 +74,6 @@ class UserProfileAdmin(admin.ModelAdmin):
 
         return RequestForm
 
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
 @admin.register(ExternalIdentity)
 class ExternalIdentityAdmin(admin.ModelAdmin):
     list_display = [
@@ -120,7 +116,7 @@ class ExternalIdentityAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return super().has_delete_permission(request, obj=obj)
 
 
 @admin.register(UserWebSession)

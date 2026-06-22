@@ -26,6 +26,30 @@ def _deleting_book_ids() -> set[str]:
     return ids
 
 
+def _deleting_user_ids() -> set[str]:
+    ids = getattr(_state, "deleting_user_ids", None)
+    if ids is None:
+        ids = set()
+        _state.deleting_user_ids = ids
+    return ids
+
+
+@receiver(pre_delete, sender=User)
+def _mark_user_deleting(sender, instance, **kwargs):
+    user_id = getattr(instance, "id", None)
+    if user_id is None:
+        return
+    _deleting_user_ids().add(str(user_id))
+
+
+@receiver(post_delete, sender=User)
+def _unmark_user_deleting(sender, instance, **kwargs):
+    user_id = getattr(instance, "id", None)
+    if user_id is None:
+        return
+    _deleting_user_ids().discard(str(user_id))
+
+
 @receiver(pre_delete, sender=Book)
 def _mark_book_deleting(sender, instance: Book, **kwargs):
     book_id = getattr(instance, "id", None)
@@ -56,6 +80,8 @@ def ensure_user_has_group_after_membership_delete(sender, instance, **kwargs):
     If the last membership is removed (including Public), re-add Public as a fallback.
     """
     if instance.user_id is None:
+        return
+    if str(instance.user_id) in _deleting_user_ids():
         return
     ensure_user_has_at_least_one_group(user=instance.user)
 

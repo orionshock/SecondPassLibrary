@@ -73,7 +73,8 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(owner.username, "lorem-admin")
         self.assertTrue(owner.is_staff)
         self.assertTrue(owner.check_password("changeme123"))
-        self.assertEqual(owner.profile.role, UserProfile.ROLE_MANAGER)
+        owner_profile = UserProfile.objects.get(user=owner)
+        self.assertEqual(owner_profile.role, UserProfile.ROLE_MANAGER)
         self.assertTrue(
             LibraryGroupMembership.objects.filter(
                 user=owner,
@@ -93,7 +94,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         owner.last_name = "Operator"
         owner.is_staff = False
         owner.save(update_fields=["first_name", "last_name", "is_staff"])
-        profile = owner.profile
+        profile = UserProfile.objects.get(user=owner)
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
         password_hash = owner.password
@@ -130,7 +131,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
             is_active=False,
             is_staff=True,
         )
-        profile = existing.profile
+        profile = UserProfile.objects.get(user=existing)
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
         fantasy = LibraryGroup.objects.create(
@@ -174,6 +175,12 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(fantasy.description, "Existing group description.")
         self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
         self.assertEqual(shelf.description, "Existing shelf description.")
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                group=fantasy,
+                role=LibraryGroupMembership.ROLE_CURATOR,
+            ).exists()
+        )
 
     @override_settings(DEBUG=True)
     def test_default_world_has_users_groups_and_varied_memberships(self):
@@ -263,6 +270,14 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                 role=LibraryGroupMembership.ROLE_CURATOR,
             ).exists()
         )
+        for group in LibraryGroup.objects.exclude(pk=public.pk):
+            with self.subTest(group=group.name):
+                self.assertTrue(
+                    LibraryGroupMembership.objects.filter(
+                        group=group,
+                        role=LibraryGroupMembership.ROLE_CURATOR,
+                    ).exists()
+                )
 
     @override_settings(DEBUG=True)
     def test_creates_user_group_and_public_shelves_without_books(self):
@@ -292,6 +307,21 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                 owner_group=get_public_group(),
             ).count(),
             2,
+        )
+        self.assertSetEqual(
+            set(
+                Shelf.objects.filter(
+                    owner_type=Shelf.OWNER_TYPE_GROUP,
+                ).values_list("name", flat=True)
+            ),
+            {
+                "Fantasy Club: Staff Picks",
+                "Fantasy Club: Current Favorites",
+                "Mystery Annex: Staff Picks",
+                "Mystery Annex: Current Favorites",
+                "Common Room: Welcome Shelf",
+                "Common Room: Community Favorites",
+            },
         )
         self.assertEqual(ShelfItem.objects.count(), 0)
         self.assertIn("No books found; shelf item population skipped.", output.getvalue())
