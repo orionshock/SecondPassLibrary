@@ -175,12 +175,6 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(fantasy.description, "Existing group description.")
         self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
         self.assertEqual(shelf.description, "Existing shelf description.")
-        self.assertTrue(
-            LibraryGroupMembership.objects.filter(
-                group=fantasy,
-                role=LibraryGroupMembership.ROLE_CURATOR,
-            ).exists()
-        )
 
     @override_settings(DEBUG=True)
     def test_default_world_has_users_groups_and_varied_memberships(self):
@@ -270,6 +264,28 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                 role=LibraryGroupMembership.ROLE_CURATOR,
             ).exists()
         )
+        curator_user_ids = LibraryGroupMembership.objects.filter(
+            role=LibraryGroupMembership.ROLE_CURATOR,
+        ).values_list("user_id", flat=True)
+        curator_profile_roles = set(
+            UserProfile.objects.filter(user_id__in=curator_user_ids).values_list(
+                "role",
+                flat=True,
+            )
+        )
+        self.assertEqual(curator_profile_roles, {UserProfile.ROLE_READER})
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                role=LibraryGroupMembership.ROLE_CURATOR,
+                user__profile__role=UserProfile.ROLE_MANAGER,
+            ).exists()
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                role=LibraryGroupMembership.ROLE_CURATOR,
+                user__profile__role=UserProfile.ROLE_LIBRARIAN,
+            ).exists()
+        )
         for group in LibraryGroup.objects.exclude(pk=public.pk):
             with self.subTest(group=group.name):
                 self.assertTrue(
@@ -278,6 +294,33 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                         role=LibraryGroupMembership.ROLE_CURATOR,
                     ).exists()
                 )
+
+    @override_settings(DEBUG=True)
+    def test_existing_reader_membership_is_not_promoted_to_curator(self):
+        existing = User.objects.create_user(
+            username="lorem",
+            password="private-password",
+        )
+        profile = UserProfile.objects.get(user=existing)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        fantasy = LibraryGroup.objects.create(name="Fantasy Club")
+        membership = LibraryGroupMembership.objects.create(
+            user=existing,
+            group=fantasy,
+            role=LibraryGroupMembership.ROLE_READER,
+        )
+
+        call_command(
+            "seed_dev_users",
+            users=1,
+            groups=1,
+            skip_shelves=True,
+            verbosity=0,
+        )
+
+        membership.refresh_from_db()
+        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
 
     @override_settings(DEBUG=True)
     def test_creates_user_group_and_public_shelves_without_books(self):

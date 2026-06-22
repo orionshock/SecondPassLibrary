@@ -59,21 +59,21 @@ class SeedCounts:
 
 
 DEMO_USERS = [
-    DemoUserSpec("lorem", "Lorem", "Ipsum", UserProfile.ROLE_MANAGER),
-    DemoUserSpec("ipsum", "Ipsum", "Dolor", UserProfile.ROLE_MANAGER),
-    DemoUserSpec("dolor", "Dolor", "Sit", UserProfile.ROLE_MANAGER),
-    DemoUserSpec("sit", "Sit", "Amet", UserProfile.ROLE_LIBRARIAN),
-    DemoUserSpec("amet", "Amet", "Consectetur", UserProfile.ROLE_LIBRARIAN),
+    DemoUserSpec("lorem", "Lorem", "Ipsum", UserProfile.ROLE_READER),
+    DemoUserSpec("ipsum", "Ipsum", "Dolor", UserProfile.ROLE_READER),
+    DemoUserSpec("dolor", "Dolor", "Sit", UserProfile.ROLE_READER),
+    DemoUserSpec("sit", "Sit", "Amet", UserProfile.ROLE_READER),
+    DemoUserSpec("amet", "Amet", "Consectetur", UserProfile.ROLE_READER),
     DemoUserSpec(
         "consectetur",
         "Consectetur",
         "Adipiscing",
-        UserProfile.ROLE_LIBRARIAN,
+        UserProfile.ROLE_MANAGER,
     ),
-    DemoUserSpec("adipiscing", "Adipiscing", "Elit", UserProfile.ROLE_LIBRARIAN),
-    DemoUserSpec("elit", "Elit", "Sed", UserProfile.ROLE_READER),
-    DemoUserSpec("sed", "Sed", "Eiusmod", UserProfile.ROLE_READER),
-    DemoUserSpec("eiusmod", "Eiusmod", "Tempor", UserProfile.ROLE_READER),
+    DemoUserSpec("adipiscing", "Adipiscing", "Elit", UserProfile.ROLE_MANAGER),
+    DemoUserSpec("elit", "Elit", "Sed", UserProfile.ROLE_LIBRARIAN),
+    DemoUserSpec("sed", "Sed", "Eiusmod", UserProfile.ROLE_LIBRARIAN),
+    DemoUserSpec("eiusmod", "Eiusmod", "Tempor", UserProfile.ROLE_LIBRARIAN),
     DemoUserSpec("tempor", "Tempor", "Incididunt", UserProfile.ROLE_READER),
     DemoUserSpec("incididunt", "Incididunt", "Labore", UserProfile.ROLE_READER),
     DemoUserSpec("labore", "Labore", "Dolore", UserProfile.ROLE_READER),
@@ -241,7 +241,6 @@ class Command(BaseCommand):
         users, created_usernames = self._ensure_demo_users(user_specs, counts)
         groups = self._ensure_groups(_expanded_group_specs(group_count), counts)
         self._ensure_memberships(
-            owner=owner,
             users=users,
             created_usernames=created_usernames,
             groups=groups,
@@ -406,7 +405,6 @@ class Command(BaseCommand):
     def _ensure_memberships(
         self,
         *,
-        owner: Any,
         users: dict[str, Any],
         created_usernames: set[str],
         groups: list[LibraryGroup],
@@ -414,21 +412,27 @@ class Command(BaseCommand):
         counts: SeedCounts,
     ) -> None:
         user_items = list(users.items())
+        reader_users = [
+            user
+            for _username, user in user_items
+            if UserProfile.objects.get(user=user).role == UserProfile.ROLE_READER
+        ]
+        self._ensure_each_group_has_curator(
+            users=reader_users,
+            groups=groups,
+            counts=counts,
+        )
+
         for index, (username, user) in enumerate(user_items):
             desired: list[tuple[LibraryGroup, str]] = []
             if index % 4 != 2:
                 desired.append((public, LibraryGroupMembership.ROLE_READER))
 
             if index % 8 != 7:
-                primary_role = (
-                    LibraryGroupMembership.ROLE_CURATOR
-                    if index < len(groups)
-                    else LibraryGroupMembership.ROLE_READER
-                )
                 desired.append(
                     (
                         groups[index % len(groups)],
-                        primary_role,
+                        LibraryGroupMembership.ROLE_READER,
                     )
                 )
                 if index % 3 == 0:
@@ -455,15 +459,6 @@ class Command(BaseCommand):
                     user=user,
                     group=public,
                 ).delete()
-
-        curator_candidates = [user for _username, user in user_items]
-        if owner not in curator_candidates:
-            curator_candidates.append(owner)
-        self._ensure_each_group_has_curator(
-            users=curator_candidates,
-            groups=groups,
-            counts=counts,
-        )
 
     @staticmethod
     def _ensure_each_group_has_curator(
