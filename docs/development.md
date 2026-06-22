@@ -160,9 +160,9 @@ The command:
 - creates varied reader/curator memberships without removing existing
   memberships, with at least one reader-profile curator for every demo
   non-Public group
-- keeps Manager and Librarian demo accounts as broad-role users without
-  fixture group memberships; they already have broad access through their
-  global roles
+- keeps Manager and Librarian demo accounts as broad-role users with their
+  normal default Common Room membership, but does not add them to non-Public
+  demo groups or assign them curator memberships
 - represents demo curators as Reader-role accounts with curator memberships in
   specific non-Public groups
 - creates personal, group-owned, and Common Room shelves; shared shelf names

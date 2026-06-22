@@ -429,14 +429,6 @@ class Command(BaseCommand):
 
         for index, (username, user) in enumerate(user_items):
             if profiles[username].role != UserProfile.ROLE_READER:
-                if username in created_usernames:
-                    # User creation normally adds Public via a signal. Broad-role
-                    # demo users already have server-wide access and intentionally
-                    # carry no fixture memberships. Bypass the membership fallback
-                    # signal only for these newly created fixture accounts.
-                    LibraryGroupMembership.objects.filter(user=user)._raw_delete(
-                        LibraryGroupMembership.objects.db
-                    )
                 continue
 
             desired: list[tuple[LibraryGroup, str]] = []

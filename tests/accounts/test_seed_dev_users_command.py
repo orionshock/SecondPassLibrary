@@ -250,11 +250,23 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertFalse(
             LibraryGroupMembership.objects.filter(user=dolor, group=public).exists()
         )
-        self.assertFalse(
-            LibraryGroupMembership.objects.filter(user=manager).exists()
+        self.assertEqual(
+            list(
+                LibraryGroupMembership.objects.filter(user=manager).values_list(
+                    "group_id",
+                    "role",
+                )
+            ),
+            [(public.id, LibraryGroupMembership.ROLE_READER)],
         )
-        self.assertFalse(
-            LibraryGroupMembership.objects.filter(user=librarian).exists()
+        self.assertEqual(
+            list(
+                LibraryGroupMembership.objects.filter(user=librarian).values_list(
+                    "group_id",
+                    "role",
+                )
+            ),
+            [(public.id, LibraryGroupMembership.ROLE_READER)],
         )
         self.assertFalse(
             LibraryGroupMembership.objects.filter(
@@ -291,6 +303,18 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                     UserProfile.ROLE_LIBRARIAN,
                 ],
                 user__is_superuser=False,
+            )
+            .exclude(group=public)
+            .exists()
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                user__profile__role__in=[
+                    UserProfile.ROLE_MANAGER,
+                    UserProfile.ROLE_LIBRARIAN,
+                ],
+                user__is_superuser=False,
+                role=LibraryGroupMembership.ROLE_CURATOR,
             ).exists()
         )
         for group in LibraryGroup.objects.exclude(pk=public.pk):
