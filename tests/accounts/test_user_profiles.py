@@ -53,7 +53,7 @@ class UserProfileAPITest(APITestCase):
         self.client.login(username="testuser", password="testpass")
 
     def test_authenticated_access(self):
-        response = self.client.get("/api/v1/accounts/profiles/")
+        response = cast(Response, self.client.get("/api/v1/accounts/profiles/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         profile = cast(list[dict[str, Any]], data["results"])[0]
@@ -88,7 +88,7 @@ class UserProfileAPITest(APITestCase):
         self.assertFalse(profile.must_change_password)
 
     def test_safe_me_update_preserves_profile_id(self):
-        profile_id = self.user.profile.id
+        profile_id = cast(Any, self.user).profile.id
         response = cast(
             Response,
             self.client.patch(
@@ -108,7 +108,7 @@ class UserProfileAPITest(APITestCase):
         self.assertEqual(data["first_name"], "Updated")
         self.assertEqual(data["last_name"], "Reader")
         self.user.refresh_from_db()
-        self.assertEqual(self.user.profile.id, profile_id)
+        self.assertEqual(cast(Any, self.user).profile.id, profile_id)
 
     def test_authenticated_access_me(self):
         response = cast(Response, self.client.get("/api/v1/accounts/me/"))
@@ -152,7 +152,7 @@ class ExternalIdentityModelTest(TestCase):
 
         self.assertEqual(first.user, self.user)
         self.assertEqual(second.user, self.user)
-        self.assertEqual(self.user.external_identities.count(), 2)
+        self.assertEqual(cast(Any, self.user).external_identities.count(), 2)
 
     def test_issuer_and_subject_must_be_unique(self):
         ExternalIdentity.objects.create(
@@ -184,7 +184,7 @@ class ExternalIdentityModelTest(TestCase):
             issuer="https://id-two.example.test/",
             subject="shared-subject",
         )
-        self.assertEqual(self.user.external_identities.count(), 2)
+        self.assertEqual(cast(Any, self.user).external_identities.count(), 2)
 
     def test_external_identities_are_not_exposed_by_account_apis(self):
         ExternalIdentity.objects.create(

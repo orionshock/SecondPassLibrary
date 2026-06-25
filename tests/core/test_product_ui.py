@@ -124,7 +124,9 @@ class FirstRunProductUiTests(TestCase):
         self.assertEqual(login_response["Location"], "/app/")
 
     def test_setup_redirects_to_login_after_completion(self):
-        User.objects.create_superuser(username="owner", password="pw")
+        User.objects.create_superuser(
+            username="owner", email="owner@example.com", password="pw"
+        )
         response = self.client.get("/setup/", follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/")

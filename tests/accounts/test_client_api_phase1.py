@@ -20,6 +20,7 @@ class ClientApiPhase1Tests(APITestCase):
     def setUp(self):
         self.bootstrap_owner = User.objects.create_superuser(
             username="bootstrap-owner",
+            email="bootstrap-owner@example.com",
             password="pw",
         )
 

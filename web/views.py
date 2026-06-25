@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from functools import wraps
+from typing import Any, cast
 
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
@@ -23,11 +25,13 @@ from reading.services import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
 
 
-def product_login_required(view_func):
-    login_view = login_required(view_func)
+def product_login_required(
+    view_func: Callable[..., HttpResponse],
+) -> Callable[..., HttpResponse]:
+    login_view = cast(Callable[..., HttpResponse], login_required(view_func))
 
     @wraps(view_func)
-    def wrapped(request: HttpRequest, *args, **kwargs):
+    def wrapped(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         if not has_active_owner():
             return redirect("web:setup")
         return login_view(request, *args, **kwargs)
@@ -55,28 +59,30 @@ def setup(request: HttpRequest) -> HttpResponse:
 
     form = FirstOwnerSetupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
+        cleaned_data = cast(Mapping[str, Any], form.cleaned_data)
         try:
             create_first_owner(
-                server_name=form.cleaned_data["server_name"],
-                server_description=form.cleaned_data.get("server_description", ""),
-                public_group_name=form.cleaned_data["public_group_name"],
-                public_group_description=form.cleaned_data.get(
-                    "public_group_description", ""
+                server_name=str(cleaned_data["server_name"]),
+                server_description=str(cleaned_data.get("server_description", "")),
+                public_group_name=str(cleaned_data["public_group_name"]),
+                public_group_description=str(
+                    cleaned_data.get("public_group_description", "")
                 ),
-                advanced_library_groups_enabled=form.cleaned_data.get(
-                    "advanced_library_groups_enabled", False
+                advanced_library_groups_enabled=bool(
+                    cleaned_data.get("advanced_library_groups_enabled", False)
                 ),
-                username=form.cleaned_data["username"],
-                first_name=form.cleaned_data.get("first_name", ""),
-                last_name=form.cleaned_data.get("last_name", ""),
-                email=form.cleaned_data.get("email", ""),
-                password=form.cleaned_data["password1"],
+                username=str(cleaned_data["username"]),
+                first_name=str(cleaned_data.get("first_name", "")),
+                last_name=str(cleaned_data.get("last_name", "")),
+                email=str(cleaned_data.get("email", "")),
+                password=str(cleaned_data["password1"]),
             )
         except SetupAlreadyComplete:
             return redirect("login")
         except ValidationError as exc:
-            if hasattr(exc, "error_dict"):
-                for field, errors in exc.error_dict.items():
+            error_dict = cast(Mapping[str, Any] | None, getattr(exc, "error_dict", None))
+            if error_dict is not None:
+                for field, errors in error_dict.items():
                     target = field if field in form.fields else None
                     for error in errors:
                         form.add_error(target, error)
@@ -103,7 +109,7 @@ def reading_sessions(request: HttpRequest) -> HttpResponse:
 def reading_export(request: HttpRequest) -> HttpResponse:
     rows_by_book: dict[str, dict] = {}
     for row in list_sessions_for_user(user=request.user):
-        book = row.get("book") or {}
+        book = cast(Mapping[str, Any], row.get("book") or {})
         book_id = str(book.get("id") or "")
         if not book_id:
             continue

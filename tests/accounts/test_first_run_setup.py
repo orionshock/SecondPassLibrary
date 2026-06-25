@@ -20,12 +20,15 @@ User = get_user_model()
 class FirstOwnerBootstrapServiceTests(TestCase):
     def test_active_superuser_is_owner_capable(self):
         self.assertFalse(has_active_owner())
-        User.objects.create_superuser(username="owner", password="pw")
+        User.objects.create_superuser(
+            username="owner", email="owner@example.com", password="pw"
+        )
         self.assertTrue(has_active_owner())
 
     def test_inactive_superuser_does_not_block_setup(self):
         User.objects.create_superuser(
             username="disabled-owner",
+            email="disabled-owner@example.com",
             password="pw",
             is_active=False,
         )

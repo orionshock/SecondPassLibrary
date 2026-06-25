@@ -57,7 +57,7 @@ class ManagedUsersAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(data["username"], "reader")
-        self.assertEqual(data["profile_id"], str(self.reader.profile.id))
+        self.assertEqual(data["profile_id"], str(cast(Any, self.reader).profile.id))
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
         self.assertFalse(data["is_owner"])
         self.assertNotIn("id", data)
