@@ -9,7 +9,6 @@ import {
   canEditGroupDescription,
   canEditGroupPage,
   canManageGroupBooks,
-  isManagerOrOwner,
 } from "./shared.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
@@ -180,9 +179,7 @@ export async function initGroupEdit() {
 
   // Delete (Owner/Manager only; never for Public)
   if (deleteRoot && deleteForm && deleteConfirm && deleteBtn && deleteStatus) {
-    const groupCaps = group.capabilities || {};
-    const allowDelete = groupCaps.can_delete != null ? !!groupCaps.can_delete : isManagerOrOwner(me) && !isPublicGroup;
-    visible(deleteRoot, allowDelete);
+    visible(deleteRoot, false);
     deleteConfirm.value = "";
     deleteBtn.disabled = true;
     setStatus(deleteStatus, "", false);
@@ -284,7 +281,7 @@ export async function initGroupEdit() {
 
   const groupCaps = group.capabilities || {};
   const allowShelfManage =
-    groupCaps.can_create_shelf != null ? !!groupCaps.can_create_shelf : canManageGroupBooks({ me, group });
+    groupCaps.can_curate != null ? !!groupCaps.can_curate : canManageGroupBooks({ me, group });
   await initGroupShelvesTab({
     groupId,
     shelvesStatus,

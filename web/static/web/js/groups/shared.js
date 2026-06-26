@@ -20,21 +20,21 @@ export function isLibrarian(me) {
 export function canEditGroupPage({ me, group }) {
   if (!me || !group) return false;
   const caps = group.capabilities || {};
-  if (caps.can_edit_description != null) return !!caps.can_edit_description;
+  if (caps.can_curate != null) return !!caps.can_curate;
   return isManagerOrOwner(me) || isLibrarian(me);
 }
 
 export function canEditGroupDescription({ me, group }) {
   if (!me || !group) return false;
   const caps = group.capabilities || {};
-  if (caps.can_edit_description != null) return !!caps.can_edit_description;
+  if (caps.can_curate != null) return !!caps.can_curate;
   return isManagerOrOwner(me) || isLibrarian(me);
 }
 
 export function canManageGroupBooks({ me, group }) {
   if (!me || !group) return false;
   const caps = group.capabilities || {};
-  if (caps.can_manage_books != null) return !!caps.can_manage_books;
+  if (caps.can_curate != null) return !!caps.can_curate;
   return isManagerOrOwner(me) || isLibrarian(me);
 }
 

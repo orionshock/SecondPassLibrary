@@ -246,6 +246,9 @@ class PolicyTest(TestCase):
         )
         self.assertTrue(policies.can_curate_group(user=self.reader, group=fantasy))
         self.assertFalse(policies.can_curate_group(user=self.reader, group=self.public))
+        self.assertTrue(policies.can_curate_group(user=self.owner, group=self.public))
+        self.assertTrue(policies.can_curate_group(user=self.manager, group=self.public))
+        self.assertTrue(policies.can_curate_group(user=self.librarian, group=self.public))
 
     def test_curator_authority_is_exact_group_scoped(self):
         fantasy = LibraryGroup.objects.create(name="Fantasy")
@@ -265,6 +268,9 @@ class PolicyTest(TestCase):
         self.assertTrue(policies.can_manage_group_books(user=self.owner, group=group))
         self.assertTrue(policies.can_manage_group_books(user=self.manager, group=group))
         self.assertTrue(policies.can_manage_group_books(user=self.librarian, group=group))
+        self.assertTrue(policies.can_curate_group(user=self.owner, group=group))
+        self.assertTrue(policies.can_curate_group(user=self.manager, group=group))
+        self.assertTrue(policies.can_curate_group(user=self.librarian, group=group))
 
     def test_public_group_cannot_have_curators(self):
         with self.assertRaises(ValidationError):

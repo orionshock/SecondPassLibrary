@@ -313,6 +313,11 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
             is_curator=True,
         )
         self.other_group = LibraryGroup.objects.create(name="Other", description="before")
+        LibraryGroupMembership.objects.create(
+            user=self.curator,
+            group=self.other_group,
+            is_curator=False,
+        )
 
     def test_owner_and_manager_can_create_group_librarian_denied(self):
         self.client.login(username="owner", password="pw")
@@ -337,12 +342,15 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         )
         self.assertEqual(curator_response.status_code, status.HTTP_200_OK)
         curator_caps = cast(dict[str, Any], cast(dict[str, Any], curator_response.data)["capabilities"])
-        self.assertTrue(curator_caps["can_edit_description"])
-        self.assertTrue(curator_caps["can_manage_books"])
-        self.assertTrue(curator_caps["can_create_shelf"])
-        self.assertFalse(curator_caps["can_manage_members"])
-        self.assertFalse(curator_caps["can_manage_identity"])
-        self.assertFalse(curator_caps["can_delete"])
+        self.assertEqual(curator_caps, {"can_curate": True})
+
+        other_response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.other_group.id}/"),
+        )
+        self.assertEqual(other_response.status_code, status.HTTP_200_OK)
+        other_caps = cast(dict[str, Any], cast(dict[str, Any], other_response.data)["capabilities"])
+        self.assertEqual(other_caps, {"can_curate": False})
 
         public_response = cast(
             Response,
@@ -350,12 +358,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         )
         self.assertEqual(public_response.status_code, status.HTTP_200_OK)
         public_caps = cast(dict[str, Any], cast(dict[str, Any], public_response.data)["capabilities"])
-        self.assertFalse(public_caps["can_edit_description"])
-        self.assertFalse(public_caps["can_manage_books"])
-        self.assertFalse(public_caps["can_create_shelf"])
-        self.assertFalse(public_caps["can_manage_members"])
-        self.assertFalse(public_caps["can_manage_identity"])
-        self.assertFalse(public_caps["can_delete"])
+        self.assertEqual(public_caps, {"can_curate": False})
 
         self.client.logout()
         self.client.login(username="librarian", password="pw")
@@ -365,12 +368,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         )
         self.assertEqual(librarian_response.status_code, status.HTTP_200_OK)
         librarian_caps = cast(dict[str, Any], cast(dict[str, Any], librarian_response.data)["capabilities"])
-        self.assertTrue(librarian_caps["can_edit_description"])
-        self.assertTrue(librarian_caps["can_manage_books"])
-        self.assertTrue(librarian_caps["can_create_shelf"])
-        self.assertFalse(librarian_caps["can_manage_members"])
-        self.assertFalse(librarian_caps["can_manage_identity"])
-        self.assertFalse(librarian_caps["can_delete"])
+        self.assertEqual(librarian_caps, {"can_curate": True})
 
     def test_blank_name_rejected(self):
         self.client.login(username="manager", password="pw")
@@ -475,7 +473,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
 
         denied = cast(Response, self.client.patch(f"/api/v1/library/groups/{self.other_group.id}/", data={"description": "c"}, format="json"))
-        self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_attempts_to_patch_name_or_slug_are_rejected(self):
         self.client.login(username="manager", password="pw")

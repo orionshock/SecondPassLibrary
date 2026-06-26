@@ -42,30 +42,9 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if user is None or getattr(user, "is_anonymous", False):
-            return {
-                "can_edit_description": False,
-                "can_manage_books": False,
-                "can_create_shelf": False,
-                "can_manage_members": False,
-                "can_manage_identity": False,
-                "can_delete": False,
-            }
+            return {"can_curate": False}
 
-        from shelves import policies as shelf_policies
-        from shelves.models import Shelf
-
-        return {
-            "can_edit_description": policies.can_edit_group_description(user=user, group=obj),
-            "can_manage_books": policies.can_manage_group_books(user=user, group=obj),
-            "can_create_shelf": shelf_policies.can_create_shelf(
-                user=user,
-                owner_type=Shelf.OWNER_TYPE_GROUP,
-                owner_group=obj,
-            ),
-            "can_manage_members": policies.can_manage_group_membership(user=user, group=obj),
-            "can_manage_identity": policies.can_manage_group_identity(user=user, group=obj),
-            "can_delete": policies.can_delete_library_group(user, group=obj),
-        }
+        return {"can_curate": policies.can_curate_group(user=user, group=obj)}
 
     class Meta:
         model = LibraryGroup

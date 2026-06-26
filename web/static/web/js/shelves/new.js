@@ -31,7 +31,7 @@ export function manageableShelfGroups(me, groups) {
       (group) =>
         group &&
         group.capabilities &&
-        group.capabilities.can_create_shelf === true
+        group.capabilities.can_curate === true
     );
   }
 
@@ -39,7 +39,7 @@ export function manageableShelfGroups(me, groups) {
     (group) =>
       group &&
       group.capabilities &&
-      group.capabilities.can_create_shelf === true
+      group.capabilities.can_curate === true
   );
 }
 
