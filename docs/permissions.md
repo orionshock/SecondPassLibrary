@@ -12,7 +12,7 @@ Key principles:
 In plain language:
 
 - Readers live in groups.
-- Curators are trusted readers within a group.
+- Curator is an optional group-membership stewardship flag.
 - Librarians manage the collection globally.
 - Managers manage people globally.
 - Owners manage the installation.
@@ -45,14 +45,14 @@ Manager can:
 - manage users
 - assign users as Librarian or Reader
 - manage LibraryGroup membership (add/remove users from groups)
-- assign group member roles such as reader/curator
+- set or clear the `is_curator` stewardship flag on group memberships
 - create LibraryGroups
 - manage LibraryGroup identity, subject to Public restrictions
 - perform all Librarian-level book/library operations
 
 API note (current implementation):
 
-- LibraryGroup create/delete endpoints are available to Owner/Manager only (and Public remains protected from deletion).
+- LibraryGroup create endpoints are available to Owner/Manager only.
 - Group membership management is now exposed via Manager/Owner-only group membership endpoints (see `docs/api.md`).
 
 Manager cannot (unless also Owner):
@@ -114,12 +114,11 @@ Librarian can:
 Librarian cannot:
 
 - create LibraryGroups
-- delete LibraryGroups
 - rename LibraryGroups
 - change LibraryGroup identity fields
 - manage LibraryGroup membership
 - add/remove users from groups
-- assign Curators
+- set curator flags
 - manage global user roles
 
 Public-specific librarian rule:
@@ -142,28 +141,30 @@ Reader cannot:
 - manage LibraryGroups
 - manage users
 
-## Curator (group-scoped role)
+## Curator (group-scoped flag)
 
-Curator is **not** a global role. It is a group-scoped role on `LibraryGroupMembership.role`.
+Curator is **not** a global role. A `LibraryGroupMembership` means ordinary group membership; `is_curator=true` is an optional group-scoped curator/stewardship flag on that exact membership.
 
-Curator can, for their assigned **non-Public** LibraryGroup only:
+Reader users with `is_curator=true` can curate that exact **non-Public** LibraryGroup only:
 
 - edit group description
 - add books they can already view/read to the group
 - remove books from the group
-- later: manage group-owned shelves for that group
+- create and manage group-owned shelves for that group
 
 Curator cannot:
 
 - curate Public
 - import books
 - delete books from the system
-- create/delete/rename LibraryGroups
+- create/rename LibraryGroups
 - change LibraryGroup identity fields
 - manage group membership
 - add/remove users from groups
-- assign Curators
+- assign or remove curator flags
 - add books they cannot already view/read
+
+Librarian, Manager, and Owner users can curate groups through their broad global authority. They may also have `is_curator=true` on a non-Public group as stewardship metadata, but their broad authority does not depend on that flag.
 
 ## LibraryGroups
 
@@ -196,15 +197,15 @@ identity.
 - Public behavior is based on `is_public_group()` / `get_public_group()` (not boolean flags).
 - Renaming the Public display name does not change its identity or protections.
 - Public cannot be deleted.
-- Public cannot have Curators.
+- Public cannot have curator assignments (`is_curator=true` is invalid).
 
 Default/fallback behavior:
 
 - Public, displayed as `Common Room` by default, is the shared public library
   space managed by librarians and managers.
 - First-run Owner setup creates/repairs Public, saves its configured name and
-  description, and adds the Owner as a reader member.
-- New users default to Public (reader membership).
+  description, and adds the Owner as an ordinary member.
+- New users default to Public ordinary membership.
 - New/imported books default to Public (book assignment).
 - Users/books must belong to at least one LibraryGroup.
 - Public is fallback only: if a user/book would otherwise have zero groups, it is restored to Public.
@@ -241,12 +242,12 @@ Shelves API is implemented under `/api/v1/shelves/`. Shelves have product UI sup
   - Owner/Manager/Librarian can list group members.
   - Direct members of a group can list that group's members (including Public).
   - Non-members cannot list memberships for non-Public groups they cannot view (anti-leakage behavior).
-- **Owner/Manager** can manage LibraryGroup memberships via the API (add/remove users and set membership role `reader` / `curator`).
+- **Owner/Manager** can manage LibraryGroup memberships via the API (add/remove users and set `is_curator`).
 - **Librarian/Curator/Reader** cannot manage memberships via the API.
 - **Public protections**:
   - Public is default/fallback (assigned on user creation, and restored if a user would otherwise have zero memberships).
   - Public memberships can be removed when another group remains; removing a user's final membership restores Public.
-  - Public cannot have Curators; membership role remains `reader`.
+  - Public cannot have curator assignments.
 
 ## Group API and anti-existence-leakage rules
 
@@ -259,7 +260,8 @@ When exposing groups through the API:
 
 Not implemented (non-goals):
 
-- No public API for anonymous users to create/delete LibraryGroups.
+- No public API for anonymous users to create LibraryGroups.
+- Group delete/scary delete is not part of the current documented product/API contract.
 
 ## Shelves are separate (design principle)
 
@@ -270,7 +272,7 @@ LibraryGroups are access scopes. Shelves are presentation/organization objects.
 - Each book on a shelf must still pass `can_view_book(user, book)`.
 - User-owned shelves and group-owned shelves should be modeled separately later.
 - Librarians may manage group-owned shelves across groups later.
-- Curators may manage group-owned shelves only for groups where they are curator.
+- Curators may manage group-owned shelves only for groups where `is_curator=true`; broad roles may manage group-owned shelves through global authority.
 - Readers may manage their own personal shelves later.
 
 ## Policy helper direction (recommended)
@@ -280,7 +282,7 @@ Centralize permission rules in explicit policy helpers. Recommended helpers incl
 - `can_create_library_group(user)`
 - `can_manage_group_identity(user, group)`
 - `can_manage_group_membership(user, group)`
-- `can_edit_group_presentation(user, group)`
+- `can_curate_group(user, group)`
 - `can_assign_global_role(actor, target_user, new_role)`
 - `can_view_book(user, book)`
 - `can_download_book_file(user, book_file)`

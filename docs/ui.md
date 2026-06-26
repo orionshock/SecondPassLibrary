@@ -59,7 +59,7 @@ Cover note: book lists/cards throughout the product UI render cover art when `co
 
 Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). In development (`DEBUG=True`), Django serves media directly; production deployments should serve `MEDIA_ROOT` at `MEDIA_URL` outside Django.
 
-The book detail page also shows the book's assigned LibraryGroups (filtered for Readers/Curators to only viewable groups) with links to the group pages.
+The book detail page also shows the book's assigned LibraryGroups (filtered for Readers, including readers with group curator flags, to only viewable groups) with links to the group pages.
 
 The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Author and series can be selected from existing records or created by name. Book identifiers can be added/edited/deleted here. LibraryGroup assignments can be added/removed here. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only BookFile info; the stored EPUB is not edited from this page.
 
@@ -86,7 +86,6 @@ The groups UI is API-driven using:
 - `POST /api/v1/library/groups/` (Owner/Manager only; create)
 - `GET /api/v1/library/groups/<group_id>/` (detail)
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
-- `DELETE /api/v1/library/groups/<group_id>/` (Owner/Manager only; destructive delete; Public cannot be deleted)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `GET /api/v1/library/books/?q=<search>` (book search for the Groups UI picker)
 - `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)
@@ -148,7 +147,7 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
   - global role (`role`) and `is_owner`
   - broad UI hints (`capabilities`)
   - direct group memberships (`groups`)
-  - scoped curator power (`curated_group_ids`)
+  - exact membership stewardship (`groups[].is_curator`)
 - Capabilities are UI hints, not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
 
 ## 2. First UI surface
@@ -175,9 +174,9 @@ The UI should gate navigation based on `/api/v1/accounts/me/`:
 
 ### Curator (group-scoped)
 
-Curator is a membership role, not a global role. A curator typically has global `role=reader` but will have:
+Curator is not a global role and is not mutually exclusive with ordinary membership. A group membership is ordinary membership; `is_curator=true` is an optional curator/stewardship flag on that exact membership.
 
-- `curated_group_ids` non-empty and `capabilities.can_edit_group_presentation=true`
+Reader users gain scoped curation authority only for non-Public groups where their membership has `is_curator=true`. Librarian, Manager, and Owner users have broad curation authority through their global role; they may also be marked `is_curator=true` on a non-Public group as stewardship metadata.
 
 Sees:
 
@@ -282,14 +281,14 @@ UI behaviors:
 
 - Readers should only see groups they can view (Public or direct membership).
 - Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
-- Presentation edits should be shown only when the user has broad capability (or scoped curator power for that group).
-- Curation controls (add/remove books) should be gated similarly.
+- Presentation edits, grouped book management, and group-owned shelf controls should be shown when the loaded group payload has `capabilities.can_curate=true`.
+- Curation controls (add/remove books) should be gated by `group.capabilities.can_curate`.
 
 Current implemented UI:
 
 - Group creation exists at `/groups/new/` for Owner/Manager.
 - Group membership management exists on the Group Edit page for Manager/Owner.
-- Group deletion exists on the Group Edit page for Owner/Manager; Public cannot be deleted.
+- Group deletion is not exposed in the Product UI.
 
 ## 8. User management screen
 
@@ -306,9 +305,10 @@ UI behaviors:
 
 - `/users/` is a compact list screen with simple client-side role tabs/filters (over the currently loaded page):
   - All, Readers, Curators, Librarians, Managers, Inactive
-  - Curators are detected via group membership role (`membership_role == curator`) and show a "Curates: ..." summary
+  - Curators are detected via `groups[].is_curator` and may show a "Curates: ..." summary
 - Editing is on a dedicated page: `/users/<user_id>/edit/`.
 - When allowed (`capabilities.can_manage_group_memberships`), the user edit page includes user-centric group membership management (add/update/remove).
+- Membership editors use ordinary membership plus a Curator checkbox/toggle, not a Reader/Curator role selector. Displays may show Member and Curator indicators separately.
 - Show safe editable fields (email, first_name, last_name, is_active, role) on the edit page.
 - Make role editing rules explicit in the UI:
   - Owner-only Manager promotion/demotion

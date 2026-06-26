@@ -117,7 +117,7 @@ Login request / authorization:
 
 User-management payload notes:
 
-- Managed users now include a read-only `groups[]` membership summary for that user (membership_id, group id/name, membership_role, is_public_group).
+- Managed users now include a read-only `groups[]` membership summary for that user (`membership_id`, group id/name, `is_public_group`, `is_curator`).
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 - User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
 - Email is optional contact/management metadata. It is not required for local
@@ -161,7 +161,7 @@ Notes:
 - What global role do I have?
 - What broad capabilities do I have? (UI hints)
 - Which LibraryGroups am I a member of?
-- Which groups do I curate (if any)?
+- Which group memberships are marked as curator/steward relationships?
 
 The response includes a `capabilities` object that provides **high-level UI hints only**. Authorization is still enforced by the specific endpoint policies; clients must not assume that a `true` capability guarantees any particular request will succeed.
 
@@ -173,7 +173,7 @@ Current `capabilities` keys:
 - `can_create_library_groups`
 - `can_manage_group_memberships` (broad, role-level)
 - `can_manage_group_identity` (broad, role-level; Public remains protected)
-- `can_edit_group_presentation` (broad; includes scoped curator power when applicable)
+- `can_edit_group_presentation` (broad/account bootstrap hint; group payloads expose exact group curation via `capabilities.can_curate`)
 - `can_access_imports`
 
 It also includes a `groups` array listing the caller's `LibraryGroupMembership`s.
@@ -181,10 +181,21 @@ It also includes a `groups` array listing the caller's `LibraryGroupMembership`s
 Each `groups[]` item includes:
 
 - `id`, `name`
-- `membership_role` (`reader` / `curator`)
 - `is_public_group`
+- `is_curator`
 
-If the user is a curator of any non-Public group, `curated_group_ids` lists the group IDs where they have scoped curator powers.
+Example:
+
+```json
+{
+  "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",
+  "name": "Fantasy Club",
+  "is_public_group": false,
+  "is_curator": true
+}
+```
+
+`/accounts/me/` global `role` and `capabilities` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list.
 
 Additional identity fields:
 
@@ -374,7 +385,7 @@ Book payload notes:
 
 - Books now include a read-only `groups[]` summary (assigned LibraryGroups).
 - For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
-- For Readers/Curators, `groups[]` includes only groups the caller can view (Public or direct membership).
+- For Readers, including readers with group curator flags, `groups[]` includes only groups the caller can view (Public or direct membership).
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `MEDIA_URL` (default: `/media/`) and is part of the normal product/API contract; only Django *serving* media directly is debug-only.
 - Book write shape: `authors` is a list of Author ids; `series` is a Series id or `null`.
@@ -399,22 +410,41 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 - `POST /api/v1/library/groups/` (Owner/Manager only; creates a group)
 - `GET /api/v1/library/groups/<group_id>/`
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`)
-- `DELETE /api/v1/library/groups/<group_id>/` (Owner/Manager only; destructive delete; Public cannot be deleted)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 - Memberships (Manager/Owner only):
   - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; readable by group members and by Owner/Manager/Librarian; Public group is readable to any authenticated user)
-  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user": "<user_id>", "role": "reader|curator"}`
-  - `PATCH /api/v1/library/groups/<group_id>/memberships/<membership_id>/` body: `{"role": "reader|curator"}`
+  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user": "<user_id>", "is_curator": true}`
+  - `PATCH /api/v1/library/groups/<group_id>/memberships/<membership_id>/` body: `{"is_curator": false}`
   - `DELETE /api/v1/library/groups/<group_id>/memberships/<membership_id>/`
+
+Group list/detail payloads include request-context UI hints:
+
+```json
+{
+  "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",
+  "name": "Fantasy Club",
+  "description": "Epic quests, folklore, and imagined worlds.",
+  "is_public_group": false,
+  "is_curator": true,
+  "capabilities": {
+    "can_curate": true
+  }
+}
+```
+
+`capabilities.can_curate` means the requester can curate that group: edit presentation/description, manage grouped books, and create/manage group-owned shelves. It does not include member management, group deletion, global user management, or server settings.
 
 Public restrictions:
 
-- Public cannot have Curators; membership role remains `reader`.
+- Public cannot have curator assignments (`is_curator=true` is invalid).
 - Public is default/fallback, not mandatory: membership may be removed when another group remains; removing a user's final membership restores Public.
+- Librarian/Manager/Owner users may still curate/manage Public through global authority.
 
 See `docs/permissions.md` for the visibility/curation rules.
+
+Group delete/scary delete is not part of the current documented product/API contract.
 
 ## Reading
 
