@@ -42,7 +42,6 @@ class _AuthorSeriesBookCountBase(APITestCase):
         LibraryGroupMembership.objects.create(
             user=other,
             group=self.hidden_group,
-            role=LibraryGroupMembership.ROLE_READER,
         )
 
         self.author = Author.objects.create(name="Author A")

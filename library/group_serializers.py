@@ -15,28 +15,57 @@ from .models import (
 
 class LibraryGroupSerializer(serializers.ModelSerializer):
     is_public_group = serializers.SerializerMethodField(read_only=True)
-    membership_role = serializers.SerializerMethodField(read_only=True)
+    is_curator = serializers.SerializerMethodField(read_only=True)
+    capabilities = serializers.SerializerMethodField(read_only=True)
 
     def get_is_public_group(self, obj: LibraryGroup) -> bool:
         return is_public_group(obj)
 
-    def get_membership_role(self, obj: LibraryGroup) -> str | None:
+    def get_is_curator(self, obj: LibraryGroup) -> bool:
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if user is None or getattr(user, "is_anonymous", False):
-            return None
+            return False
 
         cache = getattr(obj, "_prefetched_objects_cache", {})
         if "memberships" in cache:
             membership = cast(Any, obj).memberships.all().first()
-            return membership.role if membership is not None else None
+            return bool(membership.is_curator) if membership is not None else False
 
-        role = (
+        return bool(
             LibraryGroupMembership.objects.filter(group=obj, user=user)
-            .values_list("role", flat=True)
+            .values_list("is_curator", flat=True)
             .first()
         )
-        return cast(str | None, role)
+
+    def get_capabilities(self, obj: LibraryGroup) -> dict[str, bool]:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is None or getattr(user, "is_anonymous", False):
+            return {
+                "can_edit_description": False,
+                "can_manage_books": False,
+                "can_create_shelf": False,
+                "can_manage_members": False,
+                "can_manage_identity": False,
+                "can_delete": False,
+            }
+
+        from shelves import policies as shelf_policies
+        from shelves.models import Shelf
+
+        return {
+            "can_edit_description": policies.can_edit_group_description(user=user, group=obj),
+            "can_manage_books": policies.can_manage_group_books(user=user, group=obj),
+            "can_create_shelf": shelf_policies.can_create_shelf(
+                user=user,
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group=obj,
+            ),
+            "can_manage_members": policies.can_manage_group_membership(user=user, group=obj),
+            "can_manage_identity": policies.can_manage_group_identity(user=user, group=obj),
+            "can_delete": policies.can_delete_library_group(user, group=obj),
+        }
 
     class Meta:
         model = LibraryGroup
@@ -45,7 +74,8 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "is_public_group",
-            "membership_role",
+            "is_curator",
+            "capabilities",
             "created_at",
             "updated_at",
         ]
@@ -129,23 +159,32 @@ class LibraryGroupMembershipSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
-    role = serializers.ChoiceField(choices=[LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR])
     is_owner = serializers.BooleanField()
+    is_curator = serializers.BooleanField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 
 
 class LibraryGroupMembershipCreateSerializer(serializers.Serializer):
     user = serializers.IntegerField()
-    role = serializers.ChoiceField(
-        required=False,
-        choices=[LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR],
-        default=LibraryGroupMembership.ROLE_READER,
-    )
+    is_curator = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        if "role" in initial:
+            raise serializers.ValidationError(
+                {"role": "Membership role is not supported. Use is_curator."}
+            )
+        return super().validate(attrs)
 
 
 class LibraryGroupMembershipPatchSerializer(serializers.Serializer):
-    role = serializers.ChoiceField(
-        required=True,
-        choices=[LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR],
-    )
+    is_curator = serializers.BooleanField(required=True)
+
+    def validate(self, attrs):
+        initial = getattr(self, "initial_data", {}) or {}
+        if "role" in initial:
+            raise serializers.ValidationError(
+                {"role": "Membership role is not supported. Use is_curator."}
+            )
+        return super().validate(attrs)

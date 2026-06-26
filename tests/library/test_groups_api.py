@@ -47,7 +47,6 @@ class LibraryGroupVisibilityAPITest(APITestCase):
         LibraryGroupMembership.objects.create(
             user=self.reader,
             group=self.member_group,
-            role=LibraryGroupMembership.ROLE_READER,
         )
 
     def test_reader_sees_public_and_member_groups_only(self):
@@ -113,14 +112,14 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
 
         self.group = LibraryGroup.objects.create(name="Group")
         LibraryGroupMembership.objects.create(
-            user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
+            user=self.curator, group=self.group, is_curator=True
         )
 
         self.other_group = LibraryGroup.objects.create(name="Other")
 
         self.visible_group = LibraryGroup.objects.create(name="VisibleGroup")
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.visible_group, role=LibraryGroupMembership.ROLE_READER
+            user=self.reader, group=self.visible_group
         )
 
         self.book_public = create_file_backed_book(title="Public Book", assign_public=False).book
@@ -136,7 +135,7 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
         other = User.objects.create_user(username="other", email="other@example.com", password="pw")
         ensure_user_public_membership(user=other)
         LibraryGroupMembership.objects.create(
-            user=other, group=hidden, role=LibraryGroupMembership.ROLE_READER
+            user=other, group=hidden
         )
         BookGroupAssignment.objects.create(book=self.book_inaccessible, group=hidden, added_by=self.librarian)
 
@@ -269,7 +268,7 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         manager_profile.save(update_fields=["role", "updated_at"])
 
         self.group = LibraryGroup.objects.create(name="Group", description="before")
-        LibraryGroupMembership.objects.create(user=self.curator, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR)
+        LibraryGroupMembership.objects.create(user=self.curator, group=self.group, is_curator=True)
 
         self.other_group = LibraryGroup.objects.create(name="Other", description="before")
 
@@ -311,7 +310,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         LibraryGroupMembership.objects.create(
             user=self.curator,
             group=self.group,
-            role=LibraryGroupMembership.ROLE_CURATOR,
+            is_curator=True,
         )
         self.other_group = LibraryGroup.objects.create(name="Other", description="before")
 
@@ -329,6 +328,49 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         self.client.login(username="librarian", password="pw")
         r3 = cast(Response, self.client.post("/api/v1/library/groups/", data={"name": "Nope"}, format="json"))
         self.assertEqual(r3.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_group_payload_capabilities_match_policy(self):
+        self.client.login(username="curator", password="pw")
+        curator_response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.group.id}/"),
+        )
+        self.assertEqual(curator_response.status_code, status.HTTP_200_OK)
+        curator_caps = cast(dict[str, Any], cast(dict[str, Any], curator_response.data)["capabilities"])
+        self.assertTrue(curator_caps["can_edit_description"])
+        self.assertTrue(curator_caps["can_manage_books"])
+        self.assertTrue(curator_caps["can_create_shelf"])
+        self.assertFalse(curator_caps["can_manage_members"])
+        self.assertFalse(curator_caps["can_manage_identity"])
+        self.assertFalse(curator_caps["can_delete"])
+
+        public_response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.public.id}/"),
+        )
+        self.assertEqual(public_response.status_code, status.HTTP_200_OK)
+        public_caps = cast(dict[str, Any], cast(dict[str, Any], public_response.data)["capabilities"])
+        self.assertFalse(public_caps["can_edit_description"])
+        self.assertFalse(public_caps["can_manage_books"])
+        self.assertFalse(public_caps["can_create_shelf"])
+        self.assertFalse(public_caps["can_manage_members"])
+        self.assertFalse(public_caps["can_manage_identity"])
+        self.assertFalse(public_caps["can_delete"])
+
+        self.client.logout()
+        self.client.login(username="librarian", password="pw")
+        librarian_response = cast(
+            Response,
+            self.client.get(f"/api/v1/library/groups/{self.public.id}/"),
+        )
+        self.assertEqual(librarian_response.status_code, status.HTTP_200_OK)
+        librarian_caps = cast(dict[str, Any], cast(dict[str, Any], librarian_response.data)["capabilities"])
+        self.assertTrue(librarian_caps["can_edit_description"])
+        self.assertTrue(librarian_caps["can_manage_books"])
+        self.assertTrue(librarian_caps["can_create_shelf"])
+        self.assertFalse(librarian_caps["can_manage_members"])
+        self.assertFalse(librarian_caps["can_manage_identity"])
+        self.assertFalse(librarian_caps["can_delete"])
 
     def test_blank_name_rejected(self):
         self.client.login(username="manager", password="pw")
@@ -355,7 +397,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
         # User membership only in this group.
         u = User.objects.create_user(username="member", password="pw")
         ensure_user_public_membership(user=u)
-        LibraryGroupMembership.objects.create(user=u, group=group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=u, group=group)
         LibraryGroupMembership.objects.filter(user=u, group=self.public).delete()
         ensure_user_has_at_least_one_group(user=u)
 
@@ -388,7 +430,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
 
     def test_librarian_and_reader_cannot_delete_group(self):
         group = LibraryGroup.objects.create(name="G")
-        LibraryGroupMembership.objects.create(user=self.reader, group=group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=self.reader, group=group)
 
         self.client.login(username="librarian", password="pw")
         r1 = cast(Response, self.client.delete(f"/api/v1/library/groups/{group.id}/"))

@@ -60,9 +60,9 @@ class CurrentUserMePatchAPITest(APITestCase):
             "is_owner",
             "capabilities",
             "groups",
-            "curated_group_ids",
         ):
             self.assertIn(key, data)
+        self.assertNotIn("curated_group_ids", data)
 
         self.assertEqual(data["username"], "reader")
         self.assertEqual(data["email"], "new@example.test")

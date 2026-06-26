@@ -457,9 +457,9 @@ class LibraryGroupAdmin(admin.ModelAdmin):
 
 @admin.register(LibraryGroupMembership)
 class LibraryGroupMembershipAdmin(admin.ModelAdmin):
-    list_display = ["user", "group", "role", "created_at"]
+    list_display = ["user", "group", "is_curator", "created_at"]
     search_fields = ["user__username", "user__email", "group__name"]
-    list_filter = ["role", ("created_at", DateFieldListFilter)]
+    list_filter = ["is_curator", ("created_at", DateFieldListFilter)]
     raw_id_fields = ["user", "group"]
     readonly_fields = ["created_at", "updated_at"]
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import cast
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -89,7 +90,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
 
     def test_group_member_can_list_memberships_for_their_group(self):
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER
+            user=self.reader, group=self.group
         )
         self.client.login(username="reader", password="pw")
         response = cast(
@@ -97,6 +98,18 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_membership_defaults_to_non_curator(self):
+        membership = LibraryGroupMembership.objects.create(user=self.reader, group=self.group)
+        self.assertFalse(membership.is_curator)
+
+    def test_direct_public_curator_creation_is_rejected(self):
+        with self.assertRaises(DjangoValidationError):
+            LibraryGroupMembership.objects.create(
+                user=self.reader,
+                group=self.public,
+                is_curator=True,
+            )
 
     def test_authenticated_user_can_list_public_memberships(self):
         self.client.login(username="reader", password="pw")
@@ -112,23 +125,43 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "role": "reader"},
+                data={"user": self.reader.pk},
                 format="json",
             ),
         )
         self.assertEqual(add_reader.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(cast(dict, add_reader.data)["is_curator"])
+        self.assertNotIn("role", cast(dict, add_reader.data))
 
         add_curator = cast(
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "role": "curator"},
+                data={"user": self.reader.pk, "is_curator": True},
                 format="json",
             ),
         )
         self.assertEqual(add_curator.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(cast(dict, add_curator.data)["is_curator"])
         membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.group)
-        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+        self.assertTrue(membership.is_curator)
+
+    def test_broad_role_users_may_be_curators_on_non_public_groups(self):
+        for user in (self.owner, self.manager, self.librarian):
+            with self.subTest(username=user.username):
+                self.client.logout()
+                self.client.login(username="owner", password="pw")
+                response = cast(
+                    Response,
+                    self.client.post(
+                        f"/api/v1/library/groups/{self.group.id}/memberships/",
+                        data={"user": user.pk, "is_curator": True},
+                        format="json",
+                    ),
+                )
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                membership = LibraryGroupMembership.objects.get(user=user, group=self.group)
+                self.assertTrue(membership.is_curator)
 
     def test_reader_librarian_and_curator_cannot_mutate_memberships(self):
         curator_user = User.objects.create_user(
@@ -140,10 +173,10 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         curator_profile.save(update_fields=["role", "updated_at"])
 
         membership = LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER
+            user=self.reader, group=self.group
         )
         LibraryGroupMembership.objects.create(
-            user=curator_user, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
+            user=curator_user, group=self.group, is_curator=True
         )
 
         for username in ("reader", "librarian", "curator"):
@@ -154,7 +187,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
                 Response,
                 self.client.post(
                     f"/api/v1/library/groups/{self.group.id}/memberships/",
-                    data={"user": self.manager.pk, "role": "reader"},
+                    data={"user": self.manager.pk},
                     format="json",
                 ),
             )
@@ -164,7 +197,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
                 Response,
                 self.client.patch(
                     f"/api/v1/library/groups/{self.group.id}/memberships/{membership.id}/",
-                    data={"role": "curator"},
+                    data={"is_curator": True},
                     format="json",
                 ),
             )
@@ -178,13 +211,13 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             )
             self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_duplicate_add_is_idempotent_and_updates_role(self):
+    def test_duplicate_add_is_idempotent_and_updates_curator_status(self):
         self.client.login(username="manager", password="pw")
         first = cast(
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "role": "reader"},
+                data={"user": self.reader.pk},
                 format="json",
             ),
         )
@@ -194,14 +227,14 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "role": "curator"},
+                data={"user": self.reader.pk, "is_curator": True},
                 format="json",
             ),
         )
         self.assertEqual(second.status_code, status.HTTP_201_CREATED)
         self.assertEqual(LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).count(), 1)
         membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.group)
-        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+        self.assertTrue(membership.is_curator)
 
     def test_manager_cannot_add_curator_membership_to_public(self):
         self.client.login(username="manager", password="pw")
@@ -209,20 +242,18 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.public.id}/memberships/",
-                data={"user": self.reader.pk, "role": "curator"},
+                data={"user": self.reader.pk, "is_curator": True},
                 format="json",
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.reader.refresh_from_db()
         public_membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
-        self.assertEqual(public_membership.role, LibraryGroupMembership.ROLE_READER)
+        self.assertFalse(public_membership.is_curator)
 
     def test_manager_can_remove_public_membership_if_another_group_remains(self):
         other = LibraryGroup.objects.create(name="Other")
-        LibraryGroupMembership.objects.create(
-            user=self.reader, group=other, role=LibraryGroupMembership.ROLE_READER
-        )
+        LibraryGroupMembership.objects.create(user=self.reader, group=other)
 
         self.client.login(username="manager", password="pw")
         membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
@@ -249,25 +280,25 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertTrue(LibraryGroupMembership.objects.filter(user=self.reader).exists())
         restored = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
-        self.assertEqual(restored.role, LibraryGroupMembership.ROLE_READER)
+        self.assertFalse(restored.is_curator)
 
     def test_manager_can_update_and_remove_non_public_membership(self):
         self.client.login(username="manager", password="pw")
         membership = LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER
+            user=self.reader, group=self.group
         )
 
         patched = cast(
             Response,
             self.client.patch(
                 f"/api/v1/library/groups/{self.group.id}/memberships/{membership.id}/",
-                data={"role": "curator"},
+                data={"is_curator": True},
                 format="json",
             ),
         )
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
         membership.refresh_from_db()
-        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_CURATOR)
+        self.assertTrue(membership.is_curator)
 
         deleted = cast(
             Response,
@@ -277,3 +308,30 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         )
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(LibraryGroupMembership.objects.filter(pk=membership.id).exists())
+
+    def test_public_curator_update_is_rejected(self):
+        self.client.login(username="manager", password="pw")
+        membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.public)
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/groups/{self.public.id}/memberships/{membership.id}/",
+                data={"is_curator": True},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        membership.refresh_from_db()
+        self.assertFalse(membership.is_curator)
+
+    def test_legacy_role_field_is_rejected(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"user": self.reader.pk, "role": "curator"},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

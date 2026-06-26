@@ -91,13 +91,13 @@ class ShelfServicePolicyTests(TestCase):
         ensure_user_public_membership(user=self.other)
 
         self.group = LibraryGroup.objects.create(name="Fantasy Club")
-        LibraryGroupMembership.objects.create(user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=self.reader, group=self.group)
         self.curated_group = LibraryGroup.objects.create(name="Curated")
         self.curator = User.objects.create_user(username="curator", password="pw")
         LibraryGroupMembership.objects.create(
             user=self.curator,
             group=self.curated_group,
-            role=LibraryGroupMembership.ROLE_CURATOR,
+            is_curator=True,
         )
 
         self.book_in_group = create_file_backed_book(title="GBook", assign_public=False).book

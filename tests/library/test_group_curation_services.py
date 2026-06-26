@@ -60,14 +60,13 @@ class GroupCurationServicesTest(TestCase):
         LibraryGroupMembership.objects.create(
             user=self.curator,
             group=self.group,
-            role=LibraryGroupMembership.ROLE_CURATOR,
+            is_curator=True,
         )
 
         self.group_reader_only = LibraryGroup.objects.create(name="ReaderOnly")
         LibraryGroupMembership.objects.create(
             user=self.curator,
             group=self.group_reader_only,
-            role=LibraryGroupMembership.ROLE_READER,
         )
 
         self.book_public = create_file_backed_book(title="Public", assign_public=False).book
@@ -77,7 +76,7 @@ class GroupCurationServicesTest(TestCase):
         hidden_group = LibraryGroup.objects.create(name="Hidden")
         other_user = User.objects.create_user(username="other", email="other@example.com", password="pw")
         ensure_user_public_membership(user=other_user)
-        LibraryGroupMembership.objects.create(user=other_user, group=hidden_group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=other_user, group=hidden_group)
         BookGroupAssignment.objects.create(book=self.book_hidden, group=hidden_group, added_by=self.owner)
 
     def test_manager_can_add_book_to_group(self):

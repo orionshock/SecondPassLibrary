@@ -38,7 +38,7 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
 
         self.group = LibraryGroup.objects.create(name="G")
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR
+            user=self.reader, group=self.group, is_curator=True
         )
 
     def test_manager_user_list_includes_groups_summary(self):
@@ -57,12 +57,14 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
 
         g_row = next(g for g in groups if g["name"] == "G")
         self.assertIn("membership_id", g_row)
-        self.assertEqual(g_row["membership_role"], "curator")
+        self.assertTrue(g_row["is_curator"])
+        self.assertNotIn("membership_role", g_row)
         self.assertFalse(g_row["is_public_group"])
 
         public_row = next(g for g in groups if g["is_public_group"])
         self.assertIn("membership_id", public_row)
-        self.assertEqual(public_row["membership_role"], "reader")
+        self.assertFalse(public_row["is_curator"])
+        self.assertNotIn("membership_role", public_row)
         self.assertTrue(public_row["is_public_group"])
 
         # Sanity: does not expose sensitive auth internals.

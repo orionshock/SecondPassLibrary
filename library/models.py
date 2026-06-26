@@ -247,21 +247,13 @@ def is_public_group(group: LibraryGroup | None) -> bool:
 
 
 class LibraryGroupMembership(TimeStampedModel):
-    ROLE_READER = "reader"
-    ROLE_CURATOR = "curator"
-
-    ROLE_CHOICES = [
-        (ROLE_READER, "Reader"),
-        (ROLE_CURATOR, "Curator"),
-    ]
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_group_memberships"
     )
     group = models.ForeignKey(
         LibraryGroup, on_delete=models.CASCADE, related_name="memberships"
     )
-    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_READER)
+    is_curator = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["group__name", "user__username"]
@@ -271,20 +263,24 @@ class LibraryGroupMembership(TimeStampedModel):
                 name="unique_user_library_group_membership",
             )
         ]
+        indexes = [
+            models.Index(fields=["group", "is_curator"], name="idx_group_membership_curator"),
+        ]
 
     def clean(self):
         group_id = getattr(self, "group_id", None)
-        if group_id and self.role == self.ROLE_CURATOR:
+        if group_id and self.is_curator:
             group = self.group
             if is_public_group(group):
-                raise ValidationError({"role": "Public group cannot have curators."})
+                raise ValidationError({"is_curator": "Public group cannot have curators."})
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.get_username()} in {self.group.name} ({self.role})"
+        suffix = ", curator" if self.is_curator else ""
+        return f"{self.user.get_username()} in {self.group.name}{suffix}"
 
 
 class BookGroupAssignment(TimeStampedModel):

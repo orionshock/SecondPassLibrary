@@ -64,7 +64,6 @@ class PolicyTest(TestCase):
         LibraryGroupMembership.objects.create(
             user=self.reader,
             group=self.hidden_group,
-            role=LibraryGroupMembership.ROLE_READER,
         )
 
         self.hidden_book = create_file_backed_book(title="Hidden Book", assign_public=False).book
@@ -183,7 +182,7 @@ class PolicyTest(TestCase):
         profile.save(update_fields=["role", "updated_at"])
 
         # Add a non-Public membership, then remove Public so the user remains in at least one group.
-        LibraryGroupMembership.objects.create(user=u, group=fantasy, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=u, group=fantasy)
         LibraryGroupMembership.objects.filter(user=u, group=self.public).delete()
         self.assertFalse(LibraryGroupMembership.objects.filter(user=u, group=self.public).exists())
 
@@ -223,7 +222,7 @@ class PolicyTest(TestCase):
 
         # Presentation (description): Owner/Manager/Librarian, or Curator for their group; never for Public.
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=group, role=LibraryGroupMembership.ROLE_CURATOR
+            user=self.reader, group=group, is_curator=True
         )
         self.assertTrue(policies.can_edit_group_presentation(user=self.librarian, group=group))
         self.assertTrue(policies.can_edit_group_presentation(user=self.reader, group=group))
@@ -243,15 +242,34 @@ class PolicyTest(TestCase):
     def test_curator_rules(self):
         fantasy = LibraryGroup.objects.create(name="Fantasy")
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=fantasy, role=LibraryGroupMembership.ROLE_CURATOR
+            user=self.reader, group=fantasy, is_curator=True
         )
         self.assertTrue(policies.can_curate_group(user=self.reader, group=fantasy))
         self.assertFalse(policies.can_curate_group(user=self.reader, group=self.public))
+
+    def test_curator_authority_is_exact_group_scoped(self):
+        fantasy = LibraryGroup.objects.create(name="Fantasy")
+        mystery = LibraryGroup.objects.create(name="Mystery")
+        LibraryGroupMembership.objects.create(
+            user=self.reader, group=fantasy, is_curator=True
+        )
+        LibraryGroupMembership.objects.create(user=self.reader, group=mystery)
+
+        self.assertTrue(policies.can_curate_group(user=self.reader, group=fantasy))
+        self.assertFalse(policies.can_curate_group(user=self.reader, group=mystery))
+        self.assertTrue(policies.can_manage_group_books(user=self.reader, group=fantasy))
+        self.assertFalse(policies.can_manage_group_books(user=self.reader, group=mystery))
+
+    def test_broad_roles_retain_group_book_authority_without_curator_flag(self):
+        group = LibraryGroup.objects.create(name="G")
+        self.assertTrue(policies.can_manage_group_books(user=self.owner, group=group))
+        self.assertTrue(policies.can_manage_group_books(user=self.manager, group=group))
+        self.assertTrue(policies.can_manage_group_books(user=self.librarian, group=group))
 
     def test_public_group_cannot_have_curators(self):
         with self.assertRaises(ValidationError):
             LibraryGroupMembership.objects.create(
                 user=self.reader,
                 group=self.public,
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
             )

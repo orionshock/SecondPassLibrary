@@ -77,8 +77,9 @@ class ManagedUsersAPITest(APITestCase):
         public_groups = [g for g in groups if g["is_public_group"]]
         self.assertEqual(len(public_groups), 1)
         self.assertTrue(public_groups[0]["is_public_group"])
-        self.assertEqual(public_groups[0]["membership_role"], LibraryGroupMembership.ROLE_READER)
-        self.assertEqual(data["curated_group_ids"], [])
+        self.assertFalse(public_groups[0]["is_curator"])
+        self.assertNotIn("membership_role", public_groups[0])
+        self.assertNotIn("curated_group_ids", data)
 
     def test_me_capabilities_manager(self):
         self.client.login(username="manager", password="pw")
@@ -119,7 +120,7 @@ class ManagedUsersAPITest(APITestCase):
         LibraryGroupMembership.objects.create(
             user=self.reader,
             group=group,
-            role=LibraryGroupMembership.ROLE_CURATOR,
+            is_curator=True,
         )
 
         self.client.login(username="reader", password="pw")
@@ -133,8 +134,10 @@ class ManagedUsersAPITest(APITestCase):
         self.assertFalse(capabilities["can_manage_users"])
         self.assertTrue(capabilities["can_edit_group_presentation"])
 
-        curated_group_ids = cast(list[str], data["curated_group_ids"])
-        self.assertIn(str(group.id), curated_group_ids)
+        groups = cast(list[dict[str, Any]], data["groups"])
+        group_row = next(row for row in groups if row["name"] == "Fantasy Club")
+        self.assertTrue(group_row["is_curator"])
+        self.assertNotIn("curated_group_ids", data)
 
     def test_reader_and_librarian_cannot_access_user_management_endpoints(self):
         self.client.login(username="reader", password="pw")

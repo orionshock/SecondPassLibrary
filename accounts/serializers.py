@@ -21,8 +21,8 @@ class CurrentUserSerializer(serializers.Serializer):
     class GroupSummarySerializer(serializers.Serializer):
         id = serializers.UUIDField()
         name = serializers.CharField()
-        membership_role = serializers.ChoiceField(choices=["reader", "curator"])
         is_public_group = serializers.BooleanField()
+        is_curator = serializers.BooleanField()
 
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
@@ -34,7 +34,6 @@ class CurrentUserSerializer(serializers.Serializer):
     is_owner = serializers.BooleanField()
     capabilities = serializers.DictField(child=serializers.BooleanField())
     groups = GroupSummarySerializer(many=True)
-    curated_group_ids = serializers.ListField(child=serializers.UUIDField())
 
 
 class CurrentUserPatchSerializer(serializers.Serializer):
@@ -64,8 +63,8 @@ class ManagedUserSerializer(serializers.Serializer):
         membership_id = serializers.UUIDField()
         id = serializers.UUIDField()
         name = serializers.CharField()
-        membership_role = serializers.ChoiceField(choices=["reader", "curator"])
         is_public_group = serializers.BooleanField()
+        is_curator = serializers.BooleanField()
 
     id = serializers.IntegerField()
     username = serializers.CharField()

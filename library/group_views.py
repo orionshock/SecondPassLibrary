@@ -43,6 +43,21 @@ from .view_mixins import ClientBearerReadOnlyMixin
 
 User = get_user_model()
 
+
+def _membership_payload(membership: LibraryGroupMembership) -> dict[str, Any]:
+    user = membership.user
+    return {
+        "id": membership.id,
+        "user_id": user.pk,
+        "username": user.get_username(),
+        "email": user.email or "",
+        "is_owner": policies.is_owner(user),
+        "is_curator": bool(membership.is_curator),
+        "created_at": membership.created_at,
+        "updated_at": membership.updated_at,
+    }
+
+
 class LibraryGroupViewSet(
     ClientBearerReadOnlyMixin,
     mixins.CreateModelMixin,
@@ -223,21 +238,7 @@ class LibraryGroupViewSet(
             )
             page = self.paginate_queryset(qs)
             memberships = list(page) if page is not None else list(qs)
-            payload = []
-            for membership in memberships:
-                user = membership.user
-                payload.append(
-                    {
-                        "id": membership.id,
-                        "user_id": user.pk,
-                        "username": user.get_username(),
-                        "email": user.email or "",
-                        "role": membership.role,
-                        "is_owner": policies.is_owner(user),
-                        "created_at": membership.created_at,
-                        "updated_at": membership.updated_at,
-                    }
-                )
+            payload = [_membership_payload(membership) for membership in memberships]
             serializer = LibraryGroupMembershipSerializer(payload, many=True)
             if page is not None:
                 return self.get_paginated_response(serializer.data)
@@ -251,7 +252,7 @@ class LibraryGroupViewSet(
         data = create.validated_data
 
         user_id = data.get("user")
-        role = data.get("role")
+        is_curator = bool(data.get("is_curator", False))
         try:
             target = User.objects.get(pk=user_id)
         except User.DoesNotExist:
@@ -265,28 +266,21 @@ class LibraryGroupViewSet(
 
         try:
             membership = add_user_to_group(
-                actor=request.user, target_user=target, group=group, role=role
+                actor=request.user,
+                target_user=target,
+                group=group,
+                is_curator=is_curator,
             )
         except ValidationError as exc:
             return api_error_response(
                 code=ErrorCode.INVALID_REQUEST,
                 message="Invalid membership request.",
                 detail=str(exc),
-                hint="Use role=reader|curator (curator only for non-Public groups).",
+                hint="Use is_curator=true only for non-Public groups.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = membership.user
-        payload = {
-            "id": membership.id,
-            "user_id": user.pk,
-            "username": user.get_username(),
-            "email": user.email or "",
-            "role": membership.role,
-            "is_owner": policies.is_owner(user),
-            "created_at": membership.created_at,
-            "updated_at": membership.updated_at,
-        }
+        payload = _membership_payload(membership)
         serializer = LibraryGroupMembershipSerializer(payload)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -321,27 +315,19 @@ class LibraryGroupViewSet(
 
         try:
             membership = update_user_group_membership(
-                actor=request.user, membership=membership, role=data["role"]
+                actor=request.user,
+                membership=membership,
+                is_curator=bool(data["is_curator"]),
             )
         except ValidationError as exc:
             return api_error_response(
                 code=ErrorCode.INVALID_REQUEST,
                 message="Invalid membership update.",
                 detail=str(exc),
-                hint="Use role=reader|curator (curator only for non-Public groups).",
+                hint="Use is_curator=true only for non-Public groups.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = membership.user
-        payload = {
-            "id": membership.id,
-            "user_id": user.pk,
-            "username": user.get_username(),
-            "email": user.email or "",
-            "role": membership.role,
-            "is_owner": policies.is_owner(user),
-            "created_at": membership.created_at,
-            "updated_at": membership.updated_at,
-        }
+        payload = _membership_payload(membership)
         serializer = LibraryGroupMembershipSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)

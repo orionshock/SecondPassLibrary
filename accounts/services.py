@@ -346,7 +346,6 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
     )
 
     groups: list[dict[str, Any]] = []
-    curated_group_ids: list[Any] = []
     for membership in memberships:
         group = membership.group
         public = is_public_group(group)
@@ -354,20 +353,18 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
             {
                 "id": group.id,
                 "name": group.name,
-                "membership_role": membership.role,
                 "is_public_group": public,
+                "is_curator": bool(membership.is_curator),
             }
         )
-        if (
-            membership.role == LibraryGroupMembership.ROLE_CURATOR
-            and not public
-        ):
-            curated_group_ids.append(group.id)
 
     can_manage_users = policies.can_manage_users(user)
     can_manage_library = policies.can_manage_library(user)
     can_import_books = policies.can_import_books(user)
     can_create_library_groups = policies.can_create_library_group(user)
+    has_curated_groups = any(
+        bool(group["is_curator"]) and not bool(group["is_public_group"]) for group in groups
+    )
 
     capabilities = {
         "can_manage_users": can_manage_users,
@@ -376,7 +373,7 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "can_create_library_groups": can_create_library_groups,
         "can_manage_group_memberships": can_manage_users,
         "can_manage_group_identity": can_manage_users,
-        "can_edit_group_presentation": bool(can_manage_library or curated_group_ids),
+        "can_edit_group_presentation": bool(can_manage_library or has_curated_groups),
         "can_access_imports": bool(can_import_books or can_manage_library),
     }
 
@@ -391,5 +388,4 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "is_owner": policies.is_owner(user),
         "capabilities": capabilities,
         "groups": groups,
-        "curated_group_ids": curated_group_ids,
     }

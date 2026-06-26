@@ -48,7 +48,7 @@ class ShelvesClientBearerTests(APITestCase):
 
         self.public_group = get_public_group()
         self.group = LibraryGroup.objects.create(name="G")
-        LibraryGroupMembership.objects.create(user=self.user, group=self.group, role=LibraryGroupMembership.ROLE_CURATOR)
+        LibraryGroupMembership.objects.create(user=self.user, group=self.group, is_curator=True)
 
         self.book_public = create_file_backed_book(title="Public book", assign_public=False).book
         cast(Any, self.book_public).group_assignments.create(group=self.public_group, added_by=self.user)

@@ -21,8 +21,8 @@ def managed_user_group_payloads(user) -> list[dict[str, Any]]:
                 "membership_id": membership.id,
                 "id": group.id,
                 "name": group.name,
-                "membership_role": membership.role,
                 "is_public_group": is_public_group(group),
+                "is_curator": bool(membership.is_curator),
             }
         )
     return sorted(groups, key=lambda g: (g["name"], str(g["id"])))

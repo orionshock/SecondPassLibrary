@@ -97,7 +97,7 @@ def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
 
 def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
     """
-    Ensure the user has a Public membership (reader role).
+    Ensure the user has a Public membership.
 
     Public is the default/fallback group for new users, but it is not mandatory
     if the user belongs to at least one other group.
@@ -106,11 +106,12 @@ def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
     membership, _created = LibraryGroupMembership.objects.get_or_create(
         user=user,
         group=public,
-        defaults={"role": LibraryGroupMembership.ROLE_READER},
+        defaults={"is_curator": False},
     )
-    if membership.role != LibraryGroupMembership.ROLE_READER:
-        membership.role = LibraryGroupMembership.ROLE_READER
-        membership.save(update_fields=["role", "updated_at"])
+    if membership.is_curator:
+        membership.is_curator = False
+        membership.full_clean()
+        membership.save(update_fields=["is_curator", "updated_at"])
     return membership
 
 
@@ -232,36 +233,32 @@ def add_user_to_group(
     actor,
     target_user,
     group: LibraryGroup,
-    role: str = LibraryGroupMembership.ROLE_READER,
+    is_curator: bool = False,
 ) -> LibraryGroupMembership:
     """
     Safe path for adding (or updating) a user's membership in a LibraryGroup.
 
     Rules:
     - Only Owner/Manager may manage memberships.
-    - Public cannot have Curators and role is forced to reader.
-    - Non-Public: role must be reader or curator.
-    - Idempotent: existing membership is updated to the requested role (subject to rules).
+    - Public cannot have Curators.
+    - Idempotent: existing membership is updated to the requested curator status.
     """
     if not policies.can_manage_group_membership(user=actor, group=group):
         raise PermissionDenied("Not allowed.")
 
-    if is_public_group(group):
-        if role != LibraryGroupMembership.ROLE_READER:
-            raise ValidationError({"role": "Public group cannot have curators."})
-        role = LibraryGroupMembership.ROLE_READER
-    else:
-        if role not in {LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR}:
-            raise ValidationError({"role": "Invalid membership role."})
+    is_curator = bool(is_curator)
+    if is_curator and is_public_group(group):
+        raise ValidationError({"is_curator": "Public group cannot have curators."})
 
     membership, created = LibraryGroupMembership.objects.get_or_create(
         user=target_user,
         group=group,
-        defaults={"role": role},
+        defaults={"is_curator": is_curator},
     )
-    if not created and membership.role != role:
-        membership.role = role
-        membership.save(update_fields=["role", "updated_at"])
+    if not created and membership.is_curator != is_curator:
+        membership.is_curator = is_curator
+        membership.full_clean()
+        membership.save(update_fields=["is_curator", "updated_at"])
     return membership
 
 
@@ -269,26 +266,23 @@ def update_user_group_membership(
     *,
     actor,
     membership: LibraryGroupMembership,
-    role: str,
+    is_curator: bool,
 ) -> LibraryGroupMembership:
     """
-    Safe path for updating an existing membership's role.
+    Safe path for updating an existing membership's curator status.
     """
     group = membership.group
     if not policies.can_manage_group_membership(user=actor, group=group):
         raise PermissionDenied("Not allowed.")
 
-    if is_public_group(group):
-        if role != LibraryGroupMembership.ROLE_READER:
-            raise ValidationError({"role": "Public group cannot have curators."})
-        role = LibraryGroupMembership.ROLE_READER
-    else:
-        if role not in {LibraryGroupMembership.ROLE_READER, LibraryGroupMembership.ROLE_CURATOR}:
-            raise ValidationError({"role": "Invalid membership role."})
+    is_curator = bool(is_curator)
+    if is_curator and is_public_group(group):
+        raise ValidationError({"is_curator": "Public group cannot have curators."})
 
-    if membership.role != role:
-        membership.role = role
-        membership.save(update_fields=["role", "updated_at"])
+    if membership.is_curator != is_curator:
+        membership.is_curator = is_curator
+        membership.full_clean()
+        membership.save(update_fields=["is_curator", "updated_at"])
     return membership
 
 
@@ -330,10 +324,10 @@ def delete_library_group(*, actor, group: LibraryGroup) -> dict[str, int]:
 
     Returns counts for diagnostics.
     """
-    if not policies.can_delete_library_group(actor):
-        raise PermissionDenied("Not allowed.")
     if is_public_group(group):
         raise ValidationError("Public group cannot be deleted.")
+    if not policies.can_delete_library_group(actor, group=group):
+        raise PermissionDenied("Not allowed.")
 
     group_id = group.id
 

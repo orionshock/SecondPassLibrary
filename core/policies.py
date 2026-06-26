@@ -181,7 +181,9 @@ def can_create_library_group(user) -> bool:
     return is_owner(user) or _is_manager_role(user)
 
 
-def can_delete_library_group(user) -> bool:
+def can_delete_library_group(user, group: LibraryGroup | None = None) -> bool:
+    if group is not None and is_public_group(group):
+        return False
     return can_create_library_group(user)
 
 
@@ -196,6 +198,12 @@ def can_manage_group_membership(*, user, group: LibraryGroup) -> bool:
     return is_owner(user) or _is_manager_role(user)
 
 
+def can_manage_group_books(*, user, group: LibraryGroup) -> bool:
+    if can_manage_library(user):
+        return True
+    return can_curate_group(user=user, group=group)
+
+
 def can_edit_group_presentation(*, user, group: LibraryGroup) -> bool:
     # Group presentation is limited to description only.
     # Public is handled by field-specific helpers.
@@ -204,7 +212,7 @@ def can_edit_group_presentation(*, user, group: LibraryGroup) -> bool:
     if is_owner(user) or _is_manager_role(user) or _is_librarian_role(user):
         return True
     return LibraryGroupMembership.objects.filter(
-        user=user, group=group, role=LibraryGroupMembership.ROLE_CURATOR
+        user=user, group=group, is_curator=True
     ).exists()
 
 
@@ -228,7 +236,7 @@ def can_curate_group(*, user, group: LibraryGroup) -> bool:
     if is_public_group(group):
         return False
     return LibraryGroupMembership.objects.filter(
-        user=user, group=group, role=LibraryGroupMembership.ROLE_CURATOR
+        user=user, group=group, is_curator=True
     ).exists()
 
 

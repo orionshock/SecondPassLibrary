@@ -68,7 +68,7 @@ class FirstOwnerBootstrapServiceTests(TestCase):
             LibraryGroupMembership.objects.filter(
                 user=owner,
                 group=public,
-                role=LibraryGroupMembership.ROLE_READER,
+                is_curator=False,
             ).exists()
         )
 

@@ -48,13 +48,13 @@ class ShelvesAPITest(APITestCase):
         ensure_user_public_membership(user=self.other)
 
         self.group = LibraryGroup.objects.create(name="G")
-        LibraryGroupMembership.objects.create(user=self.reader, group=self.group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=self.reader, group=self.group)
         self.curator = User.objects.create_user(username="curator", password="pw")
         ensure_user_public_membership(user=self.curator)
         LibraryGroupMembership.objects.create(
             user=self.curator,
             group=self.group,
-            role=LibraryGroupMembership.ROLE_CURATOR,
+            is_curator=True,
         )
 
         self.librarian = User.objects.create_user(username="librarian", password="pw")
