@@ -103,7 +103,7 @@ export function inferCanEditShelf({ me, shelf }) {
     return shelf.owner_user && String(shelf.owner_user.username) === String(me.username || "");
   }
 
-  // For group shelves, infer from role/capabilities:
+  // For group shelves, infer from current account capabilities:
   // - broad roles (owner/manager/librarian) can edit
   // - curator can edit non-Public group shelves if they are curator in that group
   const isOwner = !!me.is_owner;
@@ -115,5 +115,5 @@ export function inferCanEditShelf({ me, shelf }) {
   if (!og || og.is_public_group) return false;
   const groups = Array.isArray(me.groups) ? me.groups : [];
   const membership = groups.find((g) => g && String(g.id) === String(og.id));
-  return membership && membership.membership_role === "curator";
+  return !!(membership && membership.is_curator === true);
 }

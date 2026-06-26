@@ -9,11 +9,10 @@ function renderGroupsList(payload) {
 
   return results
     .map((g) => {
-      const membershipRole = g.membership_role || "";
       const href = g.id ? `/groups/${encodeURIComponent(String(g.id))}/` : "#";
 
       const badgeBits = [
-        membershipRole ? `<span class="pill">Your role: ${escapeHtml(membershipRole)}</span>` : "",
+        g.is_curator ? '<span class="pill">Curator</span>' : "",
       ].filter(truthy);
 
       const badges = badgeBits.length ? `<span class="badge-row">${badgeBits.join(" ")}</span>` : "";

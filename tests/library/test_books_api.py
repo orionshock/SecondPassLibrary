@@ -369,7 +369,7 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.group_b = LibraryGroup.objects.create(name="Group B")
 
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.group_a, role=LibraryGroupMembership.ROLE_READER
+            user=self.reader, group=self.group_a, is_curator=False
         )
 
         self.public_book = create_file_backed_book(title="Public Book", assign_public=False).book
@@ -499,7 +499,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.group_x = LibraryGroup.objects.create(name="X")
         LibraryGroupMembership.objects.create(
-            user=self.reader, group=self.group_x, role=LibraryGroupMembership.ROLE_READER
+            user=self.reader, group=self.group_x, is_curator=False
         )
         self.group_y = LibraryGroup.objects.create(name="Y")
 

@@ -158,11 +158,11 @@ export async function initGroupEdit() {
     b.textContent = "Public";
     badgesNode.appendChild(b);
   }
-  if (group.membership_role) {
+  if (group.is_curator) {
     if (badgesNode.childNodes.length) badgesNode.appendChild(document.createTextNode(" "));
     const b2 = document.createElement("span");
     b2.className = "pill";
-    b2.textContent = `Your role: ${group.membership_role}`;
+    b2.textContent = "Curator";
     badgesNode.appendChild(b2);
   }
   badgesEl.appendChild(badgesNode);
@@ -180,7 +180,8 @@ export async function initGroupEdit() {
 
   // Delete (Owner/Manager only; never for Public)
   if (deleteRoot && deleteForm && deleteConfirm && deleteBtn && deleteStatus) {
-    const allowDelete = isManagerOrOwner(me) && !isPublicGroup;
+    const groupCaps = group.capabilities || {};
+    const allowDelete = groupCaps.can_delete != null ? !!groupCaps.can_delete : isManagerOrOwner(me) && !isPublicGroup;
     visible(deleteRoot, allowDelete);
     deleteConfirm.value = "";
     deleteBtn.disabled = true;
@@ -281,7 +282,9 @@ export async function initGroupEdit() {
     membersPrev,
   });
 
-  const allowShelfManage = canManageGroupBooks({ me, group });
+  const groupCaps = group.capabilities || {};
+  const allowShelfManage =
+    groupCaps.can_create_shelf != null ? !!groupCaps.can_create_shelf : canManageGroupBooks({ me, group });
   await initGroupShelvesTab({
     groupId,
     shelvesStatus,

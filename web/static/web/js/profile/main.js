@@ -26,9 +26,10 @@ function renderGroups(container, groups) {
     const li = document.createElement("li");
     li.appendChild(renderGroupBadge(g, { compact: true }));
     const bits = [];
-    if (g && g.membership_role) bits.push(String(g.membership_role));
+    bits.push("Member");
+    if (g && g.is_curator) bits.push("Curator");
     li.appendChild(document.createTextNode(" "));
-    li.appendChild(el("span", "muted", `(${bits.join(", ") || "member"})`));
+    li.appendChild(el("span", "muted", `(${bits.join(", ")})`));
     ul.appendChild(li);
   }
   container.appendChild(ul);

@@ -97,11 +97,11 @@ export async function initGroupView() {
     b.textContent = "Public";
     badgesNode.appendChild(b);
   }
-  if (group.membership_role) {
+  if (group.is_curator) {
     if (badgesNode.childNodes.length) badgesNode.appendChild(document.createTextNode(" "));
     const b2 = document.createElement("span");
     b2.className = "pill";
-    b2.textContent = `Your role: ${group.membership_role}`;
+    b2.textContent = "Curator";
     badgesNode.appendChild(b2);
   }
   badgesEl.appendChild(badgesNode);

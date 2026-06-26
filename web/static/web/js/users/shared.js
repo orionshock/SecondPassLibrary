@@ -17,7 +17,7 @@ export function passesFilter(user, filter) {
   if (filter === "curators") {
     const groups = Array.isArray(user.groups) ? user.groups : [];
     return groups.some(
-      (group) => group && group.membership_role === "curator"
+      (group) => group && group.is_curator === true
     );
   }
   if (filter === "managers") return user.is_owner === true || (user.role || "") === "manager";

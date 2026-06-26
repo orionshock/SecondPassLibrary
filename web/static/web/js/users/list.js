@@ -75,7 +75,6 @@ export async function initUsersList() {
 
     const groups = Array.isArray(user && user.groups) ? user.groups : [];
     const memberGroupBadges = groups
-      .filter((group) => group && group.membership_role !== "curator")
       .map((group) =>
         renderGroupBadge(group, { compact: true }).outerHTML
       )
@@ -85,7 +84,7 @@ export async function initUsersList() {
       : `<div class="user-row__line muted">Groups: (none)</div>`;
     const curatedGroupBadges = groups
       .filter(
-        (group) => group && group.membership_role === "curator"
+        (group) => group && group.is_curator === true
       )
       .map((group) =>
         renderGroupBadge(group, { compact: true }).outerHTML

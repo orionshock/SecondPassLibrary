@@ -127,7 +127,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
 
         group = LibraryGroup.objects.create(name="Private")
         LibraryGroupMembership.objects.create(
-            user=user, group=group, role=LibraryGroupMembership.ROLE_READER
+            user=user, group=group, is_curator=False
         )
 
         restricted = create_file_backed_book(title="Restricted", assign_public=False).book
@@ -158,7 +158,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
 
         group = LibraryGroup.objects.create(name="Private2")
         LibraryGroupMembership.objects.create(
-            user=user, group=group, role=LibraryGroupMembership.ROLE_READER
+            user=user, group=group, is_curator=False
         )
 
         restricted = create_file_backed_book(title="RestrictedOpen", assign_public=False).book

@@ -107,7 +107,7 @@ class FirstRunProductUiTests(TestCase):
             LibraryGroupMembership.objects.filter(
                 user=owner,
                 group=public_group,
-                role=LibraryGroupMembership.ROLE_READER,
+                is_curator=False,
             ).exists()
         )
 
@@ -564,11 +564,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="group-delete-root"')
         self.assertContains(
             response,
-            "Managers, librarians, and owners can already access and manage books globally.",
+            "Managers, librarians, and owners can already manage books globally.",
         )
-        self.assertContains(response, "Group membership is mainly for readers.")
+        self.assertContains(response, "Curator identifies members who specifically steward this group")
         self.assertContains(
-            response, "group’s books and shelves."
+            response, "group-scoped management access to readers."
         )
 
     def test_unauthenticated_shelves_redirects_to_login(self):
@@ -621,9 +621,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("export function canCreateGroupShelves(me)", new_js)
         self.assertIn("me.is_owner", new_js)
         self.assertIn("capabilities.can_manage_library", new_js)
-        self.assertIn("me.curated_group_ids", new_js)
-        self.assertIn('group.membership_role === "curator"', new_js)
+        self.assertIn("group.is_curator === true", new_js)
+        self.assertIn("group.capabilities.can_create_shelf === true", new_js)
         self.assertIn("!group.is_public_group", new_js)
+        self.assertNotIn("curated_group_ids", new_js)
+        self.assertNotIn("membership_role", new_js)
         self.assertNotIn("can_create_library_groups", new_js)
         self.assertIn("export function manageableShelfGroups(me, groups)", new_js)
         self.assertIn("availableGroups.filter", new_js)
@@ -883,9 +885,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('from "../ui/identity.js"', users_list_js)
         self.assertIn("renderUserIdentity(user", users_list_js)
         self.assertIn("includeEmail: true", users_list_js)
-        self.assertIn('membership_role !== "curator"', users_list_js)
-        self.assertIn('membership_role === "curator"', users_list_js)
-        self.assertNotIn("membership_role ? String", users_list_js)
+        self.assertIn("group.is_curator === true", users_list_js)
+        self.assertNotIn("membership_role", users_list_js)
         self.assertNotIn('<span class="pill">active</span>', users_list_js)
         self.assertIn('<span class="pill">inactive</span>', users_list_js)
         self.assertIn("const roleBadge = isOwner", users_list_js)
@@ -1494,11 +1495,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="user-memberships-add-form"')
         self.assertContains(
             response,
-            "Managers, librarians, and owners can already access and manage books globally.",
+            "Managers, librarians, and owners can already manage books globally.",
         )
-        self.assertContains(response, "Group membership is mainly for readers.")
+        self.assertContains(response, "Curator identifies members who specifically steward this group")
         self.assertContains(
-            response, "group’s books and shelves."
+            response, "group-scoped management access to readers."
         )
 
     def test_authenticated_profile_returns_200_and_has_containers(self):

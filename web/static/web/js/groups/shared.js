@@ -19,22 +19,23 @@ export function isLibrarian(me) {
 
 export function canEditGroupPage({ me, group }) {
   if (!me || !group) return false;
-  if (isManagerOrOwner(me) || isLibrarian(me)) return true;
-  if (group.is_public_group) return false;
-  return group.membership_role === "curator";
+  const caps = group.capabilities || {};
+  if (caps.can_edit_description != null) return !!caps.can_edit_description;
+  return isManagerOrOwner(me) || isLibrarian(me);
 }
 
 export function canEditGroupDescription({ me, group }) {
   if (!me || !group) return false;
-  if (group.is_public_group) return isManagerOrOwner(me) || isLibrarian(me);
-  return isManagerOrOwner(me) || isLibrarian(me) || group.membership_role === "curator";
+  const caps = group.capabilities || {};
+  if (caps.can_edit_description != null) return !!caps.can_edit_description;
+  return isManagerOrOwner(me) || isLibrarian(me);
 }
 
 export function canManageGroupBooks({ me, group }) {
   if (!me || !group) return false;
-  if (isManagerOrOwner(me) || isLibrarian(me)) return true;
-  if (group.is_public_group) return false;
-  return group.membership_role === "curator";
+  const caps = group.capabilities || {};
+  if (caps.can_manage_books != null) return !!caps.can_manage_books;
+  return isManagerOrOwner(me) || isLibrarian(me);
 }
 
 export function canManageGroupMemberships(me) {
@@ -125,14 +126,13 @@ export function renderMembersReadOnly(payload) {
   return results
     .map((m) => {
       const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
-      const role = m.role || "reader";
-      const roleLabel = `${role.slice(0, 1).toUpperCase()}${role.slice(1)}`;
+      const curatorBadge = m.is_curator ? '<span class="pill">Curator</span>' : "";
       const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
       return `
         <article class="book card-row--compact">
           <div class="identity-row">
             <h3 class="book__title identity-row__main">${identity}${ownerBadge}</h3>
-            <div class="badge-row"><span class="pill">${escapeHtml(roleLabel)}</span></div>
+            <div class="badge-row"><span class="pill">Member</span>${curatorBadge}</div>
           </div>
         </article>
       `.trim();
@@ -147,13 +147,12 @@ export function renderMembersManage(payload, { isPublicGroup }) {
   return results
     .map((m) => {
       const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
-      const role = m.role || "reader";
+      const isCurator = !!m.is_curator;
       const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
       const curatorDisabled = isPublicGroup ? "disabled" : "";
-      const selectDisabled = isPublicGroup ? "disabled" : "";
       const saveDisabled = isPublicGroup ? "disabled" : "";
       const note = isPublicGroup
-        ? '<div class="muted">Public is the default/fallback group. Role remains reader; removal is allowed when other memberships remain (final removal restores Public).</div>'
+        ? '<div class="muted">Public is the default/fallback group. Curator assignment is not available; removal is allowed when other memberships remain (final removal restores Public).</div>'
         : "";
 
       return `
@@ -161,11 +160,10 @@ export function renderMembersManage(payload, { isPublicGroup }) {
           <div class="identity-row">
             <h3 class="book__title identity-row__main">${identity}${ownerBadge}</h3>
             <div class="badge-row">
-              <label>Role <select data-action="member-role" data-membership-id="${escapeHtml(m.id)}" ${selectDisabled}>
-                <option value="reader" ${role === "reader" ? "selected" : ""}>reader</option>
-                <option value="curator" ${role === "curator" ? "selected" : ""} ${curatorDisabled}>curator</option>
-              </select></label>
-              <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}" ${saveDisabled}>Save role</button>
+              <span class="pill">Member</span>
+              ${isCurator ? '<span class="pill">Curator</span>' : ""}
+              <label><input type="checkbox" data-action="member-curator" data-membership-id="${escapeHtml(m.id)}" ${isCurator ? "checked" : ""} ${curatorDisabled} /> Curator</label>
+              <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}" ${saveDisabled}>Save</button>
               <button class="icon-button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
             </div>
           </div>

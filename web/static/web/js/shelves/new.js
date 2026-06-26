@@ -12,17 +12,12 @@ export function canCreateGroupShelves(me) {
   const capabilities = me.capabilities || {};
   if (me.is_owner || capabilities.can_manage_library) return true;
 
-  const curatedGroupIds = Array.isArray(me.curated_group_ids)
-    ? me.curated_group_ids
-    : [];
-  if (curatedGroupIds.length > 0) return true;
-
   const groups = Array.isArray(me.groups) ? me.groups : [];
   return groups.some(
     (group) =>
       group &&
       !group.is_public_group &&
-      group.membership_role === "curator"
+      group.is_curator === true
   );
 }
 
@@ -31,25 +26,20 @@ export function manageableShelfGroups(me, groups) {
   if (!me) return [];
 
   const capabilities = me.capabilities || {};
-  if (me.is_owner || capabilities.can_manage_library) return availableGroups;
+  if (me.is_owner || capabilities.can_manage_library) {
+    return availableGroups.filter(
+      (group) =>
+        group &&
+        group.capabilities &&
+        group.capabilities.can_create_shelf === true
+    );
+  }
 
-  const curatedIds = new Set(
-    [
-      ...(Array.isArray(me.curated_group_ids) ? me.curated_group_ids : []),
-      ...(Array.isArray(me.groups)
-        ? me.groups
-            .filter(
-              (group) => group && group.membership_role === "curator"
-            )
-            .map((group) => group.id)
-        : []),
-    ].map(String)
-  );
   return availableGroups.filter(
     (group) =>
       group &&
-      !group.is_public_group &&
-      curatedIds.has(String(group.id))
+      group.capabilities &&
+      group.capabilities.can_create_shelf === true
   );
 }
 

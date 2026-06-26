@@ -87,9 +87,9 @@
     <h2 class="card__title">Group Memberships</h2>
 
     <div id="user-memberships-note" class="muted">
-      Managers, librarians, and owners can already access and manage books globally.
-      Group membership is mainly for readers. Use Curator to let a reader manage this
-      group’s books and shelves.
+      Managers, librarians, and owners can already manage books globally.
+      Curator identifies members who specifically steward this group and grants
+      group-scoped management access to readers.
     </div>
 
     <div id="user-memberships-status" class="muted"></div>
@@ -103,12 +103,9 @@
           <select id="user-memberships-add-group" style="width: 100%;"></select>
         </div>
 
-        <div class="kv__k"><label for="user-memberships-add-role">Role</label></div>
+        <div class="kv__k"><label for="user-memberships-add-role">Curator</label></div>
         <div class="kv__v">
-          <select id="user-memberships-add-role">
-            <option value="reader">reader</option>
-            <option value="curator">curator</option>
-          </select>
+          <input id="user-memberships-add-role" type="checkbox" />
         </div>
       </div>
 

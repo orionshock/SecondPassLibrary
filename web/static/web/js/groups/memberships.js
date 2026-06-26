@@ -31,11 +31,10 @@ export async function initGroupMembershipsTab({
   visible(addMemberForm, allowMembershipManage);
   if (isPublicGroup) {
     membersNote.textContent = allowMembershipManage
-      ? "Public is the default/fallback group. Public cannot have curators; role remains reader. Public membership can be removed when another group remains (final removal restores Public)."
+      ? "Public is the default/fallback group. Public cannot have curators. Public membership can be removed when another group remains (final removal restores Public)."
       : membersNote.textContent;
-    addMemberRole.value = "reader";
-    const curatorOpt = addMemberRole.querySelector('option[value=\"curator\"]');
-    if (curatorOpt) curatorOpt.disabled = true;
+    addMemberRole.checked = false;
+    addMemberRole.disabled = true;
   }
 
   function setAddMemberStatus(text, isError) {
@@ -76,13 +75,13 @@ export async function initGroupMembershipsTab({
     setGlobalError("");
 
     const userId = addMemberUser.value;
-    const role = isPublicGroup ? "reader" : addMemberRole.value;
     if (!userId) {
       setAddMemberStatus("Choose a user.", true);
       return;
     }
 
     try {
+      const isCurator = !isPublicGroup && !!addMemberRole.checked;
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json", "Content-Type": "application/json" };
       if (csrf) headers["X-CSRFToken"] = csrf;
@@ -90,7 +89,7 @@ export async function initGroupMembershipsTab({
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ user: Number(userId), role }),
+        body: JSON.stringify({ user: Number(userId), is_curator: isCurator }),
       });
 
       setAddMemberStatus("Added.", false);
@@ -133,10 +132,10 @@ export async function initGroupMembershipsTab({
     }
 
     if (action === "member-save") {
-      const select = membersResults.querySelector(
-        `select[data-action=\"member-role\"][data-membership-id=\"${membershipId}\"]`
+      const checkbox = membersResults.querySelector(
+        `input[data-action=\"member-curator\"][data-membership-id=\"${membershipId}\"]`
       );
-      const role = select ? select.value : "reader";
+      const isCurator = !!(checkbox && checkbox.checked);
       setStatus(membersStatus, "Saving...", false);
       try {
         const csrf = getCsrfToken();
@@ -147,11 +146,11 @@ export async function initGroupMembershipsTab({
           `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(
             String(membershipId)
           )}/`,
-          { method: "PATCH", headers, body: JSON.stringify({ role }) }
+          { method: "PATCH", headers, body: JSON.stringify({ is_curator: isCurator }) }
         );
         await membersCtl.reloadFirstPage();
       } catch (e2) {
-        console.error("Failed to update member role", { groupId, membershipId, e2 });
+        console.error("Failed to update member curator status", { groupId, membershipId, e2 });
         setStatus(membersStatus, extractApiErrorMessage(e2), true);
         setGlobalError(extractApiErrorMessage(e2));
       }

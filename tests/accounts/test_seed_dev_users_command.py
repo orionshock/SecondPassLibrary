@@ -79,7 +79,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
             LibraryGroupMembership.objects.filter(
                 user=owner,
                 group=get_public_group(),
-                role=LibraryGroupMembership.ROLE_READER,
+                is_curator=False,
             ).exists()
         )
 
@@ -141,7 +141,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         membership = LibraryGroupMembership.objects.create(
             user=existing,
             group=fantasy,
-            role=LibraryGroupMembership.ROLE_READER,
+            is_curator=False,
         )
         shelf = Shelf.objects.create(
             name="Reading Queue",
@@ -173,7 +173,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(existing.password, password_hash)
         self.assertEqual(profile.role, UserProfile.ROLE_READER)
         self.assertEqual(fantasy.description, "Existing group description.")
-        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
+        self.assertFalse(membership.is_curator)
         self.assertEqual(shelf.description, "Existing shelf description.")
 
     @override_settings(DEBUG=True)
@@ -235,7 +235,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertTrue(
             LibraryGroupMembership.objects.filter(
                 user=lorem,
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
             ).exists()
         )
         self.assertEqual(
@@ -254,28 +254,28 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
             list(
                 LibraryGroupMembership.objects.filter(user=manager).values_list(
                     "group_id",
-                    "role",
+                    "is_curator",
                 )
             ),
-            [(public.id, LibraryGroupMembership.ROLE_READER)],
+            [(public.id, False)],
         )
         self.assertEqual(
             list(
                 LibraryGroupMembership.objects.filter(user=librarian).values_list(
                     "group_id",
-                    "role",
+                    "is_curator",
                 )
             ),
-            [(public.id, LibraryGroupMembership.ROLE_READER)],
+            [(public.id, False)],
         )
         self.assertFalse(
             LibraryGroupMembership.objects.filter(
                 group=public,
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
             ).exists()
         )
         curator_user_ids = LibraryGroupMembership.objects.filter(
-            role=LibraryGroupMembership.ROLE_CURATOR,
+            is_curator=True,
         ).values_list("user_id", flat=True)
         curator_profile_roles = set(
             UserProfile.objects.filter(user_id__in=curator_user_ids).values_list(
@@ -286,13 +286,13 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(curator_profile_roles, {UserProfile.ROLE_READER})
         self.assertFalse(
             LibraryGroupMembership.objects.filter(
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
                 user__profile__role=UserProfile.ROLE_MANAGER,
             ).exists()
         )
         self.assertFalse(
             LibraryGroupMembership.objects.filter(
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
                 user__profile__role=UserProfile.ROLE_LIBRARIAN,
             ).exists()
         )
@@ -314,7 +314,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                     UserProfile.ROLE_LIBRARIAN,
                 ],
                 user__is_superuser=False,
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
             ).exists()
         )
         for group in LibraryGroup.objects.exclude(pk=public.pk):
@@ -322,7 +322,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
                 self.assertTrue(
                     LibraryGroupMembership.objects.filter(
                         group=group,
-                        role=LibraryGroupMembership.ROLE_CURATOR,
+                        is_curator=True,
                     ).exists()
                 )
 
@@ -339,7 +339,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         membership = LibraryGroupMembership.objects.create(
             user=existing,
             group=fantasy,
-            role=LibraryGroupMembership.ROLE_READER,
+            is_curator=False,
         )
 
         call_command(
@@ -351,7 +351,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         )
 
         membership.refresh_from_db()
-        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
+        self.assertFalse(membership.is_curator)
 
     @override_settings(DEBUG=True)
     def test_existing_broad_role_membership_is_preserved(self):
@@ -366,7 +366,7 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         membership = LibraryGroupMembership.objects.create(
             user=existing,
             group=fantasy,
-            role=LibraryGroupMembership.ROLE_READER,
+            is_curator=False,
         )
 
         call_command(
@@ -378,12 +378,12 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         )
 
         membership.refresh_from_db()
-        self.assertEqual(membership.role, LibraryGroupMembership.ROLE_READER)
+        self.assertFalse(membership.is_curator)
         self.assertTrue(
             LibraryGroupMembership.objects.filter(
                 user=existing,
                 group=get_public_group(),
-                role=LibraryGroupMembership.ROLE_READER,
+                is_curator=False,
             ).exists()
         )
 

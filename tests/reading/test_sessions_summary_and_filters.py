@@ -42,7 +42,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
         other = User.objects.create_user(username="other", password="pw", email="o@example.com")
         ensure_user_public_membership(user=other)
-        LibraryGroupMembership.objects.create(user=other, group=self.hidden_group, role=LibraryGroupMembership.ROLE_READER)
+        LibraryGroupMembership.objects.create(user=other, group=self.hidden_group, is_curator=False)
 
         self.hidden_book = create_file_backed_book(title="Hidden", assign_public=False).book
         add_book_to_group(actor=self.owner, book=self.hidden_book, group=self.hidden_group)

@@ -14,8 +14,10 @@ from accounts.models import UserProfile
 from accounts.services import get_or_create_profile
 from library.group_services import (
     add_book_to_group,
+    add_user_to_group,
     ensure_user_public_membership,
     get_public_group,
+    remove_user_from_group,
 )
 from library.models import Book, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
@@ -241,6 +243,7 @@ class Command(BaseCommand):
         users, created_usernames = self._ensure_demo_users(user_specs, counts)
         groups = self._ensure_groups(_expanded_group_specs(group_count), counts)
         self._ensure_memberships(
+            owner=owner,
             users=users,
             created_usernames=created_usernames,
             groups=groups,
@@ -405,6 +408,7 @@ class Command(BaseCommand):
     def _ensure_memberships(
         self,
         *,
+        owner: Any,
         users: dict[str, Any],
         created_usernames: set[str],
         groups: list[LibraryGroup],
@@ -422,6 +426,7 @@ class Command(BaseCommand):
             if profiles[username].role == UserProfile.ROLE_READER
         ]
         self._ensure_each_group_has_curator(
+            owner=owner,
             users=reader_users,
             groups=groups,
             counts=counts,
@@ -431,45 +436,53 @@ class Command(BaseCommand):
             if profiles[username].role != UserProfile.ROLE_READER:
                 continue
 
-            desired: list[tuple[LibraryGroup, str]] = []
+            desired: list[tuple[LibraryGroup, bool]] = []
             if index % 4 != 2:
-                desired.append((public, LibraryGroupMembership.ROLE_READER))
+                desired.append((public, False))
 
             if index % 8 != 7:
                 desired.append(
                     (
                         groups[index % len(groups)],
-                        LibraryGroupMembership.ROLE_READER,
+                        False,
                     )
                 )
                 if index % 3 == 0:
                     desired.append(
                         (
                             groups[(index + 1) % len(groups)],
-                            LibraryGroupMembership.ROLE_READER,
+                            False,
                         )
                     )
 
-            for group, role in desired:
-                _membership, created = LibraryGroupMembership.objects.get_or_create(
-                    user=user,
-                    group=group,
-                    defaults={"role": role},
-                )
-                if created:
-                    counts.memberships_created += 1
-                else:
+            for group, is_curator in desired:
+                existing = LibraryGroupMembership.objects.filter(
+                    user=user, group=group
+                ).first()
+                if existing is not None:
                     counts.memberships_existing += 1
+                    continue
+
+                add_user_to_group(
+                    actor=owner,
+                    target_user=user,
+                    group=group,
+                    is_curator=is_curator,
+                )
+                counts.memberships_created += 1
 
             if username in created_usernames and index % 4 == 2:
-                LibraryGroupMembership.objects.filter(
+                public_membership = LibraryGroupMembership.objects.filter(
                     user=user,
                     group=public,
-                ).delete()
+                ).first()
+                if public_membership is not None:
+                    remove_user_from_group(actor=owner, membership=public_membership)
 
     @staticmethod
     def _ensure_each_group_has_curator(
         *,
+        owner: Any,
         users: list[Any],
         groups: list[LibraryGroup],
         counts: SeedCounts,
@@ -477,7 +490,7 @@ class Command(BaseCommand):
         for group_index, group in enumerate(groups):
             if LibraryGroupMembership.objects.filter(
                 group=group,
-                role=LibraryGroupMembership.ROLE_CURATOR,
+                is_curator=True,
             ).exists():
                 continue
 
@@ -488,10 +501,11 @@ class Command(BaseCommand):
                     group=group,
                 ).exists():
                     continue
-                LibraryGroupMembership.objects.create(
-                    user=user,
+                add_user_to_group(
+                    actor=owner,
+                    target_user=user,
                     group=group,
-                    role=LibraryGroupMembership.ROLE_CURATOR,
+                    is_curator=True,
                 )
                 counts.memberships_created += 1
                 break
