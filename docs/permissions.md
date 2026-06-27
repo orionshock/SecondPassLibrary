@@ -82,11 +82,11 @@ Creation rules:
 - Manager can create `librarian` or `reader` users only (cannot create `manager`).
 - Librarian/Reader cannot create users.
 
-### `/api/v1/accounts/me/` capability hints
+### `/api/v1/accounts/me/` account hints
 
-`GET /api/v1/accounts/me/` includes a `capabilities` object and the caller's `groups` memberships to help future UIs decide what to show.
+`GET /api/v1/accounts/me/` includes the caller's identity, global `role`, `is_owner` flag, and `groups` memberships to help future UIs decide what to show.
 
-These are **broad hints**, not a replacement for policy enforcement. Every endpoint still enforces authorization via the specific `core.policies` helpers.
+These are **account hints**, not a replacement for policy enforcement. Broad Product UI affordances are derived from `role` and `is_owner`; object-specific affordances come from object payloads such as LibraryGroup `capabilities.can_curate`. Every endpoint still enforces authorization via the specific `core.policies` helpers.
 
 Rules:
 

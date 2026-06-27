@@ -358,25 +358,6 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
             }
         )
 
-    can_manage_users = policies.can_manage_users(user)
-    can_manage_library = policies.can_manage_library(user)
-    can_import_books = policies.can_import_books(user)
-    can_create_library_groups = policies.can_create_library_group(user)
-    has_curated_groups = any(
-        bool(group["is_curator"]) and not bool(group["is_public_group"]) for group in groups
-    )
-
-    capabilities = {
-        "can_manage_users": can_manage_users,
-        "can_manage_library": can_manage_library,
-        "can_import_books": can_import_books,
-        "can_create_library_groups": can_create_library_groups,
-        "can_manage_group_memberships": can_manage_users,
-        "can_manage_group_identity": can_manage_users,
-        "can_edit_group_presentation": bool(can_manage_library or has_curated_groups),
-        "can_access_imports": bool(can_import_books or can_manage_library),
-    }
-
     return {
         "username": user.get_username(),
         "email": user.email or "",
@@ -386,6 +367,5 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "role": profile.role,
         "must_change_password": bool(profile.must_change_password),
         "is_owner": policies.is_owner(user),
-        "capabilities": capabilities,
         "groups": groups,
     }

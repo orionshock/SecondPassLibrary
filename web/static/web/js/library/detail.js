@@ -1,4 +1,5 @@
 import { fetchJSON } from "../api.js";
+import { canManageLibrary } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
 import { renderShelfMetadata } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
@@ -251,7 +252,7 @@ export async function initBookDetail() {
     return;
   }
 
-  const canManage = !!(me && me.capabilities && me.capabilities.can_manage_library);
+  const canManage = canManageLibrary(me);
   visible(editWrapEl, canManage);
   if (canManage) {
     editLinkEl.setAttribute("href", `/library/books/${encodeURIComponent(String(bookId))}/edit/`);

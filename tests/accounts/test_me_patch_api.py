@@ -58,10 +58,10 @@ class CurrentUserMePatchAPITest(APITestCase):
             "profile_id",
             "role",
             "is_owner",
-            "capabilities",
             "groups",
         ):
             self.assertIn(key, data)
+        self.assertNotIn("capabilities", data)
         self.assertNotIn("curated_group_ids", data)
 
         self.assertEqual(data["username"], "reader")

@@ -61,16 +61,7 @@ class ManagedUsersAPITest(APITestCase):
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
         self.assertFalse(data["is_owner"])
         self.assertNotIn("id", data)
-        self.assertIn("capabilities", data)
-        capabilities = cast(Mapping[str, Any], data["capabilities"])
-        self.assertFalse(capabilities["can_manage_users"])
-        self.assertFalse(capabilities["can_manage_library"])
-        self.assertFalse(capabilities["can_import_books"])
-        self.assertFalse(capabilities["can_create_library_groups"])
-        self.assertFalse(capabilities["can_manage_group_memberships"])
-        self.assertFalse(capabilities["can_manage_group_identity"])
-        self.assertFalse(capabilities["can_edit_group_presentation"])
-        self.assertFalse(capabilities["can_access_imports"])
+        self.assertNotIn("capabilities", data)
 
         groups = cast(list[dict[str, Any]], data["groups"])
         self.assertGreaterEqual(len(groups), 1)
@@ -81,37 +72,35 @@ class ManagedUsersAPITest(APITestCase):
         self.assertNotIn("membership_role", public_groups[0])
         self.assertNotIn("curated_group_ids", data)
 
-    def test_me_capabilities_manager(self):
+    def test_me_manager_payload_uses_role_without_capabilities(self):
         self.client.login(username="manager", password="pw")
         response = cast(Response, self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         self.assertFalse(data["is_owner"])
-        capabilities = cast(Mapping[str, Any], data["capabilities"])
-        self.assertTrue(capabilities["can_manage_users"])
-        self.assertTrue(capabilities["can_manage_library"])
-        self.assertTrue(capabilities["can_import_books"])
-        self.assertTrue(capabilities["can_create_library_groups"])
-        self.assertTrue(capabilities["can_manage_group_memberships"])
-        self.assertTrue(capabilities["can_manage_group_identity"])
-        self.assertTrue(capabilities["can_edit_group_presentation"])
-        self.assertTrue(capabilities["can_access_imports"])
+        self.assertEqual(data["role"], UserProfile.ROLE_MANAGER)
+        self.assertNotIn("capabilities", data)
 
-    def test_me_capabilities_owner(self):
+    def test_me_owner_payload_uses_owner_flag_without_capabilities(self):
         self.client.login(username="owner", password="pw")
         response = cast(Response, self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         self.assertTrue(data["is_owner"])
-        capabilities = cast(Mapping[str, Any], data["capabilities"])
-        self.assertTrue(capabilities["can_manage_users"])
-        self.assertTrue(capabilities["can_manage_library"])
-        self.assertTrue(capabilities["can_import_books"])
-        self.assertTrue(capabilities["can_create_library_groups"])
-        self.assertTrue(capabilities["can_manage_group_memberships"])
-        self.assertTrue(capabilities["can_manage_group_identity"])
-        self.assertTrue(capabilities["can_edit_group_presentation"])
-        self.assertTrue(capabilities["can_access_imports"])
+        self.assertNotIn("capabilities", data)
+
+    def test_me_allows_multiple_owner_flags(self):
+        second_owner = User.objects.create_superuser(
+            username="owner2", email="owner2@example.com", password="pw"
+        )
+
+        self.client.login(username="owner2", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertEqual(data["username"], second_owner.username)
+        self.assertTrue(data["is_owner"])
+        self.assertNotIn("capabilities", data)
 
     def test_me_curator_reader_has_scoped_group_presentation_power(self):
         group = LibraryGroup.objects.create(
@@ -128,11 +117,8 @@ class ManagedUsersAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = cast(Mapping[str, Any], response.data)
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
-
-        capabilities = cast(Mapping[str, Any], data["capabilities"])
-        self.assertFalse(capabilities["can_manage_library"])
-        self.assertFalse(capabilities["can_manage_users"])
-        self.assertTrue(capabilities["can_edit_group_presentation"])
+        self.assertFalse(data["is_owner"])
+        self.assertNotIn("capabilities", data)
 
         groups = cast(list[dict[str, Any]], data["groups"])
         group_row = next(row for row in groups if row["name"] == "Fantasy Club")

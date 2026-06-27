@@ -4,13 +4,13 @@ import {
   fetchJSONWithOptions,
   getCsrfToken,
 } from "../api.js";
+import { canManageLibrary } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 
 export function canCreateGroupShelves(me) {
   if (!me) return false;
-  const capabilities = me.capabilities || {};
-  if (me.is_owner || capabilities.can_manage_library) return true;
+  if (canManageLibrary(me)) return true;
 
   const groups = Array.isArray(me.groups) ? me.groups : [];
   return groups.some(
@@ -24,16 +24,6 @@ export function canCreateGroupShelves(me) {
 export function manageableShelfGroups(me, groups) {
   const availableGroups = Array.isArray(groups) ? groups : [];
   if (!me) return [];
-
-  const capabilities = me.capabilities || {};
-  if (me.is_owner || capabilities.can_manage_library) {
-    return availableGroups.filter(
-      (group) =>
-        group &&
-        group.capabilities &&
-        group.capabilities.can_curate === true
-    );
-  }
 
   return availableGroups.filter(
     (group) =>

@@ -159,24 +159,11 @@ Notes:
 
 - Who am I?
 - What global role do I have?
-- What broad capabilities do I have? (UI hints)
+- Am I an Owner?
 - Which LibraryGroups am I a member of?
 - Which group memberships are marked as curator/steward relationships?
 
-The response includes a `capabilities` object that provides **high-level UI hints only**. Authorization is still enforced by the specific endpoint policies; clients must not assume that a `true` capability guarantees any particular request will succeed.
-
-Current `capabilities` keys:
-
-- `can_manage_users`
-- `can_manage_library`
-- `can_import_books`
-- `can_create_library_groups`
-- `can_manage_group_memberships` (broad, role-level)
-- `can_manage_group_identity` (broad, role-level; Public remains protected)
-- `can_edit_group_presentation` (broad/account bootstrap hint; group payloads expose exact group curation via `capabilities.can_curate`)
-- `can_access_imports`
-
-It also includes a `groups` array listing the caller's `LibraryGroupMembership`s.
+It includes a `groups` array listing the caller's `LibraryGroupMembership`s.
 
 Each `groups[]` item includes:
 
@@ -184,7 +171,7 @@ Each `groups[]` item includes:
 - `is_public_group`
 - `is_curator`
 
-Example:
+Example `groups[]` item:
 
 ```json
 {
@@ -195,12 +182,37 @@ Example:
 }
 ```
 
-`/accounts/me/` global `role` and `capabilities` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list.
+`/accounts/me/` global `role` and `is_owner` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list.
 
 Additional identity fields:
 
 - `first_name`, `last_name`
 - `must_change_password` (force change via product UI redirect)
+
+Broad Product UI affordances should be derived from `role` and `is_owner`. Object-specific affordances should come from object payloads, such as LibraryGroup `capabilities.can_curate` and shelf `can_edit`.
+
+Example response:
+
+```json
+{
+  "username": "tempor",
+  "email": "tempor@example.test",
+  "first_name": "Tempor",
+  "last_name": "Incididunt",
+  "profile_id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
+  "role": "reader",
+  "must_change_password": false,
+  "is_owner": false,
+  "groups": [
+    {
+      "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",
+      "name": "Fantasy Club",
+      "is_public_group": false,
+      "is_curator": true
+    }
+  ]
+}
+```
 
 ### `PATCH /api/v1/accounts/me/`
 

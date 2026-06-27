@@ -10,7 +10,7 @@ The first minimal product UI shell now exists:
 - `/app/` is an authenticated dashboard shell
 - `/app/` shows recent reading activity (from `GET /api/v1/reading/sessions/recent/`) and a simple welcome message
 - `/server/` is an authenticated Owner-only Server Settings page (server identity + Django Admin / Service Hatch link)
-- `/profile/` is the authenticated self account page (identity + groups + capabilities + self-profile edit)
+- `/profile/` is the authenticated self account page (identity + groups + access summary + self-profile edit)
 - `/profile/password/` is the authenticated self password change page
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
@@ -141,14 +141,13 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
 - The product UI should not expose the service hatch as a normal nav item; it is linked from the Owner-only Server Settings page (`/server/`).
-- The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role/capabilities.
+- The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role, owner flag, or object-scoped capabilities.
 - The UI should not hardcode role logic in many places. It should treat `GET /api/v1/accounts/me/` as the bootstrap source of truth for:
   - identity (`username`, `email`)
   - global role (`role`) and `is_owner`
-  - broad UI hints (`capabilities`)
   - direct group memberships (`groups`)
   - exact membership stewardship (`groups[].is_curator`)
-- Capabilities are UI hints, not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
+- Object payload capabilities are UI hints, not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
 
 ## 2. First UI surface
 
@@ -246,7 +245,7 @@ Management controls (role-gated):
 
 ## 6. Import screen
 
-Visible only when `capabilities.can_access_imports=true` (currently Librarian/Manager/Owner).
+Visible for Librarian, Manager, or Owner.
 
 Primary endpoints:
 
@@ -292,7 +291,7 @@ Current implemented UI:
 
 ## 8. User management screen
 
-Visible only for Manager/Owner (`capabilities.can_manage_users=true`).
+Visible only for Manager/Owner.
 
 Primary endpoints:
 
@@ -307,7 +306,7 @@ UI behaviors:
   - All, Readers, Curators, Librarians, Managers, Inactive
   - Curators are detected via `groups[].is_curator` and may show a "Curates: ..." summary
 - Editing is on a dedicated page: `/users/<user_id>/edit/`.
-- When allowed (`capabilities.can_manage_group_memberships`), the user edit page includes user-centric group membership management (add/update/remove).
+- For Manager/Owner, the user edit page includes user-centric group membership management (add/update/remove).
 - Membership editors use ordinary membership plus a Curator checkbox/toggle, not a Reader/Curator role selector. Displays may show Member and Curator indicators separately.
 - Show safe editable fields (email, first_name, last_name, is_active, role) on the edit page.
 - Make role editing rules explicit in the UI:

@@ -1,4 +1,5 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
+import { canManageUsers } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity } from "../ui/identity.js";
@@ -21,8 +22,7 @@ export async function initUsersList() {
     return;
   }
 
-  const caps = me && me.capabilities ? me.capabilities : {};
-  const allowed = !!caps.can_manage_users;
+  const allowed = canManageUsers(me);
 
   visible(notAllowedEl, !allowed);
   visible(createLink, allowed);

@@ -103,7 +103,7 @@ export function inferCanEditShelf({ me, shelf }) {
     return shelf.owner_user && String(shelf.owner_user.username) === String(me.username || "");
   }
 
-  // For group shelves, infer from current account capabilities:
+  // For group shelves, use the shelf object's request-scoped edit hint:
   // - broad roles (owner/manager/librarian) can edit
   // - curator can edit non-Public group shelves if they are curator in that group
   const isOwner = !!me.is_owner;

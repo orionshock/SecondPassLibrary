@@ -1,4 +1,5 @@
 import { fetchJSON } from "./api.js";
+import { canAccessImports, canManageUsers, canShowGroupsNav, isOwner } from "./auth.js";
 import { renderUserIdentity } from "./ui/identity.js";
 
 let headerResizeObserver = null;
@@ -63,17 +64,7 @@ export function initAppHeaderLayout() {
 }
 
 function navShouldShowGroups(me) {
-  if (!me) return false;
-  const groups = Array.isArray(me.groups) ? me.groups : [];
-  const caps = me.capabilities || {};
-  return (
-    groups.length > 0 ||
-    !!caps.can_manage_library ||
-    !!caps.can_create_library_groups ||
-    !!caps.can_manage_group_memberships ||
-    !!caps.can_manage_group_identity ||
-    !!caps.can_edit_group_presentation
-  );
+  return canShowGroupsNav(me);
 }
 
 function navShouldShowAdmin(me) {
@@ -81,16 +72,13 @@ function navShouldShowAdmin(me) {
 }
 
 function navShouldShowServerSettings(me) {
-  if (!me) return false;
-  return !!me.is_owner;
+  return isOwner(me);
 }
 
 function updateNavVisibility(me) {
-  const caps = me && me.capabilities ? me.capabilities : {};
-
   visible($('[data-nav="groups"]'), navShouldShowGroups(me));
-  visible($('[data-nav="imports"]'), !!caps.can_access_imports);
-  visible($('[data-nav="users"]'), !!caps.can_manage_users);
+  visible($('[data-nav="imports"]'), canAccessImports(me));
+  visible($('[data-nav="users"]'), canManageUsers(me));
   visible($('[data-nav="server-settings"]'), navShouldShowServerSettings(me));
 }
 

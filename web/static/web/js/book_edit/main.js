@@ -5,6 +5,7 @@ import {
   getCsrfToken,
   summarizeFieldErrors,
 } from "../api.js";
+import { canManageLibrary } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 import { fetchAllPages, uniqueById } from "./shared.js";
@@ -143,7 +144,7 @@ export async function initBookEdit() {
     return;
   }
 
-  const canManage = !!(me && me.capabilities && me.capabilities.can_manage_library);
+  const canManage = canManageLibrary(me);
   if (!canManage) {
     setStatus(statusEl, "Not allowed.", true);
     visible(rootEl, false);

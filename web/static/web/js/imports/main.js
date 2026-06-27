@@ -1,4 +1,5 @@
 import { fetchJSON, fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
+import { canAccessImports } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 
@@ -92,8 +93,7 @@ export async function initImports() {
     return;
   }
 
-  const caps = me && me.capabilities ? me.capabilities : {};
-  const allowed = !!caps.can_access_imports;
+  const allowed = canAccessImports(me);
 
   visible(notAllowedEl, !allowed);
   visible(uploadForm, allowed);

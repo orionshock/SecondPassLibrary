@@ -1,4 +1,10 @@
 import { fetchJSON } from "../api.js";
+import {
+  canManageGroupMemberships as accountCanManageGroupMemberships,
+  isLibrarian,
+  isManager,
+  isOwner,
+} from "../auth.js";
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { renderUserIdentity } from "../ui/identity.js";
@@ -8,14 +14,10 @@ export function truthy(v) {
 }
 
 export function isManagerOrOwner(me) {
-  if (!me) return false;
-  return !!me.is_owner || me.role === "manager";
+  return isOwner(me) || isManager(me);
 }
 
-export function isLibrarian(me) {
-  if (!me) return false;
-  return me.role === "librarian";
-}
+export { isLibrarian };
 
 export function canEditGroupPage({ me, group }) {
   if (!me || !group) return false;
@@ -39,8 +41,7 @@ export function canManageGroupBooks({ me, group }) {
 }
 
 export function canManageGroupMemberships(me) {
-  const caps = me && me.capabilities ? me.capabilities : {};
-  return !!caps.can_manage_group_memberships;
+  return accountCanManageGroupMemberships(me);
 }
 
 export function renderGroupShelvesCompact(payload, { canEdit }) {

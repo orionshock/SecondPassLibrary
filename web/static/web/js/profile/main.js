@@ -35,20 +35,17 @@ function renderGroups(container, groups) {
   container.appendChild(ul);
 }
 
-function renderCapabilities(container, caps) {
+function renderAccess(container, me) {
   clear(container);
-  const entries = caps && typeof caps === "object" ? Object.entries(caps) : [];
-  if (entries.length === 0) {
-    container.appendChild(el("div", "muted", "No capabilities."));
-    return;
-  }
   const ul = document.createElement("ul");
-  for (const [k, v] of entries.sort((a, b) => a[0].localeCompare(b[0]))) {
+  const role = me && me.role ? String(me.role) : "reader";
+  const rows = [
+    ["Global role", role],
+    ["Owner", me && me.is_owner ? "yes" : "no"],
+  ];
+  for (const [label, value] of rows) {
     const li = document.createElement("li");
-    const code = document.createElement("code");
-    code.textContent = String(k);
-    li.appendChild(code);
-    li.appendChild(document.createTextNode(`: ${v ? "yes" : "no"}`));
+    li.appendChild(document.createTextNode(`${label}: ${value}`));
     ul.appendChild(li);
   }
   container.appendChild(ul);
@@ -117,18 +114,18 @@ function renderClientSessions(container, sessions, onRevoke) {
 export async function initProfile() {
   const me = await loadMeAndInitShell();
   const groupsEl = $("#profile-groups");
-  const capsEl = $("#profile-capabilities");
+  const accessEl = $("#profile-access");
   const statusEl = $("#profile-edit-status");
 
   if (!me) {
     setText(statusEl, "Error loading identity.");
     setText(groupsEl, "Error loading identity.");
-    setText(capsEl, "Error loading identity.");
+    setText(accessEl, "Error loading identity.");
     return;
   }
 
   renderGroups(groupsEl, me.groups);
-  renderCapabilities(capsEl, me.capabilities);
+  renderAccess(accessEl, me);
 
   const form = $("#profile-edit-form");
   const editBtn = $("#profile-edit-btn");

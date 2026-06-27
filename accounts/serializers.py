@@ -32,7 +32,6 @@ class CurrentUserSerializer(serializers.Serializer):
     role = serializers.CharField()
     must_change_password = serializers.BooleanField()
     is_owner = serializers.BooleanField()
-    capabilities = serializers.DictField(child=serializers.BooleanField())
     groups = GroupSummarySerializer(many=True)
 
 

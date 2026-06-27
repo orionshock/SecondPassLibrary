@@ -5,6 +5,7 @@ import {
   getCsrfToken,
   summarizeFieldErrors,
 } from "../api.js";
+import { canManageGroupMemberships, canManageUsers } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
@@ -91,9 +92,8 @@ export async function initUserEdit() {
     return;
   }
 
-  const caps = me && me.capabilities ? me.capabilities : {};
-  const allowed = !!caps.can_manage_users;
-  const canManageMemberships = !!caps.can_manage_group_memberships;
+  const allowed = canManageUsers(me);
+  const canManageMemberships = canManageGroupMemberships(me);
 
   visible(notAllowedEl, !allowed);
   visible(cardEl, allowed);

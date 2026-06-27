@@ -4,6 +4,7 @@ import {
   getCsrfToken,
   summarizeFieldErrors,
 } from "../api.js";
+import { canManageUsers } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
@@ -49,8 +50,7 @@ export async function initUserNew() {
     return;
   }
 
-  const caps = me && me.capabilities ? me.capabilities : {};
-  const allowed = !!caps.can_manage_users;
+  const allowed = canManageUsers(me);
 
   visible(notAllowedEl, !allowed);
   visible(formCard, allowed);
