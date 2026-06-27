@@ -1510,6 +1510,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="profile-edit-form"')
         self.assertContains(response, 'id="profile-edit-btn"')
         self.assertContains(response, 'id="profile-save-btn"')
+        self.assertContains(response, ">Role</div>")
+        self.assertContains(response, 'id="profile-role"')
+        self.assertContains(response, ">Owner</div>")
+        self.assertContains(response, 'id="profile-owner"')
         self.assertContains(response, 'id="profile-email-input"')
         self.assertContains(response, "Session management")
         self.assertContains(response, 'id="profile-logout-others-btn"')
@@ -1517,6 +1521,16 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'href="/client-api/authorize/"')
         self.assertContains(response, 'id="profile-client-sessions"')
         self.assertContains(response, 'id="profile-client-sessions-status"')
+        self.assertContains(response, 'id="profile-groups"')
+        self.assertNotContains(response, "Show access details")
+        self.assertNotContains(response, 'id="profile-access"')
+
+        profile_js = Path("web/static/web/js/profile/main.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("function titleCaseRole", profile_js)
+        self.assertIn("roleEl.textContent = titleCaseRole(me.role)", profile_js)
+        self.assertIn('ownerEl.textContent = me.is_owner ? "Yes" : "No"', profile_js)
 
     def test_authenticated_profile_password_returns_200_and_has_form(self):
         self.client.force_login(self.user)

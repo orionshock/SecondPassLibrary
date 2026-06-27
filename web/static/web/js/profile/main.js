@@ -35,20 +35,10 @@ function renderGroups(container, groups) {
   container.appendChild(ul);
 }
 
-function renderAccess(container, me) {
-  clear(container);
-  const ul = document.createElement("ul");
-  const role = me && me.role ? String(me.role) : "reader";
-  const rows = [
-    ["Global role", role],
-    ["Owner", me && me.is_owner ? "yes" : "no"],
-  ];
-  for (const [label, value] of rows) {
-    const li = document.createElement("li");
-    li.appendChild(document.createTextNode(`${label}: ${value}`));
-    ul.appendChild(li);
-  }
-  container.appendChild(ul);
+function titleCaseRole(value) {
+  const role = value ? String(value).trim() : "reader";
+  if (!role) return "Reader";
+  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 }
 
 function formatWhen(value) {
@@ -114,18 +104,15 @@ function renderClientSessions(container, sessions, onRevoke) {
 export async function initProfile() {
   const me = await loadMeAndInitShell();
   const groupsEl = $("#profile-groups");
-  const accessEl = $("#profile-access");
   const statusEl = $("#profile-edit-status");
 
   if (!me) {
     setText(statusEl, "Error loading identity.");
     setText(groupsEl, "Error loading identity.");
-    setText(accessEl, "Error loading identity.");
     return;
   }
 
   renderGroups(groupsEl, me.groups);
-  renderAccess(accessEl, me);
 
   const form = $("#profile-edit-form");
   const editBtn = $("#profile-edit-btn");
@@ -133,6 +120,8 @@ export async function initProfile() {
   const cancelBtn = $("#profile-cancel-btn");
 
   const usernameEl = $("#profile-username");
+  const roleEl = $("#profile-role");
+  const ownerEl = $("#profile-owner");
   const emailDisplayEl = $("#profile-email-display");
   const firstDisplayEl = $("#profile-first-display");
   const lastDisplayEl = $("#profile-last-display");
@@ -148,6 +137,8 @@ export async function initProfile() {
     !cancelBtn ||
     !statusEl ||
     !usernameEl ||
+    !roleEl ||
+    !ownerEl ||
     !emailDisplayEl ||
     !firstDisplayEl ||
     !lastDisplayEl ||
@@ -182,6 +173,8 @@ export async function initProfile() {
 
   function syncDisplayFromMe() {
     usernameEl.replaceChildren(renderUserIdentity(me));
+    roleEl.textContent = titleCaseRole(me.role);
+    ownerEl.textContent = me.is_owner ? "Yes" : "No";
     emailDisplayEl.textContent = me.email || "";
     firstDisplayEl.textContent = me.first_name || "";
     lastDisplayEl.textContent = me.last_name || "";
