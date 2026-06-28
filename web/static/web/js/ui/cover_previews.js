@@ -4,6 +4,10 @@ function previewBooks(books) {
   return Array.isArray(books) ? books.filter((book) => book && book.title) : [];
 }
 
+function bookDetailHref(book) {
+  return book && book.id ? `/library/books/${encodeURIComponent(String(book.id))}/` : "";
+}
+
 export function renderCoverPreviewStrip(books, options = {}) {
   const visibleBooks = previewBooks(books);
   if (!visibleBooks.length) return "";
@@ -17,6 +21,24 @@ export function renderCoverPreviewStrip(books, options = {}) {
     .map((book) => {
       const title = String(book.title || "Untitled");
       const coverUrl = book.cover_url ? String(book.cover_url) : "";
+      const href = bookDetailHref(book);
+      if (href) {
+        return `
+          <a
+            class="cover-preview-button"
+            href="${escapeHtml(href)}"
+            title="${escapeHtml(title)}"
+            aria-label="${escapeHtml(`Open book details for ${title}`)}"
+          >
+            <span
+              class="cover-preview-cover"
+              data-cover-url="${escapeHtml(coverUrl)}"
+              data-cover-title="${escapeHtml(title)}"
+            ></span>
+          </a>
+        `.trim();
+      }
+
       const ariaLabel = `${actionLabel}; preview includes ${title}`;
       return `
         <button

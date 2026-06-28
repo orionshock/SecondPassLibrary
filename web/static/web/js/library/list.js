@@ -127,7 +127,7 @@ function renderAuthors(payload) {
         action: "browse-author",
         contextId: id,
         contextName: name,
-        actionLabel: `View books by ${name}`,
+        actionLabel: `View Books by ${name}`,
       });
       return `
         <article class="library-browse-row">
@@ -137,20 +137,13 @@ function renderAuthors(payload) {
             data-action="browse-author"
             data-id="${escapeHtml(id)}"
             data-name="${escapeHtml(name)}"
-            aria-label="View books by ${escapeHtml(name)}"
+            title="View Books by ${escapeHtml(name)}"
+            aria-label="View Books by ${escapeHtml(name)}"
           >
             <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
             <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
           </button>
           ${previews}
-          <button
-            class="button"
-            type="button"
-            data-action="browse-author"
-            data-id="${escapeHtml(id)}"
-            data-name="${escapeHtml(name)}"
-            aria-label="View books by ${escapeHtml(name)}"
-          >View books</button>
         </article>
       `.trim();
     })
@@ -169,7 +162,7 @@ function renderSeries(payload) {
         action: "browse-series",
         contextId: id,
         contextName: name,
-        actionLabel: `View books in ${name}`,
+        actionLabel: `View Books in ${name}`,
       });
       return `
         <article class="library-browse-row">
@@ -179,20 +172,13 @@ function renderSeries(payload) {
             data-action="browse-series"
             data-id="${escapeHtml(id)}"
             data-name="${escapeHtml(name)}"
-            aria-label="View books in ${escapeHtml(name)}"
+            title="View Books in ${escapeHtml(name)}"
+            aria-label="View Books in ${escapeHtml(name)}"
           >
             <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
             <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
           </button>
           ${previews}
-          <button
-            class="button"
-            type="button"
-            data-action="browse-series"
-            data-id="${escapeHtml(id)}"
-            data-name="${escapeHtml(name)}"
-            aria-label="View books in ${escapeHtml(name)}"
-          >View books</button>
         </article>
       `.trim();
     })

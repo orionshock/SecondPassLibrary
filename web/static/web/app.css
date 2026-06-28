@@ -1012,6 +1012,7 @@ input[type="file"]:disabled::file-selector-button {
   min-width: 0;
 }
 .cover-preview-button {
+  display: block;
   width: 34px;
   height: 48px;
   padding: 0;
@@ -1061,7 +1062,7 @@ input[type="file"]:disabled::file-selector-button {
 }
 .library-browse-row {
   display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(160px, 0.7fr) minmax(220px, 1fr);
   gap: 10px 14px;
   align-items: center;
   padding: 9px 11px;
