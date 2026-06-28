@@ -14,6 +14,13 @@
     </form>
   </div>
 
+  <div class="library-tabs" role="tablist" aria-label="Library browse views">
+    <button id="library-tab-books" class="tab-button is-active" type="button" role="tab" aria-selected="true" data-view="books">Books</button>
+    <button id="library-tab-authors" class="tab-button" type="button" role="tab" aria-selected="false" data-view="authors">Authors</button>
+    <button id="library-tab-series" class="tab-button" type="button" role="tab" aria-selected="false" data-view="series">Series</button>
+  </div>
+
+  <div id="library-filter-summary" class="library-filter-summary is-hidden" aria-live="polite"></div>
   <div id="library-status" class="muted">Loading...</div>
   <div id="library-results" class="books library-results"></div>
 

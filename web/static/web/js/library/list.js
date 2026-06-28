@@ -6,6 +6,7 @@ import { setStatus } from "../ui/status.js";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
+const VIEWS = new Set(["books", "authors", "series"]);
 
 function publishedYear(value) {
   const raw = value == null ? "" : String(value).trim();
@@ -63,6 +64,11 @@ function rangeText({ count, page, pageSize, resultLength }) {
   return `Showing ${start}-${end} of ${count}`;
 }
 
+function visibleBookCountLabel(count) {
+  const value = Number.isFinite(Number(count)) ? Number(count) : 0;
+  return `${value} visible ${value === 1 ? "book" : "books"}`;
+}
+
 function renderBooks(payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
@@ -108,6 +114,62 @@ function renderBooks(payload) {
     .join("");
 }
 
+function renderAuthors(payload) {
+  const results = Array.isArray(payload && payload.results) ? payload.results : [];
+  if (results.length === 0) return "";
+
+  return results
+    .map((author) => {
+      const id = author && author.id ? String(author.id) : "";
+      const name = author && author.name ? String(author.name) : "Unknown author";
+      return `
+        <article class="library-browse-row">
+          <div class="library-browse-row__main">
+            <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
+            <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
+          </div>
+          <button
+            class="button"
+            type="button"
+            data-action="browse-author"
+            data-id="${escapeHtml(id)}"
+            data-name="${escapeHtml(name)}"
+            aria-label="View books by ${escapeHtml(name)}"
+          >View books</button>
+        </article>
+      `.trim();
+    })
+    .join("");
+}
+
+function renderSeries(payload) {
+  const results = Array.isArray(payload && payload.results) ? payload.results : [];
+  if (results.length === 0) return "";
+
+  return results
+    .map((series) => {
+      const id = series && series.id ? String(series.id) : "";
+      const name = series && series.name ? String(series.name) : "Unknown series";
+      return `
+        <article class="library-browse-row">
+          <div class="library-browse-row__main">
+            <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
+            <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
+          </div>
+          <button
+            class="button"
+            type="button"
+            data-action="browse-series"
+            data-id="${escapeHtml(id)}"
+            data-name="${escapeHtml(name)}"
+            aria-label="View books in ${escapeHtml(name)}"
+          >View books</button>
+        </article>
+      `.trim();
+    })
+    .join("");
+}
+
 function urlWithParams(base, params) {
   const url = new URL(base, window.location.origin);
   for (const [k, v] of Object.entries(params || {})) {
@@ -121,6 +183,7 @@ export async function initLibraryBrowse() {
   await loadMeAndInitShell();
 
   const statusEl = $("#library-status");
+  const filterSummaryEl = $("#library-filter-summary");
   const rangeEl = $("#library-range");
   const resultsEl = $("#library-results");
   const nextBtn = $("#next");
@@ -128,18 +191,31 @@ export async function initLibraryBrowse() {
   const form = $("#library-search");
   const qInput = $("#q");
   const pageSizeSelect = $("#library-page-size");
+  const viewTabs = Array.from(document.querySelectorAll("[data-view]"));
 
-  if (!statusEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect) return;
+  if (!statusEl || !filterSummaryEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect) return;
 
   const state = {
+    view: "books",
     q: "",
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
+    authorId: "",
+    authorName: "",
+    seriesId: "",
+    seriesName: "",
     count: 0,
     resultLength: 0,
     hasNext: false,
     hasPrevious: false,
   };
+
+  function activeFilter() {
+    if (state.view !== "books") return null;
+    if (state.authorId) return { label: "Author", name: state.authorName || state.authorId };
+    if (state.seriesId) return { label: "Series", name: state.seriesName || state.seriesId };
+    return null;
+  }
 
   function syncControls() {
     qInput.value = state.q;
@@ -147,23 +223,77 @@ export async function initLibraryBrowse() {
     rangeEl.textContent = rangeText(state);
     prevBtn.disabled = !state.hasPrevious;
     nextBtn.disabled = !state.hasNext;
+
+    for (const tab of viewTabs) {
+      const isActive = tab.dataset.view === state.view;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+    }
+
+    const filter = activeFilter();
+    if (!filter) {
+      filterSummaryEl.innerHTML = "";
+      filterSummaryEl.classList.add("is-hidden");
+    } else {
+      filterSummaryEl.classList.remove("is-hidden");
+      filterSummaryEl.innerHTML = `
+        <span>${escapeHtml(filter.label)}: <strong>${escapeHtml(filter.name)}</strong></span>
+        <button class="button" type="button" data-action="clear-library-filter">Clear</button>
+      `.trim();
+    }
   }
 
   function apiUrlForState() {
+    if (state.view === "authors") {
+      return urlWithParams("/api/v1/library/authors/", {
+        page: state.page,
+        page_size: state.pageSize,
+      });
+    }
+
+    if (state.view === "series") {
+      return urlWithParams("/api/v1/library/series/", {
+        page: state.page,
+        page_size: state.pageSize,
+      });
+    }
+
     return urlWithParams("/api/v1/library/books/", {
       q: state.q,
       page: state.page,
       page_size: state.pageSize,
+      author: state.authorId,
+      series: state.seriesId,
+      ordering: state.seriesId ? "series_index" : "",
     });
   }
 
   function locationParamsForState() {
     const params = {
+      view: state.view,
       page: state.page,
       page_size: state.pageSize,
     };
-    if (state.q) params.q = state.q;
+    if (state.view === "books") {
+      if (state.q) params.q = state.q;
+      if (state.authorId) params.author = state.authorId;
+      if (state.authorName) params.author_name = state.authorName;
+      if (state.seriesId) params.series = state.seriesId;
+      if (state.seriesName) params.series_name = state.seriesName;
+    }
     return params;
+  }
+
+  function renderPayload(payload) {
+    if (state.view === "authors") return renderAuthors(payload);
+    if (state.view === "series") return renderSeries(payload);
+    return renderBooks(payload);
+  }
+
+  function emptyText() {
+    if (state.view === "authors") return "No authors.";
+    if (state.view === "series") return "No series.";
+    return "Empty library.";
   }
 
   async function loadCurrentPage({ push = false, replace = false } = {}) {
@@ -196,19 +326,19 @@ export async function initLibraryBrowse() {
         state.count > 0 || results.length > 0;
 
       if (!hasAny) {
-        setStatus(statusEl, "Empty library.", false);
+        setStatus(statusEl, emptyText(), false);
         syncControls();
         if (push || replace) pushLocation(locationParamsForState(), { replace });
         return;
       }
 
       setStatus(statusEl, "", false);
-      resultsEl.innerHTML = renderBooks(payload);
-      mountCovers(resultsEl);
+      resultsEl.innerHTML = renderPayload(payload);
+      if (state.view === "books") mountCovers(resultsEl);
       syncControls();
       if (push || replace) pushLocation(locationParamsForState(), { replace });
     } catch (e) {
-      console.error("Failed to load books", { url: apiUrlForState(), e });
+      console.error("Failed to load library browse view", { view: state.view, url: apiUrlForState(), e });
       setStatus(statusEl, "Error loading data.", true);
       setGlobalErrorFromError(e, "Failed to load library:");
       state.hasNext = false;
@@ -219,9 +349,19 @@ export async function initLibraryBrowse() {
 
   function syncStateFromLocation() {
     const params = new URLSearchParams(window.location.search);
-    state.q = (params.get("q") || "").trim();
+    const view = (params.get("view") || "books").trim();
+    state.view = VIEWS.has(view) ? view : "books";
+    state.q = state.view === "books" ? (params.get("q") || "").trim() : "";
     state.page = parsePositiveInt(params.get("page"), 1);
     state.pageSize = pageSizeFromValue(params.get("page_size"));
+    state.authorId = state.view === "books" ? (params.get("author") || "").trim() : "";
+    state.authorName = state.authorId ? (params.get("author_name") || "").trim() : "";
+    state.seriesId = state.view === "books" ? (params.get("series") || "").trim() : "";
+    state.seriesName = state.seriesId ? (params.get("series_name") || "").trim() : "";
+    if (state.authorId && state.seriesId) {
+      state.seriesId = "";
+      state.seriesName = "";
+    }
     syncControls();
   }
 
@@ -240,7 +380,12 @@ export async function initLibraryBrowse() {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    state.view = "books";
     state.q = (qInput.value || "").trim();
+    state.authorId = "";
+    state.authorName = "";
+    state.seriesId = "";
+    state.seriesName = "";
     state.page = 1;
     await loadCurrentPage({ push: true });
   });
@@ -260,6 +405,65 @@ export async function initLibraryBrowse() {
     if (!state.hasPrevious) return;
     state.page = Math.max(1, state.page - 1);
     await loadCurrentPage({ push: true });
+  });
+
+  for (const tab of viewTabs) {
+    tab.addEventListener("click", async () => {
+      const nextView = tab.dataset.view || "books";
+      if (!VIEWS.has(nextView)) return;
+      state.view = nextView;
+      state.page = 1;
+      if (nextView !== "books") {
+        state.q = "";
+        state.authorId = "";
+        state.authorName = "";
+        state.seriesId = "";
+        state.seriesName = "";
+      }
+      await loadCurrentPage({ push: true });
+    });
+  }
+
+  filterSummaryEl.addEventListener("click", async (e) => {
+    const source = e.target;
+    if (!(source instanceof Element)) return;
+    if (!source.closest('[data-action="clear-library-filter"]')) return;
+    state.authorId = "";
+    state.authorName = "";
+    state.seriesId = "";
+    state.seriesName = "";
+    state.page = 1;
+    await loadCurrentPage({ push: true });
+  });
+
+  resultsEl.addEventListener("click", async (e) => {
+    const source = e.target;
+    if (!(source instanceof Element)) return;
+
+    const authorButton = source.closest('[data-action="browse-author"]');
+    if (authorButton) {
+      state.view = "books";
+      state.q = "";
+      state.authorId = authorButton.getAttribute("data-id") || "";
+      state.authorName = authorButton.getAttribute("data-name") || "";
+      state.seriesId = "";
+      state.seriesName = "";
+      state.page = 1;
+      await loadCurrentPage({ push: true });
+      return;
+    }
+
+    const seriesButton = source.closest('[data-action="browse-series"]');
+    if (seriesButton) {
+      state.view = "books";
+      state.q = "";
+      state.authorId = "";
+      state.authorName = "";
+      state.seriesId = seriesButton.getAttribute("data-id") || "";
+      state.seriesName = seriesButton.getAttribute("data-name") || "";
+      state.page = 1;
+      await loadCurrentPage({ push: true });
+    }
   });
 
   window.addEventListener("popstate", async () => {
