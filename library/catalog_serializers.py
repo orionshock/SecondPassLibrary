@@ -49,6 +49,32 @@ class SeriesSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+def book_cover_url(obj: Book, request=None) -> str | None:
+    cover = getattr(obj, "cover_file", None)
+    if not cover:
+        return None
+    try:
+        url = cover.url
+    except Exception:
+        return None
+
+    if request is not None:
+        return request.build_absolute_uri(url)
+    return url
+
+
+class BookPreviewSerializer(serializers.ModelSerializer):
+    cover_url = serializers.SerializerMethodField(read_only=True)
+
+    def get_cover_url(self, obj: Book) -> str | None:
+        return book_cover_url(obj, request=self.context.get("request"))
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "cover_url"]
+        read_only_fields = fields
+
+
 class BookFileSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True, required=False)
     download_url = serializers.SerializerMethodField(read_only=True)
@@ -199,18 +225,7 @@ class BookSerializer(serializers.ModelSerializer):
         return BookFileSummarySerializer(book_file, context=self.context).data
 
     def get_cover_url(self, obj: Book) -> str | None:
-        cover = getattr(obj, "cover_file", None)
-        if not cover:
-            return None
-        try:
-            url = cover.url
-        except Exception:
-            return None
-
-        request = self.context.get("request")
-        if request is not None:
-            return request.build_absolute_uri(url)
-        return url
+        return book_cover_url(obj, request=self.context.get("request"))
 
     class Meta:
         model = Book
