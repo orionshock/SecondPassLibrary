@@ -1,5 +1,8 @@
+from collections import defaultdict
+
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Window
+from django.db.models.functions import RowNumber
 from django.http import Http404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -20,11 +23,103 @@ from .catalog_serializers import (
 from .models import Author, Book, BookGroupAssignment, BookIdentifier, Series
 from .view_mixins import ClientBearerReadOnlyMixin
 
+
+PREVIEW_BOOK_LIMIT = 6
+
+
+def _truthy_query_param(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _include_preview_books(request) -> bool:
+    return _truthy_query_param(request.query_params.get("include_preview_books"))
+
+
+def _visible_book_preview_queryset(user):
+    queryset = Book.objects.only("id", "title", "cover_file")
+    if policies.can_manage_library(user):
+        return queryset
+
+    visible_assignment = BookGroupAssignment.objects.filter(
+        book_id=OuterRef("pk"),
+        group__memberships__user=user,
+    )
+    return queryset.filter(Exists(visible_assignment))
+
+
+def _attach_author_preview_books(*, authors, user) -> None:
+    author_list = list(authors)
+    author_ids = [author.id for author in author_list]
+    if not author_ids:
+        return
+
+    queryset = (
+        _visible_book_preview_queryset(user)
+        .filter(authors__id__in=author_ids)
+        .annotate(
+            _preview_parent_id=F("authors__id"),
+            _preview_rank=Window(
+                expression=RowNumber(),
+                partition_by=[F("authors__id")],
+                order_by=[F("title").asc(), F("id").asc()],
+            ),
+        )
+        .filter(_preview_rank__lte=PREVIEW_BOOK_LIMIT)
+        .order_by("_preview_parent_id", "_preview_rank")
+    )
+
+    grouped = defaultdict(list)
+    for book in queryset:
+        grouped[str(book._preview_parent_id)].append(book)
+
+    for author in author_list:
+        author._preview_books = grouped.get(str(author.id), [])
+
+
+def _attach_series_preview_books(*, series, user) -> None:
+    series_list = list(series)
+    series_ids = [item.id for item in series_list]
+    if not series_ids:
+        return
+
+    queryset = (
+        _visible_book_preview_queryset(user)
+        .filter(series_id__in=series_ids)
+        .annotate(
+            _preview_parent_id=F("series_id"),
+            _preview_rank=Window(
+                expression=RowNumber(),
+                partition_by=[F("series_id")],
+                order_by=[
+                    F("series_index").asc(nulls_last=True),
+                    F("published_date").asc(nulls_last=True),
+                    F("title").asc(),
+                    F("id").asc(),
+                ],
+            ),
+        )
+        .filter(_preview_rank__lte=PREVIEW_BOOK_LIMIT)
+        .order_by("_preview_parent_id", "_preview_rank")
+    )
+
+    grouped = defaultdict(list)
+    for book in queryset:
+        grouped[str(book._preview_parent_id)].append(book)
+
+    for item in series_list:
+        item._preview_books = grouped.get(str(item.id), [])
+
+
 class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
     client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}}
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = _include_preview_books(self.request)
+        return context
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -54,6 +149,27 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         if not policies.can_manage_library(self.request.user):
             raise PermissionDenied("Not allowed.")
         instance.delete()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        authors = list(page) if page is not None else list(queryset)
+
+        if _include_preview_books(request):
+            _attach_author_preview_books(authors=authors, user=request.user)
+
+        serializer = self.get_serializer(authors, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if _include_preview_books(request):
+            _attach_author_preview_books(authors=[instance], user=request.user)
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
@@ -62,6 +178,11 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
     serializer_class = SeriesSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = _include_preview_books(self.request)
+        return context
+
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
@@ -90,6 +211,27 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         if not policies.can_manage_library(self.request.user):
             raise PermissionDenied("Not allowed.")
         instance.delete()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        series = list(page) if page is not None else list(queryset)
+
+        if _include_preview_books(request):
+            _attach_series_preview_books(series=series, user=request.user)
+
+        serializer = self.get_serializer(series, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if _include_preview_books(request):
+            _attach_series_preview_books(series=[instance], user=request.user)
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):

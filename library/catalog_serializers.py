@@ -19,10 +19,31 @@ from .models import (
 
 class AuthorSerializer(serializers.ModelSerializer):
     book_count = serializers.IntegerField(read_only=True)
+    preview_books = serializers.SerializerMethodField(read_only=True)
+
+    def get_preview_books(self, obj: Author):
+        preview_books = getattr(obj, "_preview_books", [])
+        return BookPreviewSerializer(
+            preview_books, many=True, context=self.context
+        ).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get("include_preview_books", False):
+            data.pop("preview_books", None)
+        return data
 
     class Meta:
         model = Author
-        fields = ["id", "name", "biography", "book_count", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "name",
+            "biography",
+            "book_count",
+            "preview_books",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
@@ -35,10 +56,31 @@ class AuthorSummarySerializer(serializers.ModelSerializer):
 
 class SeriesSerializer(serializers.ModelSerializer):
     book_count = serializers.IntegerField(read_only=True)
+    preview_books = serializers.SerializerMethodField(read_only=True)
+
+    def get_preview_books(self, obj: Series):
+        preview_books = getattr(obj, "_preview_books", [])
+        return BookPreviewSerializer(
+            preview_books, many=True, context=self.context
+        ).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get("include_preview_books", False):
+            data.pop("preview_books", None)
+        return data
 
     class Meta:
         model = Series
-        fields = ["id", "name", "summary", "book_count", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "name",
+            "summary",
+            "book_count",
+            "preview_books",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
