@@ -2,9 +2,34 @@ import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { canManageUsers } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
-import { renderUserIdentity } from "../ui/identity.js";
+import { renderUserIdentity, userDisplayName, userIdentityText } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 import { formatDateTime, passesFilter } from "./shared.js";
+
+function titleCaseRole(role) {
+  const value = String(role || "reader").trim().toLowerCase();
+  if (value === "librarian") return "Librarian";
+  if (value === "manager") return "Manager";
+  return "Reader";
+}
+
+function userSortName(user) {
+  return userDisplayName(user) || String(user && user.username ? user.username : "");
+}
+
+function roleSortValue(user) {
+  if (user && user.is_owner === true) return 3;
+  const role = String((user && user.role) || "reader").toLowerCase();
+  if (role === "manager") return 2;
+  if (role === "librarian") return 1;
+  return 0;
+}
+
+function lastLoginTime(user) {
+  if (!user || !user.last_login) return null;
+  const value = new Date(user.last_login).getTime();
+  return Number.isNaN(value) ? null : value;
+}
 
 export async function initUsersList() {
   const me = await loadMeAndInitShell();
@@ -34,6 +59,81 @@ export async function initUsersList() {
   let currentResults = [];
   let totalUsersCount = null;
   let activeFilter = "all";
+  let sortKey = "role";
+  let sortDirection = "desc";
+
+  const sortLabels = {
+    name: "Name",
+    username: "Username",
+    email: "Email",
+    role: "Role",
+    last_login: "Last Login",
+  };
+
+  function sortButton(key) {
+    const label = sortLabels[key] || key;
+    const active = sortKey === key;
+    const directionText = active
+      ? sortDirection === "asc"
+        ? "sorted ascending"
+        : "sorted descending"
+      : "not sorted";
+    const visibleDirection = active ? (sortDirection === "asc" ? "arrow_upward" : "arrow_downward") : "unfold_more";
+    return `<button class="user-sort-button" type="button" data-sort="${escapeHtml(key)}" aria-sort="${escapeHtml(active ? (sortDirection === "asc" ? "ascending" : "descending") : "none")}" aria-label="Sort by ${escapeHtml(label)}; ${escapeHtml(directionText)}">${escapeHtml(label)} <span class="material-symbols-outlined user-sort-button__icon" aria-hidden="true">${visibleDirection}</span><span class="sr-only"> ${escapeHtml(directionText)}</span></button>`;
+  }
+
+  function renderHeader() {
+    return `
+      <div class="users-header" aria-label="User columns">
+        <div class="users-header__identity">
+          ${sortButton("name")}
+          ${sortButton("username")}
+          ${sortButton("email")}
+        </div>
+        <div class="users-header__role">${sortButton("role")}</div>
+        <div class="users-header__last-login">${sortButton("last_login")}</div>
+        <div class="users-header__memberships">Groups / Curates</div>
+        <div class="users-header__actions">Actions</div>
+      </div>
+    `.trim();
+  }
+
+  function compareText(a, b) {
+    return String(a || "").localeCompare(String(b || ""), undefined, {
+      sensitivity: "base",
+      numeric: true,
+    });
+  }
+
+  function sortedUsers(users) {
+    const rows = [...users];
+    if (!sortKey) return rows;
+    rows.sort((a, b) => {
+      let result = 0;
+      if (sortKey === "name") {
+        result = compareText(userSortName(a), userSortName(b));
+      } else if (sortKey === "username") {
+        result = compareText(a && a.username, b && b.username);
+      } else if (sortKey === "email") {
+        result = compareText(a && a.email, b && b.email);
+      } else if (sortKey === "role") {
+        result = roleSortValue(a) - roleSortValue(b);
+      } else if (sortKey === "last_login") {
+        const left = lastLoginTime(a);
+        const right = lastLoginTime(b);
+        if (left == null && right == null) result = 0;
+        else if (left == null) result = 1;
+        else if (right == null) result = -1;
+        else result = left - right;
+      }
+      return sortDirection === "desc" && sortKey !== "last_login"
+        ? -result
+        : sortDirection === "desc" && sortKey === "last_login" && lastLoginTime(a) != null && lastLoginTime(b) != null
+          ? -result
+          : result;
+    });
+    return rows;
+  }
 
   function updateStatusLabel() {
     if (!allowed) return;
@@ -70,7 +170,7 @@ export async function initUsersList() {
 
     const roleBadge = isOwner
       ? '<span class="pill pill--owner">Owner</span>'
-      : `<span class="pill">${escapeHtml(role)}</span>`;
+      : `<span class="pill">${escapeHtml(titleCaseRole(role))}</span>`;
     const inactiveBadge = isActive ? "" : '<span class="pill">inactive</span>';
 
     const groups = Array.isArray(user && user.groups) ? user.groups : [];
@@ -80,8 +180,8 @@ export async function initUsersList() {
       )
       .join(" ");
     const groupsLine = memberGroupBadges
-      ? `<div class="user-row__line user-row__groups">Groups: ${memberGroupBadges}</div>`
-      : `<div class="user-row__line muted">Groups: (none)</div>`;
+      ? `<div class="user-row__badge-list">${memberGroupBadges}</div>`
+      : `<div class="user-row__line muted">(none)</div>`;
     const curatedGroupBadges = groups
       .filter(
         (group) => group && group.is_curator === true
@@ -91,35 +191,42 @@ export async function initUsersList() {
       )
       .join(" ");
     const curatesLine = curatedGroupBadges
-      ? `<div class="user-row__line user-row__groups">Curates: ${curatedGroupBadges}</div>`
-      : "";
+      ? `<div class="user-row__badge-list">${curatedGroupBadges}</div>`
+      : `<div class="user-row__line muted">(none)</div>`;
 
     const lastLoginLine = lastLogin
-      ? `<div class="user-row__line">Last login: ${escapeHtml(lastLogin)}</div>`
-      : '<div class="user-row__line muted">Last login: (never)</div>';
+      ? `<div class="user-row__line">${escapeHtml(lastLogin)}</div>`
+      : '<div class="user-row__line muted">(never)</div>';
 
     const editHref = id ? `/users/${encodeURIComponent(String(id))}/edit/` : "#";
     const identityMarkup = renderUserIdentity(user, {
       includeEmail: true,
     }).outerHTML;
+    const editLabel = `Edit ${userIdentityText(user, { includeEmail: true })}`;
 
     return `
       <article class="user-row">
-        <div class="user-row__main">
-          <div class="user-row__title">${identityMarkup}</div>
-          <div class="badge-row user-row__badges">
-            ${roleBadge}
-            ${inactiveBadge}
+        <div class="user-row__identity">
+          ${identityMarkup}
+          ${email ? "" : '<div class="user-row__line muted">(no email)</div>'}
+        </div>
+        <div class="user-row__role">
+          ${roleBadge}
+          ${inactiveBadge}
+        </div>
+        <div class="user-row__last-login">
+          ${lastLoginLine}
+        </div>
+        <div class="user-row__memberships">
+          <div class="user-row__membership-block">
+            ${groupsLine}
+          </div>
+          <div class="user-row__membership-block">
+            ${curatesLine}
           </div>
         </div>
-        <div class="user-row__meta">
-          ${email ? "" : '<div class="user-row__line muted">(no email)</div>'}
-          ${lastLoginLine}
-          ${groupsLine}
-          ${curatesLine}
-        </div>
         <div class="user-row__actions">
-          <a class="button" href="${escapeHtml(editHref)}">Edit</a>
+          <a class="icon-button" href="${escapeHtml(editHref)}" aria-label="${escapeHtml(editLabel)}" title="${escapeHtml(editLabel)}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
         </div>
       </article>
     `.trim();
@@ -134,7 +241,8 @@ export async function initUsersList() {
       resultsEl.innerHTML = '<div class="muted">No users match this filter on this page.</div>';
       return;
     }
-    resultsEl.innerHTML = filtered.map(renderRow).join("");
+    const sorted = sortedUsers(filtered);
+    resultsEl.innerHTML = `${renderHeader()}${sorted.map(renderRow).join("")}`;
   }
 
   async function load(url) {
@@ -188,6 +296,22 @@ export async function initUsersList() {
     const filter = target.getAttribute("data-filter");
     if (!filter) return;
     setActiveFilter(filter);
+  });
+
+  resultsEl.addEventListener("click", (e) => {
+    const source = e.target;
+    if (!source || source.nodeType !== 1) return;
+    const target = source.closest("button[data-sort]");
+    if (!target || !resultsEl.contains(target)) return;
+    const nextSort = target.getAttribute("data-sort") || "";
+    if (!nextSort) return;
+    if (sortKey === nextSort) {
+      sortDirection = sortDirection === "asc" ? "desc" : "asc";
+    } else {
+      sortKey = nextSort;
+      sortDirection = "asc";
+    }
+    render();
   });
 
   setActiveFilter("all");
