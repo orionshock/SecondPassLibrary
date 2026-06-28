@@ -14,7 +14,7 @@ function renderShelfRow(shelf) {
   });
 
   return `
-    <article class="book shelf-list-card">
+    <article class="book shelf-list-card" data-shelf-url="${escapeHtml(href)}">
       <div class="shelf-list-card__main">
         <h3 class="book__title shelf-list-card__title">
           <a href="${escapeHtml(href)}" title="Open shelf ${escapeHtml(name)}">${escapeHtml(name)}</a>
@@ -25,6 +25,23 @@ function renderShelfRow(shelf) {
       ${previews}
     </article>
   `.trim();
+}
+
+function isInteractiveElement(element) {
+  return !!element.closest("a, button, input, select, textarea, label, summary, [role='button'], [role='link']");
+}
+
+function installShelfCardNavigation(root) {
+  if (!root) return;
+  root.addEventListener("click", (event) => {
+    const source = event.target;
+    if (!(source instanceof Element)) return;
+    if (isInteractiveElement(source)) return;
+
+    const card = source.closest("[data-shelf-url]");
+    const url = card && card.getAttribute("data-shelf-url");
+    if (url) window.location.assign(url);
+  });
 }
 
 function renderShelfRows(_payload, rows, emptyText) {
@@ -86,6 +103,9 @@ export async function initShelvesList() {
   ) {
     return;
   }
+
+  installShelfCardNavigation(personal.resultsEl);
+  installShelfCardNavigation(shared.resultsEl);
 
   const [personalController, sharedController] = await Promise.all([
     createShelfSectionController({
