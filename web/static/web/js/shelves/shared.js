@@ -3,6 +3,7 @@ import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity, userIdentityText } from "../ui/identity.js";
 
 function shelfVisibilityLabel(shelf) {
+  if (shelf && shelf.owner_type === "group") return "";
   const value = shelf && shelf.visibility ? String(shelf.visibility) : "private";
   if (value === "listed") return "Listed";
   if (value === "private") return "Private";

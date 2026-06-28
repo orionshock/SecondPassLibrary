@@ -10,17 +10,18 @@ function renderShelfRow(shelf) {
   const metadata = shelfMetadataLine(shelf);
   const href = `/shelves/${encodeURIComponent(id)}/`;
   const previews = renderCoverPreviewStrip(shelf.preview_books, {
-    href,
     actionLabel: `View shelf ${name}`,
   });
 
   return `
     <article class="book shelf-list-card">
-      <h3 class="book__title">
-        <a href="${escapeHtml(href)}">${escapeHtml(name)}</a>
-      </h3>
-      ${description ? `<div class="muted shelf-list-card__description">${escapeHtml(description)}</div>` : ""}
-      ${metadata ? `<div class="muted shelf-list-card__metadata">${metadata}</div>` : ""}
+      <div class="shelf-list-card__main">
+        <h3 class="book__title shelf-list-card__title">
+          <a href="${escapeHtml(href)}" title="Open shelf ${escapeHtml(name)}">${escapeHtml(name)}</a>
+        </h3>
+        ${description ? `<div class="muted shelf-list-card__description">${escapeHtml(description)}</div>` : ""}
+        ${metadata ? `<div class="muted shelf-list-card__metadata">${metadata}</div>` : ""}
+      </div>
       ${previews}
     </article>
   `.trim();

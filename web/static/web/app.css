@@ -965,12 +965,21 @@ input[type="file"]:disabled::file-selector-button {
   gap: 10px;
   margin-top: 8px;
 }
+.shelf-list-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
+  gap: 10px 14px;
+  align-items: start;
+}
+.shelf-list-card__main {
+  min-width: 0;
+}
 .shelf-list-card__description,
 .shelf-list-card__metadata {
   margin-top: 4px;
 }
 .shelf-list-card .cover-preview-strip {
-  margin-top: 8px;
+  justify-content: flex-end;
 }
 
 /* =====================
@@ -1209,6 +1218,12 @@ input[type="file"]:disabled::file-selector-button {
   }
   .library-pager__actions .button {
     flex: 1;
+  }
+  .shelf-list-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shelf-list-card .cover-preview-strip {
+    justify-content: flex-start;
   }
   .library-browse-row {
     grid-template-columns: minmax(0, 1fr);
