@@ -1034,6 +1034,9 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("export function renderCoverPreviewStrip", cover_previews_js)
         self.assertIn('class="cover-preview-strip"', cover_previews_js)
         self.assertIn('class="cover-preview-button"', cover_previews_js)
+        self.assertIn("const contextHref = options.href", cover_previews_js)
+        self.assertIn("const href = contextHref || bookDetailHref(book)", cover_previews_js)
+        self.assertIn("contextHref\n          ? `${actionLabel}; preview includes ${title}`", cover_previews_js)
         self.assertIn('href="${escapeHtml(href)}"', cover_previews_js)
         self.assertIn("bookDetailHref(book)", cover_previews_js)
         self.assertIn('/library/books/${encodeURIComponent(String(book.id))}/', cover_previews_js)
@@ -1079,6 +1082,11 @@ class ProductUiSmokeTests(TestCase):
         )
 
         self.assertIn("shelfMetadataLine", list_js)
+        self.assertIn('from "../ui/cover_previews.js"', list_js)
+        self.assertIn("renderCoverPreviewStrip(shelf.preview_books", list_js)
+        self.assertIn("actionLabel: `View shelf ${name}`", list_js)
+        self.assertIn("href,", list_js)
+        self.assertIn('href="${escapeHtml(href)}"', list_js)
         self.assertIn("renderShelfMetadata", view_js)
         self.assertIn("includeVisibility: false", view_js)
         self.assertIn("renderShelfItem", view_js)
@@ -1159,6 +1167,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".inline-metadata-row", css)
         self.assertIn(".shelf-owner-identity", css)
         self.assertIn(".shelf-metadata-piece + .shelf-metadata-piece::before", css)
+        self.assertIn(".shelf-list-card .cover-preview-strip", css)
         self.assertIn(".shelf-view-heading", css)
         self.assertIn(".shelf-view-description", css)
         self.assertIn(".membership-row", css)
@@ -1178,12 +1187,20 @@ class ProductUiSmokeTests(TestCase):
 
         self.assertIn('id="personal-shelves-results"', template)
         self.assertIn('id="shared-shelves-results"', template)
-        self.assertIn('initialUrl: "/api/v1/shelves/?scope=personal"', list_js)
-        self.assertIn('initialUrl: "/api/v1/shelves/?scope=shared"', list_js)
+        self.assertIn(
+            'initialUrl: "/api/v1/shelves/?scope=personal&include_preview_books=true"',
+            list_js,
+        )
+        self.assertIn(
+            'initialUrl: "/api/v1/shelves/?scope=shared&include_preview_books=true"',
+            list_js,
+        )
+        self.assertEqual(list_js.count("include_preview_books=true"), 2)
         self.assertIn("createShelfSectionController", list_js)
         self.assertIn("createPagedListController", list_js)
         self.assertIn("Promise.all", list_js)
         self.assertIn("shelfMetadataLine", list_js)
+        self.assertIn("renderCoverPreviewStrip(shelf.preview_books", list_js)
         self.assertNotIn('initialUrl: "/api/v1/shelves/"', list_js)
         self.assertNotIn(".filter(", list_js)
         self.assertNotIn("owner_user.profile_id", list_js)

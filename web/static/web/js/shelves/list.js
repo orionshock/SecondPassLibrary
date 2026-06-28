@@ -1,4 +1,5 @@
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError } from "../layout.js";
+import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import { shelfMetadataLine } from "./shared.js";
 
@@ -7,14 +8,20 @@ function renderShelfRow(shelf) {
   const name = shelf && shelf.name ? String(shelf.name) : "(Unnamed shelf)";
   const description = shelf && shelf.description ? String(shelf.description) : "";
   const metadata = shelfMetadataLine(shelf);
+  const href = `/shelves/${encodeURIComponent(id)}/`;
+  const previews = renderCoverPreviewStrip(shelf.preview_books, {
+    href,
+    actionLabel: `View shelf ${name}`,
+  });
 
   return `
     <article class="book shelf-list-card">
       <h3 class="book__title">
-        <a href="/shelves/${encodeURIComponent(id)}/">${escapeHtml(name)}</a>
+        <a href="${escapeHtml(href)}">${escapeHtml(name)}</a>
       </h3>
       ${description ? `<div class="muted shelf-list-card__description">${escapeHtml(description)}</div>` : ""}
       ${metadata ? `<div class="muted shelf-list-card__metadata">${metadata}</div>` : ""}
+      ${previews}
     </article>
   `.trim();
 }
@@ -82,12 +89,12 @@ export async function initShelvesList() {
   const [personalController, sharedController] = await Promise.all([
     createShelfSectionController({
       ...personal,
-      initialUrl: "/api/v1/shelves/?scope=personal",
+      initialUrl: "/api/v1/shelves/?scope=personal&include_preview_books=true",
       emptyText: "No personal shelves.",
     }),
     createShelfSectionController({
       ...shared,
-      initialUrl: "/api/v1/shelves/?scope=shared",
+      initialUrl: "/api/v1/shelves/?scope=shared&include_preview_books=true",
       emptyText: "No shared shelves.",
     }),
   ]);

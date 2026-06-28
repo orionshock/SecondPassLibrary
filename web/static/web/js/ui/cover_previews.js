@@ -16,19 +16,23 @@ export function renderCoverPreviewStrip(books, options = {}) {
   const contextId = options.contextId ? String(options.contextId) : "";
   const contextName = options.contextName ? String(options.contextName) : "";
   const actionLabel = options.actionLabel ? String(options.actionLabel) : "View books";
+  const contextHref = options.href ? String(options.href) : "";
 
   const buttons = visibleBooks
     .map((book) => {
       const title = String(book.title || "Untitled");
       const coverUrl = book.cover_url ? String(book.cover_url) : "";
-      const href = bookDetailHref(book);
+      const href = contextHref || bookDetailHref(book);
       if (href) {
+        const ariaLabel = contextHref
+          ? `${actionLabel}; preview includes ${title}`
+          : `Open book details for ${title}`;
         return `
           <a
             class="cover-preview-button"
             href="${escapeHtml(href)}"
             title="${escapeHtml(title)}"
-            aria-label="${escapeHtml(`Open book details for ${title}`)}"
+            aria-label="${escapeHtml(ariaLabel)}"
           >
             <span
               class="cover-preview-cover"

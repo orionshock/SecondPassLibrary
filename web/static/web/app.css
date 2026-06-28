@@ -969,6 +969,9 @@ input[type="file"]:disabled::file-selector-button {
 .shelf-list-card__metadata {
   margin-top: 4px;
 }
+.shelf-list-card .cover-preview-strip {
+  margin-top: 8px;
+}
 
 /* =====================
    Lists / Tables
