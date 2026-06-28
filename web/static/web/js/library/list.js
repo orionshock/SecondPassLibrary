@@ -1,5 +1,6 @@
 import { fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
+import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
@@ -122,11 +123,18 @@ function renderAuthors(payload) {
     .map((author) => {
       const id = author && author.id ? String(author.id) : "";
       const name = author && author.name ? String(author.name) : "Unknown author";
+      const previews = renderCoverPreviewStrip(author.preview_books, {
+        action: "browse-author",
+        contextId: id,
+        contextName: name,
+        actionLabel: `View books by ${name}`,
+      });
       return `
         <article class="library-browse-row">
           <div class="library-browse-row__main">
             <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
             <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
+            ${previews}
           </div>
           <button
             class="button"
@@ -150,11 +158,18 @@ function renderSeries(payload) {
     .map((series) => {
       const id = series && series.id ? String(series.id) : "";
       const name = series && series.name ? String(series.name) : "Unknown series";
+      const previews = renderCoverPreviewStrip(series.preview_books, {
+        action: "browse-series",
+        contextId: id,
+        contextName: name,
+        actionLabel: `View books in ${name}`,
+      });
       return `
         <article class="library-browse-row">
           <div class="library-browse-row__main">
             <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
             <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
+            ${previews}
           </div>
           <button
             class="button"
@@ -246,6 +261,7 @@ export async function initLibraryBrowse() {
   function apiUrlForState() {
     if (state.view === "authors") {
       return urlWithParams("/api/v1/library/authors/", {
+        include_preview_books: "true",
         page: state.page,
         page_size: state.pageSize,
       });
@@ -253,6 +269,7 @@ export async function initLibraryBrowse() {
 
     if (state.view === "series") {
       return urlWithParams("/api/v1/library/series/", {
+        include_preview_books: "true",
         page: state.page,
         page_size: state.pageSize,
       });
@@ -334,7 +351,7 @@ export async function initLibraryBrowse() {
 
       setStatus(statusEl, "", false);
       resultsEl.innerHTML = renderPayload(payload);
-      if (state.view === "books") mountCovers(resultsEl);
+      mountCovers(resultsEl);
       syncControls();
       if (push || replace) pushLocation(locationParamsForState(), { replace });
     } catch (e) {

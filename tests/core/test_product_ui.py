@@ -838,6 +838,9 @@ class ProductUiSmokeTests(TestCase):
         )
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
         library_list_js = Path("web/static/web/js/library/list.js").read_text(encoding="utf-8")
+        cover_previews_js = Path("web/static/web/js/ui/cover_previews.js").read_text(
+            encoding="utf-8"
+        )
         users_list_js = Path("web/static/web/js/users/list.js").read_text(
             encoding="utf-8"
         )
@@ -945,7 +948,12 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn("user-row__column-label", users_list_js)
 
         self.assertIn('from "../ui/groups.js"', library_list_js)
+        self.assertIn('from "../ui/cover_previews.js"', library_list_js)
         self.assertIn("renderGroupBadge(group, { compact: true })", library_list_js)
+        self.assertIn("renderCoverPreviewStrip(author.preview_books", library_list_js)
+        self.assertIn("renderCoverPreviewStrip(series.preview_books", library_list_js)
+        self.assertIn('include_preview_books: "true"', library_list_js)
+        self.assertEqual(library_list_js.count('include_preview_books: "true"'), 2)
         self.assertIn("function publishedYear", library_list_js)
         self.assertIn("function compactSubtitle", library_list_js)
         self.assertIn("const DEFAULT_PAGE_SIZE = 20", library_list_js)
@@ -992,6 +1000,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("payload && payload.previous", library_list_js)
         self.assertIn("window.history.pushState", library_list_js)
         self.assertIn("window.history.replaceState", library_list_js)
+        self.assertIn("mountCovers(resultsEl)", library_list_js)
         self.assertIn('class="library-browse-row"', library_list_js)
         self.assertIn('class="library-browse-row__title"', library_list_js)
         self.assertIn("author.book_count", library_list_js)
@@ -1011,6 +1020,20 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn("Genre", library_list_js)
         self.assertNotIn("nextUrl", library_list_js)
         self.assertNotIn("prevUrl", library_list_js)
+
+        self.assertIn("export function renderCoverPreviewStrip", cover_previews_js)
+        self.assertIn('class="cover-preview-strip"', cover_previews_js)
+        self.assertIn('class="cover-preview-button"', cover_previews_js)
+        self.assertIn('type="button"', cover_previews_js)
+        self.assertIn('title="${escapeHtml(title)}"', cover_previews_js)
+        self.assertIn('aria-label="${escapeHtml(ariaLabel)}"', cover_previews_js)
+        self.assertIn("preview includes ${title}", cover_previews_js)
+        self.assertIn('data-action="${escapeHtml(action)}"', cover_previews_js)
+        self.assertIn('data-id="${escapeHtml(contextId)}"', cover_previews_js)
+        self.assertIn('data-name="${escapeHtml(contextName)}"', cover_previews_js)
+        self.assertIn('data-cover-url="${escapeHtml(coverUrl)}"', cover_previews_js)
+        self.assertIn('data-cover-title="${escapeHtml(title)}"', cover_previews_js)
+        self.assertNotIn("/library/books/", cover_previews_js)
 
         self.assertIn('from "../ui/groups.js"', user_memberships_js)
         self.assertIn("renderGroupBadge(g", user_memberships_js)
@@ -1094,6 +1117,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".library-browse-row:focus-within", css)
         self.assertIn(".library-browse-row__title", css)
         self.assertIn(".library-browse-row__meta", css)
+        self.assertIn(".cover-preview-strip", css)
+        self.assertIn(".cover-preview-button", css)
+        self.assertIn(".cover-preview-button:hover", css)
+        self.assertIn(".cover-preview-button:focus-visible", css)
+        self.assertIn(".cover-preview-cover", css)
         self.assertIn(".library-row", css)
         self.assertIn(".library-row:hover", css)
         self.assertIn(".library-row:focus-within", css)
