@@ -4,6 +4,9 @@ import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
 
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
+
 function publishedYear(value) {
   const raw = value == null ? "" : String(value).trim();
   if (!raw) return "";
@@ -41,6 +44,23 @@ function renderGroups(groups) {
     .map((group) => renderGroupBadge(group, { compact: true }).outerHTML)
     .join(" ");
   return `<div class="library-row__groups">${badges}</div>`;
+}
+
+function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function pageSizeFromValue(value) {
+  const parsed = parsePositiveInt(value, DEFAULT_PAGE_SIZE);
+  return PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+function rangeText({ count, page, pageSize, resultLength }) {
+  if (!count || !resultLength) return "Showing 0 of 0";
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(count, start + resultLength - 1);
+  return `Showing ${start}-${end} of ${count}`;
 }
 
 function renderBooks(payload) {
@@ -101,86 +121,149 @@ export async function initLibraryBrowse() {
   await loadMeAndInitShell();
 
   const statusEl = $("#library-status");
+  const rangeEl = $("#library-range");
   const resultsEl = $("#library-results");
   const nextBtn = $("#next");
   const prevBtn = $("#prev");
   const form = $("#library-search");
   const qInput = $("#q");
+  const pageSizeSelect = $("#library-page-size");
 
-  if (!statusEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput) return;
+  if (!statusEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect) return;
 
-  let nextUrl = null;
-  let prevUrl = null;
+  const state = {
+    q: "",
+    page: 1,
+    pageSize: DEFAULT_PAGE_SIZE,
+    count: 0,
+    resultLength: 0,
+    hasNext: false,
+    hasPrevious: false,
+  };
 
-  async function load(url) {
+  function syncControls() {
+    qInput.value = state.q;
+    pageSizeSelect.value = String(state.pageSize);
+    rangeEl.textContent = rangeText(state);
+    prevBtn.disabled = !state.hasPrevious;
+    nextBtn.disabled = !state.hasNext;
+  }
+
+  function apiUrlForState() {
+    return urlWithParams("/api/v1/library/books/", {
+      q: state.q,
+      page: state.page,
+      page_size: state.pageSize,
+    });
+  }
+
+  function locationParamsForState() {
+    const params = {
+      page: state.page,
+      page_size: state.pageSize,
+    };
+    if (state.q) params.q = state.q;
+    return params;
+  }
+
+  async function loadCurrentPage({ push = false, replace = false } = {}) {
     setStatus(statusEl, "Loading...", false);
     resultsEl.innerHTML = "";
+    state.hasNext = false;
+    state.hasPrevious = false;
+    state.resultLength = 0;
     nextBtn.disabled = true;
     prevBtn.disabled = true;
+    rangeEl.textContent = "Loading...";
 
     try {
+      const url = apiUrlForState();
       const payload = await fetchJSON(url);
+      const results = Array.isArray(payload && payload.results) ? payload.results : [];
+      state.count = Number.isFinite(Number(payload && payload.count)) ? Number(payload.count) : results.length;
+      state.resultLength = results.length;
+      state.hasNext = !!(payload && payload.next);
+      state.hasPrevious = !!(payload && payload.previous);
+
+      const maxPage = Math.max(1, Math.ceil(state.count / state.pageSize));
+      if (state.page > maxPage) {
+        state.page = maxPage;
+        await loadCurrentPage({ replace: true });
+        return;
+      }
+
       const hasAny =
-        payload && payload.count
-          ? payload.count > 0
-          : Array.isArray(payload.results) && payload.results.length > 0;
+        state.count > 0 || results.length > 0;
 
       if (!hasAny) {
         setStatus(statusEl, "Empty library.", false);
-        nextUrl = null;
-        prevUrl = null;
+        syncControls();
+        if (push || replace) pushLocation(locationParamsForState(), { replace });
         return;
       }
 
       setStatus(statusEl, "", false);
       resultsEl.innerHTML = renderBooks(payload);
       mountCovers(resultsEl);
-
-      nextUrl = payload.next || null;
-      prevUrl = payload.previous || null;
-      nextBtn.disabled = !nextUrl;
-      prevBtn.disabled = !prevUrl;
+      syncControls();
+      if (push || replace) pushLocation(locationParamsForState(), { replace });
     } catch (e) {
-      console.error("Failed to load books", { url, e });
+      console.error("Failed to load books", { url: apiUrlForState(), e });
       setStatus(statusEl, "Error loading data.", true);
       setGlobalErrorFromError(e, "Failed to load library:");
-      nextUrl = null;
-      prevUrl = null;
+      state.hasNext = false;
+      state.hasPrevious = false;
+      syncControls();
     }
   }
 
-  function syncQueryFromLocation() {
+  function syncStateFromLocation() {
     const params = new URLSearchParams(window.location.search);
-    qInput.value = params.get("q") || "";
+    state.q = (params.get("q") || "").trim();
+    state.page = parsePositiveInt(params.get("page"), 1);
+    state.pageSize = pageSizeFromValue(params.get("page_size"));
+    syncControls();
   }
 
-  function pushLocation(params) {
+  function pushLocation(params, { replace = false } = {}) {
     const url = new URL(window.location.href);
     url.search = new URLSearchParams(params).toString();
-    window.history.pushState({}, "", url.toString());
+    if (replace) {
+      window.history.replaceState({}, "", url.toString());
+    } else {
+      window.history.pushState({}, "", url.toString());
+    }
   }
 
-  syncQueryFromLocation();
-  const initialQ = new URLSearchParams(window.location.search).get("q") || "";
-  await load(urlWithParams("/api/v1/library/books/", { q: initialQ }));
+  syncStateFromLocation();
+  await loadCurrentPage({ replace: true });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const q = (qInput.value || "").trim();
-    pushLocation(q ? { q } : {});
-    await load(urlWithParams("/api/v1/library/books/", { q }));
+    state.q = (qInput.value || "").trim();
+    state.page = 1;
+    await loadCurrentPage({ push: true });
+  });
+
+  pageSizeSelect.addEventListener("change", async () => {
+    state.pageSize = pageSizeFromValue(pageSizeSelect.value);
+    state.page = 1;
+    await loadCurrentPage({ push: true });
   });
 
   nextBtn.addEventListener("click", async () => {
-    if (nextUrl) await load(nextUrl);
+    if (!state.hasNext) return;
+    state.page += 1;
+    await loadCurrentPage({ push: true });
   });
   prevBtn.addEventListener("click", async () => {
-    if (prevUrl) await load(prevUrl);
+    if (!state.hasPrevious) return;
+    state.page = Math.max(1, state.page - 1);
+    await loadCurrentPage({ push: true });
   });
 
   window.addEventListener("popstate", async () => {
-    syncQueryFromLocation();
-    const q = (qInput.value || "").trim();
-    await load(urlWithParams("/api/v1/library/books/", { q }));
+    syncStateFromLocation();
+    await loadCurrentPage();
   });
 }

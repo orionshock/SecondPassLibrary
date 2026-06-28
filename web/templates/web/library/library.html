@@ -15,11 +15,23 @@
   </div>
 
   <div id="library-status" class="muted">Loading...</div>
-  <div id="library-results" class="books"></div>
+  <div id="library-results" class="books library-results"></div>
 
-  <div class="pager">
-    <button id="prev" class="button" type="button" disabled>Previous</button>
-    <button id="next" class="button" type="button" disabled>Next</button>
+  <div class="pager library-pager library-pager--sticky" aria-label="Library pagination">
+    <div id="library-range" class="library-pager__range" aria-live="polite">Showing 0 of 0</div>
+    <label class="library-pager__page-size" for="library-page-size">
+      <span>Per page</span>
+      <select id="library-page-size" name="page_size">
+        <option value="20" selected>20</option>
+        <option value="30">30</option>
+        <option value="40">40</option>
+        <option value="50">50</option>
+      </select>
+    </label>
+    <div class="library-pager__actions">
+      <button id="prev" class="button" type="button" disabled>Previous</button>
+      <button id="next" class="button" type="button" disabled>Next</button>
+    </div>
   </div>
 
 {% endblock %}
