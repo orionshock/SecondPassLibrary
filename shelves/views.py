@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any, NoReturn, cast
 
-from django.db.models import Count
+from django.db.models import Count, Exists, F, OuterRef, Window
+from django.db.models.functions import RowNumber
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
@@ -13,7 +15,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from library.models import Book, LibraryGroup
+from core import policies as core_policies
+from library.models import Book, BookGroupAssignment, LibraryGroup
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 
@@ -38,6 +41,57 @@ from .services import (
 )
 from .policies import can_edit_shelf_for_request, visible_shelf_filter
 from .querysets import build_visible_shelf_list_queryset
+
+
+PREVIEW_BOOK_LIMIT = 6
+
+
+def _truthy_query_param(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _include_preview_books(request) -> bool:
+    return _truthy_query_param(request.query_params.get("include_preview_books"))
+
+
+def _attach_shelf_preview_books(*, shelves, user) -> None:
+    shelf_list = list(shelves)
+    shelf_ids = [shelf.id for shelf in shelf_list]
+    if not shelf_ids:
+        return
+
+    queryset = ShelfItem.objects.select_related("book").filter(shelf_id__in=shelf_ids)
+    if not core_policies.can_manage_library(user):
+        visible_assignment = BookGroupAssignment.objects.filter(
+            book_id=OuterRef("book_id"),
+            group__memberships__user=user,
+        )
+        queryset = queryset.filter(Exists(visible_assignment))
+
+    queryset = (
+        queryset.annotate(
+            _preview_parent_id=F("shelf_id"),
+            _preview_rank=Window(
+                expression=RowNumber(),
+                partition_by=[F("shelf_id")],
+                order_by=[
+                    F("position").asc(),
+                    F("created_at").asc(),
+                    F("id").asc(),
+                    F("book_id").asc(),
+                ],
+            ),
+        )
+        .filter(_preview_rank__lte=PREVIEW_BOOK_LIMIT)
+        .order_by("_preview_parent_id", "_preview_rank")
+    )
+
+    grouped = defaultdict(list)
+    for item in queryset:
+        grouped[str(item._preview_parent_id)].append(item.book)
+
+    for shelf in shelf_list:
+        shelf._preview_books = grouped.get(str(shelf.id), [])
 
 
 class ShelfViewSet(
@@ -96,6 +150,11 @@ class ShelfViewSet(
             return ShelfPatchSerializer
         return ShelfSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = _include_preview_books(self.request)
+        return context
+
     def _raise_drf_validation(self, exc: DjangoValidationError) -> NoReturn:
         raise serializers.ValidationError(
             exc.message_dict if hasattr(exc, "message_dict") else exc.messages
@@ -127,6 +186,27 @@ class ShelfViewSet(
         if not can_view_shelf(user=self.request.user, shelf=obj):
             raise Http404()
         return obj
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        shelves = list(page) if page is not None else list(queryset)
+
+        if _include_preview_books(request):
+            _attach_shelf_preview_books(shelves=shelves, user=request.user)
+
+        serializer = self.get_serializer(shelves, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if _include_preview_books(request):
+            _attach_shelf_preview_books(shelves=[instance], user=request.user)
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = cast(Any, self.get_serializer(data=request.data or {}))

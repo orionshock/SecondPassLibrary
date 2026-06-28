@@ -5,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from core import policies
 from core.errors import ErrorCode, api_error_payload
+from library.catalog_serializers import BookPreviewSerializer
 
 from .models import (
     BookGroupAssignment,
@@ -17,6 +18,7 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
     is_public_group = serializers.SerializerMethodField(read_only=True)
     is_curator = serializers.SerializerMethodField(read_only=True)
     capabilities = serializers.SerializerMethodField(read_only=True)
+    preview_books = serializers.SerializerMethodField(read_only=True)
 
     def get_is_public_group(self, obj: LibraryGroup) -> bool:
         return is_public_group(obj)
@@ -46,6 +48,20 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
 
         return {"can_curate": policies.can_curate_group(user=user, group=obj)}
 
+    def get_preview_books(self, obj: LibraryGroup) -> list[dict[str, Any]]:
+        books = getattr(obj, "_preview_books", [])
+        return BookPreviewSerializer(
+            books,
+            many=True,
+            context=self.context,
+        ).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get("include_preview_books", False):
+            data.pop("preview_books", None)
+        return data
+
     class Meta:
         model = LibraryGroup
         fields = [
@@ -55,6 +71,7 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
             "is_public_group",
             "is_curator",
             "capabilities",
+            "preview_books",
             "created_at",
             "updated_at",
         ]

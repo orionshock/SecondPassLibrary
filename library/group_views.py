@@ -1,8 +1,10 @@
+from collections import defaultdict
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db.models import Prefetch, Q
+from django.db.models import Exists, F, OuterRef, Prefetch, Q, Window
+from django.db.models.functions import RowNumber
 from django.http import Http404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -35,6 +37,7 @@ from .group_services import (
 )
 from .models import (
     Book,
+    BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,
     is_public_group,
@@ -42,6 +45,55 @@ from .models import (
 from .view_mixins import ClientBearerReadOnlyMixin
 
 User = get_user_model()
+
+PREVIEW_BOOK_LIMIT = 6
+
+
+def _truthy_query_param(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _include_preview_books(request) -> bool:
+    return _truthy_query_param(request.query_params.get("include_preview_books"))
+
+
+def _attach_group_preview_books(*, groups, user) -> None:
+    group_list = list(groups)
+    group_ids = [group.id for group in group_list]
+    if not group_ids:
+        return
+
+    queryset = BookGroupAssignment.objects.select_related("book").filter(group_id__in=group_ids)
+    if not policies.can_manage_library(user):
+        visible_assignment = BookGroupAssignment.objects.filter(
+            book_id=OuterRef("book_id"),
+            group__memberships__user=user,
+        )
+        queryset = queryset.filter(Exists(visible_assignment))
+
+    queryset = (
+        queryset.annotate(
+            _preview_parent_id=F("group_id"),
+            _preview_rank=Window(
+                expression=RowNumber(),
+                partition_by=[F("group_id")],
+                order_by=[
+                    F("created_at").desc(),
+                    F("book__title").asc(),
+                    F("book_id").asc(),
+                ],
+            ),
+        )
+        .filter(_preview_rank__lte=PREVIEW_BOOK_LIMIT)
+        .order_by("_preview_parent_id", "_preview_rank")
+    )
+
+    grouped = defaultdict(list)
+    for assignment in queryset:
+        grouped[str(assignment._preview_parent_id)].append(assignment.book)
+
+    for group in group_list:
+        group._preview_books = grouped.get(str(group.id), [])
 
 
 def _membership_payload(membership: LibraryGroupMembership) -> dict[str, Any]:
@@ -79,6 +131,11 @@ class LibraryGroupViewSet(
             return LibraryGroupPresentationUpdateSerializer
         return LibraryGroupSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = _include_preview_books(self.request)
+        return context
+
     def get_queryset(self):
         queryset = super().get_queryset().order_by(*self.ordering)
         user = self.request.user
@@ -93,6 +150,27 @@ class LibraryGroupViewSet(
         return queryset.filter(
             Q(id=public.id) | Q(memberships__user=user)
         ).distinct()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        groups = list(page) if page is not None else list(queryset)
+
+        if _include_preview_books(request):
+            _attach_group_preview_books(groups=groups, user=request.user)
+
+        serializer = self.get_serializer(groups, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if _include_preview_books(request):
+            _attach_group_preview_books(groups=[instance], user=request.user)
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         # Disallow full PUT updates; only PATCH is supported for presentation fields.

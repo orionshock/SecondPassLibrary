@@ -6,7 +6,11 @@ from rest_framework import serializers
 
 from accounts.user_payloads import compact_user_payload
 from library.models import Book, is_public_group
-from library.catalog_serializers import AuthorSummarySerializer, SeriesSummarySerializer
+from library.catalog_serializers import (
+    AuthorSummarySerializer,
+    BookPreviewSerializer,
+    SeriesSummarySerializer,
+)
 
 from .models import Shelf, ShelfItem
 from .policies import can_edit_shelf_for_request
@@ -19,6 +23,7 @@ class ShelfSerializer(serializers.ModelSerializer):
     item_count = serializers.IntegerField(read_only=True)
     matched_item_id = serializers.UUIDField(read_only=True, allow_null=True, required=False)
     can_edit = serializers.SerializerMethodField(read_only=True)
+    preview_books = serializers.SerializerMethodField(read_only=True)
 
     def get_owner_user(self, obj: Shelf) -> dict[str, Any] | None:
         user = obj.owner_user
@@ -44,6 +49,20 @@ class ShelfSerializer(serializers.ModelSerializer):
             return False
         return can_edit_shelf_for_request(request=request, shelf=obj)
 
+    def get_preview_books(self, obj: Shelf) -> list[dict[str, Any]]:
+        books = getattr(obj, "_preview_books", [])
+        return BookPreviewSerializer(
+            books,
+            many=True,
+            context=self.context,
+        ).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get("include_preview_books", False):
+            data.pop("preview_books", None)
+        return data
+
     class Meta:
         model = Shelf
         fields = [
@@ -57,6 +76,7 @@ class ShelfSerializer(serializers.ModelSerializer):
             "item_count",
             "matched_item_id",
             "can_edit",
+            "preview_books",
             "created_by",
             "created_at",
             "updated_at",
