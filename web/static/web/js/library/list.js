@@ -1,14 +1,46 @@
 import { fetchJSON } from "../api.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
 import { mountCovers } from "../ui/covers.js";
+import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
 
-function bookFileHtml(file) {
-  if (!file || !file.download_url) return "";
-  const label = "Download";
-  return `<div class="book__files"><a class="pill" href="${escapeHtml(
-    file.download_url
-  )}">${escapeHtml(label)}</a></div>`;
+function publishedYear(value) {
+  const raw = value == null ? "" : String(value).trim();
+  if (!raw) return "";
+  const match = raw.match(/\d{4}/);
+  return match ? match[0] : raw;
+}
+
+function compactSubtitle(title, subtitle) {
+  const cleanSubtitle = subtitle ? String(subtitle).trim() : "";
+  if (!cleanSubtitle) return "";
+  const cleanTitle = title ? String(title).trim().toLowerCase() : "";
+  return cleanTitle.includes(cleanSubtitle.toLowerCase()) ? "" : cleanSubtitle;
+}
+
+function renderTags(subjects) {
+  const values = Array.isArray(subjects)
+    ? subjects.map((s) => String(s).trim()).filter(Boolean)
+    : typeof subjects === "string"
+      ? [subjects.trim()].filter(Boolean)
+      : [];
+  if (!values.length) return "";
+
+  const visible = values.slice(0, 6);
+  const extra = values.length - visible.length;
+  const pills = visible
+    .map((tag) => `<span class="pill">${escapeHtml(tag)}</span>`)
+    .join(" ");
+  return `<div class="library-row__tags"><span class="library-row__label">Tags</span><span class="library-row__tag-list">${pills}${extra > 0 ? ` <span class="pill">+${extra}</span>` : ""}</span></div>`;
+}
+
+function renderGroups(groups) {
+  const visibleGroups = Array.isArray(groups) ? groups : [];
+  if (!visibleGroups.length) return "";
+  const badges = visibleGroups
+    .map((group) => renderGroupBadge(group, { compact: true }).outerHTML)
+    .join(" ");
+  return `<div class="library-row__groups">${badges}</div>`;
 }
 
 function renderBooks(payload) {
@@ -19,30 +51,36 @@ function renderBooks(payload) {
     .map((b) => {
       const title = b.title || "(Untitled)";
       const bookHref = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
-      const subtitle = b.subtitle ? ` <span class="muted">- ${escapeHtml(b.subtitle)}</span>` : "";
+      const subtitle = compactSubtitle(title, b.subtitle);
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const series = b.series && b.series.name ? b.series.name : "";
       const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
       const seriesLine = series ? `${series}${seriesIndex ? ` ${seriesIndex}` : ""}` : "";
-      const language = b.language || "";
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
+      const year = publishedYear(b.published_date);
+      const publisher = b.publisher ? String(b.publisher).trim() : "";
+      const publisherLine = [publisher, year].filter(Boolean).join(" - ");
 
       const metaLines = [];
-      if (authors.length) metaLines.push(`<div>${escapeHtml(authors.join(", "))}</div>`);
-      if (seriesLine) metaLines.push(`<div>${escapeHtml(seriesLine)}</div>`);
-      if (language) metaLines.push(`<div>Language: ${escapeHtml(language)}</div>`);
+      if (authors.length) metaLines.push(`<span>${escapeHtml(authors.join(", "))}</span>`);
+      if (seriesLine) metaLines.push(`<span>${escapeHtml(seriesLine)}</span>`);
+      if (publisherLine) metaLines.push(`<span>${escapeHtml(publisherLine)}</span>`);
+      const tags = renderTags(b.subjects);
+      const groups = renderGroups(b.groups);
 
       return `
-          <article class="book book--with-cover">
+          <article class="library-row">
             <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
-            <div>
-              <h3 class="book__title">${
+            <div class="library-row__body">
+              <h3 class="library-row__title">${
                 bookHref
-                  ? `<a href="${escapeHtml(bookHref)}">${escapeHtml(title)}</a>${subtitle}`
-                  : `${escapeHtml(title)}${subtitle}`
+                  ? `<a href="${escapeHtml(bookHref)}">${escapeHtml(title)}</a>`
+                  : `${escapeHtml(title)}`
               }</h3>
-              <div class="book__meta">${metaLines.join("") || '<div class="muted">No metadata.</div>'}</div>
-              ${bookFileHtml(b.file)}
+              ${subtitle ? `<div class="library-row__subtitle">${escapeHtml(subtitle)}</div>` : ""}
+              <div class="library-row__meta">${metaLines.join("") || '<span class="muted">No metadata.</span>'}</div>
+              ${tags}
+              ${groups}
             </div>
           </article>
         `.trim();
