@@ -88,7 +88,7 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
 
     grouped = defaultdict(list)
     for item in queryset:
-        grouped[str(item._preview_parent_id)].append(item.book)
+        grouped[str(getattr(item, "_preview_parent_id"))].append(item.book)
 
     for shelf in shelf_list:
         shelf._preview_books = grouped.get(str(shelf.id), [])

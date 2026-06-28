@@ -50,11 +50,14 @@ class LibraryGroupSerializer(serializers.ModelSerializer):
 
     def get_preview_books(self, obj: LibraryGroup) -> list[dict[str, Any]]:
         books = getattr(obj, "_preview_books", [])
-        return BookPreviewSerializer(
-            books,
-            many=True,
-            context=self.context,
-        ).data
+        return cast(
+            list[dict[str, Any]],
+            BookPreviewSerializer(
+                books,
+                many=True,
+                context=self.context,
+            ).data,
+        )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from rest_framework import serializers
 
@@ -51,11 +51,14 @@ class ShelfSerializer(serializers.ModelSerializer):
 
     def get_preview_books(self, obj: Shelf) -> list[dict[str, Any]]:
         books = getattr(obj, "_preview_books", [])
-        return BookPreviewSerializer(
-            books,
-            many=True,
-            context=self.context,
-        ).data
+        return cast(
+            list[dict[str, Any]],
+            BookPreviewSerializer(
+                books,
+                many=True,
+                context=self.context,
+            ).data,
+        )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

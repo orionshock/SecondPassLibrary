@@ -25,7 +25,11 @@ class ShelfPreviewBooksAPITest(APITestCase):
         self.reader = User.objects.create_user(username="reader", password="pw")
         ensure_user_public_membership(user=self.reader)
 
-        self.owner = User.objects.create_superuser(username="owner", password="pw")
+        self.owner = User.objects.create_superuser(
+            username="owner",
+            email="owner@example.com",
+            password="pw",
+        )
         ensure_user_public_membership(user=self.owner)
 
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")

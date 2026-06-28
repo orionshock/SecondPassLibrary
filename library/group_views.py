@@ -90,7 +90,7 @@ def _attach_group_preview_books(*, groups, user) -> None:
 
     grouped = defaultdict(list)
     for assignment in queryset:
-        grouped[str(assignment._preview_parent_id)].append(assignment.book)
+        grouped[str(getattr(assignment, "_preview_parent_id"))].append(assignment.book)
 
     for group in group_list:
         group._preview_books = grouped.get(str(group.id), [])

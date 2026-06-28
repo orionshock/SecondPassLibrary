@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from io import BytesIO
+from typing import Any, cast
 
 from django.contrib.auth.models import User
 from PIL import Image
@@ -27,7 +29,10 @@ class BookPreviewSerializerTest(IsolatedMediaRootMixin, APITestCase):
     def test_without_cover_uses_minimal_shape_with_null_cover_url(self):
         book = create_file_backed_book(title="No Cover", assign_public=False).book
 
-        payload = BookPreviewSerializer(book, context={"request": self._request()}).data
+        payload = cast(
+            Mapping[str, Any],
+            BookPreviewSerializer(book, context={"request": self._request()}).data,
+        )
 
         self.assertEqual(set(payload.keys()), {"id", "title", "cover_url"})
         self.assertEqual(payload["id"], str(book.id))
@@ -46,7 +51,10 @@ class BookPreviewSerializerTest(IsolatedMediaRootMixin, APITestCase):
         image.save(buffer, format="PNG")
         set_book_cover_from_bytes(book=book, data=buffer.getvalue(), source="manual")
 
-        payload = BookPreviewSerializer(book, context={"request": self._request()}).data
+        payload = cast(
+            Mapping[str, Any],
+            BookPreviewSerializer(book, context={"request": self._request()}).data,
+        )
 
         self.assertEqual(set(payload.keys()), {"id", "title", "cover_url"})
         self.assertEqual(payload["id"], str(book.id))

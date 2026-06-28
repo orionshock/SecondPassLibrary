@@ -70,7 +70,7 @@ def _attach_author_preview_books(*, authors, user) -> None:
 
     grouped = defaultdict(list)
     for book in queryset:
-        grouped[str(book._preview_parent_id)].append(book)
+        grouped[str(getattr(book, "_preview_parent_id"))].append(book)
 
     for author in author_list:
         author._preview_books = grouped.get(str(author.id), [])
@@ -104,7 +104,7 @@ def _attach_series_preview_books(*, series, user) -> None:
 
     grouped = defaultdict(list)
     for book in queryset:
-        grouped[str(book._preview_parent_id)].append(book)
+        grouped[str(getattr(book, "_preview_parent_id"))].append(book)
 
     for item in series_list:
         item._preview_books = grouped.get(str(item.id), [])
