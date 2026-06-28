@@ -92,24 +92,24 @@
       group-scoped management access to readers.
     </div>
 
-    <div id="user-memberships-status" class="muted"></div>
+    <br />
     <div id="user-memberships-results"></div>
 
-    <form id="user-memberships-add-form" style="margin-top: 12px;">
+    <form id="user-memberships-add-form" class="membership-add-tile">
       {% csrf_token %}
-      <div class="kv">
-        <div class="kv__k"><label for="user-memberships-add-group">Add to group</label></div>
-        <div class="kv__v">
+      <div class="membership-add-tile__group">
+        <label class="membership-add-tile__label" for="user-memberships-add-group">Add to group</label>
+        <div class="membership-add-tile__control">
           <select id="user-memberships-add-group" style="width: 100%;"></select>
-        </div>
-
-        <div class="kv__k"><label for="user-memberships-add-role">Curator</label></div>
-        <div class="kv__v">
-          <input id="user-memberships-add-role" type="checkbox" />
         </div>
       </div>
 
-      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <label class="membership-add-tile__curator" for="user-memberships-add-role">
+          <input id="user-memberships-add-role" type="checkbox" />
+          <span>Curator</span>
+      </label>
+
+      <div class="membership-add-tile__actions">
         <button id="user-memberships-add-submit" class="button" type="submit">Add</button>
         <span id="user-memberships-add-status" class="muted"></span>
       </div>

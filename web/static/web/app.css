@@ -557,6 +557,15 @@ input[type="file"]:disabled::file-selector-button {
 }
 .icon-button:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 .icon-button .material-symbols-outlined { font-size: 18px; }
+.icon-button--danger {
+  border-color: rgba(251, 113, 133, 0.6);
+  background: rgba(251, 113, 133, 0.1);
+  color: rgb(251, 113, 133);
+}
+.icon-button--danger:hover {
+  background: rgba(251, 113, 133, 0.18);
+  color: rgb(254, 205, 211);
+}
 
 .kv { display: grid; grid-template-columns: 160px 1fr; gap: 4px 12px; }
 .kv__k { color: var(--muted); }
@@ -1028,6 +1037,96 @@ input[type="file"]:disabled::file-selector-button {
 .user-row__badges { margin-top: 4px; }
 .user-identity--shell {
   max-width: 100%;
+}
+
+/* User edit: group memberships */
+.membership-row {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) minmax(220px, 1.4fr);
+  gap: 8px 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.membership-row + .membership-row {
+  margin-top: 6px;
+}
+.membership-row__group,
+.membership-row__controls,
+.membership-row__actions {
+  min-width: 0;
+}
+.membership-row__controls,
+.membership-row__actions,
+.membership-row__curator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.membership-row__actions {
+  justify-content: flex-start;
+}
+.membership-row__curator {
+  color: var(--text);
+}
+.membership-row__note,
+.membership-row__status {
+  font-size: 12px;
+}
+.membership-row__note {
+  flex-basis: 100%;
+}
+.membership-row__status {
+  min-width: 56px;
+}
+.membership-add-tile {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 10px 12px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.membership-add-tile__group,
+.membership-add-tile__control {
+  min-width: 0;
+}
+.membership-add-tile__label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.membership-add-tile__curator,
+.membership-add-tile__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.membership-add-tile__curator {
+  min-height: 34px;
+  color: var(--text);
+}
+.membership-add-tile__actions {
+  justify-content: flex-end;
+}
+@media (max-width: 720px) {
+  .membership-row,
+  .membership-add-tile {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .membership-row__actions,
+  .membership-add-tile__actions {
+    justify-content: flex-start;
+  }
 }
 
 /* Book edit header / tabs */

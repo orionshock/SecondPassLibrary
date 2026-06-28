@@ -22,9 +22,22 @@ export function renderGroupsReadOnly(groups) {
     .join("");
 }
 
-export function renderMembershipControls(groups) {
+function descriptionForGroup(group, groupDetailsById) {
+  const ownDescription = group && group.description ? String(group.description).trim() : "";
+  if (ownDescription) return ownDescription;
+  const groupId = group && group.id != null ? String(group.id) : "";
+  const detail = groupId ? groupDetailsById.get(groupId) : null;
+  return detail && detail.description ? String(detail.description).trim() : "";
+}
+
+export function renderMembershipControls(groups, allGroups = []) {
   const list = Array.isArray(groups) ? groups : [];
   if (!list.length) return '<div class="muted">No group memberships.</div>';
+  const groupDetailsById = new Map(
+    (Array.isArray(allGroups) ? allGroups : [])
+      .filter((g) => g && g.id != null)
+      .map((g) => [String(g.id), g])
+  );
 
   return list
     .map((g) => {
@@ -33,25 +46,31 @@ export function renderMembershipControls(groups) {
       const isCurator = !!g.is_curator;
       const isPublic = !!g.is_public_group;
 
-      const saveDisabled = isPublic ? "disabled" : "";
       const note = isPublic
-        ? '<div class="muted">Public is the default/fallback group. Curator assignment is not available; removal is allowed when another membership remains (final removal restores Public).</div>'
+        ? '<div class="membership-row__note muted">Public fallback group; curator unavailable.</div>'
         : "";
+      const groupBadge = renderGroupBadge(g).outerHTML;
+      const description = descriptionForGroup(g, groupDetailsById);
+      const titleAttr = description ? ` title="${escapeHtml(description)}"` : "";
+      const curatorControl = isPublic
+        ? ""
+        : `
+              <label class="membership-row__curator">
+                <input type="checkbox" data-action="membership-curator" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${isCurator ? "checked" : ""} />
+                <span>Curator</span>
+              </label>
+            `.trim();
 
       return `
-          <article class="book">
-            <h3 class="book__title">${renderGroupBadge(g).outerHTML}</h3>
-            <div class="book__meta">
-              <div class="badge-row">
-                <span class="pill">Member</span>
-                ${isCurator ? '<span class="pill">Curator</span>' : ""}
-                <label><input type="checkbox" data-action="membership-curator" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${isCurator ? "checked" : ""} ${isPublic ? "disabled" : ""} /> Curator</label>
-              </div>
-              ${note}
+          <article class="membership-row">
+            <div class="membership-row__actions">
+              <button class="icon-button icon-button--danger" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" aria-label="Remove membership" title="Remove membership"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
             </div>
-            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="button" type="button" data-action="membership-save" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${saveDisabled}>Save</button>
-              <button class="icon-button" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" aria-label="Remove membership" title="Remove membership"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
+            <div class="membership-row__group"${titleAttr}>${groupBadge}</div>
+            <div class="membership-row__controls">
+              ${curatorControl}
+              ${note}
+              <span class="membership-row__status muted" aria-live="polite"></span>
             </div>
           </article>
         `.trim();
@@ -103,7 +122,6 @@ export function refreshAddGroupOptions({ allGroups, userGroups, addGroupSelect, 
 export function initUserMembershipsManager({
   userId,
   membershipsCard,
-  membershipsStatus,
   membershipsResults,
   addForm,
   addGroupSelect,
@@ -125,55 +143,115 @@ export function initUserMembershipsManager({
     return;
   }
 
+  let liveStatusTimer = null;
+  function clearLiveStatusLater(rowStatus) {
+    if (liveStatusTimer) window.clearTimeout(liveStatusTimer);
+    liveStatusTimer = window.setTimeout(() => {
+      if (rowStatus) {
+        rowStatus.textContent = "";
+        rowStatus.classList.remove("error");
+      }
+    }, 5000);
+  }
+
   membershipsResults.addEventListener("click", async (e) => {
     const source = e.target;
     if (!source || source.nodeType !== 1) return;
     const target = source.closest("[data-action]");
     if (!target || !membershipsResults.contains(target)) return;
     const action = target.getAttribute("data-action");
-    if (action !== "membership-save" && action !== "membership-remove") return;
+    if (action !== "membership-remove") return;
 
     const groupId = target.getAttribute("data-group-id") || "";
     const membershipId = target.getAttribute("data-membership-id") || "";
-    if (!groupId || !membershipId) {
-      setStatus(membershipsStatus, "Missing membership identifiers.", true);
-      return;
+    const row = target.closest(".membership-row");
+    const rowStatus = row ? row.querySelector(".membership-row__status") : null;
+    function setRowStatus(text, isError) {
+      if (!rowStatus) return;
+      rowStatus.textContent = text || "";
+      rowStatus.classList.toggle("error", !!isError);
     }
 
+    if (!groupId || !membershipId) {
+      setRowStatus("Missing membership identifiers.", true);
+      return;
+    }
+    if (!window.confirm("Remove this user from the group?")) return;
+
     try {
-      setStatus(membershipsStatus, action === "membership-save" ? "Saving..." : "Removing...", false);
+      setRowStatus("Removing...", false);
       setGlobalError("");
 
       const csrf = getCsrfToken();
       const headers = { Accept: "application/json", "Content-Type": "application/json" };
       if (csrf) headers["X-CSRFToken"] = csrf;
 
-      if (action === "membership-save") {
-        const container = target.closest("article");
-        const curatorInput = container ? container.querySelector('input[data-action="membership-curator"]') : null;
-        const isCurator = !!(curatorInput && curatorInput.checked);
-        await fetchJSONWithOptions(
-          `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
-          {
-            method: "PATCH",
-            headers,
-            body: JSON.stringify({ is_curator: isCurator }),
-          }
-        );
-      } else {
-        await fetchJSONWithOptions(
-          `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
-          { method: "DELETE", headers }
-        );
-      }
+      await fetchJSONWithOptions(
+        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
+        { method: "DELETE", headers }
+      );
 
+      setRowStatus("Removed.", false);
       await refreshUserAndMemberships();
-      setStatus(membershipsStatus, action === "membership-save" ? "Saved." : "Removed.", false);
     } catch (e2) {
       console.error("Membership action failed", { action, groupId, membershipId, e2 });
       const msg = extractApiErrorMessage(e2);
-      setStatus(membershipsStatus, msg, true);
+      setRowStatus(msg, true);
       setGlobalError(msg);
+    }
+  });
+
+  membershipsResults.addEventListener("change", async (e) => {
+    const source = e.target;
+    if (!source || source.nodeType !== 1) return;
+    const target = source.closest('input[data-action="membership-curator"]');
+    if (!target || !membershipsResults.contains(target)) return;
+
+    const groupId = target.getAttribute("data-group-id") || "";
+    const membershipId = target.getAttribute("data-membership-id") || "";
+    const row = target.closest(".membership-row");
+    const rowStatus = row ? row.querySelector(".membership-row__status") : null;
+    const desired = !!target.checked;
+    function setRowStatus(text, isError) {
+      if (!rowStatus) return;
+      rowStatus.textContent = text || "";
+      rowStatus.classList.toggle("error", !!isError);
+    }
+
+    if (!groupId || !membershipId) {
+      setRowStatus("Missing membership identifiers.", true);
+      target.checked = !desired;
+      return;
+    }
+
+    try {
+      target.disabled = true;
+      setRowStatus("Saving...", false);
+      setGlobalError("");
+
+      const csrf = getCsrfToken();
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (csrf) headers["X-CSRFToken"] = csrf;
+
+      await fetchJSONWithOptions(
+        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
+        {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ is_curator: desired }),
+        }
+      );
+
+      setRowStatus("Saved.", false);
+      clearLiveStatusLater(rowStatus);
+    } catch (e2) {
+      target.checked = !desired;
+      console.error("Curator update failed", { groupId, membershipId, e2 });
+      const msg = extractApiErrorMessage(e2);
+      setRowStatus(msg, true);
+      setGlobalError(msg);
+    } finally {
+      target.disabled = false;
     }
   });
 

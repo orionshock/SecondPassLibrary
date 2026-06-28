@@ -895,6 +895,29 @@ class ProductUiSmokeTests(TestCase):
 
         self.assertIn('from "../ui/groups.js"', user_memberships_js)
         self.assertIn("renderGroupBadge(g", user_memberships_js)
+        self.assertIn('class="membership-row"', user_memberships_js)
+        self.assertIn('class="membership-row__group"', user_memberships_js)
+        self.assertIn('class="membership-row__controls"', user_memberships_js)
+        self.assertIn('class="membership-row__actions"', user_memberships_js)
+        self.assertIn('class="membership-row__status muted"', user_memberships_js)
+        self.assertIn('data-action="membership-curator"', user_memberships_js)
+        self.assertIn("Public fallback group; curator unavailable.", user_memberships_js)
+        self.assertIn("descriptionForGroup", user_memberships_js)
+        self.assertIn("titleAttr", user_memberships_js)
+        self.assertIn('input[data-action="membership-curator"]', user_memberships_js)
+        self.assertIn('method: "PATCH"', user_memberships_js)
+        self.assertIn("clearLiveStatusLater", user_memberships_js)
+        self.assertIn("5000", user_memberships_js)
+        self.assertIn('window.confirm("Remove this user from the group?")', user_memberships_js)
+        self.assertIn("icon-button--danger", user_memberships_js)
+        self.assertNotIn('data-action="membership-save"', user_memberships_js)
+        self.assertNotIn('<span class="pill">Member</span>', user_memberships_js)
+        self.assertNotIn('<span class="pill">Curator</span>', user_memberships_js)
+        self.assertNotIn('disabled" : ""} />', user_memberships_js)
+        self.assertNotIn("Public is the default/fallback group", user_memberships_js)
+        self.assertNotIn("membership_role", user_memberships_js)
+        self.assertNotIn("curated_group_ids", user_memberships_js)
+        self.assertNotIn("me.capabilities", user_memberships_js)
         self.assertNotIn(
             "${escapeHtml(g.name || String(g.id || \"\"))}",
             user_memberships_js,
@@ -942,6 +965,16 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".shelf-metadata-piece + .shelf-metadata-piece::before", css)
         self.assertIn(".shelf-view-heading", css)
         self.assertIn(".shelf-view-description", css)
+        self.assertIn(".membership-row", css)
+        self.assertIn(".membership-row__group", css)
+        self.assertIn(".membership-row__controls", css)
+        self.assertIn(".membership-row__actions", css)
+        self.assertIn(".membership-row__status", css)
+        self.assertIn(".icon-button--danger", css)
+        self.assertIn(".membership-add-tile", css)
+        self.assertIn(".membership-add-tile__curator", css)
+        self.assertIn(".membership-add-tile__actions", css)
+        self.assertIn("@media (max-width: 720px)", css)
 
     def test_shelves_product_ui_list_uses_visibility_scoped_api(self):
         template = Path("web/templates/web/shelves/shelves.html").read_text(encoding="utf-8")
@@ -1045,6 +1078,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('aria-label", "Remove from group"', book_edit_groups_js)
         self.assertIn("remove_circle", user_memberships_js)
         self.assertIn('aria-label="Remove membership"', user_memberships_js)
+        self.assertIn('data-action="membership-remove"', user_memberships_js)
+        self.assertIn('class="membership-row__status muted"', user_memberships_js)
+        self.assertIn("setRowStatus", user_memberships_js)
+        self.assertNotIn("membershipsStatus", user_memberships_js)
         self.assertIn('closest("[data-action]")', group_memberships_js)
         self.assertIn('closest("[data-action]")', user_memberships_js)
         self.assertIn('class="identity-row"', groups_list_js)
@@ -1492,6 +1529,9 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="user-reset-password-btn"')
         self.assertContains(response, 'id="user-memberships-card"')
         self.assertContains(response, 'id="user-memberships-add-form"')
+        self.assertNotContains(response, 'id="user-memberships-status"')
+        self.assertContains(response, 'class="membership-add-tile"')
+        self.assertContains(response, 'class="membership-add-tile__curator"')
         self.assertContains(
             response,
             "Managers, librarians, and owners can already manage books globally.",

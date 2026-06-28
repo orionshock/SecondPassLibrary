@@ -45,7 +45,6 @@ export async function initUserEdit() {
   const resetCopy = $("#user-reset-password-copy");
 
   const membershipsCard = $("#user-memberships-card");
-  const membershipsStatus = $("#user-memberships-status");
   const membershipsResults = $("#user-memberships-results");
   const addForm = $("#user-memberships-add-form");
   const addGroupSelect = $("#user-memberships-add-group");
@@ -75,7 +74,6 @@ export async function initUserEdit() {
     !resetResult ||
     !resetCopy ||
     !membershipsCard ||
-    !membershipsStatus ||
     !membershipsResults ||
     !addForm ||
     !addGroupSelect ||
@@ -178,9 +176,8 @@ export async function initUserEdit() {
     setStatus(resetStatus, "", false);
 
     if (canManageMemberships) {
-      setStatus(membershipsStatus, "", false);
-      membershipsResults.innerHTML = renderMembershipControls(payload.groups);
       allGroups = await loadAllGroups();
+      membershipsResults.innerHTML = renderMembershipControls(payload.groups, allGroups);
       refreshAddGroupOptions({ allGroups, userGroups: payload.groups, addGroupSelect, addSubmitBtn });
       setStatus(addStatus, "", false);
     }
@@ -206,8 +203,8 @@ export async function initUserEdit() {
     applyRoleOptions();
 
     if (canManageMemberships) {
-      membershipsResults.innerHTML = renderMembershipControls(payload.groups);
       if (!allGroups) allGroups = await loadAllGroups();
+      membershipsResults.innerHTML = renderMembershipControls(payload.groups, allGroups);
       refreshAddGroupOptions({ allGroups, userGroups: payload.groups, addGroupSelect, addSubmitBtn });
     }
     return payload;
@@ -217,7 +214,6 @@ export async function initUserEdit() {
   initUserMembershipsManager({
     userId,
     membershipsCard,
-    membershipsStatus,
     membershipsResults,
     addForm,
     addGroupSelect,
