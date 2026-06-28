@@ -67,7 +67,7 @@ function rangeText({ count, page, pageSize, resultLength }) {
 
 function visibleBookCountLabel(count) {
   const value = Number.isFinite(Number(count)) ? Number(count) : 0;
-  return `${value} visible ${value === 1 ? "book" : "books"}`;
+  return `${value} ${value === 1 ? "Book" : "Books"}`;
 }
 
 function renderBooks(payload) {
@@ -131,11 +131,18 @@ function renderAuthors(payload) {
       });
       return `
         <article class="library-browse-row">
-          <div class="library-browse-row__main">
+          <button
+            class="library-browse-row__main library-browse-row__primary"
+            type="button"
+            data-action="browse-author"
+            data-id="${escapeHtml(id)}"
+            data-name="${escapeHtml(name)}"
+            aria-label="View books by ${escapeHtml(name)}"
+          >
             <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
             <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
-            ${previews}
-          </div>
+          </button>
+          ${previews}
           <button
             class="button"
             type="button"
@@ -166,11 +173,18 @@ function renderSeries(payload) {
       });
       return `
         <article class="library-browse-row">
-          <div class="library-browse-row__main">
+          <button
+            class="library-browse-row__main library-browse-row__primary"
+            type="button"
+            data-action="browse-series"
+            data-id="${escapeHtml(id)}"
+            data-name="${escapeHtml(name)}"
+            aria-label="View books in ${escapeHtml(name)}"
+          >
             <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
             <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
-            ${previews}
-          </div>
+          </button>
+          ${previews}
           <button
             class="button"
             type="button"

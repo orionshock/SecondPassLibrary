@@ -1009,7 +1009,7 @@ input[type="file"]:disabled::file-selector-button {
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
-  margin-top: 7px;
+  min-width: 0;
 }
 .cover-preview-button {
   width: 34px;
@@ -1061,7 +1061,7 @@ input[type="file"]:disabled::file-selector-button {
 }
 .library-browse-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
   gap: 10px 14px;
   align-items: center;
   padding: 9px 11px;
@@ -1076,6 +1076,20 @@ input[type="file"]:disabled::file-selector-button {
 }
 .library-browse-row__main {
   min-width: 0;
+}
+.library-browse-row__primary {
+  display: block;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.library-browse-row__primary:hover .library-browse-row__title,
+.library-browse-row__primary:focus-visible .library-browse-row__title {
+  text-decoration: underline;
 }
 .library-browse-row__title {
   margin: 0;
