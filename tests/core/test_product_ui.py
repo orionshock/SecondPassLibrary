@@ -1358,6 +1358,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('class="badge-row"', groups_shared_js)
         self.assertIn("remove_circle", groups_shared_js)
         self.assertIn('aria-label="Remove member"', groups_shared_js)
+        self.assertNotIn("user.is_owner", groups_shared_js)
         self.assertIn("remove_circle", book_edit_groups_js)
         self.assertIn('aria-label", "Remove from group"', book_edit_groups_js)
         self.assertIn("remove_circle", user_memberships_js)

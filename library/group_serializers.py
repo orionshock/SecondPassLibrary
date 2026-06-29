@@ -169,7 +169,6 @@ class LibraryGroupMembershipSerializer(serializers.Serializer):
         email = serializers.EmailField(allow_blank=True)
         first_name = serializers.CharField(allow_blank=True)
         last_name = serializers.CharField(allow_blank=True)
-        is_owner = serializers.BooleanField()
 
     id = serializers.UUIDField()
     user = MembershipUserSerializer()

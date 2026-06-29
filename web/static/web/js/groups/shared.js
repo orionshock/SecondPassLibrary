@@ -127,13 +127,12 @@ export function renderMembersReadOnly(payload) {
   return results
     .map((m) => {
       const user = m && m.user ? m.user : m;
-      const ownerBadge = user && user.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
       const curatorBadge = m.is_curator ? '<span class="pill">Curator</span>' : "";
       const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
       return `
         <article class="book card-row--compact">
           <div class="identity-row">
-            <h3 class="book__title identity-row__main">${identity}${ownerBadge}</h3>
+            <h3 class="book__title identity-row__main">${identity}</h3>
             <div class="badge-row"><span class="pill">Member</span>${curatorBadge}</div>
           </div>
         </article>
@@ -149,7 +148,6 @@ export function renderMembersManage(payload, { isPublicGroup }) {
   return results
     .map((m) => {
       const user = m && m.user ? m.user : m;
-      const ownerBadge = user && user.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
       const isCurator = !!m.is_curator;
       const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
       const curatorDisabled = isPublicGroup ? "disabled" : "";
@@ -161,7 +159,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
       return `
         <article class="book card-row--compact">
           <div class="identity-row">
-            <h3 class="book__title identity-row__main">${identity}${ownerBadge}</h3>
+            <h3 class="book__title identity-row__main">${identity}</h3>
             <div class="badge-row">
               <span class="pill">Member</span>
               ${isCurator ? '<span class="pill">Curator</span>' : ""}

@@ -105,7 +105,6 @@ def _membership_payload(membership: LibraryGroupMembership) -> dict[str, Any]:
             "email": user.email or "",
             "first_name": user.first_name or "",
             "last_name": user.last_name or "",
-            "is_owner": policies.is_owner(user),
         },
         "is_curator": bool(membership.is_curator),
         "created_at": membership.created_at,

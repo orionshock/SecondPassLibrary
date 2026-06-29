@@ -69,6 +69,11 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         self.assertIn("user", first)
         self.assertNotIn("user_id", first)
         self.assertEqual(first["user"]["profile_id"], str(self.reader.profile.id))
+        self.assertEqual(first["user"]["username"], "reader")
+        self.assertEqual(first["user"]["email"], "reader@example.com")
+        self.assertIn("first_name", first["user"])
+        self.assertIn("last_name", first["user"])
+        self.assertNotIn("is_owner", first["user"])
 
         self.client.logout()
         self.client.login(username="owner", password="pw")
@@ -139,6 +144,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         add_reader_data = cast(dict, add_reader.data)
         self.assertFalse(add_reader_data["is_curator"])
         self.assertEqual(add_reader_data["user"]["profile_id"], str(self.reader.profile.id))
+        self.assertNotIn("is_owner", add_reader_data["user"])
         self.assertNotIn("user_id", add_reader_data)
         self.assertNotIn("role", add_reader_data)
 
@@ -311,6 +317,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         patched_data = cast(dict, patched.data)
         self.assertIn("user", patched_data)
         self.assertEqual(patched_data["user"]["profile_id"], str(self.reader.profile.id))
+        self.assertNotIn("is_owner", patched_data["user"])
         self.assertNotIn("user_id", patched_data)
         membership.refresh_from_db()
         self.assertTrue(membership.is_curator)
