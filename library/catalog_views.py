@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Window
-from django.db.models.functions import RowNumber
+from django.db.models.functions import Random, RowNumber
 from django.http import Http404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -61,7 +61,7 @@ def _attach_author_preview_books(*, authors, user) -> None:
             _preview_rank=Window(
                 expression=RowNumber(),
                 partition_by=[F("authors__id")],
-                order_by=[F("title").asc(), F("id").asc()],
+                order_by=[Random(), F("id").asc()],
             ),
         )
         .filter(_preview_rank__lte=PREVIEW_BOOK_LIMIT)
@@ -92,8 +92,6 @@ def _attach_series_preview_books(*, series, user) -> None:
                 partition_by=[F("series_id")],
                 order_by=[
                     F("series_index").asc(nulls_last=True),
-                    F("published_date").asc(nulls_last=True),
-                    F("title").asc(),
                     F("id").asc(),
                 ],
             ),

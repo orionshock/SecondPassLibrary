@@ -76,7 +76,6 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
                 partition_by=[F("shelf_id")],
                 order_by=[
                     F("position").asc(),
-                    F("created_at").asc(),
                     F("id").asc(),
                     F("book_id").asc(),
                 ],

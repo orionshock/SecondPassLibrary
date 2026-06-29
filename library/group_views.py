@@ -4,7 +4,7 @@ from typing import Any, cast
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Exists, F, OuterRef, Prefetch, Q, Window
-from django.db.models.functions import RowNumber
+from django.db.models.functions import Random, RowNumber
 from django.http import Http404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -78,8 +78,7 @@ def _attach_group_preview_books(*, groups, user) -> None:
                 expression=RowNumber(),
                 partition_by=[F("group_id")],
                 order_by=[
-                    F("created_at").desc(),
-                    F("book__title").asc(),
+                    Random(),
                     F("book_id").asc(),
                 ],
             ),
