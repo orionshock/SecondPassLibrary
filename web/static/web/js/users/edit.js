@@ -16,6 +16,7 @@ import {
   renderGroupsReadOnly,
   renderMembershipControls,
 } from "./memberships.js";
+import { syncUserEditBreadcrumb } from "./navigation.js";
 import { initManagedPasswordReset } from "./password_reset.js";
 
 export async function initUserEdit() {
@@ -89,9 +90,13 @@ export async function initUserEdit() {
     setStatus(statusEl, "Missing profile id.", true);
     return;
   }
+  syncUserEditBreadcrumb(null);
 
   const allowed = canManageUsers(me);
   const canManageMemberships = canManageGroupMemberships(me);
+  let original = null;
+  let allGroups = null;
+  let canResetPassword = false;
 
   visible(notAllowedEl, !allowed);
   visible(cardEl, allowed);
@@ -118,21 +123,9 @@ export async function initUserEdit() {
     }
   }
 
-  if (!allowed) {
-    setStatus(statusEl, "Not allowed.", true);
-    visible(cardEl, false);
-    visible(membershipsCard, false);
-    return;
-  }
-
-  setStatus(statusEl, "Loading...", false);
-  let original = null;
-  let allGroups = null;
-  let canResetPassword = false;
-
-  try {
-    const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`);
+  function applyUserPayload(payload) {
     original = payload;
+    syncUserEditBreadcrumb(payload);
     usernameEl.replaceChildren(renderUserIdentity(payload));
     groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
     emailInput.value = payload.email || "";
@@ -141,8 +134,21 @@ export async function initUserEdit() {
     roleSelect.value = payload.role || "reader";
     activeSelect.value = payload.is_active === false ? "false" : "true";
     mustChangeInput.checked = !!payload.must_change_password;
-
     applyRoleOptions();
+  }
+
+  if (!allowed) {
+    setStatus(statusEl, "Not allowed.", true);
+    visible(cardEl, false);
+    visible(membershipsCard, false);
+    return;
+  }
+
+  setStatus(statusEl, "Loading...", false);
+
+  try {
+    const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`);
+    applyUserPayload(payload);
 
     setStatus(statusEl, "", false);
     setStatus(saveStatus, "", false);
@@ -191,16 +197,7 @@ export async function initUserEdit() {
 
   async function refreshUserAndMemberships() {
     const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`);
-    original = payload;
-    usernameEl.replaceChildren(renderUserIdentity(payload));
-    groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
-    emailInput.value = payload.email || "";
-    firstInput.value = payload.first_name || "";
-    lastInput.value = payload.last_name || "";
-    roleSelect.value = payload.role || "reader";
-    activeSelect.value = payload.is_active === false ? "false" : "true";
-    mustChangeInput.checked = !!payload.must_change_password;
-    applyRoleOptions();
+    applyUserPayload(payload);
 
     if (canManageMemberships) {
       if (!allGroups) allGroups = await loadAllGroups();
@@ -289,15 +286,7 @@ export async function initUserEdit() {
         body: JSON.stringify(patch),
       });
 
-      original = updated;
-      usernameEl.replaceChildren(renderUserIdentity(updated));
-      groupsEl.innerHTML = renderGroupsReadOnly(updated.groups);
-      emailInput.value = updated.email || "";
-      firstInput.value = updated.first_name || "";
-      lastInput.value = updated.last_name || "";
-      roleSelect.value = updated.role || "reader";
-      activeSelect.value = updated.is_active === false ? "false" : "true";
-      applyRoleOptions();
+      applyUserPayload(updated);
 
       setStatus(saveStatus, "Saved.", false);
     } catch (e2) {

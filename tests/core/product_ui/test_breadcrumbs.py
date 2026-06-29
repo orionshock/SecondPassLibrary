@@ -220,3 +220,21 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
         )
         self.assertContains(response, "Edit")
         self.assertNotContains(response, "Back to Shelf")
+
+    def test_user_edit_page_renders_breadcrumbs_and_no_back_link(self):
+        self.client.force_login(self.user)
+        profile_id = self.user.profile.id
+
+        response = self.client.get(f"/users/{profile_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, '<ol class="breadcrumbs__list">')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/users/">Users</a>',
+            html=False,
+        )
+        self.assertContains(response, "User")
+        self.assertContains(response, "Edit")
+        self.assertNotContains(response, "Back to users")

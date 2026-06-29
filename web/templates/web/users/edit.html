@@ -4,10 +4,13 @@
 
 {% block title %}Edit user - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with grandparent_href="/users/" grandparent_label="Users" parent_label="User" current_label="Edit" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <h1 class="page-title">Edit user</h1>
-    <a class="button" href="/users/">Back to users</a>
   </div>
 
   <div id="user-edit" data-profile-id="{{ profile_id|escape }}"></div>

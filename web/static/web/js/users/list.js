@@ -4,6 +4,7 @@ import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../l
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity, userDisplayName, userIdentityText } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
+import { setUsersFilterUrl, usersFilterFromSearch } from "./navigation.js";
 import { formatDateTime, passesFilter } from "./shared.js";
 
 function titleCaseRole(role) {
@@ -149,13 +150,14 @@ export async function initUsersList() {
     }
   }
 
-  function setActiveFilter(filter) {
+  function setActiveFilter(filter, { writeUrl = false } = {}) {
     activeFilter = filter || "all";
     const buttons = filtersEl.querySelectorAll("button[data-filter]");
     for (const btn of buttons) {
       const isActive = btn.getAttribute("data-filter") === activeFilter;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     }
+    if (writeUrl) setUsersFilterUrl(activeFilter);
     render();
     updateStatusLabel();
   }
@@ -295,7 +297,7 @@ export async function initUsersList() {
     if (target.tagName !== "BUTTON") return;
     const filter = target.getAttribute("data-filter");
     if (!filter) return;
-    setActiveFilter(filter);
+    setActiveFilter(filter, { writeUrl: true });
   });
 
   resultsEl.addEventListener("click", (e) => {
@@ -314,8 +316,12 @@ export async function initUsersList() {
     render();
   });
 
-  setActiveFilter("all");
+  setActiveFilter(usersFilterFromSearch());
   await load(currentUrl);
+
+  window.addEventListener("popstate", () => {
+    setActiveFilter(usersFilterFromSearch());
+  });
 
   nextBtn.addEventListener("click", async () => {
     if (nextUrl) await load(nextUrl);
