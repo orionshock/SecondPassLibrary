@@ -1,4 +1,4 @@
-<nav class="breadcrumbs" aria-label="Breadcrumb">
+<nav class="breadcrumbs{% if parent_label or grandparent_label %} breadcrumbs--trail{% else %} breadcrumbs--single{% endif %}" aria-label="Breadcrumb">
   <ol class="breadcrumbs__list">
     {% if grandparent_label %}
       <li class="breadcrumbs__item">

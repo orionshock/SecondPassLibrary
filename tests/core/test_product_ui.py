@@ -426,46 +426,53 @@ class ProductUiSmokeTests(TestCase):
             (
                 "/library/",
                 ('<a class="breadcrumbs__link" href="/library/">Library</a>', "Books"),
+                "breadcrumbs--trail",
             ),
-            ("/groups/", ("Groups",)),
+            ("/groups/", ("Groups",), "breadcrumbs--single"),
             (
                 "/groups/new/",
                 ('<a class="breadcrumbs__link" href="/groups/">Groups</a>', "New"),
+                "breadcrumbs--trail",
             ),
-            ("/shelves/", ("Shelves",)),
+            ("/shelves/", ("Shelves",), "breadcrumbs--single"),
             (
                 "/shelves/new/",
                 ('<a class="breadcrumbs__link" href="/shelves/">Shelves</a>', "New"),
+                "breadcrumbs--trail",
             ),
-            ("/users/", ("Users",)),
+            ("/users/", ("Users",), "breadcrumbs--single"),
             (
                 "/users/new/",
                 ('<a class="breadcrumbs__link" href="/users/">Users</a>', "New"),
+                "breadcrumbs--trail",
             ),
-            ("/imports/", ("Imports",)),
-            ("/server/", ("Server", "Settings")),
-            ("/profile/", ("Profile",)),
+            ("/imports/", ("Imports",), "breadcrumbs--single"),
+            ("/server/", ("Server", "Settings"), "breadcrumbs--trail"),
+            ("/profile/", ("Profile",), "breadcrumbs--single"),
             (
                 "/profile/password/",
                 ('<a class="breadcrumbs__link" href="/profile/">Profile</a>', "Password"),
+                "breadcrumbs--trail",
             ),
-            ("/reading/sessions/", ("Reading Data", "Sessions")),
-            ("/reading/import/", ("Reading Data", "Import SPL Marginalia")),
-            ("/reading/export/", ("Reading Data", "Export SPL Marginalia")),
+            ("/reading/sessions/", ("Reading Data", "Sessions"), "breadcrumbs--trail"),
+            ("/reading/import/", ("Reading Data", "Import SPL Marginalia"), "breadcrumbs--trail"),
+            ("/reading/export/", ("Reading Data", "Export SPL Marginalia"), "breadcrumbs--trail"),
             (
                 "/client-api/authorize/",
                 (
                     '<a class="breadcrumbs__link" href="/profile/">Profile</a>',
                     "Authorize Reader Client",
                 ),
+                "breadcrumbs--trail",
             ),
         ]
 
-        for path, expected_parts in cases:
+        for path, expected_parts, expected_class in cases:
             with self.subTest(path=path):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, 'class="breadcrumbs"')
+                self.assertContains(response, "breadcrumbs")
+                self.assertContains(response, expected_class)
                 self.assertContains(response, 'aria-label="Breadcrumb"')
                 self.assertContains(response, '<ol class="breadcrumbs__list">')
                 self.assertContains(response, 'aria-current="page"')
@@ -1336,6 +1343,13 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".user-sort-button__icon", css)
         self.assertIn(".user-row:hover", css)
         self.assertIn(".user-row:focus-within", css)
+        self.assertIn(".breadcrumbs", css)
+        self.assertIn(".breadcrumbs__list", css)
+        self.assertIn(".breadcrumbs__item + .breadcrumbs__item::before", css)
+        self.assertIn(".breadcrumbs--single", css)
+        self.assertIn("text-transform: uppercase", css)
+        self.assertIn("letter-spacing: 0.04em", css)
+        self.assertIn(".breadcrumbs--trail .breadcrumbs__current", css)
         self.assertIn(".library-tabs", css)
         self.assertIn(".library-filter-summary", css)
         self.assertIn("display: block", css)

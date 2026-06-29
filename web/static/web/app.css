@@ -90,9 +90,10 @@ a:hover { text-decoration: underline; }
 .pager { margin: 14px 0; display: flex; gap: 10px; }
 .footer { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 12px; color: var(--muted); }
 .breadcrumbs {
-  margin: 2px 0 8px;
+  margin: 0 0 5px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.25;
 }
 .breadcrumbs__list {
   display: flex;
@@ -124,8 +125,21 @@ a:hover { text-decoration: underline; }
   color: var(--muted);
 }
 .breadcrumbs__current {
-  color: var(--text);
+  color: rgba(232, 238, 246, 0.78);
+  font-weight: 500;
+}
+.breadcrumbs--single {
+  margin-bottom: 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.breadcrumbs--single .breadcrumbs__current {
+  color: rgba(168, 179, 194, 0.72);
   font-weight: 600;
+}
+.breadcrumbs--trail .breadcrumbs__current {
+  color: rgba(232, 238, 246, 0.84);
 }
 
 /* =====================
