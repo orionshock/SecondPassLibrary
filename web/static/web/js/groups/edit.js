@@ -11,10 +11,9 @@ import {
   canManageGroupBooks,
 } from "./shared.js";
 import { setStatus } from "../ui/status.js";
-import { initTabs } from "../ui/tabs.js";
 import { initGroupBooksTab } from "./books.js";
 import { initGroupMembershipsTab } from "./memberships.js";
-import { syncGroupEditBreadcrumb } from "./navigation.js";
+import { initGroupEditNavigation, syncGroupEditBreadcrumb } from "./navigation.js";
 import { initGroupShelvesTab } from "./shelves.js";
 
 export async function initGroupEdit() {
@@ -115,10 +114,9 @@ export async function initGroupEdit() {
     return;
   }
 
-  initTabs(root);
-
   const groupId = root.getAttribute("data-group-id") || "";
   if (!groupId) return;
+  initGroupEditNavigation(root, groupId);
   syncGroupEditBreadcrumb({ groupId, groupName: "Group" });
 
   setStatus(statusEl, "Loading...", false);

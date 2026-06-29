@@ -1,6 +1,8 @@
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
+import { initTabs } from "../ui/tabs.js";
 
 const GROUP_VIEW_TABS = new Set(["books", "members", "shelves"]);
+const GROUP_EDIT_TABS = new Set(["details", "books", "members", "shelves"]);
 
 export function groupViewTabFromSearch(search = window.location.search) {
   const params = new URLSearchParams(search || "");
@@ -8,9 +10,20 @@ export function groupViewTabFromSearch(search = window.location.search) {
   return GROUP_VIEW_TABS.has(view) ? view : "books";
 }
 
+export function groupEditTabFromSearch(search = window.location.search) {
+  const params = new URLSearchParams(search || "");
+  const view = (params.get("view") || "details").trim().toLowerCase();
+  return GROUP_EDIT_TABS.has(view) ? view : "details";
+}
+
 export function groupViewHref(groupId, tab = "books") {
   const base = `/groups/${encodeURIComponent(String(groupId))}/`;
   return tab && tab !== "books" ? `${base}?view=${encodeURIComponent(String(tab))}` : base;
+}
+
+export function groupEditHref(groupId, tab = "details") {
+  const base = `/groups/${encodeURIComponent(String(groupId))}/edit/`;
+  return tab && tab !== "details" ? `${base}?view=${encodeURIComponent(String(tab))}` : base;
 }
 
 export function setGroupViewUrl(groupId, tab, { replace = false } = {}) {
@@ -19,8 +32,23 @@ export function setGroupViewUrl(groupId, tab, { replace = false } = {}) {
   else window.history.pushState({}, "", href);
 }
 
+export function setGroupEditUrl(groupId, tab, { replace = false } = {}) {
+  const href = groupEditHref(groupId, tab);
+  if (replace) window.history.replaceState({}, "", href);
+  else window.history.pushState({}, "", href);
+}
+
 export function selectGroupViewTab(root, tab) {
   const nextTab = GROUP_VIEW_TABS.has(tab) ? tab : "books";
+  selectTab(root, nextTab);
+}
+
+export function selectGroupEditTab(root, tab) {
+  const nextTab = GROUP_EDIT_TABS.has(tab) ? tab : "details";
+  selectTab(root, nextTab);
+}
+
+function selectTab(root, nextTab) {
   const buttons = Array.from(root.querySelectorAll(".tab-button[data-tab]"));
   const panels = Array.from(root.querySelectorAll("[data-tab-panel]"));
 
@@ -37,6 +65,24 @@ export function selectGroupViewTab(root, tab) {
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   }
+}
+
+export function initGroupEditNavigation(root, groupId) {
+  const initialTab = groupEditTabFromSearch();
+  initTabs(root, { defaultTab: initialTab });
+  selectGroupEditTab(root, initialTab);
+
+  root.addEventListener("click", (event) => {
+    const source = event.target;
+    if (!(source instanceof Element)) return;
+    const tab = source.closest(".tab-button[data-tab]");
+    if (!tab || !root.contains(tab)) return;
+    setGroupEditUrl(groupId, tab.getAttribute("data-tab") || "details");
+  });
+
+  window.addEventListener("popstate", () => {
+    selectGroupEditTab(root, groupEditTabFromSearch());
+  });
 }
 
 export function syncGroupBreadcrumb({ groupName = "Group" } = {}) {
