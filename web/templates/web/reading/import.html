@@ -4,6 +4,10 @@
 
 {% block title %}Import Marginalia - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_label="Reading Data" current_label="Import SPL Marginalia" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>

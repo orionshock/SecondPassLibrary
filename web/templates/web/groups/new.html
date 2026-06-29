@@ -4,6 +4,10 @@
 
 {% block title %}New group - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_href="/groups/" parent_label="Groups" current_label="New" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>

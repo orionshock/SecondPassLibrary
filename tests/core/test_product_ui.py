@@ -412,6 +412,77 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, 'id="library-results"')
         self.assertContains(response, 'id="ui-global-error"')
 
+    def test_static_product_pages_render_breadcrumbs(self):
+        owner = User.objects.create_user(
+            username="owner-breadcrumb",
+            email="owner-breadcrumb@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        cases = [
+            (
+                "/library/",
+                ('<a class="breadcrumbs__link" href="/library/">Library</a>', "Books"),
+            ),
+            ("/groups/", ("Groups",)),
+            (
+                "/groups/new/",
+                ('<a class="breadcrumbs__link" href="/groups/">Groups</a>', "New"),
+            ),
+            ("/shelves/", ("Shelves",)),
+            (
+                "/shelves/new/",
+                ('<a class="breadcrumbs__link" href="/shelves/">Shelves</a>', "New"),
+            ),
+            ("/users/", ("Users",)),
+            (
+                "/users/new/",
+                ('<a class="breadcrumbs__link" href="/users/">Users</a>', "New"),
+            ),
+            ("/imports/", ("Imports",)),
+            ("/server/", ("Server", "Settings")),
+            ("/profile/", ("Profile",)),
+            (
+                "/profile/password/",
+                ('<a class="breadcrumbs__link" href="/profile/">Profile</a>', "Password"),
+            ),
+            ("/reading/sessions/", ("Reading Data", "Sessions")),
+            ("/reading/import/", ("Reading Data", "Import SPL Marginalia")),
+            ("/reading/export/", ("Reading Data", "Export SPL Marginalia")),
+            (
+                "/client-api/authorize/",
+                (
+                    '<a class="breadcrumbs__link" href="/profile/">Profile</a>',
+                    "Authorize Reader Client",
+                ),
+            ),
+        ]
+
+        for path, expected_parts in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'class="breadcrumbs"')
+                self.assertContains(response, 'aria-label="Breadcrumb"')
+                self.assertContains(response, '<ol class="breadcrumbs__list">')
+                self.assertContains(response, 'aria-current="page"')
+                for expected in expected_parts:
+                    self.assertContains(response, expected, html=False)
+
+    def test_dashboard_and_dynamic_pages_do_not_get_static_breadcrumbs_yet(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/app/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'aria-label="Breadcrumb"')
+
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'aria-label="Breadcrumb"')
+
     def test_unauthenticated_book_detail_redirects_to_login(self):
         book_id = uuid4()
         response = self.client.get(f"/library/books/{book_id}/", follow=False)

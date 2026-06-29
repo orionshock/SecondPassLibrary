@@ -1,0 +1,23 @@
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <ol class="breadcrumbs__list">
+    {% if grandparent_label %}
+      <li class="breadcrumbs__item">
+        {% if grandparent_href %}
+          <a class="breadcrumbs__link" href="{{ grandparent_href }}">{{ grandparent_label }}</a>
+        {% else %}
+          <span class="breadcrumbs__linkless">{{ grandparent_label }}</span>
+        {% endif %}
+      </li>
+    {% endif %}
+    {% if parent_label %}
+      <li class="breadcrumbs__item">
+        {% if parent_href %}
+          <a class="breadcrumbs__link" href="{{ parent_href }}">{{ parent_label }}</a>
+        {% else %}
+          <span class="breadcrumbs__linkless">{{ parent_label }}</span>
+        {% endif %}
+      </li>
+    {% endif %}
+    <li class="breadcrumbs__item breadcrumbs__current" aria-current="page">{{ current_label }}</li>
+  </ol>
+</nav>

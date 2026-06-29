@@ -4,6 +4,10 @@
 
 {% block title %}Shelves - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with current_label="Shelves" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>

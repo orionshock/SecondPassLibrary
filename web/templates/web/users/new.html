@@ -4,6 +4,10 @@
 
 {% block title %}Create user - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_href="/users/" parent_label="Users" current_label="New" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <h1 class="page-title">Create user</h1>
