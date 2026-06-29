@@ -161,7 +161,7 @@ export async function initUsersList() {
   }
 
   function renderRow(user) {
-    const id = user && user.id != null ? String(user.id) : "";
+    const profileId = user && user.profile_id != null ? String(user.profile_id) : "";
     const email = user.email || "";
     const role = user.role || "reader";
     const isOwner = !!user.is_owner;
@@ -198,7 +198,7 @@ export async function initUsersList() {
       ? `<div class="user-row__line">${escapeHtml(lastLogin)}</div>`
       : '<div class="user-row__line muted">(never)</div>';
 
-    const editHref = id ? `/users/${encodeURIComponent(String(id))}/edit/` : "#";
+    const editHref = profileId ? `/users/${encodeURIComponent(String(profileId))}/edit/` : "#";
     const identityMarkup = renderUserIdentity(user, {
       includeEmail: true,
     }).outerHTML;

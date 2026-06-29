@@ -66,10 +66,10 @@ Manager cannot (unless also Owner):
 User management is intentionally limited:
 
 - `POST /api/v1/accounts/users/` (Manager/Owner only; creates local Django user and returns a temporary password once)
-- `POST /api/v1/accounts/users/<id>/reset-password/` (Manager/Owner only; resets a managed user's password and returns a temporary password once)
+- `POST /api/v1/accounts/users/<profile_id>/reset-password/` (Manager/Owner only; resets a managed user's password and returns a temporary password once)
 - `GET /api/v1/accounts/users/`
-- `GET /api/v1/accounts/users/<id>/`
-- `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no password reset/invite/delete endpoints)
+- `GET /api/v1/accounts/users/<profile_id>/`
+- `PATCH /api/v1/accounts/users/<profile_id>/` (safe fields only; no password reset/invite/delete endpoints)
 
 Invite-by-email is not a core account lifecycle requirement. Self-hosted
 installations may use Owner/Manager-managed local users and the Django admin

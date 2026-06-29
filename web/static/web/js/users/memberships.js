@@ -120,7 +120,7 @@ export function refreshAddGroupOptions({ allGroups, userGroups, addGroupSelect, 
 }
 
 export function initUserMembershipsManager({
-  userId,
+  profileId,
   membershipsCard,
   membershipsResults,
   addForm,
@@ -277,13 +277,13 @@ export function initUserMembershipsManager({
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ user: String(userId), is_curator: isCurator }),
+        body: JSON.stringify({ profile_id: String(profileId), is_curator: isCurator }),
       });
 
       await refreshUserAndMemberships();
       setStatus(addStatus, "Added.", false);
     } catch (e2) {
-      console.error("Failed to add membership", { userId, e2 });
+      console.error("Failed to add membership", { profileId, e2 });
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
       setStatus(addStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);

@@ -41,7 +41,7 @@ urlpatterns = [
         name="accounts_me_client_sessions_revoke",
     ),
     path(
-        "users/<str:user_id>/reset-password/",
+        "users/<str:profile_id>/reset-password/",
         ManagedUserResetPasswordView.as_view(),
         name="managed_user_reset_password",
     ),

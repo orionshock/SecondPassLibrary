@@ -1,7 +1,6 @@
 from collections import defaultdict
 from typing import Any, cast
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Exists, F, OuterRef, Prefetch, Q, Window
 from django.db.models.functions import Random, RowNumber
@@ -13,6 +12,8 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.models import UserProfile
+from accounts.services import get_or_create_profile
 from core import policies
 from core.errors import ErrorCode, api_error_response
 
@@ -43,8 +44,6 @@ from .models import (
     is_public_group,
 )
 from .view_mixins import ClientBearerReadOnlyMixin
-
-User = get_user_model()
 
 PREVIEW_BOOK_LIMIT = 6
 
@@ -97,12 +96,17 @@ def _attach_group_preview_books(*, groups, user) -> None:
 
 def _membership_payload(membership: LibraryGroupMembership) -> dict[str, Any]:
     user = membership.user
+    profile = get_or_create_profile(user=user)
     return {
         "id": membership.id,
-        "user_id": user.pk,
-        "username": user.get_username(),
-        "email": user.email or "",
-        "is_owner": policies.is_owner(user),
+        "user": {
+            "profile_id": profile.id,
+            "username": user.get_username(),
+            "email": user.email or "",
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
+            "is_owner": policies.is_owner(user),
+        },
         "is_curator": bool(membership.is_curator),
         "created_at": membership.created_at,
         "updated_at": membership.updated_at,
@@ -328,16 +332,17 @@ class LibraryGroupViewSet(
         create.is_valid(raise_exception=True)
         data = create.validated_data
 
-        user_id = data.get("user")
+        profile_id = data.get("profile_id")
         is_curator = bool(data.get("is_curator", False))
         try:
-            target = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            profile = UserProfile.objects.select_related("user").get(pk=profile_id)
+            target = profile.user
+        except (UserProfile.DoesNotExist, ValidationError, ValueError):
             return api_error_response(
                 code=ErrorCode.INVALID_REQUEST,
                 message="User not found.",
-                detail=f"No user with id={user_id}.",
-                hint="Use a valid user id from /api/v1/accounts/users/.",
+                detail=f"No user profile with profile_id={profile_id}.",
+                hint="Use a valid profile_id from /api/v1/accounts/users/.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 

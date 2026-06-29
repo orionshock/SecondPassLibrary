@@ -126,9 +126,10 @@ export function renderMembersReadOnly(payload) {
 
   return results
     .map((m) => {
-      const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
+      const user = m && m.user ? m.user : m;
+      const ownerBadge = user && user.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
       const curatorBadge = m.is_curator ? '<span class="pill">Curator</span>' : "";
-      const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
+      const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
       return `
         <article class="book card-row--compact">
           <div class="identity-row">
@@ -147,9 +148,10 @@ export function renderMembersManage(payload, { isPublicGroup }) {
 
   return results
     .map((m) => {
-      const ownerBadge = m.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
+      const user = m && m.user ? m.user : m;
+      const ownerBadge = user && user.is_owner ? ' <span class="pill pill--owner">Owner</span>' : "";
       const isCurator = !!m.is_curator;
-      const identity = renderUserIdentity(m, { includeEmail: true }).outerHTML;
+      const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
       const curatorDisabled = isPublicGroup ? "disabled" : "";
       const saveDisabled = isPublicGroup ? "disabled" : "";
       const note = isPublicGroup

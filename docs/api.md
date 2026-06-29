@@ -81,10 +81,10 @@ Response shape:
   changed or deleted through this endpoint.
 - Users (Owner/Manager only):
   - `GET /api/v1/accounts/users/` (paginated)
-  - `GET /api/v1/accounts/users/<id>/`
-  - `PATCH /api/v1/accounts/users/<id>/`
+  - `GET /api/v1/accounts/users/<profile_id>/`
+  - `PATCH /api/v1/accounts/users/<profile_id>/`
   - `POST /api/v1/accounts/users/` (creates a local Django user and returns a generated temporary password once)
-  - `POST /api/v1/accounts/users/<id>/reset-password/` (Manager/Owner only; returns a generated temporary password once)
+  - `POST /api/v1/accounts/users/<profile_id>/reset-password/` (Manager/Owner only; returns a generated temporary password once)
 
 ## Client API
 
@@ -117,12 +117,14 @@ Login request / authorization:
 
 User-management payload notes:
 
+- Managed users expose `profile_id` as the public user identifier. They do not expose Django auth user database ids.
 - Managed users now include a read-only `groups[]` membership summary for that user (`membership_id`, group id/name, `is_public_group`, `is_curator`).
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 - User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
 - Email is optional contact/management metadata. It is not required for local
-  login, is not an account identity key, and remains excluded from compact
-  public user payloads.
+  login and is not an account identity key. Shelf compact user payloads exclude
+  email; group membership management payloads include it because that UI already
+  displays member email addresses.
 
 ### `POST /api/v1/accounts/users/`
 
@@ -141,7 +143,7 @@ Response shape:
 
 ```json
 {
-  "user": { "username": "newuser", "role": "reader", "...": "..." },
+  "user": { "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15", "username": "newuser", "role": "reader", "...": "..." },
   "temporary_password": "generated",
   "message": "Show this password now. It will not be shown again."
 }
@@ -331,7 +333,7 @@ Rules:
 - Does not expose session keys, IP addresses, or user agents.
 - Deletes the other sessions from Django's session store and removes their `UserWebSession` tracking rows.
 
-### `POST /api/v1/accounts/users/<id>/reset-password/`
+### `POST /api/v1/accounts/users/<profile_id>/reset-password/`
 
 Managed password reset (temporary password shown once).
 
@@ -497,9 +499,30 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 - Memberships (Manager/Owner only):
   - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; readable by group members and by Owner/Manager/Librarian; Public group is readable to any authenticated user)
-  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user": "<user_id>", "is_curator": true}`
+  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"profile_id": "<profile_id>", "is_curator": true}`
   - `PATCH /api/v1/library/groups/<group_id>/memberships/<membership_id>/` body: `{"is_curator": false}`
   - `DELETE /api/v1/library/groups/<group_id>/memberships/<membership_id>/`
+
+Membership payloads include compact public user information and do not expose Django auth user database ids:
+
+```json
+{
+  "id": "membership-uuid",
+  "user": {
+    "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
+    "username": "reader",
+    "email": "reader@example.test",
+    "first_name": "Read",
+    "last_name": "Er",
+    "is_owner": false
+  },
+  "is_curator": true,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-01T00:00:00Z"
+}
+```
+
+Group book assignment mutation responses preserve `added_by` as a compact public user object, not an integer user id.
 
 Group list/detail payloads include request-context UI hints:
 

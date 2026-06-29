@@ -65,7 +65,7 @@ class ManagedUserSerializer(serializers.Serializer):
         is_public_group = serializers.BooleanField()
         is_curator = serializers.BooleanField()
 
-    id = serializers.IntegerField()
+    profile_id = serializers.UUIDField()
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
     first_name = serializers.CharField(allow_blank=True)
@@ -74,7 +74,6 @@ class ManagedUserSerializer(serializers.Serializer):
     date_joined = serializers.DateTimeField()
     last_login = serializers.DateTimeField(allow_null=True)
     is_owner = serializers.BooleanField()
-    profile_id = serializers.UUIDField(allow_null=True)
     role = serializers.CharField(allow_blank=True)
     must_change_password = serializers.BooleanField()
     groups = ManagedUserGroupSummarySerializer(many=True)

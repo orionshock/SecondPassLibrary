@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from core import policies
 from library.models import LibraryGroupMembership, is_public_group
@@ -41,7 +41,7 @@ def compact_user_payload(user) -> dict[str, Any]:
 def managed_user_payload(user) -> dict[str, Any]:
     profile = get_or_create_profile(user=user)
     return {
-        "id": cast(int, user.pk),
+        "profile_id": profile.id,
         "username": user.get_username(),
         "email": user.email or "",
         "first_name": user.first_name or "",
@@ -50,7 +50,6 @@ def managed_user_payload(user) -> dict[str, Any]:
         "date_joined": user.date_joined,
         "last_login": user.last_login,
         "is_owner": policies.is_owner(user),
-        "profile_id": profile.id,
         "role": profile.role,
         "must_change_password": bool(profile.must_change_password),
         "groups": managed_user_group_payloads(user),

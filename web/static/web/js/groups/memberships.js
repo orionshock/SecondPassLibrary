@@ -59,7 +59,7 @@ export async function initGroupMembershipsTab({
     addMemberUser.textContent = "";
     for (const u of users) {
       const opt = document.createElement("option");
-      opt.value = String(u.id);
+      opt.value = String(u.profile_id || "");
       opt.textContent = `${u.username} (${u.email || ""})`;
       addMemberUser.appendChild(opt);
     }
@@ -74,8 +74,8 @@ export async function initGroupMembershipsTab({
     setAddMemberStatus("Adding...", false);
     setGlobalError("");
 
-    const userId = addMemberUser.value;
-    if (!userId) {
+    const profileId = addMemberUser.value;
+    if (!profileId) {
       setAddMemberStatus("Choose a user.", true);
       return;
     }
@@ -89,7 +89,7 @@ export async function initGroupMembershipsTab({
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ user: Number(userId), is_curator: isCurator }),
+        body: JSON.stringify({ profile_id: String(profileId), is_curator: isCurator }),
       });
 
       setAddMemberStatus("Added.", false);

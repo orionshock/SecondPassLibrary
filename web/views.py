@@ -232,8 +232,8 @@ def user_new(request: HttpRequest) -> HttpResponse:
 
 
 @product_login_required
-def user_edit(request: HttpRequest, user_id: str) -> HttpResponse:
-    return render(request, "web/users/edit.html", {"user_id": user_id})
+def user_edit(request: HttpRequest, profile_id: str) -> HttpResponse:
+    return render(request, "web/users/edit.html", {"profile_id": profile_id})
 
 
 @product_login_required

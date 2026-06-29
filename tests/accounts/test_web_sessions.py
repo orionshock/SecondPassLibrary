@@ -1,4 +1,4 @@
-from typing import Any, cast
+﻿from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
@@ -192,7 +192,7 @@ class ManagedResetAndDisableSessionRevocationTests(APITestCase):
 
         actor = APIClient()
         self.assertTrue(actor.login(username="owner", password="pw"))
-        r = cast(Any, actor.post(f"/api/v1/accounts/users/{self.target.pk}/reset-password/", data={}, format="json"))
+        r = cast(Any, actor.post(f"/api/v1/accounts/users/{self.target.profile.id}/reset-password/", data={}, format="json"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         self.assertFalse(Session.objects.filter(session_key=k1).exists())
@@ -204,7 +204,7 @@ class ManagedResetAndDisableSessionRevocationTests(APITestCase):
 
         actor = APIClient()
         self.assertTrue(actor.login(username="manager", password="pw"))
-        r = cast(Any, actor.patch(f"/api/v1/accounts/users/{self.target.pk}/", data={"is_active": False}, format="json"))
+        r = cast(Any, actor.patch(f"/api/v1/accounts/users/{self.target.profile.id}/", data={"is_active": False}, format="json"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         self.assertFalse(Session.objects.filter(session_key=k1).exists())

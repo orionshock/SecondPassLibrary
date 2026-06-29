@@ -103,7 +103,7 @@ This supports standalone reader clients from arbitrary origins. Cross-origin coo
 - Groups: `/groups/`
 - Users: `/users/` (Manager/Owner)
 - Create user: `/users/new/` (Manager/Owner; temporary password shown once)
-- Edit user: `/users/<user_id>/edit/` (Manager/Owner)
+- Edit user: `/users/<profile_id>/edit/` (Manager/Owner)
 
 Before first-run setup is complete, unauthenticated Product UI routes direct to
 `/setup/`. After setup, unauthenticated pages redirect to

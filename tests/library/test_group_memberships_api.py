@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import cast
 
@@ -57,12 +57,18 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         )
 
     def test_manager_and_owner_can_list_memberships(self):
+        LibraryGroupMembership.objects.create(user=self.reader, group=self.group)
         self.client.login(username="manager", password="pw")
         response = cast(
             Response,
             self.client.get(f"/api/v1/library/groups/{self.group.id}/memberships/"),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = cast(dict, response.data)
+        first = cast(list[dict], payload["results"])[0]
+        self.assertIn("user", first)
+        self.assertNotIn("user_id", first)
+        self.assertEqual(first["user"]["profile_id"], str(self.reader.profile.id))
 
         self.client.logout()
         self.client.login(username="owner", password="pw")
@@ -125,24 +131,29 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk},
+                data={"profile_id": self.reader.profile.id},
                 format="json",
             ),
         )
         self.assertEqual(add_reader.status_code, status.HTTP_201_CREATED)
-        self.assertFalse(cast(dict, add_reader.data)["is_curator"])
-        self.assertNotIn("role", cast(dict, add_reader.data))
+        add_reader_data = cast(dict, add_reader.data)
+        self.assertFalse(add_reader_data["is_curator"])
+        self.assertEqual(add_reader_data["user"]["profile_id"], str(self.reader.profile.id))
+        self.assertNotIn("user_id", add_reader_data)
+        self.assertNotIn("role", add_reader_data)
 
         add_curator = cast(
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "is_curator": True},
+                data={"profile_id": self.reader.profile.id, "is_curator": True},
                 format="json",
             ),
         )
         self.assertEqual(add_curator.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(cast(dict, add_curator.data)["is_curator"])
+        add_curator_data = cast(dict, add_curator.data)
+        self.assertTrue(add_curator_data["is_curator"])
+        self.assertEqual(add_curator_data["user"]["profile_id"], str(self.reader.profile.id))
         membership = LibraryGroupMembership.objects.get(user=self.reader, group=self.group)
         self.assertTrue(membership.is_curator)
 
@@ -155,7 +166,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
                     Response,
                     self.client.post(
                         f"/api/v1/library/groups/{self.group.id}/memberships/",
-                        data={"user": user.pk, "is_curator": True},
+                        data={"profile_id": user.profile.id, "is_curator": True},
                         format="json",
                     ),
                 )
@@ -187,7 +198,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
                 Response,
                 self.client.post(
                     f"/api/v1/library/groups/{self.group.id}/memberships/",
-                    data={"user": self.manager.pk},
+                    data={"profile_id": self.manager.profile.id},
                     format="json",
                 ),
             )
@@ -217,7 +228,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk},
+                data={"profile_id": self.reader.profile.id},
                 format="json",
             ),
         )
@@ -227,7 +238,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "is_curator": True},
+                data={"profile_id": self.reader.profile.id, "is_curator": True},
                 format="json",
             ),
         )
@@ -242,7 +253,7 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.public.id}/memberships/",
-                data={"user": self.reader.pk, "is_curator": True},
+                data={"profile_id": self.reader.profile.id, "is_curator": True},
                 format="json",
             ),
         )
@@ -297,6 +308,10 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
             ),
         )
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        patched_data = cast(dict, patched.data)
+        self.assertIn("user", patched_data)
+        self.assertEqual(patched_data["user"]["profile_id"], str(self.reader.profile.id))
+        self.assertNotIn("user_id", patched_data)
         membership.refresh_from_db()
         self.assertTrue(membership.is_curator)
 
@@ -324,13 +339,25 @@ class LibraryGroupMembershipManagementAPITest(APITestCase):
         membership.refresh_from_db()
         self.assertFalse(membership.is_curator)
 
+    def test_legacy_integer_user_field_is_rejected(self):
+        self.client.login(username="manager", password="pw")
+        response = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"user": self.reader.pk},
+                format="json",
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_legacy_role_field_is_rejected(self):
         self.client.login(username="manager", password="pw")
         response = cast(
             Response,
             self.client.post(
                 f"/api/v1/library/groups/{self.group.id}/memberships/",
-                data={"user": self.reader.pk, "role": "curator"},
+                data={"profile_id": self.reader.profile.id, "role": "curator"},
                 format="json",
             ),
         )

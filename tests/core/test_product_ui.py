@@ -1351,7 +1351,7 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn('pill pill--owner", "Public"', library_detail_js)
         self.assertNotIn('pill pill--owner", "Public"', book_edit_groups_js)
         self.assertNotIn("pill--owner\">Public", groups_list_js)
-        self.assertIn("renderUserIdentity(m, { includeEmail: true })", groups_shared_js)
+        self.assertIn("renderUserIdentity(user, { includeEmail: true })", groups_shared_js)
         self.assertNotIn("Role: <code>", groups_shared_js)
         self.assertIn('class="identity-row"', groups_shared_js)
         self.assertIn('class="book card-row--compact"', groups_shared_js)
@@ -1790,10 +1790,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertEqual(response["Location"], "/api-auth/login/?next=/users/new/")
 
     def test_unauthenticated_user_edit_redirects_to_login(self):
-        response = self.client.get(f"/users/{self.user.pk}/edit/", follow=False)
+        profile_id = self.user.profile.id
+        response = self.client.get(f"/users/{profile_id}/edit/", follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response["Location"], f"/api-auth/login/?next=/users/{self.user.pk}/edit/"
+            response["Location"], f"/api-auth/login/?next=/users/{profile_id}/edit/"
         )
 
     def test_authenticated_users_returns_200_and_has_containers(self):
@@ -1823,11 +1824,13 @@ class ProductUiSmokeTests(TestCase):
 
     def test_authenticated_user_edit_returns_200_and_has_form(self):
         self.client.force_login(self.user)
-        response = self.client.get(f"/users/{self.user.pk}/edit/")
+        response = self.client.get(f"/users/{self.user.profile.id}/edit/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="user-edit-form"')
+        self.assertContains(response, 'data-profile-id="')
+        self.assertNotContains(response, 'data-user-id="')
         self.assertContains(response, 'id="user-edit-username"')
         self.assertContains(response, 'id="user-edit-must-change"')
         self.assertContains(response, 'id="user-reset-password-btn"')

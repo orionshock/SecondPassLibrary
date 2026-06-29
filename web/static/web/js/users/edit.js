@@ -84,9 +84,9 @@ export async function initUserEdit() {
     return;
   }
 
-  const userId = root.dataset ? root.dataset.userId : "";
-  if (!userId) {
-    setStatus(statusEl, "Missing user id.", true);
+  const profileId = root.dataset ? root.dataset.profileId : "";
+  if (!profileId) {
+    setStatus(statusEl, "Missing profile id.", true);
     return;
   }
 
@@ -131,7 +131,7 @@ export async function initUserEdit() {
   let canResetPassword = false;
 
   try {
-    const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`);
+    const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`);
     original = payload;
     usernameEl.replaceChildren(renderUserIdentity(payload));
     groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
@@ -182,7 +182,7 @@ export async function initUserEdit() {
       setStatus(addStatus, "", false);
     }
   } catch (e) {
-    console.error("Failed to load user", { userId, e });
+    console.error("Failed to load user", { profileId, e });
     setStatus(statusEl, extractApiErrorMessage(e), true);
     visible(cardEl, false);
     visible(membershipsCard, false);
@@ -190,7 +190,7 @@ export async function initUserEdit() {
   }
 
   async function refreshUserAndMemberships() {
-    const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`);
+    const payload = await fetchJSON(`/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`);
     original = payload;
     usernameEl.replaceChildren(renderUserIdentity(payload));
     groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
@@ -212,7 +212,7 @@ export async function initUserEdit() {
 
   // Wire modules now that refresh callback exists.
   initUserMembershipsManager({
-    userId,
+    profileId,
     membershipsCard,
     membershipsResults,
     addForm,
@@ -224,7 +224,7 @@ export async function initUserEdit() {
     refreshUserAndMemberships,
   });
   initManagedPasswordReset({
-    userId,
+    profileId,
     canResetPassword,
     resetBtn,
     resetStatus,
@@ -283,7 +283,7 @@ export async function initUserEdit() {
       const headers = { Accept: "application/json", "Content-Type": "application/json" };
       if (csrf) headers["X-CSRFToken"] = csrf;
 
-      const updated = await fetchJSONWithOptions(`/api/v1/accounts/users/${encodeURIComponent(String(userId))}/`, {
+      const updated = await fetchJSONWithOptions(`/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`, {
         method: "PATCH",
         headers,
         body: JSON.stringify(patch),
@@ -301,7 +301,7 @@ export async function initUserEdit() {
 
       setStatus(saveStatus, "Saved.", false);
     } catch (e2) {
-      console.error("Failed to save user", { userId, e2 });
+      console.error("Failed to save user", { profileId, e2 });
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
       setStatus(saveStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);

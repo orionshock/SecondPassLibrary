@@ -3,6 +3,7 @@ from typing import Any, cast
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
+from accounts.user_payloads import compact_user_payload
 from core import policies
 from core.errors import ErrorCode, api_error_payload
 from library.catalog_serializers import BookPreviewSerializer
@@ -147,6 +148,14 @@ class LibraryGroupPresentationUpdateSerializer(serializers.ModelSerializer):
 
 
 class BookGroupAssignmentSerializer(serializers.ModelSerializer):
+    added_by = serializers.SerializerMethodField(read_only=True)
+
+    def get_added_by(self, obj: BookGroupAssignment) -> dict[str, Any] | None:
+        user = obj.added_by
+        if user is None:
+            return None
+        return compact_user_payload(user)
+
     class Meta:
         model = BookGroupAssignment
         fields = ["id", "book", "group", "added_by", "created_at", "updated_at"]
@@ -154,18 +163,23 @@ class BookGroupAssignmentSerializer(serializers.ModelSerializer):
 
 
 class LibraryGroupMembershipSerializer(serializers.Serializer):
+    class MembershipUserSerializer(serializers.Serializer):
+        profile_id = serializers.UUIDField()
+        username = serializers.CharField()
+        email = serializers.EmailField(allow_blank=True)
+        first_name = serializers.CharField(allow_blank=True)
+        last_name = serializers.CharField(allow_blank=True)
+        is_owner = serializers.BooleanField()
+
     id = serializers.UUIDField()
-    user_id = serializers.IntegerField()
-    username = serializers.CharField()
-    email = serializers.EmailField(allow_blank=True)
-    is_owner = serializers.BooleanField()
+    user = MembershipUserSerializer()
     is_curator = serializers.BooleanField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 
 
 class LibraryGroupMembershipCreateSerializer(serializers.Serializer):
-    user = serializers.IntegerField()
+    profile_id = serializers.UUIDField()
     is_curator = serializers.BooleanField(required=False, default=False)
 
     def validate(self, attrs):
@@ -173,6 +187,10 @@ class LibraryGroupMembershipCreateSerializer(serializers.Serializer):
         if "role" in initial:
             raise serializers.ValidationError(
                 {"role": "Membership role is not supported. Use is_curator."}
+            )
+        if "user" in initial:
+            raise serializers.ValidationError(
+                {"user": "User row ids are not supported. Use profile_id."}
             )
         return super().validate(attrs)
 

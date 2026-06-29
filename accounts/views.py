@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import Http404
 from typing import Any, cast
 from rest_framework import mixins, viewsets
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -170,14 +171,28 @@ class ManagedUserViewSet(
         if not policies.can_manage_users(user):
             raise PermissionDenied("Not allowed.")
 
-        qs = User.objects.all().order_by("username").prefetch_related(
-            "library_group_memberships__group"
+        qs = (
+            User.objects.select_related("profile")
+            .all()
+            .order_by("username")
+            .prefetch_related("library_group_memberships__group")
         )
         if policies.is_owner(user):
             return qs
 
         # Managers should not see Owner accounts via normal product APIs.
         return qs.filter(is_superuser=False)
+
+    def get_object(self):
+        profile_id = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        if not profile_id:
+            raise Http404()
+        try:
+            obj = self.filter_queryset(self.get_queryset()).get(profile__id=profile_id)
+        except (User.DoesNotExist, DjangoValidationError, ValueError) as exc:
+            raise Http404() from exc
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -244,13 +259,13 @@ class ManagedUserViewSet(
 class ManagedUserResetPasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, user_id: str):
-        if not user_id:
+    def post(self, request, profile_id: str):
+        if not profile_id:
             raise PermissionDenied("Not allowed.")
 
         try:
-            target_user = User.objects.get(pk=user_id)
-        except User.DoesNotExist as exc:
+            target_user = User.objects.select_related("profile").get(profile__id=profile_id)
+        except (User.DoesNotExist, DjangoValidationError, ValueError) as exc:
             raise PermissionDenied("Not allowed.") from exc
 
         try:

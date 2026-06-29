@@ -213,6 +213,11 @@ class LibraryGroupBooksAndCurationAPITest(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        payload = cast(dict[str, Any], response.data)
+        added_by = cast(dict[str, Any], payload["added_by"])
+        self.assertEqual(str(added_by["profile_id"]), str(self.curator.profile.id))
+        self.assertEqual(added_by["username"], "curator")
+        self.assertNotIsInstance(payload["added_by"], int)
 
     def test_curator_cannot_add_inaccessible_book_to_their_group(self):
         self.client.login(username="curator", password="pw")

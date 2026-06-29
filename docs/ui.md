@@ -22,7 +22,7 @@ The first minimal product UI shell now exists:
 - `/groups/new/` is an authenticated group create page (Owner/Manager only)
 - `/users/` provides functional user management for Manager/Owner only
 - `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
-- `/users/<user_id>/edit/` provides a dedicated user edit screen for Manager/Owner
+- `/users/<profile_id>/edit/` provides a dedicated user edit screen for Manager/Owner
 - `/reading/sessions/books/<book_id>/` shows the current user's reading sessions for a book
 - `/reading/sessions/books/<book_id>/<session_id>/` shows session-specific Marginalia (progress + annotations) for the current user
 
@@ -120,9 +120,9 @@ Group shelves UX:
 The users UI is API-driven using:
 
 - `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)
-- `PATCH /api/v1/accounts/users/<id>/` (safe fields only; no passwords/invites)
+- `PATCH /api/v1/accounts/users/<profile_id>/` (safe fields only; no passwords/invites)
 - `POST /api/v1/accounts/users/` (creates local Django user and returns a temporary password once)
-- `POST /api/v1/accounts/users/<id>/reset-password/` (managed reset; temporary password shown once)
+- `POST /api/v1/accounts/users/<profile_id>/reset-password/` (managed reset; temporary password shown once)
 
 Password management:
 
@@ -296,8 +296,8 @@ Visible only for Manager/Owner.
 Primary endpoints:
 
 - List: `GET /api/v1/accounts/users/` (paginated)
-- Detail: `GET /api/v1/accounts/users/<user_id>/`
-- Patch: `PATCH /api/v1/accounts/users/<user_id>/` (safe fields only; no password handling)
+- Detail: `GET /api/v1/accounts/users/<profile_id>/`
+- Patch: `PATCH /api/v1/accounts/users/<profile_id>/` (safe fields only; no password handling)
 - Create: `POST /api/v1/accounts/users/` (Manager/Owner only; returns generated temporary password once)
 
 UI behaviors:
@@ -305,7 +305,7 @@ UI behaviors:
 - `/users/` is a compact list screen with simple client-side role tabs/filters (over the currently loaded page):
   - All, Readers, Curators, Librarians, Managers, Inactive
   - Curators are detected via `groups[].is_curator` and may show a "Curates: ..." summary
-- Editing is on a dedicated page: `/users/<user_id>/edit/`.
+- Editing is on a dedicated page: `/users/<profile_id>/edit/`.
 - For Manager/Owner, the user edit page includes user-centric group membership management (add/update/remove).
 - Membership editors use ordinary membership plus a Curator checkbox/toggle, not a Reader/Curator role selector. Displays may show Member and Curator indicators separately.
 - Show safe editable fields (email, first_name, last_name, is_active, role) on the edit page.

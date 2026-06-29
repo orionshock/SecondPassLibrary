@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, cast
 
@@ -112,7 +112,7 @@ class ManagedResetPasswordApiTests(APITestCase):
         response = cast(
             Response,
             self.client.post(
-                f"/api/v1/accounts/users/{self.reader.pk}/reset-password/",
+                f"/api/v1/accounts/users/{self.reader.profile.id}/reset-password/",
                 data={},
                 format="json",
             ),
@@ -135,18 +135,18 @@ class ManagedResetPasswordApiTests(APITestCase):
 
     def test_manager_can_reset_reader_and_librarian(self):
         self.client.login(username="manager", password="pw")
-        r1 = cast(Response, self.client.post(f"/api/v1/accounts/users/{self.reader.pk}/reset-password/"))
+        r1 = cast(Response, self.client.post(f"/api/v1/accounts/users/{self.reader.profile.id}/reset-password/"))
         self.assertEqual(r1.status_code, status.HTTP_200_OK)
         self.client.logout()
         self.client.login(username="manager", password="pw")
-        r2 = cast(Response, self.client.post(f"/api/v1/accounts/users/{self.librarian.pk}/reset-password/"))
+        r2 = cast(Response, self.client.post(f"/api/v1/accounts/users/{self.librarian.profile.id}/reset-password/"))
         self.assertEqual(r2.status_code, status.HTTP_200_OK)
 
     def test_manager_cannot_reset_manager(self):
         self.client.login(username="manager", password="pw")
         denied = cast(
             Response,
-            self.client.post(f"/api/v1/accounts/users/{self.manager2.pk}/reset-password/"),
+            self.client.post(f"/api/v1/accounts/users/{self.manager2.profile.id}/reset-password/"),
         )
         self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -154,7 +154,7 @@ class ManagedResetPasswordApiTests(APITestCase):
         self.client.login(username="manager", password="pw")
         denied = cast(
             Response,
-            self.client.post(f"/api/v1/accounts/users/{self.owner.pk}/reset-password/"),
+            self.client.post(f"/api/v1/accounts/users/{self.owner.profile.id}/reset-password/"),
         )
         self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -162,7 +162,7 @@ class ManagedResetPasswordApiTests(APITestCase):
         self.client.login(username="owner", password="pw")
         ok = cast(
             Response,
-            self.client.post(f"/api/v1/accounts/users/{self.manager.pk}/reset-password/"),
+            self.client.post(f"/api/v1/accounts/users/{self.manager.profile.id}/reset-password/"),
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
 
@@ -170,7 +170,7 @@ class ManagedResetPasswordApiTests(APITestCase):
         self.client.login(username="manager", password="pw")
         denied = cast(
             Response,
-            self.client.post(f"/api/v1/accounts/users/{self.manager.pk}/reset-password/"),
+            self.client.post(f"/api/v1/accounts/users/{self.manager.profile.id}/reset-password/"),
         )
         self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -220,7 +220,7 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         ok = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.reader.pk}/",
+                f"/api/v1/accounts/users/{self.reader.profile.id}/",
                 data={"must_change_password": True},
                 format="json",
             ),
@@ -233,7 +233,7 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         ok = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.librarian.pk}/",
+                f"/api/v1/accounts/users/{self.librarian.profile.id}/",
                 data={"must_change_password": True},
                 format="json",
             ),
@@ -246,7 +246,7 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         denied = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager2.pk}/",
+                f"/api/v1/accounts/users/{self.manager2.profile.id}/",
                 data={"must_change_password": True},
                 format="json",
             ),
@@ -258,7 +258,7 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         denied = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.owner.pk}/",
+                f"/api/v1/accounts/users/{self.owner.profile.id}/",
                 data={"must_change_password": True},
                 format="json",
             ),
@@ -272,7 +272,7 @@ class MustChangePasswordPatchBoundaryTests(APITestCase):
         ok = cast(
             Response,
             self.client.patch(
-                f"/api/v1/accounts/users/{self.manager.pk}/",
+                f"/api/v1/accounts/users/{self.manager.profile.id}/",
                 data={"must_change_password": True},
                 format="json",
             ),
