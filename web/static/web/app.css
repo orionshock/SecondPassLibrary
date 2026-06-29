@@ -992,6 +992,32 @@ input[type="file"]:disabled::file-selector-button {
 .shelf-list-card .cover-preview-strip {
   justify-content: flex-end;
 }
+.group-list-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
+  gap: 10px 14px;
+  align-items: start;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.group-list-card:hover,
+.group-list-card:focus-within {
+  border-color: rgba(125, 211, 252, 0.45);
+  background: rgba(125, 211, 252, 0.055);
+}
+.group-list-card a,
+.group-list-card button {
+  cursor: pointer;
+}
+.group-list-card__main {
+  min-width: 0;
+}
+.group-list-card__description {
+  margin-top: 4px;
+}
+.group-list-card .cover-preview-strip {
+  justify-content: flex-end;
+}
 
 /* =====================
    Lists / Tables
@@ -1234,6 +1260,12 @@ input[type="file"]:disabled::file-selector-button {
     grid-template-columns: minmax(0, 1fr);
   }
   .shelf-list-card .cover-preview-strip {
+    justify-content: flex-start;
+  }
+  .group-list-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group-list-card .cover-preview-strip {
     justify-content: flex-start;
   }
   .library-browse-row {

@@ -823,6 +823,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("createPagedListController", shelves_list_js)
         self.assertNotIn("pagedController", shelves_shared_js)
         self.assertIn('from "../ui/paged_list.js"', groups_list_js)
+        self.assertIn(
+            'initialUrl: "/api/v1/library/groups/?include_preview_books=true"',
+            groups_list_js,
+        )
         self.assertIn('from "../ui/paged_list.js"', groups_view_js)
         self.assertNotIn("pagedListController", groups_shared_js)
 
@@ -1184,6 +1188,11 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".shelf-list-card:focus-within", css)
         self.assertIn(".shelf-list-card__main", css)
         self.assertIn(".shelf-list-card .cover-preview-strip", css)
+        self.assertIn(".group-list-card", css)
+        self.assertIn(".group-list-card:hover", css)
+        self.assertIn(".group-list-card:focus-within", css)
+        self.assertIn(".group-list-card__main", css)
+        self.assertIn(".group-list-card .cover-preview-strip", css)
         self.assertIn("justify-content: flex-end", css)
         self.assertIn(".shelf-view-heading", css)
         self.assertIn(".shelf-view-description", css)
@@ -1316,6 +1325,26 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('closest("[data-action]")', user_memberships_js)
         self.assertIn('class="identity-row"', groups_list_js)
         self.assertIn('class="badge-row"', groups_list_js)
+        self.assertIn('from "../ui/cover_previews.js"', groups_list_js)
+        self.assertIn("renderCoverPreviewStrip(g.preview_books", groups_list_js)
+        self.assertIn("actionLabel: `View group ${name}`", groups_list_js)
+        self.assertIn('data-group-url="${escapeHtml(href)}"', groups_list_js)
+        self.assertIn('title="Open group ${escapeHtml(name)}"', groups_list_js)
+        self.assertIn('href="${escapeHtml(href)}"', groups_list_js)
+        self.assertIn("function isInteractiveElement", groups_list_js)
+        self.assertIn('closest("a, button, input, select, textarea, label, summary, [role=\'button\'], [role=\'link\']")', groups_list_js)
+        self.assertIn("function installGroupCardNavigation", groups_list_js)
+        self.assertIn('source.closest("[data-group-url]")', groups_list_js)
+        self.assertIn("window.location.assign(url)", groups_list_js)
+        self.assertIn("installGroupCardNavigation(resultsEl)", groups_list_js)
+        self.assertIn(
+            'initialUrl: "/api/v1/library/groups/?include_preview_books=true"',
+            groups_list_js,
+        )
+        self.assertIn('class="book group-list-card"', groups_list_js)
+        self.assertIn('class="group-list-card__main"', groups_list_js)
+        self.assertIn('group-list-card__description', groups_list_js)
+        self.assertNotIn("href,", groups_list_js)
         self.assertIn('el("ul", "compact-list")', library_detail_js)
         self.assertIn('el("li", "compact-list__item")', library_detail_js)
         self.assertIn('el("ul", "compact-list")', book_edit_groups_js)
