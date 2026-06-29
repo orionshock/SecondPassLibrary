@@ -1,10 +1,11 @@
-import { fetchJSON } from "../api.js";
+import { extractApiErrorMessage, fetchJSON, patchJSON } from "../api.js";
+import { canManageLibrary } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
-import { renderContextProseBlock, toggleProseBlock } from "./prose.js";
+import { renderLibraryContext, toggleProseBlock } from "./prose.js";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
@@ -200,7 +201,8 @@ function urlWithParams(base, params) {
 }
 
 export async function initLibraryBrowse() {
-  await loadMeAndInitShell();
+  const me = await loadMeAndInitShell();
+  const allowContextEdit = canManageLibrary(me);
 
   const statusEl = $("#library-status");
   const filterSummaryEl = $("#library-filter-summary");
@@ -227,6 +229,11 @@ export async function initLibraryBrowse() {
     seriesName: "",
     seriesSummary: "",
     contextKey: "",
+    contextEditing: false,
+    contextDraftName: "",
+    contextDraftProse: "",
+    contextStatus: "",
+    contextError: "",
     count: 0,
     resultLength: 0,
     hasNext: false,
@@ -238,38 +245,114 @@ export async function initLibraryBrowse() {
     if (state.authorId) {
       return {
         id: state.authorId,
+        kind: "author",
         label: "Author",
         name: state.authorName || state.authorId,
         prose: state.authorBiography,
+        proseLabel: "Biography",
       };
     }
     if (state.seriesId) {
       return {
         id: state.seriesId,
+        kind: "series",
         label: "Series",
         name: state.seriesName || state.seriesId,
         prose: state.seriesSummary,
+        proseLabel: "Summary",
       };
     }
     return null;
   }
 
   function renderFilterSummary(filter) {
-    const idPrefix = filter.label.toLowerCase();
-    const prose = renderContextProseBlock({
-      text: filter.prose,
-      idPrefix,
-      itemId: filter.id,
+    return renderLibraryContext({
+      filter,
+      canEdit: allowContextEdit,
+      editing: state.contextEditing,
+      editName: state.contextDraftName,
+      editProse: state.contextDraftProse,
+      status: state.contextStatus,
+      error: state.contextError,
     });
-    return `
-      <div class="library-context">
-        <div class="library-context__header">
-          <span>${escapeHtml(filter.label)}: <strong>${escapeHtml(filter.name)}</strong></span>
-          <button class="button" type="button" data-action="clear-library-filter">Clear</button>
-        </div>
-        ${prose}
-      </div>
-    `.trim();
+  }
+
+  function clearContextUiState() {
+    state.contextEditing = false;
+    state.contextDraftName = "";
+    state.contextDraftProse = "";
+    state.contextStatus = "";
+    state.contextError = "";
+    state.contextKey = "";
+  }
+
+  function beginContextEdit() {
+    const filter = activeFilter();
+    if (!filter || !allowContextEdit) return;
+    state.contextEditing = true;
+    state.contextDraftName = filter.name;
+    state.contextDraftProse = filter.prose || "";
+    state.contextStatus = "";
+    state.contextError = "";
+    syncControls();
+  }
+
+  function replaceCurrentLocation() {
+    pushLocation(locationParamsForState(), { replace: true });
+  }
+
+  async function saveActiveContext() {
+    const filter = activeFilter();
+    if (!filter || !allowContextEdit) return;
+
+    const nameInput = filterSummaryEl.querySelector('[name="library-context-name"]');
+    const proseInput = filterSummaryEl.querySelector('[name="library-context-prose"]');
+    if (!(nameInput instanceof HTMLInputElement) || !(proseInput instanceof HTMLTextAreaElement)) return;
+
+    const name = nameInput.value.trim();
+    const prose = proseInput.value.trim();
+    state.contextDraftName = name;
+    state.contextDraftProse = prose;
+    const body =
+      filter.kind === "author"
+        ? { name, biography: prose }
+        : { name, summary: prose };
+
+    state.contextStatus = "Saving...";
+    state.contextError = "";
+    syncControls();
+
+    try {
+      const payload = await patchJSON(
+        `/api/v1/library/${filter.kind === "author" ? "authors" : "series"}/${encodeURIComponent(filter.id)}/`,
+        body
+      );
+      if (filter.kind === "author") {
+        state.authorName = payload && payload.name ? String(payload.name) : name;
+        state.authorBiography = payload && payload.biography ? String(payload.biography) : "";
+      } else {
+        state.seriesName = payload && payload.name ? String(payload.name) : name;
+        state.seriesSummary = payload && payload.summary ? String(payload.summary) : "";
+      }
+      state.contextEditing = false;
+      state.contextDraftName = "";
+      state.contextDraftProse = "";
+      state.contextStatus = "Saved.";
+      state.contextError = "";
+      replaceCurrentLocation();
+      syncControls();
+      window.setTimeout(() => {
+        if (state.contextStatus === "Saved.") {
+          state.contextStatus = "";
+          syncControls();
+        }
+      }, 5000);
+    } catch (e) {
+      state.contextEditing = true;
+      state.contextStatus = "";
+      state.contextError = extractApiErrorMessage(e);
+      syncControls();
+    }
   }
 
   function syncControls() {
@@ -299,7 +382,7 @@ export async function initLibraryBrowse() {
     if (state.view !== "books" || (!state.authorId && !state.seriesId)) {
       state.authorBiography = "";
       state.seriesSummary = "";
-      state.contextKey = "";
+      clearContextUiState();
       return;
     }
 
@@ -308,9 +391,10 @@ export async function initLibraryBrowse() {
     const key = `${kind}:${id}`;
     if (state.contextKey === key) return;
 
-    state.contextKey = key;
     state.authorBiography = "";
     state.seriesSummary = "";
+    clearContextUiState();
+    state.contextKey = key;
 
     try {
       const payload = await fetchJSON(`/api/v1/library/${kind === "author" ? "authors" : "series"}/${encodeURIComponent(id)}/`);
@@ -445,7 +529,7 @@ export async function initLibraryBrowse() {
     state.seriesId = state.view === "books" ? (params.get("series") || "").trim() : "";
     state.seriesName = state.seriesId ? (params.get("series_name") || "").trim() : "";
     state.seriesSummary = "";
-    state.contextKey = "";
+    clearContextUiState();
     if (state.authorId && state.seriesId) {
       state.seriesId = "";
       state.seriesName = "";
@@ -477,7 +561,7 @@ export async function initLibraryBrowse() {
     state.seriesId = "";
     state.seriesName = "";
     state.seriesSummary = "";
-    state.contextKey = "";
+    clearContextUiState();
     state.page = 1;
     await loadCurrentPage({ push: true });
   });
@@ -513,7 +597,7 @@ export async function initLibraryBrowse() {
         state.seriesId = "";
         state.seriesName = "";
         state.seriesSummary = "";
-        state.contextKey = "";
+        clearContextUiState();
       }
       await loadCurrentPage({ push: true });
     });
@@ -528,6 +612,22 @@ export async function initLibraryBrowse() {
       return;
     }
 
+    if (source.closest('[data-action="edit-library-context"]')) {
+      beginContextEdit();
+      return;
+    }
+
+    if (source.closest('[data-action="cancel-library-context-edit"]')) {
+      clearContextUiState();
+      syncControls();
+      return;
+    }
+
+    if (source.closest('[data-action="save-library-context"]')) {
+      await saveActiveContext();
+      return;
+    }
+
     if (!source.closest('[data-action="clear-library-filter"]')) return;
     state.authorId = "";
     state.authorName = "";
@@ -535,7 +635,7 @@ export async function initLibraryBrowse() {
     state.seriesId = "";
     state.seriesName = "";
     state.seriesSummary = "";
-    state.contextKey = "";
+    clearContextUiState();
     state.page = 1;
     await loadCurrentPage({ push: true });
   });
@@ -554,7 +654,7 @@ export async function initLibraryBrowse() {
       state.seriesId = "";
       state.seriesName = "";
       state.seriesSummary = "";
-      state.contextKey = "";
+      clearContextUiState();
       state.page = 1;
       await loadCurrentPage({ push: true });
       return;
@@ -570,7 +670,7 @@ export async function initLibraryBrowse() {
       state.seriesId = seriesButton.getAttribute("data-id") || "";
       state.seriesName = seriesButton.getAttribute("data-name") || "";
       state.seriesSummary = "";
-      state.contextKey = "";
+      clearContextUiState();
       state.page = 1;
       await loadCurrentPage({ push: true });
     }

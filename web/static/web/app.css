@@ -1096,10 +1096,7 @@ input[type="file"]:disabled::file-selector-button {
   margin: 12px 0 8px;
 }
 .library-filter-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: block;
   margin: 2px 0 8px;
   color: var(--muted);
 }
@@ -1152,12 +1149,20 @@ input[type="file"]:disabled::file-selector-button {
 .library-context {
   display: grid;
   gap: 8px;
+  width: 100%;
 }
 .library-context__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+.library-context__actions,
+.library-context__editor-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .library-context__prose-wrap {
   margin-top: 7px;
@@ -1178,6 +1183,27 @@ input[type="file"]:disabled::file-selector-button {
 }
 .library-context__prose-toggle {
   margin-top: 4px;
+  font-size: 12px;
+}
+.library-context__editor {
+  display: grid;
+  gap: 10px;
+  max-width: min(760px, 100%);
+}
+.library-context__editor label {
+  display: grid;
+  gap: 5px;
+}
+.library-context__editor input,
+.library-context__editor textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+.library-context__editor textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+.library-context__status {
   font-size: 12px;
 }
 .library-row {
