@@ -54,7 +54,6 @@ export function renderLibraryContext({
       <div class="library-context">
         <div class="library-context__header">
           <span>${escapeHtml(label)}: <strong>${escapeHtml(name)}</strong></span>
-          <button class="button" type="button" data-action="clear-library-filter">Clear</button>
         </div>
         <div class="library-context__editor">
           <label>
@@ -82,7 +81,6 @@ export function renderLibraryContext({
         <span>${escapeHtml(label)}: <strong>${escapeHtml(name)}</strong></span>
         <span class="library-context__actions">
           ${canEdit ? '<button class="button" type="button" data-action="edit-library-context">Edit</button>' : ""}
-          <button class="button" type="button" data-action="clear-library-filter">Clear</button>
         </span>
       </div>
       ${renderContextProseBlock({ text: prose, idPrefix, itemId })}

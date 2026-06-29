@@ -986,6 +986,9 @@ class ProductUiSmokeTests(TestCase):
         library_prose_js = Path("web/static/web/js/library/prose.js").read_text(
             encoding="utf-8"
         )
+        breadcrumbs_js = Path("web/static/web/js/ui/breadcrumbs.js").read_text(
+            encoding="utf-8"
+        )
         cover_previews_js = Path("web/static/web/js/ui/cover_previews.js").read_text(
             encoding="utf-8"
         )
@@ -1098,6 +1101,7 @@ class ProductUiSmokeTests(TestCase):
 
         self.assertIn('from "../ui/groups.js"', library_list_js)
         self.assertIn('from "../ui/cover_previews.js"', library_list_js)
+        self.assertIn('from "../ui/breadcrumbs.js"', library_list_js)
         self.assertIn('from "./prose.js"', library_list_js)
         self.assertIn('from "../auth.js"', library_list_js)
         self.assertIn("canManageLibrary(me)", library_list_js)
@@ -1145,7 +1149,18 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn("function locationParamsForState", library_list_js)
         self.assertIn("view: state.view", library_list_js)
         self.assertIn("function activeFilter", library_list_js)
-        self.assertIn('data-action="clear-library-filter"', library_list_js)
+        self.assertIn("function syncBreadcrumbs", library_list_js)
+        self.assertIn("setBreadcrumbs([", library_list_js)
+        self.assertIn('{ label: "Library", href: "/library/" }', library_list_js)
+        self.assertIn('{ label: "Books", current: true }', library_list_js)
+        self.assertIn('{ label: "Authors", current: true }', library_list_js)
+        self.assertIn('{ label: "Series", current: true }', library_list_js)
+        self.assertIn('{ label: "Authors", href: "/library/?view=authors" }', library_list_js)
+        self.assertIn('{ label: "Series", href: "/library/?view=series" }', library_list_js)
+        self.assertIn("state.authorName || state.authorId", library_list_js)
+        self.assertIn("state.seriesName || state.seriesId", library_list_js)
+        self.assertIn("syncBreadcrumbs();", library_list_js)
+        self.assertNotIn('data-action="clear-library-filter"', library_list_js)
         self.assertIn("state.page = 1", library_list_js)
         self.assertIn('pageSizeSelect.addEventListener("change"', library_list_js)
         self.assertIn("state.page += 1", library_list_js)
@@ -1223,6 +1238,8 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn('data-action="edit-library-context"', library_prose_js)
         self.assertIn('data-action="save-library-context"', library_prose_js)
         self.assertIn('data-action="cancel-library-context-edit"', library_prose_js)
+        self.assertNotIn('data-action="clear-library-filter"', library_prose_js)
+        self.assertNotIn(">Clear</button>", library_prose_js)
         self.assertIn('name="library-context-name"', library_prose_js)
         self.assertIn('name="library-context-prose"', library_prose_js)
         self.assertIn("Biography", library_list_js)
@@ -1231,6 +1248,19 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn("renderAuthorProse", library_prose_js)
         self.assertNotIn("renderSeriesProse", library_prose_js)
         self.assertNotIn("description", library_prose_js)
+
+        self.assertIn("export function setBreadcrumbs", breadcrumbs_js)
+        self.assertIn('nav[aria-label="Breadcrumb"]', breadcrumbs_js)
+        self.assertIn(".breadcrumbs__list", breadcrumbs_js)
+        self.assertIn("breadcrumbs__item", breadcrumbs_js)
+        self.assertIn("breadcrumbs__link", breadcrumbs_js)
+        self.assertIn("breadcrumbs__current", breadcrumbs_js)
+        self.assertIn('aria-current="page"', breadcrumbs_js)
+        self.assertIn("breadcrumbs--single", breadcrumbs_js)
+        self.assertIn("breadcrumbs--trail", breadcrumbs_js)
+        self.assertIn("escapeHtml(crumb.label)", breadcrumbs_js)
+        self.assertNotIn("history.back", breadcrumbs_js)
+        self.assertNotIn("window.location", breadcrumbs_js)
 
         self.assertIn("export function renderCoverPreviewStrip", cover_previews_js)
         self.assertIn('class="cover-preview-strip"', cover_previews_js)

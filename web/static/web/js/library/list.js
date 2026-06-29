@@ -1,6 +1,7 @@
 import { extractApiErrorMessage, fetchJSON, patchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
+import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
@@ -265,6 +266,47 @@ export async function initLibraryBrowse() {
     return null;
   }
 
+  function syncBreadcrumbs() {
+    if (state.view === "authors") {
+      setBreadcrumbs([
+        { label: "Library", href: "/library/" },
+        { label: "Authors", current: true },
+      ]);
+      return;
+    }
+
+    if (state.view === "series") {
+      setBreadcrumbs([
+        { label: "Library", href: "/library/" },
+        { label: "Series", current: true },
+      ]);
+      return;
+    }
+
+    if (state.authorId) {
+      setBreadcrumbs([
+        { label: "Library", href: "/library/" },
+        { label: "Authors", href: "/library/?view=authors" },
+        { label: state.authorName || state.authorId, current: true },
+      ]);
+      return;
+    }
+
+    if (state.seriesId) {
+      setBreadcrumbs([
+        { label: "Library", href: "/library/" },
+        { label: "Series", href: "/library/?view=series" },
+        { label: state.seriesName || state.seriesId, current: true },
+      ]);
+      return;
+    }
+
+    setBreadcrumbs([
+      { label: "Library", href: "/library/" },
+      { label: "Books", current: true },
+    ]);
+  }
+
   function renderFilterSummary(filter) {
     return renderLibraryContext({
       filter,
@@ -356,6 +398,7 @@ export async function initLibraryBrowse() {
   }
 
   function syncControls() {
+    syncBreadcrumbs();
     qInput.value = state.q;
     pageSizeSelect.value = String(state.pageSize);
     rangeEl.textContent = rangeText(state);
@@ -628,16 +671,6 @@ export async function initLibraryBrowse() {
       return;
     }
 
-    if (!source.closest('[data-action="clear-library-filter"]')) return;
-    state.authorId = "";
-    state.authorName = "";
-    state.authorBiography = "";
-    state.seriesId = "";
-    state.seriesName = "";
-    state.seriesSummary = "";
-    clearContextUiState();
-    state.page = 1;
-    await loadCurrentPage({ push: true });
   });
 
   resultsEl.addEventListener("click", async (e) => {
