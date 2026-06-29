@@ -68,7 +68,78 @@ function bookDisplayTitle(book) {
   return book && book.title ? String(book.title) : "Untitled book";
 }
 
-function syncBookBreadcrumbs({ bookId, title }) {
+function pathWithParams(base, params) {
+  const url = new URL(base, window.location.origin);
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value === null || value === undefined || value === "") continue;
+    url.searchParams.set(key, String(value));
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function libraryBreadcrumbContextFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const from = (params.get("from") || "").trim().toLowerCase();
+  if (from === "author") {
+    const id = (params.get("author") || "").trim();
+    if (!id) return null;
+    return {
+      kind: "author",
+      id,
+      name: (params.get("author_name") || "").trim() || "Author",
+    };
+  }
+  if (from === "series") {
+    const id = (params.get("series") || "").trim();
+    if (!id) return null;
+    return {
+      kind: "series",
+      id,
+      name: (params.get("series_name") || "").trim() || "Series",
+    };
+  }
+  return null;
+}
+
+function contextCrumbHref(context) {
+  if (!context) return "";
+  if (context.kind === "author") {
+    return pathWithParams("/library/", {
+      view: "books",
+      author: context.id,
+      author_name: context.name,
+    });
+  }
+  if (context.kind === "series") {
+    return pathWithParams("/library/", {
+      view: "books",
+      series: context.id,
+      series_name: context.name,
+    });
+  }
+  return "";
+}
+
+function syncBookBreadcrumbs({ title, context = null }) {
+  if (context && context.kind === "author") {
+    setBreadcrumbs([
+      { label: "Library", href: "/library/" },
+      { label: "Authors", href: "/library/?view=authors" },
+      { label: context.name || "Author", href: contextCrumbHref(context) },
+      { label: title || "Book", current: true },
+    ]);
+    return;
+  }
+  if (context && context.kind === "series") {
+    setBreadcrumbs([
+      { label: "Library", href: "/library/" },
+      { label: "Series", href: "/library/?view=series" },
+      { label: context.name || "Series", href: contextCrumbHref(context) },
+      { label: title || "Book", current: true },
+    ]);
+    return;
+  }
+
   setBreadcrumbs([
     { label: "Library", href: "/library/" },
     { label: "Books", href: "/library/?view=books" },
@@ -264,7 +335,8 @@ export async function initBookDetail() {
     setStatus(statusEl, "Missing book id.", true);
     return;
   }
-  syncBookBreadcrumbs({ bookId, title: "Book" });
+  const breadcrumbContext = libraryBreadcrumbContextFromLocation();
+  syncBookBreadcrumbs({ title: "Book", context: breadcrumbContext });
 
   const canManage = canManageLibrary(me);
   visible(editWrapEl, canManage);
@@ -281,7 +353,7 @@ export async function initBookDetail() {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     const displayTitle = bookDisplayTitle(book);
     setTitle(displayTitle);
-    syncBookBreadcrumbs({ bookId, title: displayTitle });
+    syncBookBreadcrumbs({ title: displayTitle, context: breadcrumbContext });
 
     const titleText = book && book.title ? String(book.title) : "";
     const coverUrl = book && book.cover_url ? String(book.cover_url) : "";

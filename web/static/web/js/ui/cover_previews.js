@@ -17,12 +17,13 @@ export function renderCoverPreviewStrip(books, options = {}) {
   const contextName = options.contextName ? String(options.contextName) : "";
   const actionLabel = options.actionLabel ? String(options.actionLabel) : "View books";
   const contextHref = options.href ? String(options.href) : "";
+  const bookHref = typeof options.bookHref === "function" ? options.bookHref : bookDetailHref;
 
   const buttons = visibleBooks
     .map((book) => {
       const title = String(book.title || "Untitled");
       const coverUrl = book.cover_url ? String(book.cover_url) : "";
-      const href = contextHref || bookDetailHref(book);
+      const href = contextHref || bookHref(book);
       if (href) {
         const ariaLabel = contextHref
           ? `${actionLabel}; preview includes ${title}`

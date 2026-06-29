@@ -73,14 +73,43 @@ function visibleBookCountLabel(count) {
   return `${value} ${value === 1 ? "Book" : "Books"}`;
 }
 
-function renderBooks(payload) {
+function pathWithParams(base, params) {
+  const url = new URL(base, window.location.origin);
+  for (const [k, v] of Object.entries(params || {})) {
+    if (v === null || v === undefined || v === "") continue;
+    url.searchParams.set(k, String(v));
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function bookDetailHref(bookId, context = null) {
+  if (!bookId) return "";
+  const base = `/library/books/${encodeURIComponent(String(bookId))}/`;
+  if (context && context.kind === "author" && context.id) {
+    return pathWithParams(base, {
+      from: "author",
+      author: context.id,
+      author_name: context.name,
+    });
+  }
+  if (context && context.kind === "series" && context.id) {
+    return pathWithParams(base, {
+      from: "series",
+      series: context.id,
+      series_name: context.name,
+    });
+  }
+  return base;
+}
+
+function renderBooks(payload, context = null) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
   return results
     .map((b) => {
       const title = b.title || "(Untitled)";
-      const bookHref = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
+      const bookHref = b.id ? bookDetailHref(b.id, context) : null;
       const subtitle = compactSubtitle(title, b.subtitle);
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const series = b.series && b.series.name ? b.series.name : "";
@@ -131,6 +160,7 @@ function renderAuthors(payload) {
         contextId: id,
         contextName: name,
         actionLabel: `View Books by ${name}`,
+        bookHref: (book) => bookDetailHref(book && book.id, { kind: "author", id, name }),
       });
       return `
         <article class="library-browse-row">
@@ -168,6 +198,7 @@ function renderSeries(payload) {
         contextId: id,
         contextName: name,
         actionLabel: `View Books in ${name}`,
+        bookHref: (book) => bookDetailHref(book && book.id, { kind: "series", id, name }),
       });
       return `
         <article class="library-browse-row">
@@ -264,6 +295,16 @@ export async function initLibraryBrowse() {
       };
     }
     return null;
+  }
+
+  function activeBookBreadcrumbContext() {
+    const filter = activeFilter();
+    if (!filter || (filter.kind !== "author" && filter.kind !== "series")) return null;
+    return {
+      kind: filter.kind,
+      id: filter.id,
+      name: filter.name,
+    };
   }
 
   function syncBreadcrumbs() {
@@ -499,7 +540,7 @@ export async function initLibraryBrowse() {
   function renderPayload(payload) {
     if (state.view === "authors") return renderAuthors(payload);
     if (state.view === "series") return renderSeries(payload);
-    return renderBooks(payload);
+    return renderBooks(payload, activeBookBreadcrumbContext());
   }
 
   function emptyText() {
