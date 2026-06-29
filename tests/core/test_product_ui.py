@@ -472,6 +472,36 @@ class ProductUiSmokeTests(TestCase):
                 for expected in expected_parts:
                     self.assertContains(response, expected, html=False)
 
+    def test_static_breadcrumb_pages_do_not_render_redundant_back_links(self):
+        owner = User.objects.create_user(
+            username="owner-no-back",
+            email="owner-no-back@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        cases = [
+            ("/shelves/", ("Back to Dashboard", "arrow_back")),
+            ("/groups/new/", ("Back to Groups", "arrow_back")),
+            ("/shelves/new/", ("Back to Shelves", "arrow_back")),
+            ("/users/new/", ("Back to users",)),
+            ("/profile/password/", ("Back to profile",)),
+            ("/client-api/authorize/", ("Back to profile",)),
+            ("/reading/sessions/", ("Back to Dashboard", "arrow_back")),
+            ("/reading/import/", ("Back to Dashboard", "arrow_back")),
+            ("/reading/export/", ("Back to Dashboard", "arrow_back")),
+        ]
+
+        for path, removed_tokens in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'aria-label="Breadcrumb"')
+                for token in removed_tokens:
+                    self.assertNotContains(response, token)
+
     def test_dashboard_and_dynamic_pages_do_not_get_static_breadcrumbs_yet(self):
         self.client.force_login(self.user)
         response = self.client.get("/app/")
@@ -482,6 +512,7 @@ class ProductUiSmokeTests(TestCase):
         response = self.client.get(f"/library/books/{book_id}/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, "Back to Library")
 
     def test_unauthenticated_book_detail_redirects_to_login(self):
         book_id = uuid4()
