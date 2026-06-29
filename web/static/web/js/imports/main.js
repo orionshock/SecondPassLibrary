@@ -3,21 +3,49 @@ import { canAccessImports } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 
+function internalRefsForItem(item) {
+  return [
+    item.book ? `book=${item.book}` : "",
+    item.book_file ? `book_file=${item.book_file}` : "",
+  ].filter(Boolean);
+}
+
+function stripInternalRefs(message) {
+  return String(message || "")
+    .replace(/\bbook=[0-9a-fA-F-]{32,36}\b/g, "")
+    .replace(/\bbook_file=[0-9a-fA-F-]{32,36}\b/g, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .trim();
+}
+
+function renderImportItemDiagnostic(item) {
+  const status = item.status || "";
+  const source = item.source_name || "(Unknown item)";
+  const rawMessage = item.message || "";
+  const readableMessage = stripInternalRefs(rawMessage);
+  const refs = internalRefsForItem(item);
+  const debugRows = [
+    ...refs,
+    rawMessage && rawMessage !== readableMessage ? `message=${rawMessage}` : "",
+  ].filter(Boolean);
+  const debugHtml = debugRows.length
+    ? `<details class="import-job__debug"><summary>Debug details</summary><code>${escapeHtml(debugRows.join(" "))}</code></details>`
+    : "";
+
+  return `<li class="import-job__item">
+    <span class="pill">${escapeHtml(status)}</span>
+    <span class="import-job__item-source">${escapeHtml(source)}</span>
+    ${readableMessage ? `<span class="muted import-job__item-message">- ${escapeHtml(readableMessage)}</span>` : ""}
+    ${debugHtml}
+  </li>`;
+}
+
 function renderImportJobItems(items) {
   if (!Array.isArray(items) || items.length === 0) return "";
   const rows = items
     .slice(0, 50)
-    .map((it) => {
-      const status = it.status || "";
-      const source = it.source_name || "";
-      const message = it.message || "";
-      const book = it.book ? `book=${it.book}` : "";
-      const bookFile = it.book_file ? `book_file=${it.book_file}` : "";
-      const refs = [book, bookFile].filter(Boolean).join(" ");
-      return `<li><span class="pill">${escapeHtml(status)}</span> ${escapeHtml(source)}${
-        refs ? ` <span class="muted">${escapeHtml(refs)}</span>` : ""
-      }${message ? ` <span class="muted">- ${escapeHtml(message)}</span>` : ""}</li>`;
-    })
+    .map(renderImportItemDiagnostic)
     .join("");
 
   const extra = items.length > 50 ? `<div class="muted">Showing first 50 items.</div>` : "";

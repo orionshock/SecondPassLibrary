@@ -1607,6 +1607,29 @@ input[type="file"]:disabled::file-selector-button {
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
+.import-job__item {
+  margin-top: 6px;
+}
+.import-job__item-source {
+  font-weight: 600;
+}
+.import-job__item-message {
+  overflow-wrap: anywhere;
+}
+.import-job__debug {
+  margin: 4px 0 0 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.import-job__debug summary {
+  cursor: pointer;
+}
+.import-job__debug code {
+  display: block;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .modal[hidden] { display: none; }
 .modal {
   position: fixed;
