@@ -1,0 +1,121 @@
+"""Tests for breadcrumb rendering and back links."""
+from django.contrib.auth import get_user_model
+
+from tests.core.product_ui.helpers import ProductUiTestCase
+from uuid import uuid4
+
+
+User = get_user_model()
+
+
+class ProductUiBreadcrumbTests(ProductUiTestCase):
+    """Test breadcrumb rendering across static product UI pages."""
+
+    def test_static_product_pages_render_breadcrumbs(self):
+        owner = User.objects.create_user(
+            username="owner-breadcrumb",
+            email="owner-breadcrumb@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        cases = [
+            (
+                "/library/",
+                ('<a class="breadcrumbs__link" href="/library/">Library</a>', "Books"),
+                "breadcrumbs--trail",
+            ),
+            ("/groups/", ("Groups",), "breadcrumbs--single"),
+            (
+                "/groups/new/",
+                ('<a class="breadcrumbs__link" href="/groups/">Groups</a>', "New"),
+                "breadcrumbs--trail",
+            ),
+            ("/shelves/", ("Shelves",), "breadcrumbs--single"),
+            (
+                "/shelves/new/",
+                ('<a class="breadcrumbs__link" href="/shelves/">Shelves</a>', "New"),
+                "breadcrumbs--trail",
+            ),
+            ("/users/", ("Users",), "breadcrumbs--single"),
+            (
+                "/users/new/",
+                ('<a class="breadcrumbs__link" href="/users/">Users</a>', "New"),
+                "breadcrumbs--trail",
+            ),
+            ("/imports/", ("Imports",), "breadcrumbs--single"),
+            ("/server/", ("Server", "Settings"), "breadcrumbs--trail"),
+            ("/profile/", ("Profile",), "breadcrumbs--single"),
+            (
+                "/profile/password/",
+                ('<a class="breadcrumbs__link" href="/profile/">Profile</a>', "Password"),
+                "breadcrumbs--trail",
+            ),
+            ("/reading/sessions/", ("Reading Data", "Sessions"), "breadcrumbs--trail"),
+            ("/reading/import/", ("Reading Data", "Import SPL Marginalia"), "breadcrumbs--trail"),
+            ("/reading/export/", ("Reading Data", "Export SPL Marginalia"), "breadcrumbs--trail"),
+            (
+                "/client-api/authorize/",
+                (
+                    '<a class="breadcrumbs__link" href="/profile/">Profile</a>',
+                    "Authorize Reader Client",
+                ),
+                "breadcrumbs--trail",
+            ),
+        ]
+
+        for path, expected_parts, expected_class in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "breadcrumbs")
+                self.assertContains(response, expected_class)
+                self.assertContains(response, 'aria-label="Breadcrumb"')
+                self.assertContains(response, '<ol class="breadcrumbs__list">')
+                self.assertContains(response, 'aria-current="page"')
+                for expected in expected_parts:
+                    self.assertContains(response, expected, html=False)
+
+    def test_static_breadcrumb_pages_do_not_render_redundant_back_links(self):
+        owner = User.objects.create_user(
+            username="owner-no-back",
+            email="owner-no-back@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        cases = [
+            ("/shelves/", ("Back to Dashboard", "arrow_back")),
+            ("/groups/new/", ("Back to Groups", "arrow_back")),
+            ("/shelves/new/", ("Back to Shelves", "arrow_back")),
+            ("/users/new/", ("Back to users",)),
+            ("/profile/password/", ("Back to profile",)),
+            ("/client-api/authorize/", ("Back to profile",)),
+            ("/reading/sessions/", ("Back to Dashboard", "arrow_back")),
+            ("/reading/import/", ("Back to Dashboard", "arrow_back")),
+            ("/reading/export/", ("Back to Dashboard", "arrow_back")),
+        ]
+
+        for path, removed_tokens in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'aria-label="Breadcrumb"')
+                for token in removed_tokens:
+                    self.assertNotContains(response, token)
+
+    def test_dashboard_and_dynamic_pages_do_not_get_static_breadcrumbs_yet(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/app/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'aria-label="Breadcrumb"')
+
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, "Back to Library")
