@@ -4,11 +4,14 @@
 
 {% block title %}Edit book - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with greatgrandparent_href="/library/" greatgrandparent_label="Library" grandparent_href="/library/?view=books" grandparent_label="Books" parent_href="/library/books/"|add:book_id|add:"/" parent_label="Book" current_label="Edit" only %}
+{% endblock %}
+
 {% block content %}
   <div id="book-edit-header" class="edit-header is-hidden" data-book-id="{{ book_id|escape }}">
     <div class="edit-header__cover" aria-hidden="true">Cover</div>
     <div class="edit-header__main">
-      <a id="book-edit-back" href="/library/books/{{ book_id|escape }}/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Book</span></a>
       <h1 class="edit-header__title" id="book-edit-header-title">Book</h1>
       <div class="edit-header__meta">
         <div id="book-edit-header-authors" class="muted"></div>

@@ -1,5 +1,14 @@
-<nav class="breadcrumbs{% if parent_label or grandparent_label %} breadcrumbs--trail{% else %} breadcrumbs--single{% endif %}" aria-label="Breadcrumb">
+<nav class="breadcrumbs{% if parent_label or grandparent_label or greatgrandparent_label %} breadcrumbs--trail{% else %} breadcrumbs--single{% endif %}" aria-label="Breadcrumb">
   <ol class="breadcrumbs__list">
+    {% if greatgrandparent_label %}
+      <li class="breadcrumbs__item">
+        {% if greatgrandparent_href %}
+          <a class="breadcrumbs__link" href="{{ greatgrandparent_href }}">{{ greatgrandparent_label }}</a>
+        {% else %}
+          <span class="breadcrumbs__linkless">{{ greatgrandparent_label }}</span>
+        {% endif %}
+      </li>
+    {% endif %}
     {% if grandparent_label %}
       <li class="breadcrumbs__item">
         {% if grandparent_href %}

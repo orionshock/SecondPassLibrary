@@ -45,6 +45,16 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'data-tab-panel="groups"')
         self.assertContains(response, 'data-tab-panel="metadata"')
         self.assertContains(response, 'id="tab-metadata"')
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
+        )
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/?view=books">Books</a>', html=False
+        )
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, "Book")
+        self.assertNotContains(response, "Back to Library")
         self.assertContains(
             response, f'href="/library/books/{book_id}/edit/"'
         )
@@ -83,3 +93,18 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'id="book-edit-groups-add"')
         self.assertContains(response, 'id="book-edit-shelves"')
         self.assertContains(response, 'id="book-edit-shelves-status"')
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
+        )
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/?view=books">Books</a>', html=False
+        )
+        self.assertContains(
+            response,
+            f'<a class="breadcrumbs__link" href="/library/books/{book_id}/">Book</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, "Edit")
+        self.assertNotContains(response, "Back to Book")

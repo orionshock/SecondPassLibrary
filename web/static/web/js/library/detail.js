@@ -1,6 +1,7 @@
 import { fetchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
+import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { renderShelfMetadata } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
@@ -61,6 +62,18 @@ function setTitle(text) {
   const titleEl = $("#book-title");
   if (!titleEl) return;
   titleEl.textContent = text;
+}
+
+function bookDisplayTitle(book) {
+  return book && book.title ? String(book.title) : "Untitled book";
+}
+
+function syncBookBreadcrumbs({ bookId, title }) {
+  setBreadcrumbs([
+    { label: "Library", href: "/library/" },
+    { label: "Books", href: "/library/?view=books" },
+    { label: title || "Book", current: true },
+  ]);
 }
 
 function renderSubjectsPills(container, subjects) {
@@ -251,6 +264,7 @@ export async function initBookDetail() {
     setStatus(statusEl, "Missing book id.", true);
     return;
   }
+  syncBookBreadcrumbs({ bookId, title: "Book" });
 
   const canManage = canManageLibrary(me);
   visible(editWrapEl, canManage);
@@ -265,7 +279,9 @@ export async function initBookDetail() {
 
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
-    setTitle(book && book.title ? book.title : "Book");
+    const displayTitle = bookDisplayTitle(book);
+    setTitle(displayTitle);
+    syncBookBreadcrumbs({ bookId, title: displayTitle });
 
     const titleText = book && book.title ? String(book.title) : "";
     const coverUrl = book && book.cover_url ? String(book.cover_url) : "";

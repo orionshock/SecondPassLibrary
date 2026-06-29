@@ -20,6 +20,20 @@ import { bindGroupActions } from "./group_actions.js";
 import { bindIdentifierActions, refreshIdentifiersContext } from "./identifiers_actions.js";
 import { bindShelfActions } from "./shelf_actions.js";
 import { mountCovers } from "../ui/covers.js";
+import { setBreadcrumbs } from "../ui/breadcrumbs.js";
+
+function bookDisplayTitle(book) {
+  return book && book.title ? String(book.title) : "Untitled book";
+}
+
+function syncBookEditBreadcrumbs({ bookId, title }) {
+  setBreadcrumbs([
+    { label: "Library", href: "/library/" },
+    { label: "Books", href: "/library/?view=books" },
+    { label: title || "Book", href: `/library/books/${encodeURIComponent(String(bookId))}/` },
+    { label: "Edit", current: true },
+  ]);
+}
 
 export async function initBookEdit() {
   const me = await loadMeAndInitShell();
@@ -143,6 +157,7 @@ export async function initBookEdit() {
     setStatus(statusEl, "Missing book id.", true);
     return;
   }
+  syncBookEditBreadcrumbs({ bookId, title: "Book" });
 
   const canManage = canManageLibrary(me);
   if (!canManage) {
@@ -195,6 +210,7 @@ export async function initBookEdit() {
     applyBookToMetadataForm({ book: state.book, dom, selectedAuthors: state.selectedAuthors });
 
     renderHeader({ book: state.book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
+    syncBookEditBreadcrumbs({ bookId, title: bookDisplayTitle(state.book) });
 
     const titleText = state.book && state.book.title ? String(state.book.title) : "";
     const coverUrl = state.book && state.book.cover_url ? String(state.book.cover_url) : "";

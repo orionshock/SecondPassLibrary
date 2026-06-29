@@ -108,14 +108,45 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
                 for token in removed_tokens:
                     self.assertNotContains(response, token)
 
-    def test_dashboard_and_dynamic_pages_do_not_get_static_breadcrumbs_yet(self):
+    def test_dashboard_still_omits_breadcrumbs(self):
         self.client.force_login(self.user)
         response = self.client.get("/app/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'aria-label="Breadcrumb"')
 
+    def test_book_object_pages_render_breadcrumbs_and_no_back_links(self):
+        self.client.force_login(self.user)
         book_id = uuid4()
+
         response = self.client.get(f"/library/books/{book_id}/")
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(response, "Back to Library")
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, '<ol class="breadcrumbs__list">')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
+        )
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/?view=books">Books</a>', html=False
+        )
+        self.assertContains(response, "Book")
+        self.assertNotContains(response, "Back to Library")
+
+        response = self.client.get(f"/library/books/{book_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, '<ol class="breadcrumbs__list">')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
+        )
+        self.assertContains(
+            response, '<a class="breadcrumbs__link" href="/library/?view=books">Books</a>', html=False
+        )
+        self.assertContains(
+            response,
+            f'<a class="breadcrumbs__link" href="/library/books/{book_id}/">Book</a>',
+            html=False,
+        )
+        self.assertContains(response, "Edit")
+        self.assertNotContains(response, "Back to Book")

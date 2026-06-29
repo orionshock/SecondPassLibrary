@@ -4,10 +4,13 @@
 
 {% block title %}Book - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with grandparent_href="/library/" grandparent_label="Library" parent_href="/library/?view=books" parent_label="Books" current_label="Book" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/library/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Library</span></a>
       <h1 class="page-title" id="book-title">Book</h1>
     </div>
     <div id="book-edit-link-wrap" class="is-hidden">
