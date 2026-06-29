@@ -1149,10 +1149,20 @@ input[type="file"]:disabled::file-selector-button {
   margin-top: 2px;
   color: var(--muted);
 }
-.library-browse-row__prose-wrap {
+.library-context {
+  display: grid;
+  gap: 8px;
+}
+.library-context__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.library-context__prose-wrap {
   margin-top: 7px;
 }
-.library-browse-row__prose {
+.library-context__prose {
   display: -webkit-box;
   color: var(--muted);
   overflow: hidden;
@@ -1161,12 +1171,12 @@ input[type="file"]:disabled::file-selector-button {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
-.library-browse-row__prose.is-expanded {
+.library-context__prose.is-expanded {
   display: block;
   overflow: visible;
   -webkit-line-clamp: unset;
 }
-.library-browse-row__prose-toggle {
+.library-context__prose-toggle {
   margin-top: 4px;
   font-size: 12px;
 }

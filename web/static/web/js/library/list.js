@@ -4,7 +4,7 @@ import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
-import { renderAuthorProse, renderSeriesProse, toggleProseBlock } from "./prose.js";
+import { renderContextProseBlock, toggleProseBlock } from "./prose.js";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
@@ -130,7 +130,6 @@ function renderAuthors(payload) {
         contextName: name,
         actionLabel: `View Books by ${name}`,
       });
-      const prose = renderAuthorProse(author);
       return `
         <article class="library-browse-row">
           <div class="library-browse-row__main">
@@ -146,7 +145,6 @@ function renderAuthors(payload) {
               <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
               <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
             </button>
-            ${prose}
           </div>
           ${previews}
         </article>
@@ -169,7 +167,6 @@ function renderSeries(payload) {
         contextName: name,
         actionLabel: `View Books in ${name}`,
       });
-      const prose = renderSeriesProse(series);
       return `
         <article class="library-browse-row">
           <div class="library-browse-row__main">
@@ -185,7 +182,6 @@ function renderSeries(payload) {
               <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
               <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
             </button>
-            ${prose}
           </div>
           ${previews}
         </article>
@@ -226,8 +222,11 @@ export async function initLibraryBrowse() {
     pageSize: DEFAULT_PAGE_SIZE,
     authorId: "",
     authorName: "",
+    authorBiography: "",
     seriesId: "",
     seriesName: "",
+    seriesSummary: "",
+    contextKey: "",
     count: 0,
     resultLength: 0,
     hasNext: false,
@@ -236,9 +235,41 @@ export async function initLibraryBrowse() {
 
   function activeFilter() {
     if (state.view !== "books") return null;
-    if (state.authorId) return { label: "Author", name: state.authorName || state.authorId };
-    if (state.seriesId) return { label: "Series", name: state.seriesName || state.seriesId };
+    if (state.authorId) {
+      return {
+        id: state.authorId,
+        label: "Author",
+        name: state.authorName || state.authorId,
+        prose: state.authorBiography,
+      };
+    }
+    if (state.seriesId) {
+      return {
+        id: state.seriesId,
+        label: "Series",
+        name: state.seriesName || state.seriesId,
+        prose: state.seriesSummary,
+      };
+    }
     return null;
+  }
+
+  function renderFilterSummary(filter) {
+    const idPrefix = filter.label.toLowerCase();
+    const prose = renderContextProseBlock({
+      text: filter.prose,
+      idPrefix,
+      itemId: filter.id,
+    });
+    return `
+      <div class="library-context">
+        <div class="library-context__header">
+          <span>${escapeHtml(filter.label)}: <strong>${escapeHtml(filter.name)}</strong></span>
+          <button class="button" type="button" data-action="clear-library-filter">Clear</button>
+        </div>
+        ${prose}
+      </div>
+    `.trim();
   }
 
   function syncControls() {
@@ -260,10 +291,38 @@ export async function initLibraryBrowse() {
       filterSummaryEl.classList.add("is-hidden");
     } else {
       filterSummaryEl.classList.remove("is-hidden");
-      filterSummaryEl.innerHTML = `
-        <span>${escapeHtml(filter.label)}: <strong>${escapeHtml(filter.name)}</strong></span>
-        <button class="button" type="button" data-action="clear-library-filter">Clear</button>
-      `.trim();
+      filterSummaryEl.innerHTML = renderFilterSummary(filter);
+    }
+  }
+
+  async function loadActiveFilterContext() {
+    if (state.view !== "books" || (!state.authorId && !state.seriesId)) {
+      state.authorBiography = "";
+      state.seriesSummary = "";
+      state.contextKey = "";
+      return;
+    }
+
+    const kind = state.authorId ? "author" : "series";
+    const id = state.authorId || state.seriesId;
+    const key = `${kind}:${id}`;
+    if (state.contextKey === key) return;
+
+    state.contextKey = key;
+    state.authorBiography = "";
+    state.seriesSummary = "";
+
+    try {
+      const payload = await fetchJSON(`/api/v1/library/${kind === "author" ? "authors" : "series"}/${encodeURIComponent(id)}/`);
+      if (kind === "author") {
+        state.authorName = payload && payload.name ? String(payload.name) : state.authorName;
+        state.authorBiography = payload && payload.biography ? String(payload.biography) : "";
+      } else {
+        state.seriesName = payload && payload.name ? String(payload.name) : state.seriesName;
+        state.seriesSummary = payload && payload.summary ? String(payload.summary) : "";
+      }
+    } catch (e) {
+      console.warn("Failed to load library context prose", { kind, id, e });
     }
   }
 
@@ -334,7 +393,7 @@ export async function initLibraryBrowse() {
 
     try {
       const url = apiUrlForState();
-      const payload = await fetchJSON(url);
+      const [payload] = await Promise.all([fetchJSON(url), loadActiveFilterContext()]);
       const results = Array.isArray(payload && payload.results) ? payload.results : [];
       state.count = Number.isFinite(Number(payload && payload.count)) ? Number(payload.count) : results.length;
       state.resultLength = results.length;
@@ -382,11 +441,15 @@ export async function initLibraryBrowse() {
     state.pageSize = pageSizeFromValue(params.get("page_size"));
     state.authorId = state.view === "books" ? (params.get("author") || "").trim() : "";
     state.authorName = state.authorId ? (params.get("author_name") || "").trim() : "";
+    state.authorBiography = "";
     state.seriesId = state.view === "books" ? (params.get("series") || "").trim() : "";
     state.seriesName = state.seriesId ? (params.get("series_name") || "").trim() : "";
+    state.seriesSummary = "";
+    state.contextKey = "";
     if (state.authorId && state.seriesId) {
       state.seriesId = "";
       state.seriesName = "";
+      state.seriesSummary = "";
     }
     syncControls();
   }
@@ -410,8 +473,11 @@ export async function initLibraryBrowse() {
     state.q = (qInput.value || "").trim();
     state.authorId = "";
     state.authorName = "";
+    state.authorBiography = "";
     state.seriesId = "";
     state.seriesName = "";
+    state.seriesSummary = "";
+    state.contextKey = "";
     state.page = 1;
     await loadCurrentPage({ push: true });
   });
@@ -443,8 +509,11 @@ export async function initLibraryBrowse() {
         state.q = "";
         state.authorId = "";
         state.authorName = "";
+        state.authorBiography = "";
         state.seriesId = "";
         state.seriesName = "";
+        state.seriesSummary = "";
+        state.contextKey = "";
       }
       await loadCurrentPage({ push: true });
     });
@@ -453,11 +522,20 @@ export async function initLibraryBrowse() {
   filterSummaryEl.addEventListener("click", async (e) => {
     const source = e.target;
     if (!(source instanceof Element)) return;
+    const proseToggle = source.closest('[data-action="toggle-library-prose"]');
+    if (proseToggle && filterSummaryEl.contains(proseToggle)) {
+      toggleProseBlock(proseToggle, filterSummaryEl);
+      return;
+    }
+
     if (!source.closest('[data-action="clear-library-filter"]')) return;
     state.authorId = "";
     state.authorName = "";
+    state.authorBiography = "";
     state.seriesId = "";
     state.seriesName = "";
+    state.seriesSummary = "";
+    state.contextKey = "";
     state.page = 1;
     await loadCurrentPage({ push: true });
   });
@@ -466,20 +544,17 @@ export async function initLibraryBrowse() {
     const source = e.target;
     if (!(source instanceof Element)) return;
 
-    const proseToggle = source.closest('[data-action="toggle-library-prose"]');
-    if (proseToggle && resultsEl.contains(proseToggle)) {
-      toggleProseBlock(proseToggle, resultsEl);
-      return;
-    }
-
     const authorButton = source.closest('[data-action="browse-author"]');
     if (authorButton) {
       state.view = "books";
       state.q = "";
       state.authorId = authorButton.getAttribute("data-id") || "";
       state.authorName = authorButton.getAttribute("data-name") || "";
+      state.authorBiography = "";
       state.seriesId = "";
       state.seriesName = "";
+      state.seriesSummary = "";
+      state.contextKey = "";
       state.page = 1;
       await loadCurrentPage({ push: true });
       return;
@@ -491,8 +566,11 @@ export async function initLibraryBrowse() {
       state.q = "";
       state.authorId = "";
       state.authorName = "";
+      state.authorBiography = "";
       state.seriesId = seriesButton.getAttribute("data-id") || "";
       state.seriesName = seriesButton.getAttribute("data-name") || "";
+      state.seriesSummary = "";
+      state.contextKey = "";
       state.page = 1;
       await loadCurrentPage({ push: true });
     }
