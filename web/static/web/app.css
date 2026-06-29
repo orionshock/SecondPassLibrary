@@ -1568,6 +1568,45 @@ input[type="file"]:disabled::file-selector-button {
   align-items: center;
   font-weight: 700;
 }
+.import-job {
+  padding: 0;
+}
+.import-job__summary {
+  display: flex;
+  gap: 8px 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.import-job__summary:hover,
+.import-job__summary:focus-visible {
+  background: rgba(125, 211, 252, 0.055);
+}
+.import-job__source {
+  min-width: 180px;
+  max-width: min(440px, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.import-job__counts {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.import-job__time {
+  font-size: 12px;
+}
+.import-job__details {
+  padding: 0 14px 12px;
+}
+.import-job__items {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
 .modal[hidden] { display: none; }
 .modal {
   position: fixed;

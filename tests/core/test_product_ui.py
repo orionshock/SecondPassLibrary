@@ -502,6 +502,10 @@ class ProductUiSmokeTests(TestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="imports-upload"')
         self.assertContains(response, 'id="imports-results"')
+        self.assertContains(response, "<code>.epub</code>")
+        self.assertContains(response, "simple <code>.zip</code> files of EPUBs")
+        self.assertContains(response, "Calibre-style ZIPs with OPF sidecars")
+        self.assertContains(response, "PDF is unsupported")
 
     def test_unauthenticated_groups_redirects_to_login(self):
         response = self.client.get("/groups/", follow=False)
@@ -774,6 +778,7 @@ class ProductUiSmokeTests(TestCase):
                 "web/static/web/js/users/password_reset.js",
             )
         ]
+        imports_js = Path("web/static/web/js/imports/main.js").read_text(encoding="utf-8")
         users_shared_js = Path("web/static/web/js/users/shared.js").read_text(encoding="utf-8")
 
         self.assertIn("export function setStatus", helper_js)
@@ -802,6 +807,20 @@ class ProductUiSmokeTests(TestCase):
         self.assertNotIn("function setMembershipsStatus(", "\n".join(migrated_status_modules))
         self.assertNotIn("function setAddStatus(", "\n".join(migrated_status_modules))
         self.assertNotIn("setElStatus", users_shared_js)
+        self.assertIn('<details class="book import-job"', imports_js)
+        self.assertIn('<summary class="import-job__summary">', imports_js)
+        self.assertIn("function isActiveImportJob", imports_js)
+        self.assertIn('["pending", "processing"]', imports_js)
+        self.assertIn("function jobCounts", imports_js)
+        self.assertIn('["found", job.total_found]', imports_js)
+        self.assertIn('["imported", job.imported_count]', imports_js)
+        self.assertIn('["duplicates", job.duplicate_count]', imports_js)
+        self.assertIn('["failed", job.failed_count]', imports_js)
+        self.assertIn("friendlyDate(job.created_at)", imports_js)
+        self.assertIn("friendlyDate(job.updated_at)", imports_js)
+        self.assertIn("Job: <code>", imports_js)
+        self.assertIn("renderImportJobItems(job.items)", imports_js)
+        self.assertNotIn('<h3 class="book__title">Job ${escapeHtml(job.id', imports_js)
 
     def test_shelves_and_groups_use_shared_paged_list_helper(self):
         helper_js = Path("web/static/web/js/ui/paged_list.js").read_text(encoding="utf-8")
@@ -1205,6 +1224,13 @@ class ProductUiSmokeTests(TestCase):
         self.assertIn(".membership-add-tile", css)
         self.assertIn(".membership-add-tile__curator", css)
         self.assertIn(".membership-add-tile__actions", css)
+        self.assertIn(".import-job", css)
+        self.assertIn(".import-job__summary", css)
+        self.assertIn(".import-job__summary:hover", css)
+        self.assertIn(".import-job__source", css)
+        self.assertIn(".import-job__counts", css)
+        self.assertIn(".import-job__details", css)
+        self.assertIn(".import-job__items", css)
         self.assertIn("@media (max-width: 720px)", css)
 
     def test_shelves_product_ui_list_uses_visibility_scoped_api(self):

@@ -24,44 +24,70 @@ function renderImportJobItems(items) {
   return `${extra}<ul>${rows}</ul>`;
 }
 
+function friendlyDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function jobSourceLabel(job) {
+  return job.source_filename || "(Unknown source)";
+}
+
+function jobCounts(job) {
+  return [
+    ["found", job.total_found],
+    ["imported", job.imported_count],
+    ["duplicates", job.duplicate_count],
+    ["failed", job.failed_count],
+  ].filter(([_k, v]) => v !== null && v !== undefined && v !== "");
+}
+
+function isActiveImportJob(job) {
+  return ["pending", "processing"].includes(String(job.status || "").toLowerCase());
+}
+
 function renderImportJobs(payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
   return results
     .map((job) => {
+      const source = jobSourceLabel(job);
+      const status = job.status || "";
       const message = job.message ? `<div class="muted">${escapeHtml(job.message)}</div>` : "";
-      const createdAt = job.created_at ? `<div class="muted">${escapeHtml(job.created_at)}</div>` : "";
-      const counts = [
-        ["found", job.total_found],
-        ["imported", job.imported_count],
-        ["dupes", job.duplicate_count],
-        ["failed", job.failed_count],
-      ]
-        .filter(([_k, v]) => v !== null && v !== undefined && v !== "")
+      const createdAt = friendlyDate(job.created_at);
+      const updatedAt = friendlyDate(job.updated_at);
+      const counts = jobCounts(job)
         .map(([k, v]) => `<span class="pill">${escapeHtml(k)}: ${escapeHtml(v)}</span>`)
         .join(" ");
 
       const itemsHtml = renderImportJobItems(job.items);
+      const open = isActiveImportJob(job) ? " open" : "";
 
       return `
-          <article class="book">
-            <h3 class="book__title">Job ${escapeHtml(job.id || "")}</h3>
-            <div class="book__meta">
-              <div>Source: ${escapeHtml(job.source_filename || "")} <span class="muted">(${escapeHtml(
-        job.source_type || ""
-      )})</span></div>
-              <div>Status: <span class="pill">${escapeHtml(job.status || "")}</span></div>
-              ${counts ? `<div>${counts}</div>` : ""}
+          <details class="book import-job"${open}>
+            <summary class="import-job__summary">
+              <span class="import-job__source">${escapeHtml(source)}</span>
+              <span class="pill">${escapeHtml(status)}</span>
+              ${counts ? `<span class="import-job__counts">${counts}</span>` : ""}
+              ${createdAt ? `<span class="muted import-job__time">Created ${escapeHtml(createdAt)}</span>` : ""}
+              ${updatedAt ? `<span class="muted import-job__time">Updated ${escapeHtml(updatedAt)}</span>` : ""}
+            </summary>
+            <div class="book__meta import-job__details">
+              <div>Job: <code>${escapeHtml(job.id || "")}</code></div>
+              <div>Source type: ${escapeHtml(job.source_type || "")}</div>
               ${message}
-              ${createdAt}
+              ${itemsHtml ? `<div class="import-job__items"><h4 class="card__title">Items</h4>${itemsHtml}</div>` : ""}
             </div>
-            ${
-              itemsHtml
-                ? `<div class="card" style="margin-top: 10px;"><h4 class="card__title">Items</h4>${itemsHtml}</div>`
-                : ""
-            }
-          </article>
+          </details>
         `.trim();
     })
     .join("");
