@@ -201,7 +201,15 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-view-items-prev"')
         self.assertContains(response, 'id="shelf-view-items-next"')
         self.assertContains(response, 'id="shelf-view-items-page-note"')
-        self.assertContains(response, "arrow_back")
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/shelves/">Shelves</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, "Shelf")
+        self.assertNotContains(response, "Back to Shelves")
         self.assertContains(response, 'id="shelf-view-edit-link"')
         self.assertNotContains(response, ">Details</h2>")
         self.assertNotContains(response, ">Books</h2>")
@@ -231,6 +239,20 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-edit-book-search-form"')
         self.assertContains(response, 'id="shelf-edit-danger"')
         self.assertContains(response, 'id="shelf-edit-delete-btn"')
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/shelves/">Shelves</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            f'<a class="breadcrumbs__link" href="/shelves/{shelf_id}/">Shelf</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, "Edit")
+        self.assertNotContains(response, "Back to Shelf")
 
     def test_shelf_items_js_has_move_controls(self):
         js = Path("web/static/web/js/shelves/items.js").read_text()

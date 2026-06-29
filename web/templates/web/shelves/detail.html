@@ -4,10 +4,13 @@
 
 {% block title %}Shelf - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_href="/shelves/" parent_label="Shelves" current_label="Shelf" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/shelves/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Shelves</span></a>
       <div class="shelf-view-heading">
         <h1 class="page-title" id="shelf-title">Shelf</h1>
         <div id="shelf-view-summary" class="shelf-view-summary"></div>

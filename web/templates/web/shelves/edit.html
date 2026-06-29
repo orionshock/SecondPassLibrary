@@ -4,10 +4,13 @@
 
 {% block title %}Edit shelf - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with grandparent_href="/shelves/" grandparent_label="Shelves" parent_href="/shelves/"|add:shelf_id|add:"/" parent_label="Shelf" current_label="Edit" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>
-      <a id="shelf-edit-back" href="/shelves/{{ shelf_id|escape }}/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Shelf</span></a>
       <h1 class="page-title" id="shelf-edit-title">Edit shelf</h1>
       <div id="shelf-edit-header-meta" class="muted" style="margin-top: 6px;">
         <div id="shelf-edit-owner-context"></div>

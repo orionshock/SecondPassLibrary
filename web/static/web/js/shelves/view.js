@@ -1,6 +1,7 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
+import { syncShelfBreadcrumb } from "./navigation.js";
 import {
   inferCanEditShelf,
   renderShelfMetadata,
@@ -110,6 +111,7 @@ export async function initShelfView() {
     setStatus(statusEl, "Missing shelf id.", true);
     return;
   }
+  syncShelfBreadcrumb({ shelfName: "Shelf" });
 
   setStatus(statusEl, "Loading...", false);
   setErr("");
@@ -120,6 +122,7 @@ export async function initShelfView() {
   try {
     const shelf = await fetchJSON(`/api/v1/shelves/${encodeURIComponent(String(shelfId))}/`);
     titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
+    syncShelfBreadcrumb({ shelfName: shelf.name || "Shelf" });
     summaryEl.replaceChildren(
       renderShelfMetadata(shelf, { includeVisibility: false })
     );

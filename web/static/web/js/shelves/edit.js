@@ -9,6 +9,7 @@ import { setStatus } from "../ui/status.js";
 import { inferCanEditShelf, shelfMetadataLine } from "./shared.js";
 import { initShelfItemsEditor } from "./items.js";
 import { initShelfBookSearch } from "./book_search.js";
+import { initShelfEditNavigation, syncShelfEditBreadcrumb } from "./navigation.js";
 
 export async function initShelfEdit() {
   const me = await loadMeAndInitShell();
@@ -96,24 +97,6 @@ export async function initShelfEdit() {
   )
     return;
 
-  function setActiveTab(tabName) {
-    const isBooks = tabName === "books";
-    const isAdd = tabName === "add";
-    const isDetails = tabName === "details";
-
-    tabBooks.classList.toggle("is-active", isBooks);
-    tabAdd.classList.toggle("is-active", isAdd);
-    tabDetails.classList.toggle("is-active", isDetails);
-
-    tabBooks.setAttribute("aria-selected", isBooks ? "true" : "false");
-    tabAdd.setAttribute("aria-selected", isAdd ? "true" : "false");
-    tabDetails.setAttribute("aria-selected", isDetails ? "true" : "false");
-
-    visible(panelBooks, isBooks);
-    visible(panelAdd, isAdd);
-    visible(panelDetails, isDetails);
-  }
-
   function setErr(msg) {
     errEl.textContent = msg || "";
     visible(errEl, !!msg);
@@ -124,6 +107,7 @@ export async function initShelfEdit() {
     setStatus(statusEl, "Missing shelf id.", true);
     return;
   }
+  syncShelfEditBreadcrumb({ shelfId, shelfName: "Shelf" });
 
   setStatus(statusEl, "Loading...", false);
   setErr("");
@@ -154,6 +138,7 @@ export async function initShelfEdit() {
   const ownerGroupId = ownerType === "group" && ownerGroup && ownerGroup.id ? String(ownerGroup.id) : "";
 
   titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
+  syncShelfEditBreadcrumb({ shelfId, shelfName: shelf.name || "Shelf" });
   const metadata = shelfMetadataLine(shelf);
 
   if (ownerType === "user") {
@@ -204,17 +189,13 @@ export async function initShelfEdit() {
   }
 
   visible(tabsEl, true);
-  setActiveTab("books");
+  initShelfEditNavigation(document, shelfId);
 
   visible(wrapEl, true);
   visible(itemsCard, true);
   visible(addCard, true);
   visible(dangerCard, true);
   setStatus(statusEl, "", false);
-
-  tabBooks.addEventListener("click", () => setActiveTab("books"));
-  tabAdd.addEventListener("click", () => setActiveTab("add"));
-  tabDetails.addEventListener("click", () => setActiveTab("details"));
 
   formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
