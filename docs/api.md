@@ -292,6 +292,7 @@ Shelf payload notes:
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
   - group shelves and other users' shelves are read-only via bearer tokens and report `can_edit: false`
   - do not bypass book access; `/items/` still filters listed books through normal book visibility
+- Shelf list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
 
 Example user-owned shelf payload excerpt:
 
@@ -392,6 +393,75 @@ All Library mutation endpoints (including imports, identifier CRUD, group member
 Author/Series payload notes:
 
 - Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
+- Author and Series list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
+
+### Preview books
+
+Several browse/context endpoints support optional bounded book-cover previews:
+
+- `GET /api/v1/library/authors/?include_preview_books=true`
+- `GET /api/v1/library/authors/<id>/?include_preview_books=true`
+- `GET /api/v1/library/series/?include_preview_books=true`
+- `GET /api/v1/library/series/<id>/?include_preview_books=true`
+- `GET /api/v1/shelves/?include_preview_books=true`
+- `GET /api/v1/shelves/<id>/?include_preview_books=true`
+- `GET /api/v1/library/groups/?include_preview_books=true`
+- `GET /api/v1/library/groups/<group_id>/?include_preview_books=true`
+
+Request behavior:
+
+- `include_preview_books` accepts truthy values `1`, `true`, `yes`, `y`, and `on`, case-insensitive after trimming.
+- Absent or false-like values omit `preview_books`; default payloads remain unchanged.
+- The option can be combined with normal parent endpoint pagination (`page`, `page_size`) and normal endpoint filters.
+- Parent endpoint pagination shape does not change. `preview_books` is attached to each parent row on the current page and is capped independently of parent `page_size`.
+
+Response shape when opted in:
+
+```json
+{
+  "id": "author-or-series-shelf-or-group-id",
+  "name": "Parent name",
+  "preview_books": [
+    {
+      "id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
+      "title": "Example Book",
+      "cover_url": null
+    }
+  ]
+}
+```
+
+Preview item rules:
+
+- Each preview item contains only `id`, `title`, and `cover_url`.
+- `cover_url` is an absolute URL when a cover exists, otherwise `null`.
+- Preview items are context hints, not full Book objects.
+- Preview items never include file/download URLs, reading data, marginalia, permission internals, groups, shelves, authors, or series payloads.
+- At most 6 preview books are returned per parent item.
+
+Visibility and auth:
+
+- Preview books are visibility-scoped before limiting or sampling.
+- Readers and Client API bearer tokens only receive preview books visible to their user.
+- Shelves do not grant book access; inaccessible shelf items are omitted from previews.
+- Group previews use books assigned to that exact group and do not leak hidden assigned books.
+- Public/Common Room previews do not leak hidden books.
+- Session auth and bearer auth use the same `request.user` book visibility behavior for preview selection.
+- Inaccessible parent resources remain inaccessible as before.
+
+Ordering:
+
+- Author previews are sample-like/random visible books. Contents and order may change between requests; clients must not rely on stable order or stable membership.
+- Group previews are sample-like/random visible books assigned to that exact group. Contents and order may change between requests; clients must not rely on stable order or stable membership.
+- Series previews are stable by natural series sequence: `series_index`, then deterministic fallback.
+- Shelf previews are stable by shelf item order: `position`, then deterministic fallback.
+
+Client guidance:
+
+- Treat `preview_books` as optional and feature-detect it per endpoint.
+- Do not use `preview_books` as a substitute for fetching a full book list or book detail.
+- Render a placeholder when `cover_url` is `null`.
+- If a preview cover is interactive, clients may open the preview book detail by `id` or open the parent context, but should not infer file/download capability from the preview item.
 
 Book payload notes:
 
@@ -447,6 +517,8 @@ Group list/detail payloads include request-context UI hints:
 ```
 
 `capabilities.can_curate` means the requester can curate that group: edit presentation/description, manage grouped books, and create/manage group-owned shelves. It does not include member management, group deletion, global user management, or server settings.
+
+Group list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
 
 Public restrictions:
 

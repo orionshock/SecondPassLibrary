@@ -104,8 +104,10 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
 
 - `GET /api/v1/accounts/me/` (read-only; bearer tokens do not allow `PATCH`)
 - selected library read/download endpoints
+  - supported browse endpoints may opt into `preview_books` with `include_preview_books=true`; preview items are visibility-scoped context hints with `id`, `title`, and `cover_url` only, never file/download URLs
 - shelves endpoints:
   - bearer tokens may read any shelf the user can view
+  - visible shelf list/detail payloads may opt into `preview_books` with `include_preview_books=true`; shelves still do not grant book access
   - bearer tokens may create/edit/delete **only** the user's own personal shelves
   - bearer tokens may add/remove/reorder items only in the user's own personal shelves
   - group-owned shelves are read-only via bearer tokens and report `can_edit: false`
