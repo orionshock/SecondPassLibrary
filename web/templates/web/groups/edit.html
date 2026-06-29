@@ -4,10 +4,13 @@
 
 {% block title %}Edit group - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with grandparent_href="/groups/" grandparent_label="Groups" parent_href="/groups/"|add:group_id|add:"/" parent_label="Group" current_label="Edit" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/groups/{{ group_id|escape }}/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Group</span></a>
       <h1 class="page-title" id="group-edit-title">Group</h1>
       <div class="muted" id="group-edit-subtitle"></div>
     </div>

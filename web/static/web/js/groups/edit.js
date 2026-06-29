@@ -14,6 +14,7 @@ import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 import { initGroupBooksTab } from "./books.js";
 import { initGroupMembershipsTab } from "./memberships.js";
+import { syncGroupEditBreadcrumb } from "./navigation.js";
 import { initGroupShelvesTab } from "./shelves.js";
 
 export async function initGroupEdit() {
@@ -118,6 +119,7 @@ export async function initGroupEdit() {
 
   const groupId = root.getAttribute("data-group-id") || "";
   if (!groupId) return;
+  syncGroupEditBreadcrumb({ groupId, groupName: "Group" });
 
   setStatus(statusEl, "Loading...", false);
   visible(root, false);
@@ -138,6 +140,7 @@ export async function initGroupEdit() {
 
   const isPublicGroup = !!group.is_public_group;
   titleEl.textContent = group.name || "Group";
+  syncGroupEditBreadcrumb({ groupId, groupName: group.name || "Group" });
   subtitleEl.textContent = "";
 
   if (!canEditGroupPage({ me, group })) {

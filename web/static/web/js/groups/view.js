@@ -3,6 +3,12 @@ import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
+import {
+  groupViewTabFromSearch,
+  selectGroupViewTab,
+  setGroupViewUrl,
+  syncGroupBreadcrumb,
+} from "./navigation.js";
 import { canEditGroupPage, renderBooksCompact, renderGroupShelvesCompact, renderMembersReadOnly } from "./shared.js";
 
 export async function initGroupView() {
@@ -56,10 +62,22 @@ export async function initGroupView() {
     return;
   }
 
-  initTabs(root);
-
   const groupId = root.getAttribute("data-group-id") || "";
   if (!groupId) return;
+  const initialTab = groupViewTabFromSearch();
+  initTabs(root, { defaultTab: initialTab });
+  selectGroupViewTab(root, initialTab);
+  syncGroupBreadcrumb({ groupName: "Group" });
+  root.addEventListener("click", (event) => {
+    const source = event.target;
+    if (!(source instanceof Element)) return;
+    const tab = source.closest(".tab-button[data-tab]");
+    if (!tab || !root.contains(tab)) return;
+    setGroupViewUrl(groupId, tab.getAttribute("data-tab") || "books");
+  });
+  window.addEventListener("popstate", () => {
+    selectGroupViewTab(root, groupViewTabFromSearch());
+  });
 
   setStatus(statusEl, "Loading...", false);
   visible(root, false);
@@ -80,6 +98,7 @@ export async function initGroupView() {
 
   const isPublicGroup = !!group.is_public_group;
   titleEl.textContent = group.name || "Group";
+  syncGroupBreadcrumb({ groupName: group.name || "Group" });
 
   subtitleEl.textContent = "";
 

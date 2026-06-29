@@ -4,10 +4,13 @@
 
 {% block title %}Group - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_href="/groups/" parent_label="Groups" current_label="Group" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/groups/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Groups</span></a>
       <h1 class="page-title" id="group-view-title">Group</h1>
       <div class="muted" id="group-view-subtitle"></div>
     </div>

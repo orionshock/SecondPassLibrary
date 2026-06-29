@@ -150,3 +150,38 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
         )
         self.assertContains(response, "Edit")
         self.assertNotContains(response, "Back to Book")
+
+    def test_group_object_pages_render_breadcrumbs_and_no_back_links(self):
+        self.client.force_login(self.user)
+        group_id = uuid4()
+
+        response = self.client.get(f"/groups/{group_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, '<ol class="breadcrumbs__list">')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/groups/">Groups</a>',
+            html=False,
+        )
+        self.assertContains(response, "Group")
+        self.assertNotContains(response, "Back to Groups")
+
+        response = self.client.get(f"/groups/{group_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(response, '<ol class="breadcrumbs__list">')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/groups/">Groups</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            f'<a class="breadcrumbs__link" href="/groups/{group_id}/">Group</a>',
+            html=False,
+        )
+        self.assertContains(response, "Edit")
+        self.assertNotContains(response, "Back to Group")

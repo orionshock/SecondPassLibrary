@@ -56,6 +56,15 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="group-view-books-results"')
         self.assertContains(response, 'id="group-view-members-results"')
         self.assertContains(response, 'id="group-view-shelves-results"')
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/groups/">Groups</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, "Group")
+        self.assertNotContains(response, "Back to Groups")
 
     def test_unauthenticated_group_edit_redirects_to_login(self):
         group_id = uuid4()
@@ -83,6 +92,20 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="group-edit-shelves-results"')
         self.assertContains(response, 'id="group-edit-shelves-actions"')
         self.assertContains(response, 'id="group-delete-root"')
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/groups/">Groups</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            f'<a class="breadcrumbs__link" href="/groups/{group_id}/">Group</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, "Edit")
+        self.assertNotContains(response, "Back to Group")
         self.assertContains(
             response,
             "Managers, librarians, and owners can already manage books globally.",
