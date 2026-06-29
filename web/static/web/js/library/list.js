@@ -4,6 +4,7 @@ import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
+import { renderAuthorProse, renderSeriesProse, toggleProseBlock } from "./prose.js";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
@@ -129,20 +130,24 @@ function renderAuthors(payload) {
         contextName: name,
         actionLabel: `View Books by ${name}`,
       });
+      const prose = renderAuthorProse(author);
       return `
         <article class="library-browse-row">
-          <button
-            class="library-browse-row__main library-browse-row__primary"
-            type="button"
-            data-action="browse-author"
-            data-id="${escapeHtml(id)}"
-            data-name="${escapeHtml(name)}"
-            title="View Books by ${escapeHtml(name)}"
-            aria-label="View Books by ${escapeHtml(name)}"
-          >
-            <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
-            <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
-          </button>
+          <div class="library-browse-row__main">
+            <button
+              class="library-browse-row__primary"
+              type="button"
+              data-action="browse-author"
+              data-id="${escapeHtml(id)}"
+              data-name="${escapeHtml(name)}"
+              title="View Books by ${escapeHtml(name)}"
+              aria-label="View Books by ${escapeHtml(name)}"
+            >
+              <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
+              <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(author.book_count))}</div>
+            </button>
+            ${prose}
+          </div>
           ${previews}
         </article>
       `.trim();
@@ -164,20 +169,24 @@ function renderSeries(payload) {
         contextName: name,
         actionLabel: `View Books in ${name}`,
       });
+      const prose = renderSeriesProse(series);
       return `
         <article class="library-browse-row">
-          <button
-            class="library-browse-row__main library-browse-row__primary"
-            type="button"
-            data-action="browse-series"
-            data-id="${escapeHtml(id)}"
-            data-name="${escapeHtml(name)}"
-            title="View Books in ${escapeHtml(name)}"
-            aria-label="View Books in ${escapeHtml(name)}"
-          >
-            <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
-            <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
-          </button>
+          <div class="library-browse-row__main">
+            <button
+              class="library-browse-row__primary"
+              type="button"
+              data-action="browse-series"
+              data-id="${escapeHtml(id)}"
+              data-name="${escapeHtml(name)}"
+              title="View Books in ${escapeHtml(name)}"
+              aria-label="View Books in ${escapeHtml(name)}"
+            >
+              <h3 class="library-browse-row__title">${escapeHtml(name)}</h3>
+              <div class="library-browse-row__meta">${escapeHtml(visibleBookCountLabel(series.book_count))}</div>
+            </button>
+            ${prose}
+          </div>
           ${previews}
         </article>
       `.trim();
@@ -456,6 +465,12 @@ export async function initLibraryBrowse() {
   resultsEl.addEventListener("click", async (e) => {
     const source = e.target;
     if (!(source instanceof Element)) return;
+
+    const proseToggle = source.closest('[data-action="toggle-library-prose"]');
+    if (proseToggle && resultsEl.contains(proseToggle)) {
+      toggleProseBlock(proseToggle, resultsEl);
+      return;
+    }
 
     const authorButton = source.closest('[data-action="browse-author"]');
     if (authorButton) {
