@@ -8,11 +8,15 @@ Practical local development workflow (Windows/PowerShell).
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+npm install
 ```
 
 Note: `requirements.txt` includes Pillow for cover image validation.
 EPUB imports also attempt best-effort embedded cover extraction (JPEG/PNG/WebP only).
 ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) to bootstrap metadata and cover for new books only.
+
+`npm install` installs the pinned local Pyright dev tool. There is no frontend
+build step.
 
 ## Media serving (dev)
 
@@ -136,7 +140,13 @@ Basic auth should not be treated as the final production/client authentication s
 ```powershell
 python manage.py check
 python manage.py test
+npm run typecheck
 ```
+
+`npm run typecheck` runs Pyright with a conservative Django-friendly baseline.
+It is intended to catch ordinary Python mistakes without treating Django's
+dynamic model/runtime attributes as hard errors.
+If PowerShell blocks `npm.ps1`, use `npm.cmd run typecheck`.
 
 Test helpers:
 

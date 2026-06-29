@@ -3,11 +3,41 @@
   "pythonVersion": "3.13",
   "venvPath": ".",
   "venv": ".venv",
+  "include": [
+    "accounts",
+    "core",
+    "library",
+    "reading",
+    "secondpass",
+    "shelves",
+    "web"
+  ],
   "exclude": [
+    "**/.*",
     "**/__pycache__",
+    "**/.mypy_cache",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/build",
+    "**/dist",
+    "**/migrations",
+    "**/node_modules",
     "**/tests.py",
+    ".git",
     ".venv",
+    "node_modules",
+    "out",
+    "tests",
     "userdata",
-    "TestFiles", "**/node_modules", "**/.*"
-  ]
+    "TestFiles"
+  ],
+  "reportAttributeAccessIssue": false,
+  "reportAssignmentType": false,
+  "reportArgumentType": false,
+  "reportCallIssue": false,
+  "reportGeneralTypeIssues": false,
+  "reportIndexIssue": false,
+  "reportOperatorIssue": false,
+  "reportOptionalIterable": false,
+  "reportReturnType": false
 }
