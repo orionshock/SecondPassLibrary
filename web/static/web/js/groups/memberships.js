@@ -54,6 +54,17 @@ export async function initGroupMembershipsTab({
 
   if (!allowMembershipManage) return { membersCtl };
 
+  let liveStatusTimer = null;
+  function clearLiveStatusLater(rowStatus) {
+    if (liveStatusTimer) window.clearTimeout(liveStatusTimer);
+    liveStatusTimer = window.setTimeout(() => {
+      if (rowStatus) {
+        rowStatus.textContent = "";
+        rowStatus.classList.remove("error");
+      }
+    }, 5000);
+  }
+
   try {
     const users = await loadAllManageableUsers();
     addMemberUser.textContent = "";
@@ -111,8 +122,19 @@ export async function initGroupMembershipsTab({
     if (!action || !membershipId) return;
 
     if (action === "member-remove") {
-      setStatus(membersStatus, "Removing...", false);
+      const row = target.closest(".membership-row");
+      const rowStatus = row ? row.querySelector(".membership-row__status") : null;
+      function setRowStatus(text, isError) {
+        if (!rowStatus) return;
+        rowStatus.textContent = text || "";
+        rowStatus.classList.toggle("error", !!isError);
+      }
+
+      if (!window.confirm("Remove this user from the group?")) return;
+
       try {
+        setRowStatus("Removing...", false);
+        setGlobalError("");
         const csrf = getCsrfToken();
         const headers = { Accept: "application/json" };
         if (csrf) headers["X-CSRFToken"] = csrf;
@@ -123,37 +145,66 @@ export async function initGroupMembershipsTab({
           )}/`,
           { method: "DELETE", headers }
         );
+        setRowStatus("Removed.", false);
         await membersCtl.reloadFirstPage();
       } catch (e2) {
         console.error("Failed to remove member", { groupId, membershipId, e2 });
-        setStatus(membersStatus, extractApiErrorMessage(e2), true);
-        setGlobalError(extractApiErrorMessage(e2));
+        const msg = extractApiErrorMessage(e2);
+        setRowStatus(msg, true);
+        setStatus(membersStatus, msg, true);
+        setGlobalError(msg);
       }
     }
+  });
 
-    if (action === "member-save") {
-      const checkbox = membersResults.querySelector(
-        `input[data-action=\"member-curator\"][data-membership-id=\"${membershipId}\"]`
+  membersResults.addEventListener("change", async (e) => {
+    const source = e.target;
+    if (!source || source.nodeType !== 1) return;
+    const target = source.closest('input[data-action="member-curator"]');
+    if (!target || !membersResults.contains(target)) return;
+
+    const membershipId = target.getAttribute("data-membership-id") || "";
+    const row = target.closest(".membership-row");
+    const rowStatus = row ? row.querySelector(".membership-row__status") : null;
+    const desired = !!target.checked;
+    function setRowStatus(text, isError) {
+      if (!rowStatus) return;
+      rowStatus.textContent = text || "";
+      rowStatus.classList.toggle("error", !!isError);
+    }
+
+    if (!membershipId) {
+      setRowStatus("Missing membership identifier.", true);
+      target.checked = !desired;
+      return;
+    }
+
+    try {
+      target.disabled = true;
+      setRowStatus("Saving...", false);
+      setGlobalError("");
+
+      const csrf = getCsrfToken();
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (csrf) headers["X-CSRFToken"] = csrf;
+
+      await fetchJSONWithOptions(
+        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(
+          String(membershipId)
+        )}/`,
+        { method: "PATCH", headers, body: JSON.stringify({ is_curator: desired }) }
       );
-      const isCurator = !!(checkbox && checkbox.checked);
-      setStatus(membersStatus, "Saving...", false);
-      try {
-        const csrf = getCsrfToken();
-        const headers = { Accept: "application/json", "Content-Type": "application/json" };
-        if (csrf) headers["X-CSRFToken"] = csrf;
-
-        await fetchJSONWithOptions(
-          `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(
-            String(membershipId)
-          )}/`,
-          { method: "PATCH", headers, body: JSON.stringify({ is_curator: isCurator }) }
-        );
-        await membersCtl.reloadFirstPage();
-      } catch (e2) {
-        console.error("Failed to update member curator status", { groupId, membershipId, e2 });
-        setStatus(membersStatus, extractApiErrorMessage(e2), true);
-        setGlobalError(extractApiErrorMessage(e2));
-      }
+      setRowStatus("Saved.", false);
+      clearLiveStatusLater(rowStatus);
+    } catch (e2) {
+      target.checked = !desired;
+      console.error("Failed to update member curator status", { groupId, membershipId, e2 });
+      const msg = extractApiErrorMessage(e2);
+      setRowStatus(msg, true);
+      setStatus(membersStatus, msg, true);
+      setGlobalError(msg);
+    } finally {
+      target.disabled = false;
     }
   });
 

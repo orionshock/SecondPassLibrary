@@ -127,14 +127,10 @@ export function renderMembersReadOnly(payload) {
   return results
     .map((m) => {
       const user = m && m.user ? m.user : m;
-      const curatorBadge = m.is_curator ? '<span class="pill">Curator</span>' : "";
       const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
       return `
-        <article class="book card-row--compact">
-          <div class="identity-row">
-            <h3 class="book__title identity-row__main">${identity}</h3>
-            <div class="badge-row"><span class="pill">Member</span>${curatorBadge}</div>
-          </div>
+        <article class="membership-row membership-row--readonly">
+          <div class="membership-row__group membership-row__identity">${identity}</div>
         </article>
       `.trim();
     })
@@ -150,25 +146,29 @@ export function renderMembersManage(payload, { isPublicGroup }) {
       const user = m && m.user ? m.user : m;
       const isCurator = !!m.is_curator;
       const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
-      const curatorDisabled = isPublicGroup ? "disabled" : "";
-      const saveDisabled = isPublicGroup ? "disabled" : "";
       const note = isPublicGroup
-        ? '<div class="muted">Public is the default/fallback group. Curator assignment is not available; removal is allowed when other memberships remain (final removal restores Public).</div>'
+        ? '<div class="membership-row__note muted">Public fallback group; curator unavailable.</div>'
         : "";
+      const curatorControl = isPublicGroup
+        ? ""
+        : `
+              <label class="membership-row__curator">
+                <input type="checkbox" data-action="member-curator" data-membership-id="${escapeHtml(m.id)}" ${isCurator ? "checked" : ""} />
+                <span>Curator</span>
+              </label>
+            `.trim();
 
       return `
-        <article class="book card-row--compact">
-          <div class="identity-row">
-            <h3 class="book__title identity-row__main">${identity}</h3>
-            <div class="badge-row">
-              <span class="pill">Member</span>
-              ${isCurator ? '<span class="pill">Curator</span>' : ""}
-              <label><input type="checkbox" data-action="member-curator" data-membership-id="${escapeHtml(m.id)}" ${isCurator ? "checked" : ""} ${curatorDisabled} /> Curator</label>
-              <button class="button" type="button" data-action="member-save" data-membership-id="${escapeHtml(m.id)}" ${saveDisabled}>Save</button>
-              <button class="icon-button" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
-            </div>
+        <article class="membership-row">
+          <div class="membership-row__actions">
+            <button class="icon-button icon-button--danger" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
           </div>
-          ${note ? `<div class="book__meta">${note}</div>` : ""}
+          <div class="membership-row__group membership-row__identity">${identity}</div>
+          <div class="membership-row__controls">
+            ${curatorControl}
+            ${note}
+            <span class="membership-row__status muted" aria-live="polite"></span>
+          </div>
         </article>
         `.trim();
     })
