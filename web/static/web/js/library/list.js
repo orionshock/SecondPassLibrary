@@ -6,11 +6,13 @@ import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
+import { canonicalLibraryParams, libraryBookDetailHref, libraryContextHref } from "./navigation.js";
 import { renderLibraryContext, toggleProseBlock } from "./prose.js";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
-const VIEWS = new Set(["books", "authors", "series"]);
+const VIEWS = new Set(["books", "authors", "series", "author"]);
+const TAB_VIEWS = new Set(["books", "authors", "series"]);
 
 function publishedYear(value) {
   const raw = value == null ? "" : String(value).trim();
@@ -73,35 +75,6 @@ function visibleBookCountLabel(count) {
   return `${value} ${value === 1 ? "Book" : "Books"}`;
 }
 
-function pathWithParams(base, params) {
-  const url = new URL(base, window.location.origin);
-  for (const [k, v] of Object.entries(params || {})) {
-    if (v === null || v === undefined || v === "") continue;
-    url.searchParams.set(k, String(v));
-  }
-  return `${url.pathname}${url.search}`;
-}
-
-function bookDetailHref(bookId, context = null) {
-  if (!bookId) return "";
-  const base = `/library/books/${encodeURIComponent(String(bookId))}/`;
-  if (context && context.kind === "author" && context.id) {
-    return pathWithParams(base, {
-      from: "author",
-      author: context.id,
-      author_name: context.name,
-    });
-  }
-  if (context && context.kind === "series" && context.id) {
-    return pathWithParams(base, {
-      from: "series",
-      series: context.id,
-      series_name: context.name,
-    });
-  }
-  return base;
-}
-
 function renderBooks(payload, context = null) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
@@ -109,7 +82,7 @@ function renderBooks(payload, context = null) {
   return results
     .map((b) => {
       const title = b.title || "(Untitled)";
-      const bookHref = b.id ? bookDetailHref(b.id, context) : null;
+      const bookHref = b.id ? libraryBookDetailHref(b.id, context) : null;
       const subtitle = compactSubtitle(title, b.subtitle);
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const series = b.series && b.series.name ? b.series.name : "";
@@ -160,7 +133,7 @@ function renderAuthors(payload) {
         contextId: id,
         contextName: name,
         actionLabel: `View Books by ${name}`,
-        bookHref: (book) => bookDetailHref(book && book.id, { kind: "author", id, name }),
+        bookHref: (book) => libraryBookDetailHref(book && book.id, { kind: "author", id }),
       });
       return `
         <article class="library-browse-row">
@@ -198,7 +171,7 @@ function renderSeries(payload) {
         contextId: id,
         contextName: name,
         actionLabel: `View Books in ${name}`,
-        bookHref: (book) => bookDetailHref(book && book.id, { kind: "series", id, name }),
+        bookHref: (book) => libraryBookDetailHref(book && book.id, { kind: "series", id }),
       });
       return `
         <article class="library-browse-row">
@@ -273,8 +246,7 @@ export async function initLibraryBrowse() {
   };
 
   function activeFilter() {
-    if (state.view !== "books") return null;
-    if (state.authorId) {
+    if (state.view === "author" && state.authorId) {
       return {
         id: state.authorId,
         kind: "author",
@@ -284,7 +256,7 @@ export async function initLibraryBrowse() {
         proseLabel: "Biography",
       };
     }
-    if (state.seriesId) {
+    if (state.view === "series" && state.seriesId) {
       return {
         id: state.seriesId,
         kind: "series",
@@ -316,7 +288,7 @@ export async function initLibraryBrowse() {
       return;
     }
 
-    if (state.view === "series") {
+    if (state.view === "series" && !state.seriesId) {
       setBreadcrumbs([
         { label: "Library", href: "/library/" },
         { label: "Series", current: true },
@@ -324,7 +296,7 @@ export async function initLibraryBrowse() {
       return;
     }
 
-    if (state.authorId) {
+    if (state.view === "author" && state.authorId) {
       setBreadcrumbs([
         { label: "Library", href: "/library/" },
         { label: "Authors", href: "/library/?view=authors" },
@@ -333,7 +305,7 @@ export async function initLibraryBrowse() {
       return;
     }
 
-    if (state.seriesId) {
+    if (state.view === "series" && state.seriesId) {
       setBreadcrumbs([
         { label: "Library", href: "/library/" },
         { label: "Series", href: "/library/?view=series" },
@@ -446,8 +418,9 @@ export async function initLibraryBrowse() {
     prevBtn.disabled = !state.hasPrevious;
     nextBtn.disabled = !state.hasNext;
 
+    const activeTabView = activeFilter() ? "books" : state.view;
     for (const tab of viewTabs) {
-      const isActive = tab.dataset.view === state.view;
+      const isActive = tab.dataset.view === activeTabView;
       tab.classList.toggle("is-active", isActive);
       tab.setAttribute("aria-selected", isActive ? "true" : "false");
     }
@@ -463,15 +436,15 @@ export async function initLibraryBrowse() {
   }
 
   async function loadActiveFilterContext() {
-    if (state.view !== "books" || (!state.authorId && !state.seriesId)) {
+    if (!activeFilter()) {
       state.authorBiography = "";
       state.seriesSummary = "";
       clearContextUiState();
       return;
     }
 
-    const kind = state.authorId ? "author" : "series";
-    const id = state.authorId || state.seriesId;
+    const kind = state.view === "author" ? "author" : "series";
+    const id = kind === "author" ? state.authorId : state.seriesId;
     const key = `${kind}:${id}`;
     if (state.contextKey === key) return;
 
@@ -503,7 +476,7 @@ export async function initLibraryBrowse() {
       });
     }
 
-    if (state.view === "series") {
+    if (state.view === "series" && !state.seriesId) {
       return urlWithParams("/api/v1/library/series/", {
         include_preview_books: "true",
         page: state.page,
@@ -512,7 +485,7 @@ export async function initLibraryBrowse() {
     }
 
     return urlWithParams("/api/v1/library/books/", {
-      q: state.q,
+      q: state.view === "books" ? state.q : "",
       page: state.page,
       page_size: state.pageSize,
       author: state.authorId,
@@ -522,30 +495,18 @@ export async function initLibraryBrowse() {
   }
 
   function locationParamsForState() {
-    const params = {
-      view: state.view,
-      page: state.page,
-      page_size: state.pageSize,
-    };
-    if (state.view === "books") {
-      if (state.q) params.q = state.q;
-      if (state.authorId) params.author = state.authorId;
-      if (state.authorName) params.author_name = state.authorName;
-      if (state.seriesId) params.series = state.seriesId;
-      if (state.seriesName) params.series_name = state.seriesName;
-    }
-    return params;
+    return canonicalLibraryParams(state, { defaultPageSize: DEFAULT_PAGE_SIZE });
   }
 
   function renderPayload(payload) {
     if (state.view === "authors") return renderAuthors(payload);
-    if (state.view === "series") return renderSeries(payload);
+    if (state.view === "series" && !state.seriesId) return renderSeries(payload);
     return renderBooks(payload, activeBookBreadcrumbContext());
   }
 
   function emptyText() {
     if (state.view === "authors") return "No authors.";
-    if (state.view === "series") return "No series.";
+    if (state.view === "series" && !state.seriesId) return "No series.";
     return "Empty library.";
   }
 
@@ -607,11 +568,12 @@ export async function initLibraryBrowse() {
     state.q = state.view === "books" ? (params.get("q") || "").trim() : "";
     state.page = parsePositiveInt(params.get("page"), 1);
     state.pageSize = pageSizeFromValue(params.get("page_size"));
-    state.authorId = state.view === "books" ? (params.get("author") || "").trim() : "";
-    state.authorName = state.authorId ? (params.get("author_name") || "").trim() : "";
+    state.authorId = state.view === "author" ? (params.get("author") || "").trim() : "";
+    if (state.view === "author" && !state.authorId) state.view = "books";
+    state.authorName = "";
     state.authorBiography = "";
-    state.seriesId = state.view === "books" ? (params.get("series") || "").trim() : "";
-    state.seriesName = state.seriesId ? (params.get("series_name") || "").trim() : "";
+    state.seriesId = state.view === "series" ? (params.get("series") || "").trim() : "";
+    state.seriesName = "";
     state.seriesSummary = "";
     clearContextUiState();
     if (state.authorId && state.seriesId) {
@@ -624,7 +586,8 @@ export async function initLibraryBrowse() {
 
   function pushLocation(params, { replace = false } = {}) {
     const url = new URL(window.location.href);
-    url.search = new URLSearchParams(params).toString();
+    const search = new URLSearchParams(params).toString();
+    url.search = search ? `?${search}` : "";
     if (replace) {
       window.history.replaceState({}, "", url.toString());
     } else {
@@ -670,19 +633,17 @@ export async function initLibraryBrowse() {
   for (const tab of viewTabs) {
     tab.addEventListener("click", async () => {
       const nextView = tab.dataset.view || "books";
-      if (!VIEWS.has(nextView)) return;
+      if (!TAB_VIEWS.has(nextView)) return;
       state.view = nextView;
       state.page = 1;
-      if (nextView !== "books") {
-        state.q = "";
-        state.authorId = "";
-        state.authorName = "";
-        state.authorBiography = "";
-        state.seriesId = "";
-        state.seriesName = "";
-        state.seriesSummary = "";
-        clearContextUiState();
-      }
+      if (nextView !== "books") state.q = "";
+      state.authorId = "";
+      state.authorName = "";
+      state.authorBiography = "";
+      state.seriesId = "";
+      state.seriesName = "";
+      state.seriesSummary = "";
+      clearContextUiState();
       await loadCurrentPage({ push: true });
     });
   }
@@ -720,10 +681,10 @@ export async function initLibraryBrowse() {
 
     const authorButton = source.closest('[data-action="browse-author"]');
     if (authorButton) {
-      state.view = "books";
+      state.view = "author";
       state.q = "";
       state.authorId = authorButton.getAttribute("data-id") || "";
-      state.authorName = authorButton.getAttribute("data-name") || "";
+      state.authorName = "";
       state.authorBiography = "";
       state.seriesId = "";
       state.seriesName = "";
@@ -736,13 +697,13 @@ export async function initLibraryBrowse() {
 
     const seriesButton = source.closest('[data-action="browse-series"]');
     if (seriesButton) {
-      state.view = "books";
+      state.view = "series";
       state.q = "";
       state.authorId = "";
       state.authorName = "";
       state.authorBiography = "";
       state.seriesId = seriesButton.getAttribute("data-id") || "";
-      state.seriesName = seriesButton.getAttribute("data-name") || "";
+      state.seriesName = "";
       state.seriesSummary = "";
       clearContextUiState();
       state.page = 1;

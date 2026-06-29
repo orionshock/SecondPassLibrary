@@ -7,6 +7,7 @@ import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
+import { bookDetailContextFromSearch, libraryContextHref } from "./navigation.js";
 
 function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
   if (!summaryWrapEl || !summaryEl || !toggleEl) return;
@@ -68,64 +69,12 @@ function bookDisplayTitle(book) {
   return book && book.title ? String(book.title) : "Untitled book";
 }
 
-function pathWithParams(base, params) {
-  const url = new URL(base, window.location.origin);
-  for (const [key, value] of Object.entries(params || {})) {
-    if (value === null || value === undefined || value === "") continue;
-    url.searchParams.set(key, String(value));
-  }
-  return `${url.pathname}${url.search}`;
-}
-
-function libraryBreadcrumbContextFromLocation() {
-  const params = new URLSearchParams(window.location.search);
-  const from = (params.get("from") || "").trim().toLowerCase();
-  if (from === "author") {
-    const id = (params.get("author") || "").trim();
-    if (!id) return null;
-    return {
-      kind: "author",
-      id,
-      name: (params.get("author_name") || "").trim() || "Author",
-    };
-  }
-  if (from === "series") {
-    const id = (params.get("series") || "").trim();
-    if (!id) return null;
-    return {
-      kind: "series",
-      id,
-      name: (params.get("series_name") || "").trim() || "Series",
-    };
-  }
-  return null;
-}
-
-function contextCrumbHref(context) {
-  if (!context) return "";
-  if (context.kind === "author") {
-    return pathWithParams("/library/", {
-      view: "books",
-      author: context.id,
-      author_name: context.name,
-    });
-  }
-  if (context.kind === "series") {
-    return pathWithParams("/library/", {
-      view: "books",
-      series: context.id,
-      series_name: context.name,
-    });
-  }
-  return "";
-}
-
 function syncBookBreadcrumbs({ title, context = null }) {
   if (context && context.kind === "author") {
     setBreadcrumbs([
       { label: "Library", href: "/library/" },
       { label: "Authors", href: "/library/?view=authors" },
-      { label: context.name || "Author", href: contextCrumbHref(context) },
+      { label: context.name || "Author", href: libraryContextHref(context) },
       { label: title || "Book", current: true },
     ]);
     return;
@@ -134,7 +83,7 @@ function syncBookBreadcrumbs({ title, context = null }) {
     setBreadcrumbs([
       { label: "Library", href: "/library/" },
       { label: "Series", href: "/library/?view=series" },
-      { label: context.name || "Series", href: contextCrumbHref(context) },
+      { label: context.name || "Series", href: libraryContextHref(context) },
       { label: title || "Book", current: true },
     ]);
     return;
@@ -145,6 +94,21 @@ function syncBookBreadcrumbs({ title, context = null }) {
     { label: "Books", href: "/library/?view=books" },
     { label: title || "Book", current: true },
   ]);
+}
+
+async function loadBreadcrumbContext(context) {
+  if (!context || !context.id || (context.kind !== "author" && context.kind !== "series")) return null;
+  try {
+    const endpoint = context.kind === "author" ? "authors" : "series";
+    const payload = await fetchJSON(`/api/v1/library/${endpoint}/${encodeURIComponent(context.id)}/`);
+    return {
+      ...context,
+      name: payload && payload.name ? String(payload.name) : context.name,
+    };
+  } catch (e) {
+    console.warn("Failed to load book breadcrumb context", { context, e });
+    return context;
+  }
 }
 
 function renderSubjectsPills(container, subjects) {
@@ -335,7 +299,7 @@ export async function initBookDetail() {
     setStatus(statusEl, "Missing book id.", true);
     return;
   }
-  const breadcrumbContext = libraryBreadcrumbContextFromLocation();
+  let breadcrumbContext = bookDetailContextFromSearch(window.location.search);
   syncBookBreadcrumbs({ title: "Book", context: breadcrumbContext });
 
   const canManage = canManageLibrary(me);
@@ -350,7 +314,11 @@ export async function initBookDetail() {
   visible(detailEl, false);
 
   try {
-    const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
+    const [book, loadedContext] = await Promise.all([
+      fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`),
+      loadBreadcrumbContext(breadcrumbContext),
+    ]);
+    breadcrumbContext = loadedContext;
     const displayTitle = bookDisplayTitle(book);
     setTitle(displayTitle);
     syncBookBreadcrumbs({ title: displayTitle, context: breadcrumbContext });
