@@ -278,6 +278,7 @@ Session-authenticated API exports:
 GET /api/v1/reading/export/
 POST /api/v1/reading/export/
 POST /api/v1/reading/import/preview/
+GET /api/v1/reading/import/unmatched/?import_token=<token>
 POST /api/v1/reading/import/apply/
 ```
 
@@ -310,4 +311,4 @@ EPUB CFI annotation selectors export as `FragmentSelector` values without repeat
 
 Server-side marginalia import accepts SPL native marginalia exports only. Preview validates the uploaded JSON against the export schema, stages the validated payload in a short-lived filesystem file, returns an `import_token`, summarizes contents, reports visible local book matches, and does not create sessions or annotations. Apply uses the `import_token`, re-validates the staged payload, then imports matched visible books only. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.
 
-Current apply creates new historical/imported sessions. Unmatched books are skipped and flagged as unmatched/possibly foreign. The import unit is a reading session; annotation-level selection is not supported. Exported active sessions do not become active local sessions. Possible duplicate sessions/annotations are warnings, not blockers. Apply accepts optional session-level selection/customization JSON using export-local `export_session_id` values; selected sessions may override imported `name` and `notes`.
+Current apply creates new historical/imported sessions. Unmatched books are skipped and flagged as unmatched/possibly foreign. Preview exposes an unmatched download for the current user's staged import token; it contains only unmatched export books as native SPL JSON for Reader-assisted re-anchoring. The import unit is a reading session; annotation-level selection is not supported. Exported active sessions do not become active local sessions. Possible duplicate sessions/annotations are warnings, not blockers. Apply accepts optional session-level selection/customization JSON using export-local `export_session_id` values; selected sessions may override imported `name` and `notes`.

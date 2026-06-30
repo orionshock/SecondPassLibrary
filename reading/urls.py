@@ -13,7 +13,11 @@ from .session_views import (
     StartOverView,
 )
 from .export_views import AllMarginaliaExportView
-from .import_views import MarginaliaImportApplyView, MarginaliaImportPreviewView
+from .import_views import (
+    MarginaliaImportApplyView,
+    MarginaliaImportPreviewView,
+    MarginaliaImportUnmatchedView,
+)
 
 app_name = "reading"
 
@@ -36,6 +40,11 @@ urlpatterns = [
         "import/apply/",
         MarginaliaImportApplyView.as_view(),
         name="import_marginalia_apply",
+    ),
+    path(
+        "import/unmatched/",
+        MarginaliaImportUnmatchedView.as_view(),
+        name="import_marginalia_unmatched",
     ),
     path(
         "sessions/recent/",

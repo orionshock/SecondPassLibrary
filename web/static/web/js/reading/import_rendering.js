@@ -13,6 +13,7 @@ export function renderPreview(preview) {
   const applyMessage = preview.can_apply
     ? "Matched data is ready for import."
     : "No matched local books. Nothing can be imported.";
+  const unmatchedPanel = renderUnmatchedPanel(preview);
   return `
     <div class="book__meta">
       <div>Scope: ${escapeHtml(preview.scope && preview.scope.type ? preview.scope.type : "")}</div>
@@ -22,7 +23,23 @@ export function renderPreview(preview) {
       ${preview.can_apply ? '<div class="import-actions"><button class="button" id="reading-import-select-all-top" type="button">Select all</button><button class="button" id="reading-import-select-none-top" type="button">Select none</button></div>' : ""}
       ${warningList}
     </div>
+    ${unmatchedPanel}
     <div class="books">${bookRows || '<div class="muted">No books in export.</div>'}</div>
+  `;
+}
+
+function renderUnmatchedPanel(preview) {
+  const count = Number(preview.unmatched_entries || 0);
+  const url = preview.unmatched_download_url || "";
+  if (!count || !url) return "";
+  const noun = count === 1 ? "entry" : "entries";
+  return `
+    <section class="card import-unmatched-panel">
+      <h3 class="card__title">Some marks need the Reader.</h3>
+      <p>${escapeHtml(count)} ${noun} could not be matched automatically. Download them for Reader-assisted import.</p>
+      <p class="muted">Matching is based on book file hashes. Use the Reader to re-anchor marks when the original book file is missing or different.</p>
+      <a class="button" href="${escapeHtml(url)}">Download unmatched entries</a>
+    </section>
   `;
 }
 

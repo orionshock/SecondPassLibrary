@@ -11,6 +11,7 @@ from .import_services import (
     MarginaliaImportError,
     preview_marginalia_import,
     read_uploaded_marginalia_json,
+    unmatched_marginalia_export,
 )
 from .import_staging import (
     delete_staged_marginalia_import,
@@ -32,6 +33,10 @@ class MarginaliaImportPreviewView(APIView):
                 user=request.user,
                 payload=payload,
             )
+            if preview.get("unmatched_entries"):
+                preview["unmatched_download_url"] = (
+                    f"/api/v1/reading/import/unmatched/?import_token={preview['import_token']}"
+                )
         except MarginaliaImportError as exc:
             return Response(
                 {"valid": False, "errors": exc.errors, "can_apply": False},
@@ -67,3 +72,23 @@ class MarginaliaImportApplyView(APIView):
             )
 
         return Response(result)
+
+
+class MarginaliaImportUnmatchedView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        token = request.query_params.get("import_token")
+        try:
+            payload = load_staged_marginalia_import(user=request.user, token=token)
+            unmatched = unmatched_marginalia_export(user=request.user, payload=payload)
+        except MarginaliaImportError as exc:
+            return Response(
+                {"valid": False, "errors": exc.errors},
+                status=400,
+            )
+
+        response = Response(unmatched)
+        response["Content-Disposition"] = 'attachment; filename="second-pass-unmatched-marginalia.json"'
+        return response

@@ -169,6 +169,8 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["valid"])
         self.assertRegex(r.data["import_token"], r"^[A-Za-z0-9_-]{32,128}$")
+        self.assertEqual(r.data["unmatched_entries"], 0)
+        self.assertNotIn("unmatched_download_url", r.data)
         self.assertTrue(r.data["can_apply"])
         self.assertEqual(r.data["schema_version"], "0.1.0")
         self.assertEqual(r.data["scope"]["type"], "book")
@@ -260,6 +262,39 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertFalse(r.data["books"][0]["sessions"][0]["will_import"])
         self.assertIn("No visible local book matched", r.data["books"][0]["warning"])
         self.assertIn("It will be skipped.", r.data["warnings"][0])
+        self.assertEqual(r.data["unmatched_entries"], 1)
+        self.assertIn("/api/v1/reading/import/unmatched/?import_token=", r.data["unmatched_download_url"])
+
+    def test_unmatched_download_returns_only_unmatched_books(self):
+        self.client.force_login(self.user)
+        payload = self._payload()
+        unmatched = self._payload(file_hash="0" * 64, title="Missing Book", authors=["Nobody"])["books"][0]
+        payload["books"].append(unmatched)
+
+        preview = cast(Any, self._post_payload(payload))
+        r = cast(Any, self.client.get(preview.data["unmatched_download_url"]))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            r["Content-Disposition"],
+            'attachment; filename="second-pass-unmatched-marginalia.json"',
+        )
+        self.assertEqual(r.data["type"], "SecondPassMarginaliaExport")
+        self.assertEqual(r.data["schema_version"], "0.1.0")
+        self.assertEqual(r.data["scope"]["type"], "selected")
+        self.assertEqual(r.data["scope"]["books"][0]["session_filter"], "all")
+        self.assertEqual([book["title"] for book in r.data["books"]], ["Missing Book"])
+        self.assertNotIn("Visible Match", str(r.data))
+
+    def test_unmatched_download_requires_current_user_staged_preview(self):
+        self.client.force_login(self.user)
+        other = User.objects.create_user(username="other", password="pw")
+        preview = cast(Any, self._post_payload(self._payload(file_hash="0" * 64, title="Missing Book")))
+
+        self.client.force_login(other)
+        r = self.client.get(preview.data["unmatched_download_url"])
+
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_title_author_match_when_hash_does_not_match(self):
         self.client.force_login(self.user)

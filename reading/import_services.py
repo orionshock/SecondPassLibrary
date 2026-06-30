@@ -82,6 +82,7 @@ def plan_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
 
 def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
     plan = plan_marginalia_import(user=user, payload=payload)
+    unmatched_entries = plan["apply_plan"]["skipped_books"]
     return {
         "valid": True,
         "type": payload.get("type"),
@@ -94,12 +95,49 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
         "warnings": plan["warnings"],
         "can_apply": plan["can_apply"],
         "apply_plan": plan["apply_plan"],
+        "unmatched_entries": unmatched_entries,
+    }
+
+
+def unmatched_marginalia_export(*, user, payload: dict[str, Any]) -> dict[str, Any]:
+    plan = plan_marginalia_import(user=user, payload=payload)
+    unmatched_books = [
+        book_plan["exported"]
+        for book_plan in plan["book_plans"]
+        if not book_plan["summary"]["will_import"]
+    ]
+    return {
+        "type": payload.get("type"),
+        "schema_version": payload.get("schema_version"),
+        "profile": payload.get("profile"),
+        "generated_at": payload.get("generated_at"),
+        "generator": payload.get("generator") or "Second Pass Library",
+        "scope": {
+            "type": "selected",
+            "books": [
+                {
+                    "book": _exported_book_source(book),
+                    "session_filter": "all",
+                }
+                for book in unmatched_books
+            ],
+        },
+        "books": unmatched_books,
     }
 
 
 def _load_schema() -> dict[str, Any]:
     path = Path(settings.BASE_DIR) / "docs" / "specs" / "marginalia-export.schema.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _exported_book_source(book: dict[str, Any]) -> str:
+    return (
+        str(book.get("source") or "").strip()
+        or str(book.get("file_hash") or "").strip()
+        or str(book.get("title") or "").strip()
+        or "unmatched"
+    )
 
 
 def _json_path(parts) -> str:
