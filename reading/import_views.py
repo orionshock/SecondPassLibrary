@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+
+from django.http import HttpResponse
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -89,6 +92,9 @@ class MarginaliaImportUnmatchedView(APIView):
                 status=400,
             )
 
-        response = Response(unmatched)
+        response = HttpResponse(
+            json.dumps(unmatched, indent=2),
+            content_type="application/json",
+        )
         response["Content-Disposition"] = 'attachment; filename="second-pass-unmatched-marginalia.json"'
         return response

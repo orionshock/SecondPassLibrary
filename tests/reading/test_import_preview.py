@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, cast
 
@@ -261,9 +262,67 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(r.data["books"][0]["skip_reason"], "unmatched_book")
         self.assertFalse(r.data["books"][0]["sessions"][0]["will_import"])
         self.assertIn("No visible local book matched", r.data["books"][0]["warning"])
-        self.assertIn("It will be skipped.", r.data["warnings"][0])
+        self.assertEqual(
+            r.data["warnings"],
+            [
+                "1 export book did not match visible local books. "
+                "It can be downloaded for Reader-assisted import."
+            ],
+        )
         self.assertEqual(r.data["unmatched_entries"], 1)
         self.assertIn("/api/v1/reading/import/unmatched/?import_token=", r.data["unmatched_download_url"])
+
+    def test_multiple_unmatched_books_have_one_summary_warning(self):
+        self.client.force_login(self.user)
+        payload = self._payload(session_status="active")
+        first_unmatched = deepcopy(payload["books"][0])
+        first_unmatched.update(
+            {
+                "title": "Missing One",
+                "authors": ["Missing Author One"],
+                "isbn": "",
+                "source": "book:sha256:" + ("1" * 64),
+                "file_hash": "sha256:" + ("1" * 64),
+            }
+        )
+        second_unmatched = deepcopy(payload["books"][0])
+        second_unmatched.update(
+            {
+                "title": "Missing Two",
+                "authors": ["Missing Author Two"],
+                "isbn": "",
+                "source": "book:sha256:" + ("2" * 64),
+                "file_hash": "sha256:" + ("2" * 64),
+            }
+        )
+        payload["books"].extend([first_unmatched, second_unmatched])
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["apply_plan"]["matched_books"], 1)
+        self.assertEqual(r.data["apply_plan"]["skipped_books"], 2)
+        self.assertEqual(r.data["unmatched_entries"], 2)
+        self.assertIn("/api/v1/reading/import/unmatched/?import_token=", r.data["unmatched_download_url"])
+        self.assertEqual(
+            r.data["warnings"].count(
+                "2 export books did not match visible local books. "
+                "They can be downloaded for Reader-assisted import."
+            ),
+            1,
+        )
+        self.assertEqual(
+            sum(
+                1
+                for warning in r.data["warnings"]
+                if "No visible local book matched this export book" in warning
+            ),
+            0,
+        )
+        self.assertIn(
+            "Active exported sessions will be imported as historical sessions, not active sessions.",
+            r.data["warnings"],
+        )
 
     def test_unmatched_download_returns_only_unmatched_books(self):
         self.client.force_login(self.user)
@@ -272,19 +331,25 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         payload["books"].append(unmatched)
 
         preview = cast(Any, self._post_payload(payload))
-        r = cast(Any, self.client.get(preview.data["unmatched_download_url"]))
+        r = cast(Any, self.client.get(
+            preview.data["unmatched_download_url"],
+            HTTP_ACCEPT="text/html,application/xhtml+xml,*/*",
+        ))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(r["Content-Type"].startswith("application/json"))
         self.assertEqual(
             r["Content-Disposition"],
             'attachment; filename="second-pass-unmatched-marginalia.json"',
         )
-        self.assertEqual(r.data["type"], "SecondPassMarginaliaExport")
-        self.assertEqual(r.data["schema_version"], "0.1.0")
-        self.assertEqual(r.data["scope"]["type"], "selected")
-        self.assertEqual(r.data["scope"]["books"][0]["session_filter"], "all")
-        self.assertEqual([book["title"] for book in r.data["books"]], ["Missing Book"])
-        self.assertNotIn("Visible Match", str(r.data))
+        self.assertFalse(r.content.lstrip().startswith(b"<!DOCTYPE html>"))
+        parsed = json.loads(r.content.decode("utf-8"))
+        self.assertEqual(parsed["type"], "SecondPassMarginaliaExport")
+        self.assertEqual(parsed["schema_version"], "0.1.0")
+        self.assertEqual(parsed["scope"]["type"], "selected")
+        self.assertEqual(parsed["scope"]["books"][0]["session_filter"], "all")
+        self.assertEqual([book["title"] for book in parsed["books"]], ["Missing Book"])
+        self.assertNotIn("Visible Match", str(parsed))
 
     def test_unmatched_download_requires_current_user_staged_preview(self):
         self.client.force_login(self.user)

@@ -274,8 +274,16 @@ def _warnings(book_summaries: list[dict[str, Any]], apply_plan: dict[str, int]) 
     warnings = [
         book["warning"]
         for book in book_summaries
-        if book.get("warning")
+        if book.get("warning") and book.get("will_import")
     ]
+    if apply_plan["skipped_books"]:
+        count = apply_plan["skipped_books"]
+        noun = "book" if count == 1 else "books"
+        subject = "It" if count == 1 else "They"
+        warnings.append(
+            f"{count} export {noun} did not match visible local books. "
+            f"{subject} can be downloaded for Reader-assisted import."
+        )
     if apply_plan["active_sessions_will_import_as_historical"]:
         warnings.append("Active exported sessions will be imported as historical sessions, not active sessions.")
     if apply_plan["possible_duplicate_sessions"]:
