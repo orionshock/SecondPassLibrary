@@ -1,6 +1,8 @@
 import { extractApiErrorMessage } from "../api.js";
 import { escapeHtml } from "../layout.js";
 
+const SEPARATOR_HTML = " &#183; ";
+
 export function renderPreview(preview) {
   if (!preview || !preview.valid) return "<div class=\"muted\">No preview yet.</div>";
   const summary = preview.summary || {};
@@ -30,8 +32,8 @@ function renderBook(book, bookIndex) {
   const match = book.match || {};
   const authors = Array.isArray(book.authors) ? book.authors.join(", ") : "";
   const sessions = Array.isArray(book.sessions) ? book.sessions : [];
-  const metadata = bookMetadataParts(book, authors).map((part) => escapeHtml(part)).join(" &middot; ");
-  const matchText = matchLine(match);
+  const metadata = bookMetadataParts(book, authors).map((part) => escapeHtml(part)).join(SEPARATOR_HTML);
+  const matchHtml = matchLine(match);
   const warningState = bookWarningState(book, sessions);
   const sessionRows = sessions
     .map((session) => renderSession(session, book, bookIndex, warningState.suppressedSessionWarning))
@@ -51,7 +53,7 @@ function renderBook(book, bookIndex) {
           <h3 class="book__title">${escapeHtml(book.title || "Book")}</h3>
           <div class="book__meta import-book__meta">
             ${metadata ? `<div>${metadata}</div>` : ""}
-            ${matchText ? `<div>${escapeHtml(matchText)}</div>` : ""}
+            ${matchHtml ? `<div>${matchHtml}</div>` : ""}
             ${warningState.warnings.map((warning) => `<div class="muted import-warning">${escapeHtml(warning)}</div>`).join("")}
           </div>
         </div>
@@ -73,11 +75,19 @@ function bookMetadataParts(book, authors) {
 function matchLine(match) {
   const status = (match.status || "").trim();
   const title = (match.book_title || "").trim();
-  const method = match.method ? match.methodLabel || match.method : "";
+  const method = match.method ? match.methodLabel || humanizeMatchMethod(match.method) : "";
   const methodText = [method, match.confidence].filter(Boolean).join(" ");
-  if (title) return ["Matched to", title, methodText].filter(Boolean).join(" &middot; ");
-  if (status && status !== "matched") return ["Match", status, methodText].filter(Boolean).join(" &middot; ");
-  return methodText ? `Matched &middot; ${methodText}` : "";
+  if (title) {
+    return `Matched to ${escapeHtml(title)}${methodText ? `${SEPARATOR_HTML}${escapeHtml(methodText)}` : ""}`;
+  }
+  if (status && status !== "matched") {
+    return `Match ${escapeHtml(status)}${methodText ? `${SEPARATOR_HTML}${escapeHtml(methodText)}` : ""}`;
+  }
+  return methodText ? `Matched${SEPARATOR_HTML}${escapeHtml(methodText)}` : "";
+}
+
+function humanizeMatchMethod(value) {
+  return String(value || "").replace(/_/g, " ");
 }
 
 function bookWarningState(book, sessions) {
@@ -124,7 +134,7 @@ function renderSession(session, book, bookIndex, suppressedWarning = "") {
     countText(session.commented_highlight_count, "commented highlight"),
   ];
   const dateText = session.started_at ? formatDate(session.started_at) : "";
-  const metadata = [session.status || "", dateText, ...counts].filter(Boolean).map((part) => escapeHtml(part)).join(" &middot; ");
+  const metadata = [session.status || "", dateText, ...counts].filter(Boolean).map((part) => escapeHtml(part)).join(SEPARATOR_HTML);
   return `
     <article class="import-session" data-book-index="${bookIndex}" data-session-id="${escapeHtml(session.export_session_id || "")}">
       <div class="import-session__main">
