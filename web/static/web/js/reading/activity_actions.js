@@ -10,13 +10,8 @@ export function sessionDisplayLabel(state) {
 }
 
 export function renderSessionDisplay(sessionDisplayEl, state) {
-  const sessionDisplayName = sessionDisplayLabel(state);
-  if (!sessionDisplayName) {
-    sessionDisplayEl.textContent = "";
-    return;
-  }
-  const suffix = sessionIsWritable(state) ? "" : ` (${state.sessionStatus || "closed"})`;
-  sessionDisplayEl.textContent = `Session: "${sessionDisplayName}"${suffix}`;
+  const label = state && state.sessionIsActive ? "Active" : "Closed";
+  sessionDisplayEl.textContent = `Marginalia session \u00b7 ${label}`;
 }
 
 export function bindSessionControls({

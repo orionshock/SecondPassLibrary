@@ -185,7 +185,7 @@ export async function initReadingBookActivity() {
       sessionState.sessionStatus = session && typeof session.status === "string" ? session.status : "";
       sessionState.sessionIsActive = !!(session && session.is_active);
       sessionState.canEditSessionMetadata = sessionIsWritable(sessionState);
-      titleEl.textContent = `Marginalia: ${sessionDisplayLabel(sessionState)}`;
+      titleEl.textContent = sessionDisplayLabel(sessionState);
       renderSessionDisplay(sessionDisplayEl, sessionState);
       syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState });
 
