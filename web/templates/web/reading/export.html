@@ -12,16 +12,25 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Export Marginalia</h1>
-      <div class="muted">Export reading sessions, progress, bookmarks, highlights, and notes as JSON. Native SPL exports can be previewed and imported from the import center.</div>
-    </div>
-    <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-      <a class="button" href="/api/v1/reading/export/">Export all marginalia</a>
-      <a class="button" href="/reading/sessions/">Reading sessions</a>
+      <div class="muted">Download your reading sessions, progress, bookmarks, highlights, notes, and EPUB locators as native SPL JSON.</div>
+      <div class="muted">Native SPL exports can be previewed and restored from <a href="/reading/import/">Import Marginalia</a>.</div>
+      <div class="muted">Server-side import/export uses the native SPL format only. Imports from Kindle or other foreign systems should be handled by the SecondPass Reading Client.</div>
     </div>
   </div>
 
+  <section class="card export-archive-card">
+    <div class="export-archive-card__main">
+      <h2 class="card__title">Complete archive</h2>
+      <p class="muted">Export all of your marginalia for visible books.</p>
+      <p class="muted">Includes sessions, progress, highlights, bookmarks, notes, and EPUB locators.</p>
+    </div>
+    <div class="export-archive-card__actions">
+      <a class="button" href="/api/v1/reading/export/">Export all marginalia</a>
+    </div>
+  </section>
+
   <section class="card">
-    <h2 class="card__title">Books with reading data</h2>
+    <h2 class="card__title">Export by book</h2>
     {% if books %}
       <div class="export-book-list">
         {% for book in books %}
@@ -41,8 +50,8 @@
               <div class="muted">{{ book.session_count }} session{{ book.session_count|pluralize }} - {{ book.annotation_count }} annotation{{ book.annotation_count|pluralize }}</div>
             </div>
             <div class="export-book-row__actions">
-              <a class="button" href="/api/v1/reading/export/books/{{ book.id|urlencode }}/">Export all sessions</a>
-              <a class="button" href="/reading/sessions/books/{{ book.id|urlencode }}/">View sessions</a>
+              <a class="button" href="/api/v1/reading/export/books/{{ book.id|urlencode }}/">Export book marginalia</a>
+              <a class="button" href="/reading/sessions/books/{{ book.id|urlencode }}/">Open marginalia</a>
             </div>
           </article>
         {% endfor %}
