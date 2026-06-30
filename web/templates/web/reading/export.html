@@ -20,7 +20,7 @@
   <section class="card export-archive-card">
     <div class="export-archive-card__main">
       <h2 class="card__title">Complete archive</h2>
-      <p class="muted">Export all of your marginalia for visible books.</p>
+      <p class="muted">Export all marginalia for books currently visible to you.</p>
       <p class="muted">Includes sessions, progress, highlights, bookmarks, notes, and EPUB locators.</p>
     </div>
     <div class="export-archive-card__actions">
@@ -28,12 +28,30 @@
     </div>
   </section>
 
-  <section class="card">
-    <h2 class="card__title">Export by book</h2>
+  <section class="card" id="reading-export-workflow">
+    <div class="export-section-header">
+      <div>
+        <h2 class="card__title">Selective archive</h2>
+        <p class="muted">Select a book or individual sessions to export a smaller marginalia archive.</p>
+      </div>
+      <div class="export-selected-actions">
+        <button class="button" id="reading-export-selected" type="button" disabled>Export selected</button>
+        <span class="muted" id="reading-export-selection-status">Select one book or session.</span>
+      </div>
+    </div>
     {% if books %}
       <div class="export-book-list">
         {% for book in books %}
-          <article class="export-book-row">
+          <article class="export-book-row" data-export-book-row data-book-id="{{ book.id|escape }}">
+            <div class="export-book-row__select">
+              <input
+                class="export-book-select"
+                id="export-book-{{ forloop.counter }}"
+                type="checkbox"
+                data-book-id="{{ book.id|escape }}"
+                aria-label="Select all sessions for {{ book.title|default:'Book'|escape }}"
+              />
+            </div>
             <div class="sessions-cover" aria-hidden="true">
               {% if book.cover_url %}
                 <img class="sessions-cover__img" src="{{ book.cover_url|escape }}" alt="Cover for {{ book.title|default:'Book'|escape }}" loading="lazy" />
@@ -43,14 +61,59 @@
             </div>
             <div class="export-book-row__main">
               <div class="book-meta__line">{{ book.title|escape }}</div>
-              {% if book.authors %}
-                <div class="muted">{{ book.authors|join:", "|escape }}</div>
-              {% endif %}
-              <div class="muted">{{ book.session_count }} session{{ book.session_count|pluralize }} - {{ book.annotation_count }} annotation{{ book.annotation_count|pluralize }}</div>
+              <div class="muted">
+                <span class="meta-list">
+                  {% if book.authors %}<span class="meta-item">{{ book.authors|join:", "|escape }}</span>{% endif %}
+                  {% if book.series_name %}<span class="meta-item">{{ book.series_name|escape }}{% if book.series_index %} {{ book.series_index }}{% endif %}</span>{% endif %}
+                  <span class="meta-item">{{ book.session_count }} session{{ book.session_count|pluralize }}</span>
+                  <span class="meta-item">{{ book.annotation_count }} annotation{{ book.annotation_count|pluralize }}</span>
+                </span>
+              </div>
             </div>
             <div class="export-book-row__actions">
-              <a class="button" href="/api/v1/reading/export/books/{{ book.id|urlencode }}/">Export book marginalia</a>
-              <a class="button" href="/reading/sessions/books/{{ book.id|urlencode }}/">Open marginalia</a>
+              <button
+                class="button export-sessions-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="export-sessions-{{ forloop.counter }}"
+              >Show sessions</button>
+            </div>
+            <div class="export-session-list" id="export-sessions-{{ forloop.counter }}" hidden>
+              {% for session in book.sessions %}
+                {% with session_id=session.id|stringformat:"s" session_name=session.name|default_if_none:"" %}
+                <label class="export-session-row">
+                  <input
+                    class="export-session-select"
+                    type="checkbox"
+                    data-book-id="{{ book.id|escape }}"
+                    data-session-id="{{ session.id|escape }}"
+                    aria-label="Select {% if session_name %}{{ session_name|escape }}{% else %}Unnamed session, {{ session_id|slice:'-8:' }}{% endif %} from {{ book.title|default:'Book'|escape }}"
+                  />
+                  <span class="export-session-row__main">
+                    <span class="export-session-row__title">
+                      {% if session_name %}
+                        {{ session_name|escape }}
+                      {% else %}
+                        <span class="meta-list">
+                          <span class="meta-item">Unnamed session</span>
+                          <span class="meta-item">{{ session_id|slice:"-8:" }}</span>
+                        </span>
+                      {% endif %}
+                    </span>
+                    <span class="muted">
+                      <span class="meta-list">
+                        <span class="meta-item">{% if session.is_active %}Active{% else %}Closed{% endif %}</span>
+                        {% if session.progression_percent is not None %}
+                          <span class="meta-item">{{ session.progression_percent|floatformat:1 }}%</span>
+                        {% endif %}
+                        <span class="meta-item">{{ session.annotation_count }} annotation{{ session.annotation_count|pluralize }}</span>
+                        <span class="meta-item">Started {{ session.started_at|date:"Y-m-d" }}</span>
+                      </span>
+                    </span>
+                  </span>
+                </label>
+                {% endwith %}
+              {% endfor %}
             </div>
           </article>
         {% endfor %}

@@ -369,20 +369,44 @@ a:hover { text-decoration: underline; }
   justify-content: flex-end;
 }
 
+.export-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.export-section-header p {
+  margin: 6px 0 0;
+}
+
+.export-selected-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .export-book-list {
   display: grid;
   gap: 10px;
 }
 
 .export-book-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   gap: 12px;
-  justify-content: space-between;
   align-items: flex-start;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.export-book-row__select {
+  padding-top: 34px;
 }
 
 .export-book-row__main {
@@ -395,6 +419,37 @@ a:hover { text-decoration: underline; }
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.export-session-list {
+  grid-column: 3 / -1;
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.export-session-list[hidden] {
+  display: none;
+}
+
+.export-session-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.export-session-row__main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.export-session-row__title {
+  font-weight: 700;
 }
 
 /* =====================
@@ -1889,8 +1944,16 @@ input[type="file"]:disabled::file-selector-button {
   .dashboard-actions { grid-template-columns: 1fr; }
   .export-archive-card { flex-direction: column; }
   .export-archive-card__actions { justify-content: flex-start; }
-  .export-book-row { flex-direction: column; }
+  .export-section-header { flex-direction: column; }
+  .export-selected-actions { justify-content: flex-start; }
+  .export-book-row { grid-template-columns: auto minmax(0, 1fr); }
+  .export-book-row__select { padding-top: 0; }
+  .export-book-row .sessions-cover { grid-column: 1; }
+  .export-book-row__main { grid-column: 2; }
   .export-book-row__actions { justify-content: flex-start; }
+  .export-session-list {
+    grid-column: 1 / -1;
+  }
   .book-hero { grid-template-columns: 92px 1fr; }
   .book-meta-grid { grid-template-columns: 1fr; }
 }

@@ -41,6 +41,11 @@ document.addEventListener("DOMContentLoaded", () => {
       initExportName: "initReadingImportPreview",
       label: "Import marginalia",
     },
+    "reading-export": {
+      importer: () => import("./reading/export.js"),
+      initExportName: "initReadingExport",
+      label: "Export marginalia",
+    },
     "book-edit": { importer: () => import("./book_edit/main.js"), initExportName: "initBookEdit", label: "Book edit" },
     imports: { importer: () => import("./imports/main.js"), initExportName: "initImports", label: "Imports" },
 

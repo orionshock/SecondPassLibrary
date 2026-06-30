@@ -119,13 +119,17 @@ def reading_export(request: HttpRequest) -> HttpResponse:
                 "id": book_id,
                 "title": book.get("title") or "Book",
                 "authors": book.get("authors") or [],
+                "series_name": book.get("series_name") or "",
+                "series_index": book.get("series_index"),
                 "cover_url": book.get("cover_url") or "",
                 "session_count": 0,
                 "annotation_count": 0,
+                "sessions": [],
             },
         )
         entry["session_count"] += 1
         entry["annotation_count"] += int(row.get("annotation_count") or 0)
+        entry["sessions"].append(row)
 
     books = sorted(rows_by_book.values(), key=lambda b: str(b.get("title") or "").lower())
     return render(request, "web/reading/export.html", {"books": books})
