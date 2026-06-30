@@ -5,7 +5,7 @@
 {% block title %}Sessions - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
-  {% include "web/partials/breadcrumbs.html" with parent_label="My Marginalia" parent_href="/app/" current_label=book.title|default:"Book" only %}
+  {% include "web/partials/breadcrumbs.html" with grandparent_label="My Marginalia" grandparent_href="/reading/sessions/" parent_label="By Book" parent_href="/reading/sessions/?view=book" current_label=book.title|default:"Book" only %}
 {% endblock %}
 
 {% block content %}

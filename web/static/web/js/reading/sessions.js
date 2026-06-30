@@ -5,6 +5,7 @@ import {
   setGlobalErrorFromError,
   visible,
 } from "../layout.js";
+import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { mountCovers } from "../ui/covers.js";
 import { setStatus } from "../ui/status.js";
 
@@ -63,6 +64,13 @@ function writeQueryState(state, { replace = false } = {}) {
   if (state.view !== "session") params.set("view", state.view);
   url.search = params.toString();
   window.history[replace ? "replaceState" : "pushState"]({}, "", url.toString());
+}
+
+function syncSessionsBreadcrumb(state) {
+  setBreadcrumbs([
+    { label: "My Marginalia", href: "/reading/sessions/" },
+    { label: state.view === "book" ? "By Book" : "By Session", current: true },
+  ]);
 }
 
 function authorNames(book) {
@@ -392,6 +400,7 @@ export async function initReadingSessions() {
   let previousUrl = null;
 
   function applyStateToControls() {
+    syncSessionsBreadcrumb(state);
     searchInput.value = state.q;
     pageSizeSelect.value = String(state.pageSize);
     for (const button of filtersEl.querySelectorAll("[data-status-filter]")) {

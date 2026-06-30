@@ -5,7 +5,7 @@
 {% block title %}Reading activity - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
-  {% include "web/partials/breadcrumbs.html" with grandparent_label="My Marginalia" grandparent_href="/app/" parent_label="Book" parent_href="/reading/sessions/books/"|add:book_id|add:"/" current_label="Session" only %}
+  {% include "web/partials/breadcrumbs.html" with greatgrandparent_label="My Marginalia" greatgrandparent_href="/reading/sessions/" grandparent_label="By Book" grandparent_href="/reading/sessions/?view=book" parent_label="Book" parent_href="/reading/sessions/books/"|add:book_id|add:"/" current_label="Session" only %}
 {% endblock %}
 
 {% block content %}

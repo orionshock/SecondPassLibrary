@@ -40,7 +40,8 @@ function sessionBreadcrumbLabel(state) {
 
 function syncActivityBreadcrumb({ bookId, bookTitle, sessionState }) {
   setBreadcrumbs([
-    { label: "My Marginalia", href: "/app/" },
+    { label: "My Marginalia", href: "/reading/sessions/" },
+    { label: "By Book", href: "/reading/sessions/?view=book" },
     {
       label: bookTitle || "Book",
       href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`,

@@ -54,7 +54,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
-            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
             html=False,
         )
         self.assertContains(response, 'aria-current="page">Export</li>', html=False)
@@ -76,7 +76,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
-            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
             html=False,
         )
         self.assertContains(response, 'aria-current="page">Import</li>', html=False)
@@ -147,7 +147,12 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
-            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/reading/sessions/?view=book">By Book</a>',
             html=False,
         )
         self.assertContains(response, f'aria-current="page">{book.title}</li>', html=False)
@@ -190,7 +195,8 @@ class ProductUiReadingTests(ProductUiTestCase):
 
         self.assertIn('from "../ui/breadcrumbs.js"', js)
         self.assertIn("function syncActivityBreadcrumb", js)
-        self.assertIn('{ label: "My Marginalia", href: "/app/" }', js)
+        self.assertIn('{ label: "My Marginalia", href: "/reading/sessions/" }', js)
+        self.assertIn('{ label: "By Book", href: "/reading/sessions/?view=book" }', js)
         self.assertIn('href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`', js)
         self.assertIn("sessionBreadcrumbLabel(sessionState)", js)
         self.assertIn("onSessionChanged", js)
@@ -225,7 +231,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
-            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
             html=False,
         )
         self.assertContains(response, 'aria-current="page">By Session</li>', html=False)
@@ -305,6 +311,11 @@ class ProductUiReadingTests(ProductUiTestCase):
         css = Path("web/static/web/app.css").read_text(encoding="utf-8")
 
         self.assertIn("const DEFAULT_PAGE_SIZE = 20", js)
+        self.assertIn('from "../ui/breadcrumbs.js"', js)
+        self.assertIn("function syncSessionsBreadcrumb", js)
+        self.assertIn('{ label: "My Marginalia", href: "/reading/sessions/" }', js)
+        self.assertIn('state.view === "book" ? "By Book" : "By Session"', js)
+        self.assertIn("syncSessionsBreadcrumb(state)", js)
         self.assertIn('params.get("book")', js)
         self.assertIn('params.get("q")', js)
         self.assertIn('params.get("status")', js)
@@ -378,7 +389,12 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
-            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/reading/sessions/?view=book">By Book</a>',
             html=False,
         )
         self.assertContains(
