@@ -2,7 +2,12 @@ import { fetchJSON, fetchJSONWithOptions, getCsrfToken, patchJSON, extractApiErr
 import { $, loadMeAndInitShell, setGlobalErrorFromError, visible } from "../layout.js";
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { mountCovers } from "../ui/covers.js";
-import { bindSessionControls, renderSessionDisplay, sessionIsWritable } from "./activity_actions.js";
+import {
+  bindSessionControls,
+  renderSessionDisplay,
+  sessionDisplayLabel,
+  sessionIsWritable,
+} from "./activity_actions.js";
 import { renderAnnotations, renderBookMeta } from "./activity_rendering.js";
 
 async function getSession(sessionId) {
@@ -34,8 +39,7 @@ async function getAnnotationsForSession(sessionId) {
 }
 
 function sessionBreadcrumbLabel(state) {
-  const name = state && state.sessionName ? String(state.sessionName).trim() : "";
-  return name || "Session";
+  return state ? sessionDisplayLabel(state) : "Session";
 }
 
 function syncActivityBreadcrumb({ bookId, bookTitle, sessionState }) {
@@ -176,11 +180,12 @@ export async function initReadingBookActivity() {
     if (session && session.id) {
       sessionState.sessionId = String(session.id);
       sessionState.sessionName = session && typeof session.name === "string" ? session.name : "";
-      sessionIdEl.textContent = `Session ID: ${sessionState.sessionId}`;
+      sessionIdEl.textContent = "";
 
       sessionState.sessionStatus = session && typeof session.status === "string" ? session.status : "";
       sessionState.sessionIsActive = !!(session && session.is_active);
       sessionState.canEditSessionMetadata = sessionIsWritable(sessionState);
+      titleEl.textContent = `Marginalia: ${sessionDisplayLabel(sessionState)}`;
       renderSessionDisplay(sessionDisplayEl, sessionState);
       syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState });
 

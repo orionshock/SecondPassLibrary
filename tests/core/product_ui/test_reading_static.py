@@ -137,9 +137,17 @@ class ProductUiReadingTests(ProductUiTestCase):
         book = create_file_backed_book(title="B1").book
         other_book = create_file_backed_book(title="B2").book
 
-        mine = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
+        mine = ReadingSession.objects.create(
+            user=self.user,
+            book=book,
+            name="Mine",
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+        unnamed = ReadingSession.objects.create(user=self.user, book=book, name="")
         ReadingSession.objects.create(user=self.user, book=other_book, name="Other book")
         others = ReadingSession.objects.create(user=other, book=book, name="Other user")
+        unnamed_suffix = str(unnamed.id)[-8:]
 
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{book.id}/")
@@ -158,18 +166,29 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, f'aria-current="page">{book.title}</li>', html=False)
         self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
-        self.assertContains(response, "Sessions for")
+        self.assertContains(response, f"Marginalia for {book.title}")
         self.assertContains(response, "No sessions yet for this book.", count=0)
 
         # Only the current user's sessions for this book appear.
         self.assertContains(response, str(mine.id))
+        self.assertContains(response, str(unnamed.id))
         self.assertNotContains(response, str(others.id))
 
-        # Sessions link back to marginalia with ?session=.
+        # Sessions link to their canonical marginalia records.
         self.assertContains(
             response,
             f"/reading/sessions/books/{book.id}/{mine.id}/",
         )
+        self.assertContains(
+            response,
+            f"/reading/sessions/books/{book.id}/{unnamed.id}/",
+        )
+        self.assertContains(response, 'class="card sessions-row sessions-row--link"')
+        self.assertContains(response, "Mine")
+        self.assertContains(response, f"Unnamed session &#183; {unnamed_suffix}", html=False)
+        self.assertNotContains(response, f">{unnamed.id}<")
+        self.assertNotContains(response, f"Session ID: {unnamed.id}")
+        self.assertNotContains(response, "Session ID:")
         self.assertContains(response, 'href="/library/books/')
         self.assertContains(response, "Book details")
         self.assertNotContains(response, f"/api/v1/reading/export/books/{book.id}/")
@@ -193,10 +212,16 @@ class ProductUiReadingTests(ProductUiTestCase):
 
         self.assertIn('from "../ui/breadcrumbs.js"', js)
         self.assertIn("function syncActivityBreadcrumb", js)
+        self.assertIn("sessionDisplayLabel", js)
+        self.assertIn("sessionDisplayLabel(state)", actions_js)
+        self.assertIn('Unnamed session \\u00b7 ${id.slice(-8)}', actions_js)
         self.assertIn('{ label: "My Marginalia", href: "/reading/sessions/" }', js)
         self.assertIn('{ label: "Browse by Book", href: "/reading/sessions/?view=book" }', js)
         self.assertIn('href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`', js)
         self.assertIn("sessionBreadcrumbLabel(sessionState)", js)
+        self.assertIn("titleEl.textContent = `Marginalia: ${sessionDisplayLabel(sessionState)}`", js)
+        self.assertIn('sessionIdEl.textContent = ""', js)
+        self.assertNotIn("Session ID: ${sessionState.sessionId}", js)
         self.assertIn("onSessionChanged", js)
         self.assertIn("onSessionChanged", actions_js)
 

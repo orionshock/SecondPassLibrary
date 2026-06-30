@@ -11,7 +11,7 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <h1 class="page-title" id="reading-sessions-title">Sessions for {{ book.title|default:"Book"|escape }}</h1>
+      <h1 class="page-title" id="reading-sessions-title">Marginalia for {{ book.title|default:"Book"|escape }}</h1>
     </div>
     <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <a class="button" href="/library/books/{{ book.id|escape }}/">Book details</a>
@@ -47,12 +47,17 @@
     <div style="margin-top: 12px;">
       {% if sessions %}
         {% for s in sessions %}
-          <div class="card sessions-row">
+          {% with session_id=s.id|stringformat:"s" session_name=s.name|default_if_none:"" %}
+          <a
+            class="card sessions-row sessions-row--link"
+            href="/reading/sessions/books/{{ book.id|escape }}/{{ s.id|urlencode }}/"
+            title="Open session marginalia"
+            aria-label="Open session marginalia: {% if session_name %}{{ session_name|escape }}{% else %}Unnamed session &#183; {{ session_id|slice:'-8:' }}{% endif %}"
+          >
             <div class="sessions-row__main">
               <div style="display:flex; gap: 10px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                 <div>
-                  <div>{% if s.name %}{{ s.name|escape }}{% else %}{{ s.id|escape }}{% endif %}</div>
-                  {% if s.name %}<div class="muted">Session ID: {{ s.id|escape }}</div>{% endif %}
+                  <div>{% if session_name %}{{ session_name|escape }}{% else %}Unnamed session &#183; {{ session_id|slice:"-8:" }}{% endif %}</div>
                 </div>
                 <div class="muted">
                   {% if s.is_active %}Active{% else %}Closed{% endif %}
@@ -74,15 +79,8 @@
                 <div>Annotations: {{ s.annotation_count }}</div>
               </div>
             </div>
-            <a
-              class="icon-button sessions-row__nav"
-              href="/reading/sessions/books/{{ book.id|escape }}/{{ s.id|urlencode }}/"
-              title="Open session marginalia"
-              aria-label="Open session marginalia"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
-            </a>
-          </div>
+          </a>
+          {% endwith %}
         {% endfor %}
       {% else %}
         <div class="muted" id="reading-sessions-empty">No sessions yet for this book.</div>

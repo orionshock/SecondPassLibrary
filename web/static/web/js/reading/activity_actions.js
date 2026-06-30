@@ -2,8 +2,15 @@ export function sessionIsWritable(state) {
   return state.sessionStatus === "active" && state.sessionIsActive === true;
 }
 
+export function sessionDisplayLabel(state) {
+  const name = state && state.sessionName ? String(state.sessionName).trim() : "";
+  if (name) return name;
+  const id = state && state.sessionId ? String(state.sessionId).trim() : "";
+  return id ? `Unnamed session \u00b7 ${id.slice(-8)}` : "Unnamed session";
+}
+
 export function renderSessionDisplay(sessionDisplayEl, state) {
-  const sessionDisplayName = state.sessionName && state.sessionName.trim() ? state.sessionName.trim() : state.sessionId;
+  const sessionDisplayName = sessionDisplayLabel(state);
   if (!sessionDisplayName) {
     sessionDisplayEl.textContent = "";
     return;

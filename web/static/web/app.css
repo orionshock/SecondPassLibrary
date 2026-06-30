@@ -661,6 +661,21 @@ input[type="file"]:disabled::file-selector-button {
   margin: 10px 0;
 }
 .sessions-row__main { flex: 1; min-width: 0; }
+.sessions-row--link {
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+}
+.sessions-row--link:hover,
+.sessions-row--link:focus-visible {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.045);
+  text-decoration: none;
+}
+.sessions-row--link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 .sessions-card {
   color: var(--text);
   cursor: default;
@@ -713,21 +728,6 @@ input[type="file"]:disabled::file-selector-button {
 .sessions-card__action:hover {
   color: var(--text);
   text-decoration: none;
-}
-.session-select {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-}
-.session-select input { margin: 0; }
-.sessions-row__nav {
-  align-self: center;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  min-height: 40px;
 }
 .sessions-controls {
   display: flex;
