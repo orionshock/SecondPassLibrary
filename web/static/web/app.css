@@ -219,6 +219,22 @@ a:hover { text-decoration: underline; }
    Dashboard: Recent Reading
    ===================== */
 
+.dashboard-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.dashboard-section-copy,
+.dashboard-action-card__copy {
+  margin: 0 0 10px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .recent-reading__row {
   display: flex;
   gap: 12px;
@@ -330,6 +346,9 @@ a:hover { text-decoration: underline; }
 
 .dashboard-action-card__body {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .dashboard-action-card__links {

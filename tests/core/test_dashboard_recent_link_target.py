@@ -19,4 +19,6 @@ class DashboardRecentLinkTargetTest(TestCase):
         )
         text = js_path.read_text(encoding="utf-8")
         self.assertIn("/reading/sessions/books/", text)
-        self.assertIn("[All Sessions]", text)
+        self.assertIn("View all sessions", text)
+        self.assertIn("/api/v1/reading/sessions/?page_size=10", text)
+        self.assertNotIn("/api/v1/reading/sessions/recent/?limit=10", text)

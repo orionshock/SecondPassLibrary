@@ -7,8 +7,14 @@
 {% block content %}
   <h1 class="page-title">Dashboard</h1>
 
-  <section class="card">
-    <h2 class="card__title">Recent reading activity</h2>
+  <section class="card dashboard-recent">
+    <div class="dashboard-section-header">
+      <div>
+        <h2 class="card__title">Recent reading activity</h2>
+        <p class="dashboard-section-copy">Active and closed sessions from your reading history.</p>
+      </div>
+      <a class="button" href="/reading/sessions/">View all sessions</a>
+    </div>
     <div id="recent-reading-section">
       <div id="recent-reading-status" class="muted">Loading...</div>
       <div id="recent-reading-list" class="recent-reading__row" aria-label="Recent reading activity"></div>
@@ -21,9 +27,13 @@
         <span class="material-symbols-outlined">local_library</span>
       </div>
       <div class="dashboard-action-card__body">
-        <h2 class="card__title">Library</h2>
+        <h2 class="card__title">Browse Library</h2>
+        <p class="dashboard-action-card__copy">Explore the collection by different views.</p>
         <div class="dashboard-action-card__links">
-          <a class="button" href="/library/">Browse library</a>
+          <a class="button" href="/library/?view=books">Books</a>
+          <a class="button" href="/library/?view=authors">Authors</a>
+          <a class="button" href="/library/?view=series">Series</a>
+          <a class="button" href="/groups/">Groups</a>
         </div>
       </div>
     </article>
@@ -33,9 +43,11 @@
         <span class="material-symbols-outlined">shelves</span>
       </div>
       <div class="dashboard-action-card__body">
-        <h2 class="card__title">Shelves</h2>
+        <h2 class="card__title">My Shelves</h2>
+        <p class="dashboard-action-card__copy">Organize books into personal and shared shelves.</p>
         <div class="dashboard-action-card__links">
           <a class="button" href="/shelves/">View shelves</a>
+          <a class="button" href="/shelves/new/">Create shelf</a>
         </div>
       </div>
     </article>
@@ -45,11 +57,13 @@
         <span class="material-symbols-outlined">history</span>
       </div>
       <div class="dashboard-action-card__body">
-        <h2 class="card__title">Reading data</h2>
+        <h2 class="card__title">My Marginalia</h2>
+        <p class="dashboard-action-card__copy">Review your reading sessions, highlights, bookmarks, notes, progress, imports, and exports.</p>
         <div class="dashboard-action-card__links">
-          <a class="button" href="/reading/sessions/">Reading Sessions</a>
-          <a class="button" href="/reading/import/">Import SPL Marginalia</a>
-          <a class="button" href="/reading/export/">Export SPL Marginalia</a>
+          <a class="button" href="/reading/sessions/">View by session</a>
+          <a class="button" href="/reading/sessions/?view=book">View by book</a>
+          <a class="button" href="/reading/import/">Import</a>
+          <a class="button" href="/reading/export/">Export</a>
         </div>
       </div>
     </article>

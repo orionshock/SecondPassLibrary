@@ -20,7 +20,18 @@ function formatWhen(value) {
   return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+function normalizeRecentItem(item) {
+  if (item && item.session) return item;
+  const session = item && typeof item === "object" ? item : {};
+  return {
+    book: session.book || { id: session.book_id || "", title: "" },
+    last_activity_at: session.updated_at || session.completed_at || session.started_at,
+    session,
+  };
+}
+
 function renderRecentItem(item) {
+  item = normalizeRecentItem(item);
   const wrap = el("a", "recent-reading__item", "");
   const bookId = item && item.book && item.book.id ? String(item.book.id) : "";
   const sessionId = item && item.session && item.session.id ? String(item.session.id) : "";
@@ -74,7 +85,7 @@ function renderRecentItem(item) {
     wrap.title = `${sessionName}`;
   }
 
-  const allSessions = el("a", "muted", "[All Sessions]");
+  const allSessions = el("a", "muted", "View all sessions");
   allSessions.href = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
   allSessions.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -107,7 +118,7 @@ export async function initDashboard() {
     visible(recentListEl, false);
 
     try {
-      const data = await fetchJSON("/api/v1/reading/sessions/recent/?limit=10");
+      const data = await fetchJSON("/api/v1/reading/sessions/?page_size=10");
       const results = data && Array.isArray(data.results) ? data.results : [];
       if (!results.length) {
         setText(recentStatusEl, "No recent reading activity yet.");
