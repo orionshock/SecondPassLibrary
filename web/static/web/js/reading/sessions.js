@@ -31,6 +31,11 @@ function normalizeStatusFilter(params) {
   return "all";
 }
 
+function parsePositivePage(value) {
+  const page = Number.parseInt(String(value || ""), 10);
+  return Number.isFinite(page) && page > 1 ? page : 1;
+}
+
 function readQueryState() {
   const params = new URLSearchParams(window.location.search);
   const rawPageSize = (params.get("page_size") || "").trim();
@@ -38,6 +43,7 @@ function readQueryState() {
   return {
     book: (params.get("book") || "").trim(),
     q: (params.get("q") || "").trim(),
+    page: parsePositivePage(params.get("page")),
     status: normalizeStatusFilter(params),
     pageSize: PAGE_SIZE_OPTIONS.has(rawPageSize) ? Number(rawPageSize) : DEFAULT_PAGE_SIZE,
     view: VIEW_MODES.has(rawView) ? rawView : "session",
@@ -50,6 +56,7 @@ function buildApiUrl(state) {
   if (state.q) url.searchParams.set("q", state.q);
   if (state.status === "active") url.searchParams.set("is_active", "true");
   if (state.status === "closed") url.searchParams.set("is_active", "false");
+  if (state.page > 1) url.searchParams.set("page", String(state.page));
   url.searchParams.set("page_size", String(state.pageSize));
   return url.toString();
 }
@@ -59,6 +66,7 @@ function writeQueryState(state, { replace = false } = {}) {
   const params = new URLSearchParams();
   if (state.book) params.set("book", state.book);
   if (state.q) params.set("q", state.q);
+  if (state.page > 1) params.set("page", String(state.page));
   if (state.status !== "all") params.set("status", state.status);
   if (state.pageSize !== DEFAULT_PAGE_SIZE) params.set("page_size", String(state.pageSize));
   if (state.view !== "session") params.set("view", state.view);
@@ -420,6 +428,7 @@ export async function initReadingSessions() {
   }
 
   async function reloadFirstPage({ replace = false } = {}) {
+    state = { ...state, page: 1 };
     writeQueryState(state, { replace });
     applyStateToControls();
     await load(buildApiUrl(state));
@@ -470,12 +479,20 @@ export async function initReadingSessions() {
 
   prevBtns.forEach((button) => {
     button.addEventListener("click", async () => {
-      if (previousUrl) await load(previousUrl);
+      if (!previousUrl) return;
+      state = { ...state, page: Math.max(1, state.page - 1) };
+      writeQueryState(state);
+      applyStateToControls();
+      await load(buildApiUrl(state));
     });
   });
   nextBtns.forEach((button) => {
     button.addEventListener("click", async () => {
-      if (nextUrl) await load(nextUrl);
+      if (!nextUrl) return;
+      state = { ...state, page: state.page + 1 };
+      writeQueryState(state);
+      applyStateToControls();
+      await load(buildApiUrl(state));
     });
   });
 
@@ -486,5 +503,6 @@ export async function initReadingSessions() {
   });
 
   applyStateToControls();
-  await reloadFirstPage({ replace: true });
+  writeQueryState(state, { replace: true });
+  await load(buildApiUrl(state));
 }
