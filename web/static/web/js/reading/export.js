@@ -60,6 +60,19 @@ function clearSelection() {
   });
 }
 
+function selectAll() {
+  bookRows().forEach((row) => {
+    const bookBox = row.querySelector(".export-book-select");
+    if (bookBox) {
+      bookBox.checked = true;
+      bookBox.indeterminate = false;
+    }
+    sessionBoxes(row).forEach((box) => {
+      box.checked = true;
+    });
+  });
+}
+
 function updateSelectedAction(message = "") {
   bookRows().forEach(updateBookState);
   const button = document.getElementById("reading-export-selected");
@@ -185,6 +198,12 @@ export async function initReadingExport() {
 
     if (target.id === "reading-export-clear" && target instanceof HTMLButtonElement) {
       clearSelection();
+      updateSelectedAction();
+      return;
+    }
+
+    if (target.id === "reading-export-select-all" && target instanceof HTMLButtonElement) {
+      selectAll();
       updateSelectedAction();
       return;
     }

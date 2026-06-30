@@ -34,14 +34,13 @@
         <h2 class="card__title">Selective archive</h2>
         <p class="muted">Select a book or individual sessions to export a smaller marginalia archive.</p>
       </div>
-      <div class="export-selected-actions">
-        <span class="muted" id="reading-export-selection-status">Select books or sessions.</span>
-      </div>
     </div>
     {% if books %}
       <div class="export-selection-bar">
         <span class="muted" id="reading-export-selection-summary">No selection</span>
-        <button class="button" id="reading-export-clear" type="button" disabled>Clear</button>
+        <span class="muted" id="reading-export-selection-status">Select books or sessions.</span>
+        <button class="button" id="reading-export-select-all" type="button">Select all</button>
+        <button class="button" id="reading-export-clear" type="button" disabled>Clear Selection</button>
         <button class="button" id="reading-export-selected" type="button" disabled>Export selected</button>
       </div>
       <div class="export-book-list">
