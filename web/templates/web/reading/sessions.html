@@ -45,28 +45,34 @@
         <button id="reading-sessions-search-button" class="button" type="submit">Search</button>
       </form>
 
+    </div>
+
+    <div class="sessions-view-bar">
+      <div
+        class="sessions-view-toggle"
+        id="reading-sessions-view-toggle"
+        role="group"
+        aria-label="Reading sessions view"
+      >
+        <span class="muted">View</span>
+        <button class="tab-button is-active" type="button" data-view-mode="session" aria-pressed="true">By Session</button>
+        <button class="tab-button" type="button" data-view-mode="book" aria-pressed="false">By Book</button>
+      </div>
       <label
         class="sessions-controls__group sessions-controls__page-size"
         for="reading-sessions-page-size"
       >
         <span class="muted">Results per page</span>
-        <select id="reading-sessions-page-size" name="page_size">
-          <option value="10">10</option>
-          <option value="20" selected>20</option>
+        <select id="reading-sessions-page-size" class="reading-sessions-page-size" name="page_size">
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
           <option value="50">50</option>
         </select>
       </label>
-    </div>
-
-    <div
-      class="sessions-view-toggle"
-      id="reading-sessions-view-toggle"
-      role="group"
-      aria-label="Reading sessions view"
-    >
-      <span class="muted">View</span>
-      <button class="tab-button is-active" type="button" data-view-mode="session" aria-pressed="true">By Session</button>
-      <button class="tab-button" type="button" data-view-mode="book" aria-pressed="false">By Book</button>
+      <div class="sessions-pager__nav" aria-label="Reading sessions top pagination">
+        <button class="button reading-sessions-prev" type="button" disabled>Previous</button>
+        <button class="button reading-sessions-next" type="button" disabled>Next</button>
+      </div>
     </div>
     <div class="muted is-hidden" id="reading-sessions-view-note"></div>
 
@@ -142,9 +148,21 @@
     {% endif %}
     </div>
 
-    <div class="pager" aria-label="Reading sessions pagination">
-      <button id="reading-sessions-prev" class="button" type="button" disabled>Previous</button>
-      <button id="reading-sessions-next" class="button" type="button" disabled>Next</button>
+    <div class="pager sessions-pager" aria-label="Reading sessions pagination">
+      <div class="sessions-pager__page-size">
+        <label class="sessions-controls__group sessions-controls__page-size" for="reading-sessions-page-size-bottom">
+          <span class="muted">Results per page</span>
+          <select id="reading-sessions-page-size-bottom" class="reading-sessions-page-size" name="page_size">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+      </div>
+      <div class="sessions-pager__nav">
+        <button id="reading-sessions-prev" class="button reading-sessions-prev" type="button" disabled>Previous</button>
+        <button id="reading-sessions-next" class="button reading-sessions-next" type="button" disabled>Next</button>
+      </div>
     </div>
   </section>
 {% endblock %}

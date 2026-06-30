@@ -768,15 +768,31 @@ input[type="file"]:disabled::file-selector-button {
 .sessions-controls__page-size {
   flex: 0 0 auto;
 }
-.sessions-view-toggle {
+.sessions-view-bar > .sessions-controls__page-size {
+  margin-left: auto;
+}
+.sessions-view-bar {
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
   margin: 0 0 10px;
+  justify-content: space-between;
+}
+.sessions-view-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .sessions-book-group {
   margin: 10px 0;
+  cursor: pointer;
+}
+.sessions-book-group:hover,
+.sessions-book-group:focus-within {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.045);
 }
 .sessions-book-group__header {
   display: flex;
@@ -790,9 +806,23 @@ input[type="file"]:disabled::file-selector-button {
 .sessions-book-group__title {
   margin: 0;
   font-size: 17px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .sessions-book-group__count {
   margin-top: 6px;
+}
+.sessions-pager {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sessions-pager__nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 .sessions-row__detail {
   margin-top: 6px;
@@ -819,6 +849,10 @@ input[type="file"]:disabled::file-selector-button {
   }
   .sessions-book-group__header {
     flex-wrap: wrap;
+  }
+  .sessions-view-bar,
+  .sessions-pager {
+    align-items: stretch;
   }
 }
 

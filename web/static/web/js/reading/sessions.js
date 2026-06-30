@@ -9,7 +9,7 @@ import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { mountCovers } from "../ui/covers.js";
 import { setStatus } from "../ui/status.js";
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = new Set(["10", "20", "50"]);
 const STATUS_FILTERS = new Set(["all", "active", "closed"]);
 const VIEW_MODES = new Set(["session", "book"]);
@@ -125,6 +125,14 @@ function sessionActionLink({ href, icon, label }) {
   return link;
 }
 
+function isInteractiveElement(element) {
+  return !!(
+    element &&
+    element.closest &&
+    element.closest("a, button, input, select, textarea, label, summary, details")
+  );
+}
+
 function renderSessionCard(session) {
   const book = session && session.book && typeof session.book === "object" ? session.book : {};
   const bookId = String((book && book.id) || (session && session.book_id) || "");
@@ -234,6 +242,7 @@ function renderBookGroup(sessions) {
   const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
 
   const group = el("section", "card sessions-book-group");
+  group.dataset.bookSessionsUrl = bookSessionsHref;
   const header = el("div", "sessions-book-group__header");
 
   const coverLink = el("a", "sessions-card__cover-link");
@@ -257,17 +266,10 @@ function renderBookGroup(sessions) {
     el(
       "div",
       "muted sessions-book-group__count",
-      `${sessions.length} session${sessions.length === 1 ? "" : "s"} on this page`
+      `${sessions.length} session${sessions.length === 1 ? "" : "s"}`
     )
   );
   header.appendChild(identity);
-  header.appendChild(
-    sessionActionLink({
-      href: bookSessionsHref,
-      icon: "auto_stories",
-      label: "View sessions for this book",
-    })
-  );
   group.appendChild(header);
   return group;
 }
@@ -303,6 +305,13 @@ function renderResults(container, payload, results, state) {
   container.appendChild(empty);
 }
 
+function resultStatusText({ count, results, state }) {
+  if (!count) return "";
+  if (state.view !== "book") return `Showing ${results.length} of ${count} sessions.`;
+  const bookCount = groupSessionsByBook(results).length;
+  return `Showing ${bookCount} book${bookCount === 1 ? "" : "s"} from ${count} sessions.`;
+}
+
 export async function initReadingSessions() {
   await loadMeAndInitShell();
 
@@ -313,11 +322,11 @@ export async function initReadingSessions() {
   const viewNoteEl = $("#reading-sessions-view-note");
   const searchForm = $("#reading-sessions-search-form");
   const searchInput = $("#reading-sessions-search");
-  const pageSizeSelect = $("#reading-sessions-page-size");
+  const pageSizeSelects = Array.from(document.querySelectorAll(".reading-sessions-page-size"));
   const statusEl = $("#reading-sessions-status");
   const resultsEl = $("#reading-sessions-results");
-  const prevBtn = $("#reading-sessions-prev");
-  const nextBtn = $("#reading-sessions-next");
+  const prevBtns = Array.from(document.querySelectorAll(".reading-sessions-prev"));
+  const nextBtns = Array.from(document.querySelectorAll(".reading-sessions-next"));
 
   if (
     !root ||
@@ -327,11 +336,11 @@ export async function initReadingSessions() {
     !viewNoteEl ||
     !searchForm ||
     !searchInput ||
-    !pageSizeSelect ||
+    !pageSizeSelects.length ||
     !statusEl ||
     !resultsEl ||
-    !prevBtn ||
-    !nextBtn
+    !prevBtns.length ||
+    !nextBtns.length
   ) {
     return;
   }
@@ -340,10 +349,21 @@ export async function initReadingSessions() {
   let nextUrl = null;
   let previousUrl = null;
 
+  function syncPaginationButtons() {
+    prevBtns.forEach((button) => {
+      button.disabled = !previousUrl;
+    });
+    nextBtns.forEach((button) => {
+      button.disabled = !nextUrl;
+    });
+  }
+
   function applyStateToControls() {
     syncSessionsBreadcrumb(state);
     searchInput.value = state.q;
-    pageSizeSelect.value = String(state.pageSize);
+    pageSizeSelects.forEach((select) => {
+      select.value = String(state.pageSize);
+    });
     for (const button of filtersEl.querySelectorAll("[data-status-filter]")) {
       const active = button.dataset.statusFilter === state.status;
       button.classList.toggle("is-active", active);
@@ -354,17 +374,17 @@ export async function initReadingSessions() {
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
     }
-    viewNoteEl.textContent =
-      state.view === "book" ? "Grouped by book for this page of results." : "";
-    visible(viewNoteEl, !!viewNoteEl.textContent);
+    viewNoteEl.textContent = "";
+    visible(viewNoteEl, false);
   }
 
   async function load(url) {
     root.setAttribute("aria-busy", "true");
     setStatus(statusEl, "Loading sessions...", false);
     resultsEl.replaceChildren();
-    prevBtn.disabled = true;
-    nextBtn.disabled = true;
+    nextUrl = null;
+    previousUrl = null;
+    syncPaginationButtons();
 
     try {
       const payload = await fetchJSON(url);
@@ -379,11 +399,10 @@ export async function initReadingSessions() {
 
       nextUrl = payload && payload.next ? String(payload.next) : null;
       previousUrl = payload && payload.previous ? String(payload.previous) : null;
-      nextBtn.disabled = !nextUrl;
-      prevBtn.disabled = !previousUrl;
+      syncPaginationButtons();
 
       const count = payload && payload.count != null ? Number(payload.count) : results.length;
-      setStatus(statusEl, count ? `Showing ${results.length} of ${count} sessions.` : "", false);
+      setStatus(statusEl, resultStatusText({ count, results, state }), false);
     } catch (error) {
       console.error("Failed to load reading sessions", { url, error });
       const errorEl = el("div", "muted error", "Could not load reading sessions.");
@@ -394,6 +413,7 @@ export async function initReadingSessions() {
       setGlobalErrorFromError(error, "Failed to load reading sessions:");
       nextUrl = null;
       previousUrl = null;
+      syncPaginationButtons();
     } finally {
       root.setAttribute("aria-busy", "false");
     }
@@ -429,20 +449,34 @@ export async function initReadingSessions() {
     await reloadFirstPage();
   });
 
-  pageSizeSelect.addEventListener("change", async () => {
-    const value = String(pageSizeSelect.value || "");
-    state = {
-      ...state,
-      pageSize: PAGE_SIZE_OPTIONS.has(value) ? Number(value) : DEFAULT_PAGE_SIZE,
-    };
-    await reloadFirstPage();
+  pageSizeSelects.forEach((select) => {
+    select.addEventListener("change", async () => {
+      const value = String(select.value || "");
+      state = {
+        ...state,
+        pageSize: PAGE_SIZE_OPTIONS.has(value) ? Number(value) : DEFAULT_PAGE_SIZE,
+      };
+      await reloadFirstPage();
+    });
   });
 
-  prevBtn.addEventListener("click", async () => {
-    if (previousUrl) await load(previousUrl);
+  resultsEl.addEventListener("click", (event) => {
+    const source = event.target;
+    if (isInteractiveElement(source)) return;
+    const card = source && source.closest ? source.closest("[data-book-sessions-url]") : null;
+    const url = card && card.getAttribute("data-book-sessions-url");
+    if (url) window.location.href = url;
   });
-  nextBtn.addEventListener("click", async () => {
-    if (nextUrl) await load(nextUrl);
+
+  prevBtns.forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (previousUrl) await load(previousUrl);
+    });
+  });
+  nextBtns.forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (nextUrl) await load(nextUrl);
+    });
   });
 
   window.addEventListener("popstate", async () => {
