@@ -1,5 +1,6 @@
 import { fetchJSON, fetchJSONWithOptions, getCsrfToken, patchJSON, extractApiErrorMessage, summarizeFieldErrors } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalErrorFromError, visible } from "../layout.js";
+import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { mountCovers } from "../ui/covers.js";
 import { bindSessionControls, renderSessionDisplay, sessionIsWritable } from "./activity_actions.js";
 import { renderAnnotations, renderBookMeta } from "./activity_rendering.js";
@@ -30,6 +31,22 @@ async function getAnnotationsForSession(sessionId) {
     `/api/v1/reading/annotations/?session_id=${encodeURIComponent(String(sessionId))}&page_size=200`,
   );
   return payload && Array.isArray(payload.results) ? payload.results : Array.isArray(payload) ? payload : [];
+}
+
+function sessionBreadcrumbLabel(state) {
+  const name = state && state.sessionName ? String(state.sessionName).trim() : "";
+  return name || "Session";
+}
+
+function syncActivityBreadcrumb({ bookId, bookTitle, sessionState }) {
+  setBreadcrumbs([
+    { label: "My Marginalia", href: "/app/" },
+    {
+      label: bookTitle || "Book",
+      href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`,
+    },
+    { label: sessionBreadcrumbLabel(sessionState), current: true },
+  ]);
 }
 
 export async function initReadingBookActivity() {
@@ -104,6 +121,7 @@ export async function initReadingBookActivity() {
   try {
     const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     const titleText = book && book.title ? String(book.title) : "Book";
+    syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState: null });
     titleEl.textContent = `Marginalia for \u201c${titleText}\u201d`;
     subtitleEl.textContent = "";
     sessionDisplayEl.textContent = "";
@@ -163,6 +181,7 @@ export async function initReadingBookActivity() {
       sessionState.sessionIsActive = !!(session && session.is_active);
       sessionState.canEditSessionMetadata = sessionIsWritable(sessionState);
       renderSessionDisplay(sessionDisplayEl, sessionState);
+      syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState });
 
       sessionNameEl.value = sessionState.sessionName;
       sessionSaveBtn.disabled = true;
@@ -207,6 +226,7 @@ export async function initReadingBookActivity() {
       closeSessionById: closeSession,
       extractApiErrorMessage,
       summarizeFieldErrors,
+      onSessionChanged: () => syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState }),
     });
 
     let annotations = [];

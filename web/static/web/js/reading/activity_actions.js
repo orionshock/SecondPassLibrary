@@ -20,6 +20,7 @@ export function bindSessionControls({
   closeSessionById,
   extractApiErrorMessage,
   summarizeFieldErrors,
+  onSessionChanged,
 }) {
   const {
     sessionDisplayEl,
@@ -87,6 +88,7 @@ export function bindSessionControls({
       state.sessionName = updated && typeof updated.name === "string" ? updated.name : desired;
       sessionNameEl.value = state.sessionName;
       renderSessionDisplay(sessionDisplayEl, state);
+      if (typeof onSessionChanged === "function") onSessionChanged(state);
       sessionSaveStatusEl.textContent = "Saved.";
       // Return to display mode after a successful save.
       exitEditMode();
@@ -116,6 +118,7 @@ export function bindSessionControls({
       sessionNameEl.value = state.sessionName;
       state.canEditSessionMetadata = false;
       renderSessionDisplay(sessionDisplayEl, state);
+      if (typeof onSessionChanged === "function") onSessionChanged(state);
       visible(sessionEditBtn, false);
       visible(sessionEditFormEl, false);
       visible(sessionCloseBtn, false);

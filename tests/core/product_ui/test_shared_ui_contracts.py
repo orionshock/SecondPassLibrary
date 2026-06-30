@@ -82,14 +82,11 @@ class ProductUiSharedContractsTests(ProductUiTestCase):
         template_text = "\n".join(
             text for path, text in sources.items() if path.endswith(".html")
         )
-        self.assertIn('class="pill back-link"', template_text)
-        self.assertIn(
-            '<span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>',
-            template_text,
-        )
+        self.assertNotIn('class="pill back-link"', template_text)
+        self.assertNotIn("Back to Dashboard", template_text)
 
         css = Path("web/static/web/app.css").read_text(encoding="utf-8")
-        self.assertIn(".back-link", css)
+        self.assertNotIn(".back-link", css)
         self.assertIn(".metadata-piece + .metadata-piece::before", css)
         self.assertIn(
             ".shelf-metadata-piece + .shelf-metadata-piece::before",

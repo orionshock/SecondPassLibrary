@@ -51,6 +51,13 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get("/reading/export/")
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page">Export</li>', html=False)
         self.assertContains(response, "Export Marginalia")
         self.assertContains(response, "Native SPL exports can be previewed and imported")
         self.assertContains(response, 'href="/api/v1/reading/export/"')
@@ -66,6 +73,13 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get("/reading/import/")
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page">Import</li>', html=False)
         self.assertContains(response, "Import Marginalia")
         self.assertContains(response, "Preview and import SPL native marginalia exports.")
         self.assertContains(response, "SPL native marginalia export")
@@ -130,6 +144,14 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{book.id}/")
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(response, f'aria-current="page">{book.title}</li>', html=False)
+        self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
         self.assertContains(response, "Sessions for")
         self.assertContains(response, "No sessions yet for this book.", count=0)
@@ -160,6 +182,20 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn("/api/v1/reading/export/books/", js)
         self.assertIn("button.disabled = selectedIds().length === 0", js)
 
+    def test_reading_activity_js_updates_breadcrumbs_from_loaded_context(self):
+        js = Path("web/static/web/js/reading/activity.js").read_text(encoding="utf-8")
+        actions_js = Path("web/static/web/js/reading/activity_actions.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('from "../ui/breadcrumbs.js"', js)
+        self.assertIn("function syncActivityBreadcrumb", js)
+        self.assertIn('{ label: "My Marginalia", href: "/app/" }', js)
+        self.assertIn('href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`', js)
+        self.assertIn("sessionBreadcrumbLabel(sessionState)", js)
+        self.assertIn("onSessionChanged", js)
+        self.assertIn("onSessionChanged", actions_js)
+
     def test_authenticated_reading_sessions_empty_state(self):
         profile = get_or_create_profile(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -186,6 +222,13 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get("/reading/sessions/")
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page">By Session</li>', html=False)
         self.assertContains(response, 'id="reading-sessions-all-title">Sessions</h1>')
         self.assertContains(response, 'id="reading-sessions-subtitle"')
         self.assertContains(response, 'class="sessions-controls"')
@@ -332,6 +375,19 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{book.id}/{session.id}/")
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Breadcrumb"')
+        self.assertContains(
+            response,
+            '<a class="breadcrumbs__link" href="/app/">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            f'<a class="breadcrumbs__link" href="/reading/sessions/books/{book.id}/">Book</a>',
+            html=False,
+        )
+        self.assertContains(response, 'aria-current="page">Session</li>', html=False)
+        self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
         self.assertContains(response, f'data-session-id="{session.id}"')
         self.assertContains(response, 'id="reading-activity-status"')

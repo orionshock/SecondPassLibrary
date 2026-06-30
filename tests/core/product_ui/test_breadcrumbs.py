@@ -53,9 +53,21 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
                 ('<a class="breadcrumbs__link" href="/profile/">Profile</a>', "Password"),
                 "breadcrumbs--trail",
             ),
-            ("/reading/sessions/", ("Reading Data", "Sessions"), "breadcrumbs--trail"),
-            ("/reading/import/", ("Reading Data", "Import SPL Marginalia"), "breadcrumbs--trail"),
-            ("/reading/export/", ("Reading Data", "Export SPL Marginalia"), "breadcrumbs--trail"),
+            (
+                "/reading/sessions/",
+                ('<a class="breadcrumbs__link" href="/app/">My Marginalia</a>', "By Session"),
+                "breadcrumbs--trail",
+            ),
+            (
+                "/reading/import/",
+                ('<a class="breadcrumbs__link" href="/app/">My Marginalia</a>', "Import"),
+                "breadcrumbs--trail",
+            ),
+            (
+                "/reading/export/",
+                ('<a class="breadcrumbs__link" href="/app/">My Marginalia</a>', "Export"),
+                "breadcrumbs--trail",
+            ),
             (
                 "/client-api/authorize/",
                 (

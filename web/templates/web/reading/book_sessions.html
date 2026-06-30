@@ -4,10 +4,13 @@
 
 {% block title %}Sessions - {{ server_name }}{% endblock %}
 
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_label="My Marginalia" parent_href="/app/" current_label=book.title|default:"Book" only %}
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <div>
-      <a href="/app/" class="pill back-link"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Back to Dashboard</span></a>
       <h1 class="page-title" id="reading-sessions-title">Sessions for {{ book.title|default:"Book"|escape }}</h1>
     </div>
     <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">

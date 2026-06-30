@@ -44,15 +44,6 @@ body {
     "GRAD" 0,
     "opsz" 20;
 }
-.back-link {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-}
-.back-link .material-symbols-outlined {
-  font-size: 16px;
-}
-
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
