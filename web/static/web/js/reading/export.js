@@ -56,16 +56,41 @@ function selectedExportUrl(row) {
   return `${base}?${params.toString()}`;
 }
 
+function selectedSummary(row) {
+  if (!row) return "No selection";
+  const count = checkedSessionBoxes(row).length;
+  if (!count) return "No selection";
+  const noun = count === 1 ? "session" : "sessions";
+  return `${count} ${noun} selected from 1 book`;
+}
+
+function clearSelection() {
+  bookRows().forEach((row) => {
+    const bookBox = row.querySelector(".export-book-select");
+    if (bookBox) {
+      bookBox.checked = false;
+      bookBox.indeterminate = false;
+    }
+    sessionBoxes(row).forEach((box) => {
+      box.checked = false;
+    });
+  });
+}
+
 function updateSelectedAction(message = "") {
   bookRows().forEach(updateBookState);
   const button = document.getElementById("reading-export-selected");
   const status = document.getElementById("reading-export-selection-status");
+  const summary = document.getElementById("reading-export-selection-summary");
+  const clearButton = document.getElementById("reading-export-clear");
   const row = selectedRow();
   const url = selectedExportUrl(row);
   if (button) {
     button.disabled = !url;
     button.dataset.exportUrl = url;
   }
+  if (clearButton) clearButton.disabled = !url;
+  if (summary) summary.textContent = selectedSummary(row);
   if (status) {
     status.textContent = url
       ? message || "Ready to export selected marginalia."
@@ -125,6 +150,12 @@ export async function initReadingExport() {
     if (target.id === "reading-export-selected" && target instanceof HTMLButtonElement) {
       const url = target.dataset.exportUrl || "";
       if (url && !target.disabled) window.location.assign(url);
+      return;
+    }
+
+    if (target.id === "reading-export-clear" && target instanceof HTMLButtonElement) {
+      clearSelection();
+      updateSelectedAction();
     }
   });
 
