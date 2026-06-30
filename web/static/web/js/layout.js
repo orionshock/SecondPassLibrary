@@ -85,6 +85,7 @@ function updateNavVisibility(me) {
 function setActiveNav() {
   const path = window.location.pathname || "/";
   const mapping = [
+    { key: "marginalia", prefix: "/reading/" },
     { key: "library", prefix: "/library/" },
     { key: "app", prefix: "/app/" },
     { key: "shelves", prefix: "/shelves/" },

@@ -57,7 +57,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
                 "/reading/sessions/",
                 (
                     '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
-                    "By Session",
+                    "Browse by Session",
                 ),
                 "breadcrumbs--trail",
             ),
@@ -65,7 +65,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
                 "/reading/import/",
                 (
                     '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
-                    "Import",
+                    "Import Marginalia",
                 ),
                 "breadcrumbs--trail",
             ),
@@ -73,7 +73,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
                 "/reading/export/",
                 (
                     '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
-                    "Export",
+                    "Export Marginalia",
                 ),
                 "breadcrumbs--trail",
             ),

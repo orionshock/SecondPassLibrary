@@ -114,16 +114,21 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertContains(response, "My Marginalia")
         self.assertContains(
             response,
+            '<a class="nav__item" href="/reading/sessions/" data-nav="marginalia">My Marginalia</a>',
+            html=False,
+        )
+        self.assertContains(
+            response,
             "Review your reading sessions, highlights, bookmarks, notes, progress, imports, and exports.",
         )
         self.assertContains(response, 'href="/reading/sessions/"')
-        self.assertContains(response, "View by session")
+        self.assertContains(response, "Browse by Session")
         self.assertContains(response, 'href="/reading/sessions/?view=book"')
-        self.assertContains(response, "View by book")
+        self.assertContains(response, "Browse by Book")
         self.assertContains(response, 'href="/reading/import/"')
-        self.assertContains(response, "Import")
+        self.assertContains(response, "Import Marginalia")
         self.assertContains(response, 'href="/reading/export/"')
-        self.assertContains(response, "Export")
+        self.assertContains(response, "Export Marginalia")
         self.assertNotContains(response, "Reading data")
         self.assertNotContains(response, "Reading Data")
         self.assertNotContains(response, "Reading Sessions")

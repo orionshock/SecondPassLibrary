@@ -77,7 +77,7 @@ function writeQueryState(state, { replace = false } = {}) {
 function syncSessionsBreadcrumb(state) {
   setBreadcrumbs([
     { label: "My Marginalia", href: "/reading/sessions/" },
-    { label: state.view === "book" ? "By Book" : "By Session", current: true },
+    { label: state.view === "book" ? "Browse by Book" : "Browse by Session", current: true },
   ]);
 }
 

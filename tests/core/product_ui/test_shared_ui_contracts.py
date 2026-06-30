@@ -51,6 +51,8 @@ class ProductUiSharedContractsTests(ProductUiTestCase):
         self.assertIn("initAppHeaderLayout();", main_js)
         self.assertIn('<header class="topbar">', base_template)
         self.assertIn('<div class="container topbar__inner">', base_template)
+        self.assertIn('data-nav="marginalia"', base_template)
+        self.assertIn('{ key: "marginalia", prefix: "/reading/" }', layout_js)
 
     def test_product_ui_avoids_legacy_decorative_entities(self):
         source_paths = [
