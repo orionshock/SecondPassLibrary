@@ -145,7 +145,7 @@ function renderSessionCard(session) {
       : "Not available";
   const marginaliaHref =
     `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`;
-  const bookSessionsHref = `/reading/sessions/?book=${encodeURIComponent(bookId)}`;
+  const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
 
   const card = el("div", "card sessions-row sessions-card");
 
@@ -224,65 +224,6 @@ function groupSessionsByBook(results) {
   return Array.from(groups.values());
 }
 
-function renderCompactSessionRow(session, bookTitle) {
-  const book = session && session.book && typeof session.book === "object" ? session.book : {};
-  const bookId = String((book && book.id) || (session && session.book_id) || "");
-  const sessionId = String((session && session.id) || "");
-  const completedAt = session && session.completed_at ? formatWhen(session.completed_at) : "";
-  const updatedAt = session && session.updated_at ? formatWhen(session.updated_at) : "";
-  const startedAt = session && session.started_at ? formatWhen(session.started_at) : "";
-  const annotationCount = Number.isFinite(Number(session && session.annotation_count))
-    ? Number(session.annotation_count)
-    : 0;
-  const progression = session && session.progression != null ? Number(session.progression) : null;
-  const progressionText =
-    progression != null && Number.isFinite(progression)
-      ? `${Math.round(progression * 1000) / 10}%`
-      : "Not available";
-  const marginaliaHref =
-    `/reading/sessions/books/${encodeURIComponent(bookId)}/${encodeURIComponent(sessionId)}/`;
-
-  const row = el("article", "sessions-book-group__session");
-  const content = el("div", "sessions-book-group__session-main");
-  const titleLink = el(
-    "a",
-    "sessions-book-group__session-title",
-    sessionCardTitle(session, bookTitle)
-  );
-  titleLink.href = marginaliaHref;
-  content.appendChild(titleLink);
-  content.appendChild(el("div", "muted sessions-row__id", sessionId));
-
-  const dates = el("div", "muted sessions-card__metadata");
-  appendSeparatedParts(dates, [
-    startedAt ? `Started: ${startedAt}` : "",
-    completedAt ? `Closed: ${completedAt}` : updatedAt ? `Updated: ${updatedAt}` : "",
-  ]);
-  content.appendChild(dates);
-
-  const stats = el("div", "muted sessions-card__metadata");
-  appendSeparatedParts(stats, [
-    `Annotations: ${annotationCount}`,
-    `Progression: ${progressionText}`,
-  ]);
-  content.appendChild(stats);
-  row.appendChild(content);
-
-  const actions = el("div", "sessions-book-group__session-actions");
-  actions.appendChild(
-    el("span", "pill sessions-card__status", session && session.is_active ? "Active" : "Closed")
-  );
-  actions.appendChild(
-    sessionActionLink({
-      href: marginaliaHref,
-      icon: "article",
-      label: "Open session",
-    })
-  );
-  row.appendChild(actions);
-  return row;
-}
-
 function renderBookGroup(sessions) {
   const first = sessions[0] || {};
   const book = first && first.book && typeof first.book === "object" ? first.book : {};
@@ -290,19 +231,25 @@ function renderBookGroup(sessions) {
   const bookTitle = String((book && book.title) || "Book");
   const authors = authorNames(book);
   const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
-  const bookSessionsHref = `/reading/sessions/?book=${encodeURIComponent(bookId)}&view=book`;
+  const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
 
   const group = el("section", "card sessions-book-group");
   const header = el("div", "sessions-book-group__header");
 
+  const coverLink = el("a", "sessions-card__cover-link");
+  coverLink.href = bookSessionsHref;
+  coverLink.setAttribute("aria-label", "View sessions for this book");
   const cover = el("div", "sessions-cover");
   cover.dataset.coverUrl = coverUrl;
   cover.dataset.coverTitle = bookTitle;
   cover.setAttribute("aria-hidden", "true");
-  header.appendChild(cover);
+  coverLink.appendChild(cover);
+  header.appendChild(coverLink);
 
   const identity = el("div", "sessions-book-group__identity");
-  identity.appendChild(el("h2", "sessions-book-group__title", bookTitle));
+  const titleLink = el("a", "sessions-book-group__title", bookTitle);
+  titleLink.href = bookSessionsHref;
+  identity.appendChild(titleLink);
   const metadata = el("div", "muted sessions-card__metadata");
   appendSeparatedParts(metadata, [authors.join(", "), seriesLabel(book)]);
   if (metadata.childNodes.length) identity.appendChild(metadata);
@@ -322,12 +269,6 @@ function renderBookGroup(sessions) {
     })
   );
   group.appendChild(header);
-
-  const sessionList = el("div", "sessions-book-group__sessions");
-  sessions.forEach((session) => {
-    sessionList.appendChild(renderCompactSessionRow(session, bookTitle));
-  });
-  group.appendChild(sessionList);
   return group;
 }
 
