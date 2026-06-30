@@ -30,7 +30,12 @@ function renderBook(book, bookIndex) {
   const match = book.match || {};
   const authors = Array.isArray(book.authors) ? book.authors.join(", ") : "";
   const sessions = Array.isArray(book.sessions) ? book.sessions : [];
-  const sessionRows = sessions.map((session) => renderSession(session, book, bookIndex)).join("");
+  const metadata = bookMetadataParts(book, authors).map((part) => escapeHtml(part)).join(" &middot; ");
+  const matchText = matchLine(match);
+  const warningState = bookWarningState(book, sessions);
+  const sessionRows = sessions
+    .map((session) => renderSession(session, book, bookIndex, warningState.suppressedSessionWarning))
+    .join("");
   const checkbox = book.will_import
     ? `<input class="import-book-select import-book-select--large" type="checkbox" data-book-index="${bookIndex}" checked aria-label="Select all sessions for ${escapeHtml(book.title || "book")}" />`
     : "";
@@ -44,12 +49,10 @@ function renderBook(book, bookIndex) {
         <div class="sessions-cover" aria-hidden="true">${cover}</div>
         <div class="import-book__main">
           <h3 class="book__title">${escapeHtml(book.title || "Book")}</h3>
-          <div class="book__meta">
-            ${authors ? `<div>${escapeHtml(authors)}</div>` : ""}
-            <div>${escapeHtml(book.session_count)} session(s), ${escapeHtml(book.annotation_count)} annotation(s)</div>
-            <div>Match: <span class="pill">${escapeHtml(match.status || "unmatched")}</span> ${escapeHtml(match.book_title || "")}</div>
-            ${match.method ? `<div class="muted">Method: ${escapeHtml(match.method)} (${escapeHtml(match.confidence || "")})</div>` : ""}
-            ${book.warning ? `<div class="muted">${escapeHtml(book.warning)}</div>` : ""}
+          <div class="book__meta import-book__meta">
+            ${metadata ? `<div>${metadata}</div>` : ""}
+            ${matchText ? `<div>${escapeHtml(matchText)}</div>` : ""}
+            ${warningState.warnings.map((warning) => `<div class="muted import-warning">${escapeHtml(warning)}</div>`).join("")}
           </div>
         </div>
       </div>
@@ -58,13 +61,70 @@ function renderBook(book, bookIndex) {
   `;
 }
 
-function renderSession(session, book, bookIndex) {
+function bookMetadataParts(book, authors) {
+  return [
+    authors,
+    book.series || "",
+    countText(book.session_count, "session"),
+    countText(book.annotation_count, "annotation"),
+  ].filter(Boolean);
+}
+
+function matchLine(match) {
+  const status = (match.status || "").trim();
+  const title = (match.book_title || "").trim();
+  const method = match.method ? match.methodLabel || match.method : "";
+  const methodText = [method, match.confidence].filter(Boolean).join(" ");
+  if (title) return ["Matched to", title, methodText].filter(Boolean).join(" &middot; ");
+  if (status && status !== "matched") return ["Match", status, methodText].filter(Boolean).join(" &middot; ");
+  return methodText ? `Matched &middot; ${methodText}` : "";
+}
+
+function bookWarningState(book, sessions) {
+  const warnings = [];
+  if (book.warning) warnings.push(book.warning);
+
+  const sessionWarnings = sessions
+    .map((session) => sessionWarning(session))
+    .filter(Boolean);
+  const uniqueSessionWarnings = [...new Set(sessionWarnings)];
+  let suppressedSessionWarning = "";
+  if (uniqueSessionWarnings.length === 1 && sessionWarnings.length === sessions.length && sessions.length > 1) {
+    suppressedSessionWarning = uniqueSessionWarnings[0];
+    warnings.push(pluralizeWarning(suppressedSessionWarning));
+  }
+  return { warnings: [...new Set(warnings)], suppressedSessionWarning };
+}
+
+function pluralizeWarning(warning) {
+  if (warning === "Possible duplicate session.") return "Possible duplicate sessions found.";
+  return warning;
+}
+
+function sessionWarning(session) {
+  if (session.active_will_import_as_historical) return "Active export will import as historical.";
+  return session.warning || "";
+}
+
+function countText(value, noun) {
+  const count = Number(value || 0);
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+function renderSession(session, book, bookIndex, suppressedWarning = "") {
   const selectable = Boolean(book.will_import && session.will_import);
   const checked = selectable ? "checked" : "";
   const disabled = selectable ? "" : "disabled";
-  const warning = session.active_will_import_as_historical
-    ? "Active export will import as historical."
-    : session.warning || "";
+  const warning = sessionWarning(session);
+  const visibleWarning = warning === suppressedWarning ? "" : warning;
+  const counts = [
+    countText(session.annotation_count, "annotation"),
+    countText(session.bookmark_count, "bookmark"),
+    countText(session.highlight_count, "highlight"),
+    countText(session.commented_highlight_count, "commented highlight"),
+  ];
+  const dateText = session.started_at ? formatDate(session.started_at) : "";
+  const metadata = [session.status || "", dateText, ...counts].filter(Boolean).map((part) => escapeHtml(part)).join(" &middot; ");
   return `
     <article class="import-session" data-book-index="${bookIndex}" data-session-id="${escapeHtml(session.export_session_id || "")}">
       <div class="import-session__main">
@@ -73,9 +133,8 @@ function renderSession(session, book, bookIndex) {
         ${escapeHtml(session.name || "Unnamed session")}
         </label>
         <div class="book__meta">
-          <div>${escapeHtml(session.status || "")} - ${escapeHtml(session.started_at || "")}</div>
-          <div>${escapeHtml(session.annotation_count)} annotation(s), ${escapeHtml(session.bookmark_count)} bookmark(s), ${escapeHtml(session.highlight_count)} highlight(s), ${escapeHtml(session.commented_highlight_count)} commented highlight(s)</div>
-          ${warning ? `<div class="muted">${escapeHtml(warning)}</div>` : ""}
+          <div>${metadata}</div>
+          ${visibleWarning ? `<div class="muted import-warning import-warning--session">${escapeHtml(visibleWarning)}</div>` : ""}
         </div>
       </div>
       ${selectable ? `
@@ -85,6 +144,12 @@ function renderSession(session, book, bookIndex) {
       ` : '<div class="muted">Skipped.</div>'}
     </article>
   `;
+}
+
+function formatDate(value) {
+  const raw = String(value || "");
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  return raw;
 }
 
 export function renderApplyControls(preview) {

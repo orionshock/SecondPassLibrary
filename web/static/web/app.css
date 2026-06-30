@@ -1688,6 +1688,16 @@ input[type="file"]:disabled::file-selector-button {
   flex: 1;
   min-width: 0;
 }
+.import-book__meta {
+  display: grid;
+  gap: 3px;
+}
+.import-warning {
+  font-size: 13px;
+}
+.import-warning--session {
+  margin-top: 2px;
+}
 .import-session {
   display: flex;
   gap: 12px;
