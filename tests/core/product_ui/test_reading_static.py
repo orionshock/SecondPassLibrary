@@ -170,22 +170,20 @@ class ProductUiReadingTests(ProductUiTestCase):
             response,
             f"/reading/sessions/books/{book.id}/{mine.id}/",
         )
-        self.assertContains(response, f"/api/v1/reading/export/books/{book.id}/")
-        self.assertContains(response, "Export all sessions")
-        self.assertContains(response, 'id="reading-sessions-export-selected"')
-        self.assertContains(response, "Export selected")
-        self.assertContains(response, "disabled")
-        self.assertContains(response, "Select sessions to export a subset.")
-        self.assertContains(response, 'class="reading-session-select"')
-        self.assertContains(response, f'value="{mine.id}"')
+        self.assertContains(response, 'href="/library/books/')
+        self.assertContains(response, "Book details")
+        self.assertNotContains(response, f"/api/v1/reading/export/books/{book.id}/")
+        self.assertNotContains(response, "Export all sessions")
+        self.assertNotContains(response, 'id="reading-sessions-export-selected"')
+        self.assertNotContains(response, "Export selected")
+        self.assertNotContains(response, "Select sessions to export a subset.")
+        self.assertNotContains(response, 'class="reading-session-select"')
 
-    def test_reading_book_sessions_js_builds_selected_export_query(self):
-        js = Path("web/static/web/js/reading/book_sessions.js").read_text()
-        self.assertIn("initReadingBookSessions", js)
-        self.assertIn("loadMeAndInitShell", js)
-        self.assertIn('params.append("session", id)', js)
-        self.assertIn("/api/v1/reading/export/books/", js)
-        self.assertIn("button.disabled = selectedIds().length === 0", js)
+    def test_reading_book_sessions_page_has_no_inline_export_module(self):
+        main_js = Path("web/static/web/js/main.js").read_text(encoding="utf-8")
+        self.assertNotIn('import("./reading/book_sessions.js")', main_js)
+        self.assertNotIn("initReadingBookSessions", main_js)
+        self.assertFalse(Path("web/static/web/js/reading/book_sessions.js").exists())
 
     def test_reading_activity_js_updates_breadcrumbs_from_loaded_context(self):
         js = Path("web/static/web/js/reading/activity.js").read_text(encoding="utf-8")
@@ -469,11 +467,11 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'id="reading-activity-progress"')
         self.assertContains(response, 'id="reading-activity-annotations"')
         self.assertContains(response, f"/reading/sessions/books/{book.id}/")
-        self.assertContains(
+        self.assertNotContains(
             response,
             f"/api/v1/reading/export/books/{book.id}/{session.id}/",
         )
-        self.assertContains(response, "Export this session")
+        self.assertNotContains(response, "Export this session")
 
     def test_session_marginalia_404s_for_other_users_session(self):
         profile = get_or_create_profile(user=self.user)
