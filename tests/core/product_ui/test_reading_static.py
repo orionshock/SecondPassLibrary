@@ -108,8 +108,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'id="reading-import-session-modal-notes"')
         self.assertContains(response, 'href="/reading/export/"')
         self.assertContains(response, "Export Marginalia")
-        self.assertContains(response, 'href="/reading/sessions/"')
-        self.assertContains(response, "Browse by Session")
+        self.assertNotContains(response, "Browse by Session")
         self.assertNotContains(response, "Export center")
         self.assertNotContains(response, "Reading sessions")
 
