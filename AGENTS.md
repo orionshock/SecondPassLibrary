@@ -410,6 +410,19 @@ Permission model documentation lives in `docs/permissions.md` (roles, groups, an
 * Preserve existing tests.
 * Preserve existing API paths unless asked to change them.
 
+## Product UI Text and Separators
+
+* Do not use HTML character entities for decorative punctuation or separators
+  in live UI templates, JavaScript-generated markup, docs examples, or future
+  instructions.
+* Prefer semantic elements plus CSS separators, or real Unicode text only when
+  the character is meaningful text rather than decoration.
+* CSS-generated separators are acceptable for visual decoration.
+* Keep HTML escaping helpers for security; do not replace escaping behavior
+  with raw strings.
+* ARIA labels should use plain readable punctuation or words, not decorative
+  separators.
+
 ## Before Finishing Any Task
 
 Verification guidance:

@@ -52,12 +52,21 @@
             class="card sessions-row sessions-row--link"
             href="/reading/sessions/books/{{ book.id|escape }}/{{ s.id|urlencode }}/"
             title="Open session marginalia"
-            aria-label="Open session marginalia: {% if session_name %}{{ session_name|escape }}{% else %}Unnamed session &#183; {{ session_id|slice:'-8:' }}{% endif %}"
+            aria-label="Open session marginalia: {% if session_name %}{{ session_name|escape }}{% else %}Unnamed session, {{ session_id|slice:'-8:' }}{% endif %}"
           >
             <div class="sessions-row__main">
               <div style="display:flex; gap: 10px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                 <div>
-                  <div>{% if session_name %}{{ session_name|escape }}{% else %}Unnamed session &#183; {{ session_id|slice:"-8:" }}{% endif %}</div>
+                  <div>
+                    {% if session_name %}
+                      {{ session_name|escape }}
+                    {% else %}
+                      <span class="meta-list">
+                        <span class="meta-item">Unnamed session</span>
+                        <span class="meta-item">{{ session_id|slice:"-8:" }}</span>
+                      </span>
+                    {% endif %}
+                  </div>
                 </div>
                 <div class="muted">
                   {% if s.is_active %}Active{% else %}Closed{% endif %}

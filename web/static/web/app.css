@@ -721,6 +721,16 @@ input[type="file"]:disabled::file-selector-button {
   flex-wrap: wrap;
   margin-top: 6px;
 }
+.meta-list {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.meta-item + .meta-item::before {
+  content: "·";
+  margin: 0 6px;
+  color: rgba(255, 255, 255, 0.35);
+}
 .metadata-piece + .metadata-piece::before {
   content: "\2022";
   margin: 0 6px;

@@ -148,6 +148,7 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
   - direct group memberships (`groups`)
   - exact membership stewardship (`groups[].is_curator`)
 - Object payload capabilities are UI hints, not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
+- Decorative UI punctuation and separators should not be written as HTML character entities in live templates or JavaScript-generated markup. Use semantic inline elements with CSS-generated separators, or real text only when the character is meaningful content. ARIA labels should use plain readable punctuation or words.
 
 ## 2. First UI surface
 

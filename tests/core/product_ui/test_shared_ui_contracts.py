@@ -65,10 +65,12 @@ class ProductUiSharedContractsTests(ProductUiTestCase):
         }
         forbidden = (
             "&middot;",
+            "&#183;",
             "&larr;",
             "&rarr;",
             "&mdash;",
             "&ndash;",
+            "&hellip;",
             "\u00c2\u00b7",
             "\u00b7",
             "\u2190",
@@ -89,6 +91,7 @@ class ProductUiSharedContractsTests(ProductUiTestCase):
 
         css = Path("web/static/web/app.css").read_text(encoding="utf-8")
         self.assertNotIn(".back-link", css)
+        self.assertIn(".meta-item + .meta-item::before", css)
         self.assertIn(".metadata-piece + .metadata-piece::before", css)
         self.assertIn(
             ".shelf-metadata-piece + .shelf-metadata-piece::before",

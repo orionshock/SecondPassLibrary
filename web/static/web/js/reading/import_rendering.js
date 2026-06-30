@@ -1,8 +1,6 @@
 import { extractApiErrorMessage } from "../api.js";
 import { escapeHtml } from "../layout.js";
 
-const SEPARATOR_HTML = " &#183; ";
-
 export function renderPreview(preview) {
   if (!preview || !preview.valid) return "<div class=\"muted\">No preview yet.</div>";
   const summary = preview.summary || {};
@@ -32,7 +30,7 @@ function renderBook(book, bookIndex) {
   const match = book.match || {};
   const authors = Array.isArray(book.authors) ? book.authors.join(", ") : "";
   const sessions = Array.isArray(book.sessions) ? book.sessions : [];
-  const metadata = bookMetadataParts(book, authors).map((part) => escapeHtml(part)).join(SEPARATOR_HTML);
+  const metadata = renderMetaList(bookMetadataParts(book, authors));
   const matchHtml = matchLine(match);
   const warningState = bookWarningState(book, sessions);
   const sessionRows = sessions
@@ -78,12 +76,12 @@ function matchLine(match) {
   const method = match.method ? match.methodLabel || humanizeMatchMethod(match.method) : "";
   const methodText = [method, match.confidence].filter(Boolean).join(" ");
   if (title) {
-    return `Matched to ${escapeHtml(title)}${methodText ? `${SEPARATOR_HTML}${escapeHtml(methodText)}` : ""}`;
+    return renderMetaList([`Matched to ${title}`, methodText]);
   }
   if (status && status !== "matched") {
-    return `Match ${escapeHtml(status)}${methodText ? `${SEPARATOR_HTML}${escapeHtml(methodText)}` : ""}`;
+    return renderMetaList([`Match ${status}`, methodText]);
   }
-  return methodText ? `Matched${SEPARATOR_HTML}${escapeHtml(methodText)}` : "";
+  return methodText ? renderMetaList(["Matched", methodText]) : "";
 }
 
 function humanizeMatchMethod(value) {
@@ -121,6 +119,14 @@ function countText(value, noun) {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
+function renderMetaList(parts) {
+  const items = parts
+    .filter(Boolean)
+    .map((part) => `<span class="meta-item">${escapeHtml(part)}</span>`)
+    .join("");
+  return items ? `<span class="meta-list">${items}</span>` : "";
+}
+
 function renderSession(session, book, bookIndex, suppressedWarning = "") {
   const selectable = Boolean(book.will_import && session.will_import);
   const checked = selectable ? "checked" : "";
@@ -134,7 +140,7 @@ function renderSession(session, book, bookIndex, suppressedWarning = "") {
     countText(session.commented_highlight_count, "commented highlight"),
   ];
   const dateText = session.started_at ? formatDate(session.started_at) : "";
-  const metadata = [session.status || "", dateText, ...counts].filter(Boolean).map((part) => escapeHtml(part)).join(SEPARATOR_HTML);
+  const metadata = renderMetaList([session.status || "", dateText, ...counts]);
   return `
     <article class="import-session" data-book-index="${bookIndex}" data-session-id="${escapeHtml(session.export_session_id || "")}">
       <div class="import-session__main">
