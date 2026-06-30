@@ -235,7 +235,11 @@ class ProductUiReadingTests(ProductUiTestCase):
             html=False,
         )
         self.assertContains(response, 'aria-current="page">Browse by Session</li>', html=False)
-        self.assertContains(response, 'id="reading-sessions-all-title">Sessions</h1>')
+        self.assertContains(
+            response,
+            'id="reading-sessions-all-title">Marginalia by Session</h1>',
+        )
+        self.assertNotContains(response, 'id="reading-sessions-all-title">Sessions</h1>')
         self.assertContains(response, 'id="reading-sessions-subtitle"')
         self.assertContains(response, 'class="sessions-controls"')
         self.assertContains(response, 'id="reading-sessions-controls"')
@@ -321,6 +325,9 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn("const DEFAULT_PAGE_SIZE = 10", js)
         self.assertIn('from "../ui/breadcrumbs.js"', js)
         self.assertIn("function syncSessionsBreadcrumb", js)
+        self.assertIn("function sessionsHeading", js)
+        self.assertIn('state.view === "book" ? "Marginalia by Book" : "Marginalia by Session"', js)
+        self.assertIn("titleEl.textContent = sessionsHeading(state)", js)
         self.assertIn('{ label: "My Marginalia", href: "/reading/sessions/" }', js)
         self.assertIn('state.view === "book" ? "Browse by Book" : "Browse by Session"', js)
         self.assertIn("syncSessionsBreadcrumb(state)", js)

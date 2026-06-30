@@ -81,6 +81,10 @@ function syncSessionsBreadcrumb(state) {
   ]);
 }
 
+function sessionsHeading(state) {
+  return state.view === "book" ? "Marginalia by Book" : "Marginalia by Session";
+}
+
 function authorNames(book) {
   if (!Array.isArray(book && book.authors)) return [];
   return book.authors
@@ -324,6 +328,7 @@ export async function initReadingSessions() {
   await loadMeAndInitShell();
 
   const root = $("#reading-sessions-all");
+  const titleEl = $("#reading-sessions-all-title");
   const subtitleEl = $("#reading-sessions-subtitle");
   const filtersEl = $("#reading-sessions-status-filters");
   const viewToggleEl = $("#reading-sessions-view-toggle");
@@ -338,6 +343,7 @@ export async function initReadingSessions() {
 
   if (
     !root ||
+    !titleEl ||
     !subtitleEl ||
     !filtersEl ||
     !viewToggleEl ||
@@ -368,6 +374,7 @@ export async function initReadingSessions() {
 
   function applyStateToControls() {
     syncSessionsBreadcrumb(state);
+    titleEl.textContent = sessionsHeading(state);
     searchInput.value = state.q;
     pageSizeSelects.forEach((select) => {
       select.value = String(state.pageSize);
