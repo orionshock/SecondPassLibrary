@@ -12,11 +12,7 @@ from .session_views import (
     RecentSessionsView,
     StartOverView,
 )
-from .export_views import (
-    AllMarginaliaExportView,
-    BookMarginaliaExportView,
-    SessionMarginaliaExportView,
-)
+from .export_views import AllMarginaliaExportView
 from .import_views import MarginaliaImportApplyView, MarginaliaImportPreviewView
 
 app_name = "reading"
@@ -30,16 +26,6 @@ urlpatterns = [
         "export/",
         AllMarginaliaExportView.as_view(),
         name="export_all_marginalia",
-    ),
-    path(
-        "export/books/<uuid:book_id>/",
-        BookMarginaliaExportView.as_view(),
-        name="export_book_marginalia",
-    ),
-    path(
-        "export/books/<uuid:book_id>/<uuid:session_id>/",
-        SessionMarginaliaExportView.as_view(),
-        name="export_session_marginalia",
     ),
     path(
         "import/preview/",

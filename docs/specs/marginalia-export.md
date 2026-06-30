@@ -2,7 +2,7 @@
 
 This is the baseline Second Pass Library marginalia export contract.
 
-It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data for all visible books, one book, or one session.
+It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data for all visible books or for an explicit selected set.
 
 The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
 
@@ -23,19 +23,23 @@ JSON downloads:
 
 ```text
 GET /api/v1/reading/export/
-GET /api/v1/reading/export/books/<book_id>/
-GET /api/v1/reading/export/books/<book_id>/<session_id>/
+POST /api/v1/reading/export/
 POST /api/v1/reading/import/preview/
 POST /api/v1/reading/import/apply/
 ```
 
-`GET /api/v1/reading/export/books/<book_id>/` also accepts repeated `session` query parameters to export a selected subset of sessions for that book:
+`GET /api/v1/reading/export/` exports all current-user marginalia for visible books. `POST /api/v1/reading/export/` exports selected books/sessions using this request body:
 
-```text
-GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>
+```json
+{
+  "books": [
+    { "book_id": "<uuid>", "sessions": "all" },
+    { "book_id": "<uuid>", "sessions": ["<session_uuid>", "<session_uuid>"] }
+  ]
+}
 ```
 
-The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export requires current book visibility and includes only sessions owned by the requesting user. A mismatched book/session URL returns 404.
+The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export requires current book visibility and includes only sessions owned by the requesting user. Invisible books and other-user or mismatched sessions return 404.
 
 ## Top-Level Object
 
@@ -73,36 +77,25 @@ All marginalia export:
 
 The all export includes current-user sessions grouped under visible books.
 
-Book export:
+Selected export:
 
 ```json
 {
-  "type": "book",
-  "book": "book:sha256:<hash>"
+  "type": "selected",
+  "books": [
+    {
+      "book": "book:sha256:<hash>",
+      "session_filter": "all"
+    },
+    {
+      "book": "book:sha256:<hash>",
+      "session_filter": "selected"
+    }
+  ]
 }
 ```
 
-Selected sessions for one book:
-
-```json
-{
-  "type": "book",
-  "book": "book:sha256:<hash>",
-  "session_filter": "selected"
-}
-```
-
-Selected book exports are requested with repeated `session` query parameters. Each selected session must belong to the requesting user and requested book; invalid, missing, unauthorized, or mismatched session ids return 404.
-
-Session export:
-
-```json
-{
-  "type": "session",
-  "book": "book:sha256:<hash>",
-  "session": "session-1"
-}
-```
+Selected exports preserve request book order and explicit session order. `sessions: "all"` uses the normal per-book session ordering.
 
 When a book file checksum is not available, `book` may fall back to an internal book identifier. Importers should prefer `book:sha256:<hash>` when present.
 

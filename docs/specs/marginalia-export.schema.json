@@ -64,6 +64,26 @@
             "type": { "const": "all" }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "books"],
+          "properties": {
+            "type": { "const": "selected" },
+            "books": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["book", "session_filter"],
+                "properties": {
+                  "book": { "type": "string" },
+                  "session_filter": { "enum": ["all", "selected"] }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },

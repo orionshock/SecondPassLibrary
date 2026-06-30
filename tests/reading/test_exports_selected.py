@@ -69,26 +69,32 @@ class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.other_user_session = ReadingSession.objects.create(user=self.other, book=self.book)
         self.other_book_session = ReadingSession.objects.create(user=self.user, book=self.other_book)
 
-    def _url(self, *session_ids):
-        base = f"/api/v1/reading/export/books/{self.book.id}/"
-        if not session_ids:
-            return base
-        query = "&".join(f"session={session_id}" for session_id in session_ids)
-        return f"{base}?{query}"
+    def _url(self):
+        return "/api/v1/reading/export/"
+
+    def _body(self, *books):
+        return {"books": list(books)}
 
     def test_selected_book_export_includes_only_requested_sessions(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url(self.session2.id)))
+        r = cast(Any, self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": [str(self.session2.id)]}),
+            format="json",
+        ))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
         self.assertEqual(
             r["Content-Disposition"],
-            'attachment; filename="Selected-Export-selected-sessions-marginalia.json"',
+            'attachment; filename="second-pass-marginalia.json"',
         )
         self.assertEqual(
             r.data["scope"],
-            {"type": "book", "book": r.data["books"][0]["source"], "session_filter": "selected"},
+            {
+                "type": "selected",
+                "books": [{"book": r.data["books"][0]["source"], "session_filter": "selected"}],
+            },
         )
 
         sessions = r.data["books"][0]["sessions"]
@@ -100,7 +106,16 @@ class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
 
     def test_selected_book_export_preserves_query_order(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url(self.session2.id, self.session1.id)))
+        r = cast(Any, self.client.post(
+            self._url(),
+            self._body(
+                {
+                    "book_id": str(self.book.id),
+                    "sessions": [str(self.session2.id), str(self.session1.id)],
+                }
+            ),
+            format="json",
+        ))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         names = [session["name"] for session in r.data["books"][0]["sessions"]]
@@ -108,33 +123,86 @@ class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
 
     def test_book_export_without_session_params_still_exports_all_sessions(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url()))
+        r = cast(Any, self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": "all"}),
+            format="json",
+        ))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertEqual(r.data["scope"]["type"], "book")
-        self.assertNotIn("session_filter", r.data["scope"])
+        self.assertEqual(r.data["scope"]["type"], "selected")
+        self.assertEqual(r.data["scope"]["books"][0]["session_filter"], "all")
         names = {session["name"] for session in r.data["books"][0]["sessions"]}
         self.assertEqual(names, {"First", "Second"})
 
+    def test_selected_export_supports_multiple_books(self):
+        self.client.force_login(self.user)
+        r = cast(Any, self.client.post(
+            self._url(),
+            self._body(
+                {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]},
+                {"book_id": str(self.other_book.id), "sessions": "all"},
+            ),
+            format="json",
+        ))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual([book["title"] for book in r.data["books"]], ["Selected Export", "Other Book"])
+        self.assertEqual(r.data["scope"]["books"][0]["session_filter"], "selected")
+        self.assertEqual(r.data["scope"]["books"][1]["session_filter"], "all")
+
     def test_selected_book_export_returns_404_for_invalid_session_id(self):
         self.client.force_login(self.user)
-        r = self.client.get(self._url("not-a-uuid"))
+        r = self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": ["not-a-uuid"]}),
+            format="json",
+        )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_selected_book_export_returns_404_for_missing_session_id(self):
         self.client.force_login(self.user)
-        r = self.client.get(self._url(uuid4()))
+        r = self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": [str(uuid4())]}),
+            format="json",
+        )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_selected_book_export_returns_404_for_mismatched_book_session(self):
         self.client.force_login(self.user)
-        r = self.client.get(self._url(self.other_book_session.id))
+        r = self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": [str(self.other_book_session.id)]}),
+            format="json",
+        )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_selected_book_export_returns_404_for_another_users_session(self):
         self.client.force_login(self.user)
-        r = self.client.get(self._url(self.other_user_session.id))
+        r = self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": [str(self.other_user_session.id)]}),
+            format="json",
+        )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_selected_export_rejects_empty_selection(self):
+        self.client.force_login(self.user)
+        r = self.client.post(self._url(), {"books": []}, format="json")
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_selected_export_rejects_duplicate_books(self):
+        self.client.force_login(self.user)
+        r = self.client.post(
+            self._url(),
+            self._body(
+                {"book_id": str(self.book.id), "sessions": "all"},
+                {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]},
+            ),
+            format="json",
+        )
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_selected_book_export_rejects_client_bearer_token(self):
         token = "spl_selected_export_token"
@@ -145,15 +213,21 @@ class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
             token_hash=hash_client_secret(token),
         )
 
-        r = self.client.get(
-            self._url(self.session1.id),
+        r = self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": [str(self.session1.id)]}),
+            format="json",
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_export_schema_rejects_local_session_and_annotation_ids(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url(self.session1.id)))
+        r = cast(Any, self.client.post(
+            self._url(),
+            self._body({"book_id": str(self.book.id), "sessions": [str(self.session1.id)]}),
+            format="json",
+        ))
         payload = deepcopy(r.data)
         session = payload["books"][0]["sessions"][0]
         annotation = session["annotations"][0]

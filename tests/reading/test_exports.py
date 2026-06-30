@@ -94,12 +94,20 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.session2.save(update_fields=["is_active", "status", "completed_at", "updated_at"])
 
     def _book_url(self):
-        return f"/api/v1/reading/export/books/{self.book.id}/"
+        return "/api/v1/reading/export/"
 
     def _session_url(self, session=None, book=None):
         session = session or self.session1
         book = book or self.book
         return f"/api/v1/reading/export/books/{book.id}/{session.id}/"
+
+    def _post_book(self, book=None, sessions="all"):
+        book = book or self.book
+        return self.client.post(
+            self._book_url(),
+            {"books": [{"book_id": str(book.id), "sessions": sessions}]},
+            format="json",
+        )
 
     def test_export_requires_session_auth(self):
         r = self.client.get(self._book_url())
@@ -114,18 +122,23 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
             token_hash=hash_client_secret(token),
         )
 
-        r = self.client.get(self._book_url(), HTTP_AUTHORIZATION=f"Bearer {token}")
+        r = self.client.post(
+            self._book_url(),
+            {"books": [{"book_id": str(self.book.id), "sessions": "all"}]},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_book_export_includes_only_request_user_sessions_for_book(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._book_url()))
+        r = cast(Any, self._post_book())
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],
-            'attachment; filename="Export-Book-all-sessions-marginalia.json"',
+            'attachment; filename="second-pass-marginalia.json"',
         )
         self.assertIn(b'\n  "type"', r.content)
         self.assertIn(b'\n  "books"', r.content)
@@ -136,7 +149,8 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertIn("profile", data)
         self.assertIn("generated_at", data)
         self.assertIn("generator", data)
-        self.assertEqual(data["scope"]["type"], "book")
+        self.assertEqual(data["scope"]["type"], "selected")
+        self.assertEqual(data["scope"]["books"][0]["session_filter"], "all")
         self.assertEqual(len(data["books"]), 1)
 
         book = data["books"][0]
@@ -153,13 +167,13 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
 
     def test_session_export_includes_only_selected_session(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._session_url(self.session1)))
+        r = cast(Any, self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],
-            'attachment; filename="Export-Book-First-pass-marginalia.json"',
+            'attachment; filename="second-pass-marginalia.json"',
         )
 
         sessions = r.data["books"][0]["sessions"]
@@ -171,22 +185,22 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.client.force_login(self.user)
         blank_session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-        r = self.client.get(self._session_url(blank_session))
+        r = self._post_book(sessions=[str(blank_session.id)])
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(
             r["Content-Disposition"],
-            'attachment; filename="Export-Book-session-marginalia.json"',
+            'attachment; filename="second-pass-marginalia.json"',
         )
         self.assertNotIn(str(blank_session.id), r["Content-Disposition"])
 
     def test_cannot_export_another_users_session(self):
         self.client.force_login(self.user)
-        r = self.client.get(self._session_url(self.other_user_session))
+        r = self._post_book(sessions=[str(self.other_user_session.id)])
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_mismatched_book_session_route_returns_404(self):
         self.client.force_login(self.user)
-        r = self.client.get(self._session_url(self.session1, self.other_book))
+        r = self._post_book(book=self.other_book, sessions=[str(self.session1.id)])
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_export_requires_current_book_visibility(self):
@@ -199,12 +213,16 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         ReadingSession.objects.create(user=reader, book=hidden)
 
         self.client.force_login(reader)
-        r = self.client.get(f"/api/v1/reading/export/books/{hidden.id}/")
+        r = self.client.post(
+            self._book_url(),
+            {"books": [{"book_id": str(hidden.id), "sessions": "all"}]},
+            format="json",
+        )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_export_is_nested_and_omits_spl_session_and_annotation_ids(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._session_url(self.session1)))
+        r = cast(Any, self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         session = r.data["books"][0]["sessions"][0]
@@ -217,7 +235,7 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
 
     def test_export_contract_key_sets(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._session_url(self.session1)))
+        r = cast(Any, self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         top = r.data
@@ -269,7 +287,7 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
 
     def test_text_quote_selector_context_exports_when_present(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._session_url(self.session1)))
+        r = cast(Any, self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         selector = r.data["books"][0]["sessions"][0]["annotations"][0]["target"]["selector"]
@@ -283,9 +301,20 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
 
     def test_deleted_annotations_excluded(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._session_url(self.session1)))
+        r = cast(Any, self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         annotations = r.data["books"][0]["sessions"][0]["annotations"]
         self.assertEqual(len(annotations), 1)
         self.assertNotIn("deleted text", str(annotations))
+
+    def test_old_book_and_session_export_routes_are_removed(self):
+        self.client.force_login(self.user)
+        self.assertEqual(
+            self.client.get(f"/api/v1/reading/export/books/{self.book.id}/").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.get(self._session_url(self.session1)).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )

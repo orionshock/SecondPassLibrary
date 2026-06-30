@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-import re
-from uuid import UUID
-
 from django.shortcuts import get_object_or_404
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.renderers import JSONRenderer
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import NotFound
 
 from core import policies
 from library.models import Book
 
 from .export_services import (
     export_all_marginalia,
-    export_book_marginalia,
-    export_session_marginalia,
+    export_selected_marginalia,
     selected_book_sessions,
 )
-from .models import ReadingSession
 
 
 class PrettyJSONRenderer(JSONRenderer):
@@ -30,28 +25,10 @@ class PrettyJSONRenderer(JSONRenderer):
         return super().render(data, accepted_media_type, renderer_context)
 
 
-_FILENAME_UNSAFE_RE = re.compile(r"[^A-Za-z0-9._-]+")
-_FILENAME_DASH_RE = re.compile(r"-+")
-
-
-def _safe_filename_part(value: str, fallback: str) -> str:
-    text = (value or "").strip()
-    text = _FILENAME_UNSAFE_RE.sub("-", text)
-    text = _FILENAME_DASH_RE.sub("-", text).strip(".-_")
-    return text or fallback
-
-
 def _download_response(payload: dict, filename: str) -> Response:
     response = Response(payload)
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
-
-
-def _parse_session_ids(raw_session_ids: list[str]) -> list[UUID]:
-    try:
-        return [UUID(value) for value in raw_session_ids]
-    except (TypeError, ValueError):
-        raise NotFound() from None
 
 
 class AllMarginaliaExportView(APIView):
@@ -63,63 +40,51 @@ class AllMarginaliaExportView(APIView):
         payload = export_all_marginalia(user=request.user)
         return _download_response(payload, "second-pass-marginalia.json")
 
+    def post(self, request):
+        selection = _parse_selection(data=request.data, user=request.user)
+        payload = export_selected_marginalia(user=request.user, selection=selection)
+        return _download_response(payload, "second-pass-marginalia.json")
 
-class BookMarginaliaExportView(APIView):
-    authentication_classes = [SessionAuthentication]
-    renderer_classes = [PrettyJSONRenderer]
-    permission_classes = [IsAuthenticated]
 
-    def get(self, request, book_id):
+def _parse_selection(*, data, user) -> list[dict]:
+    raw_books = data.get("books") if isinstance(data, dict) else None
+    if not isinstance(raw_books, list) or not raw_books:
+        raise ValidationError({"books": ["Select at least one book or session."]})
+
+    seen_books = set()
+    selection = []
+    for raw_book in raw_books:
+        if not isinstance(raw_book, dict):
+            raise ValidationError({"books": ["Each selected book must be an object."]})
+
+        book_id = raw_book.get("book_id")
+        if not book_id:
+            raise ValidationError({"book_id": ["This field is required."]})
+        if book_id in seen_books:
+            raise ValidationError({"books": ["Duplicate book selections are not allowed."]})
+        seen_books.add(book_id)
+
         book = get_object_or_404(
             Book.objects.select_related("series").prefetch_related("authors", "identifiers"),
             id=book_id,
         )
-        if not policies.can_view_book(user=request.user, book=book):
+        if not policies.can_view_book(user=user, book=book):
             raise NotFound()
-        raw_session_ids = request.query_params.getlist("session")
-        selected_sessions = None
-        if raw_session_ids:
+
+        raw_sessions = raw_book.get("sessions")
+        if raw_sessions == "all":
+            sessions = "all"
+        elif isinstance(raw_sessions, list) and raw_sessions:
             try:
-                selected_sessions = selected_book_sessions(
-                    user=request.user,
+                sessions = selected_book_sessions(
+                    user=user,
                     book=book,
-                    session_ids=_parse_session_ids(raw_session_ids),
+                    session_ids=raw_sessions,
                 )
-            except LookupError:
+            except (LookupError, TypeError, ValueError):
                 raise NotFound() from None
+        else:
+            raise ValidationError({"sessions": ['Use "all" or a non-empty session list.']})
 
-        session_label = "selected-sessions" if raw_session_ids else "all-sessions"
-        filename = f"{_safe_filename_part(book.title, 'book')}-{session_label}-marginalia.json"
-        payload = export_book_marginalia(
-            user=request.user,
-            book=book,
-            sessions=selected_sessions,
-            selected=bool(raw_session_ids),
-        )
-        return _download_response(payload, filename)
-
-
-class SessionMarginaliaExportView(APIView):
-    authentication_classes = [SessionAuthentication]
-    renderer_classes = [PrettyJSONRenderer]
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, book_id, session_id):
-        book = get_object_or_404(
-            Book.objects.select_related("series").prefetch_related("authors", "identifiers"),
-            id=book_id,
-        )
-        if not policies.can_view_book(user=request.user, book=book):
-            raise NotFound()
-
-        session = get_object_or_404(ReadingSession, id=session_id, user=request.user)
-        if session.book_id != book.id:
-            raise NotFound()
-
-        book_part = _safe_filename_part(book.title, "book")
-        session_part = _safe_filename_part(session.name, "session")
-        filename = f"{book_part}-{session_part}-marginalia.json"
-        payload = export_session_marginalia(
-            user=request.user, book=book, session=session
-        )
-        return _download_response(payload, filename)
+        selection.append({"book": book, "sessions": sessions})
+    return selection

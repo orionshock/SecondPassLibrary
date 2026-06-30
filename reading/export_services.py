@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from django.utils import timezone
 
@@ -182,7 +183,7 @@ def _sessions_queryset(*, user, book: Book):
 
 
 def selected_book_sessions(*, user, book: Book, session_ids) -> list[ReadingSession]:
-    unique_ids = list(dict.fromkeys(session_ids))
+    unique_ids = list(dict.fromkeys(UUID(str(session_id)) for session_id in session_ids))
     sessions = list(_sessions_queryset(user=user, book=book).filter(id__in=unique_ids))
     sessions_by_id = {session.id: session for session in sessions}
     if len(sessions_by_id) != len(unique_ids):
@@ -197,6 +198,32 @@ def _book_payload_with_sessions(book: Book, sessions: list[ReadingSession]) -> d
         for idx, session in enumerate(sessions, start=1)
     ]
     return book_payload
+
+
+def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict[str, Any]:
+    scope_books: list[dict[str, str]] = []
+    payload = _base_export({"type": "selected", "books": scope_books})
+
+    for item in selection:
+        book = item["book"]
+        sessions = item["sessions"]
+        if not policies.can_view_book(user=user, book=book):
+            raise PermissionError("Book not visible.")
+        if sessions == "all":
+            resolved_sessions = list(_sessions_queryset(user=user, book=book))
+            session_filter = "all"
+        else:
+            resolved_sessions = list(sessions)
+            session_filter = "selected"
+        scope_books.append(
+            {
+                "book": _book_source(book) or str(book.id),
+                "session_filter": session_filter,
+            }
+        )
+        payload["books"].append(_book_payload_with_sessions(book, resolved_sessions))
+
+    return payload
 
 
 def export_book_marginalia(

@@ -571,9 +571,7 @@ Group delete/scary delete is not part of the current documented product/API cont
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
 - Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
   - `GET /api/v1/reading/export/` exports all current-user sessions grouped under visible books.
-  - `GET /api/v1/reading/export/books/<book_id>/` exports all current-user sessions for one visible book.
-  - `GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>` exports a selected subset of current-user sessions for one visible book.
-  - `GET /api/v1/reading/export/books/<book_id>/<session_id>/` exports one current-user session for one visible book.
+  - `POST /api/v1/reading/export/` exports selected books/sessions from the current user's visible books.
 - Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
   - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches.
 - Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
@@ -595,7 +593,8 @@ Reading payload notes:
 - Marginalia apply imports matched visible local books only, skips unmatched books, creates new historical/imported sessions, never imports exported active sessions as active local sessions, and treats duplicate findings as warnings rather than blockers. The import unit is a session; annotation-level selection is not supported. Session selection uses export-local session ids, not SPL database ids.
 - Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.
 - All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
-- Selected book export uses `scope.type = "book"` with `scope.session_filter = "selected"`.
+- Selected export uses `scope.type = "selected"` with per-book `session_filter` values of `"all"` or `"selected"`.
+- Selected export request body shape is `{"books": [{"book_id": "<uuid>", "sessions": "all"}, {"book_id": "<uuid>", "sessions": ["<session_uuid>"]}]}`.
 - Exported sessions use export-local ids such as `session-1`; annotations do not include SPL database annotation ids.
 - Deleted annotations are excluded from export.
 

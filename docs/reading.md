@@ -261,7 +261,7 @@ Future possibilities:
 
 ## Marginalia export
 
-Current export support is complete for session/book/all scopes. Import support includes preview plus a minimal native apply path for matched visible books.
+Current export support includes a complete archive plus selected archive exports. Import support includes preview plus a minimal native apply path for matched visible books.
 
 The baseline export contract is documented in `docs/specs/marginalia-export.md`.
 
@@ -276,16 +276,23 @@ Session-authenticated API exports:
 
 ```text
 GET /api/v1/reading/export/
-GET /api/v1/reading/export/books/<book_id>/
-GET /api/v1/reading/export/books/<book_id>/?session=<session_id>&session=<session_id>
-GET /api/v1/reading/export/books/<book_id>/<session_id>/
+POST /api/v1/reading/export/
 POST /api/v1/reading/import/preview/
 POST /api/v1/reading/import/apply/
 ```
 
-Export and import preview/apply endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Mismatched book/session URLs return 404.
+Export and import preview/apply endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Selected exports reject invisible books and other-user or mismatched sessions.
 
-The book export route exports all current-user sessions for the book when no `session` query parameters are provided. When repeated `session` parameters are present, it exports only that selected subset and uses `scope.session_filter = "selected"`.
+Selected exports post a JSON body to `/api/v1/reading/export/`:
+
+```json
+{
+  "books": [
+    { "book_id": "<uuid>", "sessions": "all" },
+    { "book_id": "<uuid>", "sessions": ["<session_uuid>", "<session_uuid>"] }
+  ]
+}
+```
 
 The JSON shape is nested:
 

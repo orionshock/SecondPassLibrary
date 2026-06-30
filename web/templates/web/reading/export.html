@@ -35,14 +35,14 @@
         <p class="muted">Select a book or individual sessions to export a smaller marginalia archive.</p>
       </div>
       <div class="export-selected-actions">
-        <button class="button" id="reading-export-selected" type="button" disabled>Export selected</button>
-        <span class="muted" id="reading-export-selection-status">Select one book or session.</span>
+        <span class="muted" id="reading-export-selection-status">Select books or sessions.</span>
       </div>
     </div>
     {% if books %}
       <div class="export-selection-bar">
         <span class="muted" id="reading-export-selection-summary">No selection</span>
         <button class="button" id="reading-export-clear" type="button" disabled>Clear</button>
+        <button class="button" id="reading-export-selected" type="button" disabled>Export selected</button>
       </div>
       <div class="export-book-list">
         {% for book in books %}
