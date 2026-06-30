@@ -11,7 +11,7 @@ from accounts.authentication import ClientBearerAuthentication
 from .models import ReadingProgress, ReadingSession
 from .profile import CURRENT_READING_PROFILE_VERSION
 from .serializers import ReadingProgressSerializer
-from .services import get_or_create_progress, update_progress
+from .services import get_or_create_progress, is_session_closed, update_progress
 
 class ReadingProgressViewSet(viewsets.GenericViewSet):
     authentication_classes = [
@@ -33,7 +33,12 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
 
     def retrieve(self, request, session_id=None):
         session = self._get_session(session_id)
-        progress = get_or_create_progress(session=session)
+        if is_session_closed(session):
+            progress = ReadingProgress.objects.filter(session=session).first()
+            if progress is None:
+                progress = ReadingProgress(session=session, current_location={})
+        else:
+            progress = get_or_create_progress(session=session)
         return Response(ReadingProgressSerializer(progress, context={"request": request}).data)
 
     def partial_update(self, request, session_id=None):

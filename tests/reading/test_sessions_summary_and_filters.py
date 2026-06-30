@@ -17,6 +17,7 @@ from library.group_services import (
 )
 from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
 from reading.models import Annotation, ReadingProgress, ReadingSession
+from reading.services import list_sessions_for_book
 from tests.utils.books import create_file_backed_book
 
 
@@ -129,6 +130,37 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         r_active = cast(Response, self.client.get("/api/v1/reading/sessions/?is_active=false"))
         self.assertEqual(r_active.status_code, 200)
         self.assertIn(str(self.session_visible.id), {s["id"] for s in _results(r_active)})
+
+    def test_closed_session_progress_get_does_not_reorder_book_sessions(self):
+        target = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            name="Historical target",
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+        other_closed = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            name="Historical other",
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+
+        before = [row["id"] for row in list_sessions_for_book(user=self.user, book=self.book)]
+        self.assertIn(str(target.id), before)
+        self.assertIn(str(other_closed.id), before)
+        self.assertFalse(ReadingProgress.objects.filter(session=target).exists())
+
+        resp = cast(
+            Response,
+            self.client.get(f"/api/v1/reading/sessions/{target.id}/progress/"),
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(ReadingProgress.objects.filter(session=target).exists())
+        after = [row["id"] for row in list_sessions_for_book(user=self.user, book=self.book)]
+        self.assertEqual(after, before)
 
     def test_q_matches_session_name(self):
         self.session_visible.name = "Late night reread"

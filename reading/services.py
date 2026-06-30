@@ -374,7 +374,7 @@ def list_sessions_for_book(*, user, book: Book) -> list[dict]:
             last_activity_at=last_activity,
             annotation_count=Count("annotations", filter=Q(annotations__is_deleted=False)),
         )
-        .order_by("-last_activity_at", "-updated_at", "-started_at")
+        .order_by("-last_activity_at", "-updated_at", "-started_at", "-id")
     )
 
     rows: list[dict] = []
