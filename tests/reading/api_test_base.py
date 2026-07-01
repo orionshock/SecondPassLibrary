@@ -1,7 +1,5 @@
-from typing import Any, cast
 
 from django.contrib.auth import get_user_model
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
@@ -9,30 +7,12 @@ from accounts.models import UserClientSession
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
+from tests.utils.responses import response_data_dict as _response_data_dict
+from tests.utils.responses import response_data_list as _response_data_list
 from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
-
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
-
-
 
 
 class ReadingAPITestBase(IsolatedUserdataMixin, APITestCase):

@@ -9,27 +9,12 @@ from library.group_services import ensure_book_public_assignment
 from reading.models import Annotation, ReadingSession
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
 
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
 
 class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
     def test_annotation_create_idempotency_key_allows_safe_retry(self):
@@ -53,7 +38,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
-        a1 = _response_data_dict(r1)
+        a1 = response_data_dict(r1)
 
         r2 = cast(
             Response,
@@ -65,7 +50,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        a2 = _response_data_dict(r2)
+        a2 = response_data_dict(r2)
         self.assertEqual(a1["id"], a2["id"])
         self.assertEqual(Annotation.objects.filter(session=session).count(), 1)
         self.assertEqual(IdempotencyRecord.objects.filter(user=self.user1, key="abc-123").count(), 1)
@@ -225,7 +210,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        self.assertNotEqual(_response_data_dict(r1)["id"], _response_data_dict(r2)["id"])
+        self.assertNotEqual(response_data_dict(r1)["id"], response_data_dict(r2)["id"])
 
 
     def test_cross_user_session_with_idempotency_key_does_not_store_record(self):
@@ -269,7 +254,7 @@ class ReadingAnnotationIdempotencyBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
-        a1 = _response_data_dict(r1)
+        a1 = response_data_dict(r1)
 
         r2 = cast(
             Response,
@@ -282,6 +267,6 @@ class ReadingAnnotationIdempotencyBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        a2 = _response_data_dict(r2)
+        a2 = response_data_dict(r2)
         self.assertEqual(a1["id"], a2["id"])
 

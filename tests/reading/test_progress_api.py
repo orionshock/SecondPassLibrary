@@ -10,27 +10,12 @@ from reading.profile import (
     MAX_CURRENT_LOCATION_JSON_BYTES,
 )
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
 
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
 
 class ReadingProgressAPITest(ReadingAPITestBase):
     def test_active_session_progress_get_still_lazily_creates_progress(self):
@@ -44,7 +29,7 @@ class ReadingProgressAPITest(ReadingAPITestBase):
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertTrue(ReadingProgress.objects.filter(session=session).exists())
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(str(data["session"]), str(session.id))
         self.assertEqual(data["current_location"], {})
         self.assertIsNone(data["progression"])
@@ -69,7 +54,7 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         self.assertFalse(ReadingProgress.objects.filter(session=session).exists())
         session.refresh_from_db()
         self.assertEqual(session.updated_at, before_updated_at)
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(str(data["session"]), str(session.id))
         self.assertEqual(data["current_location"], {})
         self.assertIsNone(data["progression"])
@@ -88,7 +73,7 @@ class ReadingProgressAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(str(data["session"]), str(session.id))
         self.assertEqual(data["current_location"]["format"], "epub")
         self.assertEqual(data["current_location"]["cfi"], "/6/4")

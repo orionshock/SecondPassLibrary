@@ -11,27 +11,12 @@ from reading.profile import (
     CURRENT_READING_PROFILE_VERSION,
 )
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
 
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
 
 class ReadingAuthenticationAPITest(ReadingAPITestBase):
     def test_anonymous_cannot_access_reading_apis(self):
@@ -52,7 +37,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(active.status_code, status.HTTP_200_OK)
-        session_id = _response_data_dict(active)["id"]
+        session_id = response_data_dict(active)["id"]
 
         sessions = cast(
             Response,
@@ -62,7 +47,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(sessions.status_code, status.HTTP_200_OK)
-        sess_ids = {s["id"] for s in _response_data_list(sessions)}
+        sess_ids = {s["id"] for s in response_data_list(sessions)}
         self.assertIn(session_id, sess_ids)
 
         other = self.client.get(
@@ -91,7 +76,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(start_over.status_code, status.HTTP_201_CREATED)
-        start_over_data = _response_data_dict(start_over)
+        start_over_data = response_data_dict(start_over)
         self.assertEqual(start_over_data["profile_version"], CURRENT_READING_PROFILE_VERSION)
         self.assertIn("session", start_over_data)
         self.assertIn("progress", start_over_data)
@@ -121,7 +106,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
-        data = _response_data_dict(ok)
+        data = response_data_dict(ok)
         self.assertEqual(data["id"], str(session1.id))
         self.assertEqual(data["status"], ReadingSession.STATUS_COMPLETED)
         self.assertFalse(data["is_active"])
@@ -172,7 +157,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertIn(resp.status_code, (status.HTTP_200_OK, status.HTTP_201_CREATED))
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(data["profile_version"], CURRENT_READING_PROFILE_VERSION)
         self.assertEqual(data["session"]["book"], self.book.id)
         self.assertEqual(str(data["progress"]["session"]), str(data["session"]["id"]))
@@ -197,7 +182,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        ann_id = _response_data_dict(create)["id"]
+        ann_id = response_data_dict(create)["id"]
 
         list_all = cast(
             Response,
@@ -207,7 +192,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(list_all.status_code, status.HTTP_200_OK)
-        ids = {a["id"] for a in _response_data_list(list_all)}
+        ids = {a["id"] for a in response_data_list(list_all)}
         self.assertIn(ann_id, ids)
         self.assertNotIn(str(self.annotation2.id), ids)
 

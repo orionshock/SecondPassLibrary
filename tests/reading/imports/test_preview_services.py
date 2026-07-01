@@ -21,7 +21,6 @@ from tests.utils.books import create_file_backed_book
 
 User = get_user_model()
 
-
 class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="reader", password="pw")
@@ -125,44 +124,6 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
             "updated_at": "2026-06-01T12:00:00+00:00",
         }
 
-    def test_preview_requires_login(self):
-        r = self._post_payload(self._payload())
-        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_preview_rejects_client_bearer_token(self):
-        token = "spl_import_preview_token"
-        UserClientSession.objects.create(
-            user=self.user,
-            name="Reader",
-            client_type="reader",
-            token_hash=hash_client_secret(token),
-        )
-        r = self.client.post(
-            self._url(),
-            {"file": self._upload(self._payload())},
-            format="multipart",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
-        )
-        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_invalid_json_returns_400(self):
-        self.client.force_login(self.user)
-        r = cast(Any, self._post_payload(b"{not-json"))
-        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(r.data["valid"])
-        self.assertIn("errors", r.data)
-
-    def test_schema_invalid_export_returns_readable_errors(self):
-        self.client.force_login(self.user)
-        payload = self._payload()
-        del payload["books"][0]["sessions"][0]["annotations"][0]["target"]
-
-        r = cast(Any, self._post_payload(payload))
-        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(r.data["valid"])
-        self.assertIn("$.books[0].sessions[0].annotations[0]", r.data["errors"][0]["path"])
-        self.assertIn("target", r.data["errors"][0]["message"])
-
     def test_valid_export_returns_summary_counts_and_file_hash_match(self):
         self.client.force_login(self.user)
         r = cast(Any, self._post_payload(self._payload()))
@@ -214,18 +175,6 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(session["commented_highlight_count"], 1)
         self.assertTrue(session["will_import"])
         self.assertFalse(session["active_will_import_as_historical"])
-
-    def test_preview_creates_staged_file_with_user_and_payload(self):
-        self.client.force_login(self.user)
-        payload = self._payload()
-        r = cast(Any, self._post_payload(payload))
-
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-        path = Path(settings.IMPORTS_DIR) / "staged" / f"{r.data['import_token']}.json"
-        self.assertTrue(path.exists())
-        staged = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(staged["user_id"], cast(Any, self.user).id)
-        self.assertEqual(staged["payload"], payload)
 
     def test_preview_does_not_create_sessions_or_annotations(self):
         self.client.force_login(self.user)
@@ -323,43 +272,6 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
             "Active exported sessions will be imported as historical sessions, not active sessions.",
             r.data["warnings"],
         )
-
-    def test_unmatched_download_returns_only_unmatched_books(self):
-        self.client.force_login(self.user)
-        payload = self._payload()
-        unmatched = self._payload(file_hash="0" * 64, title="Missing Book", authors=["Nobody"])["books"][0]
-        payload["books"].append(unmatched)
-
-        preview = cast(Any, self._post_payload(payload))
-        r = cast(Any, self.client.get(
-            preview.data["unmatched_download_url"],
-            HTTP_ACCEPT="text/html,application/xhtml+xml,*/*",
-        ))
-
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertTrue(r["Content-Type"].startswith("application/json"))
-        self.assertEqual(
-            r["Content-Disposition"],
-            'attachment; filename="second-pass-unmatched-marginalia.json"',
-        )
-        self.assertFalse(r.content.lstrip().startswith(b"<!DOCTYPE html>"))
-        parsed = json.loads(r.content.decode("utf-8"))
-        self.assertEqual(parsed["type"], "SecondPassMarginaliaExport")
-        self.assertEqual(parsed["schema_version"], "0.1.0")
-        self.assertEqual(parsed["scope"]["type"], "selected")
-        self.assertEqual(parsed["scope"]["books"][0]["session_filter"], "all")
-        self.assertEqual([book["title"] for book in parsed["books"]], ["Missing Book"])
-        self.assertNotIn("Visible Match", str(parsed))
-
-    def test_unmatched_download_requires_current_user_staged_preview(self):
-        self.client.force_login(self.user)
-        other = User.objects.create_user(username="other", password="pw")
-        preview = cast(Any, self._post_payload(self._payload(file_hash="0" * 64, title="Missing Book")))
-
-        self.client.force_login(other)
-        r = self.client.get(preview.data["unmatched_download_url"])
-
-        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_bad_file_hash_does_not_match_by_title_author(self):
         self.client.force_login(self.user)

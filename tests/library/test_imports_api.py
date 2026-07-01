@@ -15,13 +15,14 @@ from django.test.utils import override_settings
 import django.core.files.storage as storage
 from django.utils.functional import empty
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
 from library.models import ImportJob, Book
 from core.errors import ErrorCode
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 class IsolatedImportsMixin:
@@ -108,24 +109,6 @@ def _epub_with_embedded_cover_bytes(*, cover_size: tuple[int, int] = (10, 12)) -
     return buf.getvalue()
 
 
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
-
-
 class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u1", password="pw")
@@ -168,7 +151,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
             self.client.post("/api/v1/library/imports/", data={}, format="multipart")
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
         self.assertIn("error", data)
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.MISSING_UPLOAD_FILE)
 
@@ -183,7 +166,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
             self.client.post("/api/v1/library/imports/", data={"file": bad}, format="multipart")
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
         self.assertIn("error", data)
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_UPLOAD_TYPE)
 
@@ -211,7 +194,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
 
         self.assertIn("id", data)
         self.assertEqual(data["source_type"], "epub")
@@ -227,7 +210,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
 
         listing = cast_response(self.client.get("/api/v1/library/imports/"))
         self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(_response_data_list(listing)), 1)
+        self.assertGreaterEqual(len(response_data_list(listing)), 1)
 
         detail = cast_response(self.client.get(f"/api/v1/library/imports/{job.id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
@@ -247,7 +230,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         epub2 = SimpleUploadedFile("book.epub", b"dup-bytes", content_type="application/epub+zip")
         r2 = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub2}, format="multipart"))
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        data = _response_data_dict(r2)
+        data = response_data_dict(r2)
         self.assertEqual(data["duplicate_count"], 1)
         self.assertEqual(data["imported_count"], 0)
         self.assertEqual(data["failed_count"], 0)
@@ -272,7 +255,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
         response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
         self.assertEqual(data["source_type"], "zip")
         self.assertEqual(data["total_found"], 2)
         self.assertEqual(len(cast(list[Any], data["items"])), 2)
@@ -311,7 +294,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
         response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
         self.assertEqual(data["total_found"], 1)
 
         book = Book.objects.get(title="Dot Segment OPF Title")
@@ -336,7 +319,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
         response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
         # Ambiguous/unsafe normalized paths are skipped (no items created).
         self.assertEqual(data["total_found"], 0)
         self.assertEqual(len(cast(list[Any], data["items"])), 0)
@@ -590,7 +573,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
 
         r2 = upload_zip(opf2)
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        data2 = _response_data_dict(r2)
+        data2 = response_data_dict(r2)
         self.assertEqual(data2["duplicate_count"], 1)
         self.assertTrue(Book.objects.filter(title="First Title").exists())
         self.assertFalse(Book.objects.filter(title="Second Title").exists())
@@ -604,7 +587,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
         created = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
-        created_data = _response_data_dict(created)
+        created_data = response_data_dict(created)
         job_id = created_data["id"]
 
         self.client.logout()

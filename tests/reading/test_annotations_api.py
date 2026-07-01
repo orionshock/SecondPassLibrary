@@ -11,27 +11,12 @@ from reading.profile import (
     EPUB_CFI_CONFORMS_TO,
 )
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
 
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
 
 class ReadingAnnotationsAPITest(ReadingAPITestBase):
     def test_annotation_create_bookmark_outputs_motivation_array(self):
@@ -51,7 +36,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        payload = _response_data_dict(resp)
+        payload = response_data_dict(resp)
         self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
 
 
@@ -71,7 +56,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        payload = _response_data_dict(resp)
+        payload = response_data_dict(resp)
         self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
         self.assertEqual(payload["body"], [])
 
@@ -96,7 +81,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        payload = _response_data_dict(resp)
+        payload = response_data_dict(resp)
         self.assertEqual(
             payload["motivation"],
             [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
@@ -144,7 +129,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        payload = _response_data_dict(create)
+        payload = response_data_dict(create)
 
         ann = Annotation.objects.get(pk=payload["id"])
         self.assertEqual(ann.highlight_text, "hello")
@@ -193,7 +178,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         ann.refresh_from_db()
         self.assertEqual(ann.comment_text, "new")
-        payload = _response_data_dict(resp)
+        payload = response_data_dict(resp)
         bodies = payload.get("body") or []
         self.assertTrue(any(b.get("purpose") == "commenting" and b.get("value") == "new" for b in bodies))
 
@@ -230,7 +215,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         ann.refresh_from_db()
         self.assertEqual(ann.highlight_color, "blue")
-        payload = _response_data_dict(resp)
+        payload = response_data_dict(resp)
         bodies = payload.get("body") or []
         describing = [b for b in bodies if b.get("purpose") == "describing"]
         self.assertTrue(describing)
@@ -264,7 +249,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(add.status_code, status.HTTP_200_OK)
-        payload_add = _response_data_dict(add)
+        payload_add = response_data_dict(add)
         self.assertEqual(
             payload_add["motivation"],
             [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
@@ -283,7 +268,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(remove.status_code, status.HTTP_200_OK)
-        payload_remove = _response_data_dict(remove)
+        payload_remove = response_data_dict(remove)
         self.assertEqual(payload_remove["motivation"], [Annotation.MOTIVATION_HIGHLIGHTING])
 
 
@@ -319,7 +304,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}")
         )
         self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        data = cast(list[dict[str, Any]], _response_data_list(listing))
+        data = cast(list[dict[str, Any]], response_data_list(listing))
         ids = {row["id"] for row in data}
         self.assertIn(str(a1.id), ids)
         self.assertNotIn(str(a2.id), ids)
@@ -331,7 +316,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(listing2.status_code, status.HTTP_200_OK)
-        data2 = cast(list[dict[str, Any]], _response_data_list(listing2))
+        data2 = cast(list[dict[str, Any]], response_data_list(listing2))
         ids2 = {row["id"] for row in data2}
         self.assertIn(str(a1.id), ids2)
         self.assertIn(str(a2.id), ids2)
@@ -380,7 +365,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(r1.status_code, status.HTTP_200_OK)
-        ids1 = {row["id"] for row in cast(list[dict[str, Any]], _response_data_list(r1))}
+        ids1 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r1))}
         self.assertEqual(ids1, {str(a_bookmark.id)})
 
         r2 = cast(
@@ -390,7 +375,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_200_OK)
-        ids2 = {row["id"] for row in cast(list[dict[str, Any]], _response_data_list(r2))}
+        ids2 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r2))}
         self.assertEqual(ids2, {str(a_highlight.id), str(a_comment.id)})
 
         r3 = cast(
@@ -400,7 +385,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(r3.status_code, status.HTTP_200_OK)
-        ids3 = {row["id"] for row in cast(list[dict[str, Any]], _response_data_list(r3))}
+        ids3 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r3))}
         self.assertEqual(ids3, {str(a_comment.id)})
 
         r4 = cast(
@@ -410,7 +395,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(r4.status_code, status.HTTP_200_OK)
-        ids4 = {row["id"] for row in cast(list[dict[str, Any]], _response_data_list(r4))}
+        ids4 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r4))}
         self.assertEqual(ids4, {str(a_bookmark.id), str(a_highlight.id), str(a_comment.id)})
 
         bad = cast(
@@ -464,7 +449,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(created_asc.status_code, status.HTTP_200_OK)
         ids_ca = [
-            row["id"] for row in cast(list[dict[str, Any]], _response_data_list(created_asc))
+            row["id"] for row in cast(list[dict[str, Any]], response_data_list(created_asc))
         ]
         self.assertEqual(ids_ca, [str(a1.id), str(a2.id), str(a3.id)])
 
@@ -476,7 +461,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(created_desc.status_code, status.HTTP_200_OK)
         ids_cd = [
-            row["id"] for row in cast(list[dict[str, Any]], _response_data_list(created_desc))
+            row["id"] for row in cast(list[dict[str, Any]], response_data_list(created_desc))
         ]
         self.assertEqual(ids_cd, [str(a3.id), str(a2.id), str(a1.id)])
 
@@ -488,7 +473,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(mod_asc.status_code, status.HTTP_200_OK)
         ids_ma = [
-            row["id"] for row in cast(list[dict[str, Any]], _response_data_list(mod_asc))
+            row["id"] for row in cast(list[dict[str, Any]], response_data_list(mod_asc))
         ]
         self.assertEqual(ids_ma, [str(a1.id), str(a3.id), str(a2.id)])
 
@@ -500,7 +485,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(mod_desc.status_code, status.HTTP_200_OK)
         ids_md = [
-            row["id"] for row in cast(list[dict[str, Any]], _response_data_list(mod_desc))
+            row["id"] for row in cast(list[dict[str, Any]], response_data_list(mod_desc))
         ]
         self.assertEqual(ids_md, [str(a2.id), str(a3.id), str(a1.id)])
 

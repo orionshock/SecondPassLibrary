@@ -16,27 +16,12 @@ from reading.profile import (
 )
 from tests.reading.api_test_base import ReadingAPITestBase
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
 
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
 
 class ReadingSessionsAPITest(ReadingAPITestBase):
     def test_get_create_active_session(self):
@@ -44,13 +29,13 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         url = f"/api/v1/reading/books/{self.book.id}/active-session/"
         response = cast(Response, self.client.get(url))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = _response_data_dict(response)
+        data = response_data_dict(response)
         self.assertEqual(data["book"], self.book.id)
         self.assertTrue(data["is_active"])
 
         response2 = cast(Response, self.client.get(url))
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
-        data2 = _response_data_dict(response2)
+        data2 = response_data_dict(response2)
         self.assertEqual(data2["id"], data["id"])
 
 
@@ -60,7 +45,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
 
         resp = cast(Response, self.client.post(url, data={}, format="json"))
         self.assertIn(resp.status_code, (status.HTTP_200_OK, status.HTTP_201_CREATED))
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(data["profile_version"], CURRENT_READING_PROFILE_VERSION)
         self.assertIn("session", data)
         self.assertIn("progress", data)
@@ -94,7 +79,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
 
         resp2 = cast(Response, self.client.post(url, data={}, format="json"))
         self.assertEqual(resp2.status_code, status.HTTP_200_OK)
-        data2 = _response_data_dict(resp2)
+        data2 = response_data_dict(resp2)
         results = cast(list[dict[str, Any]], data2["annotations"]["results"])
         ids = {row["id"] for row in results}
         self.assertIn(str(keep.id), ids)
@@ -108,7 +93,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         url = f"/api/v1/reading/books/{self.book.id}/open/"
         resp = cast(Response, self.client.post(url, data={}, format="json"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(data["session"]["id"], str(session.id))
         self.assertEqual(
             ReadingSession.objects.filter(user=self.user1, book=self.book, is_active=True).count(),
@@ -143,7 +128,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         url = f"/api/v1/reading/books/{restricted.id}/active-session/"
         resp = cast(Response, self.client.get(url))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(data["id"], str(session.id))
 
 
@@ -173,7 +158,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         url = f"/api/v1/reading/books/{restricted.id}/open/"
         resp = cast(Response, self.client.post(url, data={}, format="json"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(data["session"]["id"], str(session.id))
 
 
@@ -231,7 +216,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         resp = cast(Response, self.client.post(url, data={"name": "Reread"}, format="json"))
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
-        data = _response_data_dict(resp)
+        data = response_data_dict(resp)
         self.assertEqual(data["profile_version"], CURRENT_READING_PROFILE_VERSION)
         self.assertIn("session", data)
         self.assertIn("progress", data)
@@ -264,7 +249,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
 
         close1 = cast(Response, self.client.post(f"/api/v1/reading/sessions/{session.id}/close/", data={}, format="json"))
         self.assertEqual(close1.status_code, status.HTTP_200_OK)
-        data1 = _response_data_dict(close1)
+        data1 = response_data_dict(close1)
         self.assertEqual(data1["id"], str(session.id))
         self.assertEqual(data1["status"], ReadingSession.STATUS_COMPLETED)
         self.assertFalse(data1["is_active"])
@@ -328,7 +313,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         # Opening the book again creates a new active session (since none is active now).
         open_resp = cast(Response, self.client.post(f"/api/v1/reading/books/{self.book.id}/open/", data={}, format="json"))
         self.assertIn(open_resp.status_code, (status.HTTP_200_OK, status.HTTP_201_CREATED))
-        open_data = _response_data_dict(open_resp)
+        open_data = response_data_dict(open_resp)
         self.assertNotEqual(open_data["session"]["id"], str(session.id))
         self.assertTrue(open_data["session"]["is_active"])
         self.assertEqual(open_data["session"]["status"], ReadingSession.STATUS_ACTIVE)

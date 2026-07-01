@@ -15,27 +15,12 @@ from reading.profile import (
 )
 from reading.serializers import AnnotationSerializer
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
+from tests.utils.responses import response_data_dict
+from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
 
-
-def _response_data_dict(response: Response) -> dict[str, Any]:
-    data = response.data
-    assert data is not None
-    assert isinstance(data, dict)
-    return cast(dict[str, Any], data)
-
-
-def _response_data_list(response: Response) -> list[Any]:
-    data = response.data
-    assert data is not None
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-        assert isinstance(results, list)
-        return cast(list[Any], results)
-    assert isinstance(data, list)
-    return cast(list[Any], data)
 
 class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
     def test_annotations_create_requires_motivation_target_body(self):
@@ -56,7 +41,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        payload = _response_data_dict(create)
+        payload = response_data_dict(create)
         self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_HIGHLIGHTING])
         self.assertIn("target", payload)
         self.assertIn("body", payload)
@@ -150,7 +135,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        ann = Annotation.objects.get(pk=_response_data_dict(create)["id"])
+        ann = Annotation.objects.get(pk=response_data_dict(create)["id"])
         self.assertEqual(ann.quote_prefix, prefix)
 
 
@@ -180,7 +165,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             ),
         )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        ann = Annotation.objects.get(pk=_response_data_dict(create)["id"])
+        ann = Annotation.objects.get(pk=response_data_dict(create)["id"])
         self.assertEqual(ann.quote_suffix, suffix)
 
 
