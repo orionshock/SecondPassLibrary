@@ -10,6 +10,17 @@ function el(tag, className, text) {
   return node;
 }
 
+function libraryContextLink(bookId, bookTitle) {
+  const link = el("a", "context-switch-link");
+  link.href = `/library/books/${encodeURIComponent(bookId)}/`;
+  link.setAttribute("aria-label", `Switch to Library details for ${bookTitle}`);
+  link.setAttribute("title", "View in Library");
+  const icon = el("span", "material-symbols-outlined", "multiple_stop");
+  icon.setAttribute("aria-hidden", "true");
+  link.appendChild(icon);
+  return link;
+}
+
 function formatWhen(value) {
   if (!value) return "";
   const d = new Date(String(value));
@@ -20,6 +31,7 @@ function formatWhen(value) {
 export function renderBookMeta(container, book) {
   clear(container);
   const title = book && book.title ? String(book.title) : "Book";
+  const bookId = book && book.id ? String(book.id) : "";
   const subtitle = book && book.subtitle ? String(book.subtitle) : "";
   const authors = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
   const series = book && book.series && book.series.name ? String(book.series.name) : "";
@@ -28,7 +40,10 @@ export function renderBookMeta(container, book) {
   const wrap = document.createElement("div");
   wrap.className = "book-meta";
 
-  wrap.appendChild(el("div", "book-meta__line", title));
+  const titleWrap = el("div", "book-title-with-action");
+  titleWrap.appendChild(el("span", "book-meta__line", title));
+  if (bookId) titleWrap.appendChild(libraryContextLink(bookId, title));
+  wrap.appendChild(titleWrap);
   if (subtitle) wrap.appendChild(el("div", "muted", subtitle));
   if (authors.length) wrap.appendChild(el("div", "book-meta__line", authors.join(", ")));
   if (series) wrap.appendChild(el("div", "muted", `${series}${seriesIndex ? ` #${seriesIndex}` : ""}`));

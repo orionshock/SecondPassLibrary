@@ -13,9 +13,6 @@
     <div>
       <h1 class="page-title" id="reading-sessions-title">Marginalia for {{ book.title|default:"Book"|escape }}</h1>
     </div>
-    <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-      <a class="button" href="/library/books/{{ book.id|escape }}/">Book details</a>
-    </div>
   </div>
 
   <section id="reading-sessions" class="card" data-book-id="{{ book.id|escape }}">
@@ -30,7 +27,17 @@
 
       <div class="book-hero__main">
         <div class="book-meta">
-          <div class="book-meta__line">{{ book.title|default:"Book"|escape }}</div>
+          <div class="book-title-with-action">
+            <span class="book-meta__line">{{ book.title|default:"Book"|escape }}</span>
+            <a
+              class="context-switch-link"
+              href="/library/books/{{ book.id|escape }}/"
+              aria-label="Switch to Library details for {{ book.title|default:'Book'|escape }}"
+              title="View in Library"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">multiple_stop</span>
+            </a>
+          </div>
           {% if book.subtitle %}<div class="muted">{{ book.subtitle|escape }}</div>{% endif %}
           {% if book.authors.all %}
             <div class="book-meta__line">

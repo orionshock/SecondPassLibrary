@@ -311,8 +311,14 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertNotContains(response, f">{unnamed.id}<")
         self.assertNotContains(response, f"Session ID: {unnamed.id}")
         self.assertNotContains(response, "Session ID:")
-        self.assertContains(response, 'href="/library/books/')
-        self.assertContains(response, "Book details")
+        self.assertContains(response, f'href="/library/books/{book.id}/"')
+        self.assertContains(response, 'class="context-switch-link"')
+        self.assertContains(response, "multiple_stop")
+        self.assertContains(response, f"Switch to Library details for {book.title}")
+        self.assertContains(response, 'title="View in Library"')
+        self.assertNotContains(response, "Book details")
+        self.assertNotContains(response, 'href="/library/authors/')
+        self.assertNotContains(response, 'href="/library/series/')
         self.assertNotContains(response, f"/api/v1/reading/export/books/{book.id}/")
         self.assertNotContains(response, "Export all sessions")
         self.assertNotContains(response, 'id="reading-sessions-export-selected"')
@@ -329,6 +335,9 @@ class ProductUiReadingTests(ProductUiTestCase):
     def test_reading_activity_js_updates_breadcrumbs_from_loaded_context(self):
         js = Path("web/static/web/js/reading/activity.js").read_text(encoding="utf-8")
         actions_js = Path("web/static/web/js/reading/activity_actions.js").read_text(
+            encoding="utf-8"
+        )
+        rendering_js = Path("web/static/web/js/reading/activity_rendering.js").read_text(
             encoding="utf-8"
         )
 
@@ -350,6 +359,13 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertNotIn("Session ID: ${sessionState.sessionId}", js)
         self.assertIn("onSessionChanged", js)
         self.assertIn("onSessionChanged", actions_js)
+        self.assertIn("function libraryContextLink", rendering_js)
+        self.assertIn('el("a", "context-switch-link")', rendering_js)
+        self.assertIn('`/library/books/${encodeURIComponent(bookId)}/`', rendering_js)
+        self.assertIn("Switch to Library details for ${bookTitle}", rendering_js)
+        self.assertIn('"multiple_stop"', rendering_js)
+        self.assertNotIn("/library/authors/", rendering_js)
+        self.assertNotIn("/library/series/", rendering_js)
 
     def test_authenticated_reading_sessions_empty_state(self):
         profile = get_or_create_profile(user=self.user)
@@ -536,6 +552,11 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn('el("a", "sessions-card__cover-link")', js)
         self.assertIn('el("a", "sessions-card__title"', js)
         self.assertIn('`/reading/sessions/books/${encodeURIComponent(bookId)}/`', js)
+        self.assertIn("function libraryContextLink", js)
+        self.assertIn('el("a", "context-switch-link")', js)
+        self.assertIn('`/library/books/${encodeURIComponent(bookId)}/`', js)
+        self.assertIn("Switch to Library details for ${bookTitle}", js)
+        self.assertIn('"multiple_stop"', js)
         self.assertNotIn("bindCardInteraction", js)
         self.assertNotIn("window.location.assign", js)
         self.assertNotIn('card.setAttribute("role", "link")', js)
@@ -554,6 +575,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn('card.getAttribute("data-session-url")', js)
         self.assertIn("window.location.href = url", js)
         self.assertIn('el("a", "sessions-book-group__title", bookTitle)', js)
+        self.assertIn('el("div", "book-title-with-action")', js)
         self.assertIn("coverLink.href = bookSessionsHref", js)
         self.assertIn("titleLink.href = bookSessionsHref", js)
         self.assertIn("titleLink.href = marginaliaHref", js)
@@ -573,11 +595,16 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertNotIn(">View book sessions</", js)
         self.assertIn("No reading sessions for ${String(book.title)} yet.", js)
         self.assertNotIn("/api/v1/library/books/", js)
+        self.assertNotIn("/library/authors/", js)
+        self.assertNotIn("/library/series/", js)
         self.assertIn('import("./reading/sessions.js")', main_js)
         self.assertIn('initExportName: "initReadingSessions"', main_js)
         self.assertIn(".sessions-controls .sessions-status-filters", css)
         self.assertIn("border-bottom: 0", css)
         self.assertIn(".metadata-piece + .metadata-piece::before", css)
+        self.assertIn('.meta-item + .meta-item::before', css)
+        self.assertIn(r'content: "\00b7"', css)
+        self.assertIn(".context-switch-link", css)
         self.assertIn(".sessions-view-bar > .sessions-controls__page-size", css)
         self.assertIn("justify-content: flex-end", css)
         self.assertIn(".sessions-card[data-session-url]", css)
@@ -642,6 +669,8 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'id="reading-activity-progress"')
         self.assertContains(response, 'id="reading-activity-annotations"')
         self.assertContains(response, f"/reading/sessions/books/{book.id}/")
+        self.assertNotContains(response, "Book details")
+        self.assertNotContains(response, 'id="reading-activity-book-link"')
         self.assertNotContains(
             response,
             f"/api/v1/reading/export/books/{book.id}/{session.id}/",
