@@ -31,29 +31,47 @@ export function renderBookMeta(container, book) {
   const wrap = document.createElement("div");
   wrap.className = "book-meta";
 
-  wrap.appendChild(el("div", "book-meta__line", title));
+  wrap.appendChild(
+    contextRow(
+      el("div", "book-meta__line", title),
+      bookId ? contextAction(`/library/books/${encodeURIComponent(bookId)}/`, "View book in Library", `View ${title} in Library`) : null,
+    )
+  );
   if (subtitle) wrap.appendChild(el("div", "muted", subtitle));
-  if (authors.length) wrap.appendChild(el("div", "book-meta__line", authors.join(", ")));
-  if (series) wrap.appendChild(el("div", "muted", `${series}${seriesIndex ? ` #${seriesIndex}` : ""}`));
-  if (bookId) {
-    const actions = el("div", "library-context-actions");
-    actions.setAttribute("aria-label", "Library context links");
-    actions.appendChild(contextAction(`/library/books/${encodeURIComponent(bookId)}/`, "View book in Library", `View ${title} in Library`));
+  if (authors.length) {
     const primaryAuthor = authorObjects.find((author) => author && author.id && author.name);
-    if (primaryAuthor) {
-      actions.appendChild(contextAction(`/library/?view=author&author=${encodeURIComponent(String(primaryAuthor.id))}`, "View author in Library", `View ${primaryAuthor.name} in Library`));
-    }
-    if (series && seriesId) {
-      actions.appendChild(contextAction(`/library/?view=series&series=${encodeURIComponent(seriesId)}`, "View series in Library", `View ${series} in Library`));
-    }
-    wrap.appendChild(actions);
+    wrap.appendChild(
+      contextRow(
+        el("div", "book-meta__line", authors.join(", ")),
+        primaryAuthor
+          ? contextAction(`/library/?view=author&author=${encodeURIComponent(String(primaryAuthor.id))}`, "View author in Library", `View ${primaryAuthor.name} in Library`)
+          : null,
+      )
+    );
+  }
+  if (series) {
+    wrap.appendChild(
+      contextRow(
+        el("div", "muted", `${series}${seriesIndex ? ` #${seriesIndex}` : ""}`),
+        seriesId
+          ? contextAction(`/library/?view=series&series=${encodeURIComponent(seriesId)}`, "View series in Library", `View ${series} in Library`)
+          : null,
+      )
+    );
   }
 
   container.appendChild(wrap);
 }
 
+function contextRow(labelNode, actionNode) {
+  const row = el("div", "library-context-row");
+  row.appendChild(labelNode);
+  if (actionNode) row.appendChild(actionNode);
+  return row;
+}
+
 function contextAction(href, label, accessibleLabel) {
-  const link = el("a", "button button--secondary library-context-action", label);
+  const link = el("a", "library-context-action", label);
   link.href = href;
   link.setAttribute("aria-label", accessibleLabel);
   link.setAttribute("title", accessibleLabel);

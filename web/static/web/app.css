@@ -857,16 +857,23 @@ input[type="file"]:disabled::file-selector-button {
   color: var(--text);
   text-decoration: none;
 }
-.library-context-actions {
-  display: flex;
-  gap: 8px;
+.library-context-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
   align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
 }
 .library-context-action {
   font-size: 13px;
-  padding: 6px 9px;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--muted);
+  text-decoration: none;
+}
+.library-context-action:hover,
+.library-context-action:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
 }
 .sessions-controls {
   display: flex;

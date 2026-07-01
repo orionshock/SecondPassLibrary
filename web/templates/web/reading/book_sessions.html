@@ -27,43 +27,45 @@
 
       <div class="book-hero__main">
         <div class="book-meta">
-          <div class="book-meta__line">{{ book.title|default:"Book"|escape }}</div>
+          <div class="library-context-row">
+            <div class="book-meta__line">{{ book.title|default:"Book"|escape }}</div>
+            <a
+              class="library-context-action"
+              href="/library/books/{{ book.id|escape }}/"
+              aria-label="View {{ book.title|default:'Book'|escape }} in Library"
+              title="View {{ book.title|default:'Book'|escape }} in Library"
+            >View book in Library</a>
+          </div>
           {% if book.subtitle %}<div class="muted">{{ book.subtitle|escape }}</div>{% endif %}
           {% if book.authors.all %}
-            <div class="book-meta__line">
-              {% for a in book.authors.all %}{{ a.name|escape }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            <div class="library-context-row">
+              <div class="book-meta__line">
+                {% for a in book.authors.all %}{{ a.name|escape }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </div>
+              {% with primary_author=book.authors.all|first %}
+                {% if primary_author %}
+                  <a
+                    class="library-context-action"
+                    href="/library/?view=author&amp;author={{ primary_author.id|urlencode }}"
+                    aria-label="View {{ primary_author.name|escape }} in Library"
+                    title="View {{ primary_author.name|escape }} in Library"
+                  >View author in Library</a>
+                {% endif %}
+              {% endwith %}
             </div>
           {% endif %}
           {% if book.series %}
-            <div class="muted">{{ book.series.name|escape }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</div>
+            <div class="library-context-row">
+              <div class="muted">{{ book.series.name|escape }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</div>
+              <a
+                class="library-context-action"
+                href="/library/?view=series&amp;series={{ book.series.id|urlencode }}"
+                aria-label="View {{ book.series.name|escape }} in Library"
+                title="View {{ book.series.name|escape }} in Library"
+              >View series in Library</a>
+            </div>
           {% endif %}
         </div>
-      </div>
-      <div class="library-context-actions" aria-label="Library context links">
-        <a
-          class="button button--secondary library-context-action"
-          href="/library/books/{{ book.id|escape }}/"
-          aria-label="View {{ book.title|default:'Book'|escape }} in Library"
-          title="View {{ book.title|default:'Book'|escape }} in Library"
-        >View book in Library</a>
-        {% with primary_author=book.authors.all|first %}
-          {% if primary_author %}
-            <a
-              class="button button--secondary library-context-action"
-              href="/library/?view=author&amp;author={{ primary_author.id|urlencode }}"
-              aria-label="View {{ primary_author.name|escape }} in Library"
-              title="View {{ primary_author.name|escape }} in Library"
-            >View author in Library</a>
-          {% endif %}
-        {% endwith %}
-        {% if book.series %}
-          <a
-            class="button button--secondary library-context-action"
-            href="/library/?view=series&amp;series={{ book.series.id|urlencode }}"
-            aria-label="View {{ book.series.name|escape }} in Library"
-            title="View {{ book.series.name|escape }} in Library"
-          >View series in Library</a>
-        {% endif %}
       </div>
     </div>
 
