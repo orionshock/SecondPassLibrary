@@ -787,6 +787,9 @@ input[type="file"]:disabled::file-selector-button {
   color: var(--text);
   cursor: default;
 }
+.sessions-card[data-session-url] {
+  cursor: pointer;
+}
 .sessions-card__cover-link {
   display: block;
   flex: 0 0 auto;

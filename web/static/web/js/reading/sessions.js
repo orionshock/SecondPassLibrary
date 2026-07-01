@@ -170,6 +170,7 @@ function renderSessionCard(session) {
   const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
 
   const card = el("div", "card sessions-row sessions-card");
+  card.dataset.sessionUrl = marginaliaHref;
 
   const coverLink = el("a", "sessions-card__cover-link");
   coverLink.href = marginaliaHref;
@@ -209,13 +210,6 @@ function renderSessionCard(session) {
     el("span", "pill sessions-card__status", session && session.is_active ? "Active" : "Closed")
   );
   const actions = el("div", "sessions-card__actions");
-  actions.appendChild(
-    sessionActionLink({
-      href: marginaliaHref,
-      icon: "article",
-      label: "Open session",
-    })
-  );
   actions.appendChild(
     sessionActionLink({
       href: bookSessionsHref,
@@ -480,8 +474,12 @@ export async function initReadingSessions() {
   resultsEl.addEventListener("click", (event) => {
     const source = event.target;
     if (isInteractiveElement(source)) return;
-    const card = source && source.closest ? source.closest("[data-book-sessions-url]") : null;
-    const url = card && card.getAttribute("data-book-sessions-url");
+    const card = source && source.closest
+      ? source.closest("[data-session-url], [data-book-sessions-url]")
+      : null;
+    const url = card && (
+      card.getAttribute("data-session-url") || card.getAttribute("data-book-sessions-url")
+    );
     if (url) window.location.href = url;
   });
 

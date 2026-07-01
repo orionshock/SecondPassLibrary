@@ -57,7 +57,7 @@
             <div class="sessions-row__main">
               <div style="display:flex; gap: 10px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                 <div>
-                  <div>
+                  <div class="sessions-card__title">
                     {% if session_name %}
                       {{ session_name|escape }}
                     {% else %}
@@ -68,24 +68,25 @@
                     {% endif %}
                   </div>
                 </div>
-                <div class="muted">
+                <span class="pill sessions-card__status">
                   {% if s.is_active %}Active{% else %}Closed{% endif %}
-                </div>
+                </span>
               </div>
 
-              <div class="muted" style="margin-top: 6px;">
-                <div>Started: {{ s.started_at }}</div>
-                {% if s.completed_at %}
-                  <div>Closed: {{ s.completed_at }}</div>
-                {% else %}
-                  <div>Updated: {{ s.updated_at }}</div>
-                {% endif %}
-                {% if s.progression_percent is not None %}
-                  <div>Progression: {{ s.progression_percent|floatformat:1 }}%</div>
-                {% else %}
-                  <div>Progression: Not available</div>
-                {% endif %}
-                <div>Annotations: {{ s.annotation_count }}</div>
+              <div class="muted sessions-card__metadata" style="margin-top: 6px;">
+                <span class="meta-list">
+                  <span class="meta-item">{% if s.is_active %}Active{% else %}Closed{% endif %}</span>
+                  <span class="meta-item">Started {{ s.started_at }}</span>
+                  {% if s.completed_at %}
+                    <span class="meta-item">Closed {{ s.completed_at }}</span>
+                  {% else %}
+                    <span class="meta-item">Updated {{ s.updated_at }}</span>
+                  {% endif %}
+                  {% if s.progression_percent is not None %}
+                    <span class="meta-item">{{ s.progression_percent|floatformat:1 }}%</span>
+                  {% endif %}
+                  <span class="meta-item">{{ s.annotation_count }} annotation{{ s.annotation_count|pluralize }}</span>
+                </span>
               </div>
             </div>
           </a>

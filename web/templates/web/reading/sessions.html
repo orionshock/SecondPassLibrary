@@ -82,6 +82,7 @@
       {% for s in sessions %}
         <div
           class="card sessions-row sessions-card"
+          data-session-url="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
         >
           <a
             class="sessions-card__cover-link"
@@ -131,14 +132,6 @@
           <div class="sessions-card__trailing">
             <span class="pill sessions-card__status">{% if s.is_active %}Active{% else %}Closed{% endif %}</span>
             <div class="sessions-card__actions">
-              <a
-                class="icon-button sessions-card__action"
-                href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
-                aria-label="Open session"
-                title="Open session"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">article</span>
-              </a>
               <a
                 class="icon-button sessions-card__action"
                 href="/reading/sessions/books/{{ s.book.id|urlencode }}/"
