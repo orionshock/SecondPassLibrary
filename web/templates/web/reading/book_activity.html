@@ -2,7 +2,7 @@
 
 {% block page_id %}reading-book-activity{% endblock %}
 
-{% block title %}Reading activity - {{ server_name }}{% endblock %}
+{% block title %}Session Marginalia - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
   {% include "web/partials/breadcrumbs.html" with greatgrandparent_label="My Marginalia" greatgrandparent_href="/reading/sessions/" grandparent_label="Browse by Book" grandparent_href="/reading/sessions/?view=book" parent_label="Book" parent_href="/reading/sessions/books/"|add:book_id|add:"/" current_label="Session" only %}

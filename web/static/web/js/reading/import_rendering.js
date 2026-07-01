@@ -99,6 +99,9 @@ function matchLine(match) {
   if (title) {
     return renderMetaList([`Matched to ${title}`, methodText]);
   }
+  if (status === "unmatched") {
+    return renderMetaList(["Needs Reader", "No file-hash match"]);
+  }
   if (status && status !== "matched") {
     return renderMetaList([`Match ${status}`, methodText]);
   }

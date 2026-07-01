@@ -12,7 +12,7 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Import Marginalia</h1>
-      <div class="muted">Preview and import SPL native marginalia exports.</div>
+      <div class="muted">Preview native SPL JSON and import only exact file-hash matches.</div>
     </div>
     <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <a class="button" href="/reading/export/">Export Marginalia</a>
@@ -22,8 +22,9 @@
   <section class="card">
     <h2 class="card__title">SPL native marginalia export</h2>
     <p class="muted">
-      Upload a Second Pass Library marginalia JSON export to validate it and preview matching.
-      Foreign annotation formats should be normalized by a client or converted into SPL native format first.
+      Server import requires a visible local book with the same file hash and EPUB CFI-shaped locators.
+      Missing or different book files, malformed locators, and foreign annotation formats belong in
+      Reader-assisted import through the SecondPass Reading Client.
     </p>
 
     <form id="reading-import-preview-form" class="form">

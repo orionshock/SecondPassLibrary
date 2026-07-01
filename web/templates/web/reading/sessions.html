@@ -2,7 +2,7 @@
 
 {% block page_id %}reading-sessions{% endblock %}
 
-{% block title %}Reading Sessions - {{ server_name }}{% endblock %}
+{% block title %}My Marginalia - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
   {% include "web/partials/breadcrumbs.html" with parent_label="My Marginalia" parent_href="/reading/sessions/" current_label="Browse by Session" only %}
@@ -102,14 +102,22 @@
               class="sessions-card__title"
               href="/reading/sessions/books/{{ s.book.id|escape }}/{{ s.id|urlencode }}/"
             >
-              {{ s.name|default:s.book.title|default:"Book"|escape }}
+              {% with session_id=s.id|stringformat:"s" session_name=s.name|default_if_none:"" %}
+                {% if session_name %}
+                  {{ session_name|escape }}
+                {% else %}
+                  <span class="meta-list">
+                    <span class="meta-item">Unnamed session</span>
+                    <span class="meta-item">{{ session_id|slice:"-8:" }}</span>
+                  </span>
+                {% endif %}
+              {% endwith %}
             </a>
             <div class="muted sessions-card__metadata">
               <span class="metadata-piece">{{ s.book.title|default:"Book"|escape }}</span>
               {% if s.book.authors %}<span class="metadata-piece">{{ s.book.authors|join:", "|escape }}</span>{% endif %}
               {% if s.book.series_name %}<span class="metadata-piece">{{ s.book.series_name|escape }}{% if s.book.series_index %} {{ s.book.series_index }}{% endif %}</span>{% endif %}
             </div>
-            <div class="muted sessions-row__id">{{ s.id|escape }}</div>
             <div class="muted sessions-card__metadata">
               <span class="metadata-piece">Started: {{ s.started_at }}</span>
               {% if s.completed_at %}<span class="metadata-piece">Closed: {{ s.completed_at }}</span>{% else %}<span class="metadata-piece">Updated: {{ s.updated_at }}</span>{% endif %}

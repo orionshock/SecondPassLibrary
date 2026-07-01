@@ -146,9 +146,11 @@ class ProductUiReadingTests(ProductUiTestCase):
         )
         self.assertContains(response, 'aria-current="page">Import Marginalia</li>', html=False)
         self.assertContains(response, "Import Marginalia")
-        self.assertContains(response, "Preview and import SPL native marginalia exports.")
+        self.assertContains(response, "Preview native SPL JSON and import only exact file-hash matches.")
         self.assertContains(response, "SPL native marginalia export")
-        self.assertContains(response, "Foreign annotation formats")
+        self.assertContains(response, "Server import requires a visible local book with the same file hash")
+        self.assertContains(response, "EPUB CFI-shaped locators")
+        self.assertContains(response, "Reader-assisted import through the SecondPass Reading Client")
         self.assertContains(response, 'id="reading-import-preview-form"')
         self.assertContains(response, 'id="reading-import-file"')
         self.assertContains(response, 'id="reading-import-apply-controls"')
@@ -198,9 +200,11 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn("renderMetaList", rendering_js)
         self.assertIn('class="meta-item"', rendering_js)
         self.assertIn("Matched to ${title}", rendering_js)
+        self.assertIn('renderMetaList(["Needs Reader", "No file-hash match"])', rendering_js)
         self.assertIn('replace(/_/g, " ")', rendering_js)
         self.assertNotIn("&middot;", rendering_js)
         self.assertNotIn("&#183;", rendering_js)
+        self.assertNotIn("Match unmatched", rendering_js)
         self.assertNotIn('"Matched to", title', rendering_js)
         self.assertNotIn("Match: <span", rendering_js)
         self.assertNotIn("Method:", rendering_js)
@@ -265,6 +269,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
         self.assertContains(response, f"Marginalia for {book.title}")
+        self.assertContains(response, f"<title>Marginalia for {book.title} -", html=False)
         self.assertContains(response, "No sessions yet for this book.", count=0)
 
         # Only the current user's sessions for this book appear.
@@ -353,8 +358,16 @@ class ProductUiReadingTests(ProductUiTestCase):
         other = User.objects.create_user(username="u2", email="u2@example.com", password="pw")
 
         book = create_file_backed_book(title="B1").book
-        mine = ReadingSession.objects.create(user=self.user, book=book, name="Mine")
+        mine = ReadingSession.objects.create(
+            user=self.user,
+            book=book,
+            name="Mine",
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+        unnamed = ReadingSession.objects.create(user=self.user, book=book, name="")
         others = ReadingSession.objects.create(user=other, book=book, name="Other user")
+        unnamed_suffix = str(unnamed.id)[-8:]
 
         self.client.force_login(self.user)
         response = self.client.get("/reading/sessions/")
@@ -370,7 +383,9 @@ class ProductUiReadingTests(ProductUiTestCase):
             response,
             'id="reading-sessions-all-title">Marginalia by Session</h1>',
         )
+        self.assertContains(response, "<title>My Marginalia -", html=False)
         self.assertNotContains(response, 'id="reading-sessions-all-title">Sessions</h1>')
+        self.assertNotContains(response, "<title>Reading Sessions", html=False)
         self.assertContains(response, 'id="reading-sessions-subtitle"')
         self.assertContains(response, 'class="sessions-controls"')
         self.assertContains(response, 'id="reading-sessions-controls"')
@@ -424,6 +439,8 @@ class ProductUiReadingTests(ProductUiTestCase):
 
         # Current user's session is present.
         self.assertContains(response, str(mine.id))
+        self.assertContains(response, "Unnamed session")
+        self.assertContains(response, unnamed_suffix)
         # Other user's session not shown.
         self.assertNotContains(response, str(others.id))
 
@@ -432,6 +449,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertContains(response, 'class="card sessions-row sessions-card"')
         self.assertContains(response, 'class="sessions-card__cover-link"')
         self.assertContains(response, 'class="sessions-card__title"')
+        self.assertNotContains(response, 'class="muted sessions-row__id"')
         self.assertContains(response, 'aria-label="Open session"')
         self.assertContains(response, 'aria-label="View sessions for this book"')
         self.assertContains(response, "article")
@@ -459,6 +477,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn("function sessionsHeading", js)
         self.assertIn('state.view === "book" ? "Marginalia by Book" : "Marginalia by Session"', js)
         self.assertIn("titleEl.textContent = sessionsHeading(state)", js)
+        self.assertIn("document.title = sessionsHeading(state)", js)
         self.assertIn('{ label: "My Marginalia", href: "/reading/sessions/" }', js)
         self.assertIn('state.view === "book" ? "Browse by Book" : "Browse by Session"', js)
         self.assertIn("syncSessionsBreadcrumb(state)", js)
@@ -490,7 +509,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn("prevBtns.forEach", js)
         self.assertIn("nextBtns.forEach", js)
         self.assertIn('button.setAttribute("aria-pressed", active ? "true" : "false")', js)
-        self.assertIn("Reading sessions for ${String(book.title)}", js)
+        self.assertIn("Marginalia for ${String(book.title)}", js)
         self.assertIn("sessionCardTitle(session, bookTitle)", js)
         self.assertIn("appendSeparatedParts", js)
         self.assertIn('el("span", "metadata-piece", part)', js)
@@ -520,7 +539,8 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn("titleLink.href = bookSessionsHref", js)
         self.assertIn("titleLink.href = marginaliaHref", js)
         self.assertIn('state.view === "book"', js)
-        self.assertIn('el("div", "muted sessions-row__id", sessionId)', js)
+        self.assertIn("Unnamed session \\u00b7 ${id.slice(-8)}", js)
+        self.assertNotIn('el("div", "muted sessions-row__id", sessionId)', js)
         self.assertIn('session && session.is_active ? "Active" : "Closed"', js)
         self.assertIn('`${sessions.length} session${sessions.length === 1 ? "" : "s"}`', js)
         self.assertNotIn("Grouped by book for this page of results.", js)
@@ -580,6 +600,8 @@ class ProductUiReadingTests(ProductUiTestCase):
             html=False,
         )
         self.assertContains(response, 'aria-current="page">Session</li>', html=False)
+        self.assertContains(response, "<title>Session Marginalia -", html=False)
+        self.assertNotContains(response, "<title>Reading activity", html=False)
         self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
         self.assertContains(response, f'data-session-id="{session.id}"')

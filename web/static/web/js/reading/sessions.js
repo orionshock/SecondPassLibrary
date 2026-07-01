@@ -113,7 +113,9 @@ function appendSeparatedParts(container, parts) {
 
 function sessionCardTitle(session, bookTitle) {
   const name = session && typeof session.name === "string" ? session.name.trim() : "";
-  return name || bookTitle;
+  if (name) return name;
+  const id = session && session.id ? String(session.id).trim() : "";
+  return id ? `Unnamed session \u00b7 ${id.slice(-8)}` : "Unnamed session";
 }
 
 function seriesLabel(book) {
@@ -187,8 +189,6 @@ function renderSessionCard(session) {
   const bookMeta = el("div", "muted sessions-card__metadata");
   appendSeparatedParts(bookMeta, [bookTitle, authors.join(", "), seriesLabel(book)]);
   main.appendChild(bookMeta);
-  main.appendChild(el("div", "muted sessions-row__id", sessionId));
-
   const dates = el("div", "muted sessions-card__metadata");
   appendSeparatedParts(dates, [
     startedAt ? `Started: ${startedAt}` : "",
@@ -375,6 +375,7 @@ export async function initReadingSessions() {
   function applyStateToControls() {
     syncSessionsBreadcrumb(state);
     titleEl.textContent = sessionsHeading(state);
+    document.title = sessionsHeading(state);
     searchInput.value = state.q;
     pageSizeSelects.forEach((select) => {
       select.value = String(state.pageSize);
@@ -407,7 +408,7 @@ export async function initReadingSessions() {
       const book = contextBook(payload);
 
       subtitleEl.textContent =
-        state.book && book && book.title ? `Reading sessions for ${String(book.title)}` : "";
+        state.book && book && book.title ? `Marginalia for ${String(book.title)}` : "";
       visible(subtitleEl, !!subtitleEl.textContent);
       renderResults(resultsEl, payload, results, state);
       mountCovers(resultsEl);
