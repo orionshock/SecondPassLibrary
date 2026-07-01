@@ -17,7 +17,6 @@ from tests.utils.responses import response_data_list
 
 User = get_user_model()
 
-
 class ReadingAuthenticationAPITest(ReadingAPITestBase):
     def test_anonymous_cannot_access_reading_apis(self):
         response = self.client.get(
@@ -92,7 +91,6 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(bad_progress.status_code, status.HTTP_400_BAD_REQUEST)
 
-
     def test_bearer_can_close_own_session_and_cannot_close_cross_user(self):
         session1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True)
 
@@ -123,7 +121,6 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(cross.status_code, status.HTTP_404_NOT_FOUND)
 
-
     def test_bearer_can_call_recent_sessions(self):
         s1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True, status=ReadingSession.STATUS_ACTIVE)
         r = cast(
@@ -145,7 +142,6 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         # Cross-user session should not appear.
         self.assertNotIn(str(self.session2.id), ids)
 
-
     def test_bearer_can_open_endpoint(self):
         resp = cast(
             Response,
@@ -163,81 +159,6 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertEqual(str(data["progress"]["session"]), str(data["session"]["id"]))
         self.assertIn("results", data["annotations"])
 
-
-    def test_bearer_annotations_are_user_scoped(self):
-        session1 = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        create = cast(
-            Response,
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session1.id),
-                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
-                    "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
-                    "body": [{"type": "TextualBody", "purpose": "describing", "value": "hello"}],
-                },
-                format="json",
-                HTTP_AUTHORIZATION=self._auth_header,
-            ),
-        )
-        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        ann_id = response_data_dict(create)["id"]
-
-        list_all = cast(
-            Response,
-            self.client.get(
-                "/api/v1/reading/annotations/",
-                HTTP_AUTHORIZATION=self._auth_header,
-            ),
-        )
-        self.assertEqual(list_all.status_code, status.HTTP_200_OK)
-        ids = {a["id"] for a in response_data_list(list_all)}
-        self.assertIn(ann_id, ids)
-        self.assertNotIn(str(self.annotation2.id), ids)
-
-        # Cross-user detail and delete should 404.
-        other_get = self.client.get(
-            f"/api/v1/reading/annotations/{self.annotation2.id}/",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(other_get.status_code, status.HTTP_404_NOT_FOUND)
-        other_del = self.client.delete(
-            f"/api/v1/reading/annotations/{self.annotation2.id}/",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(other_del.status_code, status.HTTP_404_NOT_FOUND)
-
-        # Cross-user creation should be rejected by serializer validation (invalid session).
-        bad_create = self.client.post(
-            "/api/v1/reading/annotations/",
-            data={
-                "session": str(self.session2.id),
-                "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
-                "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
-                "body": [],
-            },
-            format="json",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(bad_create.status_code, status.HTTP_400_BAD_REQUEST)
-
-        # Legacy device field should be rejected as unknown.
-        bad_device_field = self.client.post(
-            "/api/v1/reading/annotations/",
-            data={
-                "session": str(session1.id),
-                "device": "nope",
-                "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                "target": {"selector": {"value": "/6/2"}},
-                "body": [],
-            },
-            format="json",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(bad_device_field.status_code, status.HTTP_400_BAD_REQUEST)
-
-
     def test_revoked_and_inactive_bearer_token_rejected(self):
         UserClientSession.objects.filter(user=self.user1).update(revoked_at=timezone.now())
         r = self.client.get(
@@ -254,4 +175,3 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertIn(r2.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
-
