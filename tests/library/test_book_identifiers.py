@@ -4,31 +4,28 @@ from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any, cast
 
-from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from accounts.models import UserProfile
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_book_public_assignment
 from library.models import Author, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 
+from tests.library.helpers import (
+    create_librarian_user,
+    create_reader_user,
+)
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 from tests.utils.books import create_file_backed_book, create_fileless_book_for_integrity_edge_case
 
 class BookIdentifierCrudAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
-        self.reader = User.objects.create_user(username="ident_reader", password="pw")
-        ensure_user_public_membership(user=self.reader)
+        self.reader = create_reader_user(username="ident_reader", password="pw")
 
-        self.librarian = User.objects.create_user(username="ident_librarian", password="pw")
-        ensure_user_public_membership(user=self.librarian)
-        profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
+        self.librarian = create_librarian_user(username="ident_librarian", password="pw")
 
         self.book = create_file_backed_book(title="Book With Idents", assign_public=False).book
         ensure_book_public_assignment(book=self.book, added_by=None)

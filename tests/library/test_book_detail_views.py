@@ -4,18 +4,20 @@ from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any, cast
 
-from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from accounts.models import UserProfile
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_book_public_assignment
 from library.models import Author, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 
+from tests.library.helpers import (
+    create_manager_user,
+    create_reader_user,
+)
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 from tests.utils.books import create_file_backed_book, create_fileless_book_for_integrity_edge_case
 
@@ -26,21 +28,13 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.public = get_public_group()
 
-        self.reader = User.objects.create_user(
+        self.reader = create_reader_user(
             username="reader", email="reader@example.com", password="pw"
         )
-        ensure_user_public_membership(user=self.reader)
-        reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
-        reader_profile.role = UserProfile.ROLE_READER
-        reader_profile.save(update_fields=["role", "updated_at"])
 
-        self.manager = User.objects.create_user(
+        self.manager = create_manager_user(
             username="manager", email="manager@example.com", password="pw"
         )
-        ensure_user_public_membership(user=self.manager)
-        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
-        manager_profile.role = UserProfile.ROLE_MANAGER
-        manager_profile.save(update_fields=["role", "updated_at"])
 
         self.hidden_group = LibraryGroup.objects.create(
             name="Hidden",

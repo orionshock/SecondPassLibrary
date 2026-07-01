@@ -4,28 +4,26 @@ from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any, cast
 
-from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from accounts.models import UserProfile
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_book_public_assignment
 from library.models import Author, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 
+from tests.library.helpers import (
+    create_librarian_user,
+    create_reader_user,
+)
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 from tests.utils.books import create_file_backed_book, create_fileless_book_for_integrity_edge_case
 
 class BaseBookFileDownloadAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpass")
-        ensure_user_public_membership(user=self.user)
-        profile, _ = UserProfile.objects.get_or_create(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
+        self.user = create_librarian_user(username="testuser", password="testpass")
         self.client.login(username="testuser", password="testpass")
 
         self.author = Author.objects.create(name="Test Author")
@@ -56,8 +54,7 @@ class BookFileDownloadAPITest(BaseBookFileDownloadAPITest):
 
 class BookFileSerializerAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpass")
-        ensure_user_public_membership(user=self.user)
+        self.user = create_reader_user(username="testuser", password="testpass")
         self.author = Author.objects.create(name="Test Author")
         # Intentionally fileless: this test sets up a BookFile row with a fixed path/checksum.
         self.book = create_fileless_book_for_integrity_edge_case(title="Test Title", assign_public=False)

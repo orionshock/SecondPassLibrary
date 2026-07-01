@@ -4,39 +4,33 @@ from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any, cast
 
-from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from accounts.models import UserProfile
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.group_services import ensure_book_public_assignment
 from library.models import Author, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 
+from tests.library.helpers import (
+    create_librarian_user,
+    create_manager_user,
+    create_owner_user,
+    create_reader_user,
+)
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 from tests.utils.books import create_file_backed_book, create_fileless_book_for_integrity_edge_case
 
 class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
-        self.reader = User.objects.create_user(username="reader", password="pw")
-        ensure_user_public_membership(user=self.reader)
-        self.librarian = User.objects.create_user(username="librarian", password="pw")
-        ensure_user_public_membership(user=self.librarian)
-        librarian_profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
-        librarian_profile.role = UserProfile.ROLE_LIBRARIAN
-        librarian_profile.save(update_fields=["role", "updated_at"])
+        self.reader = create_reader_user(username="reader", password="pw")
+        self.librarian = create_librarian_user(username="librarian", password="pw")
 
-        self.manager = User.objects.create_user(username="manager", password="pw")
-        ensure_user_public_membership(user=self.manager)
-        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
-        manager_profile.role = UserProfile.ROLE_MANAGER
-        manager_profile.save(update_fields=["role", "updated_at"])
+        self.manager = create_manager_user(username="manager", password="pw")
 
-        self.owner = User.objects.create_superuser(username="owner", password="pw", email="example@example.com")
-        ensure_user_public_membership(user=self.owner)
+        self.owner = create_owner_user(username="owner", password="pw", email="example@example.com")
 
         from library.models import LibraryGroup, LibraryGroupMembership
         from library.group_services import get_public_group
