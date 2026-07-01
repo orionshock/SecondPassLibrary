@@ -1,23 +1,22 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import Any, cast
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
-from django.utils import timezone
-from jsonschema import Draft202012Validator
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
-from accounts.models import UserClientSession, UserProfile
-from accounts.services import get_or_create_profile
-from reading.models import ReadingProgress, ReadingSession
-from reading.services import create_annotation
+from accounts.models import UserClientSession
+from reading.models import ReadingSession
+from tests.reading.exports.helpers import (
+    AllExportFixtureMixin,
+    SelectedExportFixtureMixin,
+    SingleBookExportFixtureMixin,
+)
 from tests.reading.exports.schema_assertions import (
     assert_valid_marginalia_export,
-    load_marginalia_export_schema,
 )
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
@@ -25,94 +24,10 @@ from tests.utils.books import create_file_backed_book
 
 User = get_user_model()
 
-class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
+
+class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin, APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="u1", password="pw")
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        self.other = User.objects.create_user(username="u2", password="pw")
-        other_profile = get_or_create_profile(user=self.other)
-        other_profile.role = UserProfile.ROLE_LIBRARIAN
-        other_profile.save(update_fields=["role", "updated_at"])
-
-        self.book = create_file_backed_book(title="Export Book", epub_bytes=b"export-book").book
-        self.other_book = create_file_backed_book(title="Other Book", epub_bytes=b"other-book").book
-
-        self.session1 = ReadingSession.objects.create(
-            user=self.user, book=self.book, name="First pass", notes="Session notes"
-        )
-        self.other_user_session = ReadingSession.objects.create(user=self.other, book=self.book)
-        self.other_book_session = ReadingSession.objects.create(user=self.user, book=self.other_book)
-
-        ReadingProgress.objects.create(
-            session=self.session1,
-            current_location={
-                "format": "epub",
-                "href": "Text/ch1.xhtml",
-                "cfi": "epubcfi(/6/2)",
-            },
-            progression=0.42,
-        )
-
-        self.highlight = create_annotation(
-            session=self.session1,
-            anchor_kind="highlight",
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/2[chapter]!/4/2)",
-            highlight_text="selected text",
-            quote_prefix="before ",
-            quote_suffix=" after",
-            highlight_color="green",
-            comment_text="reader note",
-        )
-        self.deleted = create_annotation(
-            session=self.session1,
-            anchor_kind="highlight",
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/10)",
-            highlight_text="deleted text",
-            highlight_color="yellow",
-        )
-        self.deleted.is_deleted = True
-        self.deleted.save(update_fields=["is_deleted", "updated_at"])
-
-        self.session1.is_active = False
-        self.session1.status = ReadingSession.STATUS_ARCHIVED
-        self.session1.save(update_fields=["is_active", "status", "updated_at"])
-
-        self.session2 = ReadingSession.objects.create(
-            user=self.user,
-            book=self.book,
-            name="Second pass",
-        )
-        self.bookmark = create_annotation(
-            session=self.session2,
-            anchor_kind="bookmark",
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/8)",
-        )
-        self.session2.is_active = False
-        self.session2.status = ReadingSession.STATUS_COMPLETED
-        self.session2.completed_at = timezone.now()
-        self.session2.save(update_fields=["is_active", "status", "completed_at", "updated_at"])
-
-    def _book_url(self):
-        return "/api/v1/reading/export/"
-
-    def _session_url(self, session=None, book=None):
-        session = session or self.session1
-        book = book or self.book
-        return f"/api/v1/reading/export/books/{book.id}/{session.id}/"
-
-    def _post_book(self, book=None, sessions="all"):
-        book = book or self.book
-        return self.client.post(
-            self._book_url(),
-            {"books": [{"book_id": str(book.id), "sessions": sessions}]},
-            format="json",
-        )
+        self.set_up_single_book_export_world()
 
     def test_export_requires_session_auth(self):
         r = self.client.get(self._book_url())
@@ -237,45 +152,9 @@ class ReadingExportApiTests(IsolatedUserdataMixin, APITestCase):
         )
 
 
-class AllMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
+class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="u1", password="pw")
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        self.other = User.objects.create_user(username="u2", password="pw")
-
-        self.book1 = create_file_backed_book(title="Alpha Book", epub_bytes=b"alpha").book
-        self.book2 = create_file_backed_book(title="Beta Book", epub_bytes=b"beta").book
-        self.no_session_book = create_file_backed_book(
-            title="No Session Book", epub_bytes=b"none"
-        ).book
-        self.other_only_book = create_file_backed_book(
-            title="Other User Book", epub_bytes=b"other"
-        ).book
-
-        self.session1 = ReadingSession.objects.create(
-            user=self.user, book=self.book1, name="Alpha session"
-        )
-        self.session2 = ReadingSession.objects.create(
-            user=self.user, book=self.book2, name="Beta session"
-        )
-        self.other_session = ReadingSession.objects.create(
-            user=self.other, book=self.other_only_book, name="Other session"
-        )
-
-        create_annotation(
-            session=self.session1,
-            anchor_kind="highlight",
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/2)",
-            highlight_text="alpha quote",
-            highlight_color="yellow",
-        )
-
-    def _url(self):
-        return "/api/v1/reading/export/"
+        self.set_up_all_export_world()
 
     def test_all_export_requires_session_auth(self):
         r = self.client.get(self._url())
@@ -324,53 +203,9 @@ class AllMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertNotIn(str(self.other_session.id), str(r.data))
 
 
-class SelectedBookMarginaliaExportApiTests(IsolatedUserdataMixin, APITestCase):
+class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedUserdataMixin, APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="u1", password="pw")
-        profile = get_or_create_profile(user=self.user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
-
-        self.other = User.objects.create_user(username="u2", password="pw")
-        other_profile = get_or_create_profile(user=self.other)
-        other_profile.role = UserProfile.ROLE_LIBRARIAN
-        other_profile.save(update_fields=["role", "updated_at"])
-
-        self.book = create_file_backed_book(title="Selected Export", epub_bytes=b"selected").book
-        self.other_book = create_file_backed_book(title="Other Book", epub_bytes=b"other").book
-
-        self.session1 = ReadingSession.objects.create(user=self.user, book=self.book, name="First")
-        create_annotation(
-            session=self.session1,
-            anchor_kind="highlight",
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/2)",
-            highlight_text="first quote",
-        )
-        self.session1.is_active = False
-        self.session1.status = ReadingSession.STATUS_ARCHIVED
-        self.session1.save(update_fields=["is_active", "status", "updated_at"])
-
-        self.session2 = ReadingSession.objects.create(user=self.user, book=self.book, name="Second")
-        create_annotation(
-            session=self.session2,
-            anchor_kind="bookmark",
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/4)",
-        )
-        self.session2.is_active = False
-        self.session2.status = ReadingSession.STATUS_COMPLETED
-        self.session2.completed_at = timezone.now()
-        self.session2.save(update_fields=["is_active", "status", "completed_at", "updated_at"])
-
-        self.other_user_session = ReadingSession.objects.create(user=self.other, book=self.book)
-        self.other_book_session = ReadingSession.objects.create(user=self.user, book=self.other_book)
-
-    def _url(self):
-        return "/api/v1/reading/export/"
-
-    def _body(self, *books):
-        return {"books": list(books)}
+        self.set_up_selected_export_world()
 
     def test_selected_book_export_includes_only_requested_sessions(self):
         self.client.force_login(self.user)
