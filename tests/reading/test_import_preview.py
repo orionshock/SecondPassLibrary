@@ -265,7 +265,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(
             r.data["warnings"],
             [
-                "1 export book did not match visible local books. "
+                "1 export book did not match by file hash. "
                 "It can be downloaded for Reader-assisted import."
             ],
         )
@@ -306,7 +306,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         self.assertIn("/api/v1/reading/import/unmatched/?import_token=", r.data["unmatched_download_url"])
         self.assertEqual(
             r.data["warnings"].count(
-                "2 export books did not match visible local books. "
+                "2 export books did not match by file hash. "
                 "They can be downloaded for Reader-assisted import."
             ),
             1,
@@ -361,7 +361,7 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_title_author_match_when_hash_does_not_match(self):
+    def test_bad_file_hash_does_not_match_by_title_author(self):
         self.client.force_login(self.user)
         payload = self._payload(file_hash="1" * 64)
         payload["books"][0]["source"] = "book:sha256:" + ("1" * 64)
@@ -370,7 +370,101 @@ class MarginaliaImportPreviewApiTests(IsolatedUserdataMixin, APITestCase):
         r = cast(Any, self._post_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertEqual(r.data["books"][0]["match"]["method"], "title_author")
+        self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
+        self.assertEqual(r.data["unmatched_books"], 1)
+
+    def test_bad_file_hash_does_not_match_by_isbn(self):
+        self.visible.isbn = "9780345816023"
+        self.visible.save(update_fields=["isbn", "updated_at"])
+        self.client.force_login(self.user)
+        payload = self._payload(file_hash="1" * 64, title="Different Title", authors=["Other"])
+        payload["books"][0]["isbn"] = "9780345816023"
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
+        self.assertEqual(r.data["unmatched_books"], 1)
+
+    def test_matched_book_with_malformed_cfi_session_needs_reader(self):
+        self.client.force_login(self.user)
+        payload = self._payload()
+        invalid = deepcopy(payload["books"][0]["sessions"][0])
+        invalid["export_session_id"] = "session-bad"
+        invalid["name"] = "Bad locator"
+        invalid["annotations"][0]["target"]["selector"]["value"] = "not-a-cfi"
+        payload["books"][0]["sessions"].append(invalid)
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(r.data["can_apply"])
+        self.assertEqual(r.data["apply_plan"]["matched_books"], 1)
+        self.assertEqual(r.data["apply_plan"]["skipped_books"], 0)
+        self.assertEqual(r.data["apply_plan"]["sessions_to_create"], 1)
+        self.assertEqual(r.data["unmatched_books"], 0)
+        self.assertEqual(r.data["unmatched_sessions"], 1)
+        sessions = r.data["books"][0]["sessions"]
+        self.assertTrue(sessions[0]["will_import"])
+        self.assertFalse(sessions[0]["needs_reader"])
+        self.assertFalse(sessions[1]["will_import"])
+        self.assertTrue(sessions[1]["needs_reader"])
+        self.assertEqual(sessions[1]["warning"], "Malformed EPUB CFI locator. Needs Reader.")
+        self.assertIn(
+            "1 session has malformed locators and needs Reader-assisted import.",
+            r.data["warnings"],
+        )
+        unmatched = json.loads(
+            self.client.get(r.data["unmatched_download_url"]).content.decode("utf-8")
+        )
+        self.assertEqual([book["title"] for book in unmatched["books"]], ["Visible Match"])
+        self.assertEqual(
+            [session["export_session_id"] for session in unmatched["books"][0]["sessions"]],
+            ["session-bad"],
+        )
+
+    def test_matched_book_with_malformed_progress_cfi_session_needs_reader(self):
+        self.client.force_login(self.user)
+        payload = self._payload()
+        payload["books"][0]["sessions"][0]["progress"] = {
+            "current_location": {"cfi": "not-a-cfi"},
+            "progression": 0.5,
+            "profile_version": "0.1.0",
+            "updated_at": "2026-06-01T12:00:00+00:00",
+        }
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertFalse(r.data["can_apply"])
+        self.assertEqual(r.data["apply_plan"]["sessions_to_create"], 0)
+        self.assertEqual(r.data["unmatched_sessions"], 1)
+        self.assertFalse(r.data["books"][0]["sessions"][0]["will_import"])
+        self.assertTrue(r.data["books"][0]["sessions"][0]["needs_reader"])
+        unmatched = json.loads(
+            self.client.get(r.data["unmatched_download_url"]).content.decode("utf-8")
+        )
+        self.assertEqual(
+            unmatched["books"][0]["sessions"][0]["progress"]["current_location"]["cfi"],
+            "not-a-cfi",
+        )
+        self.assertEqual([book["title"] for book in unmatched["books"]], ["Visible Match"])
+        self.assertEqual(
+            [session["export_session_id"] for session in unmatched["books"][0]["sessions"]],
+            ["session-1"],
+        )
+
+    def test_empty_session_without_locators_remains_importable(self):
+        self.client.force_login(self.user)
+        payload = self._payload()
+        payload["books"][0]["sessions"][0]["progress"] = None
+        payload["books"][0]["sessions"][0]["annotations"] = []
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(r.data["books"][0]["sessions"][0]["will_import"])
+        self.assertFalse(r.data["books"][0]["sessions"][0]["needs_reader"])
 
     def test_active_exported_sessions_warn_but_can_apply(self):
         self.client.force_login(self.user)

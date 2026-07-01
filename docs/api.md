@@ -573,8 +573,8 @@ Group delete/scary delete is not part of the current documented product/API cont
   - `GET /api/v1/reading/export/` exports all current-user sessions grouped under visible books.
   - `POST /api/v1/reading/export/` exports selected books/sessions from the current user's visible books.
 - Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches.
-  - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads a native SPL JSON subset containing only staged preview books that could not be matched to visible local books.
+  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches by file hash only.
+  - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads a native SPL JSON subset containing staged preview books that could not be matched to visible local books plus malformed-locator sessions from matched books.
 - Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
   - `POST /api/v1/reading/import/apply/` accepts an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not import foreign/provider formats.
   - Optional multipart `selection` JSON limits import to selected export-local sessions and may override imported session `name`/`notes`.
@@ -591,8 +591,9 @@ Reading payload notes:
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 - Marginalia import apply is intentionally minimal: no stored import jobs and no annotation-level selection. The product UI supports session-level selection and session name/notes customization.
 - Server-side marginalia import is intended for SPL native marginalia exports only. Foreign/provider-specific formats should be normalized by a client through the normal reading APIs or converted by an external tool into the SPL native export shape first.
-- Marginalia apply imports matched visible local books only, skips unmatched books, creates new historical/imported sessions, never imports exported active sessions as active local sessions, and treats duplicate findings as warnings rather than blockers. The import unit is a session; annotation-level selection is not supported. Session selection uses export-local session ids, not SPL database ids.
-- Unmatched import download is Product UI/session-authenticated, tied to the current user's staged preview token, and intended for Reader-assisted re-anchoring when the original book file is missing or different.
+- Marginalia apply imports visible local books matched by file hash only, skips unmatched books, creates new historical/imported sessions, never imports exported active sessions as active local sessions, and treats duplicate findings as warnings rather than blockers. ISBN and title/author fallback matching are intentionally not used for server-side locator import.
+- Server-side apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`; the server does not resolve CFIs against EPUB content. Sessions with malformed locators are excluded from server apply and preserved for Reader-assisted import. The import unit is a session; annotation-level selection is not supported. Session selection uses export-local session ids, not SPL database ids.
+- Unmatched import download is Product UI/session-authenticated, tied to the current user's staged preview token, and intended for Reader-assisted re-anchoring when the original book file is missing, different, or has malformed locators.
 - Export JSON is nested as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session context from nesting.
 - All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
 - Selected export uses `scope.type = "selected"` with per-book `session_filter` values of `"all"` or `"selected"`.

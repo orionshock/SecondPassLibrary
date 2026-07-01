@@ -34,7 +34,8 @@ def parse_import_selection(*, raw_selection: object, plan: dict[str, Any]) -> di
         sessions = selected.setdefault(key, {})
         valid_session_ids = {
             str(session.get("export_session_id") or "")
-            for session in planned_book["exported"].get("sessions") or []
+            for session in planned_book["summary"].get("sessions") or []
+            if session.get("will_import")
         }
         for session_index, raw_session in enumerate(raw_sessions):
             if not isinstance(raw_session, dict):
@@ -46,7 +47,7 @@ def parse_import_selection(*, raw_selection: object, plan: dict[str, Any]) -> di
             session_id = str(raw_session.get("export_session_id") or "")
             if session_id not in valid_session_ids:
                 raise _selection_error(
-                    f"selected session {session_id!r} does not exist in the export."
+                    f"selected session {session_id!r} is not importable by the server."
                 )
             if planned_book["local_book"] is None:
                 raise _selection_error(f"selected book {key!r} is not matched to a visible local book.")

@@ -383,6 +383,22 @@ class MarginaliaImportApplyApiTests(IsolatedUserdataMixin, APITestCase):
             preview["apply_plan"]["annotations_to_create"],
         )
 
+    def test_apply_skips_malformed_locator_sessions(self):
+        self.client.force_login(self.user)
+        payload = self._payload()
+        invalid = json.loads(json.dumps(payload["books"][0]["sessions"][0]))
+        invalid["export_session_id"] = "session-bad"
+        invalid["name"] = "Bad locator"
+        invalid["annotations"][0]["target"]["selector"]["value"] = "not-a-cfi"
+        payload["books"][0]["sessions"].append(invalid)
+
+        r = cast(Any, self._post_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["summary"]["sessions_created"], 1)
+        self.assertEqual(ReadingSession.objects.filter(user=self.user).count(), 1)
+        self.assertFalse(ReadingSession.objects.filter(user=self.user, name="Bad locator").exists())
+
     def test_apply_rolls_back_if_annotation_write_fails(self):
         payload = self._payload()
 

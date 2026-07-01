@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from jsonschema import Draft202012Validator
 
 from core import policies
-from library.models import Book, BookIdentifier
+from library.models import Book
 from reading.models import ReadingSession
 
 
@@ -75,14 +76,23 @@ def plan_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
         "books": book_summaries,
         "book_plans": book_plans,
         "warnings": warnings,
-        "can_apply": apply_plan["matched_books"] > 0,
+        "can_apply": apply_plan["sessions_to_create"] > 0,
         "apply_plan": apply_plan,
     }
 
 
 def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
     plan = plan_marginalia_import(user=user, payload=payload)
-    unmatched_entries = plan["apply_plan"]["skipped_books"]
+    unmatched_books = sum(
+        1 for book in plan["books"] if book["match"]["status"] == "unmatched"
+    )
+    unmatched_sessions = sum(
+        1
+        for book in plan["books"]
+        for session in book["sessions"]
+        if session.get("needs_reader")
+    )
+    unmatched_entries = unmatched_books + unmatched_sessions
     return {
         "valid": True,
         "type": payload.get("type"),
@@ -96,16 +106,32 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
         "can_apply": plan["can_apply"],
         "apply_plan": plan["apply_plan"],
         "unmatched_entries": unmatched_entries,
+        "unmatched_books": unmatched_books,
+        "unmatched_sessions": unmatched_sessions,
     }
 
 
 def unmatched_marginalia_export(*, user, payload: dict[str, Any]) -> dict[str, Any]:
     plan = plan_marginalia_import(user=user, payload=payload)
-    unmatched_books = [
-        book_plan["exported"]
-        for book_plan in plan["book_plans"]
-        if not book_plan["summary"]["will_import"]
-    ]
+    unmatched_books = []
+    for book_plan in plan["book_plans"]:
+        summary = book_plan["summary"]
+        if summary["match"]["status"] == "unmatched":
+            unmatched_books.append(book_plan["exported"])
+            continue
+        invalid_session_ids = {
+            session["export_session_id"]
+            for session in summary["sessions"]
+            if session.get("needs_reader")
+        }
+        if invalid_session_ids:
+            exported = deepcopy(book_plan["exported"])
+            exported["sessions"] = [
+                session
+                for session in exported.get("sessions") or []
+                if session.get("export_session_id") in invalid_session_ids
+            ]
+            unmatched_books.append(exported)
     return {
         "type": payload.get("type"),
         "schema_version": payload.get("schema_version"),
@@ -154,18 +180,29 @@ def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
     sessions = exported.get("sessions") or []
     annotation_counts = _annotation_counts(sessions)
     local_book, match = match_exported_book(user=user, exported=exported)
-    will_import = match["status"] == "matched"
+    book_matched = match["status"] == "matched"
     skipped_warning = (
         "No visible local book matched this export book. It will be skipped."
-        if not will_import
+        if not book_matched
         else ""
     )
     active_sessions = _active_session_count(sessions)
+    session_summaries = [
+        _session_summary(
+            user=user,
+            book=local_book,
+            exported=session,
+            book_matched=book_matched,
+        )
+        for session in sessions
+    ]
+    invalid_sessions = sum(1 for session in session_summaries if session.get("needs_reader"))
     duplicate_sessions = (
         _possible_duplicate_count(user=user, book=local_book, sessions=sessions)
         if local_book is not None
         else 0
     )
+    will_import = any(session["will_import"] for session in session_summaries)
     summary = {
         "title": exported.get("title") or "",
         "authors": exported.get("authors") or [],
@@ -177,29 +214,28 @@ def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
         "match": match,
         "cover_url": _cover_url(local_book) if local_book is not None else "",
         "will_import": will_import,
-        "skip_reason": None if will_import else "unmatched_book",
-        "warning": skipped_warning,
-        "active_sessions_will_import_as_historical": active_sessions if will_import else 0,
+        "skip_reason": None if book_matched else "unmatched_book",
+        "warning": skipped_warning or (
+            "Some sessions have malformed locators and need Reader-assisted import."
+            if invalid_sessions
+            else ""
+        ),
+        "active_sessions_will_import_as_historical": active_sessions if book_matched else 0,
+        "invalid_locator_sessions": invalid_sessions,
         "possible_duplicate_sessions": duplicate_sessions,
-        "sessions": [
-            _session_summary(
-                user=user,
-                book=local_book,
-                exported=session,
-                will_import=will_import,
-            )
-            for session in sessions
-        ],
+        "sessions": session_summaries,
     }
     return {"exported": exported, "local_book": local_book, "summary": summary}
 
 
-def _session_summary(*, user, book: Book | None, exported: dict[str, Any], will_import: bool) -> dict[str, Any]:
+def _session_summary(*, user, book: Book | None, exported: dict[str, Any], book_matched: bool) -> dict[str, Any]:
     counts = _annotation_counts([exported])
     is_active = exported.get("status") == ReadingSession.STATUS_ACTIVE
+    locator_warning = _locator_warning(exported) if book_matched else ""
+    will_import = bool(book_matched and not locator_warning)
     duplicate = (
         _possible_duplicate_session(user=user, book=book, session=exported)
-        if book is not None
+        if book is not None and will_import
         else False
     )
     return {
@@ -211,9 +247,10 @@ def _session_summary(*, user, book: Book | None, exported: dict[str, Any], will_
         "completed_at": exported.get("completed_at"),
         **counts,
         "will_import": will_import,
+        "needs_reader": bool(book_matched and locator_warning),
         "active_will_import_as_historical": bool(will_import and is_active),
         "possible_duplicate": duplicate,
-        "warning": "Possible duplicate session." if duplicate else "",
+        "warning": locator_warning or ("Possible duplicate session." if duplicate else ""),
     }
 
 
@@ -241,6 +278,34 @@ def _annotation_counts(sessions: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
+def _locator_warning(session: dict[str, Any]) -> str:
+    values = []
+    progress = session.get("progress") or {}
+    current_location = progress.get("current_location") if isinstance(progress, dict) else {}
+    if isinstance(current_location, dict):
+        if current_location.get("cfi"):
+            values.append(current_location.get("cfi"))
+        selector = current_location.get("selector")
+        if isinstance(selector, dict) and selector.get("type") == "FragmentSelector":
+            values.append(selector.get("value"))
+
+    for annotation in session.get("annotations") or []:
+        target = annotation.get("target") or {}
+        selector = target.get("selector") if isinstance(target, dict) else None
+        selectors = selector if isinstance(selector, list) else [selector]
+        for item in selectors:
+            if isinstance(item, dict) and item.get("type") == "FragmentSelector":
+                values.append(item.get("value"))
+
+    malformed = any(not _is_cfi_shaped(value) for value in values if value is not None)
+    return "Malformed EPUB CFI locator. Needs Reader." if malformed else ""
+
+
+def _is_cfi_shaped(value: object) -> bool:
+    text = str(value or "").strip()
+    return text.startswith("epubcfi(") and text.endswith(")") and bool(text[8:-1].strip())
+
+
 def _apply_plan(book_summaries: list[dict[str, Any]]) -> dict[str, int]:
     plan = {
         "matched_books": 0,
@@ -254,17 +319,30 @@ def _apply_plan(book_summaries: list[dict[str, Any]]) -> dict[str, int]:
         "possible_duplicate_sessions": 0,
     }
     for book in book_summaries:
-        if book["will_import"]:
-            plan["matched_books"] += 1
-            plan["sessions_to_create"] += book["session_count"]
-            plan["annotations_to_create"] += book["annotation_count"]
-            plan["bookmarks_to_create"] += book["bookmark_count"]
-            plan["highlights_to_create"] += book["highlight_count"]
-            plan["commented_highlights_to_create"] += book["commented_highlight_count"]
-            plan["active_sessions_will_import_as_historical"] += book[
-                "active_sessions_will_import_as_historical"
+        if book["match"]["status"] == "matched":
+            valid_sessions = [
+                session for session in book["sessions"] if session["will_import"]
             ]
-            plan["possible_duplicate_sessions"] += book["possible_duplicate_sessions"]
+            plan["matched_books"] += 1
+            plan["sessions_to_create"] += len(valid_sessions)
+            plan["annotations_to_create"] += sum(
+                session["annotation_count"] for session in valid_sessions
+            )
+            plan["bookmarks_to_create"] += sum(
+                session["bookmark_count"] for session in valid_sessions
+            )
+            plan["highlights_to_create"] += sum(
+                session["highlight_count"] for session in valid_sessions
+            )
+            plan["commented_highlights_to_create"] += sum(
+                session["commented_highlight_count"] for session in valid_sessions
+            )
+            plan["active_sessions_will_import_as_historical"] += sum(
+                1 for session in valid_sessions if session["active_will_import_as_historical"]
+            )
+            plan["possible_duplicate_sessions"] += sum(
+                1 for session in valid_sessions if session["possible_duplicate"]
+            )
         else:
             plan["skipped_books"] += 1
     return plan
@@ -281,13 +359,21 @@ def _warnings(book_summaries: list[dict[str, Any]], apply_plan: dict[str, int]) 
         noun = "book" if count == 1 else "books"
         subject = "It" if count == 1 else "They"
         warnings.append(
-            f"{count} export {noun} did not match visible local books. "
+            f"{count} export {noun} did not match by file hash. "
             f"{subject} can be downloaded for Reader-assisted import."
         )
     if apply_plan["active_sessions_will_import_as_historical"]:
         warnings.append("Active exported sessions will be imported as historical sessions, not active sessions.")
     if apply_plan["possible_duplicate_sessions"]:
         warnings.append("Possible duplicate sessions were found. They are warnings only and do not block preview.")
+    if any(book.get("invalid_locator_sessions") for book in book_summaries):
+        count = sum(book.get("invalid_locator_sessions") or 0 for book in book_summaries)
+        phrase = (
+            "session has malformed locators and needs"
+            if count == 1
+            else "sessions have malformed locators and need"
+        )
+        warnings.append(f"{count} {phrase} Reader-assisted import.")
     return warnings
 
 
@@ -306,20 +392,6 @@ def match_exported_book(*, user, exported: dict[str, Any]) -> tuple[Book | None,
             checksum = getattr(getattr(book, "file", None), "checksum", "") or ""
             if checksum.lower() == file_hash:
                 return book, _matched(book=book, method="file_hash")
-
-    exported_isbn = _normalize_isbn(exported.get("isbn") or "")
-    if exported_isbn:
-        for book in visible_books:
-            if _book_isbns(book) & {exported_isbn}:
-                return book, _matched(book=book, method="isbn")
-
-    title = _normalize_text(exported.get("title") or "")
-    authors = {_normalize_text(author) for author in exported.get("authors") or [] if author}
-    if title and authors:
-        for book in visible_books:
-            book_authors = {_normalize_text(author.name) for author in book.authors.all()}
-            if _normalize_text(book.title) == title and bool(book_authors & authors):
-                return book, _matched(book=book, method="title_author")
 
     return None, {"status": "unmatched", "method": None, "confidence": "none", "book_title": None}
 
@@ -347,22 +419,6 @@ def _hash_value(value: str) -> str:
     text = str(value or "").strip().lower()
     match = re.search(r"sha256:([0-9a-f]{64})", text)
     return match.group(1) if match else ""
-
-
-def _normalize_isbn(value: str) -> str:
-    return re.sub(r"[^0-9xX]", "", str(value or "")).upper()
-
-
-def _normalize_text(value: str) -> str:
-    return " ".join(str(value or "").strip().lower().split())
-
-
-def _book_isbns(book: Book) -> set[str]:
-    values = {_normalize_isbn(book.isbn)}
-    for identifier in cast(Any, book).identifiers.all():
-        if identifier.scheme in {BookIdentifier.SCHEME_ISBN_10, BookIdentifier.SCHEME_ISBN_13}:
-            values.add(_normalize_isbn(identifier.value))
-    return {value for value in values if value}
 
 
 def _active_session_count(sessions: list[dict[str, Any]]) -> int:

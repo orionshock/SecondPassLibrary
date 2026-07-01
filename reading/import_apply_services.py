@@ -43,8 +43,15 @@ def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: obj
                 continue
 
             result["summary"]["books_matched"] += 1
+            importable_session_ids = {
+                session["export_session_id"]
+                for session in preview["sessions"]
+                if session["will_import"]
+            }
             for exported_session in exported_book.get("sessions") or []:
                 export_session_id = exported_session.get("export_session_id") or ""
+                if export_session_id not in importable_session_ids:
+                    continue
                 overrides = None
                 if selected_sessions is not None:
                     overrides = selected_sessions.get(export_session_id)

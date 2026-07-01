@@ -6,7 +6,7 @@ It is distinct from the normal Reading API annotation response shape. The normal
 
 The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
 
-Current support includes export, import preview, and native import apply for matched visible books. Preview stages the validated payload with a short-lived import token; apply imports selected sessions as historical sessions.
+Current support includes export, import preview, and native import apply for exact file-hash-matched visible books. Preview stages the validated payload with a short-lived import token; apply imports selected valid sessions as historical sessions.
 
 This SPL nested marginalia format is the native server import format. The server should not import foreign/provider-specific annotation formats directly. Foreign imports should be normalized by a reader client and sent through the normal reading session/progress/annotation APIs, or converted by an external tool into this SPL native format before server import.
 
@@ -40,6 +40,8 @@ POST /api/v1/reading/import/apply/
 ```
 
 The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export requires current book visibility and includes only sessions owned by the requesting user. Invisible books and other-user or mismatched sessions return 404.
+
+Server-side import is intentionally stricter than export. It matches exported books to visible local books by file hash only; ISBN and title/author metadata are descriptive and are not used as fallback matching for locator import. Apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`, but the server does not resolve CFIs against EPUB contents. Missing/different book files and malformed locator sessions belong in Reader-assisted import via the unmatched download.
 
 ## Top-Level Object
 

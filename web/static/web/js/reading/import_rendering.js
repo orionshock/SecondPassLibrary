@@ -29,16 +29,20 @@ export function renderPreview(preview) {
 }
 
 function renderUnmatchedPanel(preview) {
+  const books = Number(preview.unmatched_books || 0);
+  const sessions = Number(preview.unmatched_sessions || 0);
   const count = Number(preview.unmatched_entries || 0);
   const url = preview.unmatched_download_url || "";
   if (!count || !url) return "";
-  const noun = count === 1 ? "entry" : "entries";
+  const countText = books && sessions
+    ? `${books} ${books === 1 ? "book" : "books"} and ${sessions} ${sessions === 1 ? "session" : "sessions"} are not safe for server-side import.`
+    : `${count} ${count === 1 ? "book or session is" : "books or sessions are"} not safe for server-side import. Download them for Reader-assisted import.`;
   return `
     <section class="card import-unmatched-panel">
       <h3 class="card__title">Some marks need the Reader.</h3>
-      <p>${escapeHtml(count)} ${noun} could not be matched automatically. Download them for Reader-assisted import.</p>
-      <p class="muted">Matching is based on book file hashes. Use the Reader to re-anchor marks when the original book file is missing or different.</p>
-      <a class="button" href="${escapeHtml(url)}">Download unmatched entries</a>
+      <p>${escapeHtml(countText)}</p>
+      <p class="muted">Server import requires an exact book file-hash match and valid EPUB CFI-shaped locators. Use the Reader when the original book file is missing, different, or needs reanchoring.</p>
+      <a class="button" href="${escapeHtml(url)}">Download unmatched marginalia</a>
     </section>
   `;
 }
@@ -158,6 +162,7 @@ function renderSession(session, book, bookIndex, suppressedWarning = "") {
   ];
   const dateText = session.started_at ? formatDate(session.started_at) : "";
   const metadata = renderMetaList([session.status || "", dateText, ...counts]);
+  const skippedText = session.needs_reader ? "Needs Reader" : "Skipped.";
   return `
     <article class="import-session" data-book-index="${bookIndex}" data-session-id="${escapeHtml(session.export_session_id || "")}">
       <div class="import-session__main">
@@ -174,7 +179,7 @@ function renderSession(session, book, bookIndex, suppressedWarning = "") {
         <input class="import-session-name" type="hidden" value="${escapeHtml(session.name || "")}" />
         <input class="import-session-notes" type="hidden" value="${escapeHtml(session.notes || "")}" />
         <button class="button import-session-edit" type="button">Edit name / note</button>
-      ` : '<div class="muted">Skipped.</div>'}
+      ` : `<div class="muted">${escapeHtml(skippedText)}</div>`}
     </article>
   `;
 }
