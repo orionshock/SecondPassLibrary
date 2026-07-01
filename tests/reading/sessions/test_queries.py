@@ -3,74 +3,27 @@ from __future__ import annotations
 from typing import Any, cast
 from uuid import uuid4
 
-from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from accounts.client_api import generate_bearer_token, hash_client_secret
-from accounts.models import UserClientSession
 from library.group_services import (
-    add_book_to_group,
     ensure_book_public_assignment,
-    ensure_user_public_membership,
 )
-from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
-from reading.models import Annotation, ReadingProgress, ReadingSession
+from library.models import Author, Series
+from reading.models import ReadingProgress, ReadingSession
 from reading.services import list_sessions_for_book
+from tests.reading.sessions.helpers import (
+    SessionBearerFixtureMixin,
+    SessionVisibilityFixtureMixin,
+)
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import response_data_list
 
 
-User = get_user_model()
-
-
-def _results(resp: Response) -> list[dict[str, Any]]:
-    payload = cast(dict[str, Any], resp.data)
-    return cast(list[dict[str, Any]], payload.get("results") or [])
-
-class ReadingSessionSummarySessionAuthTests(APITestCase):
+class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_superuser(username="owner", password="pw", email="o@example.com")
-        ensure_user_public_membership(user=self.owner)
-
-        self.user = User.objects.create_user(username="u", password="pw", email="u@example.com")
-        ensure_user_public_membership(user=self.user)
-        self.client.login(username="u", password="pw")
-
-        self.book = create_file_backed_book(title="Visible").book
-
-        self.hidden_group = LibraryGroup.objects.create(name="Hidden")
-        other = User.objects.create_user(username="other", password="pw", email="o@example.com")
-        ensure_user_public_membership(user=other)
-        LibraryGroupMembership.objects.create(user=other, group=self.hidden_group, is_curator=False)
-
-        self.hidden_book = create_file_backed_book(title="Hidden", assign_public=False).book
-        add_book_to_group(actor=self.owner, book=self.hidden_book, group=self.hidden_group)
-
-        self.session_visible = ReadingSession.objects.create(user=self.user, book=self.book, name="S1")
-        ReadingProgress.objects.create(session=self.session_visible, current_location={"cfi": "/6/2"}, progression=0.25)
-        Annotation.objects.create(
-            session=self.session_visible,
-            book=self.book,
-            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
-            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/2)",
-            highlight_text="hi",
-        )
-        Annotation.objects.create(
-            session=self.session_visible,
-            book=self.book,
-            motivation=Annotation.MOTIVATION_COMMENTING,
-            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
-            selector_kind="epub_cfi",
-            selector_value="epubcfi(/6/4)",
-            highlight_text="deleted",
-            comment_text="deleted",
-            is_deleted=True,
-        )
-
-        self.session_hidden = ReadingSession.objects.create(user=self.user, book=self.hidden_book, name="Secret")
+        self.set_up_session_visibility_world()
 
     def test_filters_book_status_is_active(self):
         self.session_visible.status = ReadingSession.STATUS_COMPLETED
@@ -79,15 +32,15 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
 
         r_book = cast(Response, self.client.get(f"/api/v1/reading/sessions/?book={self.book.id}"))
         self.assertEqual(r_book.status_code, 200)
-        self.assertEqual({s["id"] for s in _results(r_book)}, {str(self.session_visible.id)})
+        self.assertEqual({s["id"] for s in response_data_list(r_book)}, {str(self.session_visible.id)})
 
         r_status = cast(Response, self.client.get("/api/v1/reading/sessions/?status=completed"))
         self.assertEqual(r_status.status_code, 200)
-        self.assertIn(str(self.session_visible.id), {s["id"] for s in _results(r_status)})
+        self.assertIn(str(self.session_visible.id), {s["id"] for s in response_data_list(r_status)})
 
         r_active = cast(Response, self.client.get("/api/v1/reading/sessions/?is_active=false"))
         self.assertEqual(r_active.status_code, 200)
-        self.assertIn(str(self.session_visible.id), {s["id"] for s in _results(r_active)})
+        self.assertIn(str(self.session_visible.id), {s["id"] for s in response_data_list(r_active)})
 
     def test_closed_session_progress_get_does_not_reorder_book_sessions(self):
         target = ReadingSession.objects.create(
@@ -126,7 +79,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
 
         resp = cast(Response, self.client.get("/api/v1/reading/sessions/?q=reread"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual({s["id"] for s in _results(resp)}, {str(self.session_visible.id)})
+        self.assertEqual({s["id"] for s in response_data_list(resp)}, {str(self.session_visible.id)})
 
     def test_q_matches_session_notes(self):
         self.session_visible.notes = "Track notes for chapter pacing."
@@ -134,7 +87,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
 
         resp = cast(Response, self.client.get("/api/v1/reading/sessions/?q=pacing"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual({s["id"] for s in _results(resp)}, {str(self.session_visible.id)})
+        self.assertEqual({s["id"] for s in response_data_list(resp)}, {str(self.session_visible.id)})
 
     def test_q_matches_visible_book_title_subtitle_author_and_series(self):
         author = Author.objects.create(name="Jim Butcher")
@@ -151,22 +104,22 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
                 resp = cast(Response, self.client.get(f"/api/v1/reading/sessions/?q={q}"))
                 self.assertEqual(resp.status_code, status.HTTP_200_OK)
                 self.assertEqual(
-                    {s["id"] for s in _results(resp)},
+                    {s["id"] for s in response_data_list(resp)},
                     {str(self.session_visible.id)},
                 )
 
-    def test_q_no_matches_returns_empty_results(self):
+    def test_q_no_matches_returns_emptyresponse_data_list(self):
         resp = cast(Response, self.client.get("/api/v1/reading/sessions/?q=nomatch"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(_results(resp), [])
+        self.assertEqual(response_data_list(resp), [])
 
     def test_whitespace_q_behaves_like_no_q(self):
         no_q = cast(Response, self.client.get("/api/v1/reading/sessions/"))
         whitespace = cast(Response, self.client.get("/api/v1/reading/sessions/?q=%20%20"))
         self.assertEqual(whitespace.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            {s["id"] for s in _results(whitespace)},
-            {s["id"] for s in _results(no_q)},
+            {s["id"] for s in response_data_list(whitespace)},
+            {s["id"] for s in response_data_list(no_q)},
         )
 
     def test_q_combines_with_status_and_is_active_filters(self):
@@ -189,14 +142,14 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
             self.client.get("/api/v1/reading/sessions/?q=marker&status=completed"),
         )
         self.assertEqual(status_resp.status_code, status.HTTP_200_OK)
-        self.assertEqual({s["id"] for s in _results(status_resp)}, {str(completed_match.id)})
+        self.assertEqual({s["id"] for s in response_data_list(status_resp)}, {str(completed_match.id)})
 
         active_resp = cast(
             Response,
             self.client.get("/api/v1/reading/sessions/?q=marker&is_active=true"),
         )
         self.assertEqual(active_resp.status_code, status.HTTP_200_OK)
-        self.assertEqual({s["id"] for s in _results(active_resp)}, {str(active_match.id)})
+        self.assertEqual({s["id"] for s in response_data_list(active_resp)}, {str(active_match.id)})
 
     def test_q_combines_with_book_filter_and_keeps_context(self):
         self.session_visible.notes = "Notes for this visible book."
@@ -209,7 +162,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         payload = cast(dict[str, Any], resp.data)
         self.assertEqual(cast(dict[str, Any], payload["context"])["book"]["id"], str(self.book.id))
-        self.assertEqual({s["id"] for s in _results(resp)}, {str(self.session_visible.id)})
+        self.assertEqual({s["id"] for s in response_data_list(resp)}, {str(self.session_visible.id)})
 
     def test_q_with_book_filter_can_return_zero_results_with_context(self):
         resp = cast(
@@ -237,14 +190,14 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
             with self.subTest(q=q):
                 resp = cast(Response, self.client.get(f"/api/v1/reading/sessions/?q={q}"))
                 self.assertEqual(resp.status_code, status.HTTP_200_OK)
-                self.assertNotIn(str(self.session_hidden.id), {s["id"] for s in _results(resp)})
+                self.assertNotIn(str(self.session_hidden.id), {s["id"] for s in response_data_list(resp)})
 
         by_session_name = cast(
             Response,
             self.client.get("/api/v1/reading/sessions/?q=secret"),
         )
         self.assertEqual(by_session_name.status_code, status.HTTP_200_OK)
-        hidden = next(s for s in _results(by_session_name) if s["id"] == str(self.session_hidden.id))
+        hidden = next(s for s in response_data_list(by_session_name) if s["id"] == str(self.session_hidden.id))
         book = cast(dict[str, Any], hidden["book"])
         self.assertEqual(book["id"], str(self.hidden_book.id))
         self.assertEqual(book["title"], "")
@@ -271,7 +224,7 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         self.assertEqual(book["series"], {"id": str(series.id), "name": "Dresden Files"})
         self.assertEqual(book["series_index"], "6.0")
         self.assertIn("cover_url", book)
-        self.assertEqual({s["id"] for s in _results(resp)}, {str(self.session_visible.id)})
+        self.assertEqual({s["id"] for s in response_data_list(resp)}, {str(self.session_visible.id)})
 
     def test_book_filter_context_present_when_visible_book_has_zero_sessions(self):
         zero = create_file_backed_book(title="No Sessions", assign_public=False).book
@@ -307,22 +260,9 @@ class ReadingSessionSummarySessionAuthTests(APITestCase):
         self.assertEqual(bad_active.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class ReadingSessionSummaryBearerTests(APITestCase):
+class ReadingSessionSummaryBearerTests(SessionBearerFixtureMixin, APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="u", password="pw", email="u@example.com")
-        ensure_user_public_membership(user=self.user)
-
-        token = generate_bearer_token()
-        UserClientSession.objects.create(
-            user=self.user,
-            name="Reader",
-            client_type="reader",
-            token_hash=hash_client_secret(token),
-        )
-        self._auth = f"Bearer {token}"
-
-        self.book = create_file_backed_book(title="Visible").book
-        self.session = ReadingSession.objects.create(user=self.user, book=self.book)
+        self.set_up_session_bearer_world()
 
     def test_bearer_can_search_sessions_with_q(self):
         self.session.name = "Bearer reread"
@@ -336,4 +276,4 @@ class ReadingSessionSummaryBearerTests(APITestCase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual({s["id"] for s in _results(resp)}, {str(self.session.id)})
+        self.assertEqual({s["id"] for s in response_data_list(resp)}, {str(self.session.id)})
