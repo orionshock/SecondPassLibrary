@@ -696,6 +696,14 @@ input[type="file"]:disabled::file-selector-button {
   background: rgba(251, 113, 133, 0.12);
 }
 .button--danger:disabled { opacity: 0.6; cursor: not-allowed; }
+.button--secondary {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+}
+.button--secondary:hover,
+.button--secondary:focus-visible {
+  color: var(--text);
+}
 
 .group-edit-summary {
   padding-bottom: 12px;
@@ -849,32 +857,16 @@ input[type="file"]:disabled::file-selector-button {
   color: var(--text);
   text-decoration: none;
 }
-.book-title-with-action {
-  display: inline-flex;
+.library-context-actions {
+  display: flex;
+  gap: 8px;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
-.context-switch-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  text-decoration: none;
-  border-radius: 6px;
-}
-.context-switch-link .material-symbols-outlined {
-  font-size: 18px;
-  line-height: 1;
-}
-.context-switch-link:hover,
-.context-switch-link:focus-visible {
-  color: var(--text);
-  text-decoration: none;
-}
-.context-switch-link:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+.library-context-action {
+  font-size: 13px;
+  padding: 6px 9px;
 }
 .sessions-controls {
   display: flex;

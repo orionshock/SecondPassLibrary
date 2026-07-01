@@ -139,17 +139,6 @@ function sessionActionLink({ href, icon, label }) {
   return link;
 }
 
-function libraryContextLink(bookId, bookTitle) {
-  const link = el("a", "context-switch-link");
-  link.href = `/library/books/${encodeURIComponent(bookId)}/`;
-  link.setAttribute("aria-label", `Switch to Library details for ${bookTitle}`);
-  link.setAttribute("title", "View in Library");
-  const iconEl = el("span", "material-symbols-outlined", "multiple_stop");
-  iconEl.setAttribute("aria-hidden", "true");
-  link.appendChild(iconEl);
-  return link;
-}
-
 function isInteractiveElement(element) {
   return !!(
     element &&
@@ -273,12 +262,9 @@ function renderBookGroup(sessions) {
   header.appendChild(coverLink);
 
   const identity = el("div", "sessions-book-group__identity");
-  const titleWrap = el("div", "book-title-with-action");
   const titleLink = el("a", "sessions-book-group__title", bookTitle);
   titleLink.href = bookSessionsHref;
-  titleWrap.appendChild(titleLink);
-  titleWrap.appendChild(libraryContextLink(bookId, bookTitle));
-  identity.appendChild(titleWrap);
+  identity.appendChild(titleLink);
   const metadata = el("div", "muted sessions-card__metadata");
   appendSeparatedParts(metadata, [authors.join(", "), seriesLabel(book)]);
   if (metadata.childNodes.length) identity.appendChild(metadata);

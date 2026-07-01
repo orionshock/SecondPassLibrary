@@ -10,17 +10,6 @@ function el(tag, className, text) {
   return node;
 }
 
-function libraryContextLink(bookId, bookTitle) {
-  const link = el("a", "context-switch-link");
-  link.href = `/library/books/${encodeURIComponent(bookId)}/`;
-  link.setAttribute("aria-label", `Switch to Library details for ${bookTitle}`);
-  link.setAttribute("title", "View in Library");
-  const icon = el("span", "material-symbols-outlined", "multiple_stop");
-  icon.setAttribute("aria-hidden", "true");
-  link.appendChild(icon);
-  return link;
-}
-
 function formatWhen(value) {
   if (!value) return "";
   const d = new Date(String(value));
@@ -33,22 +22,42 @@ export function renderBookMeta(container, book) {
   const title = book && book.title ? String(book.title) : "Book";
   const bookId = book && book.id ? String(book.id) : "";
   const subtitle = book && book.subtitle ? String(book.subtitle) : "";
-  const authors = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
+  const authorObjects = Array.isArray(book && book.authors) ? book.authors.filter(Boolean) : [];
+  const authors = authorObjects.map((a) => a && a.name).filter(Boolean);
   const series = book && book.series && book.series.name ? String(book.series.name) : "";
+  const seriesId = book && book.series && book.series.id ? String(book.series.id) : "";
   const seriesIndex = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
 
   const wrap = document.createElement("div");
   wrap.className = "book-meta";
 
-  const titleWrap = el("div", "book-title-with-action");
-  titleWrap.appendChild(el("span", "book-meta__line", title));
-  if (bookId) titleWrap.appendChild(libraryContextLink(bookId, title));
-  wrap.appendChild(titleWrap);
+  wrap.appendChild(el("div", "book-meta__line", title));
   if (subtitle) wrap.appendChild(el("div", "muted", subtitle));
   if (authors.length) wrap.appendChild(el("div", "book-meta__line", authors.join(", ")));
   if (series) wrap.appendChild(el("div", "muted", `${series}${seriesIndex ? ` #${seriesIndex}` : ""}`));
+  if (bookId) {
+    const actions = el("div", "library-context-actions");
+    actions.setAttribute("aria-label", "Library context links");
+    actions.appendChild(contextAction(`/library/books/${encodeURIComponent(bookId)}/`, "View book in Library", `View ${title} in Library`));
+    const primaryAuthor = authorObjects.find((author) => author && author.id && author.name);
+    if (primaryAuthor) {
+      actions.appendChild(contextAction(`/library/?view=author&author=${encodeURIComponent(String(primaryAuthor.id))}`, "View author in Library", `View ${primaryAuthor.name} in Library`));
+    }
+    if (series && seriesId) {
+      actions.appendChild(contextAction(`/library/?view=series&series=${encodeURIComponent(seriesId)}`, "View series in Library", `View ${series} in Library`));
+    }
+    wrap.appendChild(actions);
+  }
 
   container.appendChild(wrap);
+}
+
+function contextAction(href, label, accessibleLabel) {
+  const link = el("a", "button button--secondary library-context-action", label);
+  link.href = href;
+  link.setAttribute("aria-label", accessibleLabel);
+  link.setAttribute("title", accessibleLabel);
+  return link;
 }
 
 function sortAnnotations(rows, sortKey) {

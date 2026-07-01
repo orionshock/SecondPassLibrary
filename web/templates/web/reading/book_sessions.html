@@ -27,17 +27,7 @@
 
       <div class="book-hero__main">
         <div class="book-meta">
-          <div class="book-title-with-action">
-            <span class="book-meta__line">{{ book.title|default:"Book"|escape }}</span>
-            <a
-              class="context-switch-link"
-              href="/library/books/{{ book.id|escape }}/"
-              aria-label="Switch to Library details for {{ book.title|default:'Book'|escape }}"
-              title="View in Library"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">multiple_stop</span>
-            </a>
-          </div>
+          <div class="book-meta__line">{{ book.title|default:"Book"|escape }}</div>
           {% if book.subtitle %}<div class="muted">{{ book.subtitle|escape }}</div>{% endif %}
           {% if book.authors.all %}
             <div class="book-meta__line">
@@ -48,6 +38,32 @@
             <div class="muted">{{ book.series.name|escape }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</div>
           {% endif %}
         </div>
+      </div>
+      <div class="library-context-actions" aria-label="Library context links">
+        <a
+          class="button button--secondary library-context-action"
+          href="/library/books/{{ book.id|escape }}/"
+          aria-label="View {{ book.title|default:'Book'|escape }} in Library"
+          title="View {{ book.title|default:'Book'|escape }} in Library"
+        >View book in Library</a>
+        {% with primary_author=book.authors.all|first %}
+          {% if primary_author %}
+            <a
+              class="button button--secondary library-context-action"
+              href="/library/?view=author&amp;author={{ primary_author.id|urlencode }}"
+              aria-label="View {{ primary_author.name|escape }} in Library"
+              title="View {{ primary_author.name|escape }} in Library"
+            >View author in Library</a>
+          {% endif %}
+        {% endwith %}
+        {% if book.series %}
+          <a
+            class="button button--secondary library-context-action"
+            href="/library/?view=series&amp;series={{ book.series.id|urlencode }}"
+            aria-label="View {{ book.series.name|escape }} in Library"
+            title="View {{ book.series.name|escape }} in Library"
+          >View series in Library</a>
+        {% endif %}
       </div>
     </div>
 

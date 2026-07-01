@@ -4,6 +4,7 @@ from pathlib import Path
 from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
+from library.models import Author, Series
 from reading.models import ReadingSession
 from tests.core.product_ui.helpers import ProductUiTestCase
 from tests.utils.books import create_file_backed_book
@@ -237,6 +238,11 @@ class ProductUiReadingTests(ProductUiTestCase):
         )
 
         book = create_file_backed_book(title="B1").book
+        author = Author.objects.create(name="Author One")
+        series = Series.objects.create(name="Series One")
+        book.authors.add(author)
+        book.series = series
+        book.save(update_fields=["series", "updated_at"])
         other_book = create_file_backed_book(title="B2").book
 
         mine = ReadingSession.objects.create(
@@ -312,10 +318,18 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertNotContains(response, f"Session ID: {unnamed.id}")
         self.assertNotContains(response, "Session ID:")
         self.assertContains(response, f'href="/library/books/{book.id}/"')
-        self.assertContains(response, 'class="context-switch-link"')
-        self.assertContains(response, "multiple_stop")
-        self.assertContains(response, f"Switch to Library details for {book.title}")
-        self.assertContains(response, 'title="View in Library"')
+        self.assertContains(response, 'class="library-context-actions"')
+        self.assertContains(response, 'class="button button--secondary library-context-action"')
+        self.assertContains(response, "View book in Library")
+        self.assertContains(response, f"View {book.title} in Library")
+        self.assertContains(response, f'href="/library/?view=author&amp;author={author.id}"', html=False)
+        self.assertContains(response, "View author in Library")
+        self.assertContains(response, f"View {author.name} in Library")
+        self.assertContains(response, f'href="/library/?view=series&amp;series={series.id}"', html=False)
+        self.assertContains(response, "View series in Library")
+        self.assertContains(response, f"View {series.name} in Library")
+        self.assertNotContains(response, 'class="context-switch-link"')
+        self.assertNotContains(response, "multiple_stop")
         self.assertNotContains(response, "Book details")
         self.assertNotContains(response, 'href="/library/authors/')
         self.assertNotContains(response, 'href="/library/series/')
@@ -359,11 +373,17 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertNotIn("Session ID: ${sessionState.sessionId}", js)
         self.assertIn("onSessionChanged", js)
         self.assertIn("onSessionChanged", actions_js)
-        self.assertIn("function libraryContextLink", rendering_js)
-        self.assertIn('el("a", "context-switch-link")', rendering_js)
+        self.assertIn("function contextAction", rendering_js)
+        self.assertIn('el("a", "button button--secondary library-context-action", label)', rendering_js)
+        self.assertIn('el("div", "library-context-actions")', rendering_js)
         self.assertIn('`/library/books/${encodeURIComponent(bookId)}/`', rendering_js)
-        self.assertIn("Switch to Library details for ${bookTitle}", rendering_js)
-        self.assertIn('"multiple_stop"', rendering_js)
+        self.assertIn('"View book in Library"', rendering_js)
+        self.assertIn("`View ${title} in Library`", rendering_js)
+        self.assertIn('/library/?view=author&author=${encodeURIComponent(String(primaryAuthor.id))}', rendering_js)
+        self.assertIn('"View author in Library"', rendering_js)
+        self.assertIn('/library/?view=series&series=${encodeURIComponent(seriesId)}', rendering_js)
+        self.assertIn('"View series in Library"', rendering_js)
+        self.assertNotIn('"multiple_stop"', rendering_js)
         self.assertNotIn("/library/authors/", rendering_js)
         self.assertNotIn("/library/series/", rendering_js)
 
@@ -552,11 +572,10 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn('el("a", "sessions-card__cover-link")', js)
         self.assertIn('el("a", "sessions-card__title"', js)
         self.assertIn('`/reading/sessions/books/${encodeURIComponent(bookId)}/`', js)
-        self.assertIn("function libraryContextLink", js)
-        self.assertIn('el("a", "context-switch-link")', js)
-        self.assertIn('`/library/books/${encodeURIComponent(bookId)}/`', js)
-        self.assertIn("Switch to Library details for ${bookTitle}", js)
-        self.assertIn('"multiple_stop"', js)
+        self.assertNotIn("function libraryContextLink", js)
+        self.assertNotIn('el("a", "context-switch-link")', js)
+        self.assertNotIn('`/library/books/${encodeURIComponent(bookId)}/`', js)
+        self.assertNotIn('"multiple_stop"', js)
         self.assertNotIn("bindCardInteraction", js)
         self.assertNotIn("window.location.assign", js)
         self.assertNotIn('card.setAttribute("role", "link")', js)
@@ -575,7 +594,7 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn('card.getAttribute("data-session-url")', js)
         self.assertIn("window.location.href = url", js)
         self.assertIn('el("a", "sessions-book-group__title", bookTitle)', js)
-        self.assertIn('el("div", "book-title-with-action")', js)
+        self.assertNotIn('el("div", "book-title-with-action")', js)
         self.assertIn("coverLink.href = bookSessionsHref", js)
         self.assertIn("titleLink.href = bookSessionsHref", js)
         self.assertIn("titleLink.href = marginaliaHref", js)
@@ -604,7 +623,9 @@ class ProductUiReadingTests(ProductUiTestCase):
         self.assertIn(".metadata-piece + .metadata-piece::before", css)
         self.assertIn('.meta-item + .meta-item::before', css)
         self.assertIn(r'content: "\00b7"', css)
-        self.assertIn(".context-switch-link", css)
+        self.assertIn(".library-context-actions", css)
+        self.assertIn(".library-context-action", css)
+        self.assertIn(".button--secondary", css)
         self.assertIn(".sessions-view-bar > .sessions-controls__page-size", css)
         self.assertIn("justify-content: flex-end", css)
         self.assertIn(".sessions-card[data-session-url]", css)
