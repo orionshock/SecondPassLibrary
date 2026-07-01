@@ -15,6 +15,7 @@ from django.test.utils import override_settings
 import django.core.files.storage as storage
 from django.utils.functional import empty
 from rest_framework import status
+from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile

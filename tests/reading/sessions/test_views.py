@@ -17,7 +17,6 @@ from reading.profile import (
 from tests.reading.api_test_base import ReadingAPITestBase
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import response_data_dict
-from tests.utils.responses import response_data_list
 
 
 User = get_user_model()

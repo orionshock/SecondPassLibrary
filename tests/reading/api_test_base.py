@@ -7,8 +7,6 @@ from accounts.models import UserClientSession
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
-from tests.utils.responses import response_data_dict as _response_data_dict
-from tests.utils.responses import response_data_list as _response_data_list
 from tests.utils.books import create_file_backed_book
 
 

@@ -2,22 +2,16 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from pathlib import Path
 from typing import Any, cast
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.client_api import hash_client_secret
-from accounts.models import UserClientSession
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
-from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()

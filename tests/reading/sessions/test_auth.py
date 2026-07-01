@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from accounts.models import UserClientSession
-from reading.models import Annotation, ReadingSession
+from reading.models import ReadingSession
 from reading.profile import (
     CURRENT_READING_PROFILE_VERSION,
 )

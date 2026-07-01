@@ -1,25 +1,14 @@
 from __future__ import annotations
 
-import json
-from datetime import timedelta
 from typing import Any, cast
-from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.client_api import hash_client_secret
-from accounts.models import UserClientSession
-from reading.import_apply_services import apply_marginalia_import
-from reading.import_services import preview_marginalia_import
-from reading.import_staging import stage_marginalia_import, staged_import_path
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
-from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()

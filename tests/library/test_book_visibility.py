@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from decimal import Decimal
-from typing import Any, cast
+from typing import cast
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
@@ -10,9 +8,8 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.group_services import ensure_book_public_assignment
-from library.models import Author, BookFile, Series
+from library.models import BookFile
 from library.models import BookGroupAssignment
-from library.models import BookIdentifier
 
 from tests.library.helpers import (
     create_librarian_user,

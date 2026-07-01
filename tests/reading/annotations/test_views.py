@@ -530,26 +530,6 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(ann.status_code, status.HTTP_400_BAD_REQUEST)
 
-
-from typing import Any, cast
-
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from rest_framework import status
-from rest_framework.response import Response
-
-from accounts.models import UserClientSession
-from reading.models import Annotation, ReadingSession
-from reading.profile import (
-    CURRENT_READING_PROFILE_VERSION,
-)
-from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
-from tests.utils.responses import response_data_dict
-from tests.utils.responses import response_data_list
-
-
-User = get_user_model()
-
 class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
     def test_bearer_annotations_are_user_scoped(self):
         session1 = ReadingSession.objects.create(user=self.user1, book=self.book)

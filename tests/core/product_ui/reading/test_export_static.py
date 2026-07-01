@@ -4,11 +4,9 @@ from pathlib import Path
 from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
-from library.models import Author, Series
 from reading.models import ReadingSession
 from tests.core.product_ui.helpers import ProductUiTestCase
 from tests.utils.books import create_file_backed_book
-from uuid import uuid4
 
 
 User = get_user_model()

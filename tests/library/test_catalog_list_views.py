@@ -11,7 +11,6 @@ from rest_framework.test import APITestCase
 
 from library.group_services import ensure_book_public_assignment
 from library.models import Author, BookFile, Series
-from library.models import BookGroupAssignment
 from library.models import BookIdentifier
 
 from tests.library.helpers import (

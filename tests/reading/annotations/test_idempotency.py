@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import cast
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
@@ -10,7 +10,6 @@ from reading.models import Annotation, ReadingSession
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import response_data_dict
-from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
