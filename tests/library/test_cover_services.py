@@ -89,5 +89,7 @@ class CoverStorageTests(IsolatedMediaRootMixin, TestCase):
 
         # Content-addressed-ish storage: covers/<first2>/<next2>/<sha>.<ext>
         expected_prefix = f"covers/{info.sha256[:2]}/{info.sha256[2:4]}/{info.sha256}"
-        self.assertTrue(book.cover_file.name.startswith(expected_prefix))
-        self.assertTrue(book.cover_file.name.endswith(".png"))
+        cover_name = book.cover_file.name
+        assert cover_name is not None
+        self.assertTrue(cover_name.startswith(expected_prefix))
+        self.assertTrue(cover_name.endswith(".png"))
