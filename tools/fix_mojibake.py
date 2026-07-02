@@ -59,7 +59,7 @@ MOJIBAKE_SEQ_REPLACEMENTS: dict[str, str] = {
 }
 
 
-def _iter_text_files(root: Path) -> list[Path]:
+def iter_text_files(root: Path) -> list[Path]:
     out: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [name for name in dirnames if name not in SKIP_DIR_NAMES]
@@ -70,7 +70,7 @@ def _iter_text_files(root: Path) -> list[Path]:
     return out
 
 
-def _decode_best_effort(data: bytes) -> str | None:
+def decode_best_effort(data: bytes) -> str | None:
     for encoding in ("utf-8", "cp1252", "latin-1"):
         try:
             return data.decode(encoding)
@@ -79,7 +79,7 @@ def _decode_best_effort(data: bytes) -> str | None:
     return None
 
 
-def _fix_mojibake(text: str) -> str:
+def fix_mojibake_text(text: str) -> str:
     candidate = text
     if any(marker in text for marker in MOJIBAKE_MARKERS):
         for encoding in ("cp1252", "latin-1"):
@@ -98,11 +98,15 @@ def _fix_mojibake(text: str) -> str:
     return candidate.replace("\r\n", "\n").replace("\r", "\n")
 
 
+def has_mojibake_marker(text: str) -> bool:
+    return any(marker in text for marker in MOJIBAKE_MARKERS)
+
+
 def _check_repository(repo_root: Path) -> int:
     scanned = 0
     failures: list[str] = []
 
-    for path in _iter_text_files(repo_root):
+    for path in iter_text_files(repo_root):
         scanned += 1
         try:
             text = path.read_text(encoding="utf-8")
@@ -110,7 +114,7 @@ def _check_repository(repo_root: Path) -> int:
             failures.append(f"{path}: invalid UTF-8 ({exc})")
             continue
 
-        if any(marker in text for marker in MOJIBAKE_MARKERS):
+        if has_mojibake_marker(text):
             failures.append(f"{path}: contains mojibake marker")
 
     if failures:
@@ -137,13 +141,13 @@ def main() -> int:
     changed = 0
     scanned = 0
 
-    for path in _iter_text_files(repo_root):
+    for path in iter_text_files(repo_root):
         scanned += 1
-        text = _decode_best_effort(path.read_bytes())
+        text = decode_best_effort(path.read_bytes())
         if text is None:
             continue
 
-        fixed = _fix_mojibake(text)
+        fixed = fix_mojibake_text(text)
         if fixed != text:
             path.write_text(fixed, encoding="utf-8", newline="\n")
             changed += 1

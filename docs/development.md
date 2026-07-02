@@ -187,7 +187,16 @@ Hygiene:
 
 ```powershell
 .\.venv\Scripts\python.exe -m ruff check tests
+.\.venv\Scripts\python.exe tools\static_hygiene.py
+.\.venv\Scripts\python.exe tools\static_hygiene.py --all
+.\.venv\Scripts\python.exe tools\static_hygiene.py --fix-mojibake
 ```
+
+`tools\static_hygiene.py` is the repo check for decorative HTML entities,
+mojibake markers, trailing whitespace, and `git diff --check`. By default it
+checks touched files only and does not modify files. Use `--all` for a full
+tracked-file scan. `--fix-mojibake` and `--fix-trailing-whitespace` may modify
+files in the scan set.
 
 Pyright currently excludes tests in the checked-in configuration. For a
 report-only type audit, use the local `node_modules\.bin\pyright.cmd` with a

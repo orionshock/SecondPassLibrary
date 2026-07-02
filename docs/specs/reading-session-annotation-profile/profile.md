@@ -1,10 +1,10 @@
 # Reading Session Annotation Profile
 
-Version: 0.1.0  
-Status: Draft  
-Base model: W3C Web Annotation Data Model  
-Primary serialization: JSON-LD  
-Primary ebook target: EPUB  
+Version: 0.1.0
+Status: Draft
+Base model: W3C Web Annotation Data Model
+Primary serialization: JSON-LD
+Primary ebook target: EPUB
 Primary selector: EPUB CFI FragmentSelector
 
 Profile id (project-owned placeholder):

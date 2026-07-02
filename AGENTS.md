@@ -444,6 +444,10 @@ Verification guidance:
 4. Docs-only changes: optionally run `python manage.py check`; no tests required.
 5. In the summary, list exactly which focused tests were run and whether the full suite was intentionally skipped.
 6. Do not claim "all tests pass" unless the full suite was run; use phrasing like "Focused tests passed" / "Full suite not run".
+7. For static Product UI/text hygiene, prefer the repo tool instead of ad hoc
+   commands:
+   `python tools/static_hygiene.py`. Use `--all` for a full tracked-file scan
+   and `--fix-mojibake` only when file mutation is intended.
 
 Then summarize:
 
