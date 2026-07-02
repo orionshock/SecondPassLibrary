@@ -80,6 +80,18 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
         deployment = (ROOT / "docs" / "deployment.md").read_text(encoding="utf-8")
         normalized = " ".join(deployment.split())
 
-        self.assertIn("`ALLOWED_HOSTS` is currently permissive", normalized)
-        self.assertIn("temporary deployment posture", normalized)
+        self.assertIn("`DJANGO_ALLOWED_HOSTS`", normalized)
+        self.assertIn("wildcard `*` is available only by explicit operator choice", normalized)
+        self.assertIn("`DJANGO_CSRF_TRUSTED_ORIGINS`", normalized)
+        self.assertIn("`DJANGO_TRUST_X_FORWARDED_PROTO`", normalized)
+        self.assertIn("`DJANGO_USE_X_FORWARDED_HOST`", normalized)
+        self.assertIn("`DJANGO_SECURE_COOKIES`", normalized)
+
+    def test_deployment_docs_explain_cors_contract(self):
+        deployment = (ROOT / "docs" / "deployment.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("CORS remains open for `/api/` and `/.well-known/`", normalized)
+        self.assertIn("credentials disabled", normalized)
+        self.assertIn("independent bearer-token browser clients", normalized)
         self.assertIn("`DJANGO_ALLOWED_HOSTS`", normalized)

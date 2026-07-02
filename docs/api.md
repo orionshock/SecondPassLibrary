@@ -24,6 +24,15 @@ Authentication non-goals (current):
 
 See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction. Session revocation and web/client session tracking are documented in `docs/session-management.md`. Implemented reader-client code authorization is documented in `docs/client-api-auth.md`.
 
+## Browser clients and CORS
+
+CORS is currently open for `/api/` and `/.well-known/` with credentials
+disabled. This supports independent browser reader clients that use bearer
+tokens from another origin.
+
+The Product UI is a same-origin session/CSRF application and is not CORS-open.
+Do not enable cross-origin credentials without a separate auth/security design.
+
 ## Error responses
 
 Second Pass Library uses two broad categories of error responses:

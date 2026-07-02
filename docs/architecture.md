@@ -55,6 +55,9 @@ Position:
 - `accounts.UserWebSession` tracks active Django web sessions to support revocation (companion tracking only; does not replace Django sessions).
 - Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
+- CORS is open for API/discovery endpoints only, with credentials disabled, so
+  independent browser reader clients can use bearer tokens from another origin.
+  Product UI session-auth routes are intentionally not CORS-open.
 - Email verification, password reset flows, MFA, and invite systems are not implemented yet.
 
 ### First-run bootstrap

@@ -24,21 +24,61 @@ The script fails fast and performs these steps in order:
 2. `python manage.py collectstatic --noinput`
 3. A WSGI server serving `secondpass.wsgi:application`
 
+The scripts are local/dev convenience helpers and manual smoke tools for now,
+not the final deployment orchestration contract. Real deployment environment
+wiring and process supervision can wait for Docker.
+
 Environment variables:
 
 - `PYTHON`: Python executable, default `python`
 - `DJANGO_SETTINGS_MODULE`: optional Django settings module override; inherited
   by migration, static collection, and Gunicorn processes
 - `DJANGO_DEBUG`: production startup scripts force `0`
+- `DJANGO_ALLOWED_HOSTS`: comma-separated allowed hostnames/IPs
+- `DJANGO_CSRF_TRUSTED_ORIGINS`: comma-separated scheme-qualified origins for
+  CSRF checks
+- `DJANGO_TRUST_X_FORWARDED_PROTO`: set to `1` only behind a trusted reverse
+  proxy that strips/sets `X-Forwarded-Proto`
+- `DJANGO_USE_X_FORWARDED_HOST`: set to `1` only behind a trusted reverse proxy
+  that strips/sets forwarded host headers
+- `DJANGO_SECURE_COOKIES`: set to `1` for HTTPS deployments
 - `BIND`: server bind address, default `0.0.0.0:8000`
 - `WEB_CONCURRENCY`: POSIX/Gunicorn worker count, default `2`
 - `GUNICORN_CONFIG`: optional POSIX/Gunicorn configuration file
 - `WAITRESS_THREADS`: PowerShell/Waitress thread count, default `4`
 
-`ALLOWED_HOSTS` is currently permissive (`["*"]`) as a temporary deployment
-posture while self-hosted setup hardens. Do not treat wildcard hosts as the
-recommended long-term production configuration. The expected future shape is an
-environment-driven setting such as `DJANGO_ALLOWED_HOSTS`.
+`DJANGO_ALLOWED_HOSTS` defaults to local-safe hosts:
+`localhost,127.0.0.1,[::1]`. Production deployments should set it to the public
+hostnames or LAN IPs that users will actually use. The wildcard `*` is available
+only by explicit operator choice, for example `DJANGO_ALLOWED_HOSTS=*`; do not
+treat wildcard hosts as the recommended hardened deployment posture.
+
+HTTPS reverse proxy example:
+
+```text
+DJANGO_ALLOWED_HOSTS=books.example.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://books.example.com
+DJANGO_TRUST_X_FORWARDED_PROTO=1
+DJANGO_SECURE_COOKIES=1
+```
+
+Direct HTTP LAN example:
+
+```text
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,[::1],192.168.1.25
+DJANGO_CSRF_TRUSTED_ORIGINS=
+DJANGO_TRUST_X_FORWARDED_PROTO=0
+DJANGO_USE_X_FORWARDED_HOST=0
+DJANGO_SECURE_COOKIES=0
+```
+
+Do not enable forwarded-proxy trust unless the app is behind a trusted reverse
+proxy that strips untrusted incoming forwarded headers and sets the replacement
+headers itself.
+
+CORS remains open for `/api/` and `/.well-known/` with credentials disabled.
+This is for independent bearer-token browser clients such as the reading
+client. The Product UI remains same-origin session/CSRF and is not CORS-open.
 
 WhiteNoise serves only application assets under `/static/` from the collected
 `STATIC_ROOT` at `var/static/`: Product UI CSS, JavaScript, icons, favicon

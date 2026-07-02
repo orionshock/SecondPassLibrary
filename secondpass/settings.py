@@ -41,6 +41,12 @@ def _staticfiles_backend(*, debug: bool) -> str:
     return "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
+def _secure_proxy_ssl_header() -> tuple[str, str] | None:
+    if _env_bool("DJANGO_TRUST_X_FORWARDED_PROTO", False):
+        return ("HTTP_X_FORWARDED_PROTO", "https")
+    return None
+
+
 # User data directory for runtime data
 USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
 RUNNING_TESTS = "test" in sys.argv
@@ -65,9 +71,13 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool("DJANGO_DEBUG", False)
 
-# Host restrictions are intentionally disabled for now. Deployments should put
-# host validation at a reverse proxy or tighten this setting when needed.
-ALLOWED_HOSTS = ["*"]
+LOCAL_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS", LOCAL_ALLOWED_HOSTS)
+
+CSRF_TRUSTED_ORIGINS = _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS", [])
+
+SECURE_PROXY_SSL_HEADER = _secure_proxy_ssl_header()
+USE_X_FORWARDED_HOST = _env_bool("DJANGO_USE_X_FORWARDED_HOST", False)
 
 
 # Application definition
@@ -199,6 +209,16 @@ STORAGES = {
     },
 }
 WHITENOISE_MANIFEST_STRICT = False
+
+# Browser/session security.
+_SECURE_COOKIES = _env_bool("DJANGO_SECURE_COOKIES", False)
+SESSION_COOKIE_SECURE = _SECURE_COOKIES
+CSRF_COOKIE_SECURE = _SECURE_COOKIES
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_HTTPONLY = True
+# Product UI JavaScript reads the CSRF cookie to send X-CSRFToken.
+CSRF_COOKIE_HTTPONLY = False
 
 # Product UI pages reuse DRF's built-in login views.
 LOGIN_URL = "/api-auth/login/"

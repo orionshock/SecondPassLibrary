@@ -15,6 +15,8 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn('$ErrorActionPreference = "Stop"', source)
         self.assertIn("$env:PYTHON", source)
         self.assertIn('$env:DJANGO_DEBUG = if ($env:DJANGO_DEBUG)', source)
+        self.assertIn("DJANGO_ALLOWED_HOSTS", source)
+        self.assertIn("localhost,127.0.0.1,[::1]", source)
         self.assertLess(
             source.index("manage.py migrate --noinput"),
             source.index("manage.py runserver @args"),
@@ -27,6 +29,10 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn("set -e", source)
         self.assertIn('PYTHON="${PYTHON:-python}"', source)
         self.assertIn('export DJANGO_DEBUG="${DJANGO_DEBUG:-1}"', source)
+        self.assertIn(
+            'export DJANGO_ALLOWED_HOSTS="${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,[::1]}"',
+            source,
+        )
         self.assertLess(
             source.index("manage.py migrate --noinput"),
             source.index('manage.py runserver "$@"'),
@@ -90,6 +96,17 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn("development and production", normalized)
         self.assertIn("setup wizard does not create tables", normalized)
         self.assertIn("seed_dev_users", normalized)
+
+    def test_docs_describe_scripts_as_local_convenience_not_deployment_contract(self):
+        docs = [
+            ROOT / "README.md",
+            ROOT / "docs" / "deployment.md",
+        ]
+        for path in docs:
+            with self.subTest(path=path):
+                normalized = " ".join(path.read_text(encoding="utf-8").split())
+                self.assertIn("local/dev convenience", normalized)
+                self.assertIn("Docker", normalized)
 
     def test_docs_explain_raw_runserver_requires_debug_opt_in(self):
         docs = [

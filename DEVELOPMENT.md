@@ -26,3 +26,5 @@ lives under `userdata/`.
 
 Raw `python manage.py runserver` does not opt into debug mode by itself. Set
 `DJANGO_DEBUG=1` first if you bypass the startup script for local development.
+Development startup also supplies local-safe `DJANGO_ALLOWED_HOSTS` defaults
+unless you set that environment variable yourself.

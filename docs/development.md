@@ -60,6 +60,10 @@ Raw `python manage.py runserver` uses the normal settings defaults. Because
 development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
 running raw `runserver`.
 
+The development scripts also set `DJANGO_ALLOWED_HOSTS` to
+`localhost,127.0.0.1,[::1]` when it is not already set. Preserve or override
+that value in your shell if you need a LAN hostname or IP during development.
+
 For a clean local reset:
 
 1. Stop the server.
@@ -103,7 +107,10 @@ The Django server enables open CORS for API + discovery endpoints only:
 - `/.well-known/*`
 - `/api/*`
 
-This supports standalone reader clients from arbitrary origins. Cross-origin cookie credentials are not enabled; clients must use `Authorization: Bearer ...` tokens for protected API calls.
+This supports standalone reader clients from arbitrary origins. Cross-origin
+cookie credentials are not enabled; clients must use `Authorization: Bearer ...`
+tokens for protected API calls. The Product UI remains same-origin and uses
+session auth with CSRF.
 
 ## Product UI (current)
 
