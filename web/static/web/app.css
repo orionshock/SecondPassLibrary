@@ -647,13 +647,28 @@ input[type="file"]:disabled::file-selector-button {
   margin-bottom: 16px;
 }
 
+.server-settings-label,
 .server-settings-field label {
   color: var(--muted);
   font-size: 13px;
+  font-weight: 650;
 }
 
 .server-settings-display {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.server-settings-display--status {
+  display: inline-flex;
+  width: fit-content;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
 }
 
 .server-settings-control {
@@ -661,8 +676,8 @@ input[type="file"]:disabled::file-selector-button {
   box-sizing: border-box;
 }
 
-.server-settings-control--short {
-  min-height: 76px;
+.server-settings-control--banner {
+  min-height: 132px;
 }
 
 .server-settings-help {
@@ -675,6 +690,14 @@ input[type="file"]:disabled::file-selector-button {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.server-settings-feature {
+  max-width: 720px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .server-settings-status-row {

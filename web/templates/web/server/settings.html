@@ -33,20 +33,20 @@
       <button id="server-settings-tab-identity" class="tab-button is-active" type="button" data-tab="identity" role="tab" aria-selected="true" aria-controls="server-settings-panel-identity">Identity</button>
       <button id="server-settings-tab-dashboard" class="tab-button" type="button" data-tab="dashboard" role="tab" aria-selected="false" aria-controls="server-settings-panel-dashboard">Dashboard</button>
       <button id="server-settings-tab-public" class="tab-button" type="button" data-tab="public-library" role="tab" aria-selected="false" aria-controls="server-settings-panel-public">Public Library</button>
-      <button id="server-settings-tab-advanced" class="tab-button" type="button" data-tab="advanced" role="tab" aria-selected="false" aria-controls="server-settings-panel-advanced">Advanced</button>
+      <button id="server-settings-tab-library-groups" class="tab-button" type="button" data-tab="library-groups" role="tab" aria-selected="false" aria-controls="server-settings-panel-library-groups">Library Groups</button>
     </div>
 
     <form id="server-settings-form" class="server-settings-form">
       <div id="server-settings-panel-identity" class="tab-panel server-settings-panel" data-tab-panel="identity" role="tabpanel" aria-labelledby="server-settings-tab-identity">
         <div class="server-settings-field">
-          <label for="server-settings-name-input">Server name</label>
-          <span id="server-settings-name-display" class="server-settings-display muted">Loading...</span>
+          <label class="server-settings-label" for="server-settings-name-input">Server name</label>
+          <span id="server-settings-name-display" class="server-settings-display">Loading...</span>
           <input id="server-settings-name-input" class="form-control is-hidden server-settings-control" type="text" value="" maxlength="120" />
         </div>
 
         <div class="server-settings-field">
-          <label for="server-settings-description-input">Description</label>
-          <span id="server-settings-description-display" class="server-settings-display muted">Loading...</span>
+          <label class="server-settings-label" for="server-settings-description-input">Description</label>
+          <span id="server-settings-description-display" class="server-settings-display">Loading...</span>
           <textarea id="server-settings-description-input" class="form-control form-control--textarea is-hidden server-settings-control" maxlength="1000"></textarea>
           <div class="server-settings-help muted">Shown to reader clients via discovery (optional).</div>
         </div>
@@ -54,31 +54,31 @@
 
       <div id="server-settings-panel-dashboard" class="tab-panel server-settings-panel is-hidden" data-tab-panel="dashboard" role="tabpanel" aria-labelledby="server-settings-tab-dashboard">
         <div class="server-settings-field">
-          <label for="server-settings-banner-input">Server banner message</label>
-          <span id="server-settings-banner-display" class="server-settings-display muted">Loading...</span>
-          <textarea id="server-settings-banner-input" class="form-control form-control--textarea is-hidden server-settings-control server-settings-control--short" maxlength="500"></textarea>
+          <label class="server-settings-label" for="server-settings-banner-input">Server banner message</label>
+          <span id="server-settings-banner-display" class="server-settings-display">Loading...</span>
+          <textarea id="server-settings-banner-input" class="form-control form-control--textarea is-hidden server-settings-control server-settings-control--banner" maxlength="500"></textarea>
           <div class="server-settings-help muted">Shown at the top of the dashboard. Leave blank to hide.</div>
         </div>
       </div>
 
       <div id="server-settings-panel-public" class="tab-panel server-settings-panel is-hidden" data-tab-panel="public-library" role="tabpanel" aria-labelledby="server-settings-tab-public">
         <div class="server-settings-field">
-          <label for="server-settings-public-name-input">Public group name</label>
-          <span id="server-settings-public-name-display" class="server-settings-display muted">Loading...</span>
+          <label class="server-settings-label" for="server-settings-public-name-input">Public group name</label>
+          <span id="server-settings-public-name-display" class="server-settings-display">Loading...</span>
           <input id="server-settings-public-name-input" class="form-control is-hidden server-settings-control" type="text" value="" maxlength="255" />
         </div>
 
         <div class="server-settings-field">
-          <label for="server-settings-public-description-input">Public group description</label>
-          <span id="server-settings-public-description-display" class="server-settings-display muted">Loading...</span>
+          <label class="server-settings-label" for="server-settings-public-description-input">Public group description</label>
+          <span id="server-settings-public-description-display" class="server-settings-display">Loading...</span>
           <textarea id="server-settings-public-description-input" class="form-control form-control--textarea is-hidden server-settings-control"></textarea>
         </div>
       </div>
 
-      <div id="server-settings-panel-advanced" class="tab-panel server-settings-panel is-hidden" data-tab-panel="advanced" role="tabpanel" aria-labelledby="server-settings-tab-advanced">
-        <div class="server-settings-field">
-          <label for="server-settings-advanced-groups-input">Advanced library groups</label>
-          <span id="server-settings-advanced-groups-display" class="server-settings-display muted">Loading...</span>
+      <div id="server-settings-panel-library-groups" class="tab-panel server-settings-panel is-hidden" data-tab-panel="library-groups" role="tabpanel" aria-labelledby="server-settings-tab-library-groups">
+        <div class="server-settings-field server-settings-feature">
+          <label class="server-settings-label" for="server-settings-advanced-groups-input">Advanced library groups</label>
+          <span id="server-settings-advanced-groups-display" class="server-settings-display server-settings-display--status">Loading...</span>
           <div id="server-settings-advanced-groups-edit" class="server-settings-checkbox is-hidden">
             <input id="server-settings-advanced-groups-input" type="checkbox" />
             <span class="muted">Enable Advanced Library Group Usage</span>
