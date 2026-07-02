@@ -7,7 +7,7 @@ app_name = "web"
 urlpatterns = [
     path("", views.index, name="index"),
     path("setup/", views.setup, name="setup"),
-    path("app/", views.app_dashboard, name="app"),
+    path("dashboard/", views.dashboard, name="dashboard"),
 
     # Canonical reading session routes (sessions-first).
     path("reading/export/", views.reading_export, name="reading_export"),

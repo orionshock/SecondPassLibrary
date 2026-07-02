@@ -98,7 +98,7 @@ This supports standalone reader clients from arbitrary origins. Cross-origin coo
 
 ## Product UI (current)
 
-- App shell/dashboard: `/app/`
+- Dashboard: `/dashboard/`
 - Owner server settings: `/server/` (Owner only; includes Django Admin / Service Hatch link)
 - Library browse: `/library/`
 - Book detail: `/library/books/<book_id>/`

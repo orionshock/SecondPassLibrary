@@ -87,7 +87,7 @@ function setActiveNav() {
   const mapping = [
     { key: "marginalia", prefix: "/reading/" },
     { key: "library", prefix: "/library/" },
-    { key: "app", prefix: "/app/" },
+    { key: "dashboard", prefix: "/dashboard/" },
     { key: "shelves", prefix: "/shelves/" },
     { key: "groups", prefix: "/groups/" },
     { key: "imports", prefix: "/imports/" },

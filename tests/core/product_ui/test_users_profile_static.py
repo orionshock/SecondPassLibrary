@@ -148,7 +148,7 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
 
     def test_logout_is_post_form(self):
         self.client.force_login(self.user)
-        response = self.client.get("/app/")
+        response = self.client.get("/dashboard/")
         self.assertContains(response, '<form class="userbox__logoutform" action="/api-auth/logout/" method="post">')
 
     def test_post_logout_logs_out_and_redirects(self):

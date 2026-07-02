@@ -37,9 +37,9 @@ class CorsPolicyTests(TestCase):
         self.assertIn(response.status_code, (200, 302))
         self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
 
-    def test_product_ui_app_is_not_cors_open(self):
+    def test_product_ui_dashboard_is_not_cors_open(self):
         response = self.client.get(
-            "/app/",
+            "/dashboard/",
             HTTP_ORIGIN="http://evil.example",
         )
         self.assertIn(response.status_code, (200, 302))

@@ -200,7 +200,7 @@ STORAGES = {
 
 # Product UI pages reuse DRF's built-in login views.
 LOGIN_URL = "/api-auth/login/"
-LOGIN_REDIRECT_URL = "/app/"
+LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/"
 
 # CORS

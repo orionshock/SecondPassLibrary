@@ -6,9 +6,9 @@ This document sketches the first product web UI for Second Pass Library at a hig
 
 The first minimal product UI shell now exists:
 
-- `/` redirects to `/app/`
-- `/app/` is an authenticated dashboard shell
-- `/app/` shows recent reading activity (from `GET /api/v1/reading/sessions/recent/`) and a simple welcome message
+- `/` redirects to `/dashboard/` after setup
+- `/dashboard/` is the authenticated dashboard shell
+- `/dashboard/` shows recent reading activity (from `GET /api/v1/reading/sessions/recent/`) and dashboard action cards
 - `/server/` is an authenticated Owner-only Server Settings page (server identity + Django Admin / Service Hatch link)
 - `/profile/` is the authenticated self account page (identity + groups + access summary + self-profile edit)
 - `/profile/password/` is the authenticated self password change page
@@ -96,7 +96,7 @@ The groups UI is API-driven using:
 
 Note: Group product routes use UUIDs and `LibraryGroup` no longer has a slug. The special Public group is identified internally by `ServerSetting(public_group_id)` (not by a slug string).
 
-Dashboard note: the old "Sections" navigation card was removed from `/app/` because the top navigation already provides the same links.
+Dashboard note: the old "Sections" navigation card was removed from `/dashboard/` because the top navigation already provides the same links.
 
 Shelves product UI pages exist (API-driven):
 

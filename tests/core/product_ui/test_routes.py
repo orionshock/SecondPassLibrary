@@ -10,15 +10,19 @@ from tests.core.product_ui.helpers import ProductUiTestCase
 class ProductUiRouteTests(ProductUiTestCase):
     """Test basic route availability and redirects."""
 
-    def test_root_redirects_to_app(self):
+    def test_root_redirects_to_dashboard(self):
         response = self.client.get("/", follow=False)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "/app/")
+        self.assertEqual(response["Location"], "/dashboard/")
 
-    def test_unauthenticated_app_redirects_to_login(self):
-        response = self.client.get("/app/", follow=False)
+    def test_unauthenticated_dashboard_redirects_to_login(self):
+        response = self.client.get("/dashboard/", follow=False)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "/api-auth/login/?next=/app/")
+        self.assertEqual(response["Location"], "/api-auth/login/?next=/dashboard/")
+
+    def test_app_route_is_not_registered(self):
+        response = self.client.get("/app/", follow=False)
+        self.assertEqual(response.status_code, 404)
 
     def test_unauthenticated_server_settings_redirects_to_login(self):
         response = self.client.get("/server/", follow=False)
@@ -94,15 +98,15 @@ class ProductUiRouteTests(ProductUiTestCase):
 
     def test_base_template_has_no_service_hatch_nav_link(self):
         self.client.force_login(self.user)
-        response = self.client.get("/app/")
+        response = self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'href="/admin/"')
         self.assertContains(response, 'href="/server/"')
         self.assertContains(response, "Server Settings")
 
-    def test_authenticated_app_returns_200_and_title(self):
+    def test_authenticated_dashboard_returns_200_and_title(self):
         self.client.force_login(self.user)
-        response = self.client.get("/app/")
+        response = self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Second Pass Library")
         self.assertContains(response, "/static/web/js/main.js")
@@ -111,6 +115,9 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertContains(response, "/static/web/favicon.png")
         self.assertContains(response, 'class="brand__icon"')
         self.assertContains(response, 'aria-hidden="true"')
+        self.assertContains(response, '<a class="brand" href="/dashboard/">', html=False)
+        self.assertContains(response, '<h1 class="sr-only">Dashboard</h1>', html=False)
+        self.assertNotContains(response, '<h1 class="page-title">Dashboard</h1>', html=False)
         self.assertNotContains(response, "/static/web/js/groups.js")
         self.assertNotContains(response, "/static/web/js/shelves.js")
         self.assertNotContains(response, "/static/web/js/users.js")
@@ -183,7 +190,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         profile.must_change_password = True
         profile.save(update_fields=["must_change_password", "updated_at"])
         self.client.force_login(self.user)
-        response = self.client.get("/app/", follow=False)
+        response = self.client.get("/dashboard/", follow=False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/profile/password/")
 
@@ -203,7 +210,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         profile.save(update_fields=["must_change_password", "updated_at"])
         self.client.force_login(self.user)
 
-        response = self.client.get("/app/", follow=False)
+        response = self.client.get("/dashboard/", follow=False)
 
         self.assertEqual(response.status_code, 200)
 
@@ -211,7 +218,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         server_settings.set_server_banner_message("Maintenance tonight.")
         self.client.force_login(self.user)
 
-        response = self.client.get("/app/")
+        response = self.client.get("/dashboard/")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="dashboard-server-banner"')
@@ -223,7 +230,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         server_settings.set_server_banner_message(raw_message)
         self.client.force_login(self.user)
 
-        response = self.client.get("/app/")
+        response = self.client.get("/dashboard/")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, escape(raw_message), html=False)

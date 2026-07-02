@@ -43,7 +43,7 @@ def product_login_required(
 def index(request: HttpRequest) -> HttpResponse:
     if not has_active_owner():
         return redirect("web:setup")
-    return redirect("/app/")
+    return redirect("/dashboard/")
 
 
 def login(request: HttpRequest) -> HttpResponse:
@@ -96,7 +96,7 @@ def setup(request: HttpRequest) -> HttpResponse:
 
 
 @product_login_required
-def app_dashboard(request: HttpRequest) -> HttpResponse:
+def dashboard(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "web/dashboard/app.html",

@@ -131,7 +131,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
 
     def test_dashboard_still_omits_breadcrumbs(self):
         self.client.force_login(self.user)
-        response = self.client.get("/app/")
+        response = self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'aria-label="Breadcrumb"')
 
