@@ -113,6 +113,7 @@ complete the first-run setup wizard. It initializes the server identity, the
 shared Public group (displayed as `Common Room` by default), the advanced-groups
 UI preference, and the initial Owner account. `seed_dev_users` remains optional
 development/demo data and is not required for setup. On POSIX systems, use
-`sh scripts/start-dev.sh`.
+`sh scripts/start-dev.sh`. The development scripts opt into Django debug mode;
+the app settings default to debug off.
 
 Development-only test dependencies live in `requirements-dev.txt`.

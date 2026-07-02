@@ -44,9 +44,10 @@ POSIX:
 sh scripts/start-dev.sh
 ```
 
-Both scripts run `python manage.py migrate --noinput` and only then start
-Django's development server. Set `PYTHON` to override the Python executable.
-Additional arguments are passed through to `runserver`, for example:
+Both scripts set `DJANGO_DEBUG=1` when it is not already set, run
+`python manage.py migrate --noinput`, and only then start Django's development
+server. Set `PYTHON` to override the Python executable. Additional arguments
+are passed through to `runserver`, for example:
 
 ```powershell
 .\scripts\start-dev.ps1 127.0.0.1:8080 --noreload

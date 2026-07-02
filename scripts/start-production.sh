@@ -4,6 +4,7 @@ set -e
 PYTHON="${PYTHON:-python}"
 BIND="${BIND:-0.0.0.0:8000}"
 WEB_CONCURRENCY="${WEB_CONCURRENCY:-2}"
+export DJANGO_DEBUG=0
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$SCRIPT_DIR/.."
 

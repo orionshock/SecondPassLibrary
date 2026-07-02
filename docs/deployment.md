@@ -4,7 +4,7 @@ Second Pass Library's first-run setup works in development and production. The
 database schema must exist before the web process accepts requests; the setup
 wizard does not create tables from request handling.
 
-## Single-instance POSIX startup
+## Single-instance startup
 
 Install the runtime dependencies, configure the environment, and run:
 
@@ -12,24 +12,32 @@ Install the runtime dependencies, configure the environment, and run:
 sh scripts/start-production.sh
 ```
 
+On PowerShell:
+
+```powershell
+.\scripts\start-production.ps1
+```
+
 The script fails fast and performs these steps in order:
 
 1. `python manage.py migrate --noinput`
 2. `python manage.py collectstatic --noinput`
-3. Gunicorn serving `secondpass.wsgi:application`
+3. A WSGI server serving `secondpass.wsgi:application`
 
 Environment variables:
 
 - `PYTHON`: Python executable, default `python`
 - `DJANGO_SETTINGS_MODULE`: optional Django settings module override; inherited
   by migration, static collection, and Gunicorn processes
-- `BIND`: Gunicorn bind address, default `0.0.0.0:8000`
-- `WEB_CONCURRENCY`: Gunicorn worker count, default `2`
-- `GUNICORN_CONFIG`: optional Gunicorn configuration file
+- `DJANGO_DEBUG`: production startup scripts force `0`
+- `BIND`: server bind address, default `0.0.0.0:8000`
+- `WEB_CONCURRENCY`: POSIX/Gunicorn worker count, default `2`
+- `GUNICORN_CONFIG`: optional POSIX/Gunicorn configuration file
+- `WAITRESS_THREADS`: PowerShell/Waitress thread count, default `4`
 
 WhiteNoise serves only application assets under `/static/` from the collected
 `STATIC_ROOT`: Product UI CSS, JavaScript, icons, favicon assets, and other
-packaged static files. WhiteNoise runs inside the Django/Gunicorn application,
+packaged static files. WhiteNoise runs inside the Django/WSGI application,
 so a separate static-file web server is not required for these assets.
 Production (`DEBUG=False`) uses compressed manifest storage for hashed,
 cacheable filenames. Development keeps Django's normal `runserver` static-file

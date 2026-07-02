@@ -39,15 +39,21 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             "django.contrib.staticfiles.storage.StaticFilesStorage",
         )
 
-    def test_production_startup_collects_static_before_gunicorn(self):
-        source = (ROOT / "scripts" / "start-production.sh").read_text(
-            encoding="utf-8"
-        )
+    def test_production_startup_collects_static_before_wsgi_server(self):
+        script_servers = {
+            "start-production.sh": "-m gunicorn",
+            "start-production.ps1": "-m waitress",
+        }
+        for script_name, server_marker in script_servers.items():
+            with self.subTest(script_name=script_name):
+                source = (ROOT / "scripts" / script_name).read_text(
+                    encoding="utf-8"
+                )
 
-        self.assertLess(
-            source.index("manage.py collectstatic --noinput"),
-            source.index("-m gunicorn"),
-        )
+                self.assertLess(
+                    source.index("manage.py collectstatic --noinput"),
+                    source.index(server_marker),
+                )
 
     def test_deployment_docs_keep_static_and_protected_data_separate(self):
         deployment = (ROOT / "docs" / "deployment.md").read_text(encoding="utf-8")

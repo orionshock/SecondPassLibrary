@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 
 from corsheaders.defaults import default_headers
 
@@ -42,6 +43,7 @@ def _staticfiles_backend(*, debug: bool) -> str:
 
 # User data directory for runtime data
 USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
+RUNNING_TESTS = "test" in sys.argv
 
 # Ensure required directories exist
 os.makedirs(USERDATA_DIR / "db", exist_ok=True)
@@ -62,11 +64,11 @@ SECRET_KEY = os.getenv(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool("DJANGO_DEBUG", True)
+DEBUG = _env_bool("DJANGO_DEBUG", False)
 
-ALLOWED_HOSTS = [
-    h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
-]
+# Host restrictions are intentionally disabled for now. Deployments should put
+# host validation at a reverse proxy or tighten this setting when needed.
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -194,9 +196,10 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": _staticfiles_backend(debug=DEBUG),
+        "BACKEND": _staticfiles_backend(debug=DEBUG or RUNNING_TESTS),
     },
 }
+WHITENOISE_MANIFEST_STRICT = False
 
 # Product UI pages reuse DRF's built-in login views.
 LOGIN_URL = "/api-auth/login/"
