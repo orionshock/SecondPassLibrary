@@ -7,6 +7,12 @@
 {% block content %}
   <h1 class="page-title">Dashboard</h1>
 
+  {% if server_banner_message %}
+    <section id="dashboard-server-banner" class="dashboard-banner" aria-label="Server message">
+      <p>{{ server_banner_message }}</p>
+    </section>
+  {% endif %}
+
   <section class="card dashboard-recent">
     <div class="dashboard-section-header">
       <div>

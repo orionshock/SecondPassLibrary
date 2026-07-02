@@ -19,6 +19,7 @@ def _server_settings_payload() -> dict[str, Any]:
     return {
         "server_name": server_settings.get_server_name(),
         "server_description": server_settings.get_server_description(),
+        "server_banner_message": server_settings.get_server_banner_message(),
         "public_group_name": public_group.name,
         "public_group_description": public_group.description,
         "advanced_library_groups_enabled": (
@@ -45,6 +46,7 @@ class ServerSettingsView(APIView):
         allowed_keys = {
             "server_name",
             "server_description",
+            "server_banner_message",
             "public_group_name",
             "public_group_description",
             "advanced_library_groups_enabled",
@@ -68,6 +70,14 @@ class ServerSettingsView(APIView):
                 )
             except ValueError as exc:
                 errors.setdefault("server_description", []).append(str(exc))
+
+        if "server_banner_message" in data:
+            try:
+                server_settings.set_server_banner_message(
+                    str(data.get("server_banner_message") or "")
+                )
+            except ValueError as exc:
+                errors.setdefault("server_banner_message", []).append(str(exc))
 
         public_name = data.get("public_group_name", None)
         public_description = data.get("public_group_description", None)

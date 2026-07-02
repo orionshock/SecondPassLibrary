@@ -8,8 +8,10 @@ from django.test import TestCase
 from core.models import ServerSetting
 from core.server_settings import (
     clear_server_settings_cache,
+    get_server_banner_message,
     get_server_setting,
     get_server_settings_map,
+    set_server_banner_message,
     set_server_setting,
 )
 from library.group_services import PUBLIC_GROUP_ID_SETTING, get_public_group
@@ -25,6 +27,19 @@ class ServerSettingsServiceTests(TestCase):
         self.assertIsNone(get_server_setting("example", default=None))
         set_server_setting(key="example", value={"a": 1}, description="d")
         self.assertEqual(get_server_setting("example", default=None), {"a": 1})
+
+    def test_server_banner_message_is_optional_and_trimmed(self):
+        self.assertEqual(get_server_banner_message(), "")
+
+        set_server_banner_message("  Server maintenance tonight.  ")
+        self.assertEqual(get_server_banner_message(), "Server maintenance tonight.")
+
+        set_server_banner_message("   ")
+        self.assertEqual(get_server_banner_message(), "")
+
+    def test_server_banner_message_rejects_overlong_value(self):
+        with self.assertRaises(ValueError):
+            set_server_banner_message("x" * 501)
 
     def test_settings_are_cached_until_cleared(self):
         ServerSetting.objects.create(key="k", value="v1", description="")

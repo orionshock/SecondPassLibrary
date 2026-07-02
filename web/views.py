@@ -20,6 +20,7 @@ from accounts.bootstrap import (
 )
 from accounts.forms import FirstOwnerSetupForm
 from core import policies
+from core import server_settings as server_settings_service
 from library.models import Book
 from reading.services import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
@@ -96,7 +97,11 @@ def setup(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def app_dashboard(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/dashboard/app.html")
+    return render(
+        request,
+        "web/dashboard/app.html",
+        {"server_banner_message": server_settings_service.get_server_banner_message()},
+    )
 
 
 @product_login_required

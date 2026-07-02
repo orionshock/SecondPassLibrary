@@ -40,6 +40,7 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["server_name"], "Second Pass Library")
+        self.assertEqual(data["server_banner_message"], "")
         self.assertEqual(data["public_group_name"], "Common Room")
         self.assertFalse(data["advanced_library_groups_enabled"])
 
@@ -48,6 +49,7 @@ class ServerIdentitySettingsTests(TestCase):
             data={
                 "server_name": "My Library",
                 "server_description": "Private.",
+                "server_banner_message": "  Maintenance tonight.  ",
                 "public_group_name": "Reading Room",
                 "public_group_description": "Shared books.",
                 "advanced_library_groups_enabled": True,
@@ -58,9 +60,18 @@ class ServerIdentitySettingsTests(TestCase):
         data = resp.json()
         self.assertEqual(data["server_name"], "My Library")
         self.assertEqual(data["server_description"], "Private.")
+        self.assertEqual(data["server_banner_message"], "Maintenance tonight.")
         self.assertEqual(data["public_group_name"], "Reading Room")
         self.assertEqual(data["public_group_description"], "Shared books.")
         self.assertTrue(data["advanced_library_groups_enabled"])
+
+        resp = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"server_banner_message": "   "},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["server_banner_message"], "")
 
     def test_patch_rejects_unknown_fields(self):
         owner = User.objects.create_user(
@@ -96,6 +107,23 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         payload = resp.json()
         self.assertIn("server_name", payload)
+
+    def test_patch_rejects_overlong_server_banner_message(self):
+        owner = User.objects.create_user(
+            username="owner",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+        resp = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"server_banner_message": "x" * 501},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        payload = resp.json()
+        self.assertIn("server_banner_message", payload)
 
     def test_discovery_includes_server_identity(self):
         owner = User.objects.create_user(

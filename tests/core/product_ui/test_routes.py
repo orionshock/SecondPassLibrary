@@ -1,4 +1,6 @@
 """Route and smoke tests for product UI pages."""
+from django.utils.html import escape
+
 from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from core import server_settings
@@ -38,6 +40,9 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Server Settings")
         self.assertContains(response, 'id="server-settings-form"')
+        self.assertContains(response, "Server banner message")
+        self.assertContains(response, 'id="server-settings-banner-input"')
+        self.assertContains(response, "Shown at the top of the dashboard. Leave blank to hide.")
         self.assertContains(response, 'id="server-settings-public-name-input"')
         self.assertContains(response, 'id="server-settings-public-description-input"')
         self.assertContains(response, 'id="server-settings-advanced-groups-input"')
@@ -89,6 +94,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertContains(response, 'id="recent-reading-section"')
         self.assertContains(response, 'id="recent-reading-status"')
         self.assertContains(response, 'id="recent-reading-list"')
+        self.assertNotContains(response, 'id="dashboard-server-banner"')
         self.assertNotContains(response, "All reading sessions")
         self.assertContains(response, 'aria-label="Dashboard actions"')
         self.assertContains(response, "Recent reading activity")
@@ -175,6 +181,28 @@ class ProductUiRouteTests(ProductUiTestCase):
         response = self.client.get("/app/", follow=False)
 
         self.assertEqual(response.status_code, 200)
+
+    def test_dashboard_shows_configured_server_banner_message(self):
+        server_settings.set_server_banner_message("Maintenance tonight.")
+        self.client.force_login(self.user)
+
+        response = self.client.get("/app/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="dashboard-server-banner"')
+        self.assertContains(response, 'aria-label="Server message"')
+        self.assertContains(response, "Maintenance tonight.")
+
+    def test_dashboard_escapes_server_banner_message(self):
+        raw_message = "<strong>Maintenance</strong>"
+        server_settings.set_server_banner_message(raw_message)
+        self.client.force_login(self.user)
+
+        response = self.client.get("/app/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, escape(raw_message), html=False)
+        self.assertNotContains(response, raw_message, html=False)
 
     def test_unauthenticated_library_redirects_to_login(self):
         response = self.client.get("/library/", follow=False)
