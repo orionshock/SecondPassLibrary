@@ -18,9 +18,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path, re_path
 from django.conf import settings
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.templatetags.static import static
+from django.views import defaults as default_views
 from django.views.static import serve as static_serve
 
 from core.views import secondpass_well_known
@@ -29,6 +30,15 @@ from web import views as web_views
 
 def favicon(request):
     return redirect(static("web/favicon.png"), permanent=True)
+
+
+def page_not_found(request, exception):
+    if request.path.startswith("/api/"):
+        return JsonResponse({"detail": "Not found."}, status=404)
+    return default_views.page_not_found(request, exception, template_name="404.html")
+
+
+handler404 = page_not_found
 
 
 urlpatterns = [

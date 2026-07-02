@@ -46,6 +46,7 @@ Second Pass Library uses two broad categories of error responses:
 Notes:
 
 - Some endpoints intentionally return `404 Not Found` for resources the user cannot access to avoid leaking existence. This is by design in a few places (see `docs/permissions.md`).
+- API route misses under `/api/` return JSON `{"detail": "Not found."}` with status `404`. Product UI route misses return styled HTML error pages.
 - The `error` envelope is a UI hint for consistent messaging; it does not replace authorization checks on the actual endpoint being called.
 
 ## Pagination
