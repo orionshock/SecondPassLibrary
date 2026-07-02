@@ -43,11 +43,21 @@ Second Pass Library uses two broad categories of error responses:
 
 2. **Standard DRF serializer validation errors** generally keep DRF's default field-error shape.
 
+Current API errors are not fully normalized. Existing response shapes may
+include:
+
+- `{"detail": "..."}`
+- field validation errors such as `{"field": ["..."]}`
+- selected custom `{"error": {...}}` helper responses
+
 Notes:
 
-- Some endpoints intentionally return `404 Not Found` for resources the user cannot access to avoid leaking existence. This is by design in a few places (see `docs/permissions.md`).
-- API route misses under `/api/` return JSON `{"detail": "Not found."}` with status `404`. Product UI route misses return styled HTML error pages.
+- API route misses under `/api/` return JSON `{"detail": "Not found."}` with status `404`. Non-API route misses return styled Product UI HTML error pages.
+- Malformed API input should generally return `400 Bad Request`. Malformed UUID path segments under `/api/` may fail URL matching before a view runs; those route-level misses return the JSON 404 shape above.
+- Missing objects generally return `404 Not Found`.
+- Some endpoints intentionally return `404 Not Found` for resources the user cannot access to avoid leaking existence. This is by design in sensitive user, library, reading, and shelf flows where already established (see `docs/permissions.md`). Do not change these anti-leak 404s to 403 without an explicit product/security decision.
 - The `error` envelope is a UI hint for consistent messaging; it does not replace authorization checks on the actual endpoint being called.
+- A future API error-envelope cleanup should be separate and treated as contract-impacting.
 
 ## Pagination
 

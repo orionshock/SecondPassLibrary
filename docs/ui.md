@@ -30,6 +30,15 @@ Implementation note: the product UI lives in the dedicated Django app `web` (not
 
 UI JavaScript is split into page-focused vanilla ES modules under `web/static/web/js/` and loaded via a single `<script type="module">` entrypoint (`web/static/web/js/main.js`). There is no frontend build step.
 
+Product UI error handling:
+
+- Missing Product UI pages return styled HTML error pages, not API JSON.
+- Styled Product UI error pages currently exist for `404 Page not found`, `403 Not allowed`, and `500 Something went wrong`.
+- Error pages should use the Product UI dark theme/shell where it is safe, avoid tracebacks and debug details in non-debug mode, and include a dashboard action.
+- `/dashboard/` is the canonical dashboard route.
+- `/app/` is not a supported route; it should remain a normal styled 404.
+- Product UI object routes that expect UUID-backed IDs should reject malformed IDs with 404 before rendering a broken shell. Valid inaccessible objects may still intentionally return 404 to avoid leaking existence.
+
 Fresh installs first use the server-rendered `/setup/` page to configure the
 server name and optional description, the Public group's display name and
 description, the advanced-groups UI preference, and the initial Owner account.
@@ -148,6 +157,7 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
   - direct group memberships (`groups`)
   - exact membership stewardship (`groups[].is_curator`)
 - Object payload capabilities are UI hints, not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
+- Do not "fix" established anti-leak 404 responses to 403 without an explicit product/security decision.
 - Decorative UI punctuation and separators should not be written as HTML character entities in live templates or JavaScript-generated markup. Use semantic inline elements with CSS-generated separators, or real text only when the character is meaningful content. ARIA labels should use plain readable punctuation or words.
 
 ## 2. First UI surface

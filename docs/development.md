@@ -120,6 +120,24 @@ Logout is POST-based via `/api-auth/logout/` (no GET logout links in the product
 
 The product UI code lives in the Django app `web`.
 
+## Error-handling checks
+
+Product UI and API missing-route behavior intentionally differ:
+
+- Product UI missing pages return styled HTML error pages.
+- `/api/` missing routes return JSON 404 responses shaped as `{"detail": "Not found."}`.
+- Product UI error-page tests should run with `DEBUG=False`.
+- API route-level 404 tests should assert JSON content type and response body.
+
+Useful focused checks:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py test tests.core.test_api_route_errors --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.contracts.test_error_pages --keepdb
+.\.venv\Scripts\python.exe tools\static_hygiene.py
+.\.venv\Scripts\python.exe -m ruff check .
+```
+
 ## Authentication (current)
 
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
