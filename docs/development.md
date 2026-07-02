@@ -148,6 +148,53 @@ It is intended to catch ordinary Python mistakes without treating Django's
 dynamic model/runtime attributes as hard errors.
 If PowerShell blocks `npm.ps1`, use `npm.cmd run typecheck`.
 
+Targeted test commands:
+
+Product UI:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_sessions_static --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_book_marginalia_static --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_import_static --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_export_static --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.contracts.test_html_entity_contracts --keepdb
+```
+
+Reading:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py test tests.reading.sessions --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.reading.progress --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.reading.annotations --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.reading.imports --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.reading.exports --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.reading --keepdb
+```
+
+Library:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py test tests.library.test_catalog_list_views --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.library.test_book_visibility --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.library.test_file_views --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.library.test_author_series_views --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.library.test_book_identifiers --keepdb
+.\.venv\Scripts\python.exe manage.py test tests.library --keepdb
+```
+
+Hygiene:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check tests
+```
+
+Pyright currently excludes tests in the checked-in configuration. For a
+report-only type audit, use the local `node_modules\.bin\pyright.cmd` with a
+temporary config that includes `tests` and adds the repository root to
+`extraPaths`; do not treat this as a required gate until that setup is checked
+in deliberately.
+
 Test helpers:
 
 - Prefer `tests/utils/books.py::create_file_backed_book()` when a test needs a normal valid Book. The product invariant is that Books are file-backed.

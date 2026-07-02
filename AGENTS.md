@@ -433,7 +433,7 @@ Verification guidance:
    - library changes: `python manage.py test tests.library --keepdb`
    - reading changes: `python manage.py test tests.reading --keepdb`
    - core/policy/shared changes: `python manage.py test tests.core --keepdb` (plus any affected app tests)
-   - product UI/template/static changes: `python manage.py test tests.core.test_product_ui --keepdb`
+   - product UI/template/static changes: `python manage.py test tests.core.product_ui --keepdb`
 3. Run the full suite (`python manage.py test`) only when:
    - migrations changed broadly
    - settings/middleware/global API behavior changed
