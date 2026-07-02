@@ -55,6 +55,11 @@ are passed through to `runserver`, for example:
 .\scripts\start-dev.ps1 127.0.0.1:8080 --noreload
 ```
 
+Raw `python manage.py runserver` uses the normal settings defaults. Because
+`DEBUG` defaults to false, local development behavior requires either the
+development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
+running raw `runserver`.
+
 For a clean local reset:
 
 1. Stop the server.
@@ -81,9 +86,10 @@ permissions in this pass. Once an active Owner exists, `/setup/` is disabled
 and normal login at `/api-auth/login/` is used.
 
 Raw `python manage.py runserver` remains available, but it does not create or
-migrate the database schema. If using raw `runserver`, run
-`python manage.py migrate --noinput` first. The setup wizard assumes migrations
-already exist; it does not create database tables during an HTTP request.
+migrate the database schema. If using raw `runserver`, set `DJANGO_DEBUG=1` for
+local debug/static/media behavior and run `python manage.py migrate --noinput`
+first. The setup wizard assumes migrations already exist; it does not create
+database tables during an HTTP request.
 
 The setup wizard is not development-only. The same migrated-database/no-active-
 Owner condition is used in production. See `docs/deployment.md`.

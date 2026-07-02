@@ -90,3 +90,16 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn("development and production", normalized)
         self.assertIn("setup wizard does not create tables", normalized)
         self.assertIn("seed_dev_users", normalized)
+
+    def test_docs_explain_raw_runserver_requires_debug_opt_in(self):
+        docs = [
+            ROOT / "README.md",
+            ROOT / "DEVELOPMENT.md",
+            ROOT / "docs" / "development.md",
+            ROOT / "docs" / "deployment.md",
+        ]
+        for path in docs:
+            with self.subTest(path=path):
+                normalized = " ".join(path.read_text(encoding="utf-8").split())
+                self.assertIn("DJANGO_DEBUG=1", normalized)
+                self.assertIn("runserver", normalized)

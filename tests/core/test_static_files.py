@@ -66,6 +66,8 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             normalized,
         )
         self.assertIn("`STATIC_ROOT` at `var/static/`", normalized)
+        self.assertIn("`WHITENOISE_MANIFEST_STRICT=False` is intentional", normalized)
+        self.assertIn("generated deploy artifact", normalized)
         self.assertIn("Back up `userdata/`", normalized)
         self.assertIn("do not include it in normal backups", normalized)
         self.assertIn("does not serve `MEDIA_ROOT`", normalized)
@@ -73,3 +75,11 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             "Books, EPUB files, covers, imports, exports, or marginalia",
             normalized,
         )
+
+    def test_deployment_docs_mark_permissive_hosts_as_temporary(self):
+        deployment = (ROOT / "docs" / "deployment.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("`ALLOWED_HOSTS` is currently permissive", normalized)
+        self.assertIn("temporary deployment posture", normalized)
+        self.assertIn("`DJANGO_ALLOWED_HOSTS`", normalized)

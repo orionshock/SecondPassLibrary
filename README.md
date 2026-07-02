@@ -118,4 +118,7 @@ development/demo data and is not required for setup. On POSIX systems, use
 `sh scripts/start-dev.sh`. The development scripts opt into Django debug mode;
 the app settings default to debug off.
 
+Raw `python manage.py runserver` uses the default debug-off settings. For local
+development behavior without the wrapper script, set `DJANGO_DEBUG=1` first.
+
 Development-only test dependencies live in `requirements-dev.txt`.

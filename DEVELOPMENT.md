@@ -23,3 +23,6 @@ The startup script opts into Django debug mode and applies migrations before
 wizard creates the initial Owner account after the schema exists.
 Production static output is generated under `var/static/`; durable app data
 lives under `userdata/`.
+
+Raw `python manage.py runserver` does not opt into debug mode by itself. Set
+`DJANGO_DEBUG=1` first if you bypass the startup script for local development.

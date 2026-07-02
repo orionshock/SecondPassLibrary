@@ -35,6 +35,11 @@ Environment variables:
 - `GUNICORN_CONFIG`: optional POSIX/Gunicorn configuration file
 - `WAITRESS_THREADS`: PowerShell/Waitress thread count, default `4`
 
+`ALLOWED_HOSTS` is currently permissive (`["*"]`) as a temporary deployment
+posture while self-hosted setup hardens. Do not treat wildcard hosts as the
+recommended long-term production configuration. The expected future shape is an
+environment-driven setting such as `DJANGO_ALLOWED_HOSTS`.
+
 WhiteNoise serves only application assets under `/static/` from the collected
 `STATIC_ROOT` at `var/static/`: Product UI CSS, JavaScript, icons, favicon
 assets, and other packaged static files. WhiteNoise runs inside the Django/WSGI
@@ -43,6 +48,9 @@ assets.
 Production (`DEBUG=False`) uses compressed manifest storage for hashed,
 cacheable filenames. Development keeps Django's normal `runserver` static-file
 behavior and does not require `collectstatic`.
+`WHITENOISE_MANIFEST_STRICT=False` is intentional for now to reduce local and
+offline production-mode friction while static references stabilize. Revisit it
+later when stricter deployment checks are useful.
 
 `var/static/` is a generated deploy artifact. It is safe to delete and
 regenerate with `python manage.py collectstatic --noinput`; do not include it
@@ -76,3 +84,5 @@ of production startup and is not required for normal first-run setup.
 Raw `python manage.py runserver` and raw `gunicorn` remain usable only after
 migrations have been applied manually. The recommended startup path is the
 appropriate wrapper script so migrations finish before the web server starts.
+Raw local `runserver` also needs `DJANGO_DEBUG=1` if development static/media
+behavior is expected; production wrapper scripts force `DJANGO_DEBUG=0`.

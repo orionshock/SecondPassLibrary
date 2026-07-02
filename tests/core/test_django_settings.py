@@ -14,8 +14,12 @@ class DjangoSettingsContractTests(SimpleTestCase):
         source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
 
         self.assertIn('DEBUG = _env_bool("DJANGO_DEBUG", False)', source)
+        self.assertIn("Host restrictions are intentionally disabled for now", source)
         self.assertIn("*", settings.ALLOWED_HOSTS)
 
     def test_static_root_is_generated_artifact_outside_userdata(self):
         self.assertEqual(Path(settings.STATIC_ROOT), ROOT / "var" / "static")
         self.assertNotEqual(Path(settings.STATIC_ROOT).parent, settings.USERDATA_DIR)
+
+    def test_whitenoise_manifest_strictness_is_intentionally_relaxed(self):
+        self.assertIs(settings.WHITENOISE_MANIFEST_STRICT, False)
