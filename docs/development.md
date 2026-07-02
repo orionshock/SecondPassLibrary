@@ -27,6 +27,8 @@ In local development (`DEBUG=True`), Django serves `MEDIA_ROOT` at `MEDIA_URL` s
 Production deployments must handle `MEDIA_ROOT` separately from WhiteNoise.
 WhiteNoise serves packaged Product UI assets under `/static/` only; it does not
 serve books, covers, imports, exports, marginalia, or other user data.
+Production `collectstatic` output goes to `var/static/`, which is generated and
+can be rebuilt. Back up `userdata/`, not `var/static/`.
 
 Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
 

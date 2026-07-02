@@ -48,7 +48,6 @@ RUNNING_TESTS = "test" in sys.argv
 # Ensure required directories exist
 os.makedirs(USERDATA_DIR / "db", exist_ok=True)
 os.makedirs(USERDATA_DIR / "media", exist_ok=True)
-os.makedirs(USERDATA_DIR / "static", exist_ok=True)
 os.makedirs(USERDATA_DIR / "logs", exist_ok=True)
 os.makedirs(USERDATA_DIR / "imports", exist_ok=True)
 IMPORTS_DIR = USERDATA_DIR / "imports"
@@ -190,7 +189,7 @@ REST_FRAMEWORK = {
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = USERDATA_DIR / "static"
+STATIC_ROOT = BASE_DIR / "var" / "static"
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",

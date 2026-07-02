@@ -29,6 +29,8 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
 
     def test_static_root_and_production_whitenoise_storage_are_configured(self):
         self.assertTrue(settings.STATIC_ROOT)
+        self.assertEqual(Path(settings.STATIC_ROOT), ROOT / "var" / "static")
+        self.assertFalse(Path(settings.STATIC_ROOT).is_relative_to(ROOT / "userdata"))
         self.assertEqual(settings.STATIC_URL, "/static/")
         self.assertEqual(
             _staticfiles_backend(debug=False),
@@ -63,6 +65,9 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             "WhiteNoise serves only application assets under `/static/`",
             normalized,
         )
+        self.assertIn("`STATIC_ROOT` at `var/static/`", normalized)
+        self.assertIn("Back up `userdata/`", normalized)
+        self.assertIn("do not include it in normal backups", normalized)
         self.assertIn("does not serve `MEDIA_ROOT`", normalized)
         self.assertIn(
             "Books, EPUB files, covers, imports, exports, or marginalia",

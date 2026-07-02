@@ -36,18 +36,25 @@ Environment variables:
 - `WAITRESS_THREADS`: PowerShell/Waitress thread count, default `4`
 
 WhiteNoise serves only application assets under `/static/` from the collected
-`STATIC_ROOT`: Product UI CSS, JavaScript, icons, favicon assets, and other
-packaged static files. WhiteNoise runs inside the Django/WSGI application,
-so a separate static-file web server is not required for these assets.
+`STATIC_ROOT` at `var/static/`: Product UI CSS, JavaScript, icons, favicon
+assets, and other packaged static files. WhiteNoise runs inside the Django/WSGI
+application, so a separate static-file web server is not required for these
+assets.
 Production (`DEBUG=False`) uses compressed manifest storage for hashed,
 cacheable filenames. Development keeps Django's normal `runserver` static-file
 behavior and does not require `collectstatic`.
+
+`var/static/` is a generated deploy artifact. It is safe to delete and
+regenerate with `python manage.py collectstatic --noinput`; do not include it
+in normal backups.
 
 WhiteNoise does not serve `MEDIA_ROOT` or any user/library data. Books, EPUB
 files, covers, imports, exports, or marginalia continue to use their existing
 storage and authenticated Django/API paths. Do not point WhiteNoise at
 `userdata/media/`, `userdata/imports/`, or any directory containing protected
 content.
+Back up `userdata/` for durable app state. Do not treat generated `var/static/`
+files as backup-worthy state.
 
 After the first startup, visit `/`. With a migrated database and no active
 Django superuser, `/`, Product UI routes, and login direct to `/setup/`.

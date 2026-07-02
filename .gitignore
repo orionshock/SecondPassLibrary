@@ -183,6 +183,9 @@ yarn-error.log*
 #Test Files
 TestFiles/
 
+# Generated deploy artifacts
+var/static/
+
 # User data directory
 userdata/
 

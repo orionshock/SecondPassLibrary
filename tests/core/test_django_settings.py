@@ -15,3 +15,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
 
         self.assertIn('DEBUG = _env_bool("DJANGO_DEBUG", False)', source)
         self.assertIn("*", settings.ALLOWED_HOSTS)
+
+    def test_static_root_is_generated_artifact_outside_userdata(self):
+        self.assertEqual(Path(settings.STATIC_ROOT), ROOT / "var" / "static")
+        self.assertNotEqual(Path(settings.STATIC_ROOT).parent, settings.USERDATA_DIR)

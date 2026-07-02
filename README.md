@@ -57,13 +57,15 @@ Runtime and user data live under `userdata/`:
 - `userdata/media/` for uploaded/stored EPUBs and covers
 - `userdata/imports/` for staged imports
 - `userdata/logs/` for logs
-- `userdata/static/` for collected static files
 
 `userdata/` is ignored by Git and should be backed up separately.
+Collected static files are generated deploy artifacts under `var/static/`.
+They can be deleted and regenerated with `collectstatic`; they should not be
+part of normal user-data backups.
 
 EPUB files are stored by SHA-256 checksum for deduplication. Human-readable filenames are derived from book metadata when files are downloaded or exported.
 
-Production startup collects Product UI assets into `userdata/static/`, which
+Production startup collects Product UI assets into `var/static/`, which
 WhiteNoise serves under `/static/`. WhiteNoise does not serve `userdata/media/`,
 books, covers, imports, exports, marginalia, or other protected user data.
 

@@ -21,3 +21,5 @@ python manage.py test
 The startup script opts into Django debug mode and applies migrations before
 `runserver`. The first-run setup
 wizard creates the initial Owner account after the schema exists.
+Production static output is generated under `var/static/`; durable app data
+lives under `userdata/`.
