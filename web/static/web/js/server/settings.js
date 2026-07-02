@@ -1,6 +1,7 @@
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
 import { fetchJSON, patchJSON } from "../api.js";
 import { setStatus } from "../ui/status.js";
+import { initTabs } from "../ui/tabs.js";
 
 function setEditing(on) {
   visible($("#server-settings-edit-btn"), !on);
@@ -51,6 +52,7 @@ export async function initServerSettings() {
   const me = await loadMeAndInitShell();
   if (!me || !me.is_owner) return;
 
+  initTabs($("#server-settings-card"));
   setEditing(false);
   setStatus("#server-settings-status", "Loading...");
 

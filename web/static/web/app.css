@@ -603,6 +603,85 @@ input[type="file"]:disabled::file-selector-button {
 }
 .form-control--textarea { resize: vertical; min-height: 92px; }
 
+.server-settings-card {
+  padding: 16px;
+}
+
+.server-settings-card__header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.server-settings-card__copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.server-settings-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.server-settings-tabs {
+  margin-top: 14px;
+}
+
+.server-settings-form {
+  margin-top: 12px;
+}
+
+.server-settings-panel {
+  max-width: 760px;
+}
+
+.server-settings-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.server-settings-field label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.server-settings-display {
+  overflow-wrap: anywhere;
+}
+
+.server-settings-control {
+  max-width: 640px;
+  box-sizing: border-box;
+}
+
+.server-settings-control--short {
+  min-height: 76px;
+}
+
+.server-settings-help {
+  max-width: 680px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.server-settings-checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.server-settings-status-row {
+  min-height: 20px;
+  margin-top: 8px;
+}
+
 .setup-page {
   padding-top: 0;
 }
