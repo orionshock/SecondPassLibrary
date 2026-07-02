@@ -106,6 +106,13 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
             response, "group-scoped management access to readers."
         )
 
+    def test_authenticated_user_edit_malformed_profile_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/users/not-a-uuid/edit/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_authenticated_profile_returns_200_and_has_containers(self):
         self.client.force_login(self.user)
         response = self.client.get("/profile/")

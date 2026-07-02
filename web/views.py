@@ -207,12 +207,14 @@ def library_browse(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
-    return render(request, "web/library/book_detail.html", {"book_id": book_id})
+    book_uuid = _uuid_or_404(book_id)
+    return render(request, "web/library/book_detail.html", {"book_id": str(book_uuid)})
 
 
 @product_login_required
 def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
-    return render(request, "web/library/book_edit.html", {"book_id": book_id})
+    book_uuid = _uuid_or_404(book_id)
+    return render(request, "web/library/book_edit.html", {"book_id": str(book_uuid)})
 
 
 @product_login_required
@@ -227,7 +229,8 @@ def groups(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
-    return render(request, "web/groups/detail.html", {"group_id": group_id})
+    group_uuid = _uuid_or_404(group_id)
+    return render(request, "web/groups/detail.html", {"group_id": str(group_uuid)})
 
 
 @product_login_required
@@ -237,7 +240,8 @@ def group_new(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def group_edit(request: HttpRequest, group_id: str) -> HttpResponse:
-    return render(request, "web/groups/edit.html", {"group_id": group_id})
+    group_uuid = _uuid_or_404(group_id)
+    return render(request, "web/groups/edit.html", {"group_id": str(group_uuid)})
 
 
 @product_login_required
@@ -252,7 +256,8 @@ def user_new(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def user_edit(request: HttpRequest, profile_id: str) -> HttpResponse:
-    return render(request, "web/users/edit.html", {"profile_id": profile_id})
+    profile_uuid = _uuid_or_404(profile_id)
+    return render(request, "web/users/edit.html", {"profile_id": str(profile_uuid)})
 
 
 @product_login_required
@@ -267,12 +272,14 @@ def shelf_new(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def shelf_detail(request: HttpRequest, shelf_id: str) -> HttpResponse:
-    return render(request, "web/shelves/detail.html", {"shelf_id": shelf_id})
+    shelf_uuid = _uuid_or_404(shelf_id)
+    return render(request, "web/shelves/detail.html", {"shelf_id": str(shelf_uuid)})
 
 
 @product_login_required
 def shelf_edit(request: HttpRequest, shelf_id: str) -> HttpResponse:
-    return render(request, "web/shelves/edit.html", {"shelf_id": shelf_id})
+    shelf_uuid = _uuid_or_404(shelf_id)
+    return render(request, "web/shelves/edit.html", {"shelf_id": str(shelf_uuid)})
 
 
 @product_login_required

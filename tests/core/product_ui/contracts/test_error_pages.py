@@ -44,6 +44,16 @@ class ProductUiErrorPageTests(ProductUiTestCase):
         self.assertContains(response, 'href="/dashboard/"', status_code=404)
         self.assertNotContains(response, "Traceback", status_code=404)
 
+    def test_malformed_object_route_renders_styled_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/library/books/not-a-uuid/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "Page not found", status_code=404)
+        self.assertContains(response, 'href="/dashboard/"', status_code=404)
+        self.assertNotContains(response, "Traceback", status_code=404)
+
     def test_server_settings_forbidden_renders_styled_403(self):
         profile = get_or_create_profile(user=self.user)
         profile.role = UserProfile.ROLE_MANAGER

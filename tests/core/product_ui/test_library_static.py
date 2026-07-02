@@ -59,6 +59,13 @@ class ProductUiLibraryTests(ProductUiTestCase):
             response, f'href="/library/books/{book_id}/edit/"'
         )
 
+    def test_authenticated_book_detail_malformed_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/library/books/not-a-uuid/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_authenticated_book_edit_returns_200_and_has_form_container(self):
         self.client.force_login(self.user)
         book_id = uuid4()
@@ -108,3 +115,10 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'aria-current="page"')
         self.assertContains(response, "Edit")
         self.assertNotContains(response, "Back to Book")
+
+    def test_authenticated_book_edit_malformed_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/library/books/not-a-uuid/edit/", follow=False)
+
+        self.assertEqual(response.status_code, 404)

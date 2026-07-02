@@ -66,6 +66,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, "Group")
         self.assertNotContains(response, "Back to Groups")
 
+    def test_authenticated_group_detail_malformed_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/groups/not-a-uuid/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_unauthenticated_group_edit_redirects_to_login(self):
         group_id = uuid4()
         response = self.client.get(f"/groups/{group_id}/edit/", follow=False)
@@ -114,6 +121,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(
             response, "group-scoped management access to readers."
         )
+
+    def test_authenticated_group_edit_malformed_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/groups/not-a-uuid/edit/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
 
     def test_unauthenticated_shelves_redirects_to_login(self):
         response = self.client.get("/shelves/", follow=False)
@@ -214,6 +228,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertNotContains(response, ">Details</h2>")
         self.assertNotContains(response, ">Books</h2>")
 
+    def test_authenticated_shelf_detail_malformed_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/shelves/not-a-uuid/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_unauthenticated_shelf_edit_redirects_to_login(self):
         shelf_id = uuid4()
         response = self.client.get(f"/shelves/{shelf_id}/edit/", follow=False)
@@ -253,6 +274,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'aria-current="page"')
         self.assertContains(response, "Edit")
         self.assertNotContains(response, "Back to Shelf")
+
+    def test_authenticated_shelf_edit_malformed_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/shelves/not-a-uuid/edit/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
 
     def test_shelf_items_js_has_move_controls(self):
         js = Path("web/static/web/js/shelves/items.js").read_text()
