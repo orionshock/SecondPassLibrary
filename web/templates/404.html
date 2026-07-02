@@ -1,0 +1,6 @@
+{% extends "web/error_base.html" %}
+
+{% block title %}Page not found - {{ server_name|default:"Second Pass Library" }}{% endblock %}
+{% block status_label %}404{% endblock %}
+{% block heading %}Page not found{% endblock %}
+{% block message %}That page does not exist or is not available.{% endblock %}

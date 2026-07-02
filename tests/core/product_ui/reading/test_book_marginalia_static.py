@@ -272,6 +272,48 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         response = self.client.get(f"/reading/sessions/books/{other_book.id}/{session.id}/", follow=False)
         self.assertEqual(response.status_code, 404)
 
+    def test_book_marginalia_malformed_book_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/reading/sessions/books/not-a-uuid/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_book_marginalia_nonexistent_book_id_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/reading/sessions/books/{uuid4()}/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_session_marginalia_malformed_session_id_returns_404(self):
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        book = create_file_backed_book(title="B1").book
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            f"/reading/sessions/books/{book.id}/not-a-uuid/",
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_session_marginalia_nonexistent_session_id_returns_404(self):
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        book = create_file_backed_book(title="B1").book
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            f"/reading/sessions/books/{book.id}/{uuid4()}/",
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 404)
+
 
 class ReadingActivityJsRenderingTest(TestCase):
     """Test reading activity JavaScript rendering contracts."""

@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ server_name|default:"Second Pass Library" }}{% endblock %}</title>
+    <link rel="icon" href="{% static 'web/favicon.png' %}" type="image/png" />
+    <link rel="stylesheet" href="{% static 'web/app.css' %}" />
+  </head>
+  <body class="error-page">
+    <header class="error-page__topbar">
+      <div class="container error-page__topbar-inner">
+        <a class="brand" href="/dashboard/">
+          <img class="brand__icon" src="{% static 'web/favicon.png' %}" alt="" aria-hidden="true" />
+          <span>{{ server_name|default:"Second Pass Library" }}</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="container error-page__main">
+      <section class="card error-page__card" aria-labelledby="error-page-title">
+        <p class="error-page__eyebrow">{% block status_label %}{% endblock %}</p>
+        <h1 id="error-page-title" class="page-title error-page__title">{% block heading %}{% endblock %}</h1>
+        <p class="error-page__message">{% block message %}{% endblock %}</p>
+        <div class="error-page__actions">
+          <a class="button" href="/dashboard/">Go to dashboard</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer container">
+      <small>{{ server_name|default:"Second Pass Library" }}</small>
+    </footer>
+  </body>
+</html>

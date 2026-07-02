@@ -3,12 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from functools import wraps
 from typing import Any, cast
+from uuid import UUID
 
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpRequest, HttpResponse
-from django.http import HttpResponseForbidden
 from django.http import Http404
 from django.shortcuts import redirect, render
 
@@ -24,6 +24,13 @@ from core import server_settings as server_settings_service
 from library.models import Book
 from reading.services import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
+
+
+def _uuid_or_404(value: str) -> UUID:
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        raise Http404() from None
 
 
 def product_login_required(
@@ -149,14 +156,16 @@ def reading_import(request: HttpRequest) -> HttpResponse:
 def reading_session_marginalia(
     request: HttpRequest, book_id: str, session_id: str
 ) -> HttpResponse:
+    book_uuid = _uuid_or_404(book_id)
+    session_uuid = _uuid_or_404(session_id)
     session = (
         ReadingSession.objects.select_related("book")
-        .filter(id=session_id, user=request.user)
+        .filter(id=session_uuid, user=request.user)
         .first()
     )
     if session is None:
         raise Http404()
-    if str(session.book_id) != str(book_id):
+    if session.book_id != book_uuid:
         raise Http404()
     if not policies.can_view_book(user=request.user, book=session.book):
         raise Http404()
@@ -164,16 +173,17 @@ def reading_session_marginalia(
     return render(
         request,
         "web/reading/book_activity.html",
-        {"book_id": str(book_id), "session_id": str(session_id)},
+        {"book_id": str(book_uuid), "session_id": str(session_uuid)},
     )
 
 
 @product_login_required
 def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpResponse:
+    book_uuid = _uuid_or_404(book_id)
     book = (
         Book.objects.select_related("series")
         .prefetch_related("authors")
-        .filter(id=book_id)
+        .filter(id=book_uuid)
         .first()
     )
     if book is None:
@@ -368,5 +378,5 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 @product_login_required
 def server_settings(request: HttpRequest) -> HttpResponse:
     if not policies.is_owner(getattr(request, "user", None)):
-        return HttpResponseForbidden("Not allowed.")
+        raise PermissionDenied
     return render(request, "web/server/settings.html")

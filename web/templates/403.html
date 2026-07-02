@@ -1,0 +1,6 @@
+{% extends "web/error_base.html" %}
+
+{% block title %}Not allowed - {{ server_name|default:"Second Pass Library" }}{% endblock %}
+{% block status_label %}403{% endblock %}
+{% block heading %}Not allowed{% endblock %}
+{% block message %}You do not have permission to view this page.{% endblock %}
