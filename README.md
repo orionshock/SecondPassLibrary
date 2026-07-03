@@ -54,7 +54,9 @@ The reader client is separate from this repository. This app provides the librar
 Runtime and user data live under `userdata/`:
 
 - `userdata/db/` for the SQLite database
-- `userdata/media/` for uploaded/stored EPUBs and covers
+- `userdata/media/` for uploaded/stored EPUBs and covers. Only covers are
+  raw-public under `/media/covers/`; EPUB/book files are delivered through
+  authenticated app/API endpoints.
 - `userdata/imports/` for staged imports
 - `userdata/logs/` for logs
 
@@ -66,8 +68,9 @@ part of normal user-data backups.
 EPUB files are stored by SHA-256 checksum for deduplication. Human-readable filenames are derived from book metadata when files are downloaded or exported.
 
 Production startup collects Product UI assets into `var/static/`, which
-WhiteNoise serves under `/static/`. WhiteNoise does not serve `userdata/media/`,
-books, covers, imports, exports, marginalia, or other protected user data.
+WhiteNoise serves under `/static/`. WhiteNoise does not serve `userdata/media/`.
+The only public raw media namespace is `/media/covers/`; books, imports,
+exports, marginalia, and other protected user data are not exposed as raw media.
 
 ## Import And Export
 

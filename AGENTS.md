@@ -340,6 +340,21 @@ Prefer focused tests for:
 - Always run `python manage.py check` for meaningful code changes.
 - Do not skip tests entirely unless the user explicitly asks.
 
+## Test Change Reporting
+
+When updating tests, report each test changed or added and classify what it
+protects:
+
+- invariant: a rule that should remain true across implementations
+- contract: externally visible behavior/API/UI behavior/docs contract
+- regression: coverage for a previously found bug
+- implementation detail: current internal behavior that may change later
+
+Do not weaken invariant or contract tests without calling that out explicitly
+and explaining why the weaker assertion is acceptable. For large mechanical
+moves or pure test-file splits, summarize by group when individual test-by-test
+listing would add noise.
+
 ## Dependency Rules
 
 Do not add dependencies casually.

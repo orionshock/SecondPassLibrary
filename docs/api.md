@@ -491,7 +491,7 @@ Book payload notes:
 - For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
 - For Readers, including readers with group curator flags, `groups[]` includes only groups the caller can view (Public or direct membership).
 - Books include a singular `file` object (or `null`) rather than `files[]`.
-- Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `MEDIA_URL` (default: `/media/`) and is part of the normal product/API contract; only Django *serving* media directly is debug-only.
+- Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; raw book media such as `/media/books/...` is not public and EPUB/book content should be delivered only through authenticated app/API endpoints.
 - Book write shape: `authors` is a list of Author ids; `series` is a Series id or `null`.
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.

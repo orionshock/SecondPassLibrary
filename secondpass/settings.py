@@ -177,10 +177,10 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# MEDIA_URL is the canonical public URL prefix for user media (e.g. cover art).
-# In development (DEBUG=True), secondpass/urls.py serves MEDIA_ROOT at MEDIA_URL
-# via Django as a convenience. In production, deployments should serve MEDIA_ROOT
-# at MEDIA_URL outside Django (web server / reverse proxy / static file layer).
+# MEDIA_URL is the canonical URL prefix for public cover assets.
+# Only MEDIA_ROOT/covers is exposed through /media/covers/ by secondpass/urls.py.
+# Stored EPUB files under MEDIA_ROOT/books are not public raw media and must be
+# delivered through authenticated app/API views.
 MEDIA_URL = "/media/"
 MEDIA_ROOT = USERDATA_DIR / "media"
 
