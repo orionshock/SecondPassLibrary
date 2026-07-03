@@ -648,6 +648,37 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(Book.objects.filter(title="Test Title").exists())
 
     @patch("library.services.epub.read_epub")
+    def test_zip_sidecar_opf_with_doctype_entity_is_ignored_safely(self, mock_read_epub):
+        mock_read_epub.return_value = _mock_epub()
+        self._login_librarian()
+
+        unsafe_opf = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE package [
+  <!ENTITY unsafe "Unsafe OPF Title">
+]>
+<package xmlns="http://www.idpf.org/2007/opf">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>&unsafe;</dc:title>
+  </metadata>
+</package>
+"""
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("dir/book.epub", b"epub-bytes")
+            zf.writestr("dir/metadata.opf", unsafe_opf)
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(Book.objects.filter(title="Unsafe OPF Title").exists())
+        self.assertTrue(Book.objects.filter(title="Test Title").exists())
+
+    @patch("library.services.epub.read_epub")
     def test_zip_duplicate_epub_does_not_refresh_metadata_from_sidecar_opf(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)

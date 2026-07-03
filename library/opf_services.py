@@ -4,7 +4,8 @@ from decimal import Decimal
 import posixpath
 import re
 from typing import Any, Callable, cast
-import xml.etree.ElementTree as ET
+
+from defusedxml import ElementTree as SafeElementTree
 
 from .cover_services import find_cover_href_in_opf, set_book_cover_from_bytes, MAX_COVER_BYTES
 from .models import Book
@@ -28,7 +29,7 @@ def extract_opf_sidecar_metadata(
     if not opf_xml or len(opf_xml) > MAX_OPF_SIDECAR_XML_BYTES:
         return None
     try:
-        root = ET.fromstring(opf_xml)
+        root = SafeElementTree.fromstring(opf_xml)
     except Exception:
         return None
 
@@ -218,4 +219,3 @@ def try_set_book_cover_from_sidecar_opf(
         return True
     except Exception:
         return False
-

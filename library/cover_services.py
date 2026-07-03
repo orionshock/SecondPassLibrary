@@ -8,10 +8,10 @@ from typing import Literal
 from urllib.parse import urlparse
 import zipfile
 import posixpath
-import xml.etree.ElementTree as ET
 import warnings
 
 from django.core.files.base import ContentFile
+from defusedxml import ElementTree as SafeElementTree
 
 from PIL import Image
 from PIL import ImageFile
@@ -198,9 +198,8 @@ def _read_zip_member_bytes(
     return data
 
 
-def _parse_xml_bytes(*, data: bytes) -> ET.Element:
-    # xml.etree.ElementTree does not expand external entities. Keep parsing local-only.
-    return ET.fromstring(data)
+def _parse_xml_bytes(*, data: bytes) -> SafeElementTree.Element:
+    return SafeElementTree.fromstring(data)
 
 
 def _find_opf_path_from_container_xml(container_xml: bytes) -> str | None:

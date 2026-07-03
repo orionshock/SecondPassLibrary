@@ -33,8 +33,9 @@ def _write_epub_zip(
     opf_xml: str,
     cover_member: str | None = None,
     cover_bytes: bytes | None = None,
+    container_xml: str | None = None,
 ) -> None:
-    container_xml = f"""<?xml version="1.0"?>
+    container_xml = container_xml or f"""<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
     <rootfile full-path="{opf_path}" media-type="application/oebps-package+xml"/>
@@ -145,6 +146,82 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         _write_epub_zip(out_path=epub_path, opf_path=opf_path, opf_xml=opf_xml)
 
         result = import_epub(epub_path)
+        self.assertEqual(result.status, ImportStatus.IMPORTED)
+        book = result.book
+        assert book is not None
+        book.refresh_from_db()
+        self.assertFalse(bool(book.cover_file))
+
+    @patch("library.services.epub.read_epub")
+    def test_unsafe_container_xml_is_ignored_and_import_succeeds(self, mock_read_epub):
+        mock_book = MagicMock()
+        mock_book.get_metadata.return_value = []
+        mock_read_epub.return_value = mock_book
+
+        epub_path = os.path.join(self.temp_dir, "unsafe-container.epub")
+        opf_path = "OEBPS/content.opf"
+        container_xml = """<?xml version="1.0"?>
+<!DOCTYPE container [
+  <!ENTITY opf "OEBPS/content.opf">
+]>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="&opf;" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>
+"""
+        opf_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
+  <manifest>
+    <item id="c1" href="images/cover.png" media-type="image/png" properties="cover-image"/>
+  </manifest>
+</package>
+"""
+        _write_epub_zip(
+            out_path=epub_path,
+            opf_path=opf_path,
+            opf_xml=opf_xml,
+            cover_member="OEBPS/images/cover.png",
+            cover_bytes=_png_bytes(),
+            container_xml=container_xml,
+        )
+
+        result = import_epub(epub_path)
+
+        self.assertEqual(result.status, ImportStatus.IMPORTED)
+        book = result.book
+        assert book is not None
+        book.refresh_from_db()
+        self.assertFalse(bool(book.cover_file))
+
+    @patch("library.services.epub.read_epub")
+    def test_unsafe_embedded_opf_xml_is_ignored_and_import_succeeds(self, mock_read_epub):
+        mock_book = MagicMock()
+        mock_book.get_metadata.return_value = []
+        mock_read_epub.return_value = mock_book
+
+        epub_path = os.path.join(self.temp_dir, "unsafe-opf.epub")
+        opf_path = "OEBPS/content.opf"
+        opf_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE package [
+  <!ENTITY cover "images/cover.png">
+]>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
+  <manifest>
+    <item id="c1" href="&cover;" media-type="image/png" properties="cover-image"/>
+  </manifest>
+</package>
+"""
+        _write_epub_zip(
+            out_path=epub_path,
+            opf_path=opf_path,
+            opf_xml=opf_xml,
+            cover_member="OEBPS/images/cover.png",
+            cover_bytes=_png_bytes(),
+        )
+
+        result = import_epub(epub_path)
+
         self.assertEqual(result.status, ImportStatus.IMPORTED)
         book = result.book
         assert book is not None
