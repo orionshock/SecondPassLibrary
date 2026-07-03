@@ -10,16 +10,44 @@ from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingSession
-from reading.profile import (
-    EPUB_CFI_CONFORMS_TO,
-)
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
 from tests.utils.books import create_file_backed_book
-from tests.utils.responses import response_data_dict
-from tests.utils.responses import response_data_list
+from tests.utils.responses import response_data_dict, response_data_list
 
 
 User = get_user_model()
+
+
+def bookmark_payload(session: ReadingSession, value: str = "epubcfi(/6/2)") -> dict[str, Any]:
+    return {
+        "session": str(session.id),
+        "kind": "bookmark",
+        "selector": {"kind": "epub_cfi", "value": value},
+    }
+
+
+def highlight_payload(
+    session: ReadingSession,
+    *,
+    value: str = "epubcfi(/6/2)",
+    text: str = "hello",
+    comment: str = "",
+    color: str = "",
+    quote: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "session": str(session.id),
+        "kind": "highlight",
+        "selector": {"kind": "epub_cfi", "value": value},
+        "highlight_text": text,
+    }
+    if comment:
+        payload["comment_text"] = comment
+    if color:
+        payload["highlight_color"] = color
+    if quote is not None:
+        payload["quote"] = quote
+    return payload
 
 
 class ReadingAnnotationsAPITest(ReadingAPITestBase):
@@ -47,143 +75,109 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         LibraryGroupMembership.objects.filter(user=user, group=group).delete()
         return user, session, annotation
 
-    def test_annotation_create_bookmark_outputs_motivation_array(self):
+    def test_annotation_create_bookmark_returns_spl_native_shape(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
         resp = cast(
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(session),
                 format="json",
             ),
         )
+
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         payload = response_data_dict(resp)
-        self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
+        self.assertEqual(payload["kind"], "bookmark")
+        self.assertEqual(payload["book"], str(self.book.id))
+        self.assertEqual(payload["selector"], {"kind": "epub_cfi", "value": "epubcfi(/6/2)"})
+        self.assertEqual(payload["quote"], {})
+        self.assertEqual(payload["highlight_text"], "")
+        self.assertEqual(payload["highlight_color"], "")
+        self.assertEqual(payload["comment_text"], "")
+        self.assertFalse(payload["has_comment"])
+        self.assertNotIn("motivation", payload)
+        self.assertNotIn("target", payload)
+        self.assertNotIn("body", payload)
+        self.assertNotIn("profile_version", payload)
 
-
-    def test_annotation_create_bookmark_body_omitted_defaults_empty_list(self):
+    def test_annotation_create_highlight_with_comment_returns_spl_native_shape(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
         resp = cast(
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": ["bookmarking"],
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                },
+                data=highlight_payload(
+                    session,
+                    value="/6/6",
+                    text="hello",
+                    comment="note",
+                    color="green",
+                    quote={"exact": "hello", "prefix": "pre-", "suffix": "-suf"},
+                ),
                 format="json",
             ),
         )
+
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         payload = response_data_dict(resp)
-        self.assertEqual(payload["motivation"], [Annotation.MOTIVATION_BOOKMARKING])
-        self.assertEqual(payload["body"], [])
-
-
-    def test_annotation_create_highlight_with_comment_outputs_both_motivations(self):
-        self.client.login(username="u1", password="pass1")
-        session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        resp = cast(
-            Response,
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [
-                        {"type": "TextualBody", "purpose": "describing", "value": "hello"},
-                        {"type": "TextualBody", "purpose": "commenting", "value": "note"},
-                    ],
-                },
-                format="json",
-            ),
-        )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        payload = response_data_dict(resp)
-        self.assertEqual(
-            payload["motivation"],
-            [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
-        )
-
-
-    def test_annotation_create_with_text_quote_selector_stores_prefix_suffix_and_emits_selector_array(
-        self,
-    ):
-        self.client.login(username="u1", password="pass1")
-        session = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        create = cast(
-            Response,
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
-                    "target": {
-                        "source": {"id": f"urn:uuid:{self.book.id}"},
-                        "selector": [
-                            {
-                                "type": "FragmentSelector",
-                                "conformsTo": EPUB_CFI_CONFORMS_TO,
-                                "value": "epubcfi(/6/6)",
-                            },
-                            {
-                                "type": "TextQuoteSelector",
-                                "exact": "hello",
-                                "prefix": "pre-",
-                                "suffix": "-suf",
-                            },
-                        ],
-                    },
-                    "body": [
-                        {
-                            "type": "TextualBody",
-                            "purpose": "describing",
-                            "value": "hello",
-                        }
-                    ],
-                },
-                format="json",
-            ),
-        )
-        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        payload = response_data_dict(create)
+        self.assertEqual(payload["kind"], "highlight")
+        self.assertEqual(payload["selector"], {"kind": "epub_cfi", "value": "epubcfi(/6/6)"})
+        self.assertEqual(payload["quote"], {"exact": "hello", "prefix": "pre-", "suffix": "-suf"})
+        self.assertEqual(payload["highlight_text"], "hello")
+        self.assertEqual(payload["highlight_color"], "green")
+        self.assertEqual(payload["comment_text"], "note")
+        self.assertTrue(payload["has_comment"])
 
         ann = Annotation.objects.get(pk=payload["id"])
-        self.assertEqual(ann.highlight_text, "hello")
         self.assertEqual(ann.quote_prefix, "pre-")
         self.assertEqual(ann.quote_suffix, "-suf")
 
-        selector = payload["target"]["selector"]
-        self.assertIsInstance(selector, list)
-        self.assertEqual(selector[0]["type"], "FragmentSelector")
-        self.assertEqual(selector[0]["value"], "epubcfi(/6/6)")
-        self.assertEqual(selector[1]["type"], "TextQuoteSelector")
-        self.assertEqual(selector[1]["exact"], "hello")
-        self.assertEqual(selector[1]["prefix"], "pre-")
-        self.assertEqual(selector[1]["suffix"], "-suf")
-
-
-    def test_annotation_patch_comment_without_selector_succeeds(self):
+    def test_annotation_list_detail_return_spl_native_shape(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         ann = Annotation.objects.create(
             session=session,
-            motivation=Annotation.MOTIVATION_COMMENTING,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
             anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
             book=self.book,
             selector_value="epubcfi(/6/2)",
             highlight_text="hello",
+            highlight_color="yellow",
+            comment_text="note",
+        )
+
+        listing = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        row = response_data_list(listing)[0]
+        self.assertEqual(row["id"], str(ann.id))
+        self.assertEqual(row["kind"], "highlight")
+        self.assertNotIn("motivation", row)
+        self.assertNotIn("target", row)
+        self.assertNotIn("body", row)
+        self.assertNotIn("profile_version", row)
+
+        detail = cast(Response, self.client.get(f"/api/v1/reading/annotations/{ann.id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        payload = response_data_dict(detail)
+        self.assertEqual(payload["id"], str(ann.id))
+        self.assertEqual(payload["comment_text"], "note")
+
+    def test_annotation_patch_comment_and_color_for_highlight(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        ann = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+            highlight_text="hello",
+            highlight_color="yellow",
             comment_text="old",
         )
 
@@ -191,27 +185,21 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             Response,
             self.client.patch(
                 f"/api/v1/reading/annotations/{ann.id}/",
-                data={
-                    "body": [
-                        {
-                            "type": "TextualBody",
-                            "purpose": "commenting",
-                            "value": "new",
-                        }
-                    ]
-                },
+                data={"comment_text": "new", "highlight_color": "blue"},
                 format="json",
             ),
         )
+
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         ann.refresh_from_db()
         self.assertEqual(ann.comment_text, "new")
+        self.assertEqual(ann.highlight_color, "blue")
         payload = response_data_dict(resp)
-        bodies = payload.get("body") or []
-        self.assertTrue(any(b.get("purpose") == "commenting" and b.get("value") == "new" for b in bodies))
+        self.assertEqual(payload["comment_text"], "new")
+        self.assertEqual(payload["highlight_color"], "blue")
+        self.assertTrue(payload["has_comment"])
 
-
-    def test_annotation_patch_highlight_color_without_selector_succeeds(self):
+    def test_annotation_patch_blank_comment_clears_note(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         ann = Annotation.objects.create(
@@ -222,35 +210,24 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             selector_value="epubcfi(/6/2)",
             highlight_text="hello",
             highlight_color="yellow",
+            comment_text="old",
         )
 
         resp = cast(
             Response,
             self.client.patch(
                 f"/api/v1/reading/annotations/{ann.id}/",
-                data={
-                    "body": [
-                        {
-                            "type": "TextualBody",
-                            "purpose": "describing",
-                            "color": "blue",
-                        }
-                    ]
-                },
+                data={"comment_text": ""},
                 format="json",
             ),
         )
+
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         ann.refresh_from_db()
-        self.assertEqual(ann.highlight_color, "blue")
-        payload = response_data_dict(resp)
-        bodies = payload.get("body") or []
-        describing = [b for b in bodies if b.get("purpose") == "describing"]
-        self.assertTrue(describing)
-        self.assertEqual(describing[0].get("color"), "blue")
+        self.assertEqual(ann.comment_text, "")
+        self.assertFalse(response_data_dict(resp)["has_comment"])
 
-
-    def test_annotation_patch_add_and_remove_note_updates_motivations(self):
+    def test_annotation_patch_rejects_anchor_fields(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         ann = Annotation.objects.create(
@@ -261,58 +238,41 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             selector_value="epubcfi(/6/2)",
             highlight_text="hello",
             highlight_color="yellow",
-            comment_text="",
+            quote_prefix="pre-",
         )
 
-        add = cast(
-            Response,
-            self.client.patch(
-                f"/api/v1/reading/annotations/{ann.id}/",
-                data={
-                    "body": [
-                        {"type": "TextualBody", "purpose": "commenting", "value": "note"}
-                    ]
-                },
-                format="json",
-            ),
-        )
-        self.assertEqual(add.status_code, status.HTTP_200_OK)
-        payload_add = response_data_dict(add)
-        self.assertEqual(
-            payload_add["motivation"],
-            [Annotation.MOTIVATION_HIGHLIGHTING, Annotation.MOTIVATION_COMMENTING],
-        )
+        for field, value in (
+            ("selector", {"kind": "epub_cfi", "value": "epubcfi(/6/4)"}),
+            ("quote", {"exact": "hello", "prefix": "changed"}),
+            ("highlight_text", "changed"),
+            ("kind", "bookmark"),
+            ("session", str(session.id)),
+        ):
+            resp = cast(
+                Response,
+                self.client.patch(
+                    f"/api/v1/reading/annotations/{ann.id}/",
+                    data={field: value},
+                    format="json",
+                ),
+            )
+            self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST, field)
 
-        remove = cast(
-            Response,
-            self.client.patch(
-                f"/api/v1/reading/annotations/{ann.id}/",
-                data={
-                    "body": [
-                        {"type": "TextualBody", "purpose": "commenting", "value": ""}
-                    ]
-                },
-                format="json",
-            ),
-        )
-        self.assertEqual(remove.status_code, status.HTTP_200_OK)
-        payload_remove = response_data_dict(remove)
-        self.assertEqual(payload_remove["motivation"], [Annotation.MOTIVATION_HIGHLIGHTING])
-
+        ann.refresh_from_db()
+        self.assertEqual(ann.selector_value, "epubcfi(/6/2)")
+        self.assertEqual(ann.quote_prefix, "pre-")
+        self.assertEqual(ann.highlight_text, "hello")
+        self.assertEqual(ann.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT)
 
     def test_annotations_list_includes_owned_annotations_after_book_access_lost(self):
         _user, session, annotation = self._make_lost_access_session_with_annotation()
         self.client.login(username="lostann", password="pass")
 
-        resp = cast(
-            Response,
-            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"),
-        )
+        resp = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         ids = {row["id"] for row in response_data_list(resp)}
         self.assertIn(str(annotation.id), ids)
-
 
     def test_annotation_create_requires_current_book_access(self):
         _user, session, _annotation = self._make_lost_access_session_with_annotation()
@@ -322,19 +282,13 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/4)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(session, "epubcfi(/6/4)"),
                 format="json",
             ),
         )
 
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Annotation.objects.filter(session=session).count(), 1)
-
 
     def test_annotation_patch_requires_current_book_access(self):
         _user, _session, annotation = self._make_lost_access_session_with_annotation()
@@ -344,15 +298,7 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
             Response,
             self.client.patch(
                 f"/api/v1/reading/annotations/{annotation.id}/",
-                data={
-                    "body": [
-                        {
-                            "type": "TextualBody",
-                            "purpose": "commenting",
-                            "value": "new",
-                        }
-                    ]
-                },
+                data={"comment_text": "new"},
                 format="json",
             ),
         )
@@ -361,15 +307,11 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         annotation.refresh_from_db()
         self.assertEqual(annotation.comment_text, "old")
 
-
     def test_annotation_delete_requires_current_book_access_and_open_session(self):
         _user, session, annotation = self._make_lost_access_session_with_annotation()
         self.client.login(username="lostann", password="pass")
 
-        no_access = cast(
-            Response,
-            self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/"),
-        )
+        no_access = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/"))
         self.assertEqual(no_access.status_code, status.HTTP_403_FORBIDDEN)
         annotation.refresh_from_db()
         self.assertFalse(annotation.is_deleted)
@@ -378,13 +320,61 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         session.is_active = False
         session.save(update_fields=["status", "is_active", "updated_at"])
 
-        closed = cast(
-            Response,
-            self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/"),
-        )
+        closed = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/"))
         self.assertEqual(closed.status_code, status.HTTP_400_BAD_REQUEST)
         annotation.refresh_from_db()
         self.assertFalse(annotation.is_deleted)
+
+    def test_batch_create_multiple_annotations(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/batch/",
+                data={
+                    "session": str(session.id),
+                    "annotations": [
+                        {"client_id": "a", "kind": "bookmark", "selector": {"kind": "epub_cfi", "value": "/6/2"}},
+                        {
+                            "client_id": "b",
+                            "kind": "highlight",
+                            "selector": {"kind": "epub_cfi", "value": "/6/4"},
+                            "highlight_text": "hello",
+                        },
+                    ],
+                },
+                format="json",
+            ),
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        data = response_data_dict(resp)
+        self.assertEqual([row["client_id"] for row in data["annotations"]], ["a", "b"])
+        self.assertEqual(Annotation.objects.filter(session=session).count(), 2)
+
+    def test_batch_create_is_all_or_nothing(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/batch/",
+                data={
+                    "session": str(session.id),
+                    "annotations": [
+                        {"kind": "bookmark", "selector": {"kind": "epub_cfi", "value": "/6/2"}},
+                        {"kind": "highlight", "selector": {"kind": "epub_cfi", "value": "/6/4"}},
+                    ],
+                },
+                format="json",
+            ),
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Annotation.objects.filter(session=session).count(), 0)
 
 
 class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
@@ -415,34 +405,29 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         a2.refresh_from_db()
         self.assertTrue(a2.is_deleted)
 
-        listing = cast(
-            Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}")
-        )
+        listing = cast(Response, self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"))
         self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        data = cast(list[dict[str, Any]], response_data_list(listing))
-        ids = {row["id"] for row in data}
+        ids = {row["id"] for row in response_data_list(listing)}
         self.assertIn(str(a1.id), ids)
         self.assertNotIn(str(a2.id), ids)
 
         listing2 = cast(
             Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&include_deleted=true"
-            ),
+            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&include_deleted=true"),
         )
         self.assertEqual(listing2.status_code, status.HTTP_200_OK)
-        data2 = cast(list[dict[str, Any]], response_data_list(listing2))
-        ids2 = {row["id"] for row in data2}
+        ids2 = {row["id"] for row in response_data_list(listing2)}
         self.assertIn(str(a1.id), ids2)
         self.assertIn(str(a2.id), ids2)
 
-        get_deleted = cast(Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/"))
-        self.assertEqual(get_deleted.status_code, status.HTTP_404_NOT_FOUND)
-        get_deleted2 = cast(
-            Response, self.client.get(f"/api/v1/reading/annotations/{a2.id}/?include_deleted=true")
+        self.assertEqual(
+            self.client.get(f"/api/v1/reading/annotations/{a2.id}/").status_code,
+            status.HTTP_404_NOT_FOUND,
         )
-        self.assertEqual(get_deleted2.status_code, status.HTTP_200_OK)
-
+        self.assertEqual(
+            self.client.get(f"/api/v1/reading/annotations/{a2.id}/?include_deleted=true").status_code,
+            status.HTTP_200_OK,
+        )
 
     def test_annotations_list_filters_by_motivation(self):
         self.client.login(username="u1", password="pass1")
@@ -473,145 +458,75 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             comment_text="note",
         )
 
-        r1 = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&motivation=bookmarking"
-            ),
-        )
-        self.assertEqual(r1.status_code, status.HTTP_200_OK)
-        ids1 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r1))}
-        self.assertEqual(ids1, {str(a_bookmark.id)})
+        expectations = {
+            "bookmarking": {str(a_bookmark.id)},
+            "highlighting": {str(a_highlight.id), str(a_comment.id)},
+            "commenting": {str(a_comment.id)},
+        }
+        for motivation, expected in expectations.items():
+            response = cast(
+                Response,
+                self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&motivation={motivation}"),
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, motivation)
+            self.assertEqual({row["id"] for row in response_data_list(response)}, expected)
 
-        r2 = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&motivation=highlighting"
-            ),
-        )
-        self.assertEqual(r2.status_code, status.HTTP_200_OK)
-        ids2 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r2))}
-        self.assertEqual(ids2, {str(a_highlight.id), str(a_comment.id)})
-
-        r3 = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&motivation=commenting"
-            ),
-        )
-        self.assertEqual(r3.status_code, status.HTTP_200_OK)
-        ids3 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r3))}
-        self.assertEqual(ids3, {str(a_comment.id)})
-
-        r4 = cast(
+        multi = cast(
             Response,
             self.client.get(
                 f"/api/v1/reading/annotations/?session_id={session.id}&motivation=highlighting&motivation=bookmarking"
             ),
         )
-        self.assertEqual(r4.status_code, status.HTTP_200_OK)
-        ids4 = {row["id"] for row in cast(list[dict[str, Any]], response_data_list(r4))}
-        self.assertEqual(ids4, {str(a_bookmark.id), str(a_highlight.id), str(a_comment.id)})
+        self.assertEqual(multi.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {row["id"] for row in response_data_list(multi)},
+            {str(a_bookmark.id), str(a_highlight.id), str(a_comment.id)},
+        )
 
         bad = cast(
             Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&motivation=weird"
-            ),
+            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&motivation=weird"),
         )
         self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
-
 
     def test_annotations_list_ordering_created_and_modified(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        a1 = Annotation.objects.create(
-            session=session,
-            motivation=Annotation.MOTIVATION_BOOKMARKING,
-            book=self.book,
-            selector_value="epubcfi(/6/2)",
-        )
-        a2 = Annotation.objects.create(
-            session=session,
-            motivation=Annotation.MOTIVATION_BOOKMARKING,
-            book=self.book,
-            selector_value="epubcfi(/6/4)",
-        )
-        a3 = Annotation.objects.create(
-            session=session,
-            motivation=Annotation.MOTIVATION_BOOKMARKING,
-            book=self.book,
-            selector_value="epubcfi(/6/6)",
-        )
-
+        annotations = [
+            Annotation.objects.create(
+                session=session,
+                motivation=Annotation.MOTIVATION_BOOKMARKING,
+                book=self.book,
+                selector_value=f"epubcfi(/6/{idx})",
+            )
+            for idx in (2, 4, 6)
+        ]
         base = timezone.now()
-        Annotation.objects.filter(pk=a1.pk).update(
-            created_at=base + timedelta(seconds=1), updated_at=base + timedelta(seconds=10)
-        )
-        Annotation.objects.filter(pk=a2.pk).update(
-            created_at=base + timedelta(seconds=2), updated_at=base + timedelta(seconds=30)
-        )
-        Annotation.objects.filter(pk=a3.pk).update(
-            created_at=base + timedelta(seconds=3), updated_at=base + timedelta(seconds=20)
-        )
+        for idx, annotation in enumerate(annotations, start=1):
+            Annotation.objects.filter(pk=annotation.pk).update(
+                created_at=base + timedelta(seconds=idx),
+                updated_at=base + timedelta(seconds={1: 10, 2: 30, 3: 20}[idx]),
+            )
 
-        created_asc = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&ordering=created"
-            ),
-        )
-        self.assertEqual(created_asc.status_code, status.HTTP_200_OK)
-        ids_ca = [
-            row["id"] for row in cast(list[dict[str, Any]], response_data_list(created_asc))
-        ]
-        self.assertEqual(ids_ca, [str(a1.id), str(a2.id), str(a3.id)])
-
-        created_desc = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&ordering=-created"
-            ),
-        )
-        self.assertEqual(created_desc.status_code, status.HTTP_200_OK)
-        ids_cd = [
-            row["id"] for row in cast(list[dict[str, Any]], response_data_list(created_desc))
-        ]
-        self.assertEqual(ids_cd, [str(a3.id), str(a2.id), str(a1.id)])
-
-        mod_asc = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&ordering=modified"
-            ),
-        )
-        self.assertEqual(mod_asc.status_code, status.HTTP_200_OK)
-        ids_ma = [
-            row["id"] for row in cast(list[dict[str, Any]], response_data_list(mod_asc))
-        ]
-        self.assertEqual(ids_ma, [str(a1.id), str(a3.id), str(a2.id)])
-
-        mod_desc = cast(
-            Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&ordering=-modified"
-            ),
-        )
-        self.assertEqual(mod_desc.status_code, status.HTTP_200_OK)
-        ids_md = [
-            row["id"] for row in cast(list[dict[str, Any]], response_data_list(mod_desc))
-        ]
-        self.assertEqual(ids_md, [str(a2.id), str(a3.id), str(a1.id)])
+        expected = {
+            "created": [str(a.id) for a in annotations],
+            "-created": [str(a.id) for a in reversed(annotations)],
+            "modified": [str(annotations[0].id), str(annotations[2].id), str(annotations[1].id)],
+            "-modified": [str(annotations[1].id), str(annotations[2].id), str(annotations[0].id)],
+        }
+        for ordering, ids in expected.items():
+            response = cast(
+                Response,
+                self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&ordering={ordering}"),
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, ordering)
+            self.assertEqual([row["id"] for row in response_data_list(response)], ids)
 
         bad = cast(
             Response,
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&ordering=weird"
-            ),
+            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&ordering=weird"),
         )
         self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
-
 
     def test_closed_session_rejects_progress_updates_and_annotation_create(self):
         self.client.login(username="u1", password="pass1")
@@ -634,16 +549,12 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(session),
                 format="json",
             ),
         )
         self.assertEqual(ann.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
     def test_bearer_annotations_are_user_scoped(self):
@@ -653,12 +564,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session1.id),
-                    "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
-                    "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
-                    "body": [{"type": "TextualBody", "purpose": "describing", "value": "hello"}],
-                },
+                data=highlight_payload(session1),
                 format="json",
                 HTTP_AUTHORIZATION=self._auth_header,
             ),
@@ -678,7 +584,6 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertIn(ann_id, ids)
         self.assertNotIn(str(self.annotation2.id), ids)
 
-        # Cross-user detail and delete should 404.
         other_get = self.client.get(
             f"/api/v1/reading/annotations/{self.annotation2.id}/",
             HTTP_AUTHORIZATION=self._auth_header,
@@ -690,30 +595,17 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(other_del.status_code, status.HTTP_404_NOT_FOUND)
 
-        # Cross-user creation should be rejected by serializer validation (invalid session).
         bad_create = self.client.post(
             "/api/v1/reading/annotations/",
-            data={
-                "session": str(self.session2.id),
-                "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
-                "target": {"source": {"id": f"urn:uuid:{self.book.id}"}, "selector": {"value": "epubcfi(/6/6)"}},
-                "body": [],
-            },
+            data=highlight_payload(self.session2),
             format="json",
             HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(bad_create.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # Legacy device field should be rejected as unknown.
         bad_device_field = self.client.post(
             "/api/v1/reading/annotations/",
-            data={
-                "session": str(session1.id),
-                "device": "nope",
-                "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                "target": {"selector": {"value": "/6/2"}},
-                "body": [],
-            },
+            data={**bookmark_payload(session1), "device": "nope"},
             format="json",
             HTTP_AUTHORIZATION=self._auth_header,
         )

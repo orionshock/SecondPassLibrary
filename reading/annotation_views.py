@@ -15,21 +15,22 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from accounts.authentication import ClientBearerAuthentication
 from core.models import IdempotencyRecord
 
-from .annotation_profile_services import compact_annotation_from_profile
 from .models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingSession
 from .policies import can_access_session_book
-from .profile import validate_annotation_body, validate_profile_version
 from .serializers import AnnotationSerializer
 from .services import (
     assert_session_writable,
     create_annotation,
-    update_annotation,
     update_annotation_content,
 )
+
+
+BATCH_CREATE_LIMIT = 100
 
 class AnnotationViewSet(viewsets.ModelViewSet):
     authentication_classes = [
@@ -103,8 +104,8 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         Constrained PATCH semantics: anchors are immutable after creation.
 
         Allowed updates:
-        - Comment/note text (TextualBody purpose=commenting value)
-        - Highlight color token (TextualBody purpose=describing color)
+        - comment_text
+        - highlight_color
         """
         annotation = cast(Annotation, self.get_object())
         assert_session_writable(session=annotation.session)
@@ -112,55 +113,31 @@ class AnnotationViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Book is not currently accessible.")
 
         initial = cast(dict[str, Any], getattr(request, "data", None) or {})
-        allowed_keys = {"body", "profile_version"}
+        allowed_keys = {"comment_text", "highlight_color"}
         unknown = set(initial.keys()).difference(allowed_keys)
         if unknown:
             unknown_sorted = ", ".join(sorted(unknown))
             raise DRFValidationError({"detail": f"Unsupported fields: {unknown_sorted}."})
 
-        try:
-            validate_profile_version(initial.get("profile_version"))
-        except ValueError as e:
-            raise DRFValidationError({"profile_version": str(e)}) from e
-
-        try:
-            bodies = validate_annotation_body(initial.get("body"))
-        except ValueError as e:
-            raise DRFValidationError({"body": str(e)}) from e
-
         new_comment: str | None = None
         new_color: str | None = None
 
-        for b in bodies:
-            if b.get("type") != "TextualBody":
-                continue
-            purpose = str(b.get("purpose") or "").strip()
-            value = b.get("value")
-            color = b.get("color")
+        if "comment_text" in initial:
+            comment = initial.get("comment_text")
+            if comment is not None and not isinstance(comment, str):
+                raise DRFValidationError({"comment_text": "comment_text must be a string."})
+            new_comment = comment or ""
 
-            if purpose == "commenting" and isinstance(value, str):
-                new_comment = value
-                continue
-
-            if purpose == "describing":
-                if (
-                    value is not None
-                    and isinstance(value, str)
-                    and value
-                    and value != (annotation.highlight_text or "")
-                ):
-                    raise DRFValidationError(
-                        {"body": "describing body value is immutable for an annotation."}
-                    )
-                if color is not None:
-                    if not isinstance(color, str):
-                        raise DRFValidationError({"body": "describing body color must be a string."})
-                    token = color.strip()
-                    if token == "":
-                        raise DRFValidationError({"body": "describing body color cannot be blank."})
-                    if token not in HIGHLIGHT_COLOR_TOKENS:
-                        raise DRFValidationError({"body": "Unsupported highlight color token."})
-                    new_color = token
+        if "highlight_color" in initial:
+            color = initial.get("highlight_color")
+            if not isinstance(color, str):
+                raise DRFValidationError({"highlight_color": "highlight_color must be a string."})
+            token = color.strip()
+            if token == "":
+                raise DRFValidationError({"highlight_color": "highlight_color cannot be blank."})
+            if token not in HIGHLIGHT_COLOR_TOKENS:
+                raise DRFValidationError({"highlight_color": "Unsupported highlight_color token."})
+            new_color = token
 
         update_annotation_content(
             annotation=annotation,
@@ -305,30 +282,79 @@ class AnnotationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         validated = cast(dict[str, Any], serializer.validated_data)
+        annotation = self._create_annotation_from_validated(validated)
+        serializer.instance = annotation
+
+    def _create_annotation_from_validated(self, validated: dict[str, Any]) -> Annotation:
         session = cast(ReadingSession, validated["session"])
         if not can_access_session_book(user=self.request.user, session=session):
             raise PermissionDenied("Book is not currently accessible.")
-        motivations = cast(list[str], validated["motivation"])
-        target = cast(dict, validated.get("target") or {})
-        body = cast(list[dict], validated.get("body") or [])
+        selector = cast(dict[str, str], validated["selector"])
+        quote = cast(dict[str, str], validated.get("quote") or {})
+        return create_annotation(
+            session=session,
+            anchor_kind=cast(str, validated["anchor_kind"]),
+            selector_kind=selector["kind"],
+            selector_value=selector["value"],
+            highlight_text=cast(str, validated.get("highlight_text") or ""),
+            quote_prefix=quote.get("prefix") or "",
+            quote_suffix=quote.get("suffix") or "",
+            highlight_color=cast(str, validated.get("highlight_color") or ""),
+            comment_text=cast(str, validated.get("comment_text") or ""),
+        )
 
-        compact = compact_annotation_from_profile(motivations=motivations, target=target, body=body)
-        anchor_kind = cast(str, compact.pop("anchor_kind"))
-        annotation = create_annotation(session=session, anchor_kind=anchor_kind, **compact)
-        serializer.instance = annotation
+    @action(detail=False, methods=["post"], url_path="batch")
+    def batch(self, request):
+        data = cast(dict[str, Any], request.data or {})
+        unknown = set(data.keys()).difference({"session", "annotations"})
+        if unknown:
+            unknown_sorted = ", ".join(sorted(unknown))
+            raise DRFValidationError({"detail": f"Unsupported fields: {unknown_sorted}."})
+        raw_session = data.get("session")
+        raw_items = data.get("annotations")
+        if not isinstance(raw_items, list):
+            raise DRFValidationError({"annotations": "annotations must be a list."})
+        if len(raw_items) > BATCH_CREATE_LIMIT:
+            raise DRFValidationError(
+                {"annotations": f"At most {BATCH_CREATE_LIMIT} annotations may be created at once."}
+            )
+        if not raw_items:
+            raise DRFValidationError({"annotations": "annotations cannot be empty."})
 
-    def perform_update(self, serializer):
-        annotation = cast(Annotation, serializer.instance)
-        if not can_access_session_book(user=self.request.user, session=annotation.session):
-            raise PermissionDenied("Book is not currently accessible.")
-        validated = cast(dict[str, Any], serializer.validated_data)
-        motivations = cast(list[str], validated.get("motivation") or [])
-        target = cast(dict, validated.get("target") or {})
-        body = cast(list[dict], validated.get("body") or [])
+        serializers: list[tuple[str | None, AnnotationSerializer]] = []
+        for idx, item in enumerate(raw_items):
+            if not isinstance(item, dict):
+                raise DRFValidationError({"annotations": f"annotations[{idx}] must be an object."})
+            item_unknown = set(item.keys()).difference(
+                {"client_id", "kind", "selector", "quote", "highlight_text", "highlight_color", "comment_text"}
+            )
+            if item_unknown:
+                unknown_sorted = ", ".join(sorted(item_unknown))
+                raise DRFValidationError(
+                    {"annotations": f"Unsupported fields in annotations[{idx}]: {unknown_sorted}."}
+                )
+            client_id = item.get("client_id")
+            if client_id is not None and not isinstance(client_id, str):
+                raise DRFValidationError({"annotations": f"annotations[{idx}].client_id must be a string."})
+            payload = dict(item)
+            payload.pop("client_id", None)
+            payload["session"] = raw_session
+            serializer = self.get_serializer(data=payload)
+            serializer.is_valid(raise_exception=True)
+            serializers.append((client_id, serializer))
 
-        compact = compact_annotation_from_profile(motivations=motivations, target=target, body=body)
-        anchor_kind = cast(str, compact.pop("anchor_kind"))
-        update_annotation(annotation=annotation, anchor_kind=anchor_kind, **compact)
+        with transaction.atomic():
+            response_items = []
+            for client_id, serializer in serializers:
+                annotation = self._create_annotation_from_validated(
+                    cast(dict[str, Any], serializer.validated_data)
+                )
+                payload = AnnotationSerializer(annotation, context=self.get_serializer_context()).data
+                if client_id is not None:
+                    payload = dict(payload)
+                    payload["client_id"] = client_id
+                response_items.append(payload)
+        return Response({"annotations": response_items}, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         annotation = self.get_object()

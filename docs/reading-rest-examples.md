@@ -300,17 +300,12 @@ Example request body:
 
 ```json
 {
-  "profile_version": "0.1.0",
   "session": "<session_id>",
-  "motivation": "bookmarking",
-  "target": {
-    "selector": {
-      "type": "FragmentSelector",
-      "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-      "value": "epubcfi(/6/14!/4/2/6)"
-    }
-  },
-  "body": []
+  "kind": "bookmark",
+  "selector": {
+    "kind": "epub_cfi",
+    "value": "epubcfi(/6/14!/4/2/6)"
+  }
 }
 ```
 
@@ -319,7 +314,6 @@ Notes:
 - Bookmark and current reading location often point into the book similarly, but they differ by lifecycle/intent:
   - Progress/current location is mutable session state.
   - Bookmark is an intentionally saved user artifact (annotation history).
-- Annotation `body` is always accepted/returned as a list of objects. If a client submits a single body object, the server coerces it to a list in responses.
 
 ## 6) Create highlight annotation
 
@@ -327,33 +321,30 @@ Example request body:
 
 ```json
 {
-  "profile_version": "0.1.0",
   "session": "<session_id>",
-  "motivation": "highlighting",
-  "target": {
-    "selector": {
-      "type": "FragmentSelector",
-      "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-      "value": "epubcfi(/6/14!/4/2/6)"
-    }
+  "kind": "highlight",
+  "selector": {
+    "kind": "epub_cfi",
+    "value": "epubcfi(/6/14!/4/2/6)"
   },
-  "body": [
-    {
-      "type": "TextualBody",
-      "purpose": "highlighting",
-      "value": "Selected text from the EPUB.",
-      "color": "yellow"
-    }
-  ]
+  "quote": {
+    "exact": "Selected text from the EPUB.",
+    "prefix": "optional preceding context",
+    "suffix": "optional following context"
+  },
+  "highlight_text": "Selected text from the EPUB.",
+  "highlight_color": "yellow"
 }
 ```
 
 Notes:
 
-- Keep highlight body fields within the current profile shape (unknown body fields are rejected).
+- `selector.value` may be a raw EPUB CFI path such as `/6/14`; the server normalizes it to `epubcfi(...)`.
+- `quote` is optional anchoring/repair context. When `quote.exact` is provided, it must match `highlight_text`.
+- Missing or blank `highlight_color` defaults to `yellow`.
 - Long (but reasonable) selected text is allowed; excessive payloads are rejected.
 
-## 7) Create note annotation
+## 7) Create highlighted note annotation
 
 `POST /api/v1/reading/annotations/`
 
@@ -361,25 +352,29 @@ Example request body:
 
 ```json
 {
-  "profile_version": "0.1.0",
   "session": "<session_id>",
-  "motivation": "commenting",
-  "target": {
-    "selector": {
-      "type": "FragmentSelector",
-      "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-      "value": "epubcfi(/6/14!/4/2/6)"
-    }
+  "kind": "highlight",
+  "selector": {
+    "kind": "epub_cfi",
+    "value": "epubcfi(/6/14!/4/2/6)"
   },
-  "body": [
-    {
-      "type": "TextualBody",
-      "purpose": "commenting",
-      "value": "My note about this passage."
-    }
-  ]
+  "highlight_text": "Selected text from the EPUB.",
+  "comment_text": "My note about this passage."
 }
 ```
+
+Standalone comment-only annotations are not supported yet; notes attach to highlights.
+
+Patch supports only user-editable content:
+
+```json
+{
+  "highlight_color": "green",
+  "comment_text": "Updated note text"
+}
+```
+
+`comment_text: ""` clears a note. Blank `highlight_color` is rejected.
 
 ## 8) List annotations
 
@@ -403,17 +398,21 @@ Example response:
     {
       "id": "c9c1b4d2-7f6f-4d70-97d5-2b1d4b9c7a11",
       "session": "<session_id>",
-      "motivation": "bookmarking",
-      "target": {
-        "source": { "book_id": "<book_id>", "type": "Book" },
-        "selector": {
-          "type": "FragmentSelector",
-          "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-          "value": "epubcfi(/6/14!/4/2/6)"
-        }
+      "book": "<book_id>",
+      "kind": "highlight",
+      "selector": {
+        "kind": "epub_cfi",
+        "value": "epubcfi(/6/14!/4/2/6)"
       },
-      "body": [],
-      "profile_version": "0.1.0",
+      "quote": {
+        "exact": "Selected text from the EPUB.",
+        "prefix": "optional preceding context",
+        "suffix": "optional following context"
+      },
+      "highlight_text": "Selected text from the EPUB.",
+      "highlight_color": "yellow",
+      "comment_text": "My note about this passage.",
+      "has_comment": true,
       "is_deleted": false,
       "created_at": "2026-05-11T02:05:02Z",
       "updated_at": "2026-05-11T02:05:02Z"
@@ -443,21 +442,17 @@ Future possibilities:
 
 Examples of common `400` errors you should expect during client integration:
 
-- Unsupported `profile_version`:
-  - `"Unsupported profile_version '0.0.1'. Expected '0.1.0'."`
 - Unknown top-level field on progress writes:
   - `"Unsupported fields: some_client_field."`
 - Unknown `current_location` field:
   - `"Unsupported current_location fields: some_client_field."`
-- Unknown `target` / `selector` / `body` fields:
-  - `"Unsupported target fields: ..."`
+- Unknown annotation `selector` / `quote` fields:
   - `"Unsupported selector fields: ..."`
-  - `"Unsupported body fields in body[0]: ..."`
+  - `"Unsupported quote fields: ..."`
 - Oversized payloads:
   - `current_location` exceeds maximum size (bytes)
-  - `target` exceeds maximum size (bytes)
-  - `body` exceeds maximum size (bytes)
-- Invalid/empty `motivation` (required).
+  - annotation selector, quote, highlight text, or comment text exceeds its limit
+- Invalid/empty `kind` or `selector.value`.
 - Writing progress or creating/updating annotations on a closed session:
   - `"This reading session is closed."`
 

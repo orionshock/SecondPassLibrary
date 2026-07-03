@@ -343,9 +343,8 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
                 "/api/v1/reading/annotations/",
                 data={
                     "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/4)"}},
-                    "body": [],
+                    "kind": "bookmark",
+                    "selector": {"kind": "epub_cfi", "value": "epubcfi(/6/4)"},
                 },
                 format="json",
             ),
@@ -357,10 +356,7 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
             self.client.patch(
                 f"/api/v1/reading/annotations/{ann.id}/",
                 data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
+                    "comment_text": "new",
                 },
                 format="json",
             ),

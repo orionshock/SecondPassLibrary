@@ -217,26 +217,23 @@ Notes:
 
 ## Annotations (highlights, notes, bookmarks)
 
-The current annotation API still uses W3C-influenced `motivation`, `target`, and
-`body` fields, but annotations are stored internally in compact/queryable
-columns:
+The live annotation API uses compact SPL-native fields:
 
 - `selector_kind` + `selector_value` (currently `epub_cfi`)
 - `highlight_text` / `highlight_color`
 - `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
-The API reconstructs the current `target`/`body` shape from those columns at the
-boundary. The canonical portable exchange format is the session-centered Second
-Pass Library Marginalia Profile documented in
+The canonical portable exchange format remains the session-centered Second Pass
+Library Marginalia Profile documented in
 `docs/specs/marginalia-export.md`.
 
 Highlight color:
 
 - `highlight_color` is a semantic token (not a CSS/hex color string).
 - Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
-- Color is highlight/quote-only metadata (it applies to the selected-text `TextualBody` with `purpose: "describing"`).
-- Note/comment bodies and bookmark-only annotations do not use color.
+- Color is highlight-only metadata.
+- Note/comment text and bookmark-only annotations do not use color.
 - For highlight annotations, missing/blank color defaults to `yellow`.
 
 - List/create/update: `GET/POST/PATCH /api/v1/reading/annotations/` (list is paginated)
@@ -248,24 +245,27 @@ Highlight color:
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.
 
-Annotation payloads currently use these API fields:
+Annotation payloads use these API fields:
 
-- `motivation`: a list of motivations (e.g. `["bookmarking"]`, `["highlighting"]`, `["highlighting", "commenting"]`)
-- `target`: `source` + `selector` (EPUB CFI `FragmentSelector`)
-- `body`: body/bodies (JSON)
-- `profile_version`: currently `0.1.0`
+- `kind`: `bookmark` or `highlight`
+- `selector`: `{ "kind": "epub_cfi", "value": "epubcfi(...)" }`
+- `quote`: optional `{ "exact": "...", "prefix": "...", "suffix": "..." }`
+- `highlight_text`
+- `highlight_color`
+- `comment_text`
 
 Notes:
 
 - Annotations belong to exactly one reading session.
 - The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
 - Annotation anchors are immutable after creation:
-  - `target.selector` (EPUB CFI `FragmentSelector`)
-  - optional `TextQuoteSelector` quote context (`exact`/`prefix`/`suffix`)
-  - `session`, `book`, and `motivation`
+  - `selector`
+  - optional `quote` context (`exact`/`prefix`/`suffix`)
+  - `session`, `book`, and `kind`
 - `PATCH /api/v1/reading/annotations/<id>/` supports only:
-  - note/comment body text (`body[]` with `purpose="commenting"`)
-  - highlight color token (`body[]` with `purpose="describing"` and `color`)
+  - `comment_text`
+  - `highlight_color`
+- `POST /api/v1/reading/annotations/batch/` creates up to 100 annotations for one session in one all-or-nothing request.
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
 - Annotation reads are owner-scoped. Annotation create/update/delete require an owned writable/open session and current access to the session's book.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.

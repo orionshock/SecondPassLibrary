@@ -574,10 +574,9 @@ Group delete/scary delete is not part of the current documented product/API cont
 
 ## Reading
 
-- Reading APIs currently use W3C-influenced `motivation`, `target`, and `body`
-  fields for annotation payloads. The canonical portable exchange format is the
-  session-centered Second Pass Library Marginalia Profile documented in
-  `docs/specs/marginalia-export.md`.
+- Reading annotation APIs use compact SPL-native payload fields. The canonical
+  portable exchange format is the session-centered Second Pass Library
+  Marginalia Profile documented in `docs/specs/marginalia-export.md`.
 - Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
 - Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
 - Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
@@ -592,6 +591,7 @@ Group delete/scary delete is not part of the current documented product/API cont
   - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?motivation=highlighting|commenting|bookmarking` (may be repeated)
   - Ordering: `?ordering=created|-created|modified|-modified`
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
+  - `POST /api/v1/reading/annotations/batch/` creates up to 100 annotations for one session in one all-or-nothing request.
 - Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
   - `GET /api/v1/reading/export/` exports all owned current-user sessions, including sessions for books the user can no longer view.
   - `POST /api/v1/reading/export/` exports selected owned books/sessions, including owned sessions for books the user can no longer view.
@@ -611,12 +611,12 @@ Reading payload notes:
 - Session search (`?q=<text>`) trims whitespace and searches session-owned `name`/`notes` plus currently visible book `title`, `subtitle`, authors, and series. It does not search annotation bodies, ISBNs, identifiers, marginalia export payloads, or arbitrary client blobs. User-owned session name/notes can match even when related book access is later lost; hidden/inaccessible book metadata cannot match and remains redacted.
 - `open`, `active-session`, `start-over`, progress writes, and annotation writes/deletes require current book access. Existing no-access active sessions may still be renamed/noted and closed by their owner.
 - Reading activity overlays live under `/api/v1/reading/`, not `/api/v1/library/books/`; catalog book list/detail payloads do not include user-specific session counts, progress, latest session ids, or annotation counts.
-- Annotation API payloads currently use `motivation`, `target`, and `body`
-  fields. Internally, annotations are stored in compact columns
-  (`selector_kind`/`selector_value` plus highlight/comment fields) and the
-  current API `target`/`body` shape is reconstructed at the API boundary.
+- Annotation API payloads use `kind`, `selector`, optional `quote`,
+  `highlight_text`, `highlight_color`, and `comment_text`. Internally,
+  annotations are stored in compact columns (`selector_kind`/`selector_value`
+  plus highlight/comment fields).
 - Annotation reads are owner-scoped and remain available after book access loss; annotation writes/deletes require current access to the session's book and an open session.
-- Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
+- Highlight color is a semantic token on highlights. Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on create and normalizes to `yellow`; blank highlight color is rejected on PATCH.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 - Marginalia import apply is intentionally minimal: no stored import jobs and no annotation-level selection. The product UI supports session-level selection and session name/notes customization.
 - Server-side marginalia import is intended for SPL Marginalia Profile files

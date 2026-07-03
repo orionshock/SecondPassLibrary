@@ -15,17 +15,19 @@ from tests.utils.responses import response_data_dict
 User = get_user_model()
 
 
+def bookmark_payload(session: ReadingSession, value: str = "epubcfi(/6/2)"):
+    return {
+        "session": str(session.id),
+        "kind": "bookmark",
+        "selector": {"kind": "epub_cfi", "value": value},
+    }
+
+
 class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
     def test_annotation_create_idempotency_key_allows_safe_retry(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        payload = {
-            "session": str(session.id),
-            "motivation": Annotation.MOTIVATION_BOOKMARKING,
-            "target": {"selector": {"value": "epubcfi(/6/2)"}},
-            "body": [],
-        }
+        payload = bookmark_payload(session)
 
         r1 = cast(
             Response,
@@ -54,7 +56,6 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
         self.assertEqual(Annotation.objects.filter(session=session).count(), 1)
         self.assertEqual(IdempotencyRecord.objects.filter(user=self.user1, key="abc-123").count(), 1)
 
-
     def test_annotation_create_idempotency_key_conflicts_on_different_body(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -63,12 +64,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(session, "epubcfi(/6/2)"),
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="same-key",
             ),
@@ -79,56 +75,28 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/4)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(session, "epubcfi(/6/4)"),
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="same-key",
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_409_CONFLICT)
 
-
     def test_annotation_create_idempotency_key_invalid_rejected(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        too_long = "x" * 129
-        r1 = cast(
-            Response,
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
-                format="json",
-                HTTP_IDEMPOTENCY_KEY=too_long,
-            ),
-        )
-        self.assertEqual(r1.status_code, status.HTTP_400_BAD_REQUEST)
-
-        r2 = cast(
-            Response,
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
-                format="json",
-                HTTP_IDEMPOTENCY_KEY="   ",
-            ),
-        )
-        self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
-
+        for key in ("x" * 129, "   "):
+            response = cast(
+                Response,
+                self.client.post(
+                    "/api/v1/reading/annotations/",
+                    data=bookmark_payload(session),
+                    format="json",
+                    HTTP_IDEMPOTENCY_KEY=key,
+                ),
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_annotation_validation_failure_does_not_store_idempotency_record(self):
         self.client.login(username="u1", password="pass1")
@@ -138,12 +106,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": "not-a-real-motivation",
-                    "target": {},
-                    "body": [],
-                },
+                data={"session": str(session.id), "kind": "weird"},
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="fixable",
             ),
@@ -155,19 +118,13 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(session.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(session),
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="fixable",
             ),
         )
         self.assertEqual(ok.status_code, status.HTTP_201_CREATED)
         self.assertTrue(IdempotencyRecord.objects.filter(user=self.user1, key="fixable").exists())
-
 
     def test_idempotency_key_is_scoped_per_user(self):
         self.client.login(username="u1", password="pass1")
@@ -176,19 +133,13 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(s1.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(s1),
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="shared-key",
             ),
         )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
 
-        # Same key for a different user is independent.
         self.client.logout()
         self.client.login(username="u2", password="pass2")
         other_book = create_file_backed_book(title="Other Book").book
@@ -198,12 +149,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(s2.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(s2),
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="shared-key",
             ),
@@ -211,20 +157,13 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         self.assertNotEqual(response_data_dict(r1)["id"], response_data_dict(r2)["id"])
 
-
     def test_cross_user_session_with_idempotency_key_does_not_store_record(self):
         self.client.login(username="u1", password="pass1")
-        # session2 belongs to user2 (setUp fixture).
         r = cast(
             Response,
             self.client.post(
                 "/api/v1/reading/annotations/",
-                data={
-                    "session": str(self.session2.id),
-                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
-                    "target": {"selector": {"value": "epubcfi(/6/2)"}},
-                    "body": [],
-                },
+                data=bookmark_payload(self.session2),
                 format="json",
                 HTTP_IDEMPOTENCY_KEY="no-store",
             ),
@@ -236,12 +175,7 @@ class ReadingAnnotationIdempotencyAPITest(ReadingAPITestBase):
 class ReadingAnnotationIdempotencyBearerAPITest(ReadingClientBearerAPITestBase):
     def test_bearer_annotation_create_idempotency_key(self):
         session1 = ReadingSession.objects.create(user=self.user1, book=self.book)
-        payload = {
-            "session": str(session1.id),
-            "motivation": Annotation.MOTIVATION_BOOKMARKING,
-            "target": {"selector": {"value": "epubcfi(/6/2)"}},
-            "body": [],
-        }
+        payload = bookmark_payload(session1)
         r1 = cast(
             Response,
             self.client.post(
@@ -268,4 +202,3 @@ class ReadingAnnotationIdempotencyBearerAPITest(ReadingClientBearerAPITestBase):
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         a2 = response_data_dict(r2)
         self.assertEqual(a1["id"], a2["id"])
-
