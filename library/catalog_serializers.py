@@ -4,7 +4,7 @@ from typing import Any, cast
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from core import policies
+from library import policies
 
 from .models import (
     Author,

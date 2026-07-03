@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from core import policies
+from library import policies as library_policies
 from library.models import Author, Book, Series
 
 from .models import (
@@ -125,7 +125,7 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
         return bool(
             user is not None
             and book is not None
-            and policies.can_view_book(user=user, book=book)
+            and library_policies.can_view_book(user=user, book=book)
         )
 
     def get_book(self, obj: ReadingSession) -> dict[str, Any]:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core import policies
+from accounts import policies
 from library.models import LibraryGroupMembership, is_public_group
 
 from .services import ManagedUserCreateResult, get_or_create_profile

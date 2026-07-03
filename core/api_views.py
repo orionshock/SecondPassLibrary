@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from core import policies
+from accounts import policies
 from core import server_settings
 from library.group_services import configure_public_group, get_public_group
 

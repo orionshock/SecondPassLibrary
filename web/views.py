@@ -19,7 +19,8 @@ from accounts.bootstrap import (
     has_active_owner,
 )
 from accounts.forms import FirstOwnerSetupForm
-from core import policies
+from accounts import policies as account_policies
+from library import policies as library_policies
 from core import server_settings as server_settings_service
 from library.models import Book
 from reading.services import list_sessions_for_book, list_sessions_for_user
@@ -174,7 +175,7 @@ def reading_session_marginalia(
         {
             "book_id": str(book_uuid),
             "session_id": str(session_uuid),
-            "can_open": policies.can_view_book(user=request.user, book=session.book),
+            "can_open": library_policies.can_view_book(user=request.user, book=session.book),
         },
     )
 
@@ -190,7 +191,7 @@ def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpR
     )
     if book is None:
         raise Http404()
-    if not policies.can_view_book(user=request.user, book=book):
+    if not library_policies.can_view_book(user=request.user, book=book):
         raise Http404()
 
     sessions = list_sessions_for_book(user=request.user, book=book)
@@ -386,6 +387,6 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def server_settings(request: HttpRequest) -> HttpResponse:
-    if not policies.is_owner(getattr(request, "user", None)):
+    if not account_policies.is_owner(getattr(request, "user", None)):
         raise PermissionDenied
     return render(request, "web/server/settings.html")

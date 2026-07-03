@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
-from core import policies
+from library import policies
 from core.server_settings import get_server_setting, set_server_setting
 from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
 

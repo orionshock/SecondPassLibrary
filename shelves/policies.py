@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db.models import Q
 
 from accounts.models import UserClientSession
-from core import policies as core_policies
+from library import policies as library_policies
 from library.models import Book, BookGroupAssignment, LibraryGroupMembership, is_public_group
 
 from .models import Shelf
@@ -26,11 +26,11 @@ def can_create_shelf(
     if owner_type == Shelf.OWNER_TYPE_GROUP:
         if owner_group is None:
             return False
-        if core_policies.can_manage_library(user):
+        if library_policies.can_manage_library(user):
             return True
         if is_public_group(owner_group):
             return False
-        return core_policies.can_curate_group(user=user, group=owner_group)
+        return library_policies.can_curate_group(user=user, group=owner_group)
 
     return False
 
@@ -47,7 +47,7 @@ def visible_shelf_filter(user) -> Q:
         owner_type=Shelf.OWNER_TYPE_GROUP,
         owner_group__memberships__user=user,
     )
-    if core_policies.can_manage_library(user):
+    if library_policies.can_manage_library(user):
         group_shelves = Q(owner_type=Shelf.OWNER_TYPE_GROUP)
 
     return user_shelves | group_shelves
@@ -64,7 +64,7 @@ def can_view_shelf(*, user, shelf: Shelf) -> bool:
         return shelf.visibility == Shelf.VISIBILITY_LISTED
 
     if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
-        if core_policies.can_manage_library(user):
+        if library_policies.can_manage_library(user):
             return True
         group = shelf.owner_group
         if group is None:
@@ -123,7 +123,7 @@ def can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
         return False
 
     if shelf.owner_type == Shelf.OWNER_TYPE_USER:
-        return core_policies.can_view_book(user=user, book=book)
+        return library_policies.can_view_book(user=user, book=book)
 
     if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
         group = shelf.owner_group

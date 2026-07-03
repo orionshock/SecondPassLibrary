@@ -10,8 +10,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.authentication import ClientBearerAuthentication
-from core import policies
 from core.pagination import DefaultPageNumberPagination
+from library import policies as library_policies
 from library.models import Book
 
 from .models import Annotation, ReadingSession
@@ -152,7 +152,7 @@ class ActiveSessionView(APIView):
 
     def get(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
-        if not policies.can_view_book(user=request.user, book=book):
+        if not library_policies.can_view_book(user=request.user, book=book):
             raise NotFound()
 
         existing = ReadingSession.objects.filter(
@@ -174,7 +174,7 @@ class StartOverView(APIView):
 
     def post(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
-        if not policies.can_view_book(user=request.user, book=book):
+        if not library_policies.can_view_book(user=request.user, book=book):
             raise NotFound()
         name = request.data.get("name", "")
         session = start_over_book(user=request.user, book=book, name=name or "")
@@ -247,7 +247,7 @@ class OpenBookView(APIView):
         created = False
 
         book = get_object_or_404(Book, id=book_id)
-        if not policies.can_view_book(user=request.user, book=book):
+        if not library_policies.can_view_book(user=request.user, book=book):
             raise NotFound()
 
         session = ReadingSession.objects.select_related("book").filter(

@@ -8,7 +8,7 @@ from django.db.models.functions import Coalesce, Greatest
 from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from core import policies
+from library import policies as library_policies
 from library.models import Book
 
 from .models import ReadingSession
@@ -45,7 +45,7 @@ def resolve_visible_book_for_session_filter(*, user, raw_book: str) -> Book | No
         .filter(id=book_id)
         .first()
     )
-    if book is None or not policies.can_view_book(user=user, book=book):
+    if book is None or not library_policies.can_view_book(user=user, book=book):
         raise NotFound()
     return book
 
@@ -65,7 +65,7 @@ def apply_session_search(
         | Q(book__series__name__icontains=q)
     )
     visible_book_match = Q()
-    if not policies.can_manage_library(user):
+    if not library_policies.can_manage_library(user):
         visible_book_match = Q(book__group_assignments__group__memberships__user=user)
     return queryset.filter(session_match | (visible_book_match & book_match))
 
@@ -153,7 +153,7 @@ def recent_sessions_for_user(*, user, request, limit: int) -> list[dict[str, Any
             continue
 
         book = getattr(session, "book", None)
-        if book is None or not policies.can_view_book(user=user, book=book):
+        if book is None or not library_policies.can_view_book(user=user, book=book):
             continue
 
         seen_books.add(book_id)
@@ -229,7 +229,7 @@ def build_activity_summary(*, user, book_ids: list[UUID]) -> list[dict[str, Any]
         book = books_by_id.get(book_id)
         if book is None:
             continue
-        if not policies.can_view_book(user=user, book=book):
+        if not library_policies.can_view_book(user=user, book=book):
             continue
         visible_books.append(book)
 

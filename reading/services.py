@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from library.models import Book
-from core import policies
+from library import policies as library_policies
 
 from .models import Annotation, ReadingProgress, ReadingSession
 from .models import HIGHLIGHT_COLOR_YELLOW
@@ -437,7 +437,7 @@ def list_sessions_for_user(*, user) -> list[dict]:
         book = getattr(s, "book", None)
         if book is None:
             continue
-        can_open = policies.can_view_book(user=user, book=book)
+        can_open = library_policies.can_view_book(user=user, book=book)
 
         progress = getattr(s, "progress", None)
         progression = (

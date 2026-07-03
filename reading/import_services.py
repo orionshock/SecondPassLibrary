@@ -10,7 +10,7 @@ from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from jsonschema import Draft202012Validator
 
-from core import policies
+from library import policies as library_policies
 from library.models import Book
 from reading.models import ReadingSession
 
@@ -405,7 +405,7 @@ def match_exported_book(*, user, exported: dict[str, Any]) -> tuple[Book | None,
         for book in Book.objects.select_related("file")
         .prefetch_related("authors", "identifiers", "group_assignments__group__memberships")
         .all()
-        if policies.can_view_book(user=user, book=book)
+        if library_policies.can_view_book(user=user, book=book)
     ]
 
     file_hash = _hash_value(exported.get("file_hash") or exported.get("source") or "")

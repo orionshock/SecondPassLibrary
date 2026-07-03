@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
 from accounts.user_payloads import compact_user_payload
-from core import policies
+from library import policies
 from core.errors import ErrorCode, api_error_payload
 from library.catalog_serializers import BookPreviewSerializer
 

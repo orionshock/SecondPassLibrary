@@ -33,7 +33,7 @@ from .services import (
     update_user_via_management_api,
 )
 from .user_payloads import managed_user_create_envelope, managed_user_payload
-from core import policies
+from accounts import policies
 from accounts import session_control
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession

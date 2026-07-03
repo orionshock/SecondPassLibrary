@@ -5,7 +5,8 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import UserProfile
-from core import policies
+from accounts import policies as account_policies
+from library import policies as library_policies
 from library.group_services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
@@ -70,22 +71,22 @@ class PolicyTest(TestCase):
         BookGroupAssignment.objects.create(book=self.hidden_book, group=self.hidden_group)
 
     def test_owner_can_manage_library_and_users(self):
-        self.assertTrue(policies.is_owner(self.owner))
-        self.assertTrue(policies.can_manage_library(self.owner))
-        self.assertTrue(policies.can_manage_users(self.owner))
+        self.assertTrue(account_policies.is_owner(self.owner))
+        self.assertTrue(library_policies.can_manage_library(self.owner))
+        self.assertTrue(account_policies.can_manage_users(self.owner))
 
     def test_manager_can_manage_users_but_not_assign_manager(self):
-        self.assertTrue(policies.is_manager(self.manager))
-        self.assertTrue(policies.can_manage_users(self.manager))
+        self.assertTrue(account_policies.is_manager(self.manager))
+        self.assertTrue(account_policies.can_manage_users(self.manager))
         self.assertTrue(
-            policies.can_assign_global_role(
+            account_policies.can_assign_global_role(
                 actor=self.manager,
                 target_user=self.reader,
                 new_role=UserProfile.ROLE_READER,
             )
         )
         self.assertFalse(
-            policies.can_assign_global_role(
+            account_policies.can_assign_global_role(
                 actor=self.manager,
                 target_user=self.reader,
                 new_role=UserProfile.ROLE_MANAGER,
@@ -102,12 +103,12 @@ class PolicyTest(TestCase):
         profile.save(update_fields=["role", "updated_at"])
 
         self.assertTrue(
-            policies.can_assign_global_role(
+            account_policies.can_assign_global_role(
                 actor=self.owner, target_user=target, new_role=UserProfile.ROLE_MANAGER
             )
         )
         self.assertFalse(
-            policies.can_assign_global_role(
+            account_policies.can_assign_global_role(
                 actor=self.manager, target_user=target, new_role=UserProfile.ROLE_MANAGER
             )
         )
@@ -116,48 +117,48 @@ class PolicyTest(TestCase):
         profile.role = UserProfile.ROLE_MANAGER
         profile.save(update_fields=["role", "updated_at"])
         self.assertTrue(
-            policies.can_assign_global_role(
+            account_policies.can_assign_global_role(
                 actor=self.owner, target_user=target, new_role=UserProfile.ROLE_READER
             )
         )
         self.assertFalse(
-            policies.can_assign_global_role(
+            account_policies.can_assign_global_role(
                 actor=self.manager, target_user=target, new_role=UserProfile.ROLE_READER
             )
         )
 
     def test_manager_can_manage_user_only_if_target_is_not_owner_or_manager(self):
-        self.assertFalse(policies.can_manage_user(actor=self.manager, target_user=self.owner))
+        self.assertFalse(account_policies.can_manage_user(actor=self.manager, target_user=self.owner))
         self.assertFalse(
-            policies.can_manage_user(actor=self.manager, target_user=self.manager2)
+            account_policies.can_manage_user(actor=self.manager, target_user=self.manager2)
         )
         self.assertTrue(
-            policies.can_manage_user(actor=self.manager, target_user=self.reader)
+            account_policies.can_manage_user(actor=self.manager, target_user=self.reader)
         )
         self.assertFalse(
-            policies.can_manage_user(actor=self.librarian, target_user=self.reader)
+            account_policies.can_manage_user(actor=self.librarian, target_user=self.reader)
         )
 
     def test_librarian_can_manage_library_not_users(self):
-        self.assertTrue(policies.is_librarian(self.librarian))
-        self.assertTrue(policies.can_manage_library(self.librarian))
-        self.assertFalse(policies.can_manage_users(self.librarian))
-        self.assertFalse(policies.can_create_library_group(self.librarian))
+        self.assertTrue(account_policies.is_librarian(self.librarian))
+        self.assertTrue(library_policies.can_manage_library(self.librarian))
+        self.assertFalse(account_policies.can_manage_users(self.librarian))
+        self.assertFalse(library_policies.can_create_library_group(self.librarian))
 
     def test_reader_cannot_manage_library(self):
-        self.assertTrue(policies.is_reader(self.reader))
-        self.assertFalse(policies.can_manage_library(self.reader))
-        self.assertFalse(policies.can_create_library_group(self.reader))
+        self.assertTrue(account_policies.is_reader(self.reader))
+        self.assertFalse(library_policies.can_manage_library(self.reader))
+        self.assertFalse(library_policies.can_create_library_group(self.reader))
 
     def test_manager_and_owner_can_create_library_groups(self):
-        self.assertTrue(policies.can_create_library_group(self.owner))
-        self.assertTrue(policies.can_create_library_group(self.manager))
+        self.assertTrue(library_policies.can_create_library_group(self.owner))
+        self.assertTrue(library_policies.can_create_library_group(self.manager))
 
     def test_reader_can_view_books_only_in_groups_they_belong_to(self):
         # Public book is visible only via Public membership.
-        self.assertTrue(policies.can_view_book(user=self.reader, book=self.book))
+        self.assertTrue(library_policies.can_view_book(user=self.reader, book=self.book))
         # Hidden book is visible only if user is in Hidden.
-        self.assertTrue(policies.can_view_book(user=self.reader, book=self.hidden_book))
+        self.assertTrue(library_policies.can_view_book(user=self.reader, book=self.hidden_book))
 
         other_reader = User.objects.create_user(
             username="other", email="other@example.com", password="pw"
@@ -166,7 +167,7 @@ class PolicyTest(TestCase):
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
         ensure_user_public_membership(user=other_reader)
-        self.assertFalse(policies.can_view_book(user=other_reader, book=self.hidden_book))
+        self.assertFalse(library_policies.can_view_book(user=other_reader, book=self.hidden_book))
 
     def test_user_without_public_membership_cannot_view_public_only_books(self):
         fantasy = LibraryGroup.objects.create(name="Fantasy")
@@ -186,57 +187,57 @@ class PolicyTest(TestCase):
         LibraryGroupMembership.objects.filter(user=u, group=self.public).delete()
         self.assertFalse(LibraryGroupMembership.objects.filter(user=u, group=self.public).exists())
 
-        self.assertFalse(policies.can_view_book(user=u, book=book_public_only))
-        self.assertTrue(policies.can_view_book(user=u, book=book_fantasy))
+        self.assertFalse(library_policies.can_view_book(user=u, book=book_public_only))
+        self.assertTrue(library_policies.can_view_book(user=u, book=book_fantasy))
 
     def test_group_visibility_is_membership_based(self):
         other = LibraryGroup.objects.create(name="Other")
-        self.assertTrue(policies.can_view_library_group(user=self.reader, group=self.public))
-        self.assertTrue(policies.can_view_library_group(user=self.reader, group=self.hidden_group))
-        self.assertFalse(policies.can_view_library_group(user=self.reader, group=other))
+        self.assertTrue(library_policies.can_view_library_group(user=self.reader, group=self.public))
+        self.assertTrue(library_policies.can_view_library_group(user=self.reader, group=self.hidden_group))
+        self.assertFalse(library_policies.can_view_library_group(user=self.reader, group=other))
 
     def test_group_management_helpers(self):
         group = LibraryGroup.objects.create(name="G")
 
         # Identity: Owner/Manager only; Public identity is protected.
-        self.assertTrue(policies.can_manage_group_identity(user=self.owner, group=group))
+        self.assertTrue(library_policies.can_manage_group_identity(user=self.owner, group=group))
         self.assertTrue(
-            policies.can_manage_group_identity(user=self.manager, group=group)
+            library_policies.can_manage_group_identity(user=self.manager, group=group)
         )
         self.assertFalse(
-            policies.can_manage_group_identity(user=self.librarian, group=group)
+            library_policies.can_manage_group_identity(user=self.librarian, group=group)
         )
-        self.assertFalse(policies.can_manage_group_identity(user=self.reader, group=group))
-        self.assertFalse(policies.can_manage_group_identity(user=self.owner, group=self.public))
+        self.assertFalse(library_policies.can_manage_group_identity(user=self.reader, group=group))
+        self.assertFalse(library_policies.can_manage_group_identity(user=self.owner, group=self.public))
 
         # Membership: Owner/Manager only.
         self.assertTrue(
-            policies.can_manage_group_membership(user=self.owner, group=group)
+            library_policies.can_manage_group_membership(user=self.owner, group=group)
         )
         self.assertTrue(
-            policies.can_manage_group_membership(user=self.manager, group=group)
+            library_policies.can_manage_group_membership(user=self.manager, group=group)
         )
         self.assertFalse(
-            policies.can_manage_group_membership(user=self.librarian, group=group)
+            library_policies.can_manage_group_membership(user=self.librarian, group=group)
         )
 
         # Presentation (description): Owner/Manager/Librarian, or Curator for their group; never for Public.
         LibraryGroupMembership.objects.create(
             user=self.reader, group=group, is_curator=True
         )
-        self.assertTrue(policies.can_edit_group_presentation(user=self.librarian, group=group))
-        self.assertTrue(policies.can_edit_group_presentation(user=self.reader, group=group))
+        self.assertTrue(library_policies.can_edit_group_presentation(user=self.librarian, group=group))
+        self.assertTrue(library_policies.can_edit_group_presentation(user=self.reader, group=group))
 
         # Description: Public description is editable by Owner/Manager/Librarian, but not Reader/Curator.
-        self.assertTrue(policies.can_edit_group_description(user=self.owner, group=self.public))
+        self.assertTrue(library_policies.can_edit_group_description(user=self.owner, group=self.public))
         self.assertTrue(
-            policies.can_edit_group_description(user=self.manager, group=self.public)
+            library_policies.can_edit_group_description(user=self.manager, group=self.public)
         )
         self.assertTrue(
-            policies.can_edit_group_description(user=self.librarian, group=self.public)
+            library_policies.can_edit_group_description(user=self.librarian, group=self.public)
         )
         self.assertFalse(
-            policies.can_edit_group_description(user=self.reader, group=self.public)
+            library_policies.can_edit_group_description(user=self.reader, group=self.public)
         )
 
     def test_curator_rules(self):
@@ -244,11 +245,11 @@ class PolicyTest(TestCase):
         LibraryGroupMembership.objects.create(
             user=self.reader, group=fantasy, is_curator=True
         )
-        self.assertTrue(policies.can_curate_group(user=self.reader, group=fantasy))
-        self.assertFalse(policies.can_curate_group(user=self.reader, group=self.public))
-        self.assertTrue(policies.can_curate_group(user=self.owner, group=self.public))
-        self.assertTrue(policies.can_curate_group(user=self.manager, group=self.public))
-        self.assertTrue(policies.can_curate_group(user=self.librarian, group=self.public))
+        self.assertTrue(library_policies.can_curate_group(user=self.reader, group=fantasy))
+        self.assertFalse(library_policies.can_curate_group(user=self.reader, group=self.public))
+        self.assertTrue(library_policies.can_curate_group(user=self.owner, group=self.public))
+        self.assertTrue(library_policies.can_curate_group(user=self.manager, group=self.public))
+        self.assertTrue(library_policies.can_curate_group(user=self.librarian, group=self.public))
 
     def test_curator_authority_is_exact_group_scoped(self):
         fantasy = LibraryGroup.objects.create(name="Fantasy")
@@ -258,19 +259,19 @@ class PolicyTest(TestCase):
         )
         LibraryGroupMembership.objects.create(user=self.reader, group=mystery)
 
-        self.assertTrue(policies.can_curate_group(user=self.reader, group=fantasy))
-        self.assertFalse(policies.can_curate_group(user=self.reader, group=mystery))
-        self.assertTrue(policies.can_manage_group_books(user=self.reader, group=fantasy))
-        self.assertFalse(policies.can_manage_group_books(user=self.reader, group=mystery))
+        self.assertTrue(library_policies.can_curate_group(user=self.reader, group=fantasy))
+        self.assertFalse(library_policies.can_curate_group(user=self.reader, group=mystery))
+        self.assertTrue(library_policies.can_manage_group_books(user=self.reader, group=fantasy))
+        self.assertFalse(library_policies.can_manage_group_books(user=self.reader, group=mystery))
 
     def test_broad_roles_retain_group_book_authority_without_curator_flag(self):
         group = LibraryGroup.objects.create(name="G")
-        self.assertTrue(policies.can_manage_group_books(user=self.owner, group=group))
-        self.assertTrue(policies.can_manage_group_books(user=self.manager, group=group))
-        self.assertTrue(policies.can_manage_group_books(user=self.librarian, group=group))
-        self.assertTrue(policies.can_curate_group(user=self.owner, group=group))
-        self.assertTrue(policies.can_curate_group(user=self.manager, group=group))
-        self.assertTrue(policies.can_curate_group(user=self.librarian, group=group))
+        self.assertTrue(library_policies.can_manage_group_books(user=self.owner, group=group))
+        self.assertTrue(library_policies.can_manage_group_books(user=self.manager, group=group))
+        self.assertTrue(library_policies.can_manage_group_books(user=self.librarian, group=group))
+        self.assertTrue(library_policies.can_curate_group(user=self.owner, group=group))
+        self.assertTrue(library_policies.can_curate_group(user=self.manager, group=group))
+        self.assertTrue(library_policies.can_curate_group(user=self.librarian, group=group))
 
     def test_public_group_cannot_have_curators(self):
         with self.assertRaises(ValidationError):

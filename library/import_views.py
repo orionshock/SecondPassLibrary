@@ -4,7 +4,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core import policies
+from library import policies
 from core.errors import ErrorCode, api_error_response
 
 from .catalog_serializers import ImportJobSerializer

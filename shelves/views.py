@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from core import policies as core_policies
+from library import policies as library_policies
 from library.models import Book, BookGroupAssignment, LibraryGroup
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
@@ -61,7 +61,7 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
         return
 
     queryset = ShelfItem.objects.select_related("book").filter(shelf_id__in=shelf_ids)
-    if not core_policies.can_manage_library(user):
+    if not library_policies.can_manage_library(user):
         visible_assignment = BookGroupAssignment.objects.filter(
             book_id=OuterRef("book_id"),
             group__memberships__user=user,

@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import Max, QuerySet
 from django.utils import timezone
 
-from core import policies as core_policies
+from library import policies as library_policies
 from library.models import Book
 
 from . import policies
@@ -229,10 +229,10 @@ def visible_shelf_items_for_user(user, shelf: Shelf) -> QuerySet[ShelfItem]:
     qs = ShelfItem.objects.select_related("book").filter(shelf=shelf)
 
     # Safety rule: shelves never grant access.
-    if core_policies.can_manage_library(user):
+    if library_policies.can_manage_library(user):
         return qs.order_by("position", "created_at")
 
-    # Mirror core.policies.can_view_book: viewable if the viewer is a member of
+    # Mirror library.policies.can_view_book: viewable if the viewer is a member of
     # at least one group the book is assigned to.
     return (
         qs.filter(book__group_assignments__group__memberships__user=user)

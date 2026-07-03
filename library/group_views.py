@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from accounts.models import UserProfile
 from accounts.services import get_or_create_profile
-from core import policies
+from library import policies
 from core.errors import ErrorCode, api_error_response
 
 from .catalog_serializers import BookSerializer

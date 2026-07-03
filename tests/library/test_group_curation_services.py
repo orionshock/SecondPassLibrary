@@ -7,7 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
 from accounts.models import UserProfile
-from core import policies
+from library import policies
 from library.group_services import (
     add_book_to_group,
     ensure_book_public_assignment,

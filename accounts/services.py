@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
-from core import policies
+from accounts import policies
 from library.group_services import ensure_user_public_membership
 from library.models import LibraryGroupMembership, is_public_group
 
@@ -147,7 +147,7 @@ def update_user_via_management_api(
     """
     Safe path for app-level user management (no password handling).
 
-    Rules are enforced via core.policies helpers plus a small amount of self-protection.
+    Rules are enforced via accounts.policies helpers plus a small amount of self-protection.
     """
     if getattr(actor, "is_anonymous", False):
         raise PermissionDenied("Not allowed.")

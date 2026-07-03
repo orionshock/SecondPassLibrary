@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
-from core import policies
+from library import policies
 
 from .catalog_serializers import BookFileSerializer
 from .epub_services import generate_epub_download_filename
