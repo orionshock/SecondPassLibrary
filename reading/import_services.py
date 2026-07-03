@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator
 
 from library import policies as library_policies
 from library.models import Book
+from reading.marginalia_profile import count_profile_annotations, profile_selectors
 from reading.models import ReadingSession
 
 
@@ -200,7 +201,7 @@ def _json_path(parts) -> str:
 
 def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
     sessions = exported.get("sessions") or []
-    annotation_counts = _annotation_counts(sessions)
+    annotation_counts = count_profile_annotations(sessions)
     local_book, match = match_exported_book(user=user, exported=exported)
     book_matched = match["status"] == "matched"
     skipped_warning = (
@@ -251,7 +252,7 @@ def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
 
 
 def _session_summary(*, user, book: Book | None, exported: dict[str, Any], book_matched: bool) -> dict[str, Any]:
-    counts = _annotation_counts([exported])
+    counts = count_profile_annotations([exported])
     is_active = exported.get("status") == ReadingSession.STATUS_ACTIVE
     locator_warning = _locator_warning(exported) if book_matched else ""
     will_import = bool(book_matched and not locator_warning)
@@ -276,30 +277,6 @@ def _session_summary(*, user, book: Book | None, exported: dict[str, Any], book_
     }
 
 
-def _annotation_counts(sessions: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {
-        "annotation_count": 0,
-        "bookmark_count": 0,
-        "highlight_count": 0,
-        "commented_highlight_count": 0,
-    }
-    for session in sessions:
-        for annotation in session.get("annotations") or []:
-            motivations = set(annotation.get("motivation") or [])
-            bodies = annotation.get("body") or []
-            has_comment = "commenting" in motivations or any(
-                body.get("purpose") == "commenting" for body in bodies if isinstance(body, dict)
-            )
-            counts["annotation_count"] += 1
-            if "bookmarking" in motivations and "highlighting" not in motivations:
-                counts["bookmark_count"] += 1
-            if "highlighting" in motivations:
-                counts["highlight_count"] += 1
-                if has_comment:
-                    counts["commented_highlight_count"] += 1
-    return counts
-
-
 def _locator_warning(session: dict[str, Any]) -> str:
     values = []
     progress = session.get("progress") or {}
@@ -313,11 +290,10 @@ def _locator_warning(session: dict[str, Any]) -> str:
 
     for annotation in session.get("annotations") or []:
         target = annotation.get("target") or {}
-        selector = target.get("selector") if isinstance(target, dict) else None
-        selectors = selector if isinstance(selector, list) else [selector]
-        for item in selectors:
-            if isinstance(item, dict) and item.get("type") == "FragmentSelector":
-                values.append(item.get("value"))
+        if isinstance(target, dict):
+            for item in profile_selectors(target):
+                if item.get("type") == "FragmentSelector":
+                    values.append(item.get("value"))
 
     malformed = any(not _is_cfi_shaped(value) for value in values if value is not None)
     return "Malformed EPUB CFI locator. Needs Reader." if malformed else ""

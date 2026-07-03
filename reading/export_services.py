@@ -7,7 +7,8 @@ from django.utils import timezone
 
 from library.models import Book, BookIdentifier
 
-from .models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
+from .marginalia_profile import profile_annotation_from_model
+from .models import ReadingSession
 from .profile import CURRENT_READING_PROFILE_ID
 
 
@@ -76,73 +77,10 @@ def _progress_payload(session: ReadingSession) -> dict[str, Any] | None:
     }
 
 
-def _annotation_motivations(annotation: Annotation) -> list[str]:
-    if annotation.anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK:
-        return [Annotation.MOTIVATION_BOOKMARKING]
-    motivations = [Annotation.MOTIVATION_HIGHLIGHTING]
-    if (annotation.comment_text or "").strip():
-        motivations.append(Annotation.MOTIVATION_COMMENTING)
-    return motivations
-
-
-def _annotation_selector(annotation: Annotation) -> dict[str, Any] | list[dict[str, Any]]:
-    fragment: dict[str, Any] = {
-        "type": "FragmentSelector",
-        "value": annotation.selector_value,
-    }
-    if annotation.selector_kind != SELECTOR_KIND_EPUB_CFI:
-        fragment["type"] = "UnknownSelector"
-
-    if annotation.highlight_text and (annotation.quote_prefix or annotation.quote_suffix):
-        quote: dict[str, Any] = {
-            "type": "TextQuoteSelector",
-            "exact": annotation.highlight_text,
-        }
-        if annotation.quote_prefix:
-            quote["prefix"] = annotation.quote_prefix
-        if annotation.quote_suffix:
-            quote["suffix"] = annotation.quote_suffix
-        return [fragment, quote]
-    return fragment
-
-
-def _annotation_body(annotation: Annotation) -> list[dict[str, Any]]:
-    bodies: list[dict[str, Any]] = []
-    if annotation.highlight_text or annotation.highlight_color:
-        bodies.append(
-            {
-                "type": "TextualBody",
-                "purpose": "describing",
-                "value": annotation.highlight_text or "",
-                "color": annotation.highlight_color or "yellow",
-            }
-        )
-    if annotation.comment_text:
-        bodies.append(
-            {
-                "type": "TextualBody",
-                "purpose": "commenting",
-                "value": annotation.comment_text,
-            }
-        )
-    return bodies
-
-
-def _annotation_payload(annotation: Annotation) -> dict[str, Any]:
-    return {
-        "motivation": _annotation_motivations(annotation),
-        "target": {"selector": _annotation_selector(annotation)},
-        "body": _annotation_body(annotation),
-        "is_deleted": bool(annotation.is_deleted),
-        "created_at": _iso(annotation.created_at),
-        "updated_at": _iso(annotation.updated_at),
-    }
-
-
 def _session_payload(session: ReadingSession, export_session_id: str) -> dict[str, Any]:
     annotations = getattr(session, "annotations")
     annotations = [
-        _annotation_payload(annotation)
+        profile_annotation_from_model(annotation)
         for annotation in annotations.all()
         if not annotation.is_deleted
     ]

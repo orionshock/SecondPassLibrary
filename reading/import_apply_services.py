@@ -8,6 +8,10 @@ from django.utils.dateparse import parse_datetime
 
 from .import_services import plan_marginalia_import
 from .import_selection import parse_import_selection, plan_book_key
+from .marginalia_profile import (
+    compact_annotation_from_profile,
+    increment_model_annotation_counts,
+)
 from .models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from .profile import CURRENT_READING_PROFILE_VERSION
 
@@ -77,7 +81,7 @@ def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: obj
                     if annotation is None:
                         continue
                     book_result["annotations_created"] += 1
-                    _count_annotation(result["summary"], annotation)
+                    increment_model_annotation_counts(result["summary"], annotation)
 
     return result
 
@@ -131,7 +135,7 @@ def _create_annotation(
     exported_annotation: dict[str, Any],
     export_session_id: str,
 ) -> Annotation | None:
-    compact = _annotation_compact(exported_annotation)
+    compact = compact_annotation_from_profile(exported_annotation)
     if compact is None:
         return None
     annotation = Annotation.objects.create(
@@ -161,69 +165,6 @@ def _create_annotation(
     if update_fields:
         annotation.save(update_fields=update_fields)
     return annotation
-
-
-def _annotation_compact(exported_annotation: dict[str, Any]) -> dict[str, str] | None:
-    motivations = set(exported_annotation.get("motivation") or [])
-    selector = _selectors(exported_annotation.get("target") or {})
-    fragment = next((item for item in selector if item.get("type") == "FragmentSelector"), {})
-    quote = next((item for item in selector if item.get("type") == "TextQuoteSelector"), {})
-    selector_value = fragment.get("value") or ""
-    if not selector_value:
-        return None
-
-    describing = ""
-    color = ""
-    comment = ""
-    for body in exported_annotation.get("body") or []:
-        if body.get("purpose") == "describing" and not describing:
-            describing = body.get("value") or ""
-            color = body.get("color") or ""
-        elif body.get("purpose") == "commenting" and not comment:
-            comment = body.get("value") or ""
-
-    if "highlighting" in motivations:
-        return {
-            "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
-            "anchor_kind": Annotation.ANCHOR_KIND_HIGHLIGHT,
-            "selector_value": selector_value,
-            "highlight_text": describing or quote.get("exact") or "",
-            "quote_prefix": quote.get("prefix") or "",
-            "quote_suffix": quote.get("suffix") or "",
-            "highlight_color": color or "yellow",
-            "comment_text": comment,
-        }
-    if "bookmarking" in motivations:
-        return {
-            "motivation": Annotation.MOTIVATION_BOOKMARKING,
-            "anchor_kind": Annotation.ANCHOR_KIND_BOOKMARK,
-            "selector_value": selector_value,
-            "highlight_text": "",
-            "quote_prefix": "",
-            "quote_suffix": "",
-            "highlight_color": "",
-            "comment_text": "",
-        }
-    return None
-
-
-def _selectors(target: dict[str, Any]) -> list[dict[str, Any]]:
-    selector = target.get("selector")
-    if isinstance(selector, list):
-        return [item for item in selector if isinstance(item, dict)]
-    if isinstance(selector, dict):
-        return [selector]
-    return []
-
-
-def _count_annotation(summary: dict[str, int], annotation: Annotation) -> None:
-    summary["annotations_created"] += 1
-    if annotation.anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK:
-        summary["bookmarks_created"] += 1
-        return
-    summary["highlights_created"] += 1
-    if annotation.comment_text:
-        summary["commented_highlights_created"] += 1
 
 
 def _dt(value: object):
