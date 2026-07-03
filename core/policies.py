@@ -248,24 +248,3 @@ def can_remove_book_from_group(*, user, book: Book, group: LibraryGroup) -> bool
     if is_public_group(group):
         return False
     return can_curate_group(user=user, group=group)
-
-
-def _owner_id_from_obj(obj: Any):
-    if hasattr(obj, "user_id"):
-        return getattr(obj, "user_id")
-    if hasattr(obj, "user"):
-        return getattr(getattr(obj, "user"), "id", None)
-    if hasattr(obj, "session") and hasattr(obj.session, "user_id"):
-        return getattr(obj.session, "user_id")
-    return None
-
-
-def can_view_reading_metadata(*, user, obj: Any) -> bool:
-    if getattr(user, "is_anonymous", False):
-        return False
-    owner_id = _owner_id_from_obj(obj)
-    return owner_id == getattr(user, "id", None)
-
-
-def can_edit_reading_metadata(*, user, obj: Any) -> bool:
-    return can_view_reading_metadata(user=user, obj=obj)
