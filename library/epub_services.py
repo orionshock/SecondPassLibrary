@@ -32,6 +32,7 @@ class ImportResult:
 
 _FILENAME_SAFE_CHARS_RE = re.compile(r"[^A-Za-z0-9 .,_()\\-]+")
 _FILENAME_SPACES_RE = re.compile(r"\\s+")
+SHA256_CHUNK_BYTES = 1024 * 1024
 
 
 def _sanitize_filename_component(value: str) -> str:
@@ -59,6 +60,31 @@ def generate_epub_download_filename(*, book: Book) -> str:
     parts.append(_sanitize_filename_component(book.title))
     filename = " - ".join(parts)
     return f"{filename}.epub"
+
+
+def calculate_file_sha256(file_obj, *, chunk_size: int = SHA256_CHUNK_BYTES) -> tuple[str, int]:
+    digest = hashlib.sha256()
+    total_size = 0
+    seek = getattr(file_obj, "seek", None)
+    if callable(seek):
+        seek(0)
+
+    chunks = getattr(file_obj, "chunks", None)
+    if callable(chunks):
+        iterator = chunks(chunk_size=chunk_size)
+    else:
+        iterator = iter(lambda: file_obj.read(chunk_size), b"")
+
+    for chunk in iterator:
+        if not chunk:
+            continue
+        digest.update(chunk)
+        total_size += len(chunk)
+
+    if callable(seek):
+        seek(0)
+
+    return digest.hexdigest(), total_size
 
 
 def _clean_str(value: object) -> str:
@@ -302,9 +328,7 @@ def import_epub_impl(
         raise ValueError(f"File must have .epub extension: {file_path}")
 
     with open(path, "rb") as f:
-        content = f.read()
-        checksum = hashlib.sha256(content).hexdigest()
-        file_size = len(content)
+        checksum, file_size = calculate_file_sha256(f)
 
     existing = BookFile.objects.filter(checksum=checksum).first()
     if existing:

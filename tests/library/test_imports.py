@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+from io import BytesIO
 import os
 from pathlib import Path
 import shutil
@@ -9,11 +11,42 @@ import uuid
 from django.conf import settings
 from django.test import TestCase
 
-from library.epub_services import ImportStatus
+from library.epub_services import calculate_file_sha256, ImportStatus
 from library.services import import_epub
 from tests.utils.books import create_file_backed_book
 
 from tests.library.utils import IsolatedMediaRootMixin
+
+
+class NoUnboundedReadBytesIO(BytesIO):
+    def __init__(self, initial_bytes: bytes):
+        super().__init__(initial_bytes)
+        self.read_sizes: list[int] = []
+
+    def read(self, size: int = -1) -> bytes:
+        self.read_sizes.append(size)
+        if size < 0:
+            raise AssertionError("checksum helper must not call unbounded read()")
+        return super().read(size)
+
+
+class ChunkedUpload:
+    def __init__(self, data: bytes):
+        self.data = data
+        self.seek_positions: list[int] = []
+        self.chunks_called = False
+
+    def seek(self, position: int) -> None:
+        self.seek_positions.append(position)
+
+    def chunks(self, *, chunk_size: int | None = None):
+        self.chunks_called = True
+        size = chunk_size or len(self.data)
+        for start in range(0, len(self.data), size):
+            yield self.data[start : start + size]
+
+    def read(self, size: int = -1) -> bytes:
+        raise AssertionError("checksum helper should use UploadedFile.chunks() when available")
 
 
 class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
@@ -30,13 +63,34 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
+    def test_stream_sha256_uses_bounded_reads_for_regular_file_and_rewinds(self):
+        data = b"abcdef"
+        file_obj = NoUnboundedReadBytesIO(data)
+
+        checksum, file_size = calculate_file_sha256(file_obj, chunk_size=2)
+
+        self.assertEqual(checksum, hashlib.sha256(data).hexdigest())
+        self.assertEqual(file_size, len(data))
+        self.assertEqual(file_obj.tell(), 0)
+        self.assertTrue(file_obj.read_sizes)
+        self.assertTrue(all(size == 2 for size in file_obj.read_sizes))
+
+    def test_stream_sha256_uses_uploaded_file_chunks_and_rewinds(self):
+        data = b"abcdef"
+        upload = ChunkedUpload(data)
+
+        checksum, file_size = calculate_file_sha256(upload, chunk_size=2)
+
+        self.assertEqual(checksum, hashlib.sha256(data).hexdigest())
+        self.assertEqual(file_size, len(data))
+        self.assertTrue(upload.chunks_called)
+        self.assertEqual(upload.seek_positions, [0, 0])
+
     @patch("library.services.epub.read_epub")
     def test_checksum_calculation(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
         mock_read_epub.return_value = mock_book
-
-        import hashlib
 
         with open(self.epub_path, "rb") as f:
             expected_checksum = hashlib.sha256(f.read()).hexdigest()
@@ -67,8 +121,6 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
         mock_read_epub.return_value = mock_book
 
         # Calculate the actual checksum of the temp file
-        import hashlib
-
         with open(self.epub_path, "rb") as f:
             checksum = hashlib.sha256(f.read()).hexdigest()
 
