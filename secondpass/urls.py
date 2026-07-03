@@ -15,13 +15,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.contrib import admin
 from pathlib import Path
-from django.urls import include, path, re_path
+
 from django.conf import settings
+from django.contrib import admin
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.templatetags.static import static
+from django.urls import include, path, re_path
 from django.views import defaults as default_views
 from django.views.static import serve as static_serve
 
@@ -68,35 +69,27 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls")),
 ]
 
-def _media(request, path: str):
+def _cover_media(request, path: str):
     """
-    Serve public cover images directly, and broad MEDIA_ROOT only in DEBUG.
+    Serve public cover images from MEDIA_ROOT/covers in direct-server mode.
 
     Notes:
-    - MEDIA_URL (default: /media/) is the canonical public URL prefix for user media
-      like cover images.
     - Cover images are public display assets and keep their stable /media/covers/
-      URLs in direct-server production-mode usage.
-    - Other media paths can include protected EPUBs and are served by Django only
-      as a DEBUG development convenience.
+      URLs in direct-server usage.
+    - Book files live under MEDIA_ROOT/books and must not be publicly served as
+      raw media.
     """
-    if path.startswith("covers/"):
-        cover_path = path.removeprefix("covers/")
-        parts = cover_path.replace("\\", "/").split("/")
-        if ".." in parts or cover_path.startswith("/"):
-            raise Http404()
-        return static_serve(
-            request,
-            cover_path,
-            document_root=Path(settings.MEDIA_ROOT) / "covers",
-        )
-    if not settings.DEBUG:
+    parts = path.replace("\\", "/").split("/")
+    if ".." in parts or path.startswith("/"):
         raise Http404()
-    return static_serve(request, path, document_root=settings.MEDIA_ROOT)
+    return static_serve(
+        request,
+        path,
+        document_root=Path(settings.MEDIA_ROOT) / "covers",
+    )
 
 
 urlpatterns += [
-    # Always register the route so generated URLs remain stable. Covers are
-    # served in direct-server mode; other media is DEBUG-only.
-    re_path(r"^media/(?P<path>.*)$", _media),
+    # Keep cover URLs stable in direct-server mode without exposing all media.
+    re_path(r"^media/covers/(?P<path>.*)$", _cover_media),
 ]

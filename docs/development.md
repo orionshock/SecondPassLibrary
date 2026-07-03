@@ -22,13 +22,13 @@ build step.
 
 Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/media/`) and stored under `MEDIA_ROOT` (default: `userdata/media`).
 
-In local development (`DEBUG=True`), Django serves `MEDIA_ROOT` at `MEDIA_URL` so cover images render in the product UI.
+In local development, Django serves only `/media/covers/` so cover images render in the product UI.
 
 Production deployments must handle durable media separately from WhiteNoise.
-WhiteNoise serves packaged Product UI assets under `/static/` only. In local or
-direct-server production-mode usage, Django serves cover images narrowly from
-`/media/covers/` for convenience, but it does not serve stored EPUB files,
-imports, exports, marginalia, or other protected user data.
+WhiteNoise serves packaged Product UI assets under `/static/` only. Django
+serves only the public cover namespace, `/media/covers/`; stored EPUB files,
+imports, exports, marginalia, and other protected user data are never served as
+raw media URLs.
 Production `collectstatic` output goes to `var/static/`, which is generated and
 can be rebuilt. Back up `userdata/`, not `var/static/`.
 

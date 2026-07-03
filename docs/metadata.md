@@ -51,8 +51,8 @@ Metadata precedence:
 Media serving note:
 
 - Covers are stored under `MEDIA_ROOT/covers` and addressed under `MEDIA_URL` (default: `/media/`).
-- Django serves `/media/covers/` narrowly in local/direct-server modes so covers render under `DEBUG=False`.
-- Broad `MEDIA_ROOT` serving remains debug-only; stored EPUB files and other protected media are not served by the direct cover route.
+- Django serves `/media/covers/` narrowly so covers render in direct-server usage.
+- Stored EPUB files and other protected media are never served as raw media URLs.
 
 ## Duplicate detection and filenames
 

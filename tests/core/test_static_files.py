@@ -71,10 +71,10 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
         self.assertIn("Back up `userdata/`", normalized)
         self.assertIn("do not include it in normal backups", normalized)
         self.assertIn("WhiteNoise does not serve `MEDIA_ROOT`", normalized)
-        self.assertIn("Django serves cover images narrowly", normalized)
-        self.assertIn("It does not serve sibling media directories", normalized)
+        self.assertIn("Django serves only the public cover namespace", normalized)
+        self.assertIn("never served as raw media", normalized)
         self.assertIn(
-            "stored EPUB files under `userdata/media/books/`",
+            "Stored EPUB files under `userdata/media/books/`",
             normalized,
         )
 

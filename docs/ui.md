@@ -66,7 +66,7 @@ Dashboard note: recent reading items render a cover image when `book.cover_url` 
 
 Cover note: book lists/cards throughout the product UI render cover art when `cover_url` is present; placeholders remain when it is `null`.
 
-Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). Django serves `/media/covers/` narrowly in local/direct-server modes so covers render under `DEBUG=False`; broad `MEDIA_ROOT` serving remains debug-only and full deployment media serving can move to a reverse proxy or Docker later.
+Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). The only public media URL namespace is `/media/covers/`; book files and other protected user data are never served as raw media URLs.
 
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers, including readers with group curator flags, to only viewable groups) with links to the group pages.
 
