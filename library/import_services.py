@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePath
 import posixpath
 import uuid
 import zipfile
@@ -22,6 +22,34 @@ COPY_CHUNK_BYTES = 1024 * 1024
 
 class ImportResourceLimitError(ValueError):
     pass
+
+
+def sanitize_import_error_message(exc_or_message: object) -> str:
+    if isinstance(exc_or_message, ImportResourceLimitError):
+        return str(exc_or_message)
+
+    raw = str(exc_or_message or "").lower()
+    if "zip" in raw:
+        return "Invalid or unsupported EPUB/ZIP structure."
+    if "epub" in raw:
+        return "Invalid or unsupported EPUB file."
+    if "xml" in raw or "opf" in raw:
+        return "Invalid or unsupported EPUB metadata."
+    if "image" in raw or "cover" in raw:
+        return "Invalid or unsupported cover image."
+    if isinstance(exc_or_message, (OSError, ValueError)):
+        return "Invalid or unsupported EPUB file."
+    return "Unexpected import failure."
+
+
+def _safe_import_result_message(*, status: str, message: object) -> str:
+    if status in {ImportJobItem.STATUS_IMPORTED, ImportJobItem.STATUS_DUPLICATE}:
+        return str(message or "")
+    return sanitize_import_error_message(message)
+
+
+def _safe_import_source_name(source_name: str) -> str:
+    return PurePath((source_name or "").replace("\\", "/")).name
 
 
 def _imports_dir() -> Path:
@@ -229,23 +257,36 @@ def process_import_job(
     try:
         if job.source_type == ImportJob.SOURCE_EPUB:
             job.total_found = 1
-            result = import_epub_func(str(staged_path))
-            status_val = getattr(result, "status", None)
-            item_status = (
-                ImportJobItem.STATUS_IMPORTED
-                if status_val == "imported"
-                else ImportJobItem.STATUS_DUPLICATE
-                if status_val == "duplicate"
-                else ImportJobItem.STATUS_FAILED
-            )
-            ImportJobItem.objects.create(
-                job=job,
-                status=item_status,
-                source_name=job.source_filename or "",
-                book=getattr(result, "book", None),
-                book_file=getattr(result, "book_file", None),
-                message=getattr(result, "message", "") or "",
-            )
+            job.save(update_fields=["total_found", "updated_at"])
+            try:
+                result = import_epub_func(str(staged_path))
+                status_val = getattr(result, "status", None)
+                item_status = (
+                    ImportJobItem.STATUS_IMPORTED
+                    if status_val == "imported"
+                    else ImportJobItem.STATUS_DUPLICATE
+                    if status_val == "duplicate"
+                    else ImportJobItem.STATUS_FAILED
+                )
+                result_message = getattr(result, "message", "") or ""
+                ImportJobItem.objects.create(
+                    job=job,
+                    status=item_status,
+                    source_name=_safe_import_source_name(job.source_filename or ""),
+                    book=getattr(result, "book", None),
+                    book_file=getattr(result, "book_file", None),
+                    message=_safe_import_result_message(
+                        status=item_status,
+                        message=result_message,
+                    ),
+                )
+            except Exception as e:
+                ImportJobItem.objects.create(
+                    job=job,
+                    status=ImportJobItem.STATUS_FAILED,
+                    source_name=_safe_import_source_name(job.source_filename or ""),
+                    message=sanitize_import_error_message(e),
+                )
         else:
             extracted_dir = imports_dir / "jobs" / str(job.id) / "extracted"
             extracted_dir.mkdir(parents=True, exist_ok=True)
@@ -299,6 +340,7 @@ def process_import_job(
                 copied_epub_bytes = 0
                 for info in members:
                     source_name = info.filename
+                    safe_source_name = _safe_import_source_name(source_name)
                     try:
                         if info.file_size > MAX_ZIP_EPUB_MEMBER_BYTES:
                             raise ImportResourceLimitError(
@@ -381,17 +423,20 @@ def process_import_job(
                         ImportJobItem.objects.create(
                             job=job,
                             status=item_status,
-                            source_name=source_name,
+                            source_name=safe_source_name,
                             book=getattr(result, "book", None),
                             book_file=getattr(result, "book_file", None),
-                            message=getattr(result, "message", "") or "",
+                            message=_safe_import_result_message(
+                                status=item_status,
+                                message=getattr(result, "message", "") or "",
+                            ),
                         )
                     except Exception as e:
                         ImportJobItem.objects.create(
                             job=job,
                             status=ImportJobItem.STATUS_FAILED,
-                            source_name=source_name,
-                            message=f"Failed to import EPUB: {e}",
+                            source_name=safe_source_name,
+                            message=sanitize_import_error_message(e),
                         )
                         continue
 

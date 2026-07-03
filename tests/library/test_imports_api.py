@@ -179,6 +179,54 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_UPLOAD_TYPE)
 
     @patch("library.services.epub.read_epub")
+    def test_single_epub_failure_message_does_not_expose_temp_path(self, mock_read_epub):
+        mock_read_epub.side_effect = ValueError(
+            r"Failed parsing C:\projects\SecondPassLibrary\userdata\imports\jobs\secret\bad.epub"
+        )
+        self._login_librarian()
+
+        epub = SimpleUploadedFile("bad.epub", b"not-an-epub", content_type="application/epub+zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response_data_dict(response)
+        item = cast(list[dict[str, Any]], data["items"])[0]
+        self.assertEqual(item["status"], "failed")
+        self.assertEqual(item["message"], "Invalid or unsupported EPUB file.")
+        self.assertNotIn("SecondPassLibrary", item["message"])
+        self.assertNotIn("userdata", item["message"])
+        self.assertNotIn("bad.epub", item["message"])
+
+    @patch("library.services.epub.read_epub")
+    def test_zip_member_failure_message_does_not_expose_member_path_or_temp_path(self, mock_read_epub):
+        mock_read_epub.side_effect = ValueError(
+            r"Failed parsing member private/nested/leaky.epub at C:\tmp\jobs\abc\extracted\file.epub"
+        )
+        self._login_librarian()
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("private/nested/leaky.epub", b"not-an-epub")
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response_data_dict(response)
+        item = cast(list[dict[str, Any]], data["items"])[0]
+        self.assertEqual(item["status"], "failed")
+        self.assertEqual(item["source_name"], "leaky.epub")
+        self.assertEqual(item["message"], "Invalid or unsupported EPUB file.")
+        self.assertNotIn("private/nested", item["message"])
+        self.assertNotIn("C:\\tmp", item["message"])
+        self.assertNotIn("leaky.epub", item["message"])
+
+    @patch("library.services.epub.read_epub")
     @patch("library.import_services.MAX_SINGLE_EPUB_UPLOAD_BYTES", 4)
     def test_oversized_single_epub_upload_is_rejected_before_import_parse(self, mock_read_epub):
         self._login_librarian()
