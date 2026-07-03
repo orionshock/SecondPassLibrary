@@ -1,19 +1,89 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
+from io import StringIO
 from pathlib import Path
 from typing import Any, cast
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.test import TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from reading.import_staging import cleanup_staged_imports
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 
 User = get_user_model()
+
+
+class MarginaliaImportStagingCleanupTests(IsolatedUserdataMixin, TestCase):
+    def _staging_dir(self) -> Path:
+        path = Path(settings.IMPORTS_DIR) / "staged"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _write_staged_file(self, token: str, *, hours_old: int) -> Path:
+        path = self._staging_dir() / f"{token}.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "staged_at": (timezone.now() - timedelta(hours=hours_old)).isoformat(),
+                    "user_id": 1,
+                    "payload": {"books": []},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_expired_staged_import_file_is_removed_by_cleanup(self):
+        expired = self._write_staged_file("A" * 40, hours_old=25)
+
+        removed = cleanup_staged_imports()
+
+        self.assertEqual(removed, 1)
+        self.assertFalse(expired.exists())
+
+    def test_non_expired_staged_import_file_is_preserved(self):
+        current = self._write_staged_file("B" * 40, hours_old=1)
+
+        removed = cleanup_staged_imports()
+
+        self.assertEqual(removed, 0)
+        self.assertTrue(current.exists())
+
+    def test_unrelated_file_in_staging_directory_is_preserved(self):
+        unrelated = self._staging_dir() / "notes.json"
+        unrelated.write_text("not staged marginalia", encoding="utf-8")
+
+        removed = cleanup_staged_imports()
+
+        self.assertEqual(removed, 0)
+        self.assertTrue(unrelated.exists())
+
+    def test_malformed_token_filename_is_ignored_safely(self):
+        malformed = self._staging_dir() / "..bad.json"
+        malformed.write_text("{not-json", encoding="utf-8")
+
+        removed = cleanup_staged_imports()
+
+        self.assertEqual(removed, 0)
+        self.assertTrue(malformed.exists())
+
+    def test_cleanup_staged_imports_command_reports_removed_count(self):
+        self._write_staged_file("C" * 40, hours_old=25)
+        out = StringIO()
+
+        call_command("cleanup_staged_imports", stdout=out)
+
+        self.assertIn("Removed 1 expired staged marginalia import file(s).", out.getvalue())
+
 
 class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase):
     def setUp(self):

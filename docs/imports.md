@@ -85,7 +85,7 @@ Apply API:
 POST /api/v1/reading/import/apply/
 ```
 
-Preview stores a short-lived staged copy under `userdata/imports/staged/` and returns an `import_token`. Staged files are filesystem-only, expire after roughly 24 hours, and are deleted after successful apply. No import jobs or import history are stored.
+Preview stores a short-lived staged copy under `userdata/imports/staged/` and returns an `import_token`. Staged files are filesystem-only, expire after roughly 24 hours, and are deleted after successful apply. Operators can remove expired staged previews explicitly with `python manage.py cleanup_staged_imports`. No import jobs or import history are stored.
 
 The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It accepts the preview `import_token`, re-validates the staged payload against the schema, and imports matched sessions from file-hash-matched visible local books. It does not create import jobs. The older file-upload apply path remains available for compatibility, but the product UI uses `import_token`.
 

@@ -60,22 +60,34 @@ def delete_staged_marginalia_import(*, token: str) -> None:
         pass
 
 
-def cleanup_staged_imports() -> None:
+def cleanup_staged_imports() -> int:
     root = staged_import_dir()
     if not root.exists():
-        return
+        return 0
     cutoff = timezone.now() - timedelta(hours=24)
-    for path in root.glob("*.json"):
+    removed = 0
+    root_resolved = root.resolve()
+    for path in root.iterdir():
+        if not path.is_file() or path.suffix != ".json" or not TOKEN_RE.fullmatch(path.stem):
+            continue
+        try:
+            if path.resolve().parent != root_resolved:
+                continue
+        except OSError:
+            continue
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             staged_at = parse_datetime(str(data.get("staged_at") or ""))
             if staged_at is None or staged_at < cutoff:
                 path.unlink(missing_ok=True)
+                removed += 1
         except (OSError, json.JSONDecodeError):
             try:
                 path.unlink(missing_ok=True)
+                removed += 1
             except OSError:
                 pass
+    return removed
 
 
 def staged_import_path(token: str) -> Path:
