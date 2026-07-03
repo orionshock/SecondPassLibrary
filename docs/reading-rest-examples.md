@@ -387,6 +387,7 @@ Notes:
 - Soft-deleted annotations are hidden by default.
 - `include_deleted=true` includes soft-deleted records.
 - `book_id=<book_id>` is also supported as a filter.
+- `kind=highlight|bookmark` is also supported as a repeated filter.
 
 Example response:
 

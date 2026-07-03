@@ -22,7 +22,11 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 ## Current Implementation (Server)
 
-Second Pass Library currently stores reading data via REST/JSON APIs using W3C-inspired fields (`motivation`, `target`, `body`, `current_location`, `profile_version`).
+Second Pass Library currently stores reading data in a compact
+reading-session-centered model. The live annotation REST API uses SPL-native
+fields such as `kind`, `selector`, `quote`, `highlight_text`,
+`highlight_color`, and `comment_text`; it does not use this draft JSON-LD
+shape.
 
 The canonical server import/export contract is the Second Pass Library
 Marginalia Profile in `../marginalia-export.md`. JSON-LD serialization using

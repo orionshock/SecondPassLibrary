@@ -22,8 +22,9 @@ Second Pass Library note:
 
 - The canonical server import/export contract is the Second Pass Library
   Marginalia Profile documented in `../marginalia-export.md`.
-- The current server implementation stores a strict W3C-inspired subset via
-  REST/JSON, but W3C/Web Annotation is an influence only.
+- The live annotation REST API uses SPL-native fields and does not use this
+  draft JSON-LD shape.
+- W3C/Web Annotation is historical design influence only.
 - Server-side marginalia import preview supports SPL Marginalia Profile files
   only, not arbitrary foreign/provider-specific formats.
 - The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.

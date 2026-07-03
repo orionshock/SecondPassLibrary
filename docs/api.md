@@ -588,7 +588,7 @@ Group delete/scary delete is not part of the current documented product/API cont
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/` (writes require current access to the session's book)
 - Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
-  - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?motivation=highlighting|commenting|bookmarking` (may be repeated)
+  - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?kind=highlight|bookmark` (may be repeated)
   - Ordering: `?ordering=created|-created|modified|-modified`
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
   - `POST /api/v1/reading/annotations/batch/` creates up to 100 annotations for one session in one all-or-nothing request.

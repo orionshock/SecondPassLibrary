@@ -240,7 +240,7 @@ Highlight color:
 - Optional filters:
   - `?book_id=<book_id>`
   - `?session_id=<session_id>`
-  - `?motivation=highlighting|commenting|bookmarking` (may be repeated)
+  - `?kind=highlight|bookmark` (may be repeated)
   - `?ordering=created|-created|modified|-modified`
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.

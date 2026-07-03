@@ -429,7 +429,7 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
             status.HTTP_200_OK,
         )
 
-    def test_annotations_list_filters_by_motivation(self):
+    def test_annotations_list_filters_by_kind(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
@@ -459,22 +459,21 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
 
         expectations = {
-            "bookmarking": {str(a_bookmark.id)},
-            "highlighting": {str(a_highlight.id), str(a_comment.id)},
-            "commenting": {str(a_comment.id)},
+            "bookmark": {str(a_bookmark.id)},
+            "highlight": {str(a_highlight.id), str(a_comment.id)},
         }
-        for motivation, expected in expectations.items():
+        for kind, expected in expectations.items():
             response = cast(
                 Response,
-                self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&motivation={motivation}"),
+                self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&kind={kind}"),
             )
-            self.assertEqual(response.status_code, status.HTTP_200_OK, motivation)
+            self.assertEqual(response.status_code, status.HTTP_200_OK, kind)
             self.assertEqual({row["id"] for row in response_data_list(response)}, expected)
 
         multi = cast(
             Response,
             self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&motivation=highlighting&motivation=bookmarking"
+                f"/api/v1/reading/annotations/?session_id={session.id}&kind=highlight&kind=bookmark"
             ),
         )
         self.assertEqual(multi.status_code, status.HTTP_200_OK)
@@ -485,9 +484,17 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
 
         bad = cast(
             Response,
-            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&motivation=weird"),
+            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}&kind=weird"),
         )
         self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
+
+        old_filter = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/reading/annotations/?session_id={session.id}&motivation=highlighting"
+            ),
+        )
+        self.assertEqual(old_filter.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_annotations_list_ordering_created_and_modified(self):
         self.client.login(username="u1", password="pass1")

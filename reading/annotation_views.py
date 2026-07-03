@@ -55,25 +55,23 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         if not include_deleted:
             queryset = queryset.filter(is_deleted=False)
 
-        motivations = [
-            str(m).strip()
-            for m in request.query_params.getlist("motivation")
-            if str(m).strip()
+        if "motivation" in request.query_params:
+            raise DRFValidationError({"motivation": "Use kind instead."})
+
+        kinds = [
+            str(kind).strip()
+            for kind in request.query_params.getlist("kind")
+            if str(kind).strip()
         ]
-        if motivations:
-            allowed = {c[0] for c in Annotation.MOTIVATION_CHOICES}
-            if any(m not in allowed for m in motivations):
-                raise DRFValidationError({"motivation": "Invalid motivation."})
+        if kinds:
+            allowed = {Annotation.ANCHOR_KIND_BOOKMARK, Annotation.ANCHOR_KIND_HIGHLIGHT}
+            if any(kind not in allowed for kind in kinds):
+                raise DRFValidationError({"kind": "Invalid kind."})
             q = Q()
-            if Annotation.MOTIVATION_BOOKMARKING in motivations:
+            if Annotation.ANCHOR_KIND_BOOKMARK in kinds:
                 q |= Q(anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK)
-            if Annotation.MOTIVATION_HIGHLIGHTING in motivations:
+            if Annotation.ANCHOR_KIND_HIGHLIGHT in kinds:
                 q |= Q(anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT)
-            if Annotation.MOTIVATION_COMMENTING in motivations:
-                q |= Q(
-                    anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
-                    comment_text__gt="",
-                )
             queryset = queryset.filter(q)
 
         session_id = request.query_params.get("session_id")
