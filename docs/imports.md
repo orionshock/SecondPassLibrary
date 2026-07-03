@@ -41,6 +41,19 @@ GET /api/v1/library/imports/<id>/
   - OPF values take precedence over EPUB metadata when present.
   - Duplicate EPUB checksum imports are still rejected/skipped and do not refresh metadata or covers.
 
+### Resource limits
+
+Uploads are app-limited before parser/checksum work to keep untrusted files from consuming unbounded local resources:
+
+- Single EPUB upload: 200 MiB
+- ZIP upload: 1 GiB
+- ZIP entries: 5,000 total entries
+- EPUB member inside a ZIP: 200 MiB uncompressed
+- Total EPUB members inside a ZIP: 2 GiB uncompressed
+- Marginalia JSON import: 25 MiB
+
+Large library migrations should be split into smaller ZIP batches. These limits are independent of any reverse-proxy upload limits.
+
 ### Unsupported (non-goals)
 
 - Calibre sync/import of `metadata.db` (Second Pass Library is not a Calibre sync target)

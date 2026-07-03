@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 from typing import Any, cast
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -52,6 +53,17 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["valid"])
         self.assertIn("errors", r.data)
+
+    @patch("reading.import_services.MAX_MARGINALIA_IMPORT_BYTES", 4)
+    def test_oversized_marginalia_json_preview_upload_is_rejected_before_staging(self):
+        self.client.force_login(self.user)
+        r = cast(Any, self.post_preview_payload(b'{"x":1}'))
+
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(r.data["valid"])
+        self.assertFalse(r.data["can_apply"])
+        self.assertNotIn("import_token", r.data)
+        self.assertIn("limit", r.data["errors"][0]["message"])
 
     def test_schema_invalid_export_returns_readable_errors(self):
         self.client.force_login(self.user)

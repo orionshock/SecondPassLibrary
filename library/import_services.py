@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
+import posixpath
 import uuid
 import zipfile
-from typing import Callable
-import posixpath
+from typing import BinaryIO, Callable
 
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
@@ -13,8 +12,65 @@ from django.core.files.uploadedfile import UploadedFile
 from .models import ImportJob, ImportJobItem
 
 
+MAX_SINGLE_EPUB_UPLOAD_BYTES = 200 * 1024 * 1024
+MAX_ZIP_UPLOAD_BYTES = 1024 * 1024 * 1024
+MAX_ZIP_MEMBERS = 5000
+MAX_ZIP_EPUB_MEMBER_BYTES = 200 * 1024 * 1024
+MAX_ZIP_TOTAL_EPUB_BYTES = 2 * 1024 * 1024 * 1024
+COPY_CHUNK_BYTES = 1024 * 1024
+
+
+class ImportResourceLimitError(ValueError):
+    pass
+
+
 def _imports_dir() -> Path:
     return Path(getattr(settings, "IMPORTS_DIR", getattr(settings, "USERDATA_DIR")))  # type: ignore[arg-type]
+
+
+def _format_mib(byte_count: int) -> str:
+    return f"{byte_count // (1024 * 1024)} MiB"
+
+
+def _uploaded_size(uploaded_file: UploadedFile) -> int | None:
+    size = getattr(uploaded_file, "size", None)
+    return size if isinstance(size, int) else None
+
+
+def _max_upload_bytes_for_source(source_type: str) -> int:
+    if source_type == ImportJob.SOURCE_ZIP:
+        return MAX_ZIP_UPLOAD_BYTES
+    return MAX_SINGLE_EPUB_UPLOAD_BYTES
+
+
+def _validate_uploaded_size(*, uploaded_file: UploadedFile, source_type: str) -> None:
+    size = _uploaded_size(uploaded_file)
+    max_bytes = _max_upload_bytes_for_source(source_type)
+    if size is not None and size > max_bytes:
+        label = "ZIP" if source_type == ImportJob.SOURCE_ZIP else "EPUB"
+        raise ImportResourceLimitError(
+            f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
+        )
+
+
+def _copy_fileobj_capped(*, src: BinaryIO, dst_path: Path, max_bytes: int) -> int:
+    written = 0
+    try:
+        with dst_path.open("wb") as dst:
+            while True:
+                chunk = src.read(COPY_CHUNK_BYTES)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > max_bytes:
+                    raise ImportResourceLimitError(
+                        f"EPUB member exceeds the {_format_mib(max_bytes)} uncompressed limit."
+                    )
+                dst.write(chunk)
+    except Exception:
+        dst_path.unlink(missing_ok=True)
+        raise
+    return written
 
 
 def _stage_uploaded_file(
@@ -28,9 +84,21 @@ def _stage_uploaded_file(
     staged_name = f"{uuid.uuid4().hex}{extension}"
     staged_path = job_dir / staged_name
 
-    with staged_path.open("wb") as out:
-        for chunk in uploaded_file.chunks():
-            out.write(chunk)
+    max_bytes = _max_upload_bytes_for_source(source_type)
+    written = 0
+    try:
+        with staged_path.open("wb") as out:
+            for chunk in uploaded_file.chunks():
+                written += len(chunk)
+                if written > max_bytes:
+                    label = "ZIP" if source_type == ImportJob.SOURCE_ZIP else "EPUB"
+                    raise ImportResourceLimitError(
+                        f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
+                    )
+                out.write(chunk)
+    except Exception:
+        staged_path.unlink(missing_ok=True)
+        raise
 
     staged_rel = str(Path("jobs") / str(job_id) / staged_name)
     return staged_rel, staged_path
@@ -46,15 +114,21 @@ def create_import_job_from_upload(*, user, uploaded_file: UploadedFile) -> Impor
     else:
         raise ValueError("Upload must be a .epub or .zip file.")
 
+    _validate_uploaded_size(uploaded_file=uploaded_file, source_type=source_type)
+
     job = ImportJob.objects.create(
         user=user,
         status=ImportJob.STATUS_PENDING,
         source_type=source_type,
         source_filename=name,
     )
-    staged_rel, _staged_path = _stage_uploaded_file(
-        uploaded_file=uploaded_file, job_id=job.id, source_type=source_type
-    )
+    try:
+        staged_rel, _staged_path = _stage_uploaded_file(
+            uploaded_file=uploaded_file, job_id=job.id, source_type=source_type
+        )
+    except Exception:
+        job.delete()
+        raise
     job.staged_path = staged_rel
     job.save(update_fields=["staged_path", "updated_at"])
     return job
@@ -176,12 +250,18 @@ def process_import_job(
             extracted_dir = imports_dir / "jobs" / str(job.id) / "extracted"
             extracted_dir.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(staged_path, "r") as zf:
+                all_infos = zf.infolist()
+                if len(all_infos) > MAX_ZIP_MEMBERS:
+                    raise ImportResourceLimitError(
+                        f"ZIP contains more than {MAX_ZIP_MEMBERS} entries."
+                    )
+
                 members_index: dict[str, zipfile.ZipInfo] = {}
                 epub_members: list[zipfile.ZipInfo] = []
                 opfs_by_dir: dict[str, list[str]] = {}
                 collisions: set[str] = set()
 
-                for info in zf.infolist():
+                for info in all_infos:
                     if info.is_dir():
                         continue
                     safe_name = _safe_zip_member_name(info.filename)
@@ -216,13 +296,36 @@ def process_import_job(
                 job.total_found = len(members)
                 job.save(update_fields=["total_found", "updated_at"])
 
+                copied_epub_bytes = 0
                 for info in members:
                     source_name = info.filename
                     try:
+                        if info.file_size > MAX_ZIP_EPUB_MEMBER_BYTES:
+                            raise ImportResourceLimitError(
+                                "EPUB member exceeds the "
+                                f"{_format_mib(MAX_ZIP_EPUB_MEMBER_BYTES)} uncompressed limit."
+                            )
+                        if copied_epub_bytes + info.file_size > MAX_ZIP_TOTAL_EPUB_BYTES:
+                            raise ImportResourceLimitError(
+                                "ZIP EPUB contents exceed the "
+                                f"{_format_mib(MAX_ZIP_TOTAL_EPUB_BYTES)} total uncompressed limit."
+                            )
+
                         extracted_name = f"{uuid.uuid4().hex}.epub"
                         extracted_path = extracted_dir / extracted_name
-                        with zf.open(info, "r") as src, extracted_path.open("wb") as dst:
-                            shutil.copyfileobj(src, dst)
+                        with zf.open(info, "r") as src:
+                            written = _copy_fileobj_capped(
+                                src=src,
+                                dst_path=extracted_path,
+                                max_bytes=MAX_ZIP_EPUB_MEMBER_BYTES,
+                            )
+                        if copied_epub_bytes + written > MAX_ZIP_TOTAL_EPUB_BYTES:
+                            extracted_path.unlink(missing_ok=True)
+                            raise ImportResourceLimitError(
+                                "ZIP EPUB contents exceed the "
+                                f"{_format_mib(MAX_ZIP_TOTAL_EPUB_BYTES)} total uncompressed limit."
+                            )
+                        copied_epub_bytes += written
 
                         sidecar_opf_member = _zip_sidecar_opf_for_epub(
                             epub_member=source_name,

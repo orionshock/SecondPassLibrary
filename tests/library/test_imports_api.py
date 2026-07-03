@@ -20,6 +20,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
+from library.import_services import ImportResourceLimitError, _copy_fileobj_capped
 from library.models import ImportJob, Book
 from core.errors import ErrorCode
 from tests.utils.responses import response_data_dict
@@ -117,6 +118,12 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         ensure_user_public_membership(user=self.user)
         ensure_user_public_membership(user=self.other)
 
+    def _login_librarian(self) -> None:
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        self.client.login(username="u1", password="pw")
+
     def test_anonymous_cannot_create_or_list(self):
         epub = SimpleUploadedFile(
             "book.epub", b"epub-bytes", content_type="application/epub+zip"
@@ -170,6 +177,106 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         data = response_data_dict(response)
         self.assertIn("error", data)
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_UPLOAD_TYPE)
+
+    @patch("library.services.epub.read_epub")
+    @patch("library.import_services.MAX_SINGLE_EPUB_UPLOAD_BYTES", 4)
+    def test_oversized_single_epub_upload_is_rejected_before_import_parse(self, mock_read_epub):
+        self._login_librarian()
+
+        epub = SimpleUploadedFile("book.epub", b"12345", content_type="application/epub+zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response_data_dict(response)
+        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
+        self.assertIn("EPUB upload exceeds", cast(dict[str, Any], data["error"])["detail"])
+        mock_read_epub.assert_not_called()
+        self.assertFalse(ImportJob.objects.exists())
+
+    @patch("library.import_services.MAX_ZIP_UPLOAD_BYTES", 4)
+    def test_oversized_zip_upload_is_rejected(self):
+        self._login_librarian()
+
+        upload = SimpleUploadedFile("bundle.zip", b"12345", content_type="application/zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response_data_dict(response)
+        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
+        self.assertIn("ZIP upload exceeds", cast(dict[str, Any], data["error"])["detail"])
+        self.assertFalse(ImportJob.objects.exists())
+
+    @patch("library.import_services.MAX_ZIP_MEMBERS", 1)
+    def test_zip_with_too_many_members_is_rejected_safely(self):
+        self._login_librarian()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("a.epub", b"a")
+            zf.writestr("b.epub", b"b")
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response_data_dict(response)
+        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
+        self.assertIn("ZIP contains more than 1 entries", cast(dict[str, Any], data["error"])["detail"])
+        self.assertFalse(ImportJob.objects.exists())
+
+    @patch("library.services.epub.read_epub")
+    @patch("library.import_services.MAX_ZIP_EPUB_MEMBER_BYTES", 4)
+    def test_zip_epub_member_over_uncompressed_limit_is_skipped_safely(self, mock_read_epub):
+        self._login_librarian()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("big.epub", b"12345")
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response_data_dict(response)
+        self.assertEqual(data["total_found"], 1)
+        self.assertEqual(data["imported_count"], 0)
+        self.assertEqual(data["failed_count"], 1)
+        self.assertIn("uncompressed limit", cast(list[dict[str, Any]], data["items"])[0]["message"])
+        mock_read_epub.assert_not_called()
+
+    @patch("library.services.epub.read_epub")
+    @patch("library.import_services.MAX_ZIP_EPUB_MEMBER_BYTES", 10)
+    @patch("library.import_services.MAX_ZIP_TOTAL_EPUB_BYTES", 8)
+    def test_zip_total_epub_uncompressed_limit_is_enforced(self, mock_read_epub):
+        mock_read_epub.return_value = _mock_epub()
+        self._login_librarian()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("a.epub", b"1111")
+            zf.writestr("b.epub", b"22222")
+        buf.seek(0)
+
+        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        response = cast_response(
+            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response_data_dict(response)
+        self.assertEqual(data["total_found"], 2)
+        self.assertEqual(data["imported_count"], 1)
+        self.assertEqual(data["failed_count"], 1)
+        self.assertEqual(mock_read_epub.call_count, 1)
+        messages = [item["message"] for item in cast(list[dict[str, Any]], data["items"])]
+        self.assertTrue(any("total uncompressed limit" in message for message in messages))
 
     @patch("library.services.epub.read_epub")
     def test_authenticated_can_upload_single_epub_and_stages_with_generated_name(self, mock_read_epub):
@@ -598,6 +705,16 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
 
         detail = cast_response(self.client.get(f"/api/v1/library/imports/{job_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CappedZipCopyTests(IsolatedImportsMixin, APITestCase):
+    def test_capped_copy_failure_removes_partial_extracted_file(self):
+        destination = Path(self._imports_root) / "partial.epub"
+
+        with self.assertRaises(ImportResourceLimitError):
+            _copy_fileobj_capped(src=io.BytesIO(b"12345"), dst_path=destination, max_bytes=4)
+
+        self.assertFalse(destination.exists())
 
 
 def cast_response(resp) -> Response:

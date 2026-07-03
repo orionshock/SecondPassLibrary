@@ -15,10 +15,23 @@ from library.models import Book
 from reading.models import ReadingSession
 
 
+MAX_MARGINALIA_IMPORT_BYTES = 25 * 1024 * 1024
+
+
 class MarginaliaImportError(ValueError):
     def __init__(self, message: str, errors: list[dict[str, str]] | None = None):
         super().__init__(message)
         self.errors = errors or [{"path": "$", "message": message}]
+
+
+def _format_import_size(byte_count: int) -> str:
+    if byte_count >= 1024 * 1024 and byte_count % (1024 * 1024) == 0:
+        return f"{byte_count // (1024 * 1024)} MiB"
+    return f"{byte_count} bytes"
+
+
+def _marginalia_limit_message() -> str:
+    return f"Marginalia import JSON exceeds the {_format_import_size(MAX_MARGINALIA_IMPORT_BYTES)} limit."
 
 
 def read_uploaded_marginalia_json(uploaded) -> dict[str, Any]:
@@ -27,7 +40,16 @@ def read_uploaded_marginalia_json(uploaded) -> dict[str, Any]:
             "Upload a JSON file.",
             [{"path": "$.file", "message": "Upload a JSON file."}],
         )
-    return parse_marginalia_json(uploaded.read())
+    size = getattr(uploaded, "size", None)
+    if isinstance(size, int) and size > MAX_MARGINALIA_IMPORT_BYTES:
+        message = _marginalia_limit_message()
+        raise MarginaliaImportError(message, [{"path": "$.file", "message": message}])
+
+    raw = uploaded.read(MAX_MARGINALIA_IMPORT_BYTES + 1)
+    if len(raw) > MAX_MARGINALIA_IMPORT_BYTES:
+        message = _marginalia_limit_message()
+        raise MarginaliaImportError(message, [{"path": "$.file", "message": message}])
+    return parse_marginalia_json(raw)
 
 
 def parse_marginalia_json(raw: bytes) -> dict[str, Any]:

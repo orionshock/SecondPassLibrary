@@ -9,6 +9,7 @@ from core.errors import ErrorCode, api_error_response
 
 from .catalog_serializers import ImportJobSerializer
 from .models import ImportJob
+from .import_services import ImportResourceLimitError
 from .services import create_import_job_from_upload, process_import_job
 from .view_mixins import ClientBearerReadOnlyMixin
 
@@ -38,9 +39,20 @@ class ImportJobViewSet(
                 hint='Send a multipart/form-data request with a "file" field containing a .epub or .zip.',
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+        job = None
         try:
             job = create_import_job_from_upload(user=request.user, uploaded_file=uploaded)
             job = process_import_job(job=job)
+        except ImportResourceLimitError as e:
+            if job is not None:
+                job.delete()
+            return api_error_response(
+                code=ErrorCode.INVALID_REQUEST,
+                message="Import upload exceeds resource limits.",
+                detail=str(e),
+                hint="Use a smaller EPUB, or split a large ZIP import into smaller batches.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
         except ValueError as e:
             return api_error_response(
                 code=ErrorCode.INVALID_UPLOAD_TYPE,
