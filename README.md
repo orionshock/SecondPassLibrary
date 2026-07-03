@@ -136,3 +136,25 @@ Docker-based deployment orchestration can own final production process and
 environment wiring later.
 
 Development-only test dependencies live in `requirements-dev.txt`.
+
+## Docker Quick Start
+
+For a simple single-container SQLite deployment:
+
+```powershell
+copy .env.example .env
+.\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+docker compose up --build
+```
+
+Edit `.env` before starting: set `DJANGO_SECRET_KEY` to the generated value and
+set `DJANGO_ALLOWED_HOSTS` to the hostnames or LAN IPs users will use.
+The container serves Django on port `8000` and bind-mounts `./userdata` for the
+SQLite database, stored EPUBs, covers, imports, and logs.
+
+For updates: `git pull`, review `.env.example` for new variables, then run
+`docker compose up --build` again.
+
+Reverse proxy, TLS, and public exposure are deployment-owned. See
+[Production startup](docs/deployment.md) for HTTPS reverse-proxy settings and
+backup notes.

@@ -43,11 +43,12 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
 
     def test_production_startup_collects_static_before_wsgi_server(self):
         script_servers = {
-            "start-local-production.ps1": "-m waitress",
+            "scripts/start-local-production.ps1": "-m waitress",
+            "docker/entrypoint.sh": "gunicorn secondpass.wsgi:application",
         }
         for script_name, server_marker in script_servers.items():
             with self.subTest(script_name=script_name):
-                source = (ROOT / "scripts" / script_name).read_text(
+                source = (ROOT / script_name).read_text(
                     encoding="utf-8"
                 )
 

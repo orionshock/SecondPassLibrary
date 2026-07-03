@@ -18,6 +18,16 @@ ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) t
 `npm install` installs the pinned local Pyright dev tool. There is no frontend
 build step.
 
+## Related docs
+
+- [API index](api.md)
+- [Architecture](architecture.md)
+- [Permissions](permissions.md)
+- [Imports](imports.md)
+- [Reading data](reading.md)
+- [Metadata and identifiers](metadata.md)
+- [Production startup](deployment.md)
+
 ## Media serving (dev)
 
 Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/media/`) and stored under `MEDIA_ROOT` (default: `userdata/media`).

@@ -6,6 +6,63 @@ wizard does not create tables from request handling.
 
 ## Single-instance startup
 
+### Docker Compose
+
+The first Docker path is intentionally small: one Django/Gunicorn container,
+SQLite, and a bind-mounted `./userdata` directory.
+
+First run:
+
+```powershell
+copy .env.example .env
+.\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+docker compose up --build
+```
+
+Edit `.env` before starting. At minimum, set:
+
+```text
+DJANGO_DEBUG=0
+DJANGO_SECRET_KEY=<generated secret>
+DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
+SECOND_PASS_USERDATA_DIR=/app/userdata
+```
+
+The compose file uses `env_file: .env`, maps host port `8000` to the container,
+and mounts `./userdata` at `/app/userdata`. Startup runs:
+
+1. `python manage.py check --deploy`
+2. `python manage.py migrate --noinput`
+3. `python manage.py collectstatic --noinput`
+4. `gunicorn secondpass.wsgi:application --bind 0.0.0.0:8000`
+
+Docker does not auto-generate `DJANGO_SECRET_KEY`; settings fail fast if `.env`
+is missing, unset, or still using the documented placeholder.
+
+Update flow:
+
+```powershell
+git pull
+docker compose up --build
+```
+
+Review `.env.example` during updates for newly added variables.
+
+Reverse proxy and TLS are outside this Docker setup. If serving through an
+HTTPS reverse proxy, set `DJANGO_ALLOWED_HOSTS` to include the public host,
+set `DJANGO_CSRF_TRUSTED_ORIGINS` to the public `https://` origin, set
+`DJANGO_SECURE_COOKIES=1`, and set `DJANGO_TRUST_X_FORWARDED_PROTO=1` only
+when the proxy strips untrusted forwarded headers and sets its own.
+
+Do not directly expose the whole `userdata/media` directory through an external
+web server. WhiteNoise serves static assets after `collectstatic`; covers are
+served through the app's `/media/covers/` route; EPUB/book files should be
+served only through authorized app endpoints.
+
+Backups should include `userdata/` and the deployment secret values in `.env`.
+
+### Windows local production-mode helper
+
 Install the runtime dependencies, configure the environment, and run the
 Windows local production-mode helper:
 

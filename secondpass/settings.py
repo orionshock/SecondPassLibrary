@@ -51,13 +51,20 @@ def _secure_proxy_ssl_header() -> tuple[str, str] | None:
 INSECURE_FALLBACK_SECRET_KEY = (
     "django-insecure-t&^j-sap##2x=r@ws#*0nbmd!@!bv=u852pz&&7a9sd0_!3^#$"
 )
+PLACEHOLDER_SECRET_KEYS = {
+    "replace-me-with-a-generated-secret",
+}
 
 
 def _secret_key(*, debug: bool) -> str:
     value = os.getenv("DJANGO_SECRET_KEY")
     if debug:
         return value or INSECURE_FALLBACK_SECRET_KEY
-    if not value or value == INSECURE_FALLBACK_SECRET_KEY:
+    if (
+        not value
+        or value == INSECURE_FALLBACK_SECRET_KEY
+        or value in PLACEHOLDER_SECRET_KEYS
+    ):
         raise ImproperlyConfigured(
             "DJANGO_SECRET_KEY must be set to a non-default value when DEBUG=False."
         )

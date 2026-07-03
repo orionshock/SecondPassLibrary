@@ -12,6 +12,7 @@ from django.test import SimpleTestCase
 
 from secondpass.settings import (
     INSECURE_FALLBACK_SECRET_KEY,
+    PLACEHOLDER_SECRET_KEYS,
     _env_bool,
     _env_csv,
     _secure_proxy_ssl_header,
@@ -156,6 +157,18 @@ class DjangoSettingsContractTests(SimpleTestCase):
             {
                 "DJANGO_DEBUG": "0",
                 "DJANGO_SECRET_KEY": INSECURE_FALLBACK_SECRET_KEY,
+            }
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("DJANGO_SECRET_KEY must be set", result.stderr)
+
+    def test_production_rejects_documented_placeholder_secret_key(self):
+        placeholder = next(iter(PLACEHOLDER_SECRET_KEYS))
+        result = self._settings_import(
+            {
+                "DJANGO_DEBUG": "0",
+                "DJANGO_SECRET_KEY": placeholder,
             }
         )
 

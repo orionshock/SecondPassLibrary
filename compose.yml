@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    environment:
+      SECOND_PASS_USERDATA_DIR: /app/userdata
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./userdata:/app/userdata
+    restart: unless-stopped
