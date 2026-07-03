@@ -42,14 +42,14 @@ function sessionBreadcrumbLabel(state) {
   return state ? sessionDisplayLabel(state) : "Session";
 }
 
-function syncActivityBreadcrumb({ bookId, bookTitle, sessionState }) {
+function syncActivityBreadcrumb({ bookId, bookTitle, sessionState, canOpen }) {
+  const bookCrumb = { label: bookTitle || "Book unavailable" };
+  if (canOpen) bookCrumb.href = `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`;
+
   setBreadcrumbs([
     { label: "My Marginalia", href: "/reading/sessions/" },
     { label: "Browse by Book", href: "/reading/sessions/?view=book" },
-    {
-      label: bookTitle || "Book",
-      href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`,
-    },
+    bookCrumb,
     { label: sessionBreadcrumbLabel(sessionState), current: true },
   ]);
 }
@@ -124,21 +124,6 @@ export async function initReadingBookActivity() {
   visible(root, false);
 
   try {
-    const book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
-    const titleText = book && book.title ? String(book.title) : "Book";
-    syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState: null });
-    titleEl.textContent = `Marginalia for \u201c${titleText}\u201d`;
-    subtitleEl.textContent = "";
-    sessionDisplayEl.textContent = "";
-    visible(sessionEditFormEl, false);
-
-    const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
-    coverEl.dataset.coverUrl = coverUrl;
-    coverEl.dataset.coverTitle = titleText;
-    mountCovers(coverEl.parentNode);
-
-    renderBookMeta(bookMetaEl, book);
-
     const preferredSessionId = (initialSessionId || "").trim();
     if (!preferredSessionId) {
       statusEl.textContent = "Invalid session ID.";
@@ -169,6 +154,22 @@ export async function initReadingBookActivity() {
       return;
     }
 
+    const book = session && session.book && typeof session.book === "object" ? session.book : {};
+    const canOpen = !!(session && session.can_open);
+    const titleText = book && book.title ? String(book.title) : "Book unavailable";
+    syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState: null, canOpen });
+    titleEl.textContent = `Marginalia for \u201c${titleText}\u201d`;
+    subtitleEl.textContent = "";
+    sessionDisplayEl.textContent = "";
+    visible(sessionEditFormEl, false);
+
+    const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
+    coverEl.dataset.coverUrl = coverUrl;
+    coverEl.dataset.coverTitle = titleText;
+    mountCovers(coverEl.parentNode);
+
+    renderBookMeta(bookMetaEl, { ...book, can_open: canOpen });
+
     const sessionState = {
       sessionId: "",
       sessionName: "",
@@ -187,7 +188,7 @@ export async function initReadingBookActivity() {
       sessionState.canEditSessionMetadata = sessionIsWritable(sessionState);
       titleEl.textContent = sessionDisplayLabel(sessionState);
       renderSessionDisplay(sessionDisplayEl, sessionState);
-      syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState });
+      syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState, canOpen });
 
       sessionNameEl.value = sessionState.sessionName;
       sessionSaveBtn.disabled = true;
@@ -232,7 +233,8 @@ export async function initReadingBookActivity() {
       closeSessionById: closeSession,
       extractApiErrorMessage,
       summarizeFieldErrors,
-      onSessionChanged: () => syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState }),
+      onSessionChanged: () =>
+        syncActivityBreadcrumb({ bookId, bookTitle: titleText, sessionState, canOpen }),
     });
 
     let annotations = [];

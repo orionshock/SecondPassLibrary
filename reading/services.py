@@ -407,9 +407,10 @@ def list_sessions_for_book(*, user, book: Book) -> list[dict]:
 
 def list_sessions_for_user(*, user) -> list[dict]:
     """
-    Product UI helper: list all reading sessions for a user across visible books.
+    Product UI helper: list all owned reading sessions for a user.
 
-    Visibility is evaluated using `policies.can_view_book()`.
+    Current book visibility controls whether book metadata and open/book links are
+    safe to show. It must not hide owned reading history.
     """
     ann_updated = Max(
         "annotations__updated_at", filter=Q(annotations__is_deleted=False)
@@ -436,8 +437,7 @@ def list_sessions_for_user(*, user) -> list[dict]:
         book = getattr(s, "book", None)
         if book is None:
             continue
-        if not policies.can_view_book(user=user, book=book):
-            continue
+        can_open = policies.can_view_book(user=user, book=book)
 
         progress = getattr(s, "progress", None)
         progression = (
@@ -450,16 +450,27 @@ def list_sessions_for_user(*, user) -> list[dict]:
             except (TypeError, ValueError):
                 progression_percent = None
 
-        cover_url = ""
-        cover = getattr(book, "cover_file", None)
-        if cover:
-            try:
-                cover_url = str(cover.url)
-            except Exception:
-                cover_url = ""
+        if can_open:
+            cover_url = ""
+            cover = getattr(book, "cover_file", None)
+            if cover:
+                try:
+                    cover_url = str(cover.url)
+                except Exception:
+                    cover_url = ""
 
-        authors = [a.name for a in book.authors.all()]
-        series_name = getattr(getattr(book, "series", None), "name", "") or ""
+            authors = [a.name for a in book.authors.all()]
+            series_name = getattr(getattr(book, "series", None), "name", "") or ""
+            subtitle = getattr(book, "subtitle", "") or ""
+            series_index = getattr(book, "series_index", None)
+            title = book.title
+        else:
+            cover_url = ""
+            authors = []
+            series_name = ""
+            subtitle = ""
+            series_index = None
+            title = ""
 
         rows.append(
             {
@@ -467,6 +478,7 @@ def list_sessions_for_user(*, user) -> list[dict]:
                 "name": (s.name or "").strip(),
                 "status": s.status,
                 "is_active": bool(s.is_active),
+                "can_open": bool(can_open),
                 "started_at": s.started_at,
                 "updated_at": s.updated_at,
                 "completed_at": s.completed_at,
@@ -475,11 +487,11 @@ def list_sessions_for_user(*, user) -> list[dict]:
                 "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
                 "book": {
                     "id": str(book.id),
-                    "title": book.title,
-                    "subtitle": getattr(book, "subtitle", "") or "",
+                    "title": title,
+                    "subtitle": subtitle,
                     "authors": authors,
                     "series_name": series_name,
-                    "series_index": getattr(book, "series_index", None),
+                    "series_index": series_index,
                     "cover_url": cover_url,
                 },
             }

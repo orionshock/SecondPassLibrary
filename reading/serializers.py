@@ -116,10 +116,20 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
     progression = serializers.FloatField(read_only=True, allow_null=True)
     annotation_count = serializers.IntegerField(read_only=True)
     book = serializers.SerializerMethodField(read_only=True)
+    can_open = serializers.SerializerMethodField(read_only=True)
+
+    def _can_view_book(self, obj: ReadingSession) -> bool:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        book = getattr(obj, "book", None)
+        return bool(
+            user is not None
+            and book is not None
+            and policies.can_view_book(user=user, book=book)
+        )
 
     def get_book(self, obj: ReadingSession) -> dict[str, Any]:
         request = self.context.get("request")
-        user = getattr(request, "user", None)
         book = cast(Book, getattr(obj, "book", None))
         if book is None:
             return {
@@ -132,7 +142,7 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
             }
 
         # Don't leak hidden/inaccessible library metadata through user-owned sessions.
-        if user is None or not policies.can_view_book(user=user, book=book):
+        if not self._can_view_book(obj):
             return {
                 "id": str(book.id),
                 "title": "",
@@ -146,6 +156,9 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
             dict[str, Any],
             ReadingSessionBookSummarySerializer(book, context={"request": request}).data,
         )
+
+    def get_can_open(self, obj: ReadingSession) -> bool:
+        return self._can_view_book(obj)
 
     class Meta:
         model = ReadingSession
@@ -163,6 +176,7 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
             "progression",
             "annotation_count",
             "book",
+            "can_open",
         ]
         read_only_fields = fields
 

@@ -151,7 +151,8 @@ function renderSessionCard(session) {
   const book = session && session.book && typeof session.book === "object" ? session.book : {};
   const bookId = String((book && book.id) || (session && session.book_id) || "");
   const sessionId = String((session && session.id) || "");
-  const bookTitle = String((book && book.title) || "Book");
+  const canOpen = !!(session && session.can_open);
+  const bookTitle = String((book && book.title) || "Book unavailable");
   const authors = authorNames(book);
   const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
   const completedAt = session && session.completed_at ? formatWhen(session.completed_at) : "";
@@ -210,13 +211,15 @@ function renderSessionCard(session) {
     el("span", "pill sessions-card__status", session && session.is_active ? "Active" : "Closed")
   );
   const actions = el("div", "sessions-card__actions");
-  actions.appendChild(
-    sessionActionLink({
-      href: bookSessionsHref,
-      icon: "auto_stories",
-      label: "View sessions for this book",
-    })
-  );
+  if (canOpen) {
+    actions.appendChild(
+      sessionActionLink({
+        href: bookSessionsHref,
+        icon: "auto_stories",
+        label: "View sessions for this book",
+      })
+    );
+  }
   trailing.appendChild(actions);
   card.appendChild(trailing);
 
@@ -242,18 +245,21 @@ function renderBookGroup(sessions) {
   const first = sessions[0] || {};
   const book = first && first.book && typeof first.book === "object" ? first.book : {};
   const bookId = String((book && book.id) || (first && first.book_id) || "");
-  const bookTitle = String((book && book.title) || "Book");
+  const canOpen = !!(first && first.can_open);
+  const bookTitle = String((book && book.title) || "Book unavailable");
   const authors = authorNames(book);
   const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
   const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
 
   const group = el("section", "card sessions-book-group");
-  group.dataset.bookSessionsUrl = bookSessionsHref;
+  if (canOpen) group.dataset.bookSessionsUrl = bookSessionsHref;
   const header = el("div", "sessions-book-group__header");
 
-  const coverLink = el("a", "sessions-card__cover-link");
-  coverLink.href = bookSessionsHref;
-  coverLink.setAttribute("aria-label", "View sessions for this book");
+  const coverLink = el(canOpen ? "a" : "div", "sessions-card__cover-link");
+  if (canOpen) {
+    coverLink.href = bookSessionsHref;
+    coverLink.setAttribute("aria-label", "View sessions for this book");
+  }
   const cover = el("div", "sessions-cover");
   cover.dataset.coverUrl = coverUrl;
   cover.dataset.coverTitle = bookTitle;
@@ -262,8 +268,8 @@ function renderBookGroup(sessions) {
   header.appendChild(coverLink);
 
   const identity = el("div", "sessions-book-group__identity");
-  const titleLink = el("a", "sessions-book-group__title", bookTitle);
-  titleLink.href = bookSessionsHref;
+  const titleLink = el(canOpen ? "a" : "div", "sessions-book-group__title", bookTitle);
+  if (canOpen) titleLink.href = bookSessionsHref;
   identity.appendChild(titleLink);
   const metadata = el("div", "muted sessions-card__metadata");
   appendSeparatedParts(metadata, [authors.join(", "), seriesLabel(book)]);

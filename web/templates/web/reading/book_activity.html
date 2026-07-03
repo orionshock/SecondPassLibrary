@@ -5,7 +5,11 @@
 {% block title %}Session Marginalia - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
+  {% if can_open %}
   {% include "web/partials/breadcrumbs.html" with greatgrandparent_label="My Marginalia" greatgrandparent_href="/reading/sessions/" grandparent_label="Browse by Book" grandparent_href="/reading/sessions/?view=book" parent_label="Book" parent_href="/reading/sessions/books/"|add:book_id|add:"/" current_label="Session" only %}
+  {% else %}
+  {% include "web/partials/breadcrumbs.html" with greatgrandparent_label="My Marginalia" greatgrandparent_href="/reading/sessions/" grandparent_label="Browse by Book" grandparent_href="/reading/sessions/?view=book" parent_label="Book unavailable" current_label="Session" only %}
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -38,8 +42,12 @@
       </div>
     </div>
     <div>
+      {% if can_open %}
       <button id="reading-activity-session-close" class="button button--danger is-hidden" type="button">Close session</button>
       <a class="button" href="/reading/sessions/books/{{ book_id|escape }}/">All sessions</a>
+      {% else %}
+      <button id="reading-activity-session-close" class="button button--danger is-hidden" type="button">Close session</button>
+      {% endif %}
       <span id="reading-activity-session-close-status" class="muted"></span>
     </div>
   </div>

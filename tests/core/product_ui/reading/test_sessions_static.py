@@ -4,6 +4,8 @@ from pathlib import Path
 from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
+from library.group_services import add_book_to_group, ensure_user_public_membership
+from library.models import LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingSession
 from tests.core.product_ui.helpers import ProductUiTestCase
 from tests.utils.books import create_file_backed_book
@@ -13,6 +15,21 @@ User = get_user_model()
 
 class ProductUiReadingSessionsTests(ProductUiTestCase):
     """Test reading sessions, import/export pages."""
+
+    def _create_hidden_owned_session(self, *, name="Hidden pass"):
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        ensure_user_public_membership(user=self.bootstrap_owner)
+        ensure_user_public_membership(user=self.user)
+
+        hidden_group = LibraryGroup.objects.create(name="Hidden")
+        other = User.objects.create_user(username="hidden-owner", email="h@example.com")
+        LibraryGroupMembership.objects.create(user=other, group=hidden_group)
+        book = create_file_backed_book(title="Private Book", assign_public=False).book
+        add_book_to_group(actor=self.bootstrap_owner, book=book, group=hidden_group)
+        session = ReadingSession.objects.create(user=self.user, book=book, name=name)
+        return book, session
 
     def test_unauthenticated_reading_sessions_all_redirects_to_login(self):
         response = self.client.get("/reading/sessions/", follow=False)
@@ -31,7 +48,7 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No sessions yet for this book.")
 
-    def test_authenticated_reading_sessions_all_scopes_to_user_and_visible_books(self):
+    def test_authenticated_reading_sessions_all_scopes_to_user_and_visible_book_metadata(self):
         profile = get_or_create_profile(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
@@ -152,6 +169,39 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
         self.assertNotContains(response, ">View book sessions</")
         self.assertContains(response, "Active")
 
+    def test_authenticated_reading_sessions_all_includes_owned_session_after_book_access_lost(self):
+        book, session = self._create_hidden_owned_session()
+
+        self.client.force_login(self.user)
+        response = self.client.get("/reading/sessions/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, str(session.id))
+        self.assertContains(response, "Hidden pass")
+        self.assertContains(response, "Book unavailable")
+        self.assertNotContains(response, "Private Book")
+        self.assertContains(response, f"/reading/sessions/books/{book.id}/{session.id}/")
+        self.assertNotContains(response, f'href="/reading/sessions/books/{book.id}/"')
+
+    def test_authenticated_reading_session_marginalia_allows_owned_hidden_session(self):
+        book, session = self._create_hidden_owned_session()
+
+        self.client.force_login(self.user)
+        response = self.client.get(f"/reading/sessions/books/{book.id}/{session.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-book-id="{book.id}"')
+        self.assertContains(response, f'data-session-id="{session.id}"')
+        self.assertNotContains(response, f'href="/reading/sessions/books/{book.id}/"')
+
+    def test_authenticated_reading_book_sessions_canonical_still_404s_for_hidden_book(self):
+        book, _session = self._create_hidden_owned_session()
+
+        self.client.force_login(self.user)
+        response = self.client.get(f"/reading/sessions/books/{book.id}/", follow=False)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_reading_sessions_js_wires_filters_search_page_size_and_book_context(self):
         js = Path("web/static/web/js/reading/sessions.js").read_text(encoding="utf-8")
         main_js = Path("web/static/web/js/main.js").read_text(encoding="utf-8")
@@ -201,6 +251,9 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
         self.assertIn('el("span", "metadata-piece", part)', js)
         self.assertIn('el("div", "card sessions-row sessions-card")', js)
         self.assertIn("card.dataset.sessionUrl = marginaliaHref", js)
+        self.assertIn("const canOpen = !!(session && session.can_open)", js)
+        self.assertIn('String((book && book.title) || "Book unavailable")', js)
+        self.assertIn("if (canOpen)", js)
         self.assertIn('el("a", "sessions-card__cover-link")', js)
         self.assertIn('el("a", "sessions-card__title"', js)
         self.assertIn('`/reading/sessions/books/${encodeURIComponent(bookId)}/`', js)
@@ -225,7 +278,7 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
         self.assertIn('source.closest("[data-session-url], [data-book-sessions-url]")', js)
         self.assertIn('card.getAttribute("data-session-url")', js)
         self.assertIn("window.location.href = url", js)
-        self.assertIn('el("a", "sessions-book-group__title", bookTitle)', js)
+        self.assertIn('el(canOpen ? "a" : "div", "sessions-book-group__title", bookTitle)', js)
         self.assertNotIn('el("div", "book-title-with-action")', js)
         self.assertIn("coverLink.href = bookSessionsHref", js)
         self.assertIn("titleLink.href = bookSessionsHref", js)

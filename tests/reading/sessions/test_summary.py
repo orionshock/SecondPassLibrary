@@ -32,6 +32,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         visible = by_id[str(self.session_visible.id)]
         self.assertNotIn("book_title", visible)
         self.assertIn("progression", visible)
+        self.assertIs(visible["can_open"], True)
         self.assertEqual(visible["progression"], 0.25)
         self.assertEqual(visible["annotation_count"], 1)
         self.assertIn("book", visible)
@@ -57,6 +58,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         results = response_data_list(resp)
         hidden = next(r for r in results if r["id"] == str(self.session_hidden.id))
+        self.assertIs(hidden["can_open"], False)
         book = cast(dict[str, Any], hidden["book"])
         self.assertEqual(book["id"], str(self.hidden_book.id))
         self.assertEqual(book["title"], "")

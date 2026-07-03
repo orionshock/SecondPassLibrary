@@ -4,6 +4,8 @@ from pathlib import Path
 from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
+from library.group_services import add_book_to_group, ensure_user_public_membership
+from library.models import LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingSession
 from tests.core.product_ui.helpers import ProductUiTestCase
 from tests.utils.books import create_file_backed_book
@@ -13,6 +15,21 @@ User = get_user_model()
 
 class ProductUiExportMarginaliaTests(ProductUiTestCase):
     """Test reading sessions, import/export pages."""
+
+    def _create_hidden_owned_session(self):
+        profile = get_or_create_profile(user=self.user)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        ensure_user_public_membership(user=self.bootstrap_owner)
+        ensure_user_public_membership(user=self.user)
+
+        hidden_group = LibraryGroup.objects.create(name="Hidden")
+        other = User.objects.create_user(username="hidden-owner", email="h@example.com")
+        LibraryGroupMembership.objects.create(user=other, group=hidden_group)
+        book = create_file_backed_book(title="Private Export Book", assign_public=False).book
+        add_book_to_group(actor=self.bootstrap_owner, book=book, group=hidden_group)
+        session = ReadingSession.objects.create(user=self.user, book=book, name="Recovered hidden")
+        return book, session
 
     def test_unauthenticated_reading_export_redirects_to_login(self):
         response = self.client.get("/reading/export/", follow=False)
@@ -46,7 +63,10 @@ class ProductUiExportMarginaliaTests(ProductUiTestCase):
         self.assertContains(response, 'href="/reading/import/"')
         self.assertContains(response, "Import Marginalia")
         self.assertContains(response, "Complete archive")
-        self.assertContains(response, "Export all marginalia for books currently visible to you.")
+        self.assertContains(
+            response,
+            "Export all marginalia you own, including sessions for books you can no longer view.",
+        )
         self.assertContains(response, 'href="/api/v1/reading/export/"')
         self.assertContains(response, "Export all marginalia")
         self.assertContains(response, "Selective archive")
@@ -82,6 +102,19 @@ class ProductUiExportMarginaliaTests(ProductUiTestCase):
         self.assertNotContains(response, "Export all sessions")
         self.assertNotContains(response, "View sessions")
         self.assertNotContains(response, 'class="reading-session-select"')
+
+    def test_authenticated_reading_export_includes_owned_hidden_book_sessions(self):
+        book, session = self._create_hidden_owned_session()
+
+        self.client.force_login(self.user)
+        response = self.client.get("/reading/export/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recovered hidden")
+        self.assertContains(response, "Book unavailable")
+        self.assertNotContains(response, "Private Export Book")
+        self.assertContains(response, f'data-book-id="{book.id}"')
+        self.assertContains(response, f'data-session-id="{session.id}"')
 
     def test_reading_export_js_wires_selection_workflow(self):
         main_js = Path("web/static/web/js/main.js").read_text(encoding="utf-8")

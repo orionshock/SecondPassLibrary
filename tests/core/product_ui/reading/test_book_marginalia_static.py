@@ -165,7 +165,7 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         self.assertNotIn('Session: "${sessionDisplayName}"', actions_js)
         self.assertIn('{ label: "My Marginalia", href: "/reading/sessions/" }', js)
         self.assertIn('{ label: "Browse by Book", href: "/reading/sessions/?view=book" }', js)
-        self.assertIn('href: `/reading/sessions/books/${encodeURIComponent(String(bookId))}/`', js)
+        self.assertIn("if (canOpen) bookCrumb.href =", js)
         self.assertIn("sessionBreadcrumbLabel(sessionState)", js)
         self.assertIn("titleEl.textContent = sessionDisplayLabel(sessionState)", js)
         self.assertNotIn("Marginalia: ${sessionDisplayLabel(sessionState)}", js)
@@ -173,8 +173,10 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         self.assertNotIn("Session ID: ${sessionState.sessionId}", js)
         self.assertIn("onSessionChanged", js)
         self.assertIn("onSessionChanged", actions_js)
+        self.assertIn("Book unavailable", js)
         self.assertIn("function contextRow", rendering_js)
         self.assertIn("function contextAction", rendering_js)
+        self.assertIn("book.can_open === false", rendering_js)
         self.assertIn('el("a", "library-context-action", label)', rendering_js)
         self.assertIn('el("div", "library-context-row")', rendering_js)
         self.assertIn('`/library/books/${encodeURIComponent(bookId)}/`', rendering_js)
@@ -371,6 +373,7 @@ class ReadingActivityJsRenderingTest(TestCase):
 
         # The canonical page should not attempt to guess/fallback to an "active session" per book.
         self.assertNotIn("/api/v1/reading/books/", text)
+        self.assertNotIn("/api/v1/library/books/", text)
 
         # Annotations should be scoped to the selected session id, not book-wide.
         self.assertIn("/api/v1/reading/annotations/?session_id=", text)

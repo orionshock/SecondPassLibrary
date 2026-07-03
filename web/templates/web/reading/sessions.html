@@ -91,7 +91,7 @@
           >
             <div class="sessions-cover" aria-hidden="true">
               {% if s.book.cover_url %}
-                <img class="sessions-cover__img" src="{{ s.book.cover_url|escape }}" alt="Cover for {{ s.book.title|default:'Book'|escape }}" loading="lazy" />
+                <img class="sessions-cover__img" src="{{ s.book.cover_url|escape }}" alt="Cover for {{ s.book.title|default:'Book unavailable'|escape }}" loading="lazy" />
               {% else %}
                 Cover
               {% endif %}
@@ -115,7 +115,7 @@
               {% endwith %}
             </a>
             <div class="muted sessions-card__metadata">
-              <span class="metadata-piece">{{ s.book.title|default:"Book"|escape }}</span>
+              <span class="metadata-piece">{{ s.book.title|default:"Book unavailable"|escape }}</span>
               {% if s.book.authors %}<span class="metadata-piece">{{ s.book.authors|join:", "|escape }}</span>{% endif %}
               {% if s.book.series_name %}<span class="metadata-piece">{{ s.book.series_name|escape }}{% if s.book.series_index %} {{ s.book.series_index }}{% endif %}</span>{% endif %}
             </div>
@@ -132,6 +132,7 @@
           <div class="sessions-card__trailing">
             <span class="pill sessions-card__status">{% if s.is_active %}Active{% else %}Closed{% endif %}</span>
             <div class="sessions-card__actions">
+              {% if s.can_open %}
               <a
                 class="icon-button sessions-card__action"
                 href="/reading/sessions/books/{{ s.book.id|urlencode }}/"
@@ -140,6 +141,7 @@
               >
                 <span class="material-symbols-outlined" aria-hidden="true">auto_stories</span>
               </a>
+              {% endif %}
             </div>
           </div>
         </div>

@@ -19,7 +19,8 @@ function formatWhen(value) {
 
 export function renderBookMeta(container, book) {
   clear(container);
-  const title = book && book.title ? String(book.title) : "Book";
+  const canOpen = !(book && book.can_open === false);
+  const title = book && book.title ? String(book.title) : "Book unavailable";
   const bookId = book && book.id ? String(book.id) : "";
   const subtitle = book && book.subtitle ? String(book.subtitle) : "";
   const authorObjects = Array.isArray(book && book.authors) ? book.authors.filter(Boolean) : [];
@@ -34,7 +35,13 @@ export function renderBookMeta(container, book) {
   wrap.appendChild(
     contextRow(
       el("div", "book-meta__line", title),
-      bookId ? contextAction(`/library/books/${encodeURIComponent(bookId)}/`, "View book in Library", `View ${title} in Library`) : null,
+      canOpen && bookId
+        ? contextAction(
+            `/library/books/${encodeURIComponent(bookId)}/`,
+            "View book in Library",
+            `View ${title} in Library`,
+          )
+        : null,
     )
   );
   if (subtitle) wrap.appendChild(el("div", "muted", subtitle));
@@ -43,7 +50,7 @@ export function renderBookMeta(container, book) {
     wrap.appendChild(
       contextRow(
         el("div", "book-meta__line", authors.join(", ")),
-        primaryAuthor
+        canOpen && primaryAuthor
           ? contextAction(`/library/?view=author&author=${encodeURIComponent(String(primaryAuthor.id))}`, "View author in Library", `View ${primaryAuthor.name} in Library`)
           : null,
       )
@@ -53,7 +60,7 @@ export function renderBookMeta(container, book) {
     wrap.appendChild(
       contextRow(
         el("div", "muted", `${series}${seriesIndex ? ` #${seriesIndex}` : ""}`),
-        seriesId
+        canOpen && seriesId
           ? contextAction(`/library/?view=series&series=${encodeURIComponent(seriesId)}`, "View series in Library", `View ${series} in Library`)
           : null,
       )

@@ -129,7 +129,7 @@ def reading_export(request: HttpRequest) -> HttpResponse:
             book_id,
             {
                 "id": book_id,
-                "title": book.get("title") or "Book",
+                "title": book.get("title") or "Book unavailable",
                 "authors": book.get("authors") or [],
                 "series_name": book.get("series_name") or "",
                 "series_index": book.get("series_index"),
@@ -167,13 +167,15 @@ def reading_session_marginalia(
         raise Http404()
     if session.book_id != book_uuid:
         raise Http404()
-    if not policies.can_view_book(user=request.user, book=session.book):
-        raise Http404()
 
     return render(
         request,
         "web/reading/book_activity.html",
-        {"book_id": str(book_uuid), "session_id": str(session_uuid)},
+        {
+            "book_id": str(book_uuid),
+            "session_id": str(session_uuid),
+            "can_open": policies.can_view_book(user=request.user, book=session.book),
+        },
     )
 
 
