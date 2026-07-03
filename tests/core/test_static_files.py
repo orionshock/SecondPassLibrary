@@ -70,9 +70,11 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
         self.assertIn("generated deploy artifact", normalized)
         self.assertIn("Back up `userdata/`", normalized)
         self.assertIn("do not include it in normal backups", normalized)
-        self.assertIn("does not serve `MEDIA_ROOT`", normalized)
+        self.assertIn("WhiteNoise does not serve `MEDIA_ROOT`", normalized)
+        self.assertIn("Django serves cover images narrowly", normalized)
+        self.assertIn("It does not serve sibling media directories", normalized)
         self.assertIn(
-            "Books, EPUB files, covers, imports, exports, or marginalia",
+            "stored EPUB files under `userdata/media/books/`",
             normalized,
         )
 

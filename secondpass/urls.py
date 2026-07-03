@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
+from pathlib import Path
 from django.urls import include, path, re_path
 from django.conf import settings
 from django.http import Http404, JsonResponse
@@ -67,23 +68,35 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls")),
 ]
 
-def _debug_media(request, path: str):
+def _media(request, path: str):
     """
-    Development convenience: serve MEDIA_ROOT at MEDIA_URL via Django only when DEBUG=True.
+    Serve public cover images directly, and broad MEDIA_ROOT only in DEBUG.
 
     Notes:
     - MEDIA_URL (default: /media/) is the canonical public URL prefix for user media
       like cover images.
-    - In production, deployments should serve MEDIA_ROOT at MEDIA_URL via their web
-      server/reverse proxy/static file layer, not Django.
+    - Cover images are public display assets and keep their stable /media/covers/
+      URLs in direct-server production-mode usage.
+    - Other media paths can include protected EPUBs and are served by Django only
+      as a DEBUG development convenience.
     """
+    if path.startswith("covers/"):
+        cover_path = path.removeprefix("covers/")
+        parts = cover_path.replace("\\", "/").split("/")
+        if ".." in parts or cover_path.startswith("/"):
+            raise Http404()
+        return static_serve(
+            request,
+            cover_path,
+            document_root=Path(settings.MEDIA_ROOT) / "covers",
+        )
     if not settings.DEBUG:
         raise Http404()
     return static_serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
 urlpatterns += [
-    # Always register the route so generated URLs remain stable; it only serves
-    # content when DEBUG=True.
-    re_path(r"^media/(?P<path>.*)$", _debug_media),
+    # Always register the route so generated URLs remain stable. Covers are
+    # served in direct-server mode; other media is DEBUG-only.
+    re_path(r"^media/(?P<path>.*)$", _media),
 ]

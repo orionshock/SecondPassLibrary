@@ -96,9 +96,11 @@ later when stricter deployment checks are useful.
 regenerate with `python manage.py collectstatic --noinput`; do not include it
 in normal backups.
 
-WhiteNoise does not serve `MEDIA_ROOT` or any user/library data. Books, EPUB
-files, covers, imports, exports, or marginalia continue to use their existing
-storage and authenticated Django/API paths. Do not point WhiteNoise at
+WhiteNoise does not serve `MEDIA_ROOT` or any user/library data. In local or
+direct-server production-mode usage, Django serves cover images narrowly from
+`/media/covers/` so Product UI book lists continue to render covers under
+`DEBUG=False`. It does not serve sibling media directories such as stored EPUB
+files under `userdata/media/books/`. Do not point WhiteNoise at
 `userdata/media/`, `userdata/imports/`, or any directory containing protected
 content.
 Back up `userdata/` for durable app state. Do not treat generated `var/static/`
