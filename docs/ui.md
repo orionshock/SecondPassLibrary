@@ -64,6 +64,8 @@ The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` 
 
 Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box. Recent reading cards link to the session Marginalia page and include an `[All Sessions]` link for the book.
 
+Reading access-loss note: Product UI session history and export show owned marginalia even when the related book is no longer visible. Those rows use redacted book context and do not offer per-book/open navigation. Continue-reading/dashboard entrypoints omit inaccessible-book sessions.
+
 Cover note: book lists/cards throughout the product UI render cover art when `cover_url` is present; placeholders remain when it is `null`.
 
 Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). The only public media URL namespace is `/media/covers/`; book files and other protected user data are never served as raw media URLs.
@@ -394,7 +396,7 @@ Current limitations and intentional non-goals that affect the product UI:
 - LibraryGroups:
   - no public API for creating/deleting groups (groups are currently bootstrap/admin-oriented)
 - Reading:
-  - the UI focuses on "continue reading" and per-book flows; a dedicated session history UI is not implemented
+  - reading history/export exists, but there is no in-server EPUB reader UI
 - Users:
   - no email-based invites or password reset flows (managed user creation/reset exists for self-host administration)
 

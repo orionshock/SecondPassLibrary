@@ -10,7 +10,7 @@ Client API bearer tokens may be used for these endpoints:
 
 - Send `Authorization: Bearer <token>` (issued via the Client API code authorization flow).
 - Reading data access is strictly scoped to the token owner (sessions/progress/annotations are user-owned).
-- Reading session summary list/detail responses use `book_id` plus compact `book`; they do not include the old summary-only `book_title` compatibility field.
+- Reading session summary list/detail responses use `book_id`, `can_open`, and compact `book`; they do not include the old summary-only `book_title` compatibility field.
 
 ## 1) Overview
 
@@ -37,6 +37,7 @@ Notes:
 - Unique by book.
 - Ordered by `last_activity_at = max(session.updated_at, progress.updated_at if exists, latest non-deleted annotation.updated_at if any)`.
 - Each book includes `cover_url` (string URL) or `null` when no cover is available.
+- Sessions for books the user can no longer view are omitted because this endpoint is for continue-reading/open entrypoints.
 
 ## 1.6) Sessions for one book, including empty context
 
@@ -232,8 +233,8 @@ Notes:
 
 - Returns the `ReadingSession` payload.
 - Idempotent: closing an already-closed session returns the current session payload and does not change `completed_at`.
-- After close, progress writes and annotation create/update are rejected (closed-session immutability).
-- Soft-delete of annotations remains allowed.
+- Closing an existing active no-access session is allowed.
+- After close, progress writes and annotation create/update/delete are rejected (closed-session immutability).
 
 ## 4) Save reading progress / current location
 
@@ -277,6 +278,7 @@ Notes:
 - `current_location` is the canonical "where am I?" session state. `progression` is derived/display metadata only (a normalized scalar hint); it should not be used as a source of truth for resume location or exact positioning.
 - When present, `0.0 <= progression <= 1.0` (inclusive). If described as whole-book progress, it is relative to the whole renderable EPUB reading span from first renderable location to last renderable location.
 - Closed sessions reject progress writes with `400` validation errors (session is immutable once closed/archived).
+- Progress writes also require current access to the session's book.
 - Oversized JSON or unknown fields return `400` validation errors.
 
 ## 5) Create bookmark annotation
@@ -424,7 +426,7 @@ Example response:
 Notes:
 
 - Delete is a **soft delete**: it sets `is_deleted=true` and returns `204 No Content`.
-- Soft-delete is allowed even for closed sessions (deletion is not treated as "mutating reading content").
+- Soft-delete requires ownership, an open/writable session, and current access to the session's book.
 
 ## 10) Client attribution
 

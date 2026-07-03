@@ -5,6 +5,13 @@ Losing current book visibility does not hide a user's existing sessions or
 annotations from that user, but it does stop live reading activity for that
 book until access is restored.
 
+Access concepts are intentionally separate:
+
+- Marginalia ownership controls whether existing sessions, progress, and annotations remain visible/exportable to their owner.
+- Current book visibility controls whether the user can open/continue the book, create a new session, write progress, or create/update/delete annotations.
+- Book-file download access follows current book visibility and never follows marginalia ownership alone.
+- `can_open` in session summary/detail payloads reports whether the related book is currently visible enough for open/continue/per-book navigation.
+
 Design direction:
 
 - `docs/user-data.md`
@@ -24,6 +31,7 @@ Session list/retrieve payloads include a compact summary suitable for session-ma
 - `progression` (float 0-1 or null; derived/display metadata, not canonical location state)
 - `annotation_count` (non-deleted annotations)
 - `book` summary (id/title/authors/series/series_index/cover_url), scoped to the caller's current book visibility (hidden/inaccessible books do not leak metadata)
+- `can_open` (boolean), true when the caller currently has book visibility for open/continue/per-book navigation
 - `book_id` as the stable book identifier; the old summary-only `book_title` compatibility field is no longer returned
 - Optional list filters: `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`
 - When `?book=<book_id>` is present for a visible book, the paginated response includes `context.book` even when no sessions exist. Malformed book ids return 400; nonexistent or inaccessible book ids return 404.

@@ -10,6 +10,9 @@ Key principles:
 - Losing book access does not hide or remove a user's existing reading sessions
   and annotations from that user, but it does block live reading activity,
   annotation/progress writes, new sessions, and book-file download.
+- Session summary/detail payloads may expose `can_open=false` for owned
+  sessions whose book is no longer visible. That is a UI hint for open/continue
+  capability, not a denial of marginalia ownership.
 - Business rules should be centralized in policy helpers and service modules (avoid scattered per-view logic).
 
 In plain language:
