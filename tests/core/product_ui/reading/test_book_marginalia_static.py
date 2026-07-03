@@ -379,12 +379,15 @@ class ReadingActivityJsRenderingTest(TestCase):
         self.assertIn("/api/v1/reading/annotations/?session_id=", text)
         self.assertNotIn("book_id=", text)
 
-    def test_annotation_quote_and_note_use_purpose_not_order(self):
+    def test_annotation_quote_and_note_use_spl_native_fields(self):
         text = self._read_js()
 
-        self.assertIn('b.purpose === "describing"', text)
-        self.assertIn('b.purpose === "commenting"', text)
-        self.assertNotIn('b.purpose === "highlighting"', text)
+        self.assertIn("a.highlight_text", text)
+        self.assertIn("a.comment_text", text)
+        self.assertIn("a.highlight_color", text)
+        self.assertIn("a.selector.value", text)
+        self.assertNotIn("TextualBody", text)
+        self.assertNotIn("purpose", text)
 
     def test_annotation_quote_renders_before_note_and_uses_color_token_class(self):
         text = self._read_js()
@@ -401,7 +404,7 @@ class ReadingActivityJsRenderingTest(TestCase):
     def test_bookmark_only_annotation_uses_friendly_text(self):
         text = self._read_js()
 
-        self.assertIn('const isBookmarkOnly = motivation === "bookmarking" && !hasQuote && !hasNote', text)
+        self.assertIn('const isBookmarkOnly = kind === "bookmark" && !hasQuote && !hasNote', text)
         self.assertIn('"Bookmark"', text)
         self.assertIn('"Saved location"', text)
         self.assertIn('titleEl.setAttribute("title", selectorValue)', text)

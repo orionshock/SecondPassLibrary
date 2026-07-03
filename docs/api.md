@@ -617,7 +617,7 @@ Reading payload notes:
   plus highlight/comment fields).
 - Annotation reads are owner-scoped and remain available after book access loss; annotation writes/deletes require current access to the session's book and an open session.
 - Highlight color is a semantic token on highlights. Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on create and normalizes to `yellow`; blank highlight color is rejected on PATCH.
-- Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
+- Progress/location payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version. Annotation payloads do not include `profile_version`.
 - Marginalia import apply is intentionally minimal: no stored import jobs and no annotation-level selection. The product UI supports session-level selection and session name/notes customization.
 - Server-side marginalia import is intended for SPL Marginalia Profile files
   only. Foreign/provider-specific formats should be normalized by a client

@@ -1,8 +1,9 @@
 # User Reading Data
 
 Second Pass Library stores user reading data server-side in a compact,
-reading-session-centered model. The current annotation API still uses a few
-W3C/Web Annotation-influenced field names.
+reading-session-centered model. The live annotation API uses compact
+SPL-native fields; the portable export/import format is documented separately
+as the Second Pass Library Marginalia Profile.
 
 This document is design direction for reading sessions, progress, and annotations. The canonical portable exchange profile lives in:
 
@@ -17,30 +18,26 @@ For practical current REST payload examples for reader-client development, see:
 
 - Reader clients must adapt to the server format if they want to save user data.
 - The server does not maintain per-reader proprietary annotation formats.
-- Public reading payloads are versioned via `profile_version` and unknown/unsupported fields are rejected.
+- Progress/location payloads are versioned via `profile_version`; annotation
+  API payloads are SPL-native and do not include `profile_version`.
+- Unknown/unsupported fields are rejected.
 - Reading payloads are also size-limited as a coarse abuse guard (the server is not arbitrary client blob storage).
 - For REST clients, `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) so clients can safely retry create requests without duplicating annotations.
 - EPUB is the current target format.
-- EPUB CFI (`FragmentSelector`) is the primary selector for text targets.
+- EPUB CFI is the primary selector for text targets.
 - The app does not repair, normalize, or beautify user-provided EPUB files.
 
 ## Data Types
 
 ### Annotations (highlights, notes, bookmarks)
 
-Highlights and bookmarks use SPL annotation records with W3C-influenced
-motivation names:
+Highlights and bookmarks use SPL annotation records with a compact `kind`:
 
-- Bookmark: motivation `bookmarking`
-- Highlight: motivation `highlighting`
-- Highlight with a user note/comment: motivations `["highlighting", "commenting"]`
+- Bookmark: `kind: "bookmark"`
+- Highlight: `kind: "highlight"`
+- Highlight with a user note/comment: `kind: "highlight"` plus `comment_text`
 
 Standalone comment-only annotations are not part of the current reader workflow and are rejected on create.
-
-Motivation output:
-
-- The server may output `motivation` as an array for product semantics.
-- A highlight with a user note/comment is represented as motivations `["highlighting", "commenting"]`.
 
 Annotations point into a publication using an EPUB CFI selector, and are intentionally saved user artifacts.
 
@@ -51,23 +48,23 @@ Internally, annotations are stored in compact/queryable columns:
 - `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
-The current REST API shape still uses `target`/`body` fields and is reconstructed
-at the API boundary. The canonical export/import profile is the
-session-centered Second Pass Library Marginalia Profile.
+The live REST API uses `kind`, `selector`, optional `quote`, `highlight_text`,
+`highlight_color`, and `comment_text`. The canonical export/import profile is
+the session-centered Second Pass Library Marginalia Profile.
 
 Anchor immutability:
 
 - Annotation anchors are creation-time data and are immutable after creation:
-  - EPUB CFI selector (`FragmentSelector`)
-  - optional quote context (`TextQuoteSelector` exact/prefix/suffix)
-  - `session` and `motivation`
+  - EPUB CFI selector
+  - optional quote context (`exact`/`prefix`/`suffix`)
+  - `session` and `kind`
 - The API allows editing only user-facing content like note/comment text and highlight color tokens.
 
 Highlight color:
 
 - `highlight_color` is a semantic token (not a CSS/hex color string).
 - Allowed values: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`.
-- Color is highlight/quote-only metadata (it applies to the selected-text `TextualBody` with `purpose: "describing"`).
+- Color is highlight-only metadata.
 - Note/comment bodies and bookmark-only annotations do not use color.
 - For highlight annotations, missing/blank color defaults to `yellow`.
 

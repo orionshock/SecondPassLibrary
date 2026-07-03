@@ -102,20 +102,13 @@ function renderAnnotationRow(a) {
   const updatedAt = a && a.updated_at ? String(a.updated_at) : "";
   const createdAt = a && a.created_at ? String(a.created_at) : "";
 
-  const bodies = Array.isArray(a && a.body) ? a.body : [];
-  const quoteBody = bodies.find((b) => b && b.type === "TextualBody" && b.purpose === "describing");
-  const noteBody = bodies.find((b) => b && b.type === "TextualBody" && b.purpose === "commenting");
-
-  const quoteText = quoteBody && typeof quoteBody.value === "string" ? quoteBody.value : "";
-  const noteText = noteBody && typeof noteBody.value === "string" ? noteBody.value : "";
+  const quoteText = a && typeof a.highlight_text === "string" ? a.highlight_text : "";
+  const noteText = a && typeof a.comment_text === "string" ? a.comment_text : "";
   const hasQuote = !!quoteText;
   const hasNote = !!noteText;
-  const motivation = a && a.motivation ? String(a.motivation) : "";
-  const selectorValue =
-    a && a.target && a.target.selector && typeof a.target.selector.value === "string"
-      ? a.target.selector.value
-      : "";
-  const isBookmarkOnly = motivation === "bookmarking" && !hasQuote && !hasNote;
+  const kind = a && a.kind ? String(a.kind) : "";
+  const selectorValue = a && a.selector && typeof a.selector.value === "string" ? a.selector.value : "";
+  const isBookmarkOnly = kind === "bookmark" && !hasQuote && !hasNote;
 
   let kindLabel = "Annotation";
   let kindIcon = "edit_note";
@@ -148,7 +141,7 @@ function renderAnnotationRow(a) {
   contentWrap.className = "annotation-card__content";
 
   if (quoteText) {
-    let token = quoteBody && typeof quoteBody.color === "string" ? quoteBody.color : "";
+    let token = a && typeof a.highlight_color === "string" ? a.highlight_color : "";
     token = (token || "").trim().toLowerCase();
     const allowed = new Set(["yellow", "green", "blue", "pink", "purple", "orange"]);
     if (!token || !allowed.has(token)) token = "yellow";

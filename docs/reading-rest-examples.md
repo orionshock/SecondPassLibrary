@@ -2,10 +2,9 @@
 
 These examples document the **current** REST API payloads under `/api/v1/reading/`.
 
-They are **profile-shaped** and versioned, but they are not the canonical Second
-Pass Library Marginalia Profile file format. Reader clients and external tools
-should normalize foreign annotation data into these REST shapes when writing
-through the normal reading APIs.
+They are not the canonical Second Pass Library Marginalia Profile file format.
+Reader clients and external tools should normalize foreign annotation data into
+these REST shapes when writing through the normal reading APIs.
 
 All reading endpoints require authentication.
 
@@ -18,7 +17,9 @@ Client API bearer tokens may be used for these endpoints:
 ## 1) Overview
 
 - Base path: `/api/v1/reading/`
-- Payloads use `profile_version: "0.1.0"` (the current server profile version).
+- Progress/location payloads use `profile_version: "0.1.0"` (the current
+  server profile version). Annotation payloads use SPL-native fields and do not
+  include `profile_version`.
 - Unknown/client-specific fields are rejected with `400` validation errors.
 - The server is **not** arbitrary client blob storage.
 - Reader clients must translate their internal state into this shape before saving.
