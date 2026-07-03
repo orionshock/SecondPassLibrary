@@ -143,16 +143,19 @@ For a simple single-container SQLite deployment:
 
 ```powershell
 copy .env.example .env
+copy compose.example.yml compose.yml
 .\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 docker compose up --build
 ```
 
 Edit `.env` before starting: set `DJANGO_SECRET_KEY` to the generated value and
-set `DJANGO_ALLOWED_HOSTS` to the hostnames or LAN IPs users will use.
+set `DJANGO_ALLOWED_HOSTS` to the hostnames or LAN IPs users will use. Edit
+`compose.yml` if you need to customize ports, volumes, or restart policy.
 The container serves Django on port `8000` and bind-mounts `./userdata` for the
 SQLite database, stored EPUBs, covers, imports, and logs.
 
-For updates: `git pull`, review `.env.example` for new variables, then run
+For updates: `git pull`, review `.env.example` and `compose.example.yml` for
+new options, merge any changes you want into your local files, then run
 `docker compose up --build` again.
 
 Reverse proxy, TLS, and public exposure are deployment-owned. See

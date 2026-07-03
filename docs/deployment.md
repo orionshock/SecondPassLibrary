@@ -15,11 +15,13 @@ First run:
 
 ```powershell
 copy .env.example .env
+copy compose.example.yml compose.yml
 .\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 docker compose up --build
 ```
 
-Edit `.env` before starting. At minimum, set:
+Edit `.env` before starting. Edit `compose.yml` if you need local port, volume,
+or restart-policy changes. At minimum, set:
 
 ```text
 DJANGO_DEBUG=0
@@ -28,8 +30,8 @@ DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
 SECOND_PASS_USERDATA_DIR=/app/userdata
 ```
 
-The compose file uses `env_file: .env`, maps host port `8000` to the container,
-and mounts `./userdata` at `/app/userdata`. Startup runs:
+The example compose file uses `env_file: .env`, maps host port `8000` to the
+container, and mounts `./userdata` at `/app/userdata`. Startup runs:
 
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
@@ -47,6 +49,8 @@ docker compose up --build
 ```
 
 Review `.env.example` during updates for newly added variables.
+Review `compose.example.yml` during updates for any compose-template changes;
+your local `compose.yml` is intentionally untracked.
 
 Reverse proxy and TLS are outside this Docker setup. If serving through an
 HTTPS reverse proxy, set `DJANGO_ALLOWED_HOSTS` to include the public host,

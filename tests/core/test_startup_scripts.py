@@ -111,7 +111,7 @@ class StartupScriptContractTests(SimpleTestCase):
 
 class DockerStartupContractTests(SimpleTestCase):
     def test_compose_uses_env_file_userdata_mount_and_port_8000(self):
-        source = (ROOT / "compose.yml").read_text(encoding="utf-8")
+        source = (ROOT / "compose.example.yml").read_text(encoding="utf-8")
 
         self.assertIn("  secondpasslibrary:", source)
         self.assertNotIn("  app:", source)
@@ -122,7 +122,7 @@ class DockerStartupContractTests(SimpleTestCase):
         self.assertIn('- "8000:8000"', source)
 
     def test_compose_does_not_define_reverse_proxy_services(self):
-        source = (ROOT / "compose.yml").read_text(encoding="utf-8").lower()
+        source = (ROOT / "compose.example.yml").read_text(encoding="utf-8").lower()
 
         self.assertNotIn("nginx", source)
         self.assertNotIn("caddy", source)
@@ -184,3 +184,8 @@ class DockerStartupContractTests(SimpleTestCase):
         self.assertIn("DJANGO_USE_X_FORWARDED_HOST=0", source)
         self.assertIn("SECOND_PASS_USERDATA_DIR=/app/userdata", source)
         self.assertIn("DJANGO_SILENCED_SYSTEM_CHECKS=", source)
+
+    def test_gitignore_keeps_local_compose_file_untracked(self):
+        source = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+        self.assertIn("compose.yml", source)
