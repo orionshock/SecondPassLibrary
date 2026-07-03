@@ -1,21 +1,10 @@
+"""W3C-influenced helpers that are still used by the live annotation API."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from library.models import Book
-
-from .profile import EPUB_CFI_CONFORMS_TO, normalize_epub_cfi
-
-
-def build_fragment_selector(cfi: object) -> dict[str, Any]:
-    value = normalize_epub_cfi(cfi)
-    if not value:
-        raise ValueError("CFI is required to build a FragmentSelector")
-    return {
-        "type": "FragmentSelector",
-        "conformsTo": EPUB_CFI_CONFORMS_TO,
-        "value": value,
-    }
 
 
 def build_publication_source(*, book: Book) -> dict[str, Any]:
@@ -50,21 +39,3 @@ def build_publication_source(*, book: Book) -> dict[str, Any]:
     if file_hash is not None:
         source["fileHash"] = file_hash
     return source
-
-
-def build_target(*, book: Book, current_location: dict[str, Any]) -> dict[str, Any]:
-    """
-    Build the current annotation API target from current_location JSON.
-
-    The current API target shape uses `FragmentSelector` vocabulary influenced
-    by W3C Web Annotation, but this helper is not a W3C compliance boundary. We
-    only require `current_location["cfi"]` for now and preserve the full input
-    under `locator` for future use.
-    """
-    cfi = current_location.get("cfi")
-    selector = build_fragment_selector(cfi)
-    return {
-        "source": build_publication_source(book=book),
-        "selector": selector,
-        "locator": dict(current_location),
-    }

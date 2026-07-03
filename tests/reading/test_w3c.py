@@ -3,7 +3,8 @@ from django.test import TestCase
 
 from library.group_services import ensure_book_public_assignment
 from library.models import BookFile
-from reading.w3c import build_fragment_selector, build_publication_source, build_target, normalize_epub_cfi
+from reading.profile import normalize_epub_cfi
+from reading.w3c import build_publication_source
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 
@@ -21,10 +22,6 @@ class W3CHelpersTest(IsolatedUserdataMixin, TestCase):
         self.assertEqual(normalize_epub_cfi("/6/4"), "epubcfi(/6/4)")
         self.assertEqual(normalize_epub_cfi(" epubcfi(/6/4) "), "epubcfi(/6/4)")
 
-    def test_build_fragment_selector_requires_cfi(self):
-        with self.assertRaises(ValueError):
-            build_fragment_selector("")
-
     def test_build_publication_source_prefers_checksum_identity(self):
         # Override the checksum to keep this test stable and focused.
         book_file = BookFile.objects.get(book=self.book)
@@ -34,10 +31,3 @@ class W3CHelpersTest(IsolatedUserdataMixin, TestCase):
         source = build_publication_source(book=self.book)
         self.assertEqual(source["id"], f"book:sha256:{'a' * 64}")
         self.assertEqual(source["fileHash"], f"sha256:{'a' * 64}")
-
-    def test_build_target_includes_source_selector_and_locator(self):
-        target = build_target(book=self.book, current_location={"cfi": "/6/2", "href": "Text/c1.xhtml"})
-        self.assertIn("source", target)
-        self.assertIn("selector", target)
-        self.assertEqual(target["selector"]["value"], "epubcfi(/6/2)")
-        self.assertEqual(target["locator"]["href"], "Text/c1.xhtml")
