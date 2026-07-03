@@ -121,12 +121,16 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         new_color: str | None = None
 
         if "comment_text" in initial:
+            if annotation.anchor_kind != Annotation.ANCHOR_KIND_HIGHLIGHT:
+                raise DRFValidationError({"comment_text": "Comments are only supported on highlights."})
             comment = initial.get("comment_text")
             if comment is not None and not isinstance(comment, str):
                 raise DRFValidationError({"comment_text": "comment_text must be a string."})
             new_comment = comment or ""
 
         if "highlight_color" in initial:
+            if annotation.anchor_kind != Annotation.ANCHOR_KIND_HIGHLIGHT:
+                raise DRFValidationError({"highlight_color": "Highlight color applies only to highlights."})
             color = initial.get("highlight_color")
             if not isinstance(color, str):
                 raise DRFValidationError({"highlight_color": "highlight_color must be a string."})

@@ -94,11 +94,14 @@ def compact_annotation_from_profile(profile_annotation: dict[str, Any]) -> dict[
             comment = body.get("value") or ""
 
     if Annotation.MOTIVATION_HIGHLIGHTING in motivations:
+        highlight_text = describing or quote.get("exact") or ""
+        if not highlight_text:
+            return None
         return {
             "motivation": Annotation.MOTIVATION_HIGHLIGHTING,
             "anchor_kind": Annotation.ANCHOR_KIND_HIGHLIGHT,
             "selector_value": selector_value,
-            "highlight_text": describing or quote.get("exact") or "",
+            "highlight_text": highlight_text,
             "quote_prefix": quote.get("prefix") or "",
             "quote_suffix": quote.get("suffix") or "",
             "highlight_color": color or "yellow",

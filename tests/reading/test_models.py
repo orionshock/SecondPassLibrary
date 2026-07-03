@@ -68,7 +68,7 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             selector_value="epubcfi(/6/2[chap]!/4/2/6)",
             highlight_text="Hello world",
         )
-        self.assertIn("Highlighting", str(annotation))
+        self.assertIn("Highlight", str(annotation))
         self.assertIn("Test Book", str(annotation))
 
     def test_annotation_motivation_choices(self):

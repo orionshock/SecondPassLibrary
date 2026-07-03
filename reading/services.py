@@ -261,62 +261,6 @@ def create_annotation(
     )
 
 
-def update_annotation(
-    *,
-    annotation: Annotation,
-    anchor_kind: str,
-    selector_kind: str,
-    selector_value: str,
-    highlight_text: str = "",
-    quote_prefix: str = "",
-    quote_suffix: str = "",
-    highlight_color: str = "",
-    comment_text: str = "",
-) -> Annotation:
-    assert_session_writable(session=annotation.session)
-    motivation = (
-        Annotation.MOTIVATION_BOOKMARKING
-        if anchor_kind == Annotation.ANCHOR_KIND_BOOKMARK
-        else Annotation.MOTIVATION_HIGHLIGHTING
-    )
-    annotation.motivation = motivation
-    annotation.anchor_kind = anchor_kind
-    annotation.selector_kind = selector_kind
-    annotation.selector_value = selector_value
-    annotation.highlight_text = highlight_text or ""
-    annotation.quote_prefix = quote_prefix or ""
-    annotation.quote_suffix = quote_suffix or ""
-    if (annotation.highlight_text or highlight_color) and not highlight_color:
-        highlight_color = HIGHLIGHT_COLOR_YELLOW
-    annotation.highlight_color = highlight_color or ""
-    annotation.comment_text = comment_text or ""
-    annotation.profile_version = CURRENT_READING_PROFILE_VERSION
-
-    # Keep book/book_file consistent with the session's book at write time.
-    book = annotation.session.book
-    annotation.book = book
-    annotation.book_file = getattr(book, "file", None)
-
-    annotation.save(
-        update_fields=[
-            "motivation",
-            "anchor_kind",
-            "selector_kind",
-            "selector_value",
-            "highlight_text",
-            "quote_prefix",
-            "quote_suffix",
-            "highlight_color",
-            "comment_text",
-            "profile_version",
-            "book",
-            "book_file",
-            "updated_at",
-        ]
-    )
-    return annotation
-
-
 def update_annotation_content(
     *,
     annotation: Annotation,

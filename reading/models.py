@@ -170,8 +170,7 @@ class Annotation(TimeStampedModel):
         ]
 
     def __str__(self):
-        # Django provides `get_<field>_display()` dynamically for choice fields.
-        return f"{self.get_motivation_display()} on {self.session}"  # type: ignore[attr-defined]
+        return f"{self.get_anchor_kind_display()} on {self.session}"  # type: ignore[attr-defined]
 
     def clean(self):
         super().clean()

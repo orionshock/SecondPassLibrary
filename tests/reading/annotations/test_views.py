@@ -307,6 +307,32 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         annotation.refresh_from_db()
         self.assertEqual(annotation.comment_text, "old")
 
+    def test_patch_bookmark_rejects_comment_and_color_without_server_error(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        annotation = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK,
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+        )
+
+        for payload in ({"comment_text": "note"}, {"highlight_color": "yellow"}):
+            resp = cast(
+                Response,
+                self.client.patch(
+                    f"/api/v1/reading/annotations/{annotation.id}/",
+                    data=payload,
+                    format="json",
+                ),
+            )
+            self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST, payload)
+
+        annotation.refresh_from_db()
+        self.assertEqual(annotation.comment_text, "")
+        self.assertEqual(annotation.highlight_color, "")
+
     def test_annotation_delete_requires_current_book_access_and_open_session(self):
         _user, session, annotation = self._make_lost_access_session_with_annotation()
         self.client.login(username="lostann", password="pass")

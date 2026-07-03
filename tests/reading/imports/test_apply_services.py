@@ -96,6 +96,73 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         self.assertEqual(ReadingSession.objects.filter(user=self.user).count(), 1)
         self.assertFalse(ReadingSession.objects.filter(user=self.user, name="Bad locator").exists())
 
+    def test_apply_skips_comment_only_profile_annotation(self):
+        self.client.force_login(self.user)
+        payload = self.marginalia_payload()
+        payload["books"][0]["sessions"][0]["annotations"].append(
+            {
+                "motivation": ["commenting"],
+                "target": {"selector": {"type": "FragmentSelector", "value": "epubcfi(/6/12)"}},
+                "body": [{"type": "TextualBody", "purpose": "commenting", "value": "orphan note"}],
+                "is_deleted": False,
+                "created_at": "2026-06-01T12:00:00+00:00",
+                "updated_at": "2026-06-01T12:00:00+00:00",
+            }
+        )
+
+        r = cast(Any, self.post_apply_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["summary"]["annotations_created"], 3)
+        self.assertFalse(Annotation.objects.filter(comment_text="orphan note").exists())
+
+    def test_apply_imports_bookmark_profile_as_plain_point_flag(self):
+        self.client.force_login(self.user)
+        payload = self.marginalia_payload()
+        bookmark = payload["books"][0]["sessions"][0]["annotations"][0]
+        bookmark["target"]["selector"] = [
+            {"type": "FragmentSelector", "value": "epubcfi(/6/2)"},
+            {"type": "TextQuoteSelector", "exact": "ignored quote", "prefix": "pre", "suffix": "suf"},
+        ]
+        bookmark["body"] = [
+            {
+                "type": "TextualBody",
+                "purpose": "describing",
+                "value": "ignored highlight",
+                "color": "green",
+            },
+            {"type": "TextualBody", "purpose": "commenting", "value": "ignored note"},
+        ]
+
+        r = cast(Any, self.post_apply_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        bookmark_model = Annotation.objects.get(anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK)
+        self.assertEqual(bookmark_model.selector_value, "epubcfi(/6/2)")
+        self.assertEqual(bookmark_model.highlight_text, "")
+        self.assertEqual(bookmark_model.highlight_color, "")
+        self.assertEqual(bookmark_model.comment_text, "")
+        self.assertEqual(bookmark_model.quote_prefix, "")
+        self.assertEqual(bookmark_model.quote_suffix, "")
+
+    def test_apply_skips_highlight_without_selected_text_cleanly(self):
+        self.client.force_login(self.user)
+        payload = self.marginalia_payload()
+        malformed = json.loads(json.dumps(self.highlight_entry()))
+        malformed["target"] = {
+            "selector": {"type": "FragmentSelector", "value": "epubcfi(/6/12)"}
+        }
+        malformed["body"] = [
+            {"type": "TextualBody", "purpose": "commenting", "value": "note without range"}
+        ]
+        payload["books"][0]["sessions"][0]["annotations"].append(malformed)
+
+        r = cast(Any, self.post_apply_payload(payload))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["summary"]["annotations_created"], 3)
+        self.assertFalse(Annotation.objects.filter(comment_text="note without range").exists())
+
     def test_apply_rolls_back_if_annotation_write_fails(self):
         payload = self.marginalia_payload()
 
