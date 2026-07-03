@@ -59,6 +59,22 @@ class DjangoSettingsContractTests(SimpleTestCase):
         with patch.dict("os.environ", {"DJANGO_ALLOWED_HOSTS": "*"}):
             self.assertEqual(_env_csv("DJANGO_ALLOWED_HOSTS", []), ["*"])
 
+    def test_silenced_system_checks_are_env_driven(self):
+        source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'SILENCED_SYSTEM_CHECKS = _env_csv("DJANGO_SILENCED_SYSTEM_CHECKS", [])',
+            source,
+        )
+        with patch.dict(
+            "os.environ",
+            {"DJANGO_SILENCED_SYSTEM_CHECKS": "security.W004, security.W008"},
+        ):
+            self.assertEqual(
+                _env_csv("DJANGO_SILENCED_SYSTEM_CHECKS", []),
+                ["security.W004", "security.W008"],
+            )
+
     def test_csrf_trusted_origins_are_env_driven(self):
         with patch.dict(
             "os.environ",

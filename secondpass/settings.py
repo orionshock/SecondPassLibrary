@@ -81,6 +81,7 @@ IMPORTS_DIR = USERDATA_DIR / "imports"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool("DJANGO_DEBUG", False)
+SILENCED_SYSTEM_CHECKS = _env_csv("DJANGO_SILENCED_SYSTEM_CHECKS", [])
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = _secret_key(debug=DEBUG or RUNNING_TESTS)

@@ -71,6 +71,9 @@ Production startup collects Product UI assets into `var/static/`, which
 WhiteNoise serves under `/static/`. WhiteNoise does not serve `userdata/media/`.
 The only public raw media namespace is `/media/covers/`; books, imports,
 exports, marginalia, and other protected user data are not exposed as raw media.
+Production deployments must provide a non-default `DJANGO_SECRET_KEY`,
+`DJANGO_DEBUG=0`, and explicit `DJANGO_ALLOWED_HOSTS`; see
+[Production startup](docs/deployment.md).
 
 ## Import And Export
 
@@ -117,16 +120,19 @@ The startup script applies migrations before starting Django. Visit `/` and
 complete the first-run setup wizard. It initializes the server identity, the
 shared Public group (displayed as `Common Room` by default), the advanced-groups
 UI preference, and the initial Owner account. `seed_dev_users` remains optional
-development/demo data and is not required for setup. On POSIX systems, use
-`sh scripts/start-dev.sh`. The development scripts opt into Django debug mode;
-the app settings default to debug off.
+development/demo data and is not required for setup. The development script
+opts into Django debug mode; the app settings default to debug off.
 
 Raw `python manage.py runserver` uses the default debug-off settings. For local
 development behavior without the wrapper script, set `DJANGO_DEBUG=1` first.
-The development scripts also set local-safe `DJANGO_ALLOWED_HOSTS` defaults.
+The development script also sets local-safe `DJANGO_ALLOWED_HOSTS` defaults.
 Production deployments should set `DJANGO_ALLOWED_HOSTS` to their real
 hostnames or IP addresses.
-The scripts are local/dev convenience helpers for now; Docker-based deployment
-orchestration can own final production process and environment wiring later.
+For localhost production-mode testing on Windows, use
+`.\scripts\start-local-production.ps1`; it sets local-safe `DEBUG=0`
+environment defaults before running deploy checks, migrations, static
+collection, and Waitress. The scripts remain local/dev convenience helpers;
+Docker-based deployment orchestration can own final production process and
+environment wiring later.
 
 Development-only test dependencies live in `requirements-dev.txt`.

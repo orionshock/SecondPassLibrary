@@ -6,16 +6,11 @@ wizard does not create tables from request handling.
 
 ## Single-instance startup
 
-Install the runtime dependencies, configure the environment, and run:
-
-```sh
-sh scripts/start-production.sh
-```
-
-On PowerShell:
+Install the runtime dependencies, configure the environment, and run the
+Windows local production-mode helper:
 
 ```powershell
-.\scripts\start-production.ps1
+.\scripts\start-local-production.ps1
 ```
 
 The script fails fast and performs these steps in order:
@@ -25,9 +20,15 @@ The script fails fast and performs these steps in order:
 3. `python manage.py collectstatic --noinput`
 4. A WSGI server serving `secondpass.wsgi:application`
 
-The scripts are local/dev convenience helpers and manual smoke tools for now,
-not the final deployment orchestration contract. Real deployment environment
-wiring and process supervision can wait for Docker.
+The PowerShell script is a local production-mode helper: it runs with
+`DJANGO_DEBUG=0`, binds to `127.0.0.1:8000` by default, and fills local-safe
+defaults for `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, CSRF trusted origins,
+secure cookies, and forwarded-header trust. It is for localhost testing of
+production-mode behavior, not a real deployment secrets source. These scripts
+remain local/dev convenience helpers and manual smoke tools for now; Docker can
+own its own boot script later. There is intentionally no POSIX shell startup
+script right now. The local helper also silences Django's built-in HTTPS/HSTS
+deploy warnings that do not apply to deliberate localhost HTTP testing.
 
 Environment variables:
 
@@ -35,6 +36,7 @@ Environment variables:
 - `DJANGO_SETTINGS_MODULE`: optional Django settings module override; inherited
   by migration, static collection, and Gunicorn processes
 - `DJANGO_DEBUG`: production startup scripts force `0`
+- `DJANGO_SECRET_KEY`: required when `DJANGO_DEBUG=0`
 - `DJANGO_ALLOWED_HOSTS`: comma-separated allowed hostnames/IPs
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: comma-separated scheme-qualified origins for
   CSRF checks
@@ -43,20 +45,49 @@ Environment variables:
 - `DJANGO_USE_X_FORWARDED_HOST`: set to `1` only behind a trusted reverse proxy
   that strips/sets forwarded host headers
 - `DJANGO_SECURE_COOKIES`: set to `1` for HTTPS deployments
-- `BIND`: server bind address, default `0.0.0.0:8000`
-- `WEB_CONCURRENCY`: POSIX/Gunicorn worker count, default `2`
-- `GUNICORN_CONFIG`: optional POSIX/Gunicorn configuration file
+- `SECOND_PASS_USERDATA_DIR`: runtime data directory, default `./userdata`
+- `BIND`: server bind address, default `127.0.0.1:8000` for the PowerShell local
+  production-mode helper
 - `WAITRESS_THREADS`: PowerShell/Waitress thread count, default `4`
+
+Minimum production environment:
+
+```text
+DJANGO_DEBUG=0
+DJANGO_SECRET_KEY=<generated secret>
+DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
+```
+
+Generate a secret key with Django from the project environment:
+
+```powershell
+.\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Without the Windows virtualenv helper, run the same command with whatever
+Python executable is active:
+
+```powershell
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Use a unique secret per deployment. Keep it stable across restarts, do not
+commit it to Git, and back it up with the rest of the deployment secrets.
+Changing `DJANGO_SECRET_KEY` logs users out and invalidates Django-signed
+tokens, cookies, and short-lived signed flows.
 
 `DJANGO_ALLOWED_HOSTS` defaults to local-safe hosts:
 `localhost,127.0.0.1,[::1]`. Production deployments should set it to the public
 hostnames or LAN IPs that users will actually use. The wildcard `*` is available
 only by explicit operator choice, for example `DJANGO_ALLOWED_HOSTS=*`; do not
-treat wildcard hosts as the recommended hardened deployment posture.
+treat wildcard hosts as the recommended hardened deployment posture. The
+project deploy check warns when `DEBUG=False` and wildcard hosts are configured.
 
 HTTPS reverse proxy example:
 
 ```text
+DJANGO_DEBUG=0
+DJANGO_SECRET_KEY=<generated secret>
 DJANGO_ALLOWED_HOSTS=books.example.com
 DJANGO_CSRF_TRUSTED_ORIGINS=https://books.example.com
 DJANGO_TRUST_X_FORWARDED_PROTO=1
@@ -66,6 +97,8 @@ DJANGO_SECURE_COOKIES=1
 Direct HTTP LAN example:
 
 ```text
+DJANGO_DEBUG=0
+DJANGO_SECRET_KEY=<generated secret>
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,[::1],192.168.1.25
 DJANGO_CSRF_TRUSTED_ORIGINS=
 DJANGO_TRUST_X_FORWARDED_PROTO=0
@@ -75,7 +108,20 @@ DJANGO_SECURE_COOKIES=0
 
 Do not enable forwarded-proxy trust unless the app is behind a trusted reverse
 proxy that strips untrusted incoming forwarded headers and sets the replacement
-headers itself.
+headers itself. Direct HTTP LAN deployments may intentionally leave secure
+cookies off. HTTPS reverse-proxy deployments should set
+`DJANGO_SECURE_COOKIES=1` and enable `DJANGO_TRUST_X_FORWARDED_PROTO=1` only
+when the proxy is trusted. The project deploy check warns if forwarded HTTPS
+trust is enabled while both secure cookie settings are off.
+
+`python manage.py check --deploy` may also report Django's built-in HTTPS and
+HSTS warnings. Treat those as deployment-policy prompts: direct HTTP LAN and
+reverse-proxy HTTPS deployments have different answers.
+
+The Django admin remains available at `/admin/` as a service and recovery
+hatch. For exposed deployments, restrict it outside the app where practical:
+LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent network
+controls.
 
 CORS remains open for `/api/` and `/.well-known/` with credentials disabled.
 This is for independent bearer-token browser clients such as the reading
@@ -124,8 +170,8 @@ of production startup and is not required for normal first-run setup.
 
 ## Raw commands
 
-Raw `python manage.py runserver` and raw `gunicorn` remain usable only after
-migrations have been applied manually. The recommended startup path is the
-appropriate wrapper script so migrations finish before the web server starts.
+Raw `python manage.py runserver` and raw WSGI server commands remain usable
+only after migrations have been applied manually. The recommended startup path
+is the appropriate wrapper script so migrations finish before the web server starts.
 Raw local `runserver` also needs `DJANGO_DEBUG=1` if development static/media
-behavior is expected; production wrapper scripts force `DJANGO_DEBUG=0`.
+behavior is expected; production-mode wrapper scripts force `DJANGO_DEBUG=0`.

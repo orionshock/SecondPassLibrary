@@ -457,6 +457,9 @@ Verification guidance:
    - focused tests suggest broader risk
    - preparing release-level verification
 4. Docs-only changes: optionally run `python manage.py check`; no tests required.
+   For non-test Django management commands with `DJANGO_DEBUG=0`, set a
+   temporary non-default `DJANGO_SECRET_KEY` unless intentionally verifying the
+   missing-key production failure path.
 5. In the summary, list exactly which focused tests were run and whether the full suite was intentionally skipped.
 6. Do not claim "all tests pass" unless the full suite was run; use phrasing like "Focused tests passed" / "Full suite not run".
 7. For static Product UI/text hygiene, prefer the repo tool instead of ad hoc

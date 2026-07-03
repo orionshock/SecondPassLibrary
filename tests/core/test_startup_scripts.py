@@ -23,49 +23,26 @@ class StartupScriptContractTests(SimpleTestCase):
         )
         self.assertIn("if ($LASTEXITCODE -ne 0)", source)
 
-    def test_posix_dev_script_migrates_before_runserver(self):
-        source = (ROOT / "scripts" / "start-dev.sh").read_text(encoding="utf-8")
-
-        self.assertIn("set -e", source)
-        self.assertIn('PYTHON="${PYTHON:-python}"', source)
-        self.assertIn('export DJANGO_DEBUG="${DJANGO_DEBUG:-1}"', source)
-        self.assertIn(
-            'export DJANGO_ALLOWED_HOSTS="${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,[::1]}"',
-            source,
-        )
-        self.assertLess(
-            source.index("manage.py migrate --noinput"),
-            source.index('manage.py runserver "$@"'),
-        )
-
-    def test_posix_production_script_prepares_database_and_static_before_gunicorn(self):
-        source = (ROOT / "scripts" / "start-production.sh").read_text(encoding="utf-8")
-
-        self.assertIn("set -e", source)
-        self.assertIn('BIND="${BIND:-0.0.0.0:8000}"', source)
-        self.assertIn('WEB_CONCURRENCY="${WEB_CONCURRENCY:-2}"', source)
-        self.assertIn("export DJANGO_DEBUG=0", source)
-        self.assertIn("GUNICORN_CONFIG", source)
-        check_at = source.index("manage.py check --deploy")
-        migrate_at = source.index("manage.py migrate --noinput")
-        collectstatic_at = source.index("manage.py collectstatic --noinput")
-        gunicorn_at = source.index("-m gunicorn")
-        self.assertLess(check_at, migrate_at)
-        self.assertLess(migrate_at, collectstatic_at)
-        self.assertLess(collectstatic_at, gunicorn_at)
-        self.assertIn("secondpass.wsgi:application", source)
-        requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
-        self.assertIn("gunicorn==", requirements)
-
-    def test_powershell_production_script_matches_production_startup_contract(self):
-        source = (ROOT / "scripts" / "start-production.ps1").read_text(
+    def test_powershell_local_production_script_sets_local_prod_defaults(self):
+        source = (ROOT / "scripts" / "start-local-production.ps1").read_text(
             encoding="utf-8"
         )
 
         self.assertIn('$ErrorActionPreference = "Stop"', source)
-        self.assertIn('$Bind = if ($env:BIND)', source)
+        self.assertIn('"127.0.0.1:8000"', source)
         self.assertIn('$WaitressThreads = if ($env:WAITRESS_THREADS)', source)
         self.assertIn('$env:DJANGO_DEBUG = "0"', source)
+        self.assertIn("DJANGO_SECRET_KEY", source)
+        self.assertIn("secondpass-local-production-mode-not-for-real-deployments", source)
+        self.assertIn("DJANGO_ALLOWED_HOSTS", source)
+        self.assertIn("localhost,127.0.0.1,[::1]", source)
+        self.assertIn("DJANGO_CSRF_TRUSTED_ORIGINS", source)
+        self.assertIn("http://localhost:8000,http://127.0.0.1:8000", source)
+        self.assertIn("DJANGO_SECURE_COOKIES", source)
+        self.assertIn("DJANGO_TRUST_X_FORWARDED_PROTO", source)
+        self.assertIn("DJANGO_USE_X_FORWARDED_HOST", source)
+        self.assertIn("DJANGO_SILENCED_SYSTEM_CHECKS", source)
+        self.assertIn("security.W004,security.W008,security.W012,security.W016", source)
         check_at = source.index("manage.py check --deploy")
         migrate_at = source.index("manage.py migrate --noinput")
         collectstatic_at = source.index("manage.py collectstatic --noinput")
@@ -78,6 +55,14 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn("secondpass.wsgi:application", source)
         requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
         self.assertIn("waitress==", requirements)
+
+    def test_scripts_are_windows_native_only_for_now(self):
+        scripts = {path.name for path in (ROOT / "scripts").iterdir()}
+
+        self.assertIn("start-dev.ps1", scripts)
+        self.assertIn("start-local-production.ps1", scripts)
+        self.assertNotIn("start-dev.sh", scripts)
+        self.assertNotIn("start-production.sh", scripts)
 
     def test_documentation_does_not_reference_removed_devserver_command(self):
         docs = [

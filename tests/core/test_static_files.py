@@ -43,8 +43,7 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
 
     def test_production_startup_collects_static_before_wsgi_server(self):
         script_servers = {
-            "start-production.sh": "-m gunicorn",
-            "start-production.ps1": "-m waitress",
+            "start-local-production.ps1": "-m waitress",
         }
         for script_name, server_marker in script_servers.items():
             with self.subTest(script_name=script_name):

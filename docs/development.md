@@ -36,20 +36,12 @@ Optional: copy `.env.example` to `.env` and set environment variables for your s
 
 ## Run server
 
-Windows:
-
 ```powershell
 .\scripts\start-dev.ps1
 ```
 
-POSIX:
-
-```sh
-sh scripts/start-dev.sh
-```
-
-Both scripts set `DJANGO_DEBUG=1` when it is not already set, run
-`python manage.py migrate --noinput`, and only then start Django's development
+The script sets `DJANGO_DEBUG=1` when it is not already set, runs
+`python manage.py migrate --noinput`, and only then starts Django's development
 server. Set `PYTHON` to override the Python executable. Additional arguments
 are passed through to `runserver`, for example:
 
@@ -62,7 +54,7 @@ Raw `python manage.py runserver` uses the normal settings defaults. Because
 development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
 running raw `runserver`.
 
-The development scripts also set `DJANGO_ALLOWED_HOSTS` to
+The development script also sets `DJANGO_ALLOWED_HOSTS` to
 `localhost,127.0.0.1,[::1]` when it is not already set. Preserve or override
 that value in your shell if you need a LAN hostname or IP during development.
 
@@ -70,7 +62,7 @@ For a clean local reset:
 
 1. Stop the server.
 2. Delete `userdata/` if the database and all local runtime/user data may be discarded.
-3. Run the development startup script for the operating system.
+3. Run the development startup script.
 4. Visit `/`.
 5. Complete the first-run setup wizard.
 
