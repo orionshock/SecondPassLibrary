@@ -84,7 +84,7 @@ class ReadingProgress(TimeStampedModel):
     session = models.OneToOneField(
         ReadingSession, on_delete=models.CASCADE, related_name="progress"
     )
-    # Canonical W3C-style session state: current reading location selector/locator.
+    # Canonical session state: current reading location selector/locator.
     #
     # Note: the *storage* field is flexible JSON, but the public Reading API
     # intentionally validates `current_location` with a strict allowlist of keys.

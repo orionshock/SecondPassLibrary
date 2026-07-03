@@ -217,14 +217,19 @@ Notes:
 
 ## Annotations (highlights, notes, bookmarks)
 
-Annotations are represented externally as W3C-style `Annotation` records, but stored internally in compact/queryable columns:
+The current annotation API still uses W3C-influenced `motivation`, `target`, and
+`body` fields, but annotations are stored internally in compact/queryable
+columns:
 
 - `selector_kind` + `selector_value` (currently `epub_cfi`)
 - `highlight_text` / `highlight_color`
 - `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
-The API reconstructs the W3C-ish `target`/`body` shape from those columns at the boundary.
+The API reconstructs the current `target`/`body` shape from those columns at the
+boundary. The canonical portable exchange format is the session-centered Second
+Pass Library Marginalia Profile documented in
+`docs/specs/marginalia-export.md`.
 
 Highlight color:
 
@@ -243,11 +248,11 @@ Highlight color:
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.
 
-Annotation payloads use canonical fields:
+Annotation payloads currently use these API fields:
 
 - `motivation`: a list of motivations (e.g. `["bookmarking"]`, `["highlighting"]`, `["highlighting", "commenting"]`)
-- `target`: W3C-ish `source` + `selector` (EPUB CFI `FragmentSelector`)
-- `body`: W3C-ish body/bodies (JSON)
+- `target`: `source` + `selector` (EPUB CFI `FragmentSelector`)
+- `body`: body/bodies (JSON)
 - `profile_version`: currently `0.1.0`
 
 Notes:
@@ -277,7 +282,8 @@ Future possibilities:
 
 Current export support includes a complete archive plus selected archive exports. Import support includes preview plus a minimal native apply path for matched visible books.
 
-The baseline export contract is documented in `docs/specs/marginalia-export.md`.
+The canonical Second Pass Library Marginalia Profile is documented in
+`docs/specs/marginalia-export.md`.
 
 Product UI:
 
@@ -321,8 +327,11 @@ export header
 
 Annotations inherit book and session context from that nesting, so the export does not repeat full book metadata inside every annotation. Session rows use export-local ids such as `session-1`; exported annotations do not include SPL database annotation ids. Deleted annotations are excluded.
 
-EPUB CFI annotation selectors export as `FragmentSelector` values without repeating `conformsTo`; the reading-session annotation profile defines EPUB CFI as the default FragmentSelector format. When quote context is present, export includes a `TextQuoteSelector` with `exact`, `prefix`, and/or `suffix`.
+EPUB CFI annotation selectors export as `FragmentSelector` values without
+repeating `conformsTo`; EPUB CFI is the SPL anchoring format. When quote context
+is present, export includes a `TextQuoteSelector` with `exact`, `prefix`, and/or
+`suffix` as an anchoring/repair hint, not as W3C compliance machinery.
 
-Server-side marginalia import accepts SPL native marginalia exports only. Preview validates the uploaded JSON against the export schema, stages the validated payload in a short-lived filesystem file, returns an `import_token`, summarizes contents, reports visible local book matches by file hash only, and does not create sessions or annotations. Apply uses the `import_token`, re-validates the staged payload, then imports matched visible books only. ISBN and title/author fallback matching are intentionally not used for server-side locator import. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL native export shape before server import.
+Server-side marginalia import accepts SPL Marginalia Profile files only. Preview validates the uploaded JSON against the export schema, stages the validated payload in a short-lived filesystem file, returns an `import_token`, summarizes contents, reports visible local book matches by file hash only, and does not create sessions or annotations. Apply uses the `import_token`, re-validates the staged payload, then imports matched visible books only. ISBN and title/author fallback matching are intentionally not used for server-side locator import. Foreign/provider-specific annotation formats should be normalized by a client and written through the normal reading session/progress/annotation APIs, or converted by an external tool into the SPL Marginalia Profile shape before server import.
 
 Current apply creates new historical/imported sessions. Unmatched books are skipped and flagged as unmatched/possibly foreign. Matched books receive shallow CFI-shaped validation: EPUB CFI values must look like `epubcfi(...)`, but the server does not resolve them against EPUB contents. Sessions with malformed locators are excluded from server apply and preserved for Reader-assisted import. Preview exposes an unmatched download for the current user's staged import token; it contains unmatched export books and malformed-locator sessions as native SPL JSON. The import unit is a reading session; annotation-level selection is not supported. Exported active sessions do not become active local sessions. Possible duplicate sessions/annotations are warnings, not blockers. Apply accepts optional session-level selection/customization JSON using export-local `export_session_id` values; selected sessions may override imported `name` and `notes`.

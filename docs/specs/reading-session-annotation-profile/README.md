@@ -1,6 +1,8 @@
-# Reading Session Annotation Profile
+# Draft Reading Session Annotation Profile
 
-This package contains a draft portable JSON-LD profile for EPUB reading-session annotations.
+This package contains historical/draft JSON-LD exploration for EPUB
+reading-session annotations. It is not the canonical Second Pass Library
+Marginalia Profile.
 
 Project: Second Pass Library
 
@@ -22,17 +24,25 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 Second Pass Library currently stores reading data via REST/JSON APIs using W3C-inspired fields (`motivation`, `target`, `body`, `current_location`, `profile_version`).
 
-The current server export contract is the SPL nested marginalia format in `../marginalia-export.md`. JSON-LD serialization using this profile is not the current server import/export contract.
+The canonical server import/export contract is the Second Pass Library
+Marginalia Profile in `../marginalia-export.md`. JSON-LD serialization using
+this draft profile is not the current server import/export contract.
 
 ## Server Import Policy
 
-Server-side marginalia import supports SPL native marginalia exports only. Preview validates and stages the native export with a short-lived import token; apply imports matched visible books as historical sessions, optionally limited to selected export-local sessions.
+Server-side marginalia import supports Second Pass Library Marginalia Profile
+files only. Preview validates and stages the native export with a short-lived
+import token; apply imports matched visible books as historical sessions,
+optionally limited to selected export-local sessions.
 
-Foreign/provider-specific formats should be normalized by a client and sent through the normal reading APIs, or converted by an external tool into SPL native marginalia export format before server import.
+Foreign/provider-specific formats should be normalized by a client and sent
+through the normal reading APIs, or converted by an external tool into the SPL
+Marginalia Profile before server import.
 
 ## Annotation Shape Direction
 
-Use W3C Web Annotation concepts for annotation shape.
+W3C Web Annotation concepts may influence annotation shape, but Second Pass
+Library is not targeting W3C compliance.
 
 Use EPUB CFI as the selector format for EPUB text targets.
 
@@ -44,7 +54,8 @@ In the current server implementation, import provenance is reserved for server-m
 
 ## Validation
 
-Draft profile validation lives in `schema.json`.
+Draft JSON-LD profile validation lives in `schema.json`. It does not validate
+the canonical SPL Marginalia Profile.
 
 ## Notes
 

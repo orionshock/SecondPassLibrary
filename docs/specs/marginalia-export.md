@@ -1,14 +1,35 @@
-# SPL Marginalia Export Format
+# Second Pass Library Marginalia Profile
 
-This is the baseline Second Pass Library marginalia export contract.
+This is the canonical Second Pass Library Marginalia Profile: the portable
+import/export contract for user-owned reading sessions, progress, annotations,
+notes, highlights, and bookmarks.
 
-It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data, including owned marginalia for books the user can no longer currently view.
+It is distinct from the normal Reading API annotation response shape. The normal
+API is optimized for live client CRUD. This profile is a portable, nested
+snapshot of user-owned reading data, including owned marginalia for books the
+user can no longer currently view.
 
 The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
 
 Current support includes export, import preview, and native import apply for exact file-hash-matched visible books. Preview stages the validated payload with a short-lived import token; apply imports selected valid sessions as historical sessions.
 
-This SPL nested marginalia format is the native server import format. The server should not import foreign/provider-specific annotation formats directly. Foreign imports should be normalized by a reader client and sent through the normal reading session/progress/annotation APIs, or converted by an external tool into this SPL native format before server import.
+This SPL nested marginalia profile is the native server import format. The
+server should not import foreign/provider-specific annotation formats directly.
+Foreign imports should be normalized by a reader client and sent through the
+normal reading session/progress/annotation APIs, or converted by an external tool
+into this SPL native format before server import.
+
+The profile is reading-session-centered:
+
+- Marginalia belongs to the user.
+- Books contain reading sessions.
+- Sessions contain progress and annotations.
+- Annotations belong to reading sessions.
+- Annotations inherit book/session context from nesting and do not repeat full
+  book or source metadata.
+
+W3C/Web Annotation vocabulary influenced the current `motivation`, selector, and
+body names. The SPL Marginalia Profile is not a W3C compliance target.
 
 ## Routes
 
@@ -61,7 +82,7 @@ Fields:
 
 - `type`: always `SecondPassMarginaliaExport`.
 - `schema_version`: export schema version; current value is `0.1.0`.
-- `profile`: reading-session annotation profile URI used by annotation/progress payloads.
+- `profile`: SPL Marginalia Profile URI used by annotation/progress payloads.
 - `generated_at`: export generation timestamp.
 - `generator`: exporting application name.
 - `scope`: describes the export route scope.
@@ -159,16 +180,17 @@ Deleted annotations are excluded from exports. Exported annotation objects still
 
 Fields:
 
-- `motivation`: array of W3C-style motivations.
+- `motivation`: array of SPL annotation motivations, currently using
+  W3C-influenced names.
 - `target.selector`: selector object or selector array.
-- `body`: W3C-style bodies.
+- `body`: body objects for selected text and notes/comments.
 - `is_deleted`
 - `created_at`
 - `updated_at`
 
 ## Selectors
 
-EPUB CFI is the default FragmentSelector format for this export profile.
+EPUB CFI is the default selector format for this profile.
 
 When only an EPUB CFI exists:
 
@@ -179,7 +201,9 @@ When only an EPUB CFI exists:
 }
 ```
 
-The export intentionally omits repetitive `conformsTo` on EPUB CFI FragmentSelectors. The profile defines EPUB CFI as the default FragmentSelector format.
+The export intentionally omits repetitive `conformsTo` on EPUB CFI
+FragmentSelectors. EPUB CFI is retained as the SPL anchoring format, not as W3C
+compliance machinery.
 
 When quote context exists, `target.selector` is an array:
 
@@ -198,7 +222,8 @@ When quote context exists, `target.selector` is an array:
 ]
 ```
 
-`TextQuoteSelector` context is an anchoring/repair hint. It is not a separate annotation body.
+`TextQuoteSelector` context is an anchoring/repair hint. It is retained for EPUB
+re-anchoring support and is not a separate annotation body.
 
 ## Bodies
 

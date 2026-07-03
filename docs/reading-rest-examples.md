@@ -2,7 +2,10 @@
 
 These examples document the **current** REST API payloads under `/api/v1/reading/`.
 
-They are **profile-shaped** and versioned, but they are not the SPL native marginalia export file format. Reader clients and external tools should normalize foreign annotation data into these REST shapes when writing through the normal reading APIs.
+They are **profile-shaped** and versioned, but they are not the canonical Second
+Pass Library Marginalia Profile file format. Reader clients and external tools
+should normalize foreign annotation data into these REST shapes when writing
+through the normal reading APIs.
 
 All reading endpoints require authentication.
 

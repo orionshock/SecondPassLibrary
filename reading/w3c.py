@@ -54,11 +54,12 @@ def build_publication_source(*, book: Book) -> dict[str, Any]:
 
 def build_target(*, book: Book, current_location: dict[str, Any]) -> dict[str, Any]:
     """
-    Build a W3C-ish annotation target from current_location JSON.
+    Build the current annotation API target from current_location JSON.
 
-    The draft profile expects a `FragmentSelector` with an EPUB CFI value. We only
-    require `current_location["cfi"]` for now and preserve the full input under
-    `locator` for future use.
+    The current API target shape uses `FragmentSelector` vocabulary influenced
+    by W3C Web Annotation, but this helper is not a W3C compliance boundary. We
+    only require `current_location["cfi"]` for now and preserve the full input
+    under `locator` for future use.
     """
     cfi = current_location.get("cfi")
     selector = build_fragment_selector(cfi)

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://secondpasslibrary.local/specs/marginalia-export.schema.json",
-  "title": "Second Pass Library Marginalia Export",
+  "title": "Second Pass Library Marginalia Profile",
   "type": "object",
   "required": [
     "type",

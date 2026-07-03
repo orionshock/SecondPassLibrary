@@ -1,9 +1,9 @@
-# Reading Session Annotation Profile
+# Draft Reading Session Annotation Profile
 
 Version: 0.1.0
-Status: Draft
-Base model: W3C Web Annotation Data Model
-Primary serialization: JSON-LD
+Status: Draft / historical / non-canonical
+Influence: W3C Web Annotation Data Model
+Primary serialization explored here: JSON-LD
 Primary ebook target: EPUB
 Primary selector: EPUB CFI FragmentSelector
 
@@ -15,13 +15,17 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 
 ## Purpose
 
-This profile defines portable annotation-shape guidance for a personal EPUB reading system.
+This draft records portable annotation-shape exploration for a personal EPUB
+reading system. It is not the canonical Second Pass Library Marginalia Profile.
 
 Second Pass Library note:
 
-- The current server export contract is the SPL nested marginalia format documented in `../marginalia-export.md`.
-- The current server implementation stores a strict W3C-inspired subset via REST/JSON.
-- Server-side marginalia import preview supports SPL native marginalia exports only, not arbitrary foreign/provider-specific formats.
+- The canonical server import/export contract is the Second Pass Library
+  Marginalia Profile documented in `../marginalia-export.md`.
+- The current server implementation stores a strict W3C-inspired subset via
+  REST/JSON, but W3C/Web Annotation is an influence only.
+- Server-side marginalia import preview supports SPL Marginalia Profile files
+  only, not arbitrary foreign/provider-specific formats.
 - The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.
 
 It represents:
@@ -66,7 +70,8 @@ Rules:
 
 ### Annotation
 
-Annotations use the W3C Web Annotation Data Model.
+Annotations use a small SPL-owned shape influenced by W3C Web Annotation terms.
+This draft should not be read as a W3C compliance target.
 
 Supported motivations:
 
@@ -114,7 +119,7 @@ Required primary selector shape:
 
 Optional quote context (repair/export hint):
 
-- Implementations MAY also provide a W3C-style `TextQuoteSelector` as anchoring context.
+- Implementations may also provide `TextQuoteSelector`-style quote context.
 - This is intended to help re-anchor highlights when a CFI fails (different file, different CFI, or minor content shifts).
 - The EPUB CFI `FragmentSelector` remains the source of truth for exact positioning when it works.
 
@@ -150,7 +155,7 @@ Page numbers should not be used as durable anchors.
 
 ### Current Reading Location
 
-Current reading location is stored as session state, not as a W3C Annotation, unless an implementation intentionally wants a fully uniform annotation-only model.
+Current reading location is stored as session state, not as a W3C Annotation.
 
 Recommended shape:
 
@@ -185,16 +190,23 @@ The old annotation remains immutable.
 
 ## Export And Import Policy
 
-The implemented server export format is the SPL nested marginalia format, not this draft JSON-LD profile. See `../marginalia-export.md`.
+The implemented server export/import format is the canonical Second Pass Library
+Marginalia Profile, not this draft JSON-LD profile. See
+`../marginalia-export.md`.
 
-Server-side marginalia import supports SPL native marginalia exports only. Preview validates and stages the native export with a short-lived import token; apply imports matched visible books as historical sessions, optionally limited to selected export-local sessions.
+Server-side marginalia import supports SPL Marginalia Profile files only.
+Preview validates and stages the native export with a short-lived import token;
+apply imports matched visible books as historical sessions, optionally limited
+to selected export-local sessions.
 
 Foreign/provider-specific formats should be normalized outside the server:
 
 - A reader client can convert foreign annotations into normal reading session/progress/annotation API writes.
-- An external tool can convert foreign annotations into the SPL native marginalia export shape before server import.
+- An external tool can convert foreign annotations into the SPL Marginalia
+  Profile shape before server import.
 
-JSON-LD serialization may remain useful for interoperability experiments, but it is not the server import/export contract.
+JSON-LD serialization may remain useful for interoperability experiments, but it
+is not the server import/export contract.
 
 ## Draft JSON-LD Collection Fields
 
@@ -224,7 +236,8 @@ JSON-LD serialization may remain useful for interoperability experiments, but it
 
 ## Import Matching Policy
 
-For tools that convert external data into SPL native marginalia exports, recommended matching order is:
+For tools that convert external data into SPL Marginalia Profile files,
+recommended matching order is:
 
 1. Exact `fileHash`
 2. EPUB unique identifier
@@ -256,7 +269,7 @@ The application should not:
 
 ## Application-Specific Terms
 
-This profile adds a small number of JSON-LD terms:
+This draft adds a small number of JSON-LD terms:
 
 - `ReadingSession`
 - `session`
@@ -300,8 +313,13 @@ Notes:
 - `date` should be an ISO-8601 timestamp (UTC recommended).
 - `confidence` is implementation-defined but should be in the range `0.0` to `1.0`.
 
-## Compatibility Notes
+## Non-Canonical Notes
 
-This profile is designed to be compatible with W3C Web Annotation while remaining practical for an EPUB reader application.
+This draft keeps W3C/Web Annotation concepts visible because they informed the
+early annotation vocabulary.
 
-A renderer such as epub.js should be treated as an implementation detail. The canonical server representation should remain W3C-compatible in shape while the implemented server export/import contract remains the SPL native marginalia format.
+A renderer such as epub.js should be treated as an implementation detail. The
+canonical server exchange format is the session-centered Second Pass Library
+Marginalia Profile, where books contain sessions, sessions contain progress and
+annotations, annotations inherit book/session context from nesting, annotations
+belong to reading sessions, and marginalia belongs to the user.

@@ -34,5 +34,5 @@ def normalize_locator(locator: object) -> dict[str, Any]:
 
 
 # Canonical naming going forward. Keep `normalize_locator` for now to avoid
-# churn while the app migrates to W3C-style `current_location`.
+# churn while the app settles on `current_location` naming.
 normalize_current_location = normalize_locator

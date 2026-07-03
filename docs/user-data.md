@@ -1,10 +1,12 @@
 # User Reading Data
 
-Second Pass Library stores user reading data server-side in a W3C Web Annotation-inspired shape.
+Second Pass Library stores user reading data server-side in a compact,
+reading-session-centered model. The current annotation API still uses a few
+W3C/Web Annotation-influenced field names.
 
-This document is design direction for reading sessions, progress, and annotations. The canonical draft profile lives in:
+This document is design direction for reading sessions, progress, and annotations. The canonical portable exchange profile lives in:
 
-- `docs/specs/reading-session-annotation-profile/`
+- `docs/specs/marginalia-export.md`
   - Current profile version: `0.1.0`
 
 For practical current REST payload examples for reader-client development, see:
@@ -26,7 +28,8 @@ For practical current REST payload examples for reader-client development, see:
 
 ### Annotations (highlights, notes, bookmarks)
 
-Highlights and bookmarks are treated as W3C Annotations:
+Highlights and bookmarks use SPL annotation records with W3C-influenced
+motivation names:
 
 - Bookmark: motivation `bookmarking`
 - Highlight: motivation `highlighting`
@@ -48,7 +51,9 @@ Internally, annotations are stored in compact/queryable columns:
 - `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
-The API/export shape remains W3C-ish (`target`/`body`) and is reconstructed at the boundary.
+The current REST API shape still uses `target`/`body` fields and is reconstructed
+at the API boundary. The canonical export/import profile is the
+session-centered Second Pass Library Marginalia Profile.
 
 Anchor immutability:
 
@@ -86,16 +91,24 @@ Highlight color:
 
 ## Export/import direction
 
-Second Pass Library's current server export contract is the SPL nested marginalia format documented in `docs/specs/marginalia-export.md`.
+Second Pass Library's current server export/import contract is the canonical
+Second Pass Library Marginalia Profile documented in
+`docs/specs/marginalia-export.md`.
 
-Server-side marginalia import supports SPL native marginalia exports only. Preview validates and stages the native export with a short-lived import token; apply imports matched visible books as historical sessions, optionally limited to selected export-local sessions. The server should not become an importer for provider-specific formats such as Kindle/Calibre/vendor annotation dumps.
+Server-side marginalia import supports SPL Marginalia Profile files only.
+Preview validates and stages the native export with a short-lived import token;
+apply imports matched visible books as historical sessions, optionally limited
+to selected export-local sessions. The server should not become an importer for
+provider-specific formats such as Kindle/Calibre/vendor annotation dumps.
 
 Foreign annotation sources should be normalized outside the server:
 
 - A reader client can convert foreign annotations into normal reading session/progress/annotation API writes.
-- An external tool can convert foreign annotations into the SPL native marginalia export shape for server preview/apply.
+- An external tool can convert foreign annotations into the SPL Marginalia
+  Profile shape for server preview/apply.
 
 ## Future possibilities
 
 - Optional provenance (`sourceImport`) for imported annotations/sessions, without changing normal client write semantics.
-- Additional W3C-style serialization helpers, without changing the current REST API surface unexpectedly.
+- Additional export/serialization helpers, without changing the current REST API
+  surface unexpectedly.

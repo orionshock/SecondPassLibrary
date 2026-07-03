@@ -61,9 +61,13 @@ Large library migrations should be split into smaller ZIP batches. These limits 
 
 ## Marginalia import policy
 
-Server-side marginalia import supports preview and a minimal apply path for SPL native marginalia export files only.
+Server-side marginalia import supports preview and a minimal apply path for
+Second Pass Library Marginalia Profile files only.
 
-Foreign/provider-specific annotation formats should not be imported directly by the server. A reader client should normalize foreign annotations and submit them through the normal reading session/progress/annotation APIs, or an external tool can convert them into the SPL native marginalia export format before server import.
+Foreign/provider-specific annotation formats should not be imported directly by
+the server. A reader client should normalize foreign annotations and submit them
+through the normal reading session/progress/annotation APIs, or an external tool
+can convert them into the SPL native marginalia profile before server import.
 
 Product UI:
 
