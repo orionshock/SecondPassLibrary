@@ -152,9 +152,9 @@ Example response:
 
 Behavior notes:
 
-- If the user already has an active session for the book, it is returned **even if the user later loses current book access** (reading data is user-owned and durable).
-- A new session is created only if the user can **currently** view the book.
-- If the user cannot view the book and there is no existing active session, the endpoint returns `404 Not Found` (anti-leakage behavior).
+- Requires current book access, even if an active session already exists.
+- If the user cannot currently view the book, the endpoint returns `404 Not Found` (anti-leakage behavior).
+- Existing no-access sessions remain available through session history/export, but are not returned as continue-reading sessions.
 
 ## 2.5) Open book bootstrap (recommended)
 
@@ -164,7 +164,7 @@ Bootstrap a reader client opening a book with a single request:
 
 Behavior notes:
 
-- If an active session already exists, it is returned even if current book access is later lost.
+- Requires current book access, even if an active session already exists.
 - If no active session exists yet, the server creates one only when the user can currently view the book (otherwise `404`).
 - Progress is created if missing.
 - The response includes the **first page** of non-deleted annotations for that session.

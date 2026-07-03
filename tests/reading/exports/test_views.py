@@ -123,14 +123,14 @@ class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin,
         r = self._post_book(book=self.other_book, sessions=[str(self.session1.id)])
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_export_requires_current_book_visibility(self):
+    def test_selected_export_includes_owned_hidden_book_sessions(self):
         reader = User.objects.create_user(username="reader", password="pw")
         hidden = create_file_backed_book(
             title="Hidden",
             epub_bytes=b"hidden-book",
             assign_public=False,
         ).book
-        ReadingSession.objects.create(user=reader, book=hidden)
+        ReadingSession.objects.create(user=reader, book=hidden, name="Recovered hidden")
 
         self.client.force_login(reader)
         r = self.client.post(
@@ -138,7 +138,9 @@ class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin,
             {"books": [{"book_id": str(hidden.id), "sessions": "all"}]},
             format="json",
         )
-        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["books"][0]["title"], "Hidden")
+        self.assertEqual(r.data["books"][0]["sessions"][0]["name"], "Recovered hidden")
 
     def test_old_book_and_session_export_routes_are_removed(self):
         self.client.force_login(self.user)
@@ -201,6 +203,23 @@ class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, 
         self.assertEqual(books[1]["sessions"][0]["export_session_id"], "session-1")
         self.assertEqual(books[0]["sessions"][0]["annotations"][0]["body"][0]["value"], "alpha quote")
         self.assertNotIn(str(self.other_session.id), str(r.data))
+
+    def test_all_export_includes_owned_hidden_book_sessions(self):
+        hidden = create_file_backed_book(
+            title="Hidden Owned",
+            epub_bytes=b"hidden-owned-book",
+            assign_public=False,
+        ).book
+        ReadingSession.objects.create(user=self.user, book=hidden, name="Hidden pass")
+
+        self.client.force_login(self.user)
+        r = cast(Any, self.client.get(self._url()))
+
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        books = r.data["books"]
+        by_title = {book["title"]: book for book in books}
+        self.assertIn("Hidden Owned", by_title)
+        self.assertEqual(by_title["Hidden Owned"]["sessions"][0]["name"], "Hidden pass")
 
 
 class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedUserdataMixin, APITestCase):

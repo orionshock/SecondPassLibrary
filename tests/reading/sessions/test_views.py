@@ -23,6 +23,44 @@ User = get_user_model()
 
 
 class ReadingSessionsAPITest(ReadingAPITestBase):
+    def _make_user_with_lost_book_access(
+        self,
+        *,
+        username: str,
+        title: str,
+        active: bool = True,
+    ) -> tuple[Any, Any, ReadingSession]:
+        user = User.objects.create_user(
+            username=username, password="pass", email=f"{username}@example.com"
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        ensure_user_public_membership(user=user)
+
+        group = LibraryGroup.objects.create(name=f"{title} Group")
+        LibraryGroupMembership.objects.create(
+            user=user, group=group, is_curator=False
+        )
+
+        restricted = create_file_backed_book(title=title, assign_public=False).book
+        BookGroupAssignment.objects.create(book=restricted, group=group)
+
+        session = ReadingSession.objects.create(
+            user=user,
+            book=restricted,
+            is_active=active,
+            status=(
+                ReadingSession.STATUS_ACTIVE
+                if active
+                else ReadingSession.STATUS_COMPLETED
+            ),
+        )
+
+        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
+        self.assertFalse(policies.can_view_book(user=user, book=restricted))
+        return user, restricted, session
+
     def test_get_create_active_session(self):
         self.client.login(username="u1", password="pass1")
         url = f"/api/v1/reading/books/{self.book.id}/active-session/"
@@ -100,65 +138,89 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         )
 
 
-    def test_active_session_existing_returned_even_if_book_access_lost(self):
-        user = User.objects.create_user(
-            username="u3", password="pass3", email="u3@example.com"
-        )
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.role = UserProfile.ROLE_READER
-        profile.save(update_fields=["role", "updated_at"])
-        ensure_user_public_membership(user=user)
-
-        group = LibraryGroup.objects.create(name="Private")
-        LibraryGroupMembership.objects.create(
-            user=user, group=group, is_curator=False
+    def test_active_session_existing_404s_when_book_access_lost(self):
+        _user, restricted, session = self._make_user_with_lost_book_access(
+            username="u3", title="Restricted"
         )
 
-        restricted = create_file_backed_book(title="Restricted", assign_public=False).book
-        BookGroupAssignment.objects.create(book=restricted, group=group)
-
-        session = ReadingSession.objects.create(user=user, book=restricted, is_active=True)
-
-        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
-
-        self.assertFalse(policies.can_view_book(user=user, book=restricted))
-
-        self.client.login(username="u3", password="pass3")
+        self.client.login(username="u3", password="pass")
         url = f"/api/v1/reading/books/{restricted.id}/active-session/"
         resp = cast(Response, self.client.get(url))
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = response_data_dict(resp)
-        self.assertEqual(data["id"], str(session.id))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(ReadingSession.objects.filter(pk=session.pk).exists())
 
 
-    def test_open_existing_returned_even_if_book_access_lost(self):
-        user = User.objects.create_user(
-            username="u4", password="pass4", email="u4@example.com"
-        )
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.role = UserProfile.ROLE_READER
-        profile.save(update_fields=["role", "updated_at"])
-        ensure_user_public_membership(user=user)
-
-        group = LibraryGroup.objects.create(name="Private2")
-        LibraryGroupMembership.objects.create(
-            user=user, group=group, is_curator=False
+    def test_open_existing_active_session_404s_when_book_access_lost(self):
+        _user, restricted, session = self._make_user_with_lost_book_access(
+            username="u4", title="RestrictedOpen"
         )
 
-        restricted = create_file_backed_book(title="RestrictedOpen", assign_public=False).book
-        BookGroupAssignment.objects.create(book=restricted, group=group)
-
-        session = ReadingSession.objects.create(user=user, book=restricted, is_active=True)
-
-        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
-        self.assertFalse(policies.can_view_book(user=user, book=restricted))
-
-        self.client.login(username="u4", password="pass4")
+        self.client.login(username="u4", password="pass")
         url = f"/api/v1/reading/books/{restricted.id}/open/"
         resp = cast(Response, self.client.post(url, data={}, format="json"))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(ReadingSession.objects.filter(pk=session.pk).exists())
+
+
+    def test_close_active_session_allowed_when_book_access_lost(self):
+        _user, _restricted, session = self._make_user_with_lost_book_access(
+            username="u5", title="RestrictedClose"
+        )
+
+        self.client.login(username="u5", password="pass")
+        resp = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/reading/sessions/{session.id}/close/",
+                data={},
+                format="json",
+            ),
+        )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = response_data_dict(resp)
-        self.assertEqual(data["session"]["id"], str(session.id))
+        session.refresh_from_db()
+        self.assertFalse(session.is_active)
+        self.assertEqual(session.status, ReadingSession.STATUS_COMPLETED)
+
+
+    def test_patch_active_session_name_notes_allowed_when_book_access_lost(self):
+        _user, _restricted, session = self._make_user_with_lost_book_access(
+            username="u6", title="RestrictedPatch"
+        )
+
+        self.client.login(username="u6", password="pass")
+        resp = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/",
+                data={"name": "Recovered", "notes": "No access now."},
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        session.refresh_from_db()
+        self.assertEqual(session.name, "Recovered")
+        self.assertEqual(session.notes, "No access now.")
+
+
+    def test_start_over_requires_book_access_after_access_lost(self):
+        _user, restricted, session = self._make_user_with_lost_book_access(
+            username="u7", title="RestrictedStartOver"
+        )
+
+        self.client.login(username="u7", password="pass")
+        resp = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/reading/books/{restricted.id}/start-over/",
+                data={"name": "Nope"},
+                format="json",
+            ),
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            ReadingSession.objects.filter(user=session.user, book=restricted).count(),
+            1,
+        )
 
 
     def test_active_session_404_for_inaccessible_book_without_existing_session(self):
@@ -305,9 +367,11 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         )
         self.assertEqual(ann_update.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # Soft-delete still works on closed sessions.
+        # Annotation delete is a write and is blocked on closed sessions.
         del_resp = cast(Response, self.client.delete(f"/api/v1/reading/annotations/{ann.id}/"))
-        self.assertEqual(del_resp.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(del_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        ann.refresh_from_db()
+        self.assertFalse(ann.is_deleted)
 
         # Opening the book again creates a new active session (since none is active now).
         open_resp = cast(Response, self.client.post(f"/api/v1/reading/books/{self.book.id}/open/", data={}, format="json"))

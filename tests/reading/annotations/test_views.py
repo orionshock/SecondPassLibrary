@@ -6,11 +6,15 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
+from accounts.models import UserProfile
+from library.group_services import ensure_user_public_membership
+from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingSession
 from reading.profile import (
     EPUB_CFI_CONFORMS_TO,
 )
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
+from tests.utils.books import create_file_backed_book
 from tests.utils.responses import response_data_dict
 from tests.utils.responses import response_data_list
 
@@ -19,6 +23,30 @@ User = get_user_model()
 
 
 class ReadingAnnotationsAPITest(ReadingAPITestBase):
+    def _make_lost_access_session_with_annotation(self):
+        user = User.objects.create_user(username="lostann", password="pass", email="lostann@example.com")
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = UserProfile.ROLE_READER
+        profile.save(update_fields=["role", "updated_at"])
+        ensure_user_public_membership(user=user)
+        group = LibraryGroup.objects.create(name="Lost Annotation Group")
+        LibraryGroupMembership.objects.create(user=user, group=group)
+        book = create_file_backed_book(title="Lost Annotation", assign_public=False).book
+        BookGroupAssignment.objects.create(book=book, group=group)
+        session = ReadingSession.objects.create(user=user, book=book)
+        annotation = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+            book=book,
+            selector_value="epubcfi(/6/2)",
+            highlight_text="owned",
+            highlight_color="yellow",
+            comment_text="old",
+        )
+        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
+        return user, session, annotation
+
     def test_annotation_create_bookmark_outputs_motivation_array(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -270,6 +298,93 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         self.assertEqual(remove.status_code, status.HTTP_200_OK)
         payload_remove = response_data_dict(remove)
         self.assertEqual(payload_remove["motivation"], [Annotation.MOTIVATION_HIGHLIGHTING])
+
+
+    def test_annotations_list_includes_owned_annotations_after_book_access_lost(self):
+        _user, session, annotation = self._make_lost_access_session_with_annotation()
+        self.client.login(username="lostann", password="pass")
+
+        resp = cast(
+            Response,
+            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}"),
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = {row["id"] for row in response_data_list(resp)}
+        self.assertIn(str(annotation.id), ids)
+
+
+    def test_annotation_create_requires_current_book_access(self):
+        _user, session, _annotation = self._make_lost_access_session_with_annotation()
+        self.client.login(username="lostann", password="pass")
+
+        resp = cast(
+            Response,
+            self.client.post(
+                "/api/v1/reading/annotations/",
+                data={
+                    "session": str(session.id),
+                    "motivation": Annotation.MOTIVATION_BOOKMARKING,
+                    "target": {"selector": {"value": "epubcfi(/6/4)"}},
+                    "body": [],
+                },
+                format="json",
+            ),
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Annotation.objects.filter(session=session).count(), 1)
+
+
+    def test_annotation_patch_requires_current_book_access(self):
+        _user, _session, annotation = self._make_lost_access_session_with_annotation()
+        self.client.login(username="lostann", password="pass")
+
+        resp = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/reading/annotations/{annotation.id}/",
+                data={
+                    "body": [
+                        {
+                            "type": "TextualBody",
+                            "purpose": "commenting",
+                            "value": "new",
+                        }
+                    ]
+                },
+                format="json",
+            ),
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        annotation.refresh_from_db()
+        self.assertEqual(annotation.comment_text, "old")
+
+
+    def test_annotation_delete_requires_current_book_access_and_open_session(self):
+        _user, session, annotation = self._make_lost_access_session_with_annotation()
+        self.client.login(username="lostann", password="pass")
+
+        no_access = cast(
+            Response,
+            self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/"),
+        )
+        self.assertEqual(no_access.status_code, status.HTTP_403_FORBIDDEN)
+        annotation.refresh_from_db()
+        self.assertFalse(annotation.is_deleted)
+
+        session.status = ReadingSession.STATUS_COMPLETED
+        session.is_active = False
+        session.save(update_fields=["status", "is_active", "updated_at"])
+
+        closed = cast(
+            Response,
+            self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/"),
+        )
+        self.assertEqual(closed.status_code, status.HTTP_400_BAD_REQUEST)
+        annotation.refresh_from_db()
+        self.assertFalse(annotation.is_deleted)
 
 
 class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):

@@ -3,12 +3,14 @@ from typing import Any, cast
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.authentication import ClientBearerAuthentication
 
 from .models import ReadingProgress, ReadingSession
+from .policies import can_access_session_book
 from .profile import CURRENT_READING_PROFILE_VERSION
 from .serializers import ReadingProgressSerializer
 from .services import get_or_create_progress, is_session_closed, update_progress
@@ -48,6 +50,8 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
 
     def _update(self, request, session_id, partial):
         session = self._get_session(session_id)
+        if not can_access_session_book(user=request.user, session=session):
+            raise PermissionDenied("Book is not currently accessible.")
         progress = get_or_create_progress(session=session)
         serializer = ReadingProgressSerializer(
             progress, data=request.data, partial=partial, context={"request": request}
@@ -69,5 +73,4 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(ReadingProgressSerializer(progress).data)
-
 

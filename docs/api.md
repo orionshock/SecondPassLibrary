@@ -581,17 +581,17 @@ Group delete/scary delete is not part of the current documented product/API cont
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
 - Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active sessions only). Summary list/detail payloads include `book_id` and compact `book`, not the legacy `book_title` field. When `?book=<book_id>` is present and the book is visible, list responses include `context.book` even if `results` is empty.
-- Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`)
+- Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`; omits inaccessible-book sessions from continue-reading results)
 - Batch activity summary: `POST /api/v1/reading/books/activity-summary/` with `{"books": ["<book_id>"]}` returns per-visible-book current-user session counts and active/latest session ids. This endpoint is read-only in meaning but uses POST for practical batch request size.
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
-- Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
+- Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/` (writes require current access to the session's book)
 - Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
   - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?motivation=highlighting|commenting|bookmarking` (may be repeated)
   - Ordering: `?ordering=created|-created|modified|-modified`
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
 - Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
-  - `GET /api/v1/reading/export/` exports all current-user sessions grouped under visible books.
-  - `POST /api/v1/reading/export/` exports selected books/sessions from the current user's visible books.
+  - `GET /api/v1/reading/export/` exports all owned current-user sessions, including sessions for books the user can no longer view.
+  - `POST /api/v1/reading/export/` exports selected owned books/sessions, including owned sessions for books the user can no longer view.
 - Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
   - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches by file hash only.
   - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads a native SPL JSON subset containing staged preview books that could not be matched to visible local books plus malformed-locator sessions from matched books.
@@ -605,8 +605,10 @@ Reading payload notes:
 - `progression` is derived/display metadata (a normalized scalar hint, `0.0 <= progression <= 1.0` when present), not canonical navigation state. It is useful for progress bars and summaries; it should not be used for resume location, annotation anchoring, CFI correctness validation, or cross-device exact positioning. If described as whole-book progress, it is relative to the whole renderable EPUB reading span from first renderable location to last renderable location (not page count, viewport count, chapter-local progress, or byte offset).
 - Session list/retrieve payloads include `progression`, `annotation_count`, and a compact `book` summary scoped to the caller's current book visibility.
 - Session search (`?q=<text>`) trims whitespace and searches session-owned `name`/`notes` plus currently visible book `title`, `subtitle`, authors, and series. It does not search annotation bodies, ISBNs, identifiers, marginalia export payloads, or arbitrary client blobs. User-owned session name/notes can match even when related book access is later lost; hidden/inaccessible book metadata cannot match and remains redacted.
+- `open`, `active-session`, `start-over`, progress writes, and annotation writes/deletes require current book access. Existing no-access active sessions may still be renamed/noted and closed by their owner.
 - Reading activity overlays live under `/api/v1/reading/`, not `/api/v1/library/books/`; catalog book list/detail payloads do not include user-specific session counts, progress, latest session ids, or annotation counts.
 - Annotation API payloads use canonical `motivation`, `target`, and `body` fields. Internally, annotations are stored in compact columns (`selector_kind`/`selector_value` plus highlight/comment fields) and the `target`/`body` profile shape is reconstructed at the API boundary.
+- Annotation reads are owner-scoped and remain available after book access loss; annotation writes/deletes require current access to the session's book and an open session.
 - Highlight color is a semantic token in `body[].color` and is highlight/quote-only (used on `TextualBody` with `purpose: "describing"`). Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on input and normalizes to `yellow`.
 - Reading payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version.
 - Marginalia import apply is intentionally minimal: no stored import jobs and no annotation-level selection. The product UI supports session-level selection and session name/notes customization.

@@ -8,7 +8,6 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core import policies
 from library.models import Book
 
 from .export_services import (
@@ -68,8 +67,6 @@ def _parse_selection(*, data, user) -> list[dict]:
             Book.objects.select_related("series").prefetch_related("authors", "identifiers"),
             id=book_id,
         )
-        if not policies.can_view_book(user=user, book=book):
-            raise NotFound()
 
         raw_sessions = raw_book.get("sessions")
         if raw_sessions == "all":

@@ -161,6 +161,28 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         ]:
             self.assertNotIn(key, payload)
 
+    def test_recent_sessions_omits_inaccessible_active_sessions(self):
+        hidden = create_file_backed_book(title="Hidden Recent", assign_public=False).book
+        hidden_session = ReadingSession.objects.create(
+            user=self.user,
+            book=hidden,
+            name="No longer accessible",
+            is_active=True,
+            status=ReadingSession.STATUS_ACTIVE,
+        )
+        visible_session = self.session_visible
+        visible_session.is_active = True
+        visible_session.status = ReadingSession.STATUS_ACTIVE
+        visible_session.save(update_fields=["is_active", "status", "updated_at"])
+
+        resp = cast(Response, self.client.get("/api/v1/reading/sessions/recent/"))
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        rows = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data)["results"])
+        ids = {row["session"]["id"] for row in rows}
+        self.assertIn(str(visible_session.id), ids)
+        self.assertNotIn(str(hidden_session.id), ids)
+
 
 class ReadingSessionSummaryBearerTests(SessionBearerFixtureMixin, APITestCase):
     def setUp(self):

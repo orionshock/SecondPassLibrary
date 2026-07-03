@@ -7,6 +7,9 @@ Key principles:
 - Reading metadata is user-owned and durable.
 - LibraryGroups are **access scopes**, not shelves.
 - Access to a book is determined by `LibraryGroupMembership` + `BookGroupAssignment`.
+- Losing book access does not hide or remove a user's existing reading sessions
+  and annotations from that user, but it does block live reading activity,
+  annotation/progress writes, new sessions, and book-file download.
 - Business rules should be centralized in policy helpers and service modules (avoid scattered per-view logic).
 
 In plain language:

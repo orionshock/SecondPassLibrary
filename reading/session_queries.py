@@ -151,17 +151,19 @@ def recent_sessions_for_user(*, user, request, limit: int) -> list[dict[str, Any
         book_id = str(getattr(session, "book_id", ""))
         if not book_id or book_id in seen_books:
             continue
-        seen_books.add(book_id)
 
         book = getattr(session, "book", None)
+        if book is None or not policies.can_view_book(user=user, book=book):
+            continue
+
+        seen_books.add(book_id)
         cover_url: str | None = None
-        if book is not None:
-            cover = getattr(book, "cover_file", None)
-            if cover:
-                try:
-                    cover_url = request.build_absolute_uri(cover.url)
-                except Exception:
-                    cover_url = None
+        cover = getattr(book, "cover_file", None)
+        if cover:
+            try:
+                cover_url = request.build_absolute_uri(cover.url)
+            except Exception:
+                cover_url = None
 
         results.append(
             {

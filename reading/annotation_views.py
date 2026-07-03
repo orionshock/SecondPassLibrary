@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
@@ -20,6 +21,7 @@ from core.models import IdempotencyRecord
 
 from .annotation_profile_services import compact_annotation_from_profile
 from .models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingSession
+from .policies import can_access_session_book
 from .profile import validate_annotation_body, validate_profile_version
 from .serializers import AnnotationSerializer
 from .services import (
@@ -106,6 +108,8 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         """
         annotation = cast(Annotation, self.get_object())
         assert_session_writable(session=annotation.session)
+        if not can_access_session_book(user=request.user, session=annotation.session):
+            raise PermissionDenied("Book is not currently accessible.")
 
         initial = cast(dict[str, Any], getattr(request, "data", None) or {})
         allowed_keys = {"body", "profile_version"}
@@ -302,6 +306,8 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         validated = cast(dict[str, Any], serializer.validated_data)
         session = cast(ReadingSession, validated["session"])
+        if not can_access_session_book(user=self.request.user, session=session):
+            raise PermissionDenied("Book is not currently accessible.")
         motivations = cast(list[str], validated["motivation"])
         target = cast(dict, validated.get("target") or {})
         body = cast(list[dict], validated.get("body") or [])
@@ -313,6 +319,8 @@ class AnnotationViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         annotation = cast(Annotation, serializer.instance)
+        if not can_access_session_book(user=self.request.user, session=annotation.session):
+            raise PermissionDenied("Book is not currently accessible.")
         validated = cast(dict[str, Any], serializer.validated_data)
         motivations = cast(list[str], validated.get("motivation") or [])
         target = cast(dict, validated.get("target") or {})
@@ -324,6 +332,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         annotation = self.get_object()
+        assert_session_writable(session=annotation.session)
+        if not can_access_session_book(user=request.user, session=annotation.session):
+            raise PermissionDenied("Book is not currently accessible.")
         annotation.is_deleted = True
         annotation.save(update_fields=["is_deleted", "updated_at"])
         return Response(status=status.HTTP_204_NO_CONTENT)

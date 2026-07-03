@@ -5,7 +5,6 @@ from uuid import UUID
 
 from django.utils import timezone
 
-from core import policies
 from library.models import Book, BookIdentifier
 
 from .models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
@@ -207,8 +206,6 @@ def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict
     for item in selection:
         book = item["book"]
         sessions = item["sessions"]
-        if not policies.can_view_book(user=user, book=book):
-            raise PermissionError("Book not visible.")
         if sessions == "all":
             resolved_sessions = list(_sessions_queryset(user=user, book=book))
             session_filter = "all"
@@ -229,9 +226,6 @@ def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict
 def export_book_marginalia(
     *, user, book: Book, sessions: list[ReadingSession] | None = None, selected: bool = False
 ) -> dict[str, Any]:
-    if not policies.can_view_book(user=user, book=book):
-        raise PermissionError("Book not visible.")
-
     if sessions is None:
         sessions = list(_sessions_queryset(user=user, book=book))
 
@@ -261,9 +255,6 @@ def export_all_marginalia(*, user) -> dict[str, Any]:
     session_counts: dict[str, int] = {}
     for session in sessions:
         book = session.book
-        if not policies.can_view_book(user=user, book=book):
-            continue
-
         book_key = str(book.id)
         if book_key not in books_by_id:
             books_by_id[book_key] = _book_payload(book)
@@ -283,8 +274,6 @@ def export_session_marginalia(*, user, book: Book, session: ReadingSession) -> d
         raise PermissionError("Session not owned by user.")
     if session.book_id != book.id:
         raise LookupError("Session does not belong to book.")
-    if not policies.can_view_book(user=user, book=book):
-        raise PermissionError("Book not visible.")
 
     session = (
         ReadingSession.objects.select_related("book", "book__series", "progress")

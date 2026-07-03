@@ -151,17 +151,16 @@ class ActiveSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, book_id):
-        # If the user already has an active session for this book, return it even
-        # if they no longer have current library access (user-owned reading data).
+        book = get_object_or_404(Book, id=book_id)
+        if not policies.can_view_book(user=request.user, book=book):
+            raise NotFound()
+
         existing = ReadingSession.objects.filter(
             user=request.user, book_id=book_id, is_active=True
         ).first()
         if existing is not None:
             return Response(ReadingSessionSerializer(existing).data)
 
-        book = get_object_or_404(Book, id=book_id)
-        if not policies.can_view_book(user=request.user, book=book):
-            raise NotFound()
         session = get_or_create_active_session(user=request.user, book=book)
         return Response(ReadingSessionSerializer(session).data)
 
@@ -247,16 +246,15 @@ class OpenBookView(APIView):
     def post(self, request, book_id):
         created = False
 
-        # Preserve durability behavior: if an active session exists, return it even
-        # if current book access is lost.
+        book = get_object_or_404(Book, id=book_id)
+        if not policies.can_view_book(user=request.user, book=book):
+            raise NotFound()
+
         session = ReadingSession.objects.select_related("book").filter(
             user=request.user, book_id=book_id, is_active=True
         ).first()
 
         if session is None:
-            book = get_object_or_404(Book, id=book_id)
-            if not policies.can_view_book(user=request.user, book=book):
-                raise NotFound()
             session = get_or_create_active_session(user=request.user, book=book)
             created = True
 

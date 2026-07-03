@@ -1,6 +1,9 @@
 # Reading
 
 Reading metadata is user-owned and must remain durable/exportable.
+Losing current book visibility does not hide a user's existing sessions or
+annotations from that user, but it does stop live reading activity for that
+book until access is restored.
 
 Design direction:
 
@@ -116,14 +119,14 @@ If multiple active sessions somehow exist for the same user/book despite the mod
 
 This endpoint is intended for "Continue reading" style UIs. For full session history use `GET /api/v1/reading/sessions/`.
 
-The compact payload includes `session.name` (may be blank) and `session.progression` (float 0-1 or null) alongside the session id/status.
+The compact payload includes `session.name` (may be blank) and `session.progression` (float 0-1 or null) alongside the session id/status. Active sessions for books the user can no longer view are omitted; they remain available through the full session history endpoints.
 
 ### Active session behavior
 
-- If the user already has an active session for the book, `active-session` returns it even if the user later loses current book access (reading data is user-owned and durable).
-- If no active session exists yet, `active-session` creates a new one only when the user can currently view the book.
-- If the user cannot view the book and there is no existing active session, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
-- `open` follows the same durability rule: it returns an existing active session even if current book access was later lost, but creates a missing active session only when the user can currently view the book.
+- `active-session` requires current book access, even when an active session already exists.
+- If the user cannot currently view the book, the endpoint returns a `404 Not Found` style response (NotFound/anti-leakage behavior).
+- `open` follows the same access rule: it returns or creates an active session only when the user can currently view the book.
+- Existing no-access sessions remain visible in session history and export, but are not continue-reading/bootstrap targets.
 
 ### Start-over behavior
 
@@ -135,6 +138,7 @@ The compact payload includes `session.name` (may be blank) and `session.progress
 
 - `close` marks a session as completed (`status=completed`, `is_active=false`) and sets `completed_at` the first time it is closed.
 - The endpoint is idempotent: closing an already-closed session returns the current session payload and does not change `completed_at`.
+- Closing an existing active session is allowed even if the user has lost current book access.
 - `close` does not create a new session; the client should call `/open/` when opening another book.
 - `start-over` is different: it archives the current active session for the same book and creates a new active session.
 
@@ -181,6 +185,7 @@ If described as whole-book progress, treat `progression` as relative to the whol
 Validation:
 
 - When present, `0.0 <= progression <= 1.0` (inclusive).
+- Progress reads are owner-scoped. Progress writes require an owned writable/open session and current access to the session's book.
 
 ## Current location (JSON conventions)
 
@@ -249,6 +254,7 @@ Notes:
   - note/comment body text (`body[]` with `purpose="commenting"`)
   - highlight color token (`body[]` with `purpose="describing"` and `color`)
 - Unknown/unsupported fields in progress/annotation payloads are rejected; the server is not arbitrary client blob storage.
+- Annotation reads are owner-scoped. Annotation create/update/delete require an owned writable/open session and current access to the session's book.
 - Payloads are size-limited as a coarse abuse guard (not a perfect semantic model for very long/multi-part highlights). Oversized payloads return 400 validation errors.
 
 ## Client attribution
@@ -282,7 +288,7 @@ GET /api/v1/reading/import/unmatched/?import_token=<token>
 POST /api/v1/reading/import/apply/
 ```
 
-Export and import preview/apply endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports enforce current book visibility and include only reading sessions owned by the requesting user. The all export includes only visible books with at least one exported session. Selected exports reject invisible books and other-user or mismatched sessions.
+Export and import preview/apply endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports include owned reading sessions and annotations even when the user no longer has current book visibility. Other-user or mismatched sessions are rejected. Import preview/apply remains stricter and matches visible local books only.
 
 Selected exports post a JSON body to `/api/v1/reading/export/`:
 

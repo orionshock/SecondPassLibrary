@@ -2,7 +2,7 @@
 
 This is the baseline Second Pass Library marginalia export contract.
 
-It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data for all visible books or for an explicit selected set.
+It is distinct from the normal Reading API annotation response shape. The normal API is optimized for live client CRUD. This export format is a portable, nested snapshot of user-owned reading data, including owned marginalia for books the user can no longer currently view.
 
 The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
 
@@ -28,7 +28,7 @@ POST /api/v1/reading/import/preview/
 POST /api/v1/reading/import/apply/
 ```
 
-`GET /api/v1/reading/export/` exports all current-user marginalia for visible books. `POST /api/v1/reading/export/` exports selected books/sessions using this request body:
+`GET /api/v1/reading/export/` exports all current-user marginalia. `POST /api/v1/reading/export/` exports selected books/sessions using this request body:
 
 ```json
 {
@@ -39,7 +39,7 @@ POST /api/v1/reading/import/apply/
 }
 ```
 
-The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export requires current book visibility and includes only sessions owned by the requesting user. Invisible books and other-user or mismatched sessions return 404.
+The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export includes only sessions owned by the requesting user, including owned sessions for books the user can no longer currently view. Other-user or mismatched sessions return 404.
 
 Server-side import is intentionally stricter than export. It matches exported books to visible local books by file hash only; ISBN and title/author metadata are descriptive and are not used as fallback matching for locator import. Apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`, but the server does not resolve CFIs against EPUB contents. Missing/different book files and malformed locator sessions belong in Reader-assisted import via the unmatched download.
 
@@ -77,7 +77,7 @@ All marginalia export:
 }
 ```
 
-The all export includes current-user sessions grouped under visible books.
+The all export includes current-user sessions grouped under their related books, including books the user can no longer currently view.
 
 Selected export:
 
