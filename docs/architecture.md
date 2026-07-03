@@ -4,7 +4,7 @@
 
 Current apps:
 
-- `core`: shared base models, policy helpers, utilities
+- `core`: shared base models, server settings, utilities
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
 - `reading`: reading sessions, progress, annotations
