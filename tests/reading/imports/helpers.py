@@ -6,6 +6,7 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from reading.import_staging import stage_marginalia_import
 from tests.utils.books import create_file_backed_book
 
 
@@ -45,6 +46,12 @@ class MarginaliaImportFixtureMixin:
         if selection is not None:
             data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
         return self.client.post("/api/v1/reading/import/apply/", data, format="multipart")
+
+    def post_apply_staged_payload(self, payload: dict[str, Any], *, selection: Any = None):
+        return self.post_apply_token(
+            stage_marginalia_import(user=self.user, payload=payload),
+            selection=selection,
+        )
 
     def post_apply_token(self, token: str, *, selection: Any = None):
         data: dict[str, Any] = {"import_token": token}

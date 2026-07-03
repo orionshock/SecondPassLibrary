@@ -57,17 +57,18 @@ class MarginaliaImportApplyView(APIView):
     def post(self, request):
         token = request.data.get("import_token")
         try:
-            if token:
-                payload = load_staged_marginalia_import(user=request.user, token=token)
-            else:
-                payload = read_uploaded_marginalia_json(request.FILES.get("file"))
+            if not token:
+                raise MarginaliaImportError(
+                    "import_token is required.",
+                    [{"path": "$.import_token", "message": "import_token is required."}],
+                )
+            payload = load_staged_marginalia_import(user=request.user, token=token)
             result = apply_marginalia_import(
                 user=request.user,
                 payload=payload,
                 selection_raw=request.data.get("selection"),
             )
-            if token:
-                delete_staged_marginalia_import(token=token)
+            delete_staged_marginalia_import(token=token)
         except MarginaliaImportError as exc:
             return Response(
                 {"applied": False, "valid": False, "errors": exc.errors},

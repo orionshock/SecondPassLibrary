@@ -599,7 +599,7 @@ Group delete/scary delete is not part of the current documented product/API cont
   - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches by file hash only.
   - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads a native SPL JSON subset containing staged preview books that could not be matched to visible local books plus malformed-locator sessions from matched books.
 - Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/apply/` accepts an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not import foreign/provider formats.
+  - `POST /api/v1/reading/import/apply/` requires an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not accept direct file uploads or foreign/provider formats.
   - Optional multipart `selection` JSON limits import to selected export-local sessions and may override imported session `name`/`notes`.
 
 Reading payload notes:

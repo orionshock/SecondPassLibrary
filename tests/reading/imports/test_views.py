@@ -104,19 +104,31 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         )
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_apply_invalid_json_returns_400_and_no_writes(self):
+    def test_apply_without_import_token_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_payload(b"{not-json"))
+        r = cast(Any, self.client.post(self._url(), {}, format="multipart"))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
+        self.assertIn("import_token", r.data["errors"][0]["message"])
         self.assertEqual(ReadingSession.objects.count(), 0)
         self.assertEqual(Annotation.objects.count(), 0)
 
-    def test_apply_schema_invalid_returns_400_and_no_writes(self):
+    def test_apply_with_uploaded_file_but_no_import_token_returns_400_and_no_writes(self):
+        self.client.force_login(self.user)
+        payload = self.marginalia_payload()
+        r = cast(Any, self.post_apply_payload(payload))
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(r.data["applied"])
+        self.assertIn("import_token", r.data["errors"][0]["message"])
+        self.assertEqual(ReadingSession.objects.count(), 0)
+        self.assertEqual(Annotation.objects.count(), 0)
+
+    def test_apply_schema_invalid_staged_payload_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
         payload = self.marginalia_payload()
         del payload["books"][0]["sessions"][0]["annotations"][0]["target"]
-        r = cast(Any, self.post_apply_payload(payload))
+        token = stage_marginalia_import(user=self.user, payload=payload)
+        r = cast(Any, self.post_apply_token(token))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
         self.assertEqual(ReadingSession.objects.count(), 0)

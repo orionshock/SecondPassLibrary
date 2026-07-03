@@ -44,7 +44,7 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         }
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_payload(payload, selection=selection))
+        r = cast(Any, self.post_apply_staged_payload(payload, selection=selection))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["sessions_created"], 1)
@@ -55,7 +55,7 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
 
     def test_apply_malformed_selection_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_payload(self.marginalia_payload(), selection="{not-json"))
+        r = cast(Any, self.post_apply_staged_payload(self.marginalia_payload(), selection="{not-json"))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
         self.assertIn("selection", r.data["errors"][0]["path"])
@@ -74,7 +74,7 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         }
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_payload(payload, selection=selection))
+        r = cast(Any, self.post_apply_staged_payload(payload, selection=selection))
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
@@ -93,7 +93,7 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         }
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_payload(payload, selection=selection))
+        r = cast(Any, self.post_apply_staged_payload(payload, selection=selection))
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
