@@ -135,8 +135,6 @@ collection, and Waitress. The scripts remain local/dev convenience helpers;
 Docker-based deployment orchestration can own final production process and
 environment wiring later.
 
-Development-only test dependencies live in `requirements-dev.txt`.
-
 ## Docker Quick Start
 
 For a simple single-container SQLite deployment:

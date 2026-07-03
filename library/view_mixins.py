@@ -11,7 +11,7 @@ class ClientBearerReadOnlyMixin:
     Allow Client API bearer tokens only for explicitly allowed read actions.
 
     Notes:
-    - Session/basic auth continues to work normally.
+    - Session auth continues to work normally.
     - If a request is authenticated via a client bearer token (request.auth is a
       UserClientSession), disallowed actions are rejected with 403.
     """

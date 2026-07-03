@@ -31,7 +31,6 @@
       "SecondPassLibrary.code-workspace",
       "**/docs/**",
       "pyrightconfig.json",
-      "requirements-dev.txt",
       "requirements.txt",
       "**/tools/**",
       "web/static/web/favicon.png"
