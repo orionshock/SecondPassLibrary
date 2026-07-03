@@ -8,6 +8,7 @@ export DJANGO_DEBUG=0
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$SCRIPT_DIR/.."
 
+"$PYTHON" manage.py check --deploy
 "$PYTHON" manage.py migrate --noinput
 "$PYTHON" manage.py collectstatic --noinput
 

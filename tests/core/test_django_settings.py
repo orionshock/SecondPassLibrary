@@ -1,18 +1,43 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import subprocess
+import sys
 from unittest.mock import patch
 
 from django.conf import settings
+from django.core.checks import Tags, run_checks
 from django.test import SimpleTestCase
 
-from secondpass.settings import _env_bool, _env_csv, _secure_proxy_ssl_header
+from secondpass.settings import (
+    INSECURE_FALLBACK_SECRET_KEY,
+    _env_bool,
+    _env_csv,
+    _secure_proxy_ssl_header,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class DjangoSettingsContractTests(SimpleTestCase):
+    def _settings_import(self, env_updates: dict[str, str | None]):
+        env = os.environ.copy()
+        for key, value in env_updates.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return subprocess.run(
+            [sys.executable, "-c", "import secondpass.settings"],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
     def test_debug_defaults_off_and_hosts_are_local_safe_by_default(self):
         source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
 
@@ -89,3 +114,58 @@ class DjangoSettingsContractTests(SimpleTestCase):
         self.assertEqual(settings.CSRF_COOKIE_SAMESITE, "Lax")
         self.assertIs(settings.SESSION_COOKIE_HTTPONLY, True)
         self.assertIs(settings.CSRF_COOKIE_HTTPONLY, False)
+
+    def test_production_rejects_missing_secret_key(self):
+        result = self._settings_import(
+            {
+                "DJANGO_DEBUG": "0",
+                "DJANGO_SECRET_KEY": None,
+            }
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("DJANGO_SECRET_KEY must be set", result.stderr)
+
+    def test_production_rejects_default_insecure_secret_key(self):
+        result = self._settings_import(
+            {
+                "DJANGO_DEBUG": "0",
+                "DJANGO_SECRET_KEY": INSECURE_FALLBACK_SECRET_KEY,
+            }
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("DJANGO_SECRET_KEY must be set", result.stderr)
+
+    def test_production_accepts_explicit_secret_key(self):
+        result = self._settings_import(
+            {
+                "DJANGO_DEBUG": "0",
+                "DJANGO_SECRET_KEY": "test-explicit-production-secret-key",
+            }
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_deploy_check_warns_for_wildcard_allowed_hosts_in_production(self):
+        with self.settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
+            messages = run_checks(
+                tags=[Tags.security],
+                include_deployment_checks=True,
+            )
+
+        self.assertIn("secondpass.W001", {message.id for message in messages})
+
+    def test_deploy_check_warns_for_trusted_proxy_without_secure_cookies(self):
+        with self.settings(
+            DEBUG=False,
+            SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+            SESSION_COOKIE_SECURE=False,
+            CSRF_COOKIE_SECURE=False,
+        ):
+            messages = run_checks(
+                tags=[Tags.security],
+                include_deployment_checks=True,
+            )
+
+        self.assertIn("secondpass.W002", {message.id for message in messages})

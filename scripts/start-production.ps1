@@ -9,6 +9,11 @@ $env:DJANGO_DEBUG = "0"
 
 Push-Location $ProjectRoot
 try {
+    & $PythonExecutable manage.py check --deploy
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+
     & $PythonExecutable manage.py migrate --noinput
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE

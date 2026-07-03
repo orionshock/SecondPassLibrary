@@ -15,6 +15,7 @@ import os
 import sys
 
 from corsheaders.defaults import default_headers
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,6 +48,22 @@ def _secure_proxy_ssl_header() -> tuple[str, str] | None:
     return None
 
 
+INSECURE_FALLBACK_SECRET_KEY = (
+    "django-insecure-t&^j-sap##2x=r@ws#*0nbmd!@!bv=u852pz&&7a9sd0_!3^#$"
+)
+
+
+def _secret_key(*, debug: bool) -> str:
+    value = os.getenv("DJANGO_SECRET_KEY")
+    if debug:
+        return value or INSECURE_FALLBACK_SECRET_KEY
+    if not value or value == INSECURE_FALLBACK_SECRET_KEY:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be set to a non-default value when DEBUG=False."
+        )
+    return value
+
+
 # User data directory for runtime data
 USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
 RUNNING_TESTS = "test" in sys.argv
@@ -62,14 +79,11 @@ IMPORTS_DIR = USERDATA_DIR / "imports"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-t&^j-sap##2x=r@ws#*0nbmd!@!bv=u852pz&&7a9sd0_!3^#$",
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool("DJANGO_DEBUG", False)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = _secret_key(debug=DEBUG or RUNNING_TESTS)
 
 LOCAL_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
 ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS", LOCAL_ALLOWED_HOSTS)

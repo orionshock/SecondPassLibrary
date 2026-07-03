@@ -20,9 +20,10 @@ On PowerShell:
 
 The script fails fast and performs these steps in order:
 
-1. `python manage.py migrate --noinput`
-2. `python manage.py collectstatic --noinput`
-3. A WSGI server serving `secondpass.wsgi:application`
+1. `python manage.py check --deploy`
+2. `python manage.py migrate --noinput`
+3. `python manage.py collectstatic --noinput`
+4. A WSGI server serving `secondpass.wsgi:application`
 
 The scripts are local/dev convenience helpers and manual smoke tools for now,
 not the final deployment orchestration contract. Real deployment environment
