@@ -113,6 +113,8 @@ class DockerStartupContractTests(SimpleTestCase):
     def test_compose_uses_env_file_userdata_mount_and_port_8000(self):
         source = (ROOT / "compose.yml").read_text(encoding="utf-8")
 
+        self.assertIn("  secondpasslibrary:", source)
+        self.assertNotIn("  app:", source)
         self.assertIn("env_file:", source)
         self.assertIn("- .env", source)
         self.assertIn("SECOND_PASS_USERDATA_DIR: /app/userdata", source)

@@ -1,5 +1,5 @@
 services:
-  app:
+  secondpasslibrary:
     build: .
     env_file:
       - .env
