@@ -8,7 +8,7 @@ from django.db.models.functions import RowNumber
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -104,7 +104,6 @@ class ShelfViewSet(
     queryset = Shelf.objects.all()
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]

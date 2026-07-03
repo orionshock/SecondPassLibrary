@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
@@ -32,7 +32,6 @@ from .services import (
 class AnnotationViewSet(viewsets.ModelViewSet):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     serializer_class = AnnotationSerializer

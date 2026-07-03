@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -16,7 +16,6 @@ from .services import get_or_create_progress, is_session_closed, update_progress
 class ReadingProgressViewSet(viewsets.GenericViewSet):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     serializer_class = ReadingProgressSerializer

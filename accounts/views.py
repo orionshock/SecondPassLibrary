@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from typing import Any, cast
 from rest_framework import mixins, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -59,7 +59,6 @@ class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
 
@@ -127,7 +126,6 @@ class CurrentUserClientSessionsView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
 
@@ -143,7 +141,6 @@ class CurrentUserClientSessionRevokeView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
 

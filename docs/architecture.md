@@ -44,7 +44,7 @@ Avoid putting workflows in serializers, viewsets, `Model.save()`, admin classes,
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
 
 - Django **session authentication** (supports browser-based development and the DRF browsable API)
-- DRF **basic authentication** (convenience for local development/testing)
+- Explicit **Client API bearer token authentication** on selected reader-client endpoints
 - DRF browsable API login/logout at `/api-auth/`
 - Django admin at `/admin/` (service hatch; not the product UI)
 
@@ -149,7 +149,7 @@ supported alongside any future external login.
 Notes for future browser UI:
 
 - Session/CSRF behavior matters; any future web UI should account for CSRF when using session auth.
-- Basic auth should not be treated as the final production/client authentication strategy.
+- HTTP Basic authentication is not part of the product auth model.
 
 Session revocation rules and terminology are documented in `docs/session-management.md`.
 

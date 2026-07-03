@@ -1,6 +1,6 @@
 from typing import Any, cast
 
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import PermissionDenied
 
 from accounts.authentication import ClientBearerAuthentication
@@ -18,7 +18,6 @@ class ClientBearerReadOnlyMixin:
 
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
 

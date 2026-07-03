@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -72,7 +72,6 @@ class ReadingSessionViewSet(
 ):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
@@ -147,7 +146,6 @@ class ReadingSessionViewSet(
 class ActiveSessionView(APIView):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
@@ -171,7 +169,6 @@ class ActiveSessionView(APIView):
 class StartOverView(APIView):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
@@ -189,7 +186,6 @@ class StartOverView(APIView):
 class CloseSessionView(APIView):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
@@ -203,7 +199,6 @@ class CloseSessionView(APIView):
 class RecentSessionsView(APIView):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
@@ -217,7 +212,6 @@ class RecentSessionsView(APIView):
 class ReadingActivitySummaryView(APIView):
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
@@ -246,7 +240,6 @@ class OpenBookView(APIView):
 
     authentication_classes = [
         SessionAuthentication,
-        BasicAuthentication,
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]

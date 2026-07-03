@@ -150,7 +150,7 @@ Useful focused checks:
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
 
 - **Django session authentication** (browser-based development and the DRF browsable API)
-- **DRF basic authentication** (convenience for local development/testing)
+- **Client API bearer token authentication** on selected reader-client endpoints
 - **DRF browsable API login/logout** at `/api-auth/login/` and `/api-auth/logout/`
 - **Django admin authentication** at `/admin/` (a service hatch; not the product UI)
 
@@ -158,10 +158,8 @@ Practical notes:
 
 - Use `/api-auth/login/` to authenticate in the browsable API.
 - Use `/admin/` to access the Django admin (requires an admin/superuser account).
-- For non-browser API clients in local development, Basic auth is often the simplest option.
-- If Basic auth remains enabled outside `localhost`, use HTTPS so credentials are not sent over plaintext.
-
-Basic auth should not be treated as the final production/client authentication strategy.
+- HTTP Basic authentication is not enabled. Non-browser reader clients should use
+  the Client API bearer-token flow where supported.
 
 ## Run checks and tests
 

@@ -131,6 +131,15 @@ class DjangoSettingsContractTests(SimpleTestCase):
         self.assertIs(settings.SESSION_COOKIE_HTTPONLY, True)
         self.assertIs(settings.CSRF_COOKIE_HTTPONLY, False)
 
+    def test_drf_global_authentication_uses_session_auth_only(self):
+        auth_classes = settings.REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]
+
+        self.assertEqual(
+            auth_classes,
+            ["rest_framework.authentication.SessionAuthentication"],
+        )
+        self.assertNotIn("rest_framework.authentication.BasicAuthentication", auth_classes)
+
     def test_production_rejects_missing_secret_key(self):
         result = self._settings_import(
             {
