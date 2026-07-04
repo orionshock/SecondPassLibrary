@@ -179,7 +179,7 @@ Product policy: Books are import-only and file-backed. While the schema allows a
 The library import pipeline follows a facade + focused-module structure:
 
 - `library/services.py`: public facade (stable import paths and test patch points)
-- `library/import_services.py`: `ImportJob` staging and ZIP orchestration
+- `library/import_services.py`: synchronous upload staging and ZIP orchestration
 - `library/epub_services.py`: EPUB parsing and normalized metadata extraction/merge
 - `library/opf_services.py`: OPF sidecar parsing and merge helpers
 - `library/book_import_services.py`: persistence/orchestration for new `Book` records (create-only)

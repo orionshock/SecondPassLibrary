@@ -17,8 +17,6 @@ from .models import (
     LibraryGroup,
     LibraryGroupMembership,
     BookGroupAssignment,
-    ImportJob,
-    ImportJobItem,
 )
 from .public_group import is_public_group
 
@@ -324,116 +322,6 @@ class BookFileAdmin(admin.ModelAdmin):
     def download_epub_link(self, obj: BookFile) -> str:
         url = reverse("library:bookfile-download", args=[obj.pk])
         return format_html('<a href="{}">Download EPUB</a>', url)
-
-
-@admin.register(ImportJob)
-class ImportJobAdmin(admin.ModelAdmin):
-    """
-    Import jobs are created by the import API/services.
-
-    Admin is intended for inspection and limited repair/debugging only.
-    """
-
-    list_display = [
-        "id",
-        "user",
-        "status",
-        "source_type",
-        "source_filename",
-        "total_found",
-        "imported_count",
-        "duplicate_count",
-        "failed_count",
-        "created_at",
-    ]
-    list_filter = ["status", "source_type", ("created_at", DateFieldListFilter)]
-    search_fields = ["id", "source_filename", "user__username", "user__email"]
-    readonly_fields = [
-        "admin_note",
-        "created_at",
-        "updated_at",
-        "user",
-        "source_type",
-        "source_filename",
-        "internal_staged_path",
-        "total_found",
-        "imported_count",
-        "duplicate_count",
-        "failed_count",
-    ]
-
-    fieldsets = (
-        ("Note", {"fields": ("admin_note",)}),
-        (None, {"fields": ("user", "source_type", "source_filename")}),
-        ("Status", {"fields": ("status", "message")}),
-        (
-            "Counts",
-            {
-                "fields": (
-                    "total_found",
-                    "imported_count",
-                    "duplicate_count",
-                    "failed_count",
-                )
-            },
-        ),
-        ("Diagnostics", {"fields": ("internal_staged_path",)}),
-        ("Timestamps", {"fields": ("created_at", "updated_at")}),
-    )
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    @admin.display(description="")
-    def admin_note(self, obj: ImportJob) -> str:
-        return "Import jobs are created by the import API/upload workflow. Edit only for inspection or limited repair/debugging."
-
-    @admin.display(description="Internal staged path")
-    def internal_staged_path(self, obj: ImportJob) -> str:
-        return obj.staged_path or ""
-
-
-@admin.register(ImportJobItem)
-class ImportJobItemAdmin(admin.ModelAdmin):
-    """
-    Import job items are created by the import API/services.
-
-    Admin is intended for inspection and limited repair/debugging only.
-    """
-
-    list_display = [
-        "id",
-        "job",
-        "status",
-        "source_name",
-        "book",
-        "book_file",
-        "created_at",
-    ]
-    list_filter = ["status", ("created_at", DateFieldListFilter)]
-    search_fields = ["id", "job__id", "source_name", "book__title", "book_file__checksum"]
-    raw_id_fields = ["book", "book_file"]
-    readonly_fields = [
-        "admin_note",
-        "created_at",
-        "updated_at",
-        "job",
-        "source_name",
-    ]
-
-    fieldsets = (
-        ("Note", {"fields": ("admin_note",)}),
-        (None, {"fields": ("job", "source_name")}),
-        ("Repair", {"fields": ("status", "message", "book", "book_file")}),
-        ("Timestamps", {"fields": ("created_at", "updated_at")}),
-    )
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    @admin.display(description="")
-    def admin_note(self, obj: ImportJobItem) -> str:
-        return "Import job items are created by the import API/upload workflow. Edit only for inspection or limited repair/debugging."
 
 
 @admin.register(LibraryGroup)

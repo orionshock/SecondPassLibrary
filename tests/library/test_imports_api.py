@@ -21,10 +21,9 @@ from rest_framework.test import APITestCase
 from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
 from library.import_services import ImportResourceLimitError, _copy_fileobj_capped
-from library.models import ImportJob, Book
+from library.models import Book, BookFile
 from core.errors import ErrorCode
 from tests.utils.responses import response_data_dict
-from tests.utils.responses import response_data_list
 
 
 class IsolatedImportsMixin:
@@ -111,7 +110,7 @@ def _epub_with_embedded_cover_bytes(*, cover_size: tuple[int, int] = (10, 12)) -
     return buf.getvalue()
 
 
-class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
+class ImportApiTest(IsolatedImportsMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u1", password="pw")
         self.other = User.objects.create_user(username="u2", password="pw")
@@ -124,7 +123,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
 
-    def test_anonymous_cannot_create_or_list(self):
+    def test_anonymous_cannot_create_import(self):
         epub = SimpleUploadedFile(
             "book.epub", b"epub-bytes", content_type="application/epub+zip"
         )
@@ -132,16 +131,11 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
         self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
-        listing = cast_response(self.client.get("/api/v1/library/imports/"))
-        self.assertEqual(listing.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch("library.services.epub.read_epub")
-    def test_reader_cannot_list_or_retrieve_or_create_import_jobs(self, mock_read_epub):
+    def test_reader_cannot_create_import(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         self.client.login(username="u1", password="pw")
-
-        listing = cast_response(self.client.get("/api/v1/library/imports/"))
-        self.assertEqual(listing.status_code, status.HTTP_403_FORBIDDEN)
 
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
         created = cast_response(
@@ -241,7 +235,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
         self.assertIn("EPUB upload exceeds", cast(dict[str, Any], data["error"])["detail"])
         mock_read_epub.assert_not_called()
-        self.assertFalse(ImportJob.objects.exists())
+        self.assertEqual(BookFile.objects.count(), 0)
 
     @patch("library.import_services.MAX_ZIP_UPLOAD_BYTES", 4)
     def test_oversized_zip_upload_is_rejected(self):
@@ -256,7 +250,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         data = response_data_dict(response)
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
         self.assertIn("ZIP upload exceeds", cast(dict[str, Any], data["error"])["detail"])
-        self.assertFalse(ImportJob.objects.exists())
+        self.assertEqual(BookFile.objects.count(), 0)
 
     @patch("library.import_services.MAX_ZIP_MEMBERS", 1)
     def test_zip_with_too_many_members_is_rejected_safely(self):
@@ -276,7 +270,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         data = response_data_dict(response)
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
         self.assertIn("ZIP contains more than 1 entries", cast(dict[str, Any], data["error"])["detail"])
-        self.assertFalse(ImportJob.objects.exists())
+        self.assertEqual(BookFile.objects.count(), 0)
 
     @patch("library.services.epub.read_epub")
     @patch("library.import_services.MAX_ZIP_EPUB_MEMBER_BYTES", 4)
@@ -338,7 +332,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch("library.services.epub.read_epub")
-    def test_librarian_can_upload_single_epub_and_job_created(self, mock_read_epub):
+    def test_librarian_can_upload_single_epub_and_receives_transient_result(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -352,24 +346,24 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
 
-        self.assertIn("id", data)
+        self.assertNotIn("id", data)
+        self.assertRegex(str(data["run_id"]), r"^[0-9a-f-]{36}$")
+        self.assertEqual(data["status"], "completed")
         self.assertEqual(data["source_type"], "epub")
         self.assertEqual(data["source_filename"], "Original Name.epub")
         self.assertNotIn("staged_path", data)
         self.assertIn("items", data)
         self.assertEqual(len(data["items"]), 1)
-
-        job = ImportJob.objects.get(pk=data["id"])
-        self.assertTrue(job.staged_path)
-        self.assertNotIn("Original Name", job.staged_path)
-        self.assertTrue(job.staged_path.endswith(".epub"))
-
-        listing = cast_response(self.client.get("/api/v1/library/imports/"))
-        self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response_data_list(listing)), 1)
-
-        detail = cast_response(self.client.get(f"/api/v1/library/imports/{job.id}/"))
-        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(data["total_found"], 1)
+        self.assertEqual(data["imported_count"], 1)
+        self.assertEqual(data["duplicate_count"], 0)
+        self.assertEqual(data["failed_count"], 0)
+        item = cast(list[dict[str, Any]], data["items"])[0]
+        self.assertEqual(item["status"], "imported")
+        self.assertIsNotNone(item["book"])
+        self.assertIsNotNone(item["book_file"])
+        self.assertEqual(Book.objects.count(), 1)
+        self.assertEqual(BookFile.objects.count(), 1)
 
     @patch("library.services.epub.read_epub")
     def test_duplicate_epub_upload_creates_duplicate_item(self, mock_read_epub):
@@ -766,7 +760,7 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         self.assertFalse(Book.objects.filter(title="Second Title").exists())
 
     @patch("library.services.epub.read_epub")
-    def test_user_cannot_see_another_users_jobs(self, mock_read_epub):
+    def test_import_history_endpoints_are_not_supported(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -775,15 +769,13 @@ class ImportJobsAPITest(IsolatedImportsMixin, APITestCase):
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
         created = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
         created_data = response_data_dict(created)
-        job_id = created_data["id"]
+        run_id = created_data["run_id"]
 
-        self.client.logout()
-        self.client.login(username="u2", password="pw")
         listing = cast_response(self.client.get("/api/v1/library/imports/"))
-        self.assertEqual(listing.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(listing.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        detail = cast_response(self.client.get(f"/api/v1/library/imports/{job_id}/"))
-        self.assertEqual(detail.status_code, status.HTTP_403_FORBIDDEN)
+        detail = cast_response(self.client.get(f"/api/v1/library/imports/{run_id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class CappedZipCopyTests(IsolatedImportsMixin, APITestCase):

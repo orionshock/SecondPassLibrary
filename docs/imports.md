@@ -2,9 +2,9 @@
 
 Second Pass Library is EPUB-first. Imports are intended to be API-mediated, with a dev/admin management command available for convenience.
 
-## API-mediated imports (staged uploads)
+## API-mediated imports (synchronous uploads)
 
-Create an import job (multipart field name is `file`):
+Import books with a multipart upload field named `file`:
 
 ```text
 POST /api/v1/library/imports/
@@ -12,22 +12,12 @@ POST /api/v1/library/imports/
 
 ### Permissions
 
-Import jobs are currently intended for library managers only:
+Library imports are currently intended for library managers only:
 
-- Owner / Manager / Librarian can create/list/retrieve import jobs.
-- Readers cannot create/list/retrieve import jobs (they receive `403 Forbidden`).
-
-List import jobs:
-
-```text
-GET /api/v1/library/imports/   (paginated)
-```
-
-Get a specific job:
-
-```text
-GET /api/v1/library/imports/<id>/
-```
+- Owner / Manager / Librarian can import books.
+- Readers cannot import books (they receive `403 Forbidden`).
+- Import history is not stored. The import endpoint returns the result of the
+  synchronous import request.
 
 ### Supported uploads
 
@@ -53,6 +43,44 @@ Uploads are app-limited before parser/checksum work to keep untrusted files from
 - Marginalia JSON import: 25 MiB
 
 Large library migrations should be split into smaller ZIP batches. These limits are independent of any reverse-proxy upload limits.
+
+### Response shape
+
+The import response is transient and cannot be retrieved later:
+
+```json
+{
+  "run_id": "7d97ab47-2e1e-4705-a50a-08e1c9c4e5fb",
+  "status": "completed",
+  "source_type": "zip",
+  "source_filename": "bundle.zip",
+  "total_found": 2,
+  "imported_count": 1,
+  "duplicate_count": 0,
+  "failed_count": 1,
+  "message": "Import completed with failures.",
+  "items": [
+    {
+      "status": "imported",
+      "source_name": "book.epub",
+      "book": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
+      "book_file": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
+      "message": "Successfully imported EPUB."
+    },
+    {
+      "status": "failed",
+      "source_name": "bad.epub",
+      "book": null,
+      "book_file": null,
+      "message": "Invalid or unsupported EPUB file."
+    }
+  ]
+}
+```
+
+`run_id` is only for correlating the immediate response with operator logs or
+support notes. It is not a database id and is not retrievable through a detail
+endpoint.
 
 ### Unsupported (non-goals)
 
@@ -128,14 +156,10 @@ Server-side apply follows these rules:
 - Treat possible duplicates as warnings, not blockers. Do not silently de-duplicate or overwrite existing sessions/annotations without an explicit future policy.
 - Continue to reject Client API bearer tokens for server-side marginalia import.
 
-## Models
-
-- `ImportJob`: tracks one upload (EPUB or ZIP), counts, and status
-- `ImportJobItem`: per-file result entries within a job (imported/duplicate/failed)
-
 ## Storage
 
-- Temporary staged imports live under `userdata/imports/`.
+- Temporary import staging lives under `userdata/imports/` during request
+  processing and is cleaned after the synchronous import completes.
 - Final stored EPUB files are written to content-addressed storage under `userdata/media/books/<first2>/<next2>/<sha256>.epub`.
 - Product policy: Books are import-only and file-backed. In normal flows a `Book` is created together with its `BookFile` as one logical import operation; fileless metadata-only Books are not a supported state.
 

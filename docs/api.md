@@ -501,8 +501,10 @@ Book payload notes:
 ## Imports
 
 - `POST /api/v1/library/imports/`
-- `GET /api/v1/library/imports/` (paginated)
-- `GET /api/v1/library/imports/<id>/`
+
+Library imports are synchronous. `POST` returns a transient import result with
+`run_id`, status, counts, and safe per-item results. Import history is not stored
+and there are no list/detail import-history endpoints.
 
 See `docs/imports.md` for details.
 

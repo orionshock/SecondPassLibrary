@@ -76,8 +76,10 @@ The book metadata edit page is organized into client-side tabs (Metadata, Author
 
 The imports page is API-driven using:
 
-- `GET /api/v1/library/imports/` (paginated job list)
 - `POST /api/v1/library/imports/` (multipart upload field `file`)
+
+Library imports are synchronous. The page shows the latest returned import
+result for the current browser session; import history is not stored.
 
 It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre sync/import of `metadata.db`, and no PDF).
 
@@ -168,7 +170,7 @@ Likely top-level sections (navigation may be role-gated):
 
 - Library (browse/search)
 - Book detail (metadata, file, reading info)
-- Imports (upload and import job history)
+- Imports (upload and latest synchronous result)
 - Groups (LibraryGroups: view, curation, presentation)
 - Reading (history, sessions, annotations)
 - Users (management)
@@ -263,14 +265,13 @@ Visible for Librarian, Manager, or Owner.
 Primary endpoints:
 
 - Upload: `POST /api/v1/library/imports/` (multipart field name `file`)
-- List jobs: `GET /api/v1/library/imports/` (paginated)
-- Job detail: `GET /api/v1/library/imports/<job_id>/`
 
 UI behaviors:
 
 - Upload form supporting `.epub` or `.zip` of `.epub` files.
-- Show the created job result immediately (status, counts, items).
-- Job history view with paging and detail drill-in.
+- Disable upload controls while the synchronous import request is running.
+- Show that large ZIP files may take a while.
+- Show the returned result immediately (run id, status, counts, items).
 
 Non-goals:
 

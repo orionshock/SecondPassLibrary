@@ -11,8 +11,6 @@ from .models import (
     Book,
     BookFile,
     BookIdentifier,
-    ImportJob,
-    ImportJobItem,
     Series,
 )
 from .public_group import is_public_group
@@ -330,43 +328,4 @@ class BookSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Must have at most one decimal place.")
 
         return value
-
-
-class ImportJobItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ImportJobItem
-        fields = [
-            "id",
-            "status",
-            "source_name",
-            "book",
-            "book_file",
-            "message",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = fields
-
-
-class ImportJobSerializer(serializers.ModelSerializer):
-    items = ImportJobItemSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = ImportJob
-        fields = [
-            "id",
-            "status",
-            "source_type",
-            "source_filename",
-            "total_found",
-            "imported_count",
-            "duplicate_count",
-            "failed_count",
-            "message",
-            "items",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = fields
-
 

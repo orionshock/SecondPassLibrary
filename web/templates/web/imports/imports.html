@@ -26,19 +26,15 @@
       <div class="search">
         <label class="search__label" for="import-file">File</label>
         <input id="import-file" name="file" type="file" accept=".epub,.zip" />
-        <button class="button" type="submit">Upload</button>
+        <button id="imports-submit" class="button" type="submit">Upload</button>
       </div>
       <div id="imports-upload-status" class="muted" style="margin-top: 8px;"></div>
     </form>
   </section>
 
   <section class="card">
-    <h2 class="card__title">Jobs</h2>
-    <div id="imports-status" class="muted">Loading...</div>
+    <h2 class="card__title">Latest Result</h2>
+    <div id="imports-status" class="muted">No import has been run in this browser session.</div>
     <div id="imports-results"></div>
-    <div class="pager">
-      <button id="imports-prev" class="button" type="button" disabled>Previous</button>
-      <button id="imports-next" class="button" type="button" disabled>Next</button>
-    </div>
   </section>
 {% endblock %}

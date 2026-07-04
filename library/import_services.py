@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 import posixpath
 import uuid
@@ -8,8 +9,6 @@ from typing import BinaryIO, Callable
 
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
-
-from .models import ImportJob, ImportJobItem
 
 
 MAX_SINGLE_EPUB_UPLOAD_BYTES = 200 * 1024 * 1024
@@ -22,6 +21,91 @@ COPY_CHUNK_BYTES = 1024 * 1024
 
 class ImportResourceLimitError(ValueError):
     pass
+
+
+class ImportResultStatus:
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ImportSourceType:
+    EPUB = "epub"
+    ZIP = "zip"
+
+
+class ImportItemStatus:
+    IMPORTED = "imported"
+    DUPLICATE = "duplicate"
+    FAILED = "failed"
+
+
+@dataclass
+class ImportRunItem:
+    status: str
+    source_name: str = ""
+    book: object | None = None
+    book_file: object | None = None
+    message: str = ""
+
+    def as_dict(self) -> dict[str, object | None]:
+        return {
+            "status": self.status,
+            "source_name": self.source_name,
+            "book": str(getattr(self.book, "id", "")) if self.book is not None else None,
+            "book_file": str(getattr(self.book_file, "id", ""))
+            if self.book_file is not None
+            else None,
+            "message": self.message,
+        }
+
+
+@dataclass
+class ImportRunResult:
+    run_id: str
+    status: str
+    source_type: str
+    source_filename: str
+    total_found: int = 0
+    imported_count: int = 0
+    duplicate_count: int = 0
+    failed_count: int = 0
+    message: str = ""
+    items: list[ImportRunItem] = field(default_factory=list)
+
+    def finalize_counts(self) -> None:
+        self.imported_count = sum(
+            1 for item in self.items if item.status == ImportItemStatus.IMPORTED
+        )
+        self.duplicate_count = sum(
+            1 for item in self.items if item.status == ImportItemStatus.DUPLICATE
+        )
+        self.failed_count = sum(
+            1 for item in self.items if item.status == ImportItemStatus.FAILED
+        )
+        self.status = (
+            ImportResultStatus.COMPLETED
+            if self.failed_count == 0
+            else ImportResultStatus.FAILED
+        )
+        self.message = (
+            "Import completed."
+            if self.status == ImportResultStatus.COMPLETED
+            else "Import completed with failures."
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "run_id": self.run_id,
+            "status": self.status,
+            "source_type": self.source_type,
+            "source_filename": self.source_filename,
+            "total_found": self.total_found,
+            "imported_count": self.imported_count,
+            "duplicate_count": self.duplicate_count,
+            "failed_count": self.failed_count,
+            "message": self.message,
+            "items": [item.as_dict() for item in self.items],
+        }
 
 
 def sanitize_import_error_message(exc_or_message: object) -> str:
@@ -43,7 +127,7 @@ def sanitize_import_error_message(exc_or_message: object) -> str:
 
 
 def _safe_import_result_message(*, status: str, message: object) -> str:
-    if status in {ImportJobItem.STATUS_IMPORTED, ImportJobItem.STATUS_DUPLICATE}:
+    if status in {ImportItemStatus.IMPORTED, ImportItemStatus.DUPLICATE}:
         return str(message or "")
     return sanitize_import_error_message(message)
 
@@ -66,7 +150,7 @@ def _uploaded_size(uploaded_file: UploadedFile) -> int | None:
 
 
 def _max_upload_bytes_for_source(source_type: str) -> int:
-    if source_type == ImportJob.SOURCE_ZIP:
+    if source_type == ImportSourceType.ZIP:
         return MAX_ZIP_UPLOAD_BYTES
     return MAX_SINGLE_EPUB_UPLOAD_BYTES
 
@@ -75,7 +159,7 @@ def _validate_uploaded_size(*, uploaded_file: UploadedFile, source_type: str) ->
     size = _uploaded_size(uploaded_file)
     max_bytes = _max_upload_bytes_for_source(source_type)
     if size is not None and size > max_bytes:
-        label = "ZIP" if source_type == ImportJob.SOURCE_ZIP else "EPUB"
+        label = "ZIP" if source_type == ImportSourceType.ZIP else "EPUB"
         raise ImportResourceLimitError(
             f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
         )
@@ -102,15 +186,15 @@ def _copy_fileobj_capped(*, src: BinaryIO, dst_path: Path, max_bytes: int) -> in
 
 
 def _stage_uploaded_file(
-    *, uploaded_file: UploadedFile, job_id: uuid.UUID, source_type: str
+    *, uploaded_file: UploadedFile, run_id: str, source_type: str
 ) -> tuple[str, Path]:
     imports_dir = _imports_dir()
-    job_dir = imports_dir / "jobs" / str(job_id)
-    job_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = imports_dir / "jobs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    extension = ".zip" if source_type == ImportJob.SOURCE_ZIP else ".epub"
+    extension = ".zip" if source_type == ImportSourceType.ZIP else ".epub"
     staged_name = f"{uuid.uuid4().hex}{extension}"
-    staged_path = job_dir / staged_name
+    staged_path = run_dir / staged_name
 
     max_bytes = _max_upload_bytes_for_source(source_type)
     written = 0
@@ -119,7 +203,7 @@ def _stage_uploaded_file(
             for chunk in uploaded_file.chunks():
                 written += len(chunk)
                 if written > max_bytes:
-                    label = "ZIP" if source_type == ImportJob.SOURCE_ZIP else "EPUB"
+                    label = "ZIP" if source_type == ImportSourceType.ZIP else "EPUB"
                     raise ImportResourceLimitError(
                         f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
                     )
@@ -128,38 +212,46 @@ def _stage_uploaded_file(
         staged_path.unlink(missing_ok=True)
         raise
 
-    staged_rel = str(Path("jobs") / str(job_id) / staged_name)
+    staged_rel = str(Path("jobs") / run_id / staged_name)
     return staged_rel, staged_path
 
 
-def create_import_job_from_upload(*, user, uploaded_file: UploadedFile) -> ImportJob:
+def create_import_result_from_upload(
+    *,
+    user,
+    uploaded_file: UploadedFile,
+    import_epub_func: Callable[..., object],
+    max_opf_xml_bytes: int,
+    max_cover_bytes: int,
+) -> ImportRunResult:
     name = (uploaded_file.name or "").strip()
     lower = name.lower()
     if lower.endswith(".epub"):
-        source_type = ImportJob.SOURCE_EPUB
+        source_type = ImportSourceType.EPUB
     elif lower.endswith(".zip"):
-        source_type = ImportJob.SOURCE_ZIP
+        source_type = ImportSourceType.ZIP
     else:
         raise ValueError("Upload must be a .epub or .zip file.")
 
     _validate_uploaded_size(uploaded_file=uploaded_file, source_type=source_type)
 
-    job = ImportJob.objects.create(
-        user=user,
-        status=ImportJob.STATUS_PENDING,
+    run_id = str(uuid.uuid4())
+    staged_rel, _staged_path = _stage_uploaded_file(
+        uploaded_file=uploaded_file, run_id=run_id, source_type=source_type
+    )
+    result = ImportRunResult(
+        run_id=run_id,
+        status=ImportResultStatus.COMPLETED,
         source_type=source_type,
         source_filename=name,
     )
-    try:
-        staged_rel, _staged_path = _stage_uploaded_file(
-            uploaded_file=uploaded_file, job_id=job.id, source_type=source_type
-        )
-    except Exception:
-        job.delete()
-        raise
-    job.staged_path = staged_rel
-    job.save(update_fields=["staged_path", "updated_at"])
-    return job
+    return process_import_result(
+        result=result,
+        staged_rel=staged_rel,
+        import_epub_func=import_epub_func,
+        max_opf_xml_bytes=max_opf_xml_bytes,
+        max_cover_bytes=max_cover_bytes,
+    )
 
 
 def _safe_zip_member_name(name: str) -> str | None:
@@ -210,85 +302,61 @@ def _zip_sidecar_opf_for_epub(
     return None
 
 
-def process_import_job(
+def process_import_result(
     *,
-    job: ImportJob,
+    result: ImportRunResult,
+    staged_rel: str,
     import_epub_func: Callable[..., object],
     max_opf_xml_bytes: int,
     max_cover_bytes: int,
-) -> ImportJob:
-    if job.status not in {ImportJob.STATUS_PENDING, ImportJob.STATUS_FAILED}:
-        return job
-
-    staged_rel = (job.staged_path or "").strip()
+) -> ImportRunResult:
+    staged_rel = (staged_rel or "").strip()
     if not staged_rel:
-        job.status = ImportJob.STATUS_FAILED
-        job.message = "Missing staged upload."
-        job.save(update_fields=["status", "message", "updated_at"])
-        return job
+        result.status = ImportResultStatus.FAILED
+        result.message = "Missing staged upload."
+        return result
 
     imports_dir = _imports_dir()
     staged_path = imports_dir / staged_rel
     if not staged_path.exists():
-        job.status = ImportJob.STATUS_FAILED
-        job.message = "Staged upload missing on disk."
-        job.save(update_fields=["status", "message", "updated_at"])
-        return job
-
-    job.status = ImportJob.STATUS_PROCESSING
-    job.message = ""
-    job.total_found = 0
-    job.imported_count = 0
-    job.duplicate_count = 0
-    job.failed_count = 0
-    job.save(
-        update_fields=[
-            "status",
-            "message",
-            "total_found",
-            "imported_count",
-            "duplicate_count",
-            "failed_count",
-            "updated_at",
-        ]
-    )
+        result.status = ImportResultStatus.FAILED
+        result.message = "Staged upload missing on disk."
+        return result
 
     extracted_dir: Path | None = None
     try:
-        if job.source_type == ImportJob.SOURCE_EPUB:
-            job.total_found = 1
-            job.save(update_fields=["total_found", "updated_at"])
+        if result.source_type == ImportSourceType.EPUB:
+            result.total_found = 1
             try:
-                result = import_epub_func(str(staged_path))
-                status_val = getattr(result, "status", None)
+                import_result = import_epub_func(str(staged_path))
+                status_val = getattr(import_result, "status", None)
                 item_status = (
-                    ImportJobItem.STATUS_IMPORTED
+                    ImportItemStatus.IMPORTED
                     if status_val == "imported"
-                    else ImportJobItem.STATUS_DUPLICATE
+                    else ImportItemStatus.DUPLICATE
                     if status_val == "duplicate"
-                    else ImportJobItem.STATUS_FAILED
+                    else ImportItemStatus.FAILED
                 )
-                result_message = getattr(result, "message", "") or ""
-                ImportJobItem.objects.create(
-                    job=job,
+                result_message = getattr(import_result, "message", "") or ""
+                item = ImportRunItem(
                     status=item_status,
-                    source_name=_safe_import_source_name(job.source_filename or ""),
-                    book=getattr(result, "book", None),
-                    book_file=getattr(result, "book_file", None),
+                    source_name=_safe_import_source_name(result.source_filename or ""),
+                    book=getattr(import_result, "book", None),
+                    book_file=getattr(import_result, "book_file", None),
                     message=_safe_import_result_message(
                         status=item_status,
                         message=result_message,
                     ),
                 )
             except Exception as e:
-                ImportJobItem.objects.create(
-                    job=job,
-                    status=ImportJobItem.STATUS_FAILED,
-                    source_name=_safe_import_source_name(job.source_filename or ""),
+                item = ImportRunItem(
+                    status=ImportItemStatus.FAILED,
+                    source_name=_safe_import_source_name(result.source_filename or ""),
                     message=sanitize_import_error_message(e),
                 )
+            result.items.append(item)
         else:
-            extracted_dir = imports_dir / "jobs" / str(job.id) / "extracted"
+            extracted_dir = imports_dir / "jobs" / result.run_id / "extracted"
             extracted_dir.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(staged_path, "r") as zf:
                 all_infos = zf.infolist()
@@ -322,10 +390,12 @@ def process_import_job(
                         opfs_by_dir.setdefault(d, []).append(safe_name)
 
                 if collisions:
-                    # If multiple ZIP members normalize to the same safe name,
-                    # treat that path as unsafe/ambiguous. Skip those entries.
-                    members_index = {k: v for (k, v) in members_index.items() if k not in collisions}
-                    epub_members = [i for i in epub_members if i.filename not in collisions]
+                    members_index = {
+                        k: v for (k, v) in members_index.items() if k not in collisions
+                    }
+                    epub_members = [
+                        i for i in epub_members if i.filename not in collisions
+                    ]
                     for d, names in list(opfs_by_dir.items()):
                         filtered = [n for n in names if n not in collisions]
                         if filtered:
@@ -334,8 +404,7 @@ def process_import_job(
                             opfs_by_dir.pop(d, None)
 
                 members = epub_members
-                job.total_found = len(members)
-                job.save(update_fields=["total_found", "updated_at"])
+                result.total_found = len(members)
 
                 copied_epub_bytes = 0
                 for info in members:
@@ -380,7 +449,10 @@ def process_import_job(
                             try:
                                 with zf.open(sidecar_opf_member, "r") as opf_fp:
                                     sidecar_opf_bytes = opf_fp.read(max_opf_xml_bytes + 1)
-                                if sidecar_opf_bytes and len(sidecar_opf_bytes) > max_opf_xml_bytes:
+                                if (
+                                    sidecar_opf_bytes
+                                    and len(sidecar_opf_bytes) > max_opf_xml_bytes
+                                ):
                                     sidecar_opf_bytes = None
                                 else:
                                     sidecar_opf_dir = posixpath.dirname(sidecar_opf_member)
@@ -405,67 +477,49 @@ def process_import_job(
                             except Exception:
                                 return None
 
-                        result = import_epub_func(
+                        import_result = import_epub_func(
                             str(extracted_path),
                             sidecar_opf_bytes=sidecar_opf_bytes,
                             sidecar_opf_dir=sidecar_opf_dir,
-                            sidecar_asset_reader=asset_reader if sidecar_opf_bytes and sidecar_opf_dir else None,
-                        )
-
-                        status_val = getattr(result, "status", None)
-                        item_status = (
-                            ImportJobItem.STATUS_IMPORTED
-                            if status_val == "imported"
-                            else ImportJobItem.STATUS_DUPLICATE
-                            if status_val == "duplicate"
-                            else ImportJobItem.STATUS_FAILED
-                        )
-                        ImportJobItem.objects.create(
-                            job=job,
-                            status=item_status,
-                            source_name=safe_source_name,
-                            book=getattr(result, "book", None),
-                            book_file=getattr(result, "book_file", None),
-                            message=_safe_import_result_message(
-                                status=item_status,
-                                message=getattr(result, "message", "") or "",
+                            sidecar_asset_reader=(
+                                asset_reader
+                                if sidecar_opf_bytes and sidecar_opf_dir
+                                else None
                             ),
                         )
+
+                        status_val = getattr(import_result, "status", None)
+                        item_status = (
+                            ImportItemStatus.IMPORTED
+                            if status_val == "imported"
+                            else ImportItemStatus.DUPLICATE
+                            if status_val == "duplicate"
+                            else ImportItemStatus.FAILED
+                        )
+                        result.items.append(
+                            ImportRunItem(
+                                status=item_status,
+                                source_name=safe_source_name,
+                                book=getattr(import_result, "book", None),
+                                book_file=getattr(import_result, "book_file", None),
+                                message=_safe_import_result_message(
+                                    status=item_status,
+                                    message=getattr(import_result, "message", "") or "",
+                                ),
+                            )
+                        )
                     except Exception as e:
-                        ImportJobItem.objects.create(
-                            job=job,
-                            status=ImportJobItem.STATUS_FAILED,
-                            source_name=safe_source_name,
-                            message=sanitize_import_error_message(e),
+                        result.items.append(
+                            ImportRunItem(
+                                status=ImportItemStatus.FAILED,
+                                source_name=safe_source_name,
+                                message=sanitize_import_error_message(e),
+                            )
                         )
                         continue
 
-        job.imported_count = ImportJobItem.objects.filter(
-            job=job, status=ImportJobItem.STATUS_IMPORTED
-        ).count()
-        job.duplicate_count = ImportJobItem.objects.filter(
-            job=job, status=ImportJobItem.STATUS_DUPLICATE
-        ).count()
-        job.failed_count = ImportJobItem.objects.filter(
-            job=job, status=ImportJobItem.STATUS_FAILED
-        ).count()
-        job.status = (
-            ImportJob.STATUS_COMPLETED
-            if job.failed_count == 0
-            else ImportJob.STATUS_FAILED
-        )
-        job.message = "Import completed." if job.status == ImportJob.STATUS_COMPLETED else "Import completed with failures."
-        job.save(
-            update_fields=[
-                "status",
-                "message",
-                "imported_count",
-                "duplicate_count",
-                "failed_count",
-                "updated_at",
-            ]
-        )
-        return job
+        result.finalize_counts()
+        return result
     finally:
         if extracted_dir is not None and extracted_dir.exists():
             for child in extracted_dir.iterdir():
@@ -476,3 +530,7 @@ def process_import_job(
             except OSError:
                 pass
         staged_path.unlink(missing_ok=True)
+        try:
+            staged_path.parent.rmdir()
+        except OSError:
+            pass

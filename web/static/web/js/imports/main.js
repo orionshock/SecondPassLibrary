@@ -1,124 +1,64 @@
-import { fetchJSON, fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
+import { fetchJSONWithOptions, getCsrfToken, extractApiErrorMessage } from "../api.js";
 import { canAccessImports } from "../auth.js";
 import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 
-function internalRefsForItem(item) {
+function itemRefs(item) {
   return [
     item.book ? `book=${item.book}` : "",
     item.book_file ? `book_file=${item.book_file}` : "",
   ].filter(Boolean);
 }
 
-function stripInternalRefs(message) {
-  return String(message || "")
-    .replace(/\bbook=[0-9a-fA-F-]{32,36}\b/g, "")
-    .replace(/\bbook_file=[0-9a-fA-F-]{32,36}\b/g, "")
-    .replace(/\s{2,}/g, " ")
-    .replace(/\s+([,.;:])/g, "$1")
-    .trim();
-}
-
-function renderImportItemDiagnostic(item) {
+function renderImportItem(item) {
   const status = item.status || "";
   const source = item.source_name || "(Unknown item)";
-  const rawMessage = item.message || "";
-  const readableMessage = stripInternalRefs(rawMessage);
-  const refs = internalRefsForItem(item);
-  const debugRows = [
-    ...refs,
-    rawMessage && rawMessage !== readableMessage ? `message=${rawMessage}` : "",
-  ].filter(Boolean);
-  const debugHtml = debugRows.length
-    ? `<details class="import-job__debug"><summary>Debug details</summary><code>${escapeHtml(debugRows.join(" "))}</code></details>`
-    : "";
+  const message = item.message || "";
+  const refs = itemRefs(item)
+    .map((ref) => `<code>${escapeHtml(ref)}</code>`)
+    .join(" ");
 
-  return `<li class="import-job__item">
+  return `<li class="import-result__item">
     <span class="pill">${escapeHtml(status)}</span>
-    <span class="import-job__item-source">${escapeHtml(source)}</span>
-    ${readableMessage ? `<span class="muted import-job__item-message">- ${escapeHtml(readableMessage)}</span>` : ""}
-    ${debugHtml}
+    <span class="import-result__item-source">${escapeHtml(source)}</span>
+    ${message ? `<span class="muted import-result__item-message">- ${escapeHtml(message)}</span>` : ""}
+    ${refs ? `<span class="import-result__refs">${refs}</span>` : ""}
   </li>`;
 }
 
-function renderImportJobItems(items) {
-  if (!Array.isArray(items) || items.length === 0) return "";
-  const rows = items
-    .slice(0, 50)
-    .map(renderImportItemDiagnostic)
-    .join("");
-
-  const extra = items.length > 50 ? `<div class="muted">Showing first 50 items.</div>` : "";
-  return `${extra}<ul>${rows}</ul>`;
-}
-
-function friendlyDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function jobSourceLabel(job) {
-  return job.source_filename || "(Unknown source)";
-}
-
-function jobCounts(job) {
+function resultCounts(result) {
   return [
-    ["found", job.total_found],
-    ["imported", job.imported_count],
-    ["duplicates", job.duplicate_count],
-    ["failed", job.failed_count],
-  ].filter(([_k, v]) => v !== null && v !== undefined && v !== "");
+    ["found", result.total_found],
+    ["imported", result.imported_count],
+    ["duplicates", result.duplicate_count],
+    ["failed", result.failed_count],
+  ].filter(([_key, value]) => value !== null && value !== undefined && value !== "");
 }
 
-function isActiveImportJob(job) {
-  return ["pending", "processing"].includes(String(job.status || "").toLowerCase());
-}
+function renderImportResult(result) {
+  if (!result) return "";
+  const source = result.source_filename || "(Unknown source)";
+  const status = result.status || "";
+  const counts = resultCounts(result)
+    .map(([key, value]) => `<span class="pill">${escapeHtml(key)}: ${escapeHtml(value)}</span>`)
+    .join(" ");
+  const items = Array.isArray(result.items) ? result.items : [];
+  const itemRows = items.slice(0, 50).map(renderImportItem).join("");
+  const extra = items.length > 50 ? `<div class="muted">Showing first 50 items.</div>` : "";
 
-function renderImportJobs(payload) {
-  const results = Array.isArray(payload && payload.results) ? payload.results : [];
-  if (results.length === 0) return "";
-
-  return results
-    .map((job) => {
-      const source = jobSourceLabel(job);
-      const status = job.status || "";
-      const message = job.message ? `<div class="muted">${escapeHtml(job.message)}</div>` : "";
-      const createdAt = friendlyDate(job.created_at);
-      const updatedAt = friendlyDate(job.updated_at);
-      const counts = jobCounts(job)
-        .map(([k, v]) => `<span class="pill">${escapeHtml(k)}: ${escapeHtml(v)}</span>`)
-        .join(" ");
-
-      const itemsHtml = renderImportJobItems(job.items);
-      const open = isActiveImportJob(job) ? " open" : "";
-
-      return `
-          <details class="book import-job"${open}>
-            <summary class="import-job__summary">
-              <span class="import-job__source">${escapeHtml(source)}</span>
-              <span class="pill">${escapeHtml(status)}</span>
-              ${counts ? `<span class="import-job__counts">${counts}</span>` : ""}
-              ${createdAt ? `<span class="muted import-job__time">Created ${escapeHtml(createdAt)}</span>` : ""}
-              ${updatedAt ? `<span class="muted import-job__time">Updated ${escapeHtml(updatedAt)}</span>` : ""}
-            </summary>
-            <div class="book__meta import-job__details">
-              <div>Job: <code>${escapeHtml(job.id || "")}</code></div>
-              <div>Source type: ${escapeHtml(job.source_type || "")}</div>
-              ${message}
-              ${itemsHtml ? `<div class="import-job__items"><h4 class="card__title">Items</h4>${itemsHtml}</div>` : ""}
-            </div>
-          </details>
-        `.trim();
-    })
-    .join("");
+  return `<section class="book import-result" aria-label="Latest import result">
+    <div class="import-result__summary">
+      <span class="import-result__source">${escapeHtml(source)}</span>
+      <span class="pill">${escapeHtml(status)}</span>
+      ${counts ? `<span class="import-result__counts">${counts}</span>` : ""}
+    </div>
+    <div class="book__meta import-result__details">
+      <div>Run: <code>${escapeHtml(result.run_id || "")}</code></div>
+      <div>Source type: ${escapeHtml(result.source_type || "")}</div>
+      ${result.message ? `<div class="muted">${escapeHtml(result.message)}</div>` : ""}
+      ${itemRows ? `<div class="import-result__items"><h4 class="card__title">Items</h4>${extra}<ul>${itemRows}</ul></div>` : ""}
+    </div>
+  </section>`;
 }
 
 export async function initImports() {
@@ -128,21 +68,18 @@ export async function initImports() {
   const uploadForm = $("#imports-upload");
   const uploadStatus = $("#imports-upload-status");
   const fileInput = $("#import-file");
-
+  const submitBtn = $("#imports-submit");
   const statusEl = $("#imports-status");
   const resultsEl = $("#imports-results");
-  const nextBtn = $("#imports-next");
-  const prevBtn = $("#imports-prev");
 
   if (
     !statusEl ||
     !resultsEl ||
-    !nextBtn ||
-    !prevBtn ||
     !notAllowedEl ||
     !uploadForm ||
     !uploadStatus ||
-    !fileInput
+    !fileInput ||
+    !submitBtn
   ) {
     return;
   }
@@ -151,66 +88,22 @@ export async function initImports() {
 
   visible(notAllowedEl, !allowed);
   visible(uploadForm, allowed);
-
-  let nextUrl = null;
-  let prevUrl = null;
-  const firstUrl = "/api/v1/library/imports/";
+  setStatus(
+    statusEl,
+    allowed ? "No import has been run in this browser session." : "Not allowed.",
+    !allowed
+  );
 
   function setUploadStatus(text, isError) {
-    uploadStatus.textContent = text || "\u00a0";
+    uploadStatus.textContent = text || "";
     uploadStatus.classList.toggle("error", !!isError);
   }
 
-  async function load(url) {
-    setGlobalError("");
-    setStatus(statusEl, "Loading...", false);
-    resultsEl.innerHTML = "";
-    nextBtn.disabled = true;
-    prevBtn.disabled = true;
-
-    if (!allowed) {
-      setStatus(statusEl, "Not allowed.", true);
-      return;
-    }
-
-    try {
-      const payload = await fetchJSON(url);
-      const results = Array.isArray(payload && payload.results) ? payload.results : [];
-      if (results.length === 0) {
-        setStatus(statusEl, "No import jobs yet.", false);
-        nextUrl = null;
-        prevUrl = null;
-        return;
-      }
-
-      setStatus(
-        statusEl,
-        payload && payload.count != null ? `Showing ${results.length} of ${payload.count}.` : "",
-        false
-      );
-      resultsEl.innerHTML = renderImportJobs(payload);
-
-      nextUrl = payload.next || null;
-      prevUrl = payload.previous || null;
-      nextBtn.disabled = !nextUrl;
-      prevBtn.disabled = !prevUrl;
-    } catch (e) {
-      console.error("Failed to load import jobs", { url, e });
-      setStatus(statusEl, "Error loading import jobs.", true);
-      setGlobalError(extractApiErrorMessage(e));
-      nextUrl = null;
-      prevUrl = null;
-    }
+  function setBusy(isBusy) {
+    fileInput.disabled = isBusy;
+    submitBtn.disabled = isBusy;
+    submitBtn.textContent = isBusy ? "Importing..." : "Upload";
   }
-
-  await load(firstUrl);
-
-  nextBtn.addEventListener("click", async () => {
-    if (nextUrl) await load(nextUrl);
-  });
-  prevBtn.addEventListener("click", async () => {
-    if (prevUrl) await load(prevUrl);
-  });
 
   uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -222,7 +115,11 @@ export async function initImports() {
       return;
     }
 
-    setUploadStatus("Uploading...", false);
+    setGlobalError("");
+    resultsEl.innerHTML = "";
+    setBusy(true);
+    setUploadStatus("Importing... large ZIP files may take a while.", false);
+    setStatus(statusEl, "Import in progress.", false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -232,23 +129,24 @@ export async function initImports() {
       const headers = { Accept: "application/json" };
       if (csrf) headers["X-CSRFToken"] = csrf;
 
-      const created = await fetchJSONWithOptions("/api/v1/library/imports/", {
+      const result = await fetchJSONWithOptions("/api/v1/library/imports/", {
         method: "POST",
         headers,
         body: formData,
       });
 
-      setUploadStatus("Upload complete. Refreshing jobs...", false);
-      if (created && created.id) {
-        console.log("Created import job", created.id);
-      }
+      resultsEl.innerHTML = renderImportResult(result);
+      setUploadStatus("Import complete.", false);
+      setStatus(statusEl, "Latest import result.", false);
       fileInput.value = "";
-      await load(firstUrl);
-      setUploadStatus("Ready.", false);
-    } catch (e2) {
-      console.error("Upload failed", e2);
-      setUploadStatus(extractApiErrorMessage(e2), true);
-      setGlobalError(extractApiErrorMessage(e2));
+    } catch (err) {
+      const message = extractApiErrorMessage(err);
+      console.error("Import failed", err);
+      setUploadStatus(message, true);
+      setStatus(statusEl, "Import failed.", true);
+      setGlobalError(message);
+    } finally {
+      setBusy(false);
     }
   });
 }

@@ -2012,22 +2012,17 @@ input[type="file"]:disabled::file-selector-button {
   align-items: center;
   font-weight: 700;
 }
-.import-job {
+.import-result {
   padding: 0;
 }
-.import-job__summary {
+.import-result__summary {
   display: flex;
   gap: 8px 10px;
   align-items: center;
   flex-wrap: wrap;
   padding: 12px 14px;
-  cursor: pointer;
 }
-.import-job__summary:hover,
-.import-job__summary:focus-visible {
-  background: rgba(125, 211, 252, 0.055);
-}
-.import-job__source {
+.import-result__source {
   min-width: 180px;
   max-width: min(440px, 100%);
   overflow: hidden;
@@ -2035,44 +2030,35 @@ input[type="file"]:disabled::file-selector-button {
   white-space: nowrap;
   font-weight: 700;
 }
-.import-job__counts {
+.import-result__counts {
   display: inline-flex;
   gap: 6px;
   flex-wrap: wrap;
 }
-.import-job__time {
-  font-size: 12px;
-}
-.import-job__details {
+.import-result__details {
   padding: 0 14px 12px;
 }
-.import-job__items {
+.import-result__items {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-.import-job__item {
+.import-result__item {
   margin-top: 6px;
 }
-.import-job__item-source {
+.import-result__item-source {
   font-weight: 600;
 }
-.import-job__item-message {
+.import-result__item-message {
   overflow-wrap: anywhere;
 }
-.import-job__debug {
-  margin: 4px 0 0 28px;
+.import-result__refs {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: 8px;
   color: var(--muted);
   font-size: 12px;
-}
-.import-job__debug summary {
-  cursor: pointer;
-}
-.import-job__debug code {
-  display: block;
-  margin-top: 4px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 .modal[hidden] { display: none; }
 .modal {

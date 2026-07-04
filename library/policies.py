@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from accounts import policies as account_policies
 
-from .models import Book, BookFile, ImportJob, LibraryGroup, LibraryGroupMembership
+from .models import Book, BookFile, LibraryGroup, LibraryGroupMembership
 from .public_group import is_public_group
 
 
@@ -35,17 +35,6 @@ def can_view_book(*, user, book: Book) -> bool:
 
 def can_download_book_file(*, user, book_file: BookFile) -> bool:
     return can_view_book(user=user, book=book_file.book)
-
-
-def can_view_import_job(*, user, import_job: ImportJob) -> bool:
-    if can_manage_library(user):
-        return True
-    import_job_user_id = getattr(import_job, "user_id", None)
-    return bool(import_job_user_id == getattr(user, "id", None))
-
-
-def can_manage_import_job(*, user, import_job: ImportJob) -> bool:
-    return can_manage_library(user)
 
 
 def can_create_library_group(user) -> bool:
