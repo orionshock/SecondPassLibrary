@@ -12,7 +12,7 @@ from library.group_services import (
 )
 from library.models import Author, Series
 from reading.models import ReadingProgress, ReadingSession
-from reading.services import list_sessions_for_book
+from reading.session_queries import list_sessions_for_book
 from tests.reading.sessions.helpers import (
     SessionBearerFixtureMixin,
     SessionVisibilityFixtureMixin,

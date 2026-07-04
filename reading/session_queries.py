@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +13,6 @@ from library import policies as library_policies
 from library.models import Book
 
 from .models import ReadingSession
-from .services import book_context_payload, reading_activity_summary_for_books
 
 
 def get_user_session_queryset(user) -> QuerySet[ReadingSession]:
@@ -107,6 +107,31 @@ def build_session_list_context(*, book: Book | None, request=None) -> dict[str, 
     if book is None:
         return {}
     return {"book": book_context_payload(book=book, request=request)}
+
+
+def book_context_payload(*, book: Book, request=None) -> dict[str, Any]:
+    cover_url: str | None = None
+    cover = getattr(book, "cover_file", None)
+    if cover:
+        try:
+            url = cover.url
+            cover_url = request.build_absolute_uri(url) if request is not None else url
+        except Exception:
+            cover_url = None
+
+    series = getattr(book, "series", None)
+    return {
+        "id": str(book.id),
+        "title": book.title,
+        "authors": list(book.authors.order_by("name").values_list("name", flat=True)),
+        "series": (
+            {"id": str(series.id), "name": series.name}
+            if series is not None
+            else None
+        ),
+        "series_index": str(book.series_index) if book.series_index is not None else None,
+        "cover_url": cover_url,
+    }
 
 
 def parse_recent_sessions_limit(raw_limit: str, *, default: int = 10, maximum: int = 50) -> int:
@@ -234,3 +259,220 @@ def build_activity_summary(*, user, book_ids: list[UUID]) -> list[dict[str, Any]
         visible_books.append(book)
 
     return reading_activity_summary_for_books(user=user, books=visible_books)
+
+
+def reading_activity_summary_for_books(
+    *, user, books: Iterable[Book]
+) -> list[dict[str, Any]]:
+    books_by_id = {str(book.id): book for book in books}
+    ordered_book_ids = list(books_by_id.keys())
+    if not ordered_book_ids:
+        return []
+
+    counts_by_book = {
+        str(row["book_id"]): row
+        for row in (
+            ReadingSession.objects.filter(user=user, book_id__in=ordered_book_ids)
+            .values("book_id")
+            .annotate(
+                session_count=Count("id"),
+                active_session_count=Count(
+                    "id",
+                    filter=Q(
+                        is_active=True,
+                        status=ReadingSession.STATUS_ACTIVE,
+                    ),
+                ),
+            )
+        )
+    }
+
+    latest_by_book: dict[str, ReadingSession] = {}
+    for session in (
+        ReadingSession.objects.filter(user=user, book_id__in=ordered_book_ids)
+        .only("id", "book_id", "updated_at", "started_at")
+        .order_by("book_id", "-updated_at", "-started_at", "-id")
+    ):
+        latest_by_book.setdefault(str(session.book_id), session)
+
+    active_by_book: dict[str, ReadingSession] = {}
+    for session in (
+        ReadingSession.objects.filter(
+            user=user,
+            book_id__in=ordered_book_ids,
+            is_active=True,
+            status=ReadingSession.STATUS_ACTIVE,
+        )
+        .only("id", "book_id", "updated_at", "started_at")
+        .order_by("book_id", "-updated_at", "-started_at", "-id")
+    ):
+        active_by_book.setdefault(str(session.book_id), session)
+
+    results: list[dict[str, Any]] = []
+    for book_id in ordered_book_ids:
+        count_row = counts_by_book.get(book_id, {})
+        active = active_by_book.get(book_id)
+        latest = latest_by_book.get(book_id)
+        results.append(
+            {
+                "book": book_id,
+                "session_count": int(count_row.get("session_count") or 0),
+                "active_session_count": int(count_row.get("active_session_count") or 0),
+                "active_session_id": str(active.id) if active is not None else None,
+                "latest_session_id": str(latest.id) if latest is not None else None,
+                "latest_session_updated_at": (
+                    latest.updated_at if latest is not None else None
+                ),
+            }
+        )
+    return results
+
+
+def list_sessions_for_book(*, user, book: Book) -> list[dict]:
+    """
+    Product UI helper: list all reading sessions for a user+book with lightweight
+    progress/activity summary.
+
+    This is intentionally session-auth/UI scoped and should not broaden bearer-token
+    surfaces by itself.
+    """
+    ann_updated = Max(
+        "annotations__updated_at", filter=Q(annotations__is_deleted=False)
+    )
+    last_activity = Greatest(
+        F("updated_at"),
+        Coalesce(F("progress__updated_at"), F("updated_at")),
+        Coalesce(ann_updated, F("updated_at")),
+    )
+
+    qs = (
+        ReadingSession.objects.select_related("progress")
+        .filter(user=user, book=book)
+        .annotate(
+            last_activity_at=last_activity,
+            annotation_count=Count("annotations", filter=Q(annotations__is_deleted=False)),
+        )
+        .order_by("-last_activity_at", "-updated_at", "-started_at", "-id")
+    )
+
+    rows: list[dict] = []
+    for s in qs:
+        progress = getattr(s, "progress", None)
+        progression = getattr(progress, "progression", None) if progress is not None else None
+        progression_percent: float | None = None
+        if progression is not None:
+            try:
+                progression_percent = float(progression) * 100.0
+            except (TypeError, ValueError):
+                progression_percent = None
+        rows.append(
+            {
+                "id": str(s.id),
+                "name": (s.name or "").strip(),
+                "status": s.status,
+                "is_active": bool(s.is_active),
+                "started_at": s.started_at,
+                "updated_at": s.updated_at,
+                "completed_at": s.completed_at,
+                "progression": progression,
+                "progression_percent": progression_percent,
+                "annotation_count": int(getattr(s, "annotation_count", 0) or 0),
+                "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
+            }
+        )
+    return rows
+
+
+def list_sessions_for_user(*, user) -> list[dict]:
+    """
+    Product UI helper: list all owned reading sessions for a user.
+
+    Current book visibility controls whether book metadata and open/book links are
+    safe to show. It must not hide owned reading history.
+    """
+    ann_updated = Max(
+        "annotations__updated_at", filter=Q(annotations__is_deleted=False)
+    )
+    last_activity = Greatest(
+        F("updated_at"),
+        Coalesce(F("progress__updated_at"), F("updated_at")),
+        Coalesce(ann_updated, F("updated_at")),
+    )
+
+    qs = (
+        ReadingSession.objects.select_related("book", "book__series", "progress")
+        .prefetch_related("book__authors")
+        .filter(user=user)
+        .annotate(
+            last_activity_at=last_activity,
+            annotation_count=Count("annotations", filter=Q(annotations__is_deleted=False)),
+        )
+        .order_by("-last_activity_at", "-updated_at", "-started_at")
+    )
+
+    rows: list[dict] = []
+    for s in qs:
+        book = getattr(s, "book", None)
+        if book is None:
+            continue
+        can_open = library_policies.can_view_book(user=user, book=book)
+
+        progress = getattr(s, "progress", None)
+        progression = (
+            getattr(progress, "progression", None) if progress is not None else None
+        )
+        progression_percent: float | None = None
+        if progression is not None:
+            try:
+                progression_percent = float(progression) * 100.0
+            except (TypeError, ValueError):
+                progression_percent = None
+
+        if can_open:
+            cover_url = ""
+            cover = getattr(book, "cover_file", None)
+            if cover:
+                try:
+                    cover_url = str(cover.url)
+                except Exception:
+                    cover_url = ""
+
+            authors = [a.name for a in book.authors.all()]
+            series_name = getattr(getattr(book, "series", None), "name", "") or ""
+            subtitle = getattr(book, "subtitle", "") or ""
+            series_index = getattr(book, "series_index", None)
+            title = book.title
+        else:
+            cover_url = ""
+            authors = []
+            series_name = ""
+            subtitle = ""
+            series_index = None
+            title = ""
+
+        rows.append(
+            {
+                "id": str(s.id),
+                "name": (s.name or "").strip(),
+                "status": s.status,
+                "is_active": bool(s.is_active),
+                "can_open": bool(can_open),
+                "started_at": s.started_at,
+                "updated_at": s.updated_at,
+                "completed_at": s.completed_at,
+                "progression_percent": progression_percent,
+                "annotation_count": int(getattr(s, "annotation_count", 0) or 0),
+                "last_activity_at": getattr(s, "last_activity_at", None) or s.updated_at,
+                "book": {
+                    "id": str(book.id),
+                    "title": title,
+                    "subtitle": subtitle,
+                    "authors": authors,
+                    "series_name": series_name,
+                    "series_index": series_index,
+                    "cover_url": cover_url,
+                },
+            }
+        )
+
+    return rows
