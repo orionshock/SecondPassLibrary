@@ -1,8 +1,8 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .annotation_views import AnnotationViewSet
-from .progress_views import ReadingProgressViewSet
+from .annotations.views import AnnotationViewSet
+from .progress.views import ReadingProgressViewSet
 from .sessions.views import (
     ActiveSessionView,
     CloseSessionView,

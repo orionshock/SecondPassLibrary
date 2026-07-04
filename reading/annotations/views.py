@@ -20,10 +20,10 @@ from rest_framework.decorators import action
 from accounts.authentication import ClientBearerAuthentication
 from core.models import IdempotencyRecord
 
-from .models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingSession
-from .policies import can_access_session_book
-from .serializers import AnnotationSerializer
-from .services import (
+from ..models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingSession
+from ..policies import can_access_session_book
+from ..serializers import AnnotationSerializer
+from ..services import (
     assert_session_writable,
     create_annotation,
     update_annotation_content,

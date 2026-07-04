@@ -9,11 +9,11 @@ from rest_framework.response import Response
 
 from accounts.authentication import ClientBearerAuthentication
 
-from .models import ReadingProgress, ReadingSession
-from .policies import can_access_session_book
-from .profile import CURRENT_READING_PROFILE_VERSION
-from .serializers import ReadingProgressSerializer
-from .services import get_or_create_progress, is_session_closed, update_progress
+from ..models import ReadingProgress, ReadingSession
+from ..policies import can_access_session_book
+from ..profile import CURRENT_READING_PROFILE_VERSION
+from ..serializers import ReadingProgressSerializer
+from ..services import get_or_create_progress, is_session_closed, update_progress
 
 class ReadingProgressViewSet(viewsets.GenericViewSet):
     authentication_classes = [
@@ -73,4 +73,3 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(ReadingProgressSerializer(progress).data)
-

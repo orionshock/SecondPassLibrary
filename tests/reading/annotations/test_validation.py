@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from reading.annotation_views import BATCH_CREATE_LIMIT
+from reading.annotations.views import BATCH_CREATE_LIMIT
 from reading.models import Annotation, ReadingSession
 from reading.profile import (
     MAX_BODY_VALUE_CHARS,
