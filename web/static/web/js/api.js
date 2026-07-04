@@ -14,6 +14,16 @@ export function getCsrfToken() {
   return getCookie("csrftoken");
 }
 
+export function jsonRequestHeaders({ csrf = false, contentType = true } = {}) {
+  const headers = { Accept: "application/json" };
+  if (contentType) headers["Content-Type"] = "application/json";
+  if (csrf) {
+    const token = getCsrfToken();
+    if (token) headers["X-CSRFToken"] = token;
+  }
+  return headers;
+}
+
 export async function fetchJSON(url) {
   const response = await fetch(url, {
     method: "GET",

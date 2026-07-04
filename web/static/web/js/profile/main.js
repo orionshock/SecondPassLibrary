@@ -1,4 +1,4 @@
-import { getCsrfToken, fetchJSONWithOptions, extractApiErrorMessage } from "../api.js";
+import { fetchJSONWithOptions, extractApiErrorMessage, jsonRequestHeaders } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, setText, visible } from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity } from "../ui/identity.js";
@@ -235,13 +235,9 @@ export async function initProfile() {
       }
 
       try {
-        const csrf = getCsrfToken();
-        const headers = { Accept: "application/json", "Content-Type": "application/json" };
-        if (csrf) headers["X-CSRFToken"] = csrf;
-
         const updated = await fetchJSONWithOptions("/api/v1/accounts/me/", {
           method: "PATCH",
-          headers,
+          headers: jsonRequestHeaders({ csrf: true }),
           body: JSON.stringify(patch),
         });
 
@@ -282,13 +278,9 @@ export async function initProfile() {
       logoutOthersBtn.disabled = true;
 
       try {
-        const csrf = getCsrfToken();
-        const headers = { Accept: "application/json", "Content-Type": "application/json" };
-        if (csrf) headers["X-CSRFToken"] = csrf;
-
         await fetchJSONWithOptions("/api/v1/accounts/me/web-sessions/logout-others/", {
           method: "POST",
-          headers,
+          headers: jsonRequestHeaders({ csrf: true }),
           body: JSON.stringify({}),
         });
 
@@ -338,13 +330,9 @@ export async function initProfile() {
       setGlobalError("");
 
       try {
-        const csrf = getCsrfToken();
-        const headers = { Accept: "application/json" };
-        if (csrf) headers["X-CSRFToken"] = csrf;
-
         await fetchJSONWithOptions(`/api/v1/accounts/me/client-sessions/${encodeURIComponent(id)}/`, {
           method: "DELETE",
-          headers,
+          headers: jsonRequestHeaders({ csrf: true, contentType: false }),
         });
 
         clientSessionsStatusEl.textContent = "Revoked.";

@@ -7,7 +7,9 @@ class ProductUiJsContractsTests(ProductUiTestCase):
     """Test shared UI contracts and component helpers."""
 
     def test_product_ui_status_helpers_use_shared_helper(self):
+        api_js = Path("web/static/web/js/api.js").read_text(encoding="utf-8")
         helper_js = Path("web/static/web/js/ui/status.js").read_text(encoding="utf-8")
+        profile_js = Path("web/static/web/js/profile/main.js").read_text(encoding="utf-8")
         group_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
         group_view_js = Path("web/static/web/js/groups/view.js").read_text(encoding="utf-8")
         shelves_shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
@@ -45,6 +47,14 @@ class ProductUiJsContractsTests(ProductUiTestCase):
         imports_js = Path("web/static/web/js/imports/main.js").read_text(encoding="utf-8")
         users_shared_js = Path("web/static/web/js/users/shared.js").read_text(encoding="utf-8")
 
+        self.assertIn("export function jsonRequestHeaders", api_js)
+        self.assertIn('const headers = { Accept: "application/json" }', api_js)
+        self.assertIn('headers["Content-Type"] = "application/json"', api_js)
+        self.assertIn('headers["X-CSRFToken"] = token', api_js)
+        self.assertIn("jsonRequestHeaders", profile_js)
+        self.assertIn("jsonRequestHeaders({ csrf: true })", profile_js)
+        self.assertIn("jsonRequestHeaders({ csrf: true, contentType: false })", profile_js)
+        self.assertNotIn("const csrf = getCsrfToken();", profile_js)
         self.assertIn("export function setStatus", helper_js)
         self.assertIn("export function clearStatus", helper_js)
         self.assertIn("document.querySelector", helper_js)
