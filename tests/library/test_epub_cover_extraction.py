@@ -12,9 +12,9 @@ from django.test import TestCase
 
 from PIL import Image
 
-from library.epub_services import ImportStatus
+from library.imports.epub import ImportStatus
 from library.models import BookFile
-from library.services import import_epub
+from library.imports.epub import import_epub
 
 from tests.library.utils import IsolatedMediaRootMixin
 
@@ -60,7 +60,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
     def tearDown(self):
         __import__("shutil").rmtree(self.temp_dir, ignore_errors=True)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_epub3_cover_image_properties_extracted(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -94,7 +94,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(book.cover_width, 40)
         self.assertEqual(book.cover_height, 60)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_epub2_meta_cover_id_extracted(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -130,7 +130,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(book.cover_width, 22)
         self.assertEqual(book.cover_height, 33)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_no_cover_imports_successfully(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -152,7 +152,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_unsafe_container_xml_is_ignored_and_import_succeeds(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -194,7 +194,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_unsafe_embedded_opf_xml_is_ignored_and_import_succeeds(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -228,7 +228,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_path_traversal_cover_href_is_ignored(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -252,7 +252,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_url_like_cover_href_is_ignored(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -276,7 +276,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_svg_cover_is_rejected_and_import_succeeds(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -306,7 +306,7 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         book.refresh_from_db()
         self.assertFalse(bool(book.cover_file))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_duplicate_epub_does_not_replace_existing_cover(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []

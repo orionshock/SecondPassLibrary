@@ -11,8 +11,8 @@ import uuid
 from django.conf import settings
 from django.test import TestCase
 
-from library.epub_services import calculate_file_sha256, ImportStatus
-from library.services import import_epub
+from library.imports.epub import calculate_file_sha256, ImportStatus
+from library.imports.epub import import_epub
 from tests.utils.books import create_file_backed_book
 
 from tests.library.utils import IsolatedMediaRootMixin
@@ -86,7 +86,7 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
         self.assertTrue(upload.chunks_called)
         self.assertEqual(upload.seek_positions, [0, 0])
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_checksum_calculation(self, mock_read_epub):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
@@ -113,7 +113,7 @@ class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
             import_epub(non_existent)
         self.assertIn("does not exist", str(cm.exception))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_duplicate_detection(self, mock_read_epub):
         # Mock the epub object
         mock_book = MagicMock()

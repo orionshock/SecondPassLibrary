@@ -7,7 +7,7 @@ from django.db import transaction
 from pathlib import Path
 import zipfile
 
-from .epub_services import calculate_file_sha256
+from .imports.epub import calculate_file_sha256
 from .models import Book, BookFile
 
 

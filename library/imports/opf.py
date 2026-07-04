@@ -7,8 +7,8 @@ from typing import Any, Callable, cast
 
 from defusedxml import ElementTree as SafeElementTree
 
-from .cover_services import find_cover_href_in_opf, set_book_cover_from_bytes, MAX_COVER_BYTES
-from .models import Book
+from ..cover_services import find_cover_href_in_opf, set_book_cover_from_bytes, MAX_COVER_BYTES
+from ..models import Book
 
 
 MAX_OPF_SIDECAR_XML_BYTES = 1024 * 1024

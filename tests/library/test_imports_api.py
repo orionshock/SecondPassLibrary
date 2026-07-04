@@ -20,7 +20,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
-from library.import_services import ImportResourceLimitError, _copy_fileobj_capped
+from library.imports.upload import ImportResourceLimitError, _copy_fileobj_capped
 from library.models import Book, BookFile
 from core.errors import ErrorCode
 from tests.utils.responses import response_data_dict
@@ -132,7 +132,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         )
         self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_reader_cannot_create_import(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         self.client.login(username="u1", password="pw")
@@ -172,7 +172,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertIn("error", data)
         self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_UPLOAD_TYPE)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_single_epub_failure_message_does_not_expose_temp_path(self, mock_read_epub):
         mock_read_epub.side_effect = ValueError(
             r"Failed parsing C:\projects\SecondPassLibrary\userdata\imports\jobs\secret\bad.epub"
@@ -193,7 +193,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertNotIn("userdata", item["message"])
         self.assertNotIn("bad.epub", item["message"])
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_member_failure_message_does_not_expose_member_path_or_temp_path(self, mock_read_epub):
         mock_read_epub.side_effect = ValueError(
             r"Failed parsing member private/nested/leaky.epub at C:\tmp\jobs\abc\extracted\file.epub"
@@ -206,7 +206,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        with self.assertLogs("library.import_services", level="WARNING") as captured:
+        with self.assertLogs("library.imports.upload", level="WARNING") as captured:
             response = cast_response(
                 self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
             )
@@ -241,8 +241,8 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertNotIn("private/nested", safe_log_text)
         self.assertNotIn("C:\\tmp", safe_log_text)
 
-    @patch("library.services.epub.read_epub")
-    @patch("library.import_services.MAX_SINGLE_EPUB_UPLOAD_BYTES", 4)
+    @patch("library.imports.epub.epub.read_epub")
+    @patch("library.imports.upload.MAX_SINGLE_EPUB_UPLOAD_BYTES", 4)
     def test_oversized_single_epub_upload_is_rejected_before_import_parse(self, mock_read_epub):
         self._login_librarian()
 
@@ -258,7 +258,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         mock_read_epub.assert_not_called()
         self.assertEqual(BookFile.objects.count(), 0)
 
-    @patch("library.import_services.MAX_ZIP_UPLOAD_BYTES", 4)
+    @patch("library.imports.upload.MAX_ZIP_UPLOAD_BYTES", 4)
     def test_oversized_zip_upload_is_rejected(self):
         self._login_librarian()
 
@@ -273,7 +273,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertIn("ZIP upload exceeds", cast(dict[str, Any], data["error"])["detail"])
         self.assertEqual(BookFile.objects.count(), 0)
 
-    @patch("library.import_services.MAX_ZIP_MEMBERS", 1)
+    @patch("library.imports.upload.MAX_ZIP_MEMBERS", 1)
     def test_zip_with_too_many_members_is_rejected_safely(self):
         self._login_librarian()
         buf = io.BytesIO()
@@ -293,8 +293,8 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertIn("ZIP contains more than 1 entries", cast(dict[str, Any], data["error"])["detail"])
         self.assertEqual(BookFile.objects.count(), 0)
 
-    @patch("library.services.epub.read_epub")
-    @patch("library.import_services.MAX_ZIP_EPUB_MEMBER_BYTES", 4)
+    @patch("library.imports.epub.epub.read_epub")
+    @patch("library.imports.upload.MAX_ZIP_EPUB_MEMBER_BYTES", 4)
     def test_zip_epub_member_over_uncompressed_limit_is_skipped_safely(self, mock_read_epub):
         self._login_librarian()
         buf = io.BytesIO()
@@ -315,9 +315,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertIn("uncompressed limit", cast(list[dict[str, Any]], data["items"])[0]["message"])
         mock_read_epub.assert_not_called()
 
-    @patch("library.services.epub.read_epub")
-    @patch("library.import_services.MAX_ZIP_EPUB_MEMBER_BYTES", 10)
-    @patch("library.import_services.MAX_ZIP_TOTAL_EPUB_BYTES", 8)
+    @patch("library.imports.epub.epub.read_epub")
+    @patch("library.imports.upload.MAX_ZIP_EPUB_MEMBER_BYTES", 10)
+    @patch("library.imports.upload.MAX_ZIP_TOTAL_EPUB_BYTES", 8)
     def test_zip_total_epub_uncompressed_limit_is_enforced(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         self._login_librarian()
@@ -341,7 +341,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         messages = [item["message"] for item in cast(list[dict[str, Any]], data["items"])]
         self.assertTrue(any("total uncompressed limit" in message for message in messages))
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_authenticated_can_upload_single_epub_and_stages_with_generated_name(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         self.client.login(username="u1", password="pw")
@@ -352,7 +352,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_librarian_can_upload_single_epub_and_receives_transient_result(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -361,7 +361,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
-        with self.assertLogs("library.import_services", level="INFO") as captured:
+        with self.assertLogs("library.imports.upload", level="INFO") as captured:
             response = cast_response(
                 self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
             )
@@ -404,7 +404,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(finish_log.duplicate_count, 0)
         self.assertEqual(finish_log.failed_count, 0)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_duplicate_epub_upload_creates_duplicate_item(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -425,7 +425,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["failed_count"], 0)
         self.assertEqual(cast(list[dict[str, Any]], data["items"])[0]["status"], "duplicate")
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_authenticated_can_upload_zip_with_multiple_epubs_ignores_non_epub_and_path_traversal(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -452,7 +452,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             all(item["status"] in {"imported", "duplicate", "failed"} for item in cast(list[dict[str, Any]], data["items"]))
         )
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_member_dot_segment_is_normalized_for_sidecar_matching(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -490,7 +490,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(bool(book.cover_file))
         self.assertEqual(book.cover_source, "opf_sidecar")
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_member_normalization_collision_is_skipped_safely(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -513,7 +513,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["total_found"], 0)
         self.assertEqual(len(cast(list[Any], data["items"])), 0)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_metadata_opf_precedence_and_cover(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -563,7 +563,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(bool(book.cover_file))
         self.assertEqual(book.cover_source, "opf_sidecar")
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_metadata_opf_detection_order_prefers_metadata_opf(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -595,7 +595,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(Book.objects.filter(title="Meta OPF Title").exists())
         self.assertFalse(Book.objects.filter(title="Basename OPF Title").exists())
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_metadata_opf_detection_same_basename_fallback(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -620,7 +620,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Basename Only").exists())
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_metadata_opf_detection_unique_opf_fallback(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -645,7 +645,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Only OPF").exists())
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_cover_invalid_falls_back_to_embedded_epub_cover(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -683,7 +683,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(book.cover_width, 9)
         self.assertEqual(book.cover_height, 10)
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_security_bad_href_and_malformed_or_too_big_opf_ignored(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -728,7 +728,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         # Malformed/too-big OPFs should fall back to EPUB metadata from _mock_epub.
         self.assertTrue(Book.objects.filter(title="Test Title").exists())
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_opf_with_doctype_entity_is_ignored_safely(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         self._login_librarian()
@@ -759,7 +759,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertFalse(Book.objects.filter(title="Unsafe OPF Title").exists())
         self.assertTrue(Book.objects.filter(title="Test Title").exists())
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_zip_duplicate_epub_does_not_refresh_metadata_from_sidecar_opf(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -798,7 +798,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(Book.objects.filter(title="First Title").exists())
         self.assertFalse(Book.objects.filter(title="Second Title").exists())
 
-    @patch("library.services.epub.read_epub")
+    @patch("library.imports.epub.epub.read_epub")
     def test_import_history_endpoints_are_not_supported(self, mock_read_epub):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)

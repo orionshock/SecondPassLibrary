@@ -8,10 +8,16 @@ from pathlib import Path
 import re
 from typing import Any, Callable, Optional
 
-from .book_import_services import persist_new_imported_book
-from .cover_services import extract_epub_embedded_cover_to_book
-from .models import Book, BookFile, BookIdentifier
-from .opf_services import extract_opf_sidecar_metadata, merge_metadata, try_set_book_cover_from_sidecar_opf
+from ebooklib import epub
+
+from .book_import import persist_new_imported_book
+from .opf import (
+    extract_opf_sidecar_metadata,
+    merge_metadata,
+    try_set_book_cover_from_sidecar_opf,
+)
+from ..cover_services import extract_epub_embedded_cover_to_book
+from ..models import Book, BookFile, BookIdentifier
 
 
 class ImportStatus(str, Enum):
@@ -401,4 +407,20 @@ def import_epub_impl(
         book=book,
         checksum=checksum,
         message="Successfully imported EPUB.",
+    )
+
+
+def import_epub(
+    file_path: str,
+    *,
+    sidecar_opf_bytes: bytes | None = None,
+    sidecar_opf_dir: str | None = None,
+    sidecar_asset_reader=None,
+) -> ImportResult:
+    return import_epub_impl(
+        epub_module=epub,
+        file_path=file_path,
+        sidecar_opf_bytes=sidecar_opf_bytes,
+        sidecar_opf_dir=sidecar_opf_dir,
+        sidecar_asset_reader=sidecar_asset_reader,
     )

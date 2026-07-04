@@ -172,11 +172,10 @@ related user reading data.
 
 ## Library import services (current)
 
-The library import pipeline follows a facade + focused-module structure:
+The library import pipeline follows a focused-module structure:
 
-- `library/services.py`: public facade (stable import paths and test patch points)
-- `library/import_services.py`: synchronous upload staging and ZIP orchestration
-- `library/epub_services.py`: EPUB parsing and normalized metadata extraction/merge
-- `library/opf_services.py`: OPF sidecar parsing and merge helpers
-- `library/book_import_services.py`: persistence/orchestration for new `Book` records (create-only)
+- `library/imports/upload.py`: synchronous upload staging and ZIP orchestration
+- `library/imports/epub.py`: EPUB parsing and normalized metadata extraction/merge
+- `library/imports/opf.py`: OPF sidecar parsing and merge helpers
+- `library/imports/book_import.py`: persistence/orchestration for new `Book` records (create-only)
 - `library/cover_services.py`: cover validation/storage and embedded cover discovery

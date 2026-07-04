@@ -6,8 +6,8 @@ from typing import Any, Callable, Optional, cast
 
 from django.core.files import File
 
-from .group_services import ensure_book_public_assignment
-from .models import Author, Book, BookFile, BookIdentifier, Series
+from ..group_services import ensure_book_public_assignment
+from ..models import Author, Book, BookFile, BookIdentifier, Series
 
 
 def create_book_from_import_metadata(
@@ -131,4 +131,3 @@ def persist_new_imported_book(
         book=book, source_path=source_path, checksum=checksum, file_size=file_size
     )
     return book, book_file
-

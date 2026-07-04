@@ -7,9 +7,12 @@ from rest_framework.response import Response
 from library import policies
 from core.errors import ErrorCode, api_error_response
 
-from .import_services import ImportResourceLimitError
-from .services import create_import_result_from_upload
-from .view_mixins import ClientBearerReadOnlyMixin
+from .epub import import_epub
+from .opf import MAX_OPF_SIDECAR_XML_BYTES
+from .upload import ImportResourceLimitError
+from .upload import create_import_result_from_upload
+from ..cover_services import MAX_COVER_BYTES
+from ..view_mixins import ClientBearerReadOnlyMixin
 
 class ImportViewSet(
     ClientBearerReadOnlyMixin,
@@ -35,6 +38,9 @@ class ImportViewSet(
             result = create_import_result_from_upload(
                 user=request.user,
                 uploaded_file=uploaded,
+                import_epub_func=import_epub,
+                max_opf_xml_bytes=MAX_OPF_SIDECAR_XML_BYTES,
+                max_cover_bytes=MAX_COVER_BYTES,
             )
         except ImportResourceLimitError as e:
             return api_error_response(

@@ -231,7 +231,7 @@ LOGGING = {
         },
     },
     "loggers": {
-        "library.import_services": {
+        "library.imports.upload": {
             "handlers": ["null"] if RUNNING_TESTS else ["console"],
             "level": "INFO",
             "propagate": False,

@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from library.epub_services import ImportStatus
-from library.services import import_epub
+from library.imports.epub import ImportStatus, import_epub
 
 
 class Command(BaseCommand):
