@@ -224,10 +224,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         failed_item_logs = [
             record
             for record in captured.records
-            if record.getMessage() == "library import item failed"
+            if record.getMessage().startswith("library import item failed ")
         ]
         self.assertEqual(len(failed_item_logs), 1)
         failed_item_log = failed_item_logs[0]
+        self.assertIn("source_name=leaky.epub", failed_item_log.getMessage())
+        self.assertIn("status=failed", failed_item_log.getMessage())
+        self.assertIn("message=Invalid or unsupported EPUB file.", failed_item_log.getMessage())
         self.assertEqual(failed_item_log.item_source_name, "leaky.epub")
         self.assertEqual(
             failed_item_log.safe_message,
@@ -388,12 +391,30 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(BookFile.objects.count(), 1)
 
         messages = [record.getMessage() for record in captured.records]
-        self.assertIn("library import started", messages)
-        self.assertIn("library import finished", messages)
+        self.assertTrue(
+            any(
+                message.startswith("library import started ")
+                and "source_type=epub" in message
+                and "source_name=Original Name.epub" in message
+                for message in messages
+            )
+        )
+        self.assertTrue(
+            any(
+                message.startswith("library import finished ")
+                and "total_found=1" in message
+                and "item_count=1" in message
+                and "imported_count=1" in message
+                and "duplicate_count=0" in message
+                and "failed_count=0" in message
+                and "duration_ms=" in message
+                for message in messages
+            )
+        )
         finish_log = next(
             record
             for record in captured.records
-            if record.getMessage() == "library import finished"
+            if record.getMessage().startswith("library import finished ")
         )
         self.assertEqual(finish_log.run_id, data["run_id"])
         self.assertEqual(finish_log.source_type, "epub")

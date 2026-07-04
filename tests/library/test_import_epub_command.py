@@ -70,12 +70,26 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(err.getvalue(), "")
         self.assertTrue(Book.objects.filter(title="Command Book").exists())
         messages = [record.getMessage() for record in captured.records]
-        self.assertIn("operator epub import started", messages)
-        self.assertIn("operator epub import succeeded", messages)
+        self.assertTrue(
+            any(
+                message.startswith("operator epub import started ")
+                and "source_name=Command Book.epub" in message
+                and "status=started" in message
+                for message in messages
+            )
+        )
+        self.assertTrue(
+            any(
+                message.startswith("operator epub import succeeded ")
+                and "source_name=Command Book.epub" in message
+                and "status=imported" in message
+                for message in messages
+            )
+        )
         success = next(
             record
             for record in captured.records
-            if record.getMessage() == "operator epub import succeeded"
+            if record.getMessage().startswith("operator epub import succeeded ")
         )
         self.assertEqual(success.source_name, "Command Book.epub")
         self.assertEqual(success.status, "imported")
@@ -96,11 +110,18 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertIn("EPUB already exists: Existing Command Book", out.getvalue())
         self.assertEqual(err.getvalue(), "")
         messages = [record.getMessage() for record in captured.records]
-        self.assertIn("operator epub import duplicate", messages)
+        self.assertTrue(
+            any(
+                message.startswith("operator epub import duplicate ")
+                and "source_name=Command Book.epub" in message
+                and "status=duplicate" in message
+                for message in messages
+            )
+        )
         duplicate = next(
             record
             for record in captured.records
-            if record.getMessage() == "operator epub import duplicate"
+            if record.getMessage().startswith("operator epub import duplicate ")
         )
         self.assertEqual(duplicate.source_name, "Command Book.epub")
         self.assertEqual(duplicate.status, "duplicate")
@@ -119,7 +140,15 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertIn("exceeds the normal Product/API", err.getvalue())
         self.assertTrue(Book.objects.filter(title="Oversize Command Book").exists())
         messages = [record.getMessage() for record in captured.records]
-        self.assertIn("operator epub import exceeds normal api size limit", messages)
+        self.assertTrue(
+            any(
+                message.startswith("operator epub import size_warning ")
+                and "source_name=Command Book.epub" in message
+                and "status=size_warning" in message
+                and "Product/API" in message
+                for message in messages
+            )
+        )
 
     @patch("library.management.commands.import_epub.import_epub")
     def test_unexpected_import_failure_reports_clear_message_without_traceback_dump(self, mock_import):
@@ -139,9 +168,15 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertNotIn("Traceback", err.getvalue())
         self.assertNotIn("C:\\secret", err.getvalue())
         failure = captured.records[0]
-        self.assertEqual(failure.getMessage(), "operator epub import failed unexpectedly")
+        self.assertTrue(
+            failure.getMessage().startswith("operator epub import failed_unexpectedly ")
+        )
+        self.assertIn("source_name=Command Book.epub", failure.getMessage())
+        self.assertIn("status=failed", failure.getMessage())
+        self.assertIn("message=Invalid or unsupported EPUB file.", failure.getMessage())
         self.assertEqual(failure.source_name, "Command Book.epub")
         self.assertEqual(failure.safe_message, "Invalid or unsupported EPUB file.")
+        self.assertIsNotNone(failure.exc_info)
 
     @patch("library.imports.epub.epub.read_epub")
     @patch("library.imports.book_import.BookFile.objects.create")

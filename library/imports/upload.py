@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
+import time
 import uuid
 from typing import BinaryIO, Callable
 
@@ -167,6 +168,7 @@ def _log_extra(
                 "imported_count": result.imported_count,
                 "duplicate_count": result.duplicate_count,
                 "failed_count": result.failed_count,
+                "item_count": len(result.items),
             }
         )
     if run_id is not None:
@@ -186,6 +188,49 @@ def _log_extra(
     if exception_class is not None:
         extra["exception_class"] = exception_class
     return extra
+
+
+def _format_log_value(value: object) -> str:
+    return str(value).replace("\n", " ").replace("\r", " ")
+
+
+def _import_start_log_message(*, result: ImportRunResult) -> str:
+    return (
+        "library import started "
+        f"run_id={_format_log_value(result.run_id)} "
+        f"source_type={_format_log_value(result.source_type)} "
+        f"source_name={_format_log_value(_safe_import_source_name(result.source_filename))}"
+    )
+
+
+def _import_finish_log_message(
+    *, result: ImportRunResult, duration_ms: int | None = None
+) -> str:
+    message = (
+        "library import finished "
+        f"run_id={_format_log_value(result.run_id)} "
+        f"status={_format_log_value(result.status)} "
+        f"total_found={result.total_found} "
+        f"item_count={len(result.items)} "
+        f"imported_count={result.imported_count} "
+        f"duplicate_count={result.duplicate_count} "
+        f"failed_count={result.failed_count}"
+    )
+    if duration_ms is not None:
+        message = f"{message} duration_ms={duration_ms}"
+    return message
+
+
+def _item_failure_log_message(
+    *, result: ImportRunResult, item_source_name: str, safe_message: str
+) -> str:
+    return (
+        "library import item failed "
+        f"run_id={_format_log_value(result.run_id)} "
+        f"source_name={_format_log_value(_safe_import_source_name(item_source_name))} "
+        f"status={ImportItemStatus.FAILED} "
+        f"message={_format_log_value(safe_message)}"
+    )
 
 
 def _imports_dir() -> Path:
@@ -309,10 +354,8 @@ def create_import_result_from_upload(
         source_type=source_type,
         source_filename=name,
     )
-    logger.info(
-        "library import started",
-        extra=_log_extra(result=result),
-    )
+    started_at = time.monotonic()
+    logger.info(_import_start_log_message(result=result), extra=_log_extra(result=result))
     try:
         return process_import_result(
             result=result,
@@ -320,6 +363,7 @@ def create_import_result_from_upload(
             import_epub_func=import_epub_func,
             max_opf_xml_bytes=max_opf_xml_bytes,
             max_cover_bytes=max_cover_bytes,
+            started_at=started_at,
         )
     except ImportResourceLimitError:
         raise
@@ -338,7 +382,11 @@ def create_import_result_from_upload(
 
 def _log_zip_item_failure(*, result: ImportRunResult, item_source_name: str, safe_message: str) -> None:
     logger.warning(
-        "library import item failed",
+        _item_failure_log_message(
+            result=result,
+            item_source_name=item_source_name,
+            safe_message=safe_message,
+        ),
         extra=_log_extra(
             result=result,
             item_status=ImportItemStatus.FAILED,
@@ -362,6 +410,7 @@ def process_import_result(
     import_epub_func: Callable[..., object],
     max_opf_xml_bytes: int,
     max_cover_bytes: int,
+    started_at: float | None = None,
 ) -> ImportRunResult:
     staged_rel = (staged_rel or "").strip()
     if not staged_rel:
@@ -404,7 +453,11 @@ def process_import_result(
             except Exception as e:
                 safe_message = sanitize_import_error_message(e)
                 logger.warning(
-                    "library import item failed",
+                    _item_failure_log_message(
+                        result=result,
+                        item_source_name=result.source_filename,
+                        safe_message=safe_message,
+                    ),
                     extra=_log_extra(
                         result=result,
                         item_status=ImportItemStatus.FAILED,
@@ -438,8 +491,13 @@ def process_import_result(
             )
 
         result.finalize_counts()
+        duration_ms = (
+            int((time.monotonic() - started_at) * 1000)
+            if started_at is not None
+            else None
+        )
         logger.info(
-            "library import finished",
+            _import_finish_log_message(result=result, duration_ms=duration_ms),
             extra=_log_extra(result=result),
         )
         return result

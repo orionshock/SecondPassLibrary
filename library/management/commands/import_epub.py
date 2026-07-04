@@ -23,6 +23,23 @@ def _log_extra(*, source_name: str, file_size: int | None = None) -> dict[str, o
     return extra
 
 
+def _format_log_value(value: object) -> str:
+    return str(value).replace("\n", " ").replace("\r", " ")
+
+
+def _operator_epub_log_message(
+    *, event: str, source_name: str, status: str, safe_message: str | None = None
+) -> str:
+    message = (
+        f"operator epub import {event} "
+        f"source_name={_format_log_value(source_name)} "
+        f"status={_format_log_value(status)}"
+    )
+    if safe_message is not None:
+        message = f"{message} message={_format_log_value(safe_message)}"
+    return message
+
+
 class Command(BaseCommand):
     help = "Operator-only import for a single local EPUB file"
 
@@ -38,7 +55,12 @@ class Command(BaseCommand):
             message = f"File does not exist: {file_path}"
             self.stderr.write(self.style.ERROR(f"Failed to import EPUB: {message}"))
             logger.warning(
-                "operator epub import failed",
+                _operator_epub_log_message(
+                    event="failed",
+                    source_name=source_name,
+                    status="failed",
+                    safe_message=message,
+                ),
                 extra={
                     **_log_extra(source_name=source_name),
                     "status": "failed",
@@ -50,7 +72,12 @@ class Command(BaseCommand):
             message = f"File must have .epub extension: {file_path}"
             self.stderr.write(self.style.ERROR(f"Failed to import EPUB: {message}"))
             logger.warning(
-                "operator epub import failed",
+                _operator_epub_log_message(
+                    event="failed",
+                    source_name=source_name,
+                    status="failed",
+                    safe_message=message,
+                ),
                 extra={
                     **_log_extra(source_name=source_name, file_size=path.stat().st_size),
                     "status": "failed",
@@ -63,7 +90,14 @@ class Command(BaseCommand):
         log_extra = _log_extra(source_name=source_name, file_size=file_size)
 
         self.stdout.write(f"Starting EPUB import: {source_name}")
-        logger.info("operator epub import started", extra={**log_extra, "status": "started"})
+        logger.info(
+            _operator_epub_log_message(
+                event="started",
+                source_name=source_name,
+                status="started",
+            ),
+            extra={**log_extra, "status": "started"},
+        )
 
         if file_size > MAX_SINGLE_EPUB_UPLOAD_BYTES:
             warning = (
@@ -73,7 +107,12 @@ class Command(BaseCommand):
             )
             self.stderr.write(self.style.WARNING(warning))
             logger.warning(
-                "operator epub import exceeds normal api size limit",
+                _operator_epub_log_message(
+                    event="size_warning",
+                    source_name=source_name,
+                    status="size_warning",
+                    safe_message=warning,
+                ),
                 extra={
                     **log_extra,
                     "status": "size_warning",
@@ -88,21 +127,34 @@ class Command(BaseCommand):
                 message = f"EPUB already exists: {book_title}"
                 self.stdout.write(self.style.WARNING(message))
                 logger.info(
-                    "operator epub import duplicate",
+                    _operator_epub_log_message(
+                        event="duplicate",
+                        source_name=source_name,
+                        status="duplicate",
+                    ),
                     extra={**log_extra, "status": "duplicate", "checksum": result.checksum},
                 )
             elif result.status == ImportStatus.IMPORTED:
                 message = f"Successfully imported EPUB: {book_title}"
                 self.stdout.write(self.style.SUCCESS(message))
                 logger.info(
-                    "operator epub import succeeded",
+                    _operator_epub_log_message(
+                        event="succeeded",
+                        source_name=source_name,
+                        status="imported",
+                    ),
                     extra={**log_extra, "status": "imported", "checksum": result.checksum},
                 )
             else:
                 safe_message = sanitize_import_error_message(result.message or "Unknown error")
                 self.stderr.write(self.style.ERROR(f"Failed to import EPUB: {safe_message}"))
                 logger.warning(
-                    "operator epub import failed",
+                    _operator_epub_log_message(
+                        event="failed",
+                        source_name=source_name,
+                        status="failed",
+                        safe_message=safe_message,
+                    ),
                     extra={**log_extra, "status": "failed", "safe_message": safe_message},
                 )
                 raise CommandError(safe_message)
@@ -112,7 +164,12 @@ class Command(BaseCommand):
             safe_message = sanitize_import_error_message(e)
             self.stderr.write(self.style.ERROR(f"Failed to import EPUB: {safe_message}"))
             logger.warning(
-                "operator epub import failed",
+                _operator_epub_log_message(
+                    event="failed",
+                    source_name=source_name,
+                    status="failed",
+                    safe_message=safe_message,
+                ),
                 extra={
                     **log_extra,
                     "status": "failed",
@@ -125,12 +182,18 @@ class Command(BaseCommand):
             safe_message = sanitize_import_error_message(e)
             self.stderr.write(self.style.ERROR(f"Failed to import EPUB: {safe_message}"))
             logger.error(
-                "operator epub import failed unexpectedly",
+                _operator_epub_log_message(
+                    event="failed_unexpectedly",
+                    source_name=source_name,
+                    status="failed",
+                    safe_message=safe_message,
+                ),
                 extra={
                     **log_extra,
                     "status": "failed",
                     "safe_message": safe_message,
                     "exception_class": e.__class__.__name__,
                 },
+                exc_info=True,
             )
             raise CommandError(safe_message)

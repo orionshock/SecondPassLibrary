@@ -101,8 +101,26 @@ class ImportBooksCommandTests(TestCase):
         self.assertEqual(BookFile.objects.count(), 2)
         self.assertTrue(self.zip_path.exists())
         messages = [record.getMessage() for record in captured.records]
-        self.assertIn("operator zip import started", messages)
-        self.assertIn("operator zip import succeeded", messages)
+        self.assertTrue(
+            any(
+                message.startswith("operator zip import started ")
+                and "source_name=Command Books.zip" in message
+                and "status=started" in message
+                for message in messages
+            )
+        )
+        self.assertTrue(
+            any(
+                message.startswith("operator zip import succeeded ")
+                and "source_name=Command Books.zip" in message
+                and "total_found=2" in message
+                and "item_count=2" in message
+                and "imported_count=2" in message
+                and "duplicate_count=0" in message
+                and "failed_count=0" in message
+                for message in messages
+            )
+        )
 
     def test_duplicate_epub_reports_duplicate_count(self):
         create_file_backed_book(
@@ -123,7 +141,15 @@ class ImportBooksCommandTests(TestCase):
         self.assertIn("Failed: 0", out.getvalue())
         self.assertEqual(err.getvalue(), "")
         messages = [record.getMessage() for record in captured.records]
-        self.assertIn("operator zip import succeeded", messages)
+        self.assertTrue(
+            any(
+                message.startswith("operator zip import succeeded ")
+                and "imported_count=0" in message
+                and "duplicate_count=1" in message
+                and "failed_count=0" in message
+                for message in messages
+            )
+        )
 
     @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_opf_metadata_works_through_command(self, mock_read_epub):
@@ -198,9 +224,15 @@ class ImportBooksCommandTests(TestCase):
         self.assertIn("uncompressed limit", err.getvalue())
         self.assertEqual(BookFile.objects.count(), 0)
         mock_read_epub.assert_not_called()
-        self.assertIn(
-            "operator zip import completed with failures",
-            [record.getMessage() for record in captured.records],
+        self.assertTrue(
+            any(
+                record.getMessage().startswith(
+                    "operator zip import completed_with_failures "
+                )
+                and "source_name=Command Books.zip" in record.getMessage()
+                and "failed_count=1" in record.getMessage()
+                for record in captured.records
+            )
         )
 
     @patch("library.imports.epub.epub.read_epub")
@@ -236,6 +268,28 @@ class ImportBooksCommandTests(TestCase):
         self.assertIn("Failed item member.epub: Invalid or unsupported EPUB file.", err.getvalue())
         self.assertNotIn("private/member", err.getvalue())
         self.assertNotIn("C:\\tmp", err.getvalue())
+
+    @patch("library.imports.epub.epub.read_epub")
+    def test_malformed_epub_item_logs_safe_per_item_error(self, mock_read_epub):
+        mock_read_epub.side_effect = ValueError(
+            r"Failed parsing private/member.epub at C:\tmp\jobs\abc\extracted\file.epub"
+        )
+        _write_zip(self.zip_path, {"private/member.epub": b"bad"})
+
+        with self.assertLogs("library.management.commands.import_books", level="WARNING") as captured:
+            call_command("import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO())
+
+        item_logs = [
+            record.getMessage()
+            for record in captured.records
+            if record.getMessage().startswith("operator zip import item failed ")
+        ]
+        self.assertEqual(len(item_logs), 1)
+        self.assertIn("source_name=member.epub", item_logs[0])
+        self.assertIn("status=failed", item_logs[0])
+        self.assertIn("message=Invalid or unsupported EPUB file.", item_logs[0])
+        self.assertNotIn("private/member", item_logs[0])
+        self.assertNotIn("C:\\tmp", item_logs[0])
 
     def test_bad_zip_structure_reports_safe_command_failure(self):
         self.zip_path.write_bytes(b"not-a-zip")

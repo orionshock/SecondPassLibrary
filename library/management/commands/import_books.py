@@ -75,11 +75,58 @@ def _log_extra(
     return extra
 
 
+def _format_log_value(value: object) -> str:
+    return str(value).replace("\n", " ").replace("\r", " ")
+
+
+def _operator_zip_log_message(
+    *,
+    event: str,
+    source_name: str,
+    status: str,
+    result: ImportRunResult | None = None,
+    safe_message: str | None = None,
+) -> str:
+    message = (
+        f"operator zip import {event} "
+        f"source_name={_format_log_value(safe_import_source_name(source_name))} "
+        f"status={_format_log_value(status)}"
+    )
+    if result is not None:
+        message = (
+            f"{message} run_id={_format_log_value(result.run_id)} "
+            f"total_found={result.total_found} "
+            f"item_count={len(result.items)} "
+            f"imported_count={result.imported_count} "
+            f"duplicate_count={result.duplicate_count} "
+            f"failed_count={result.failed_count}"
+        )
+    if safe_message is not None:
+        message = f"{message} message={_format_log_value(safe_message)}"
+    return message
+
+
+def _operator_zip_item_failure_log_message(
+    *, result: ImportRunResult, item_source_name: str, safe_message: str
+) -> str:
+    return (
+        "operator zip import item failed "
+        f"run_id={_format_log_value(result.run_id)} "
+        f"source_name={_format_log_value(safe_import_source_name(item_source_name))} "
+        "status=failed "
+        f"message={_format_log_value(safe_message)}"
+    )
+
+
 def _log_item_failure(
     *, result: ImportRunResult, item_source_name: str, safe_message: str
 ) -> None:
     logger.warning(
-        "operator zip import item failed",
+        _operator_zip_item_failure_log_message(
+            result=result,
+            item_source_name=item_source_name,
+            safe_message=safe_message,
+        ),
         extra=_log_extra(
             result=result,
             item_source_name=item_source_name,
@@ -90,7 +137,13 @@ def _log_item_failure(
 
 def _log_archive_rejected(*, result: ImportRunResult, safe_message: str) -> None:
     logger.warning(
-        "operator zip import failed",
+        _operator_zip_log_message(
+            event="failed",
+            source_name=result.source_filename,
+            status=ImportResultStatus.FAILED,
+            result=result,
+            safe_message=safe_message,
+        ),
         extra=_log_extra(result=result, status=ImportResultStatus.FAILED, safe_message=safe_message),
     )
 
@@ -110,7 +163,12 @@ class Command(BaseCommand):
             message = f"File does not exist: {file_path}"
             self.stderr.write(self.style.ERROR(f"Failed to import ZIP: {message}"))
             logger.warning(
-                "operator zip import failed",
+                _operator_zip_log_message(
+                    event="failed",
+                    source_name=source_name,
+                    status=ImportResultStatus.FAILED,
+                    safe_message=message,
+                ),
                 extra=_log_extra(
                     source_name=source_name,
                     status=ImportResultStatus.FAILED,
@@ -124,7 +182,12 @@ class Command(BaseCommand):
             file_size = path.stat().st_size
             self.stderr.write(self.style.ERROR(f"Failed to import ZIP: {message}"))
             logger.warning(
-                "operator zip import failed",
+                _operator_zip_log_message(
+                    event="failed",
+                    source_name=source_name,
+                    status=ImportResultStatus.FAILED,
+                    safe_message=message,
+                ),
                 extra=_log_extra(
                     source_name=source_name,
                     file_size=file_size,
@@ -139,7 +202,12 @@ class Command(BaseCommand):
             message = f"ZIP archive exceeds the {_format_mib(MAX_ZIP_UPLOAD_BYTES)} limit."
             self.stderr.write(self.style.ERROR(f"Failed to import ZIP: {message}"))
             logger.warning(
-                "operator zip import failed",
+                _operator_zip_log_message(
+                    event="failed",
+                    source_name=source_name,
+                    status=ImportResultStatus.FAILED,
+                    safe_message=message,
+                ),
                 extra=_log_extra(
                     source_name=source_name,
                     file_size=file_size,
@@ -160,7 +228,12 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Starting ZIP book import: {safe_import_source_name(source_name)}")
         logger.info(
-            "operator zip import started",
+            _operator_zip_log_message(
+                event="started",
+                source_name=source_name,
+                status="started",
+                result=result,
+            ),
             extra=_log_extra(result=result, file_size=file_size, status="started"),
         )
 
@@ -191,13 +264,20 @@ class Command(BaseCommand):
             safe_message = sanitize_import_error_message(exc)
             self.stderr.write(self.style.ERROR(f"Failed to import ZIP: {safe_message}"))
             logger.error(
-                "operator zip import failed",
+                _operator_zip_log_message(
+                    event="failed_unexpectedly",
+                    source_name=source_name,
+                    status=ImportResultStatus.FAILED,
+                    result=result,
+                    safe_message=safe_message,
+                ),
                 extra=_log_extra(
                     result=result,
                     status=ImportResultStatus.FAILED,
                     safe_message=safe_message,
                     exception_class=exc.__class__.__name__,
                 ),
+                exc_info=True,
             )
             raise CommandError(safe_message)
         finally:
@@ -220,12 +300,22 @@ class Command(BaseCommand):
         if result.status == ImportResultStatus.COMPLETED:
             self.stdout.write(self.style.SUCCESS("ZIP import completed."))
             logger.info(
-                "operator zip import succeeded",
+                _operator_zip_log_message(
+                    event="succeeded",
+                    source_name=source_name,
+                    status=result.status,
+                    result=result,
+                ),
                 extra=_log_extra(result=result, status=result.status),
             )
         else:
             self.stdout.write(self.style.WARNING("ZIP import completed with failures."))
             logger.warning(
-                "operator zip import completed with failures",
+                _operator_zip_log_message(
+                    event="completed_with_failures",
+                    source_name=source_name,
+                    status=result.status,
+                    result=result,
+                ),
                 extra=_log_extra(result=result, status=result.status),
             )
