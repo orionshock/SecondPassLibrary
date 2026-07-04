@@ -8,8 +8,8 @@ import threading
 from core.models import ServerSetting
 
 from .group_services import ensure_user_public_membership, ensure_user_has_at_least_one_group, ensure_book_has_at_least_one_group
-from .group_services import PUBLIC_GROUP_ID_SETTING, get_public_group
 from .models import Book, BookGroupAssignment, LibraryGroupMembership
+from .public_group import PUBLIC_GROUP_ID_SETTING, get_public_group
 
 
 User = get_user_model()

@@ -30,7 +30,7 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.owner = create_owner_user(username="owner", password="pw", email="example@example.com")
 
         from library.models import LibraryGroup, LibraryGroupMembership
-        from library.group_services import get_public_group
+        from library.public_group import get_public_group
 
         self.public = get_public_group()
         self.group_a = LibraryGroup.objects.create(name="Group A")

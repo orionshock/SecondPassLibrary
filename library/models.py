@@ -6,12 +6,9 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from core.server_settings import get_server_setting
 
 from core.models import TimeStampedModel
-
-
-PUBLIC_GROUP_ID_SETTING = "public_group_id"
+from library import public_group
 
 
 _COVER_FILENAME_RE = re.compile(r"^(?P<sha>[0-9a-f]{64})(?P<ext>\.[A-Za-z0-9]+)?$")
@@ -224,28 +221,6 @@ class LibraryGroup(TimeStampedModel):
     def __str__(self):
         return self.name
 
-def is_public_group(group: LibraryGroup | None) -> bool:
-    if group is None:
-        return False
-
-    # Prefer a repair-safe public group id read. This avoids silently treating Public
-    # as non-Public if the ServerSetting is missing/malformed.
-    try:
-        from .group_services import get_public_group, get_public_group_id
-
-        public_id = get_public_group_id()
-        if public_id is None:
-            # Trigger repair and retry once.
-            get_public_group()
-            public_id = get_public_group_id()
-    except Exception:
-        public_id = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
-
-    if public_id is None or public_id == "":
-        return False
-    return str(getattr(group, "id", "")) == str(public_id)
-
-
 class LibraryGroupMembership(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="library_group_memberships"
@@ -271,7 +246,7 @@ class LibraryGroupMembership(TimeStampedModel):
         group_id = getattr(self, "group_id", None)
         if group_id and self.is_curator:
             group = self.group
-            if is_public_group(group):
+            if public_group.is_public_group(group):
                 raise ValidationError({"is_curator": "Public group cannot have curators."})
 
     def save(self, *args, **kwargs):

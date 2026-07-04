@@ -5,7 +5,7 @@ from typing import Any, cast
 from accounts import policies as account_policies
 
 from .models import Book, BookFile, ImportJob, LibraryGroup, LibraryGroupMembership
-from .models import is_public_group
+from .public_group import is_public_group
 
 
 def can_manage_library(user) -> bool:

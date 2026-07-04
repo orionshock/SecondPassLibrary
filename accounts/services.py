@@ -12,7 +12,8 @@ from django.db import IntegrityError, transaction
 
 from accounts import policies
 from library.group_services import ensure_user_public_membership
-from library.models import LibraryGroupMembership, is_public_group
+from library.models import LibraryGroupMembership
+from library.public_group import is_public_group
 
 from .models import UserProfile
 

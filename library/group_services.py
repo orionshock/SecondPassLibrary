@@ -1,84 +1,12 @@
 from __future__ import annotations
 
-import uuid
-
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 from library import policies
-from core.server_settings import get_server_setting, set_server_setting
-from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership, is_public_group
-
-PUBLIC_GROUP_ID_SETTING = "public_group_id"
-DEFAULT_PUBLIC_GROUP_NAME = "Common Room"
-DEFAULT_PUBLIC_GROUP_DESCRIPTION = "Main Public Library Room for everyone"
-
-
-def _parse_uuid_setting_value(value) -> str | None:
-    if value is None:
-        return None
-    if isinstance(value, uuid.UUID):
-        return str(value)
-    if isinstance(value, str):
-        s = value.strip()
-        if not s:
-            return None
-        try:
-            return str(uuid.UUID(s))
-        except (ValueError, AttributeError, TypeError):
-            return None
-    return None
-
-
-def get_public_group_id() -> str | None:
-    value = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
-    return _parse_uuid_setting_value(value)
-
-
-def set_public_group_id(group_id: str) -> None:
-    set_server_setting(
-        key=PUBLIC_GROUP_ID_SETTING,
-        value=str(group_id),
-        description="UUID of the server-wide Public LibraryGroup (default/fallback access scope).",
-    )
-
-
-def get_public_group() -> LibraryGroup:
-    """
-    Return the server-wide Public LibraryGroup (default/fallback access scope).
-
-    Public is identified by the ServerSetting `public_group_id` rather than a
-    slug or display name. If missing or invalid, this function repairs the
-    setting and/or creates the default public group.
-    """
-    public_id = get_public_group_id()
-    if public_id is not None:
-        try:
-            group = LibraryGroup.objects.get(pk=public_id)
-        except LibraryGroup.DoesNotExist:
-            group = None
-
-        if group is not None:
-            return group
-
-    # Repair path for existing installs: prefer the legacy display name before
-    # the new default display name. Identity remains the setting value.
-    existing = (
-        LibraryGroup.objects.filter(name__in=["Public", DEFAULT_PUBLIC_GROUP_NAME])
-        .order_by("created_at", "id")
-        .first()
-    )
-    if existing is not None:
-        set_public_group_id(str(existing.id))
-        return existing
-
-    group = LibraryGroup.objects.create(
-        name=DEFAULT_PUBLIC_GROUP_NAME,
-        description=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
-    )
-    set_public_group_id(str(group.id))
-    return group
+from library import public_group
+from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 
 
 def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
@@ -87,7 +15,7 @@ def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
     if not normalized_name:
         raise ValidationError({"public_group_name": "Public group name is required."})
 
-    group = get_public_group()
+    group = public_group.get_public_group()
     group.name = normalized_name
     group.description = normalized_description
     group.full_clean()
@@ -102,7 +30,7 @@ def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
     Public is the default/fallback group for new users, but it is not mandatory
     if the user belongs to at least one other group.
     """
-    public = get_public_group()
+    public = public_group.get_public_group()
     membership, _created = LibraryGroupMembership.objects.get_or_create(
         user=user,
         group=public,
@@ -127,7 +55,7 @@ def ensure_user_has_at_least_one_group(*, user) -> None:
 
 
 def ensure_book_public_assignment(*, book: Book, added_by=None) -> BookGroupAssignment:
-    public = get_public_group()
+    public = public_group.get_public_group()
     assignment, _created = BookGroupAssignment.objects.get_or_create(
         book=book,
         group=public,
@@ -173,7 +101,7 @@ def add_book_to_group(*, actor, book: Book, group: LibraryGroup) -> BookGroupAss
         )
         return assignment
 
-    if is_public_group(group):
+    if public_group.is_public_group(group):
         raise PermissionDenied("Curators cannot add books to Public.")
 
     if not policies.can_curate_group(user=actor, group=group):
@@ -205,7 +133,7 @@ def remove_book_from_group(*, actor, book: Book, group: LibraryGroup) -> bool:
     - Curator may remove only from their non-Public group.
     """
     if not policies.can_manage_library(actor):
-        if is_public_group(group):
+        if public_group.is_public_group(group):
             raise PermissionDenied("Curators cannot remove books from Public.")
         if not policies.can_curate_group(user=actor, group=group):
             raise PermissionDenied("Not allowed.")
@@ -247,7 +175,7 @@ def add_user_to_group(
         raise PermissionDenied("Not allowed.")
 
     is_curator = bool(is_curator)
-    if is_curator and is_public_group(group):
+    if is_curator and public_group.is_public_group(group):
         raise ValidationError({"is_curator": "Public group cannot have curators."})
 
     membership, created = LibraryGroupMembership.objects.get_or_create(
@@ -276,7 +204,7 @@ def update_user_group_membership(
         raise PermissionDenied("Not allowed.")
 
     is_curator = bool(is_curator)
-    if is_curator and is_public_group(group):
+    if is_curator and public_group.is_public_group(group):
         raise ValidationError({"is_curator": "Public group cannot have curators."})
 
     if membership.is_curator != is_curator:
@@ -324,7 +252,7 @@ def delete_library_group(*, actor, group: LibraryGroup) -> dict[str, int]:
 
     Returns counts for diagnostics.
     """
-    if is_public_group(group):
+    if public_group.is_public_group(group):
         raise ValidationError("Public group cannot be deleted.")
     if not policies.can_delete_library_group(actor, group=group):
         raise PermissionDenied("Not allowed.")

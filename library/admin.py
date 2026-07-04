@@ -19,8 +19,8 @@ from .models import (
     BookGroupAssignment,
     ImportJob,
     ImportJobItem,
-    is_public_group,
 )
+from .public_group import is_public_group
 
 
 @admin.register(Author)

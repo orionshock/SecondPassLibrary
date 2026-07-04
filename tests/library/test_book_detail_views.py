@@ -19,7 +19,7 @@ from tests.utils.books import create_file_backed_book
 
 class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
-        from library.group_services import get_public_group
+        from library.public_group import get_public_group
         from library.models import LibraryGroup
 
         self.public = get_public_group()

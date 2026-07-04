@@ -14,8 +14,8 @@ from core.server_settings import (
     set_server_banner_message,
     set_server_setting,
 )
-from library.group_services import PUBLIC_GROUP_ID_SETTING, get_public_group
-from library.models import LibraryGroup, is_public_group
+from library.models import LibraryGroup
+from library.public_group import PUBLIC_GROUP_ID_SETTING, get_public_group, is_public_group
 
 
 class ServerSettingsServiceTests(TestCase):

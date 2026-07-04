@@ -127,7 +127,7 @@ class BookGroupInvariantTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u", password="pw")
         ensure_user_public_membership(user=self.user)
-        from library.group_services import get_public_group
+        from library.public_group import get_public_group
         from library.models import LibraryGroup
 
         self.public = get_public_group()

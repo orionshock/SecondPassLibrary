@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from accounts import policies
-from library.models import LibraryGroupMembership, is_public_group
+from library.models import LibraryGroupMembership
+from library.public_group import is_public_group
 
 from .services import ManagedUserCreateResult, get_or_create_profile
 

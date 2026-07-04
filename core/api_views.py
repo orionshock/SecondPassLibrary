@@ -11,7 +11,8 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts import policies
 from core import server_settings
-from library.group_services import configure_public_group, get_public_group
+from library.group_services import configure_public_group
+from library.public_group import get_public_group
 
 
 def _server_settings_payload() -> dict[str, Any]:

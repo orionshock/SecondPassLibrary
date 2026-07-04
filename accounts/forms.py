@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django import forms
 
 from core.server_settings import DEFAULT_SERVER_NAME
-from library.group_services import (
+from library.public_group import (
     DEFAULT_PUBLIC_GROUP_DESCRIPTION,
     DEFAULT_PUBLIC_GROUP_NAME,
 )

@@ -9,7 +9,8 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.group_services import add_book_to_group, ensure_book_public_assignment, ensure_user_public_membership, get_public_group
+from library.group_services import add_book_to_group, ensure_book_public_assignment, ensure_user_public_membership
+from library.public_group import get_public_group
 from library.cover_services import set_book_cover_from_bytes
 from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem

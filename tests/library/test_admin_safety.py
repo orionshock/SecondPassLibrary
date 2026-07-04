@@ -5,7 +5,8 @@ from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 
 from library.admin import LibraryGroupAdmin, LibraryGroupMembershipAdmin
-from library.group_services import ensure_user_public_membership, get_public_group
+from library.group_services import ensure_user_public_membership
+from library.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 
 

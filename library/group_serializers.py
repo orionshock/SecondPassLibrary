@@ -12,8 +12,8 @@ from .models import (
     BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,
-    is_public_group,
 )
+from .public_group import is_public_group
 
 class LibraryGroupSerializer(serializers.ModelSerializer):
     is_public_group = serializers.SerializerMethodField(read_only=True)

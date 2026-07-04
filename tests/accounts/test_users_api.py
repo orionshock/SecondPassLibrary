@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.group_services import get_public_group
+from library.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 
 

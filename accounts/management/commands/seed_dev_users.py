@@ -16,10 +16,10 @@ from library.group_services import (
     add_book_to_group,
     add_user_to_group,
     ensure_user_public_membership,
-    get_public_group,
     remove_user_from_group,
 )
 from library.models import Book, LibraryGroup, LibraryGroupMembership
+from library.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem
 from shelves.services import add_book_to_shelf, create_shelf
 

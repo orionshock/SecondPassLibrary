@@ -5,7 +5,8 @@ from typing import Any, cast
 from rest_framework import serializers
 
 from accounts.user_payloads import compact_user_payload
-from library.models import Book, is_public_group
+from library.models import Book
+from library.public_group import is_public_group
 from library.catalog_serializers import (
     AuthorSummarySerializer,
     BookPreviewSerializer,

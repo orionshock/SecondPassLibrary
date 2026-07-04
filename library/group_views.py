@@ -31,7 +31,6 @@ from .group_services import (
     add_book_to_group,
     add_user_to_group,
     delete_library_group,
-    get_public_group,
     remove_book_from_group,
     remove_user_from_group,
     update_user_group_membership,
@@ -41,8 +40,8 @@ from .models import (
     BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,
-    is_public_group,
 )
+from .public_group import get_public_group, is_public_group
 from .view_mixins import ClientBearerReadOnlyMixin
 
 PREVIEW_BOOK_LIMIT = 6

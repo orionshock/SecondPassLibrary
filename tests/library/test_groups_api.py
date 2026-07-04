@@ -12,9 +12,9 @@ from accounts.models import UserProfile
 from library.group_services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
-    get_public_group,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.public_group import get_public_group
 from core.errors import ErrorCode
 from tests.utils.books import create_file_backed_book
 

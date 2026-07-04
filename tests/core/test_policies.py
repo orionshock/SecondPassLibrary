@@ -10,14 +10,13 @@ from library import policies as library_policies
 from library.group_services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
-    get_public_group,
 )
 from library.models import (
     BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,
-    is_public_group,
 )
+from library.public_group import get_public_group, is_public_group
 from tests.utils.books import create_file_backed_book
 
 

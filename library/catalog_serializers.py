@@ -14,8 +14,8 @@ from .models import (
     ImportJob,
     ImportJobItem,
     Series,
-    is_public_group,
 )
+from .public_group import is_public_group
 
 class AuthorSerializer(serializers.ModelSerializer):
     book_count = serializers.IntegerField(read_only=True)
