@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import cast
 
@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.group_services import ensure_user_public_membership
-from library.public_group import get_public_group
+from library.groups.services import ensure_user_public_membership
+from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 
 

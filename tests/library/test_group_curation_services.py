@@ -8,14 +8,14 @@ from django.test import TestCase
 
 from accounts.models import UserProfile
 from library import policies
-from library.group_services import (
+from library.groups.services import (
     add_book_to_group,
     ensure_book_public_assignment,
     ensure_user_public_membership,
     remove_book_from_group,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-from library.public_group import get_public_group, is_public_group
+from library.groups.public_group import get_public_group, is_public_group
 from tests.utils.books import create_file_backed_book
 
 

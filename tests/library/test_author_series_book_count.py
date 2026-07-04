@@ -10,13 +10,13 @@ from rest_framework.test import APITestCase
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from accounts.services import get_or_create_profile
-from library.group_services import (
+from library.groups.services import (
     add_book_to_group,
     ensure_book_public_assignment,
     ensure_user_public_membership,
 )
 from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from tests.utils.books import create_file_backed_book
 
 

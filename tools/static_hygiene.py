@@ -149,6 +149,24 @@ def check_trailing_whitespace(paths: list[Path]) -> list[HygieneIssue]:
     return issues
 
 
+def check_line_endings(paths: list[Path]) -> list[HygieneIssue]:
+    issues: list[HygieneIssue] = []
+    for path in paths:
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        offset = data.find(b"\r")
+        if offset == -1:
+            continue
+        line_no = data[:offset].count(b"\n") + 1
+        message = "CRLF line ending; repo requires LF"
+        if offset + 1 >= len(data) or data[offset + 1 : offset + 2] != b"\n":
+            message = "CR line ending; repo requires LF"
+        issues.append(HygieneIssue(path, line_no, message))
+    return issues
+
+
 def fix_mojibake(paths: list[Path]) -> int:
     changed = 0
     for path in paths:
@@ -158,6 +176,20 @@ def fix_mojibake(paths: list[Path]) -> int:
         fixed = fix_mojibake_text(text)
         if fixed != text:
             path.write_text(fixed, encoding="utf-8", newline="\n")
+            changed += 1
+    return changed
+
+
+def fix_line_endings(paths: list[Path]) -> int:
+    changed = 0
+    for path in paths:
+        try:
+            original = path.read_bytes()
+        except OSError:
+            continue
+        fixed = original.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        if fixed != original:
+            path.write_bytes(fixed)
             changed += 1
     return changed
 
@@ -222,6 +254,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Modify scanned files by trimming trailing whitespace.",
     )
+    parser.add_argument(
+        "--fix-line-endings",
+        action="store_true",
+        help="Modify scanned files by normalizing line endings to LF.",
+    )
     parser.add_argument("--verbose", action="store_true", help="Print scanned file details.")
     args = parser.parse_args(argv)
 
@@ -240,14 +277,20 @@ def main(argv: list[str] | None = None) -> int:
         changed = fix_trailing_whitespace(paths)
         print(f"fix-trailing-whitespace: updated {changed} file(s).")
 
+    if args.fix_line_endings:
+        changed = fix_line_endings(paths)
+        print(f"fix-line-endings: updated {changed} file(s).")
+
     entity_issues = check_decorative_entities(paths)
     mojibake_issues = check_mojibake(paths)
     trailing_issues = check_trailing_whitespace(paths)
+    line_ending_issues = check_line_endings(paths)
     diff_code, diff_output = run_git_diff_check()
 
     print_issues("Decorative HTML entities", entity_issues)
     print_issues("Mojibake", mojibake_issues)
     print_issues("Trailing whitespace", trailing_issues)
+    print_issues("Line endings", line_ending_issues)
     if diff_code == 0:
         print("git diff --check: OK")
     else:
@@ -255,7 +298,13 @@ def main(argv: list[str] | None = None) -> int:
         if diff_output:
             print(diff_output)
 
-    failed = bool(entity_issues or mojibake_issues or trailing_issues or diff_code != 0)
+    failed = bool(
+        entity_issues
+        or mojibake_issues
+        or trailing_issues
+        or line_ending_issues
+        or diff_code != 0
+    )
     print(f"Static hygiene: {'FAILED' if failed else 'passed'} ({len(paths)} file(s) scanned).")
     return 1 if failed else 0
 

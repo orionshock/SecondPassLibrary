@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional, cast
 
 from django.core.files import File
 
-from ..group_services import ensure_book_public_assignment
+from ..groups.services import ensure_book_public_assignment
 from ..models import Author, Book, BookFile, BookIdentifier, Series
 
 

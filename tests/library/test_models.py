@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.test import TestCase
 
-from library.group_services import ensure_user_public_membership
+from library.groups.services import ensure_user_public_membership
 from library.models import Author, Book, BookFile, Series
 from library.models import BookGroupAssignment
 from library.models import BookIdentifier
@@ -127,7 +127,7 @@ class BookGroupInvariantTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u", password="pw")
         ensure_user_public_membership(user=self.user)
-        from library.public_group import get_public_group
+        from library.groups.public_group import get_public_group
         from library.models import LibraryGroup
 
         self.public = get_public_group()

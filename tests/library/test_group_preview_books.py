@@ -9,13 +9,13 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.group_services import (
+from library.groups.services import (
     add_book_to_group,
     ensure_book_public_assignment,
     ensure_user_public_membership,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from tests.utils.books import create_file_backed_book
 
 User = get_user_model()

@@ -4,7 +4,7 @@ from typing import Any
 
 from accounts import policies
 from library.models import LibraryGroupMembership
-from library.public_group import is_public_group
+from library.groups.public_group import is_public_group
 
 from .services import ManagedUserCreateResult, get_or_create_profile
 

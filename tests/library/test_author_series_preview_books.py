@@ -13,7 +13,7 @@ from rest_framework.test import APITestCase
 from accounts.models import UserProfile
 from accounts.services import get_or_create_profile
 from library.cover_services import set_book_cover_from_bytes
-from library.group_services import (
+from library.groups.services import (
     add_book_to_group,
     ensure_book_public_assignment,
     ensure_user_public_membership,

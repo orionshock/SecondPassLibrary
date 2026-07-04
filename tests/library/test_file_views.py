@@ -13,7 +13,7 @@ from rest_framework.test import APITestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from library.book_file_services import repair_book_file_for_book
-from library.group_services import ensure_book_public_assignment
+from library.groups.services import ensure_book_public_assignment
 from library.models import Author, BookFile
 
 from tests.library.helpers import (

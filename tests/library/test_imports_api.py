@@ -19,7 +19,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.group_services import ensure_user_public_membership
+from library.groups.services import ensure_user_public_membership
 from library.imports.upload import ImportResourceLimitError, _copy_fileobj_capped
 from library.models import Book, BookFile
 from core.errors import ErrorCode

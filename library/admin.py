@@ -28,7 +28,7 @@ from .models import (
     LibraryGroupMembership,
     BookGroupAssignment,
 )
-from .public_group import is_public_group
+from .groups.public_group import is_public_group
 
 
 @admin.register(Author)

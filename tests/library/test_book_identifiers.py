@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from library.group_services import ensure_book_public_assignment
+from library.groups.services import ensure_book_public_assignment
 from library.models import BookIdentifier
 
 from tests.library.helpers import (

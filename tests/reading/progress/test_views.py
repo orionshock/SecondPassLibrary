@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from accounts.models import UserProfile
-from library.group_services import ensure_user_public_membership
+from library.groups.services import ensure_user_public_membership
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingProgress, ReadingSession
 from reading.profile.validation import (

@@ -1,4 +1,4 @@
-﻿from typing import Any, cast
+from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session

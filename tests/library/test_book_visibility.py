@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from library.group_services import ensure_book_public_assignment
+from library.groups.services import ensure_book_public_assignment
 from library.models import BookFile
 from library.models import BookGroupAssignment
 
@@ -30,7 +30,7 @@ class LibraryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.owner = create_owner_user(username="owner", password="pw", email="example@example.com")
 
         from library.models import LibraryGroup, LibraryGroupMembership
-        from library.public_group import get_public_group
+        from library.groups.public_group import get_public_group
 
         self.public = get_public_group()
         self.group_a = LibraryGroup.objects.create(name="Group A")

@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
-from library.group_services import ensure_book_public_assignment
+from library.groups.services import ensure_book_public_assignment
 from library.models import BookGroupAssignment
 
 from tests.library.helpers import (
@@ -19,7 +19,7 @@ from tests.utils.books import create_file_backed_book
 
 class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
-        from library.public_group import get_public_group
+        from library.groups.public_group import get_public_group
         from library.models import LibraryGroup
 
         self.public = get_public_group()

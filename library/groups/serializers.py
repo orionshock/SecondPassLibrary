@@ -6,9 +6,9 @@ from rest_framework.exceptions import PermissionDenied
 from accounts.user_payloads import compact_user_payload
 from library import policies
 from core.errors import ErrorCode, api_error_payload
-from library.catalog_serializers import BookPreviewSerializer
+from library.catalog.serializers import BookPreviewSerializer
 
-from .models import (
+from ..models import (
     BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,

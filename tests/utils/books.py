@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from django.core.files.base import ContentFile
 
-from library.group_services import ensure_book_public_assignment
+from library.groups.services import ensure_book_public_assignment
 from library.models import Book, BookFile
 
 

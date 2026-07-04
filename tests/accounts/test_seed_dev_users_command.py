@@ -9,7 +9,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 
 from accounts.models import UserProfile
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
 from tests.library.utils import IsolatedMediaRootMixin

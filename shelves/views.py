@@ -16,7 +16,7 @@ from rest_framework import serializers
 
 from library import policies as library_policies
 from library.models import Book, BookGroupAssignment, LibraryGroup
-from library.preview_books import (
+from library.catalog.preview_books import (
     PREVIEW_BOOK_LIMIT,
     attach_preview_books_from_queryset,
     include_preview_books,

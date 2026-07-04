@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from library import policies
 
-from .catalog_serializers import BookFileSerializer
+from .catalog.serializers import BookFileSerializer
 from .imports.epub import generate_epub_download_filename
 from .models import BookFile
 from .view_mixins import ClientBearerReadOnlyMixin

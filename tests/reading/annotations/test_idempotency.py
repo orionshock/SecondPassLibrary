@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from core.models import IdempotencyRecord
-from library.group_services import ensure_book_public_assignment
+from library.groups.services import ensure_book_public_assignment
 from reading.models import Annotation, ReadingSession
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
 from tests.utils.books import create_file_backed_book

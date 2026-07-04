@@ -11,20 +11,20 @@ from rest_framework.response import Response
 from library import policies
 from core.errors import ErrorCode, api_error_response
 
-from .catalog_serializers import (
+from .serializers import (
     AuthorSerializer,
     BookIdentifierSerializer,
     BookIdentifierWriteSerializer,
     BookSerializer,
     SeriesSerializer,
 )
-from .models import Author, Book, BookGroupAssignment, BookIdentifier, Series
+from ..models import Author, Book, BookGroupAssignment, BookIdentifier, Series
 from .preview_books import (
     PREVIEW_BOOK_LIMIT,
     attach_preview_books_from_queryset,
     include_preview_books,
 )
-from .view_mixins import ClientBearerReadOnlyMixin
+from ..view_mixins import ClientBearerReadOnlyMixin
 
 
 def _visible_book_preview_queryset(user):

@@ -12,7 +12,7 @@ from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.groups.services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import (
     Author,
     BookFile,

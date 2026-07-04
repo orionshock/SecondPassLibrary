@@ -5,14 +5,14 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
 
 from accounts.models import UserProfile
-from library.group_services import (
+from library.groups.services import (
     add_book_to_group,
     ensure_book_public_assignment,
     ensure_user_public_membership,
     remove_book_from_group,
 )
 from library.models import Book, LibraryGroup, LibraryGroupMembership
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem
 from shelves.services import (
     add_book_to_shelf,

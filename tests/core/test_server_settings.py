@@ -15,7 +15,7 @@ from core.server_settings import (
     set_server_setting,
 )
 from library.models import LibraryGroup
-from library.public_group import (
+from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
     get_public_group,

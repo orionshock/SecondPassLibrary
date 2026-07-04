@@ -465,7 +465,7 @@ Verification guidance:
 7. For static Product UI/text hygiene, prefer the repo tool instead of ad hoc
    commands:
    `python tools/static_hygiene.py`. Use `--all` for a full tracked-file scan
-   and `--fix-mojibake` only when file mutation is intended.
+   and `--fix-mojibake` / `--fix-line-endings` only when file mutation is intended.
 
 Then summarize:
 

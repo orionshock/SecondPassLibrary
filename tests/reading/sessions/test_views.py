@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from accounts.models import UserProfile
 from library import policies
-from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
+from library.groups.services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from reading.profile.validation import (

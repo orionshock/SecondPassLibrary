@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
-from library.group_services import add_book_to_group, ensure_user_public_membership
+from library.groups.services import add_book_to_group, ensure_user_public_membership
 from library.models import LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from tests.utils.books import create_file_backed_book

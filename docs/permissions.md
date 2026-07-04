@@ -231,8 +231,8 @@ Role constraints:
 
 Safe changes to group assignments should go through:
 
-- `library.group_services.add_book_to_group()`
-- `library.group_services.remove_book_from_group()`
+- `library.groups.services.add_book_to_group()`
+- `library.groups.services.remove_book_from_group()`
 
 This prevents scattered direct `BookGroupAssignment` writes and centralizes invariants (including the Public fallback invariant).
 
@@ -297,6 +297,6 @@ Centralize permission rules in explicit policy helpers. Recommended helpers incl
 
 Notes:
 
-- Group mutation should use `library.group_services.add_book_to_group()` / `remove_book_from_group()`.
+- Group mutation should use `library.groups.services.add_book_to_group()` / `remove_book_from_group()`.
 - Future group presentation APIs should enforce the role rules above.
 - Future user-management APIs should enforce Owner-only Manager promotion/demotion.

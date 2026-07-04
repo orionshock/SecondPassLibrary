@@ -5,7 +5,7 @@ from django.db.models import Q
 from accounts.models import UserClientSession
 from library import policies as library_policies
 from library.models import Book, BookGroupAssignment, LibraryGroupMembership
-from library.public_group import is_public_group
+from library.groups.public_group import is_public_group
 
 from .models import Shelf
 

@@ -12,14 +12,14 @@ from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import UserProfile
 from accounts.services import get_or_create_profile
-from library.group_services import (
+from library.groups.services import (
     add_book_to_group,
     add_user_to_group,
     ensure_user_public_membership,
     remove_user_from_group,
 )
 from library.models import Book, LibraryGroup, LibraryGroupMembership
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem
 from shelves.services import add_book_to_shelf, create_shelf
 

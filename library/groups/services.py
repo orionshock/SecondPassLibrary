@@ -5,8 +5,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 from library import policies
-from library import public_group
-from .models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from . import public_group
+from ..models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 
 
 def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:

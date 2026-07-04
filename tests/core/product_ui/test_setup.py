@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 
 from accounts.models import UserProfile
 from core import server_settings
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from library.models import LibraryGroupMembership
 
 

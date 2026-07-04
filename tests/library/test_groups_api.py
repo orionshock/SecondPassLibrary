@@ -9,12 +9,12 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.group_services import (
+from library.groups.services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from core.errors import ErrorCode
 from tests.utils.books import create_file_backed_book
 
@@ -387,7 +387,7 @@ class LibraryGroupCreateDeleteAPITest(APITestCase):
 
     def test_delete_group_is_destructive_and_reconciles_books_users_and_shelves(self):
         from shelves.models import Shelf, ShelfItem
-        from library.group_services import ensure_user_has_at_least_one_group
+        from library.groups.services import ensure_user_has_at_least_one_group
 
         group = LibraryGroup.objects.create(name="ToDelete")
 

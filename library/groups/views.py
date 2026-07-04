@@ -16,8 +16,13 @@ from accounts.services import get_or_create_profile
 from library import policies
 from core.errors import ErrorCode, api_error_response
 
-from .catalog_serializers import BookSerializer
-from .group_serializers import (
+from ..catalog.preview_books import (
+    PREVIEW_BOOK_LIMIT,
+    attach_preview_books_from_queryset,
+    include_preview_books,
+)
+from ..catalog.serializers import BookSerializer
+from .serializers import (
     BookGroupAssignmentSerializer,
     LibraryGroupCreateSerializer,
     LibraryGroupMembershipCreateSerializer,
@@ -26,7 +31,7 @@ from .group_serializers import (
     LibraryGroupPresentationUpdateSerializer,
     LibraryGroupSerializer,
 )
-from .group_services import (
+from .services import (
     add_book_to_group,
     add_user_to_group,
     delete_library_group,
@@ -34,19 +39,14 @@ from .group_services import (
     remove_user_from_group,
     update_user_group_membership,
 )
-from .models import (
+from ..models import (
     Book,
     BookGroupAssignment,
     LibraryGroup,
     LibraryGroupMembership,
 )
-from .preview_books import (
-    PREVIEW_BOOK_LIMIT,
-    attach_preview_books_from_queryset,
-    include_preview_books,
-)
 from .public_group import get_public_group, is_public_group
-from .view_mixins import ClientBearerReadOnlyMixin
+from ..view_mixins import ClientBearerReadOnlyMixin
 
 
 def _attach_group_preview_books(*, groups, user) -> None:

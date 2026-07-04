@@ -6,7 +6,7 @@ import uuid
 from core.server_settings import get_server_setting, set_server_setting
 
 if TYPE_CHECKING:
-    from .models import LibraryGroup
+    from ..models import LibraryGroup
 
 
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
@@ -51,7 +51,7 @@ def get_public_group() -> LibraryGroup:
     slug or display name. If missing or invalid, this function repairs the
     setting and/or creates the default public group.
     """
-    from .models import LibraryGroup
+    from ..models import LibraryGroup
 
     public_id = get_public_group_id()
     if public_id is not None:

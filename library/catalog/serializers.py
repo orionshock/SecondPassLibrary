@@ -6,14 +6,14 @@ from rest_framework.reverse import reverse
 
 from library import policies
 
-from .models import (
+from ..models import (
     Author,
     Book,
     BookFile,
     BookIdentifier,
     Series,
 )
-from .public_group import is_public_group
+from ..groups.public_group import is_public_group
 
 class AuthorSerializer(serializers.ModelSerializer):
     book_count = serializers.IntegerField(read_only=True)

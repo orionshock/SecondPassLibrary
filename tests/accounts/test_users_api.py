@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any, cast
@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.public_group import get_public_group
+from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 
 

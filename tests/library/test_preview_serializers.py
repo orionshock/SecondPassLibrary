@@ -8,9 +8,9 @@ from django.contrib.auth.models import User
 from PIL import Image
 from rest_framework.test import APIRequestFactory, APITestCase
 
-from library.catalog_serializers import BookPreviewSerializer
+from library.catalog.serializers import BookPreviewSerializer
 from library.cover_services import set_book_cover_from_bytes
-from library.group_services import ensure_user_public_membership
+from library.groups.services import ensure_user_public_membership
 from tests.library.utils import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 

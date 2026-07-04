@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth.models import User
 
 from accounts.models import UserProfile
-from library.group_services import ensure_user_public_membership
+from library.groups.services import ensure_user_public_membership
 
 
 def _create_user_with_role(*, username, password="pw", role=UserProfile.ROLE_READER, **kwargs):

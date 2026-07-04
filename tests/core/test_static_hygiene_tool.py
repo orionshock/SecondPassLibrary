@@ -7,8 +7,10 @@ from django.test import SimpleTestCase
 
 from tools.static_hygiene import (
     check_decorative_entities,
+    check_line_endings,
     check_mojibake,
     check_trailing_whitespace,
+    fix_line_endings,
     fix_trailing_whitespace,
 )
 
@@ -54,6 +56,17 @@ class StaticHygieneToolTests(SimpleTestCase):
         self.assertEqual(len(issues), 1)
         self.assertEqual(issues[0].line, 1)
 
+    def test_line_ending_scan_reports_crlf(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "script.js"
+            path.write_bytes(b"const x = 1;\nconst y = 2;\r\n")
+
+            issues = check_line_endings([path])
+
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].line, 2)
+        self.assertIn("LF", issues[0].message)
+
     def test_fix_trailing_whitespace_trims_scanned_files(self):
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "script.js"
@@ -64,3 +77,14 @@ class StaticHygieneToolTests(SimpleTestCase):
 
         self.assertEqual(changed, 1)
         self.assertEqual(text, "const x = 1;\nconst y = 2;\n")
+
+    def test_fix_line_endings_normalizes_to_lf(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "style.css"
+            path.write_bytes(b".x {}\r\n.y {}\r.z {}\n")
+
+            changed = fix_line_endings([path])
+            data = path.read_bytes()
+
+        self.assertEqual(changed, 1)
+        self.assertEqual(data, b".x {}\n.y {}\n.z {}\n")

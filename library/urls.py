@@ -1,9 +1,9 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .catalog_views import AuthorViewSet, BookViewSet, SeriesViewSet
+from .catalog.views import AuthorViewSet, BookViewSet, SeriesViewSet
 from .file_views import BookFileViewSet
-from .group_views import LibraryGroupViewSet
+from .groups.views import LibraryGroupViewSet
 from .imports.views import ImportViewSet
 
 app_name = "library"
