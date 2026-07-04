@@ -8,8 +8,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from reading.import_apply_services import apply_marginalia_import
-from reading.import_services import preview_marginalia_import
+from reading.imports.apply import apply_marginalia_import
+from reading.imports.services import preview_marginalia_import
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
@@ -166,7 +166,7 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
     def test_apply_rolls_back_if_annotation_write_fails(self):
         payload = self.marginalia_payload()
 
-        with patch("reading.import_apply_services.Annotation.objects.create") as create:
+        with patch("reading.imports.apply.Annotation.objects.create") as create:
             create.side_effect = RuntimeError("simulated annotation write failure")
             with self.assertRaises(RuntimeError):
                 apply_marginalia_import(user=self.user, payload=payload)

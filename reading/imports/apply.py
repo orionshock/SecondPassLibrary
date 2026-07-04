@@ -6,14 +6,14 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .import_services import plan_marginalia_import
-from .import_selection import parse_import_selection, plan_book_key
-from .marginalia_profile import (
+from .services import plan_marginalia_import
+from .selection import parse_import_selection, plan_book_key
+from ..marginalia_profile import (
     compact_annotation_from_profile,
     increment_model_annotation_counts,
 )
-from .models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
-from .profile import CURRENT_READING_PROFILE_VERSION
+from ..models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
+from ..profile import CURRENT_READING_PROFILE_VERSION
 
 
 def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: object = None) -> dict[str, Any]:

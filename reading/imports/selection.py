@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .import_services import MarginaliaImportError
+from .services import MarginaliaImportError
 
 
 def parse_import_selection(*, raw_selection: object, plan: dict[str, Any]) -> dict[str, dict[str, dict[str, str]]] | None:

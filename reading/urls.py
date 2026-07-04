@@ -12,8 +12,8 @@ from .session_views import (
     RecentSessionsView,
     StartOverView,
 )
-from .export_views import AllMarginaliaExportView
-from .import_views import (
+from .exports.views import AllMarginaliaExportView
+from .imports.views import (
     MarginaliaImportApplyView,
     MarginaliaImportPreviewView,
     MarginaliaImportUnmatchedView,

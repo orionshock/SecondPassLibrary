@@ -14,7 +14,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from reading.import_staging import cleanup_staged_imports
+from reading.imports.staging import cleanup_staged_imports
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 

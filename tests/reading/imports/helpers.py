@@ -6,7 +6,7 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from reading.import_staging import stage_marginalia_import
+from reading.imports.staging import stage_marginalia_import
 from tests.utils.books import create_file_backed_book
 
 

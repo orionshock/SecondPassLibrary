@@ -9,14 +9,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .import_apply_services import apply_marginalia_import
-from .import_services import (
+from .apply import apply_marginalia_import
+from .services import (
     MarginaliaImportError,
     preview_marginalia_import,
     read_uploaded_marginalia_json,
     unmatched_marginalia_export,
 )
-from .import_staging import (
+from .staging import (
     delete_staged_marginalia_import,
     load_staged_marginalia_import,
     stage_marginalia_import,

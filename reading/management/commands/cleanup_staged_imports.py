@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from reading.import_staging import cleanup_staged_imports
+from reading.imports.staging import cleanup_staged_imports
 
 
 class Command(BaseCommand):

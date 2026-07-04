@@ -12,7 +12,7 @@ from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
-from reading.import_staging import stage_marginalia_import, staged_import_path
+from reading.imports.staging import stage_marginalia_import, staged_import_path
 from reading.models import Annotation, ReadingSession
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
@@ -54,7 +54,7 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         self.assertFalse(r.data["valid"])
         self.assertIn("errors", r.data)
 
-    @patch("reading.import_services.MAX_MARGINALIA_IMPORT_BYTES", 4)
+    @patch("reading.imports.services.MAX_MARGINALIA_IMPORT_BYTES", 4)
     def test_oversized_marginalia_json_preview_upload_is_rejected_before_staging(self):
         self.client.force_login(self.user)
         r = cast(Any, self.post_preview_payload(b'{"x":1}'))

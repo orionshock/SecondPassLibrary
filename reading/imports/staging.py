@@ -11,7 +11,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .import_services import MarginaliaImportError
+from .services import MarginaliaImportError
 
 
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
