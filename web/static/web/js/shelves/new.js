@@ -5,7 +5,7 @@ import {
   getCsrfToken,
 } from "../api.js";
 import { canManageLibrary } from "../auth.js";
-import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { $, advancedLibraryGroupsEnabled, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 
 export function canCreateGroupShelves(me) {
@@ -61,10 +61,7 @@ export async function initShelfNew() {
     !ownerTypeEl ||
     !visibilityEl ||
     !ownerGroupEl ||
-    !ownerTypeRow ||
-    !ownerTypeRowValue ||
-    !ownerGroupRow ||
-    !ownerGroupRowValue
+    !submitStatusEl
   )
     return;
 
@@ -76,7 +73,8 @@ export async function initShelfNew() {
   setStatus(statusEl, "Loading...", false);
   setErr("");
 
-  const canCreateGroupShelf = canCreateGroupShelves(me);
+  const groupUiEnabled = advancedLibraryGroupsEnabled();
+  const canCreateGroupShelf = groupUiEnabled && canCreateGroupShelves(me);
   ownerTypeEl.value = "user";
   ownerGroupEl.disabled = true;
   visible(ownerTypeRow, canCreateGroupShelf);

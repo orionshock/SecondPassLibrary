@@ -29,6 +29,7 @@
         <div class="kv__k"><label for="shelf-new-description">Description</label></div>
         <div class="kv__v"><textarea id="shelf-new-description" rows="4" style="width: 100%;"></textarea></div>
 
+        {% if advanced_library_groups_enabled %}
         <div id="shelf-new-owner-type-row" class="kv__k"><label for="shelf-new-owner-type">Owner type</label></div>
         <div id="shelf-new-owner-type-row-v" class="kv__v">
           <select id="shelf-new-owner-type">
@@ -51,6 +52,10 @@
           <select id="shelf-new-owner-group"></select>
           <div class="muted" style="margin-top: 6px;">Group shelves are visible to group members and broad roles. Group shelves are always private.</div>
         </div>
+        {% else %}
+        <input id="shelf-new-owner-type" type="hidden" value="user" />
+        <select id="shelf-new-owner-group" class="is-hidden" aria-hidden="true"></select>
+        {% endif %}
       </div>
 
       <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">

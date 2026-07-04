@@ -1,5 +1,12 @@
 import { fetchJSONWithOptions, extractApiErrorMessage, jsonRequestHeaders } from "../api.js";
-import { $, loadMeAndInitShell, setGlobalError, setText, visible } from "../layout.js";
+import {
+  $,
+  advancedLibraryGroupsEnabled,
+  loadMeAndInitShell,
+  setGlobalError,
+  setText,
+  visible,
+} from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity } from "../ui/identity.js";
 
@@ -112,7 +119,7 @@ export async function initProfile() {
     return;
   }
 
-  renderGroups(groupsEl, me.groups);
+  if (advancedLibraryGroupsEnabled() && groupsEl) renderGroups(groupsEl, me.groups);
 
   const form = $("#profile-edit-form");
   const editBtn = $("#profile-edit-btn");

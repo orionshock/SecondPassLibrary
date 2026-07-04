@@ -30,7 +30,9 @@
       <div class="tabs" role="tablist" aria-label="Book edit tabs">
         <button class="tab-button is-active" type="button" data-tab="metadata">Metadata</button>
         <button class="tab-button" type="button" data-tab="authors">Authors &amp; Series</button>
+        {% if advanced_library_groups_enabled %}
         <button class="tab-button" type="button" data-tab="groups">Library Groups</button>
+        {% endif %}
         <button class="tab-button" type="button" data-tab="shelves">Shelves</button>
         <button class="tab-button" type="button" data-tab="idents">Identifiers &amp; File Info</button>
       </div>
@@ -121,6 +123,7 @@
       <div class="muted" style="margin-top: 10px;">Save to apply author/series changes.</div>
     </div>
 
+    {% if advanced_library_groups_enabled %}
     <div id="tab-groups" class="tab-panel is-hidden" data-tab-panel="groups">
       <h2 class="card__title">Library Groups</h2>
 
@@ -139,6 +142,7 @@
         </div>
       </form>
     </div>
+    {% endif %}
 
     <div id="tab-shelves" class="tab-panel is-hidden" data-tab-panel="shelves">
       <h2 class="card__title">Shelves</h2>

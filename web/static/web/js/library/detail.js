@@ -1,6 +1,13 @@
 import { fetchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
-import { $, loadMeAndInitShell, setGlobalError, setGlobalErrorFromError, visible } from "../layout.js";
+import {
+  $,
+  advancedLibraryGroupsEnabled,
+  loadMeAndInitShell,
+  setGlobalError,
+  setGlobalErrorFromError,
+  visible,
+} from "../layout.js";
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { renderShelfMetadata } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
@@ -267,6 +274,8 @@ export async function initBookDetail() {
   const filesBody = $("#book-files-body");
   const groupsSection = $("#book-groups");
   const groupsBody = $("#book-groups-body");
+  const groupsFeatureEnabled =
+    advancedLibraryGroupsEnabled() && !!groupsSection && !!groupsBody;
   const shelvesSection = $("#book-shelves");
   const shelvesBody = $("#book-shelves-body");
   const downloadLink = $("#book-download-link");
@@ -283,8 +292,6 @@ export async function initBookDetail() {
     !editLinkEl ||
     !idBody ||
     !filesBody ||
-    !groupsSection ||
-    !groupsBody ||
     !shelvesSection ||
     !shelvesBody ||
     !downloadLink ||
@@ -332,7 +339,7 @@ export async function initBookDetail() {
     renderBookMeta(metaEl, book);
     renderIdentifiers(idBody, book.identifiers);
     renderFile(filesBody, book.file);
-    renderBookGroups(groupsBody, book.groups);
+    if (groupsFeatureEnabled) renderBookGroups(groupsBody, book.groups);
 
     // Primary action: download
     const dlUrl = book && book.file && book.file.download_url ? String(book.file.download_url) : "";

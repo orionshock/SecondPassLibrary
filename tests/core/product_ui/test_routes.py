@@ -30,7 +30,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/server/")
 
-    def test_owner_server_settings_returns_200_and_has_form_without_service_hatch_link_by_default(self):
+    def test_owner_server_settings_returns_200_and_has_enable_action_without_service_hatch_link_by_default(self):
         from django.contrib.auth import get_user_model
         User = get_user_model()
         owner = User.objects.create_user(
@@ -72,11 +72,32 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertContains(response, 'id="server-settings-public-description-input"')
         self.assertContains(response, "Public group name")
         self.assertContains(response, "Public group description")
-        self.assertContains(response, 'id="server-settings-advanced-groups-input"')
         self.assertContains(response, 'data-tab-panel="library-groups"')
         self.assertContains(response, "Advanced library groups")
         self.assertContains(response, 'id="server-settings-advanced-groups-display"')
+        self.assertContains(response, 'id="server-settings-enable-advanced-groups-btn"')
+        self.assertContains(response, "Enable advanced library groups")
+        self.assertContains(response, "Product UI does not normally offer a way to turn this off again")
+        self.assertNotContains(response, 'id="server-settings-advanced-groups-input"')
         self.assertNotContains(response, 'href="/admin/"')
+
+    def test_owner_server_settings_enabled_status_has_no_disable_control(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        server_settings.enable_advanced_library_groups()
+        owner = User.objects.create_user(
+            username="owner-groups-enabled",
+            email="owner-groups-enabled@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+        response = self.client.get("/server/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Disabling this later is an operator recovery action")
+        self.assertNotContains(response, 'id="server-settings-advanced-groups-input"')
+        self.assertNotContains(response, "Disable advanced library groups")
 
     @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True)
     def test_owner_server_settings_has_service_hatch_link_when_admin_enabled(self):
@@ -157,8 +178,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertContains(response, "Authors")
         self.assertContains(response, 'href="/library/?view=series"')
         self.assertContains(response, "Series")
-        self.assertContains(response, 'href="/groups/"')
-        self.assertContains(response, "Groups")
+        self.assertNotContains(response, 'href="/groups/"')
         self.assertNotContains(response, "Import books")
         self.assertContains(response, "My Shelves")
         self.assertContains(response, "Organize books into personal and shared shelves.")
@@ -195,6 +215,16 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertNotContains(response, "Future activity dashboard")
         self.assertNotContains(response, 'id="future-activity-dashboard"')
         self.assertContains(response, 'href="/profile/"')
+
+    def test_dashboard_shows_groups_link_when_advanced_groups_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+
+        response = self.client.get("/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/groups/"')
+        self.assertContains(response, "Groups")
 
     def test_favicon_ico_route_works(self):
         response = self.client.get("/favicon.ico", follow=False)

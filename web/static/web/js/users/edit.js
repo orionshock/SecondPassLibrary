@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { canManageGroupMemberships, canManageUsers } from "../auth.js";
-import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import { $, advancedLibraryGroupsEnabled, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { renderUserIdentity } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
 import {
@@ -52,6 +52,16 @@ export async function initUserEdit() {
   const addRoleSelect = $("#user-memberships-add-role");
   const addSubmitBtn = $("#user-memberships-add-submit");
   const addStatus = $("#user-memberships-add-status");
+  const groupUiEnabled =
+    advancedLibraryGroupsEnabled() &&
+    !!groupsEl &&
+    !!membershipsCard &&
+    !!membershipsResults &&
+    !!addForm &&
+    !!addGroupSelect &&
+    !!addRoleSelect &&
+    !!addSubmitBtn &&
+    !!addStatus;
 
   if (
     !root ||
@@ -60,7 +70,6 @@ export async function initUserEdit() {
     !cardEl ||
     !form ||
     !usernameEl ||
-    !groupsEl ||
     !emailInput ||
     !firstInput ||
     !lastInput ||
@@ -73,14 +82,7 @@ export async function initUserEdit() {
     !resetBtn ||
     !resetStatus ||
     !resetResult ||
-    !resetCopy ||
-    !membershipsCard ||
-    !membershipsResults ||
-    !addForm ||
-    !addGroupSelect ||
-    !addRoleSelect ||
-    !addSubmitBtn ||
-    !addStatus
+    !resetCopy
   ) {
     return;
   }
@@ -93,7 +95,7 @@ export async function initUserEdit() {
   syncUserEditBreadcrumb(null);
 
   const allowed = canManageUsers(me);
-  const canManageMemberships = canManageGroupMemberships(me);
+  const canManageMemberships = groupUiEnabled && canManageGroupMemberships(me);
   let original = null;
   let allGroups = null;
   let canResetPassword = false;
@@ -127,7 +129,7 @@ export async function initUserEdit() {
     original = payload;
     syncUserEditBreadcrumb(payload);
     usernameEl.replaceChildren(renderUserIdentity(payload));
-    groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
+    if (groupUiEnabled) groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
     emailInput.value = payload.email || "";
     firstInput.value = payload.first_name || "";
     lastInput.value = payload.last_name || "";
@@ -208,18 +210,20 @@ export async function initUserEdit() {
   }
 
   // Wire modules now that refresh callback exists.
-  initUserMembershipsManager({
-    profileId,
-    membershipsCard,
-    membershipsResults,
-    addForm,
-    addGroupSelect,
-    addRoleSelect,
-    addSubmitBtn,
-    addStatus,
-    canManageMemberships,
-    refreshUserAndMemberships,
-  });
+  if (groupUiEnabled) {
+    initUserMembershipsManager({
+      profileId,
+      membershipsCard,
+      membershipsResults,
+      addForm,
+      addGroupSelect,
+      addRoleSelect,
+      addSubmitBtn,
+      addStatus,
+      canManageMemberships,
+      refreshUserAndMemberships,
+    });
+  }
   initManagedPasswordReset({
     profileId,
     canResetPassword,

@@ -6,7 +6,14 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { canManageLibrary } from "../auth.js";
-import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
+import {
+  $,
+  advancedLibraryGroupsEnabled,
+  loadMeAndInitShell,
+  setGlobalErrorFromError,
+  setText,
+  visible,
+} from "../layout.js";
 import { setStatus } from "../ui/status.js";
 import { fetchAllPages, uniqueById } from "./shared.js";
 import { initTabs } from "../ui/tabs.js";
@@ -82,6 +89,14 @@ export async function initBookEdit() {
   const groupsAddSelectEl = $("#book-edit-groups-add-select");
   const groupsAddBtnEl = $("#book-edit-groups-add-btn");
   const groupsAddStatusEl = $("#book-edit-groups-add-status");
+  const groupsFeatureEnabled =
+    advancedLibraryGroupsEnabled() &&
+    !!groupsStatusEl &&
+    !!groupsEl &&
+    !!groupsAddFormEl &&
+    !!groupsAddSelectEl &&
+    !!groupsAddBtnEl &&
+    !!groupsAddStatusEl;
 
   const shelvesStatusEl = $("#book-edit-shelves-status");
   const shelvesEl = $("#book-edit-shelves");
@@ -123,12 +138,6 @@ export async function initBookEdit() {
     !seriesNewNameEl ||
     !seriesNewBtnEl ||
     !seriesIndexEl ||
-    !groupsStatusEl ||
-    !groupsEl ||
-    !groupsAddFormEl ||
-    !groupsAddSelectEl ||
-    !groupsAddBtnEl ||
-    !groupsAddStatusEl ||
     !shelvesStatusEl ||
     !shelvesEl ||
     !identifiersStatusEl ||
@@ -205,7 +214,8 @@ export async function initBookEdit() {
   async function refreshBook() {
     state.book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     state.selectedAuthors = uniqueById(Array.isArray(state.book.authors) ? state.book.authors : []);
-    state.groups = Array.isArray(state.book.groups) ? state.book.groups : [];
+    state.groups =
+      groupsFeatureEnabled && Array.isArray(state.book.groups) ? state.book.groups : [];
 
     applyBookToMetadataForm({ book: state.book, dom, selectedAuthors: state.selectedAuthors });
 
@@ -221,8 +231,10 @@ export async function initBookEdit() {
     renderSelectedAuthors({ selectedAuthors: state.selectedAuthors, authorsSelectedEl });
     syncAuthorSelectOptions({ allAuthors: state.allAuthors, selectedAuthors: state.selectedAuthors, authorAddSelectEl, authorAddBtnEl });
     syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
-    renderGroups({ groups: state.groups, groupsEl });
-    syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
+    if (groupsFeatureEnabled) {
+      renderGroups({ groups: state.groups, groupsEl });
+      syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
+    }
     await refreshShelves();
   }
 
@@ -270,16 +282,18 @@ export async function initBookEdit() {
   }
   syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book && state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
 
-  setStatus(groupsStatusEl, "Loading...", false);
-  try {
-    state.allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
-    setStatus(groupsStatusEl, "", false);
-  } catch (e) {
-    console.error("Failed to load groups", e);
-    setStatus(groupsStatusEl, "Failed to load.", true);
-    state.allGroups = [];
+  if (groupsFeatureEnabled) {
+    setStatus(groupsStatusEl, "Loading...", false);
+    try {
+      state.allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
+      setStatus(groupsStatusEl, "", false);
+    } catch (e) {
+      console.error("Failed to load groups", e);
+      setStatus(groupsStatusEl, "Failed to load.", true);
+      state.allGroups = [];
+    }
+    syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
   }
-  syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
 
   await refreshIdentifiers();
 
@@ -303,16 +317,18 @@ export async function initBookEdit() {
     headerFileEl,
     setError,
   });
-  bindGroupActions({
-    bookId,
-    groupsEl,
-    groupsStatusEl,
-    groupsAddFormEl,
-    groupsAddSelectEl,
-    groupsAddStatusEl,
-    refreshBook,
-    setError,
-  });
+  if (groupsFeatureEnabled) {
+    bindGroupActions({
+      bookId,
+      groupsEl,
+      groupsStatusEl,
+      groupsAddFormEl,
+      groupsAddSelectEl,
+      groupsAddStatusEl,
+      refreshBook,
+      setError,
+    });
+  }
   bindIdentifierActions({ bookId, identifiersEl, refreshIdentifiers, setError });
 
   async function saveBook() {

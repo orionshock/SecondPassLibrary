@@ -133,6 +133,14 @@ def get_advanced_library_groups_enabled() -> bool:
     return value is True
 
 
+def advanced_library_groups_enabled() -> bool:
+    return get_advanced_library_groups_enabled()
+
+
+def enable_advanced_library_groups() -> None:
+    set_advanced_library_groups_enabled(True)
+
+
 def set_advanced_library_groups_enabled(value: bool) -> None:
     set_server_setting(
         key=ADVANCED_LIBRARY_GROUPS_SETTING,

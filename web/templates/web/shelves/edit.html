@@ -19,7 +19,11 @@
       </div>
       <div id="shelf-edit-header-actions" style="margin-top: 10px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <a id="shelf-edit-view-link" class="button" href="/shelves/{{ shelf_id|escape }}/">View shelf</a>
+        {% if advanced_library_groups_enabled %}
         <a id="shelf-edit-group-link" class="button is-hidden" href="#">View group</a>
+        {% else %}
+        <a id="shelf-edit-group-link" class="button is-hidden" href="#" aria-hidden="true"></a>
+        {% endif %}
       </div>
       <div id="shelf-edit-context-note" class="muted" style="margin-top: 10px;"></div>
     </div>

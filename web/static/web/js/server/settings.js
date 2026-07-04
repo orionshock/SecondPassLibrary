@@ -1,5 +1,5 @@
 import { $, loadMeAndInitShell, setGlobalErrorFromError, setText, visible } from "../layout.js";
-import { fetchJSON, patchJSON } from "../api.js";
+import { fetchJSON, fetchJSONWithOptions, getCsrfToken, patchJSON } from "../api.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 
@@ -12,13 +12,11 @@ function setEditing(on) {
   visible($("#server-settings-banner-display"), !on);
   visible($("#server-settings-public-name-display"), !on);
   visible($("#server-settings-public-description-display"), !on);
-  visible($("#server-settings-advanced-groups-display"), !on);
   visible($("#server-settings-name-input"), on);
   visible($("#server-settings-description-input"), on);
   visible($("#server-settings-banner-input"), on);
   visible($("#server-settings-public-name-input"), on);
   visible($("#server-settings-public-description-input"), on);
-  visible($("#server-settings-advanced-groups-edit"), on);
 }
 
 function fill(identity) {
@@ -34,18 +32,18 @@ function fill(identity) {
   setText($("#server-settings-public-name-display"), publicName || "(unset)");
   setText($("#server-settings-public-description-display"), publicDesc || "(empty)");
   setText($("#server-settings-advanced-groups-display"), advancedGroups ? "Enabled" : "Disabled");
+  visible($("#server-settings-advanced-groups-disabled"), !advancedGroups);
+  visible($("#server-settings-advanced-groups-enabled"), advancedGroups);
   const nameInput = $("#server-settings-name-input");
   const descInput = $("#server-settings-description-input");
   const bannerInput = $("#server-settings-banner-input");
   const publicNameInput = $("#server-settings-public-name-input");
   const publicDescInput = $("#server-settings-public-description-input");
-  const advancedGroupsInput = $("#server-settings-advanced-groups-input");
   if (nameInput) nameInput.value = name;
   if (descInput) descInput.value = desc;
   if (bannerInput) bannerInput.value = banner;
   if (publicNameInput) publicNameInput.value = publicName;
   if (publicDescInput) publicDescInput.value = publicDesc;
-  if (advancedGroupsInput) advancedGroupsInput.checked = advancedGroups;
 }
 
 export async function initServerSettings() {
@@ -96,7 +94,6 @@ export async function initServerSettings() {
       const server_banner_message = bannerInput ? bannerInput.value : "";
       const publicNameInput = $("#server-settings-public-name-input");
       const publicDescInput = $("#server-settings-public-description-input");
-      const advancedGroupsInput = $("#server-settings-advanced-groups-input");
       setStatus("#server-settings-status", "Saving...");
       try {
         const payload = {};
@@ -105,7 +102,6 @@ export async function initServerSettings() {
         payload.server_banner_message = server_banner_message;
         payload.public_group_name = publicNameInput ? publicNameInput.value : "";
         payload.public_group_description = publicDescInput ? publicDescInput.value : "";
-        payload.advanced_library_groups_enabled = advancedGroupsInput ? advancedGroupsInput.checked : false;
         identity = await patchJSON("/api/v1/server/settings/", payload);
         fill(identity);
         setEditing(false);
@@ -114,6 +110,35 @@ export async function initServerSettings() {
         console.error("Failed to save server settings", e);
         setGlobalErrorFromError(e, "Failed to save:");
         setStatus("#server-settings-status", "Failed to save.");
+      }
+    });
+  }
+
+  const enableAdvancedGroupsBtn = $("#server-settings-enable-advanced-groups-btn");
+  if (enableAdvancedGroupsBtn) {
+    enableAdvancedGroupsBtn.addEventListener("click", async () => {
+      const message = enableAdvancedGroupsBtn.dataset
+        ? enableAdvancedGroupsBtn.dataset.confirmMessage || ""
+        : "";
+      if (!window.confirm(message || "Enable advanced library groups?")) return;
+
+      setStatus("#server-settings-status", "Enabling advanced library groups...");
+      try {
+        const csrf = getCsrfToken();
+        identity = await fetchJSONWithOptions("/api/v1/server/settings/advanced-library-groups/enable/", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            ...(csrf ? { "X-CSRFToken": csrf } : {}),
+          },
+        });
+        fill(identity);
+        setEditing(false);
+        setStatus("#server-settings-status", "Advanced library groups enabled.");
+      } catch (e) {
+        console.error("Failed to enable advanced library groups", e);
+        setGlobalErrorFromError(e, "Failed to enable advanced library groups:");
+        setStatus("#server-settings-status", "Failed to enable advanced library groups.");
       }
     });
   }

@@ -50,7 +50,6 @@ class ServerSettingsView(APIView):
             "server_banner_message",
             "public_group_name",
             "public_group_description",
-            "advanced_library_groups_enabled",
         }
         unknown = sorted(set(data.keys()) - allowed_keys)
         if unknown:
@@ -101,16 +100,18 @@ class ServerSettingsView(APIView):
                 for field, messages in exc.message_dict.items():
                     errors.setdefault(field, []).extend(messages)
 
-        if "advanced_library_groups_enabled" in data:
-            value = data["advanced_library_groups_enabled"]
-            if not isinstance(value, bool):
-                errors.setdefault("advanced_library_groups_enabled", []).append(
-                    "Must be true or false."
-                )
-            else:
-                server_settings.set_advanced_library_groups_enabled(value)
-
         if errors:
             raise ValidationError(detail=errors)
 
+        return Response(_server_settings_payload(), status=status.HTTP_200_OK)
+
+
+class AdvancedLibraryGroupsEnableView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not policies.is_owner(getattr(request, "user", None)):
+            raise PermissionDenied("Not allowed.")
+
+        server_settings.enable_advanced_library_groups()
         return Response(_server_settings_payload(), status=status.HTTP_200_OK)

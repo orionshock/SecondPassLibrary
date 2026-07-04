@@ -655,7 +655,12 @@ Reading payload notes:
   - `server_description`
   - `public_group_name`
   - `public_group_description`
-  - `advanced_library_groups_enabled` (UI preference only; it does not change
-    group permissions)
+  - `advanced_library_groups_enabled`
+
+Advanced library groups are off by default. Owners enable them with
+`POST /api/v1/server/settings/advanced-library-groups/enable/`. Normal
+`PATCH /api/v1/server/settings/` does not disable or enable this flag; disabling
+after enablement is an operator recovery action through Django admin. While
+disabled, normal non-Public group mutation endpoints return forbidden.
 
 See `docs/reading.md` for details.

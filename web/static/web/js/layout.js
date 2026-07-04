@@ -27,6 +27,13 @@ export function visible(el, on) {
   el.classList.toggle("is-hidden", !on);
 }
 
+export function advancedLibraryGroupsEnabled() {
+  const value = document.body && document.body.dataset
+    ? document.body.dataset.advancedLibraryGroups
+    : "";
+  return value === "true";
+}
+
 export function setGlobalError(message) {
   const el = $("#ui-global-error");
   if (!el) return;

@@ -7,5 +7,7 @@ def server_identity(request):
     return {
         "server_name": server_settings.get_server_name(),
         "server_description": server_settings.get_server_description(),
+        "advanced_library_groups_enabled": (
+            server_settings.advanced_library_groups_enabled()
+        ),
     }
-

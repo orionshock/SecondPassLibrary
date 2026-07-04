@@ -1,6 +1,7 @@
 """Tests for library book detail and edit pages."""
 from uuid import uuid4
 
+from core import server_settings
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 
@@ -24,7 +25,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
             f"/api-auth/login/?next=/library/books/{book_id}/edit/",
         )
 
-    def test_authenticated_book_detail_returns_200_and_has_container(self):
+    def test_authenticated_book_detail_returns_200_and_hides_group_panel_by_default(self):
         self.client.force_login(self.user)
         book_id = uuid4()
         response = self.client.get(f"/library/books/{book_id}/")
@@ -33,17 +34,17 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="book-detail"')
         self.assertContains(response, f'data-book-id="{book_id}"')
-        self.assertContains(response, 'id="book-groups"')
         self.assertContains(response, 'id="book-shelves"')
         self.assertContains(response, 'id="book-edit-link-wrap"')
         self.assertContains(response, 'id="book-download-link"')
         self.assertContains(response, 'id="book-summary-toggle"')
         self.assertContains(response, 'data-tab="shelves"')
-        self.assertContains(response, 'data-tab="groups"')
         self.assertContains(response, 'data-tab="metadata"')
         self.assertContains(response, 'data-tab-panel="shelves"')
-        self.assertContains(response, 'data-tab-panel="groups"')
         self.assertContains(response, 'data-tab-panel="metadata"')
+        self.assertNotContains(response, 'id="book-groups"')
+        self.assertNotContains(response, 'data-tab="groups"')
+        self.assertNotContains(response, 'data-tab-panel="groups"')
         self.assertContains(response, 'id="tab-metadata"')
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
@@ -59,6 +60,16 @@ class ProductUiLibraryTests(ProductUiTestCase):
             response, f'href="/library/books/{book_id}/edit/"'
         )
 
+    def test_authenticated_book_detail_shows_group_panel_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="book-groups"')
+        self.assertContains(response, 'data-tab="groups"')
+        self.assertContains(response, 'data-tab-panel="groups"')
+
     def test_authenticated_book_detail_malformed_id_returns_404(self):
         self.client.force_login(self.user)
 
@@ -66,7 +77,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_authenticated_book_edit_returns_200_and_has_form_container(self):
+    def test_authenticated_book_edit_returns_200_and_hides_group_controls_by_default(self):
         self.client.force_login(self.user)
         book_id = uuid4()
         response = self.client.get(f"/library/books/{book_id}/edit/")
@@ -78,12 +89,10 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, f'data-book-id="{book_id}"')
         self.assertContains(response, 'data-tab="metadata"')
         self.assertContains(response, 'data-tab="authors"')
-        self.assertContains(response, 'data-tab="groups"')
         self.assertContains(response, 'data-tab="shelves"')
         self.assertContains(response, 'data-tab="idents"')
         self.assertContains(response, 'id="tab-metadata"')
         self.assertContains(response, 'id="tab-authors"')
-        self.assertContains(response, 'id="tab-groups"')
         self.assertContains(response, 'id="tab-shelves"')
         self.assertContains(response, 'id="tab-idents"')
         self.assertContains(response, 'id="book-edit-form"')
@@ -96,10 +105,12 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'step="0.1"')
         self.assertContains(response, 'id="book-edit-identifiers"')
         self.assertContains(response, 'id="book-edit-file-info"')
-        self.assertContains(response, 'id="book-edit-groups"')
-        self.assertContains(response, 'id="book-edit-groups-add"')
         self.assertContains(response, 'id="book-edit-shelves"')
         self.assertContains(response, 'id="book-edit-shelves-status"')
+        self.assertNotContains(response, 'data-tab="groups"')
+        self.assertNotContains(response, 'id="tab-groups"')
+        self.assertNotContains(response, 'id="book-edit-groups"')
+        self.assertNotContains(response, 'id="book-edit-groups-add"')
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
@@ -115,6 +126,17 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'aria-current="page"')
         self.assertContains(response, "Edit")
         self.assertNotContains(response, "Back to Book")
+
+    def test_authenticated_book_edit_shows_group_controls_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+        book_id = uuid4()
+        response = self.client.get(f"/library/books/{book_id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-tab="groups"')
+        self.assertContains(response, 'id="tab-groups"')
+        self.assertContains(response, 'id="book-edit-groups"')
+        self.assertContains(response, 'id="book-edit-groups-add"')
 
     def test_authenticated_book_edit_malformed_id_returns_404(self):
         self.client.force_login(self.user)

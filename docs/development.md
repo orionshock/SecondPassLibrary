@@ -89,8 +89,8 @@ The setup page initializes:
 Email and the display-name fields are optional account metadata. `Common Room`
 is the default display name for the protected shared public library space
 managed by librarians and managers. Enabling advanced library groups presents
-separate curator-managed rooms as a first-class UI feature; it does not change
-permissions in this pass. Once an active Owner exists, `/setup/` is disabled
+separate curator-managed rooms as a first-class UI feature and enables normal
+non-Public group mutation workflows. Once an active Owner exists, `/setup/` is disabled
 and normal login at `/api-auth/login/` is used.
 
 Raw `python manage.py runserver` remains available, but it does not create or

@@ -226,24 +226,33 @@ def imports(request: HttpRequest) -> HttpResponse:
     return render(request, "web/imports/imports.html")
 
 
+def _require_advanced_library_groups_enabled() -> None:
+    if not server_settings_service.advanced_library_groups_enabled():
+        raise Http404()
+
+
 @product_login_required
 def groups(request: HttpRequest) -> HttpResponse:
+    _require_advanced_library_groups_enabled()
     return render(request, "web/groups/groups.html")
 
 
 @product_login_required
 def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
+    _require_advanced_library_groups_enabled()
     group_uuid = _uuid_or_404(group_id)
     return render(request, "web/groups/detail.html", {"group_id": str(group_uuid)})
 
 
 @product_login_required
 def group_new(request: HttpRequest) -> HttpResponse:
+    _require_advanced_library_groups_enabled()
     return render(request, "web/groups/new.html")
 
 
 @product_login_required
 def group_edit(request: HttpRequest, group_id: str) -> HttpResponse:
+    _require_advanced_library_groups_enabled()
     group_uuid = _uuid_or_404(group_id)
     return render(request, "web/groups/edit.html", {"group_id": str(group_uuid)})
 

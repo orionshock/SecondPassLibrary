@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
+from core import server_settings
+from core.errors import ErrorCode
 from library.groups.services import ensure_user_public_membership
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
@@ -17,8 +19,82 @@ from library.models import LibraryGroup, LibraryGroupMembership
 User = get_user_model()
 
 
+class LibraryGroupMembershipFeatureGateAPITest(APITestCase):
+    def setUp(self):
+        self.manager = User.objects.create_user(
+            username="manager", email="manager@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.manager)
+        manager_profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        manager_profile.role = UserProfile.ROLE_MANAGER
+        manager_profile.save(update_fields=["role", "updated_at"])
+
+        self.reader = User.objects.create_user(
+            username="reader", email="reader@example.com", password="pw"
+        )
+        ensure_user_public_membership(user=self.reader)
+        reader_profile, _ = UserProfile.objects.get_or_create(user=self.reader)
+        reader_profile.role = UserProfile.ROLE_READER
+        reader_profile.save(update_fields=["role", "updated_at"])
+
+        self.group = LibraryGroup.objects.create(name="Group")
+        self.membership = LibraryGroupMembership.objects.create(
+            user=self.reader,
+            group=self.group,
+        )
+
+    def assert_advanced_groups_disabled(self, response: Response) -> None:
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        payload = cast(dict, response.data)
+        self.assertEqual(
+            cast(dict, payload["error"])["code"],
+            ErrorCode.ADVANCED_GROUPS_DISABLED,
+        )
+
+    def test_membership_add_is_blocked_when_advanced_groups_disabled(self):
+        self.client.login(username="manager", password="pw")
+
+        response = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/memberships/",
+                data={"profile_id": self.reader.profile.id},
+                format="json",
+            ),
+        )
+
+        self.assert_advanced_groups_disabled(response)
+
+    def test_membership_curator_update_is_blocked_when_advanced_groups_disabled(self):
+        self.client.login(username="manager", password="pw")
+
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/groups/{self.group.id}/memberships/{self.membership.id}/",
+                data={"is_curator": True},
+                format="json",
+            ),
+        )
+
+        self.assert_advanced_groups_disabled(response)
+
+    def test_membership_remove_is_blocked_when_advanced_groups_disabled(self):
+        self.client.login(username="manager", password="pw")
+
+        response = cast(
+            Response,
+            self.client.delete(
+                f"/api/v1/library/groups/{self.group.id}/memberships/{self.membership.id}/",
+            ),
+        )
+
+        self.assert_advanced_groups_disabled(response)
+
+
 class LibraryGroupMembershipManagementAPITest(APITestCase):
     def setUp(self):
+        server_settings.set_advanced_library_groups_enabled(True)
         self.public = get_public_group()
 
         self.owner = User.objects.create_superuser(

@@ -1,6 +1,13 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { canManageUsers } from "../auth.js";
-import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import {
+  $,
+  advancedLibraryGroupsEnabled,
+  escapeHtml,
+  loadMeAndInitShell,
+  setGlobalError,
+  visible,
+} from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity, userDisplayName, userIdentityText } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
@@ -49,6 +56,7 @@ export async function initUsersList() {
   }
 
   const allowed = canManageUsers(me);
+  const groupUiEnabled = advancedLibraryGroupsEnabled();
 
   visible(notAllowedEl, !allowed);
   visible(createLink, allowed);
@@ -93,7 +101,7 @@ export async function initUsersList() {
         </div>
         <div class="users-header__role">${sortButton("role")}</div>
         <div class="users-header__last-login">${sortButton("last_login")}</div>
-        <div class="users-header__memberships">Groups / Curates</div>
+        ${groupUiEnabled ? '<div class="users-header__memberships">Groups / Curates</div>' : ""}
         <div class="users-header__actions">Actions</div>
       </div>
     `.trim();
@@ -175,7 +183,7 @@ export async function initUsersList() {
       : `<span class="pill">${escapeHtml(titleCaseRole(role))}</span>`;
     const inactiveBadge = isActive ? "" : '<span class="pill">inactive</span>';
 
-    const groups = Array.isArray(user && user.groups) ? user.groups : [];
+    const groups = groupUiEnabled && Array.isArray(user && user.groups) ? user.groups : [];
     const memberGroupBadges = groups
       .map((group) =>
         renderGroupBadge(group, { compact: true }).outerHTML
@@ -219,14 +227,14 @@ export async function initUsersList() {
         <div class="user-row__last-login">
           ${lastLoginLine}
         </div>
-        <div class="user-row__memberships">
+        ${groupUiEnabled ? `<div class="user-row__memberships">
           <div class="user-row__membership-block">
             ${groupsLine}
           </div>
           <div class="user-row__membership-block">
             ${curatesLine}
           </div>
-        </div>
+        </div>` : ""}
         <div class="user-row__actions">
           <a class="icon-button" href="${escapeHtml(editHref)}" aria-label="${escapeHtml(editLabel)}" title="${escapeHtml(editLabel)}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
         </div>

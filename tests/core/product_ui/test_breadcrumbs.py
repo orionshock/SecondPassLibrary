@@ -1,6 +1,7 @@
 """Tests for breadcrumb rendering and back links."""
 from django.contrib.auth import get_user_model
 
+from core import server_settings
 from tests.core.product_ui.helpers import ProductUiTestCase
 from uuid import uuid4
 
@@ -20,6 +21,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
             is_staff=True,
         )
         self.client.force_login(owner)
+        server_settings.enable_advanced_library_groups()
 
         cases = [
             (
@@ -108,6 +110,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
             is_staff=True,
         )
         self.client.force_login(owner)
+        server_settings.enable_advanced_library_groups()
 
         cases = [
             ("/shelves/", ("Back to Dashboard", "arrow_back")),
@@ -173,6 +176,7 @@ class ProductUiBreadcrumbTests(ProductUiTestCase):
         self.assertNotContains(response, "Back to Book")
 
     def test_group_object_pages_render_breadcrumbs_and_no_back_links(self):
+        server_settings.enable_advanced_library_groups()
         self.client.force_login(self.user)
         group_id = uuid4()
 

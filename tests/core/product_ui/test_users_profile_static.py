@@ -1,6 +1,7 @@
 """Tests for users, profile, and account management pages."""
 from pathlib import Path
 
+from core import server_settings
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 
@@ -45,10 +46,10 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="users-filters"')
         self.assertContains(response, 'data-filter="all"')
         self.assertContains(response, 'data-filter="reader"')
-        self.assertContains(response, 'data-filter="curator"')
         self.assertContains(response, 'data-filter="librarian"')
         self.assertContains(response, 'data-filter="manager"')
         self.assertContains(response, 'data-filter="inactive"')
+        self.assertNotContains(response, 'data-filter="curator"')
         self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(response, "breadcrumbs--single")
         self.assertContains(response, 'aria-current="page"')
@@ -56,9 +57,17 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="users-create-link"')
         self.assertContains(
             response,
-            "Manage local users, roles, and group memberships.",
+            "Manage local users and roles.",
         )
         self.assertNotContains(response, "Django users")
+
+    def test_authenticated_users_shows_group_membership_filter_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+        response = self.client.get("/users/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-filter="curator"')
+        self.assertContains(response, "Manage local users and roles, and group memberships.")
 
     def test_authenticated_user_new_returns_200_and_has_form(self):
         self.client.force_login(self.user)
@@ -70,7 +79,7 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="user-new-username"')
         self.assertContains(response, 'id="user-new-created-password"')
 
-    def test_authenticated_user_edit_returns_200_and_has_form(self):
+    def test_authenticated_user_edit_returns_200_and_hides_memberships_by_default(self):
         self.client.force_login(self.user)
         response = self.client.get(f"/users/{self.user.profile.id}/edit/")
         self.assertEqual(response.status_code, 200)
@@ -92,19 +101,24 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="user-edit-username"')
         self.assertContains(response, 'id="user-edit-must-change"')
         self.assertContains(response, 'id="user-reset-password-btn"')
+        self.assertNotContains(response, 'id="user-edit-groups"')
+        self.assertNotContains(response, 'id="user-memberships-card"')
+        self.assertNotContains(response, 'id="user-memberships-add-form"')
+        self.assertNotContains(response, 'id="user-memberships-status"')
+        self.assertNotContains(response, 'class="membership-add-tile"')
+        self.assertNotContains(response, 'class="membership-add-tile__curator"')
+
+    def test_authenticated_user_edit_shows_memberships_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+        response = self.client.get(f"/users/{self.user.profile.id}/edit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="user-edit-groups"')
         self.assertContains(response, 'id="user-memberships-card"')
         self.assertContains(response, 'id="user-memberships-add-form"')
-        self.assertNotContains(response, 'id="user-memberships-status"')
         self.assertContains(response, 'class="membership-add-tile"')
         self.assertContains(response, 'class="membership-add-tile__curator"')
-        self.assertContains(
-            response,
-            "Managers, librarians, and owners can already manage books globally.",
-        )
         self.assertContains(response, "Curator identifies members who specifically steward this group")
-        self.assertContains(
-            response, "group-scoped management access to readers."
-        )
 
     def test_authenticated_user_edit_malformed_profile_id_returns_404(self):
         self.client.force_login(self.user)
@@ -133,7 +147,7 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'href="/client-api/authorize/"')
         self.assertContains(response, 'id="profile-client-sessions"')
         self.assertContains(response, 'id="profile-client-sessions-status"')
-        self.assertContains(response, 'id="profile-groups"')
+        self.assertNotContains(response, 'id="profile-groups"')
         self.assertNotContains(response, "Show access details")
         self.assertNotContains(response, 'id="profile-access"')
 
@@ -143,6 +157,13 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertIn("function titleCaseRole", profile_js)
         self.assertIn("roleEl.textContent = titleCaseRole(me.role)", profile_js)
         self.assertIn('ownerEl.textContent = me.is_owner ? "Yes" : "No"', profile_js)
+
+    def test_authenticated_profile_shows_groups_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+        response = self.client.get("/profile/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="profile-groups"')
 
     def test_authenticated_profile_password_returns_200_and_has_form(self):
         self.client.force_login(self.user)

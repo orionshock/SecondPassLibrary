@@ -27,8 +27,10 @@
         <div class="kv__k">User</div>
         <div class="kv__v" id="user-edit-username"></div>
 
+        {% if advanced_library_groups_enabled %}
         <div class="kv__k">Groups</div>
         <div class="kv__v" id="user-edit-groups"></div>
+        {% endif %}
 
         <div class="kv__k"><label for="user-edit-email">Email</label></div>
         <div class="kv__v"><input id="user-edit-email" type="email" style="width: 100%;" /></div>
@@ -86,6 +88,7 @@
     </div>
   </section>
 
+  {% if advanced_library_groups_enabled %}
   <section id="user-memberships-card" class="card is-hidden">
     <h2 class="card__title">Group Memberships</h2>
 
@@ -118,4 +121,5 @@
       </div>
     </form>
   </section>
+  {% endif %}
 {% endblock %}

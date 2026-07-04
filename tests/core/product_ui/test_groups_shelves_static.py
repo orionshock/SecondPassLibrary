@@ -2,6 +2,7 @@
 from pathlib import Path
 from uuid import uuid4
 
+from core import server_settings
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 
@@ -13,7 +14,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/groups/")
 
-    def test_authenticated_groups_returns_200_and_has_containers(self):
+    def test_authenticated_groups_returns_404_when_advanced_groups_disabled(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/groups/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_groups_returns_200_and_has_containers_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
         self.client.force_login(self.user)
         response = self.client.get("/groups/")
         self.assertEqual(response.status_code, 200)
@@ -38,6 +45,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertEqual(response["Location"], "/api-auth/login/?next=/groups/new/")
 
     def test_authenticated_group_new_returns_200_and_has_form(self):
+        server_settings.enable_advanced_library_groups()
         self.client.force_login(self.user)
         response = self.client.get("/groups/new/")
         self.assertEqual(response.status_code, 200)
@@ -45,6 +53,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="group-new-form"')
 
     def test_authenticated_group_detail_returns_200_and_has_container(self):
+        server_settings.enable_advanced_library_groups()
         self.client.force_login(self.user)
         group_id = uuid4()
         response = self.client.get(f"/groups/{group_id}/")
@@ -82,6 +91,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         )
 
     def test_authenticated_group_edit_returns_200_and_has_container(self):
+        server_settings.enable_advanced_library_groups()
         self.client.force_login(self.user)
         group_id = uuid4()
         response = self.client.get(f"/groups/{group_id}/edit/")
@@ -167,6 +177,14 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-new-form"')
         self.assertContains(response, 'id="shelf-new-owner-type"')
         self.assertContains(response, 'id="shelf-new-owner-group"')
+        self.assertNotContains(response, 'id="shelf-new-owner-type-row"')
+        self.assertNotContains(response, 'id="shelf-new-owner-group-row"')
+
+    def test_authenticated_shelf_new_shows_group_owner_controls_when_enabled(self):
+        server_settings.enable_advanced_library_groups()
+        self.client.force_login(self.user)
+        response = self.client.get("/shelves/new/")
+        self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="shelf-new-owner-type-row"')
         self.assertContains(response, 'id="shelf-new-owner-group-row"')
 

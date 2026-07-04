@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="{% static 'web/app.css' %}" />
     <script type="module" src="{% static 'web/js/main.js' %}"></script>
   </head>
-  <body data-page="{% block page_id %}{% endblock %}">
+  <body data-page="{% block page_id %}{% endblock %}" data-advanced-library-groups="{% if advanced_library_groups_enabled %}true{% else %}false{% endif %}">
     <header class="topbar">
       <div class="container topbar__inner">
         <a class="brand" href="/dashboard/">
@@ -21,7 +21,9 @@
           <a class="nav__item" href="/reading/sessions/" data-nav="marginalia">My Marginalia</a>
           <a class="nav__item" href="/library/" data-nav="library">Library</a>
           <a class="nav__item" href="/shelves/" data-nav="shelves">Shelves</a>
+          {% if advanced_library_groups_enabled %}
           <a class="nav__item is-hidden" href="/groups/" data-nav="groups">Groups</a>
+          {% endif %}
           <a class="nav__item is-hidden" href="/imports/" data-nav="imports">Imports</a>
           <a class="nav__item is-hidden" href="/users/" data-nav="users">Users</a>
           <a class="nav__item is-hidden" href="/server/" data-nav="server-settings">Server Settings</a>

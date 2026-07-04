@@ -52,7 +52,6 @@ class ServerIdentitySettingsTests(TestCase):
                 "server_banner_message": "  Maintenance tonight.  ",
                 "public_group_name": "Reading Room",
                 "public_group_description": "Shared books.",
-                "advanced_library_groups_enabled": True,
             },
             content_type="application/json",
         )
@@ -63,7 +62,7 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(data["server_banner_message"], "Maintenance tonight.")
         self.assertEqual(data["public_group_name"], "Reading Room")
         self.assertEqual(data["public_group_description"], "Shared books.")
-        self.assertTrue(data["advanced_library_groups_enabled"])
+        self.assertFalse(data["advanced_library_groups_enabled"])
 
         resp = self.client.patch(
             "/api/v1/server/settings/",
@@ -72,6 +71,49 @@ class ServerIdentitySettingsTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["server_banner_message"], "")
+
+    def test_advanced_library_groups_enable_endpoint_is_one_way(self):
+        owner = User.objects.create_user(
+            username="owner",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        manager = User.objects.create_user(username="manager", password="pw")
+
+        self.client.force_login(manager)
+        resp = self.client.post(
+            "/api/v1/server/settings/advanced-library-groups/enable/",
+            data={},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(server_settings.advanced_library_groups_enabled())
+
+        self.client.force_login(owner)
+        resp = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"advanced_library_groups_enabled": True},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(server_settings.advanced_library_groups_enabled())
+
+        resp = self.client.post(
+            "/api/v1/server/settings/advanced-library-groups/enable/",
+            data={},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["advanced_library_groups_enabled"])
+
+        resp = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"advanced_library_groups_enabled": False},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertTrue(server_settings.advanced_library_groups_enabled())
 
     def test_patch_rejects_unknown_fields(self):
         owner = User.objects.create_user(

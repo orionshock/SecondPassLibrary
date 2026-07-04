@@ -69,7 +69,9 @@
           <a class="button" href="/library/?view=books">Books</a>
           <a class="button" href="/library/?view=authors">Authors</a>
           <a class="button" href="/library/?view=series">Series</a>
+          {% if advanced_library_groups_enabled %}
           <a class="button" href="/groups/">Groups</a>
+          {% endif %}
         </div>
       </div>
     </article>

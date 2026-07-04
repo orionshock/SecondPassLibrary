@@ -22,7 +22,10 @@ Notes:
 - Settings are cached as a single dict under one Django cache key and invalidated on update.
 - `ServerSetting` is **not** intended for secrets.
 - Server identity is stored as `ServerSetting(server_name)` and `ServerSetting(server_description)` and is editable via an Owner-only UI page (`/server/`) and API endpoint (`/api/v1/server/settings/`).
-- `ServerSetting(advanced_library_groups_enabled)` is a Product UI preference. It does not change group permissions or disable backend group capabilities.
+- `ServerSetting(advanced_library_groups_enabled)` gates advanced group
+  management. It is off by default, can be enabled from Product UI by an Owner,
+  and disables normal group mutation endpoints while off. Disabling after
+  enablement is an operator recovery action through Django admin.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
 
 ## Shelves
@@ -76,8 +79,8 @@ Owner creation is performed by `accounts.bootstrap.create_first_owner()` inside
 a transaction. The service checks the active-owner condition again immediately
 before creation and sets a usable local password. The same setup submission
 saves the server name and optional description, configures the protected Public
-group's display name and description, saves the advanced-library-groups UI
-preference, creates the Manager `UserProfile`, and adds the Owner as a reader
+group's display name and description, saves the advanced-library-groups setting,
+creates the Manager `UserProfile`, and adds the Owner as a reader
 member of the Public group. The default Public display name is `Common Room`;
 its internal identity and protections still come from
 `ServerSetting(public_group_id)`. Email is optional metadata and no email,

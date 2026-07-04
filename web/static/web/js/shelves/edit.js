@@ -4,7 +4,13 @@ import {
   fetchJSONWithOptions,
   getCsrfToken,
 } from "../api.js";
-import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
+import {
+  $,
+  advancedLibraryGroupsEnabled,
+  loadMeAndInitShell,
+  setGlobalError,
+  visible,
+} from "../layout.js";
 import { setStatus } from "../ui/status.js";
 import { inferCanEditShelf, shelfMetadataLine } from "./shared.js";
 import { initShelfItemsEditor } from "./items.js";
@@ -136,6 +142,7 @@ export async function initShelfEdit() {
   const ownerType = shelf && shelf.owner_type ? String(shelf.owner_type) : "";
   const ownerGroup = shelf && shelf.owner_group ? shelf.owner_group : null;
   const ownerGroupId = ownerType === "group" && ownerGroup && ownerGroup.id ? String(ownerGroup.id) : "";
+  const groupUiEnabled = advancedLibraryGroupsEnabled();
 
   titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
   syncShelfEditBreadcrumb({ shelfId, shelfName: shelf.name || "Shelf" });
@@ -150,8 +157,10 @@ export async function initShelfEdit() {
   } else if (ownerType === "group") {
     ownerContextEl.innerHTML = metadata;
     visibilityContextEl.textContent = "";
-    contextNoteEl.textContent = "Only books assigned to this group can be added.";
-    if (ownerGroupId) {
+    contextNoteEl.textContent = groupUiEnabled
+      ? "Only books assigned to this group can be added."
+      : "";
+    if (groupUiEnabled && ownerGroupId) {
       groupLinkEl.setAttribute("href", `/groups/${encodeURIComponent(String(ownerGroupId))}/`);
       visible(groupLinkEl, true);
     } else {

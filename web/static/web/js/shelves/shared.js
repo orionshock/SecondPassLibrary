@@ -1,4 +1,4 @@
-import { escapeHtml } from "../layout.js";
+import { advancedLibraryGroupsEnabled, escapeHtml } from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity, userIdentityText } from "../ui/identity.js";
 
@@ -28,6 +28,7 @@ function renderShelfOwnerIdentity(shelf) {
     return identity;
   }
   if (ownerType === "group") {
+    if (!advancedLibraryGroupsEnabled()) return null;
     const badge = renderGroupBadge(shelf.owner_group, {
       compact: true,
       className: "shelf-owner-identity",

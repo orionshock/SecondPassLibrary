@@ -7,10 +7,13 @@ from django.test import TestCase
 
 from core.models import ServerSetting
 from core.server_settings import (
+    advanced_library_groups_enabled,
     clear_server_settings_cache,
+    enable_advanced_library_groups,
     get_server_banner_message,
     get_server_setting,
     get_server_settings_map,
+    set_advanced_library_groups_enabled,
     set_server_banner_message,
     set_server_setting,
 )
@@ -45,6 +48,16 @@ class ServerSettingsServiceTests(TestCase):
     def test_server_banner_message_rejects_overlong_value(self):
         with self.assertRaises(ValueError):
             set_server_banner_message("x" * 501)
+
+    def test_advanced_library_groups_are_disabled_by_default(self):
+        self.assertFalse(advanced_library_groups_enabled())
+
+    def test_enable_advanced_library_groups_only_sets_true(self):
+        enable_advanced_library_groups()
+        self.assertTrue(advanced_library_groups_enabled())
+
+        set_advanced_library_groups_enabled(False)
+        self.assertFalse(advanced_library_groups_enabled())
 
     def test_settings_are_cached_until_cleared(self):
         ServerSetting.objects.create(key="k", value="v1", description="")

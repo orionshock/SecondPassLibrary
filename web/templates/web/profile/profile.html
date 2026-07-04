@@ -78,8 +78,10 @@
     <div id="profile-client-sessions-status" class="muted" style="margin-top: 8px;"></div>
   </section>
 
+  {% if advanced_library_groups_enabled %}
   <section class="card">
     <h2 class="card__title">Groups</h2>
     <div id="profile-groups" class="muted">Loading...</div>
   </section>
+  {% endif %}
 {% endblock %}

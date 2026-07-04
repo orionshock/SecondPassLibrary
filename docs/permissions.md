@@ -216,11 +216,18 @@ Default/fallback behavior:
 - Users/books must belong to at least one LibraryGroup.
 - Public is fallback only: if a user/book would otherwise have zero groups, it is restored to Public.
 
-`advanced_library_groups_enabled` is currently a Product UI preference.
-Disabled means the server is centered on Common Room. Enabled presents
-additional curator-managed rooms, each with its own memberships and group-owned
-shelves, as a first-class workflow. It does not alter permissions or block
-group APIs.
+`advanced_library_groups_enabled` is off by default. Disabled means the server
+is centered on Common Room/Public Library. Product UI hides advanced group
+management, group controls, group-owned shelf creation controls, and group
+membership management. Normal group mutation API endpoints are blocked while
+disabled.
+
+An Owner can enable advanced library groups from Product UI with an explicit
+confirmation. Product UI does not offer a disable action after enablement;
+disabling later is an operator recovery action through Django admin. Public
+Library/Common Room remains available while advanced groups are disabled:
+Public display name/description are still managed through Server Settings, and
+librarian/manager Public book assignment behavior remains available.
 
 Role constraints:
 

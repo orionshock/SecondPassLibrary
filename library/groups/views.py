@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from accounts.models import UserProfile
 from accounts.services import get_or_create_profile
 from library import policies
+from core import server_settings
 from core.errors import ErrorCode, api_error_response
 
 from ..catalog.preview_books import (
@@ -104,6 +105,22 @@ def _membership_payload(membership: LibraryGroupMembership) -> dict[str, Any]:
     }
 
 
+def _advanced_groups_disabled_response() -> Response:
+    return api_error_response(
+        code=ErrorCode.ADVANCED_GROUPS_DISABLED,
+        message="Advanced library groups are disabled.",
+        detail=(
+            "Enable advanced library groups in Server Settings before changing "
+            "non-Public groups, memberships, curators, or assignments."
+        ),
+        hint=(
+            "Public Library/Common Room settings and Public book assignments "
+            "remain available."
+        ),
+        status_code=status.HTTP_403_FORBIDDEN,
+    )
+
+
 class LibraryGroupViewSet(
     ClientBearerReadOnlyMixin,
     mixins.CreateModelMixin,
@@ -171,6 +188,9 @@ class LibraryGroupViewSet(
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def create(self, request, *args, **kwargs):
+        if not server_settings.advanced_library_groups_enabled():
+            return _advanced_groups_disabled_response()
+
         if not policies.can_create_library_group(request.user):
             raise PermissionDenied("Not allowed.")
 
@@ -186,6 +206,9 @@ class LibraryGroupViewSet(
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
+        if not server_settings.advanced_library_groups_enabled():
+            return _advanced_groups_disabled_response()
+
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -196,6 +219,9 @@ class LibraryGroupViewSet(
 
     def destroy(self, request, *args, **kwargs):
         group: LibraryGroup = self.get_object()
+        if not is_public_group(group) and not server_settings.advanced_library_groups_enabled():
+            return _advanced_groups_disabled_response()
+
         # delete_library_group handles Public protection and permission checks.
         try:
             delete_library_group(actor=request.user, group=group)
@@ -227,6 +253,12 @@ class LibraryGroupViewSet(
             if page is not None:
                 return self.get_paginated_response(serializer.data)
             return Response(serializer.data)
+
+        if (
+            not is_public_group(group)
+            and not server_settings.advanced_library_groups_enabled()
+        ):
+            return _advanced_groups_disabled_response()
 
         payload = request.data or {}
         book_id = payload.get("book")
@@ -264,6 +296,12 @@ class LibraryGroupViewSet(
         group: LibraryGroup = self.get_object()
         if book_id is None:
             raise Http404()
+
+        if (
+            not is_public_group(group)
+            and not server_settings.advanced_library_groups_enabled()
+        ):
+            return _advanced_groups_disabled_response()
 
         if policies.can_manage_library(request.user):
             book_qs = Book.objects.all()
@@ -316,6 +354,9 @@ class LibraryGroupViewSet(
                 return self.get_paginated_response(serializer.data)
             return Response(serializer.data)
 
+        if not server_settings.advanced_library_groups_enabled():
+            return _advanced_groups_disabled_response()
+
         if not policies.can_manage_group_membership(user=request.user, group=group):
             raise PermissionDenied("Not allowed.")
 
@@ -366,6 +407,9 @@ class LibraryGroupViewSet(
         self, request, membership_id: str | None = None, *args, **kwargs
     ):
         group: LibraryGroup = self.get_object()
+        if not server_settings.advanced_library_groups_enabled():
+            return _advanced_groups_disabled_response()
+
         if not policies.can_manage_group_membership(user=request.user, group=group):
             raise PermissionDenied("Not allowed.")
         if membership_id is None:

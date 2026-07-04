@@ -14,6 +14,18 @@ For exposed deployments, restrict admin access outside the app where practical:
 LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent network
 controls.
 
+## Advanced Library Groups Recovery
+
+Advanced library groups are off by default. An Owner can enable them from
+Product UI with an explicit confirmation. Product UI does not offer a normal
+disable action after enablement.
+
+If an operator needs to reverse the setting, expose Django admin intentionally
+and edit `core.ServerSetting(advanced_library_groups_enabled)`. Treat disabling
+as recovery work: existing non-Public groups, memberships, assignments, and
+group-owned shelves remain data, but Product UI hides advanced management
+entry points and normal group mutation endpoints are blocked while disabled.
+
 ## BookFile Repair
 
 Normal book creation happens through import. A normal user-facing `Book`

@@ -16,6 +16,7 @@ from library.groups.services import (
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
 from core.errors import ErrorCode
+from core import server_settings
 from tests.utils.books import create_file_backed_book
 
 
@@ -84,6 +85,7 @@ class LibraryGroupVisibilityAPITest(APITestCase):
 
 class LibraryGroupBooksAndCurationAPITest(APITestCase):
     def setUp(self):
+        server_settings.set_advanced_library_groups_enabled(True)
         self.public = get_public_group()
 
         self.reader = User.objects.create_user(
@@ -278,8 +280,96 @@ class LibraryGroupPresentationPatchAPITest(APITestCase):
         self.other_group = LibraryGroup.objects.create(name="Other", description="before")
 
 
+class LibraryGroupAdvancedFeatureGateAPITest(APITestCase):
+    def setUp(self):
+        self.public = get_public_group()
+        self.manager = User.objects.create_user(username="manager", password="pw")
+        ensure_user_public_membership(user=self.manager)
+        profile, _ = UserProfile.objects.get_or_create(user=self.manager)
+        profile.role = UserProfile.ROLE_MANAGER
+        profile.save(update_fields=["role", "updated_at"])
+
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
+        ensure_user_public_membership(user=self.librarian)
+        profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+
+        self.group = LibraryGroup.objects.create(name="Group", description="before")
+        self.book = create_file_backed_book(title="Book", assign_public=False).book
+
+    def assert_advanced_groups_disabled(self, response: Response) -> None:
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIsNotNone(response.data)
+        payload = cast(dict[str, Any], response.data)
+        self.assertEqual(
+            cast(dict[str, Any], payload["error"])["code"],
+            ErrorCode.ADVANCED_GROUPS_DISABLED,
+        )
+
+    def test_group_create_is_blocked_when_advanced_groups_disabled(self):
+        self.client.login(username="manager", password="pw")
+
+        response = cast(
+            Response,
+            self.client.post(
+                "/api/v1/library/groups/",
+                data={"name": "Blocked"},
+                format="json",
+            ),
+        )
+
+        self.assert_advanced_groups_disabled(response)
+
+    def test_group_description_patch_is_blocked_when_advanced_groups_disabled(self):
+        self.client.login(username="manager", password="pw")
+
+        response = cast(
+            Response,
+            self.client.patch(
+                f"/api/v1/library/groups/{self.group.id}/",
+                data={"description": "after"},
+                format="json",
+            ),
+        )
+
+        self.assert_advanced_groups_disabled(response)
+
+    def test_non_public_group_book_mutation_is_blocked_when_advanced_groups_disabled(self):
+        self.client.login(username="librarian", password="pw")
+
+        add = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.group.id}/books/",
+                data={"book": str(self.book.id)},
+                format="json",
+            ),
+        )
+
+        self.assert_advanced_groups_disabled(add)
+
+    def test_public_group_book_mutation_still_works_when_advanced_groups_disabled(self):
+        self.client.login(username="librarian", password="pw")
+
+        response = cast(
+            Response,
+            self.client.post(
+                f"/api/v1/library/groups/{self.public.id}/books/",
+                data={"book": str(self.book.id)},
+                format="json",
+            ),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(book=self.book, group=self.public).exists()
+        )
+
+
 class LibraryGroupCreateDeleteAPITest(APITestCase):
     def setUp(self):
+        server_settings.set_advanced_library_groups_enabled(True)
         self.public = get_public_group()
 
         self.owner = User.objects.create_superuser(username="owner", password="pw", email="o@example.com")

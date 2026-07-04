@@ -1,6 +1,12 @@
 import { extractApiErrorMessage, fetchJSON, patchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
-import { $, escapeHtml, loadMeAndInitShell, setGlobalErrorFromError } from "../layout.js";
+import {
+  $,
+  advancedLibraryGroupsEnabled,
+  escapeHtml,
+  loadMeAndInitShell,
+  setGlobalErrorFromError,
+} from "../layout.js";
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
@@ -45,6 +51,7 @@ function renderTags(subjects) {
 }
 
 function renderGroups(groups) {
+  if (!advancedLibraryGroupsEnabled()) return "";
   const visibleGroups = Array.isArray(groups) ? groups : [];
   if (!visibleGroups.length) return "";
   const badges = visibleGroups

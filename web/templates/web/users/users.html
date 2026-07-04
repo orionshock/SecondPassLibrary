@@ -14,7 +14,7 @@
     <a id="users-create-link" class="button is-hidden" href="/users/new/">Create user</a>
   </div>
 
-  <p class="muted">Manage local users, roles, and group memberships.</p>
+  <p class="muted">Manage local users and roles{% if advanced_library_groups_enabled %}, and group memberships{% endif %}.</p>
 
   <div id="users-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
 
@@ -24,7 +24,9 @@
     <div id="users-filters" class="users-filters is-hidden" aria-label="User filters">
       <button class="button" type="button" data-filter="all" aria-pressed="true">All</button>
       <button class="button" type="button" data-filter="reader" aria-pressed="false">Reader</button>
+      {% if advanced_library_groups_enabled %}
       <button class="button" type="button" data-filter="curator" aria-pressed="false">Curator</button>
+      {% endif %}
       <button class="button" type="button" data-filter="librarian" aria-pressed="false">Librarian</button>
       <button class="button" type="button" data-filter="manager" aria-pressed="false">Manager</button>
       <button class="button" type="button" data-filter="inactive" aria-pressed="false">Inactive</button>

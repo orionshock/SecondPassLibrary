@@ -79,11 +79,23 @@
 
       <div id="server-settings-panel-library-groups" class="tab-panel server-settings-panel is-hidden" data-tab-panel="library-groups" role="tabpanel" aria-labelledby="server-settings-tab-library-groups">
         <div class="server-settings-field server-settings-feature">
-          <label class="server-settings-label" for="server-settings-advanced-groups-input">Advanced library groups</label>
+          <div class="server-settings-label">Advanced library groups</div>
           <span id="server-settings-advanced-groups-display" class="server-settings-display server-settings-display--status">Loading...</span>
-          <div id="server-settings-advanced-groups-edit" class="server-settings-checkbox is-hidden">
-            <input id="server-settings-advanced-groups-input" type="checkbox" />
-            <span class="muted">Enable Advanced Library Group Usage</span>
+          <div id="server-settings-advanced-groups-disabled" class="warning is-hidden">
+            <strong>Disabled.</strong>
+            Enabling exposes advanced group management, memberships, curator controls, group-owned shelves, and non-Public group book assignment. Product UI does not normally offer a way to turn this off again.
+            <div style="margin-top: 10px;">
+              <button
+                id="server-settings-enable-advanced-groups-btn"
+                class="button"
+                type="button"
+                data-confirm-message="Enable advanced library groups? Product UI will expose advanced group management and will not normally offer a disable action.">
+                Enable advanced library groups
+              </button>
+            </div>
+          </div>
+          <div id="server-settings-advanced-groups-enabled" class="muted is-hidden">
+            Enabled. Disabling this later is an operator recovery action through Django admin; Product UI does not provide a disable action.
           </div>
           <div class="server-settings-help muted">
             Advanced library groups let you create separate curator-managed library rooms with their own memberships and group-owned shelves. Leave this off if you only need the Common Room, managed by librarians as the shared public library space.
