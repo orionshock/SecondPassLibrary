@@ -76,6 +76,19 @@ class DjangoSettingsContractTests(SimpleTestCase):
                 ["security.W004", "security.W008"],
             )
 
+    def test_django_admin_exposure_setting_is_env_driven_and_enabled_by_default(self):
+        source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'SECOND_PASS_ENABLE_DJANGO_ADMIN = _env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True)',
+            source,
+        )
+        self.assertIs(settings.SECOND_PASS_ENABLE_DJANGO_ADMIN, True)
+        with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "0"}):
+            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), False)
+        with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "1"}):
+            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), True)
+
     def test_csrf_trusted_origins_are_env_driven(self):
         with patch.dict(
             "os.environ",

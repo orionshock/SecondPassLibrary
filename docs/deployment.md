@@ -28,6 +28,7 @@ DJANGO_DEBUG=0
 DJANGO_SECRET_KEY=<generated secret>
 DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
 SECOND_PASS_USERDATA_DIR=/app/userdata
+SECOND_PASS_ENABLE_DJANGO_ADMIN=0
 ```
 
 The example compose file uses `env_file: .env`, maps host port `8000` to the
@@ -111,6 +112,8 @@ Environment variables:
   that strips/sets forwarded host headers
 - `DJANGO_SECURE_COOKIES`: set to `1` for HTTPS deployments
 - `SECOND_PASS_USERDATA_DIR`: runtime data directory, default `./userdata`
+- `SECOND_PASS_ENABLE_DJANGO_ADMIN`: set to `1` to expose `/admin/`; deployment
+  examples disable it with `0`
 - `SECOND_PASS_SERVER_VERSION`: value published as `server_version` in
   `/.well-known/secondpass`, default `0.1.0-dev`
 - `SECOND_PASS_SERVER_RELEASE`: value published as `server_release` in
@@ -189,11 +192,14 @@ trust is enabled while both secure cookie settings are off.
 HSTS warnings. Treat those as deployment-policy prompts: direct HTTP LAN and
 reverse-proxy HTTPS deployments have different answers.
 
-The Django admin remains available at `/admin/` as a service and recovery
-hatch. For exposed deployments, restrict it outside the app where practical:
-LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent network
-controls. See `docs/admin.md` for admin-only repair workflows and the expected
-future direction of hiding the admin behind an explicit configuration flag.
+The Django admin is an operator/recovery hatch, not the Product UI. It is enabled
+by default for local development, but `.env.example` disables URL exposure with
+`SECOND_PASS_ENABLE_DJANGO_ADMIN=0`. To expose `/admin/` in a trusted deployment,
+set `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` and restrict access outside the app where
+practical: LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent
+network controls. Disabling admin removes the `/admin/` URL route; it does not
+remove admin classes or repair code. See `docs/admin.md` for admin-only repair
+workflows.
 
 CORS remains open for `/api/` and `/.well-known/` with credentials disabled.
 This is for independent bearer-token browser clients such as the reading

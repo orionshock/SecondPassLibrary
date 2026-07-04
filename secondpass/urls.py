@@ -53,7 +53,6 @@ urlpatterns = [
     # Product UI (Django templates; capability-driven client-side nav)
     path("", include(("web.urls", "web"), namespace="web")),
     path("api-auth/login/", web_views.login, name="login"),
-    path("admin/", admin.site.urls),
     # API v1 (versioned, REST/JSON)
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),
     path(
@@ -68,6 +67,10 @@ urlpatterns = [
     path("api/v1/", include(("core.urls", "core"), namespace="core")),
     path("api-auth/", include("rest_framework.urls")),
 ]
+
+if settings.SECOND_PASS_ENABLE_DJANGO_ADMIN:
+    urlpatterns.append(path("admin/", admin.site.urls))
+
 
 def _cover_media(request, path: str):
     """
