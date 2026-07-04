@@ -1,4 +1,5 @@
 """Route and smoke tests for product UI pages."""
+from django.test import override_settings
 from django.utils.html import escape
 
 from accounts.services import get_or_create_profile
@@ -29,7 +30,7 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/api-auth/login/?next=/server/")
 
-    def test_owner_server_settings_returns_200_and_has_form_and_service_hatch_link(self):
+    def test_owner_server_settings_returns_200_and_has_form_without_service_hatch_link_by_default(self):
         from django.contrib.auth import get_user_model
         User = get_user_model()
         owner = User.objects.create_user(
@@ -75,6 +76,22 @@ class ProductUiRouteTests(ProductUiTestCase):
         self.assertContains(response, 'data-tab-panel="library-groups"')
         self.assertContains(response, "Advanced library groups")
         self.assertContains(response, 'id="server-settings-advanced-groups-display"')
+        self.assertNotContains(response, 'href="/admin/"')
+
+    @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True)
+    def test_owner_server_settings_has_service_hatch_link_when_admin_enabled(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        owner = User.objects.create_user(
+            username="owner-admin-enabled",
+            email="owner-admin-enabled@example.com",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+        response = self.client.get("/server/")
+        self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'href="/admin/"')
 
     def test_manager_server_settings_is_not_allowed(self):

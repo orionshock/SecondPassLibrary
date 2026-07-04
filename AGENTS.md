@@ -405,7 +405,8 @@ Long-term, the product should have a separate UI (and potentially a separate sim
 
 Do not remove Django admin.
 
-In the future, the project should support disabling Django admin by configuration. For development, Django admin should remain enabled.
+Django admin URL exposure is controlled by `SECOND_PASS_ENABLE_DJANGO_ADMIN`.
+The code default is disabled; local operator scripts may explicitly enable it.
 
 Do not build a frontend yet.
 

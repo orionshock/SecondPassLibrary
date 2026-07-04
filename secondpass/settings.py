@@ -22,19 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    value = env.str(name, default=None)
-    if value is None:
-        return default
-    normalized = value.strip().lower()
-    if normalized in {"1", "true", "t", "yes", "y", "on"}:
-        return True
-    if normalized in {"0", "false", "f", "no", "n", "off"}:
-        return False
-    raise ImproperlyConfigured(f"{name} must be a boolean value.")
-
-
 def _env_list(name: str, default: list[str]) -> list[str]:
+    # Normalize comma-separated env lists so spaces and trailing commas do not
+    # become accidental host/origin/check values.
     return [item.strip() for item in env.list(name, default=default) if item.strip()]
 
 
@@ -45,7 +35,7 @@ def _staticfiles_backend(*, debug: bool) -> str:
 
 
 def _secure_proxy_ssl_header() -> tuple[str, str] | None:
-    if _env_bool("DJANGO_TRUST_X_FORWARDED_PROTO", False):
+    if env.bool("DJANGO_TRUST_X_FORWARDED_PROTO", default=False):
         return ("HTTP_X_FORWARDED_PROTO", "https")
     return None
 
@@ -94,9 +84,11 @@ IMPORTS_DIR = USERDATA_DIR / "imports"
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool("DJANGO_DEBUG", False)
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 SILENCED_SYSTEM_CHECKS = _env_list("DJANGO_SILENCED_SYSTEM_CHECKS", [])
-SECOND_PASS_ENABLE_DJANGO_ADMIN = _env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True)
+SECOND_PASS_ENABLE_DJANGO_ADMIN = env.bool(
+    "SECOND_PASS_ENABLE_DJANGO_ADMIN", default=False
+)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = _secret_key(debug=DEBUG or RUNNING_TESTS)
@@ -107,7 +99,7 @@ ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", LOCAL_ALLOWED_HOSTS)
 CSRF_TRUSTED_ORIGINS = _env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
 
 SECURE_PROXY_SSL_HEADER = _secure_proxy_ssl_header()
-USE_X_FORWARDED_HOST = _env_bool("DJANGO_USE_X_FORWARDED_HOST", False)
+USE_X_FORWARDED_HOST = env.bool("DJANGO_USE_X_FORWARDED_HOST", default=False)
 
 
 # Application definition
@@ -270,7 +262,7 @@ STORAGES = {
 WHITENOISE_MANIFEST_STRICT = False
 
 # Browser/session security.
-_SECURE_COOKIES = _env_bool("DJANGO_SECURE_COOKIES", False)
+_SECURE_COOKIES = env.bool("DJANGO_SECURE_COOKIES", default=False)
 SESSION_COOKIE_SECURE = _SECURE_COOKIES
 CSRF_COOKIE_SECURE = _SECURE_COOKIES
 SESSION_COOKIE_SAMESITE = "Lax"

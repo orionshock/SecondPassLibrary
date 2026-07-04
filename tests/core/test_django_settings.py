@@ -13,9 +13,9 @@ from django.test import SimpleTestCase
 from secondpass.settings import (
     INSECURE_FALLBACK_SECRET_KEY,
     PLACEHOLDER_SECRET_KEYS,
-    _env_bool,
     _env_list,
     _secure_proxy_ssl_header,
+    env,
 )
 
 
@@ -42,7 +42,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
     def test_debug_defaults_off_and_hosts_are_local_safe_by_default(self):
         source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
 
-        self.assertIn('DEBUG = _env_bool("DJANGO_DEBUG", False)', source)
+        self.assertIn('DEBUG = env.bool("DJANGO_DEBUG", default=False)', source)
         self.assertIn('ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS"', source)
         self.assertEqual(settings.ALLOWED_HOSTS[:3], ["localhost", "127.0.0.1", "[::1]"])
         self.assertNotIn("*", settings.ALLOWED_HOSTS)
@@ -76,33 +76,23 @@ class DjangoSettingsContractTests(SimpleTestCase):
                 ["security.W004", "security.W008"],
             )
 
-    def test_django_admin_exposure_setting_is_env_driven_and_enabled_by_default(self):
+    def test_django_admin_exposure_setting_is_env_driven_and_disabled_by_default(self):
         source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
 
         self.assertIn(
-            'SECOND_PASS_ENABLE_DJANGO_ADMIN = _env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True)',
+            'SECOND_PASS_ENABLE_DJANGO_ADMIN = env.bool(',
             source,
         )
-        self.assertIs(settings.SECOND_PASS_ENABLE_DJANGO_ADMIN, True)
+        self.assertIn('"SECOND_PASS_ENABLE_DJANGO_ADMIN", default=False', source)
+        self.assertIs(settings.SECOND_PASS_ENABLE_DJANGO_ADMIN, False)
         with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "0"}):
-            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), False)
+            self.assertIs(env.bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", default=True), False)
         with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "1"}):
-            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), True)
+            self.assertIs(env.bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", default=True), True)
         with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "false"}):
-            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), False)
+            self.assertIs(env.bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", default=True), False)
         with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "true"}):
-            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", False), True)
-
-    def test_invalid_boolean_env_values_fail_clearly(self):
-        result = self._settings_import(
-            {
-                "DJANGO_DEBUG": "maybe",
-                "DJANGO_SECRET_KEY": "test-explicit-production-secret-key",
-            }
-        )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("DJANGO_DEBUG must be a boolean value", result.stderr)
+            self.assertIs(env.bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", default=False), True)
 
     def test_csrf_trusted_origins_are_env_driven(self):
         with patch.dict(
@@ -124,18 +114,18 @@ class DjangoSettingsContractTests(SimpleTestCase):
 
         self.assertIn("SECURE_PROXY_SSL_HEADER = _secure_proxy_ssl_header()", source)
         self.assertIn(
-            'USE_X_FORWARDED_HOST = _env_bool("DJANGO_USE_X_FORWARDED_HOST", False)',
+            'USE_X_FORWARDED_HOST = env.bool("DJANGO_USE_X_FORWARDED_HOST", default=False)',
             source,
         )
         self.assertIn(
-            '_SECURE_COOKIES = _env_bool("DJANGO_SECURE_COOKIES", False)',
+            '_SECURE_COOKIES = env.bool("DJANGO_SECURE_COOKIES", default=False)',
             source,
         )
         self.assertIsNone(getattr(settings, "SECURE_PROXY_SSL_HEADER", None))
         self.assertIs(settings.USE_X_FORWARDED_HOST, False)
         self.assertIs(settings.SESSION_COOKIE_SECURE, False)
         self.assertIs(settings.CSRF_COOKIE_SECURE, False)
-        self.assertIs(_env_bool("DJANGO_SECURE_COOKIES", False), False)
+        self.assertIs(env.bool("DJANGO_SECURE_COOKIES", default=False), False)
 
         with patch.dict("os.environ", {"DJANGO_TRUST_X_FORWARDED_PROTO": "1"}):
             self.assertEqual(
@@ -143,13 +133,16 @@ class DjangoSettingsContractTests(SimpleTestCase):
                 ("HTTP_X_FORWARDED_PROTO", "https"),
             )
         with patch.dict("os.environ", {"DJANGO_USE_X_FORWARDED_HOST": "1"}):
-            self.assertIs(_env_bool("DJANGO_USE_X_FORWARDED_HOST", False), True)
+            self.assertIs(env.bool("DJANGO_USE_X_FORWARDED_HOST", default=False), True)
         with patch.dict("os.environ", {"DJANGO_SECURE_COOKIES": "1"}):
-            self.assertIs(_env_bool("DJANGO_SECURE_COOKIES", False), True)
+            self.assertIs(env.bool("DJANGO_SECURE_COOKIES", default=False), True)
 
     def test_static_root_is_generated_artifact_outside_userdata(self):
         self.assertEqual(Path(settings.STATIC_ROOT), ROOT / "var" / "static")
         self.assertNotEqual(Path(settings.STATIC_ROOT).parent, settings.USERDATA_DIR)
+
+    def test_userdata_dir_supports_path_operations(self):
+        self.assertEqual(Path(settings.USERDATA_DIR / "db"), Path(settings.USERDATA_DIR) / "db")
 
     def test_whitenoise_manifest_strictness_is_intentionally_relaxed(self):
         self.assertIs(settings.WHITENOISE_MANIFEST_STRICT, False)

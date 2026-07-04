@@ -192,10 +192,11 @@ trust is enabled while both secure cookie settings are off.
 HSTS warnings. Treat those as deployment-policy prompts: direct HTTP LAN and
 reverse-proxy HTTPS deployments have different answers.
 
-The Django admin is an operator/recovery hatch, not the Product UI. It is enabled
-by default for local development, but `.env.example` disables URL exposure with
-`SECOND_PASS_ENABLE_DJANGO_ADMIN=0`. To expose `/admin/` in a trusted deployment,
-set `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` and restrict access outside the app where
+The Django admin is an operator/recovery hatch, not the Product UI. The settings
+default and `.env.example` disable URL exposure with
+`SECOND_PASS_ENABLE_DJANGO_ADMIN=0`; the local production helper sets it to `1`
+for local operator testing. To expose `/admin/` in a trusted deployment, set
+`SECOND_PASS_ENABLE_DJANGO_ADMIN=1` and restrict access outside the app where
 practical: LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent
 network controls. Disabling admin removes the `/admin/` URL route; it does not
 remove admin classes or repair code. See `docs/admin.md` for admin-only repair

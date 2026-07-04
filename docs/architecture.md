@@ -49,7 +49,8 @@ Second Pass Library currently uses Django/DRF built-in authentication for local 
 - Django **session authentication** (supports browser-based development and the DRF browsable API)
 - Explicit **Client API bearer token authentication** on selected reader-client endpoints
 - DRF browsable API login/logout at `/api-auth/`
-- Django admin at `/admin/` (service hatch; not the product UI)
+- Optional Django admin at `/admin/` when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`
+  (service hatch; not the product UI)
 
 Position:
 

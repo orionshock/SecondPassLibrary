@@ -7,6 +7,7 @@ from uuid import UUID
 
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.http import Http404
@@ -389,4 +390,8 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 def server_settings(request: HttpRequest) -> HttpResponse:
     if not account_policies.is_owner(getattr(request, "user", None)):
         raise PermissionDenied
-    return render(request, "web/server/settings.html")
+    return render(
+        request,
+        "web/server/settings.html",
+        {"django_admin_enabled": settings.SECOND_PASS_ENABLE_DJANGO_ADMIN},
+    )

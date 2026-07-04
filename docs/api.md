@@ -11,7 +11,8 @@ Current supported authentication methods:
 - Django session authentication (browser-based development + DRF browsable API)
 - Explicit Client API bearer tokens on selected reader-client endpoints
 - DRF browsable API login/logout via `/api-auth/`
-- Django admin authentication via `/admin/` (service hatch; not the product UI)
+- Optional Django admin authentication via `/admin/` when
+  `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` (service hatch; not the product UI)
 
 HTTP Basic authentication is not enabled.
 

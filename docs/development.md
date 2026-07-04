@@ -167,10 +167,9 @@ Second Pass Library currently uses Django/DRF built-in authentication for local 
 Practical notes:
 
 - Use `/api-auth/login/` to authenticate in the browsable API.
-- Use `/admin/` to access the Django admin (requires an admin/superuser account).
-  Admin URL exposure is enabled by default for local development. Set
-  `SECOND_PASS_ENABLE_DJANGO_ADMIN=0` to test a deployment-style configuration
-  where the route is not registered.
+- Use `/admin/` to access the Django admin only when
+  `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is set. The local production helper sets
+  this for operator testing; the settings default leaves the route unregistered.
 - HTTP Basic authentication is not enabled. Non-browser reader clients should use
   the Client API bearer-token flow where supported.
 

@@ -4,10 +4,11 @@ The Django admin is an operator service hatch for recovery, inspection, and
 low-level maintenance. It is not the Product UI and should not be treated as a
 normal reader or library-management workflow.
 
-Local development keeps `/admin/` enabled by default. Deployment examples set
-`SECOND_PASS_ENABLE_DJANGO_ADMIN=0`, which removes the `/admin/` URL route while
-leaving admin classes and repair code installed. To expose admin in a trusted
-deployment, set `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`.
+`/admin/` is disabled by default unless `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is
+set. This removes the `/admin/` URL route while leaving admin classes and repair
+code installed. The local production helper sets this flag to `1` for local
+operator testing. To expose admin in a trusted deployment, set
+`SECOND_PASS_ENABLE_DJANGO_ADMIN=1`.
 
 For exposed deployments, restrict admin access outside the app where practical:
 LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent network
