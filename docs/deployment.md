@@ -9,7 +9,8 @@ wizard does not create tables from request handling.
 ### Docker Compose
 
 The first Docker path is intentionally small: one Django/Gunicorn container,
-SQLite, and a bind-mounted `./userdata` directory.
+SQLite, and a bind-mounted `./userdata` directory. Reverse proxy and TLS
+remain outside this compose file.
 
 First run:
 
@@ -31,13 +32,34 @@ SECOND_PASS_USERDATA_DIR=/app/userdata
 SECOND_PASS_ENABLE_DJANGO_ADMIN=0
 ```
 
-The example compose file uses `env_file: .env`, maps host port `8000` to the
-container, and mounts `./userdata` at `/app/userdata`. Startup runs:
+The container runs as a non-root `secondpass` user by default. The default
+image UID/GID are `1000:1000`; override them before building by setting
+`APP_UID` and `APP_GID` in `.env` if the host needs different ownership.
+
+On native Linux, prepare the bind-mounted userdata directory so the container
+user can write to it:
+
+```bash
+mkdir -p userdata
+sudo chown -R 1000:1000 userdata
+```
+
+On Windows Docker Desktop, bind mount permissions are usually handled by Docker
+Desktop rather than by matching host numeric ownership.
+
+The example compose file uses `env_file: .env`, maps host port
+`127.0.0.1:8000` to the container for reverse-proxy-on-same-host deployments,
+and mounts `./userdata` at `/app/userdata`. Direct LAN or public exposure
+requires intentionally changing the port binding in `compose.yml`. Startup
+runs:
 
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
 3. `python manage.py collectstatic --noinput`
 4. `gunicorn secondpass.wsgi:application --bind 0.0.0.0:8000`
+
+The compose healthcheck calls the app's lightweight
+`/api/v1/health/` endpoint through `127.0.0.1:8000` inside the container.
 
 Docker does not auto-generate `DJANGO_SECRET_KEY`; settings fail fast if `.env`
 is missing, unset, or still using the documented placeholder.
@@ -57,9 +79,10 @@ Review `.env.example` during updates for newly added variables.
 Review `compose.example.yml` during updates for any compose-template changes;
 your local `compose.yml` is intentionally untracked.
 
-Reverse proxy and TLS are outside this Docker setup. If serving through an
-HTTPS reverse proxy, set `DJANGO_ALLOWED_HOSTS` to include the public host,
-set `DJANGO_CSRF_TRUSTED_ORIGINS` to the public `https://` origin, set
+Reverse proxy and TLS are outside this Docker setup; do not add Caddy/nginx/TLS
+to the app compose file. If serving through an HTTPS reverse proxy such as
+Caddy, set `DJANGO_ALLOWED_HOSTS` to include the public host, set
+`DJANGO_CSRF_TRUSTED_ORIGINS` to the public `https://` origin, set
 `DJANGO_SECURE_COOKIES=1`, and set `DJANGO_TRUST_X_FORWARDED_PROTO=1` only
 when the proxy strips untrusted forwarded headers and sets its own.
 
@@ -114,6 +137,8 @@ Environment variables:
 - `SECOND_PASS_USERDATA_DIR`: runtime data directory, default `./userdata`
 - `SECOND_PASS_ENABLE_DJANGO_ADMIN`: set to `1` to expose `/admin/`; deployment
   examples disable it with `0`
+- `APP_UID`: Docker image app-user UID, default `1000`
+- `APP_GID`: Docker image app-group GID, default `1000`
 - `SECOND_PASS_SERVER_VERSION`: value published as `server_version` in
   `/.well-known/secondpass`, default `0.1.0-dev`
 - `SECOND_PASS_SERVER_RELEASE`: value published as `server_release` in

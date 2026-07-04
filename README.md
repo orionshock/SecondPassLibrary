@@ -148,13 +148,28 @@ docker compose up --build
 Edit `.env` before starting: set `DJANGO_SECRET_KEY` to the generated value and
 set `DJANGO_ALLOWED_HOSTS` to the hostnames or LAN IPs users will use. Edit
 `compose.yml` if you need to customize ports, volumes, or restart policy.
-The container serves Django on port `8000` and bind-mounts `./userdata` for the
-SQLite database, stored EPUBs, covers, and imports.
+The container runs as a non-root `secondpass` user and serves Django on
+`127.0.0.1:8000` by default for a reverse proxy on the same host. Direct LAN or
+public exposure requires intentionally changing the compose port binding. The
+container bind-mounts `./userdata` for the SQLite database, stored EPUBs,
+covers, and imports, and its healthcheck uses `/api/v1/health/`.
+
+The default Docker UID/GID are `1000:1000` and can be overridden before build
+with `APP_UID` and `APP_GID` in `.env`. On native Linux, make sure the bind
+mount is writable by that UID/GID:
+
+```bash
+mkdir -p userdata
+sudo chown -R 1000:1000 userdata
+```
+
+On Windows Docker Desktop, bind mount permissions are usually handled by Docker
+Desktop.
 
 For updates: `git pull`, review `.env.example` and `compose.example.yml` for
 new options, merge any changes you want into your local files, then run
 `docker compose up --build` again.
 
-Reverse proxy, TLS, and public exposure are deployment-owned. See
-[Production startup](docs/deployment.md) for HTTPS reverse-proxy settings and
-backup notes.
+Reverse proxy, TLS, and public exposure are deployment-owned; Caddy/nginx/TLS
+do not live in this app compose file. See [Production startup](docs/deployment.md)
+for HTTPS reverse-proxy settings and backup notes.
