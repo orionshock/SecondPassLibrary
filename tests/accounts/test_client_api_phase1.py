@@ -24,6 +24,27 @@ class ClientApiPhase1Tests(APITestCase):
             password="pw",
         )
 
+    def test_client_api_discovery_keeps_pairing_route_manifest(self):
+        r = cast(Any, self.client.get("/api/v1/client-api/discovery/"))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        body = cast(dict[str, Any], getattr(r, "data", {}))
+
+        self.assertEqual(body.get("discovery_version"), "0.1")
+        self.assertEqual(body.get("server_name"), "Second Pass Library")
+        self.assertEqual(body.get("server_description"), "")
+        self.assertEqual(body.get("api_base_url"), "http://testserver/api/v1/")
+        self.assertEqual(
+            body.get("login_request_endpoint"),
+            "http://testserver/api/v1/client-api/login-requests/",
+        )
+        self.assertEqual(body.get("authorize_url"), "http://testserver/client-api/authorize/")
+        self.assertEqual(
+            body.get("poll_endpoint_template"),
+            "http://testserver/api/v1/client-api/login-requests/%7Bid%7D/poll/",
+        )
+        self.assertEqual(body.get("token_type"), "Bearer")
+        self.assertEqual(body.get("server_base_url"), "http://testserver/")
+
     def test_create_login_request_is_anonymous_and_stores_only_hash(self):
         r = cast(
             Any,

@@ -124,8 +124,16 @@ They are also not enabled for marginalia export endpoints; exports are product U
 
 Discovery:
 
-- `GET /.well-known/secondpass`
-- `GET /api/v1/client-api/discovery/`
+- `GET /.well-known/secondpass` returns compact server identity and
+  `api_base_url`. It does not include per-endpoint route metadata.
+- `GET /api/v1/client-api/discovery/` returns the detailed Client API pairing
+  discovery document.
+
+Client API route conventions under `api_base_url`:
+
+- `{api_base_url}client-api/discovery/`
+- `{api_base_url}client-api/login-requests/`
+- `{api_base_url}client-api/login-requests/{id}/poll/`
 
 Login request / authorization:
 

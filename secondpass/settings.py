@@ -75,6 +75,10 @@ def _secret_key(*, debug: bool) -> str:
 USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
 RUNNING_TESTS = "test" in sys.argv
 
+SECOND_PASS_SERVER_VERSION = os.getenv("SECOND_PASS_SERVER_VERSION", "0.1.0-dev")
+SECOND_PASS_SERVER_RELEASE = os.getenv("SECOND_PASS_SERVER_RELEASE", "pre-release")
+SECOND_PASS_SERVER_RELEASE_DATE = os.getenv("SECOND_PASS_SERVER_RELEASE_DATE", "2026-07-03")
+
 # Ensure required directories exist
 os.makedirs(USERDATA_DIR / "db", exist_ok=True)
 os.makedirs(USERDATA_DIR / "media", exist_ok=True)

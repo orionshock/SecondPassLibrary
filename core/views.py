@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.http import JsonResponse
 
 from core import server_settings
+
 
 def health_check(request):
     return JsonResponse({"status": "ok"})
@@ -17,14 +19,9 @@ def secondpass_well_known(request):
         {
             "server_name": server_settings.get_server_name(),
             "server_description": server_settings.get_server_description(),
+            "server_version": settings.SECOND_PASS_SERVER_VERSION,
+            "server_release": settings.SECOND_PASS_SERVER_RELEASE,
+            "server_release_date": settings.SECOND_PASS_SERVER_RELEASE_DATE,
             "api_base_url": api_base,
-            "client_api": {
-                "discovery_version": "0.1",
-                "discovery_endpoint": request.build_absolute_uri("/api/v1/client-api/discovery/"),
-                "login_request_endpoint": request.build_absolute_uri("/api/v1/client-api/login-requests/"),
-                "authorize_url": request.build_absolute_uri("/client-api/authorize/"),
-                "poll_endpoint_template": request.build_absolute_uri("/api/v1/client-api/login-requests/{id}/poll/"),
-                "token_type": "Bearer",
-            },
         }
     )

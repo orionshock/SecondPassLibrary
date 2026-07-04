@@ -125,6 +125,21 @@ class ServerIdentitySettingsTests(TestCase):
         payload = resp.json()
         self.assertIn("server_banner_message", payload)
 
+    def test_well_known_secondpass_returns_compact_server_discovery(self):
+        response = self.client.get("/.well-known/secondpass")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "server_name": "Second Pass Library",
+                "server_description": "",
+                "server_version": "0.1.0-dev",
+                "server_release": "pre-release",
+                "server_release_date": "2026-07-03",
+                "api_base_url": "http://testserver/api/v1/",
+            },
+        )
+
     def test_discovery_includes_server_identity(self):
         owner = User.objects.create_user(
             username="owner",
@@ -144,6 +159,25 @@ class ServerIdentitySettingsTests(TestCase):
         payload = well_known.json()
         self.assertEqual(payload["server_name"], "My Library")
         self.assertEqual(payload["server_description"], "Private.")
+        self.assertEqual(payload["server_version"], "0.1.0-dev")
+        self.assertEqual(payload["server_release"], "pre-release")
+        self.assertEqual(payload["server_release_date"], "2026-07-03")
+        self.assertEqual(payload["api_base_url"], "http://testserver/api/v1/")
+        self.assertNotIn("client_api", payload)
+        self.assertNotIn("login_request_endpoint", payload)
+        self.assertNotIn("authorize_url", payload)
+        self.assertNotIn("poll_endpoint_template", payload)
+        self.assertEqual(
+            set(payload),
+            {
+                "server_name",
+                "server_description",
+                "server_version",
+                "server_release",
+                "server_release_date",
+                "api_base_url",
+            },
+        )
 
         discovery = self.client.get("/api/v1/client-api/discovery/")
         self.assertEqual(discovery.status_code, 200)

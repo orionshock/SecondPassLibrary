@@ -111,6 +111,12 @@ Environment variables:
   that strips/sets forwarded host headers
 - `DJANGO_SECURE_COOKIES`: set to `1` for HTTPS deployments
 - `SECOND_PASS_USERDATA_DIR`: runtime data directory, default `./userdata`
+- `SECOND_PASS_SERVER_VERSION`: value published as `server_version` in
+  `/.well-known/secondpass`, default `0.1.0-dev`
+- `SECOND_PASS_SERVER_RELEASE`: value published as `server_release` in
+  `/.well-known/secondpass`, default `pre-release`
+- `SECOND_PASS_SERVER_RELEASE_DATE`: value published as `server_release_date`
+  in `/.well-known/secondpass`, default `2026-07-03`
 - `BIND`: server bind address, default `127.0.0.1:8000` for the PowerShell local
   production-mode helper
 - `WAITRESS_THREADS`: PowerShell/Waitress thread count, default `4`

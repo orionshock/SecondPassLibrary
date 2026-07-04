@@ -86,10 +86,10 @@ Key fields:
 
 Client API (JSON):
 
-- `GET /.well-known/secondpass`
-- `GET /api/v1/client-api/discovery/`
-- `POST /api/v1/client-api/login-requests/`
-- `GET /api/v1/client-api/login-requests/<id>/poll/`
+- `GET /.well-known/secondpass` returns compact server identity and `api_base_url`.
+- `{api_base_url}client-api/discovery/`
+- `{api_base_url}client-api/login-requests/`
+- `{api_base_url}client-api/login-requests/{id}/poll/`
 
 Product UI (Django templates):
 
