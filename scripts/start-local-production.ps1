@@ -24,12 +24,14 @@ if (-not $env:DJANGO_TRUST_X_FORWARDED_PROTO) {
 if (-not $env:DJANGO_USE_X_FORWARDED_HOST) {
     $env:DJANGO_USE_X_FORWARDED_HOST = "0"
 }
-if (-not $env:SECOND_PASS_ENABLE_DJANGO_ADMIN) {
+if (-not (Test-Path Env:\SECOND_PASS_ENABLE_DJANGO_ADMIN)) {
     $env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
 }
 if (-not $env:DJANGO_SILENCED_SYSTEM_CHECKS) {
     $env:DJANGO_SILENCED_SYSTEM_CHECKS = "security.W004,security.W008,security.W012,security.W016"
 }
+
+Write-Host "SECOND_PASS_ENABLE_DJANGO_ADMIN=$env:SECOND_PASS_ENABLE_DJANGO_ADMIN"
 
 Push-Location $ProjectRoot
 try {

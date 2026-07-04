@@ -42,7 +42,12 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn("DJANGO_TRUST_X_FORWARDED_PROTO", source)
         self.assertIn("DJANGO_USE_X_FORWARDED_HOST", source)
         self.assertIn("SECOND_PASS_ENABLE_DJANGO_ADMIN", source)
+        self.assertIn("Test-Path Env:\\SECOND_PASS_ENABLE_DJANGO_ADMIN", source)
         self.assertIn('$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"', source)
+        self.assertIn(
+            'Write-Host "SECOND_PASS_ENABLE_DJANGO_ADMIN=$env:SECOND_PASS_ENABLE_DJANGO_ADMIN"',
+            source,
+        )
         self.assertIn("DJANGO_SILENCED_SYSTEM_CHECKS", source)
         self.assertIn("security.W004,security.W008,security.W012,security.W016", source)
         check_at = source.index("manage.py check --deploy")
