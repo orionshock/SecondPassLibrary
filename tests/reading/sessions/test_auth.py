@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from accounts.models import UserClientSession
 from reading.models import ReadingSession
-from reading.profile import (
+from reading.profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
 )
 from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.test import TestCase
 
-from reading.locators import normalize_locator
+from reading.profile.locators import normalize_locator
 from tests.reading.utils import IsolatedUserdataMixin
 
 
@@ -21,4 +21,3 @@ class LocatorNormalizationTest(IsolatedUserdataMixin, TestCase):
         locator = {"cfi": "/6/4", "weird": {"x": 1}}
         normalized = normalize_locator(locator)
         self.assertEqual(normalized["weird"], {"x": 1})
-

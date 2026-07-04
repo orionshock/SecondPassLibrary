@@ -11,7 +11,7 @@ from library import policies
 from library.group_services import ensure_book_public_assignment, ensure_user_public_membership
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingProgress, ReadingSession
-from reading.profile import (
+from reading.profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
 )
 from tests.reading.api_test_base import ReadingAPITestBase

@@ -8,7 +8,7 @@ from accounts.models import UserProfile
 from library.group_services import ensure_user_public_membership
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingProgress, ReadingSession
-from reading.profile import (
+from reading.profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
     MAX_CURRENT_LOCATION_JSON_BYTES,
 )

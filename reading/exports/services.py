@@ -7,9 +7,9 @@ from django.utils import timezone
 
 from library.models import Book, BookIdentifier
 
-from ..marginalia_profile import profile_annotation_from_model
+from ..profile.marginalia import profile_annotation_from_model
 from ..models import ReadingSession
-from ..profile import CURRENT_READING_PROFILE_ID
+from ..profile.validation import CURRENT_READING_PROFILE_ID
 
 
 EXPORT_SCHEMA_VERSION = "0.1.0"

@@ -8,12 +8,12 @@ from django.utils.dateparse import parse_datetime
 
 from .services import plan_marginalia_import
 from .selection import parse_import_selection, plan_book_key
-from ..marginalia_profile import (
+from ..profile.marginalia import (
     compact_annotation_from_profile,
     increment_model_annotation_counts,
 )
 from ..models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
-from ..profile import CURRENT_READING_PROFILE_VERSION
+from ..profile.validation import CURRENT_READING_PROFILE_VERSION
 
 
 def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: object = None) -> dict[str, Any]:

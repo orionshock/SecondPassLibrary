@@ -13,8 +13,8 @@ from .models import (
     ReadingProgress,
     ReadingSession,
 )
-from .locators import normalize_current_location
-from .profile import (
+from .profile.locators import normalize_current_location
+from .profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
     MAX_BODY_VALUE_CHARS,
     MAX_SELECTOR_VALUE_CHARS,

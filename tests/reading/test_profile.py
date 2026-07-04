@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from reading.profile import normalize_epub_cfi
+from reading.profile.validation import normalize_epub_cfi
 
 
 class ReadingProfileHelpersTest(SimpleTestCase):

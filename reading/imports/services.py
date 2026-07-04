@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator
 
 from library import policies as library_policies
 from library.models import Book
-from reading.marginalia_profile import count_profile_annotations, profile_selectors
+from reading.profile.marginalia import count_profile_annotations, profile_selectors
 from reading.models import ReadingSession
 
 

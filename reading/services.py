@@ -8,8 +8,8 @@ from library.models import Book
 
 from .models import Annotation, ReadingProgress, ReadingSession
 from .models import HIGHLIGHT_COLOR_YELLOW
-from .locators import normalize_current_location
-from .profile import CURRENT_READING_PROFILE_VERSION
+from .profile.locators import normalize_current_location
+from .profile.validation import CURRENT_READING_PROFILE_VERSION
 
 
 def is_session_closed(session: ReadingSession) -> bool:

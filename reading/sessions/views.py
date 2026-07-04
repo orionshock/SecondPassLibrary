@@ -15,7 +15,7 @@ from library import policies as library_policies
 from library.models import Book
 
 from ..models import Annotation, ReadingSession
-from ..profile import CURRENT_READING_PROFILE_VERSION
+from ..profile.validation import CURRENT_READING_PROFILE_VERSION
 from .queries import (
     apply_session_filters,
     build_activity_summary,

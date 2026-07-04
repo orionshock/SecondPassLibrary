@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import Annotation, SELECTOR_KIND_EPUB_CFI
+from ..models import Annotation, SELECTOR_KIND_EPUB_CFI
 
 
 def _iso(value) -> str | None:

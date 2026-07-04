@@ -11,7 +11,7 @@ from accounts.authentication import ClientBearerAuthentication
 
 from ..models import ReadingProgress, ReadingSession
 from ..policies import can_access_session_book
-from ..profile import CURRENT_READING_PROFILE_VERSION
+from ..profile.validation import CURRENT_READING_PROFILE_VERSION
 from ..serializers import ReadingProgressSerializer
 from ..services import get_or_create_progress, is_session_closed, update_progress
 

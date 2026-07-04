@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 
 from reading.annotations.views import BATCH_CREATE_LIMIT
 from reading.models import Annotation, ReadingSession
-from reading.profile import (
+from reading.profile.validation import (
     MAX_BODY_VALUE_CHARS,
     MAX_SELECTOR_VALUE_CHARS,
     MAX_TEXT_QUOTE_CONTEXT_CHARS,
