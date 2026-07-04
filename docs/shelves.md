@@ -207,7 +207,9 @@ Behavior:
 
 ## Service Hatch / admin
 
-Django admin at `/admin/` is the service hatch and can inspect/edit shelf internals for recovery/debugging. It is not the product UI.
+Django admin is the service hatch and can inspect/edit shelf internals for
+recovery/debugging when exposed with `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`. It is
+not the product UI.
 
 ## Non-goals
 

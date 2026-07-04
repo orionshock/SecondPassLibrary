@@ -169,7 +169,8 @@ Practical notes:
 - Use `/api-auth/login/` to authenticate in the browsable API.
 - Use `/admin/` to access the Django admin only when
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is set. The local production helper sets
-  this for operator testing; the settings default leaves the route unregistered.
+  this for operator testing only when the variable is unset and respects an
+  explicit `0`; the settings default leaves the route unregistered.
 - HTTP Basic authentication is not enabled. Non-browser reader clients should use
   the Client API bearer-token flow where supported.
 

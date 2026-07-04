@@ -116,8 +116,10 @@ secure cookies, and forwarded-header trust. It is for localhost testing of
 production-mode behavior, not a real deployment secrets source. These scripts
 remain local/dev convenience helpers and manual smoke tools for now; Docker can
 own its own boot script later. There is intentionally no POSIX shell startup
-script right now. The local helper also silences Django's built-in HTTPS/HSTS
-deploy warnings that do not apply to deliberate localhost HTTP testing.
+script right now. The local helper opts into Django admin only when
+`SECOND_PASS_ENABLE_DJANGO_ADMIN` is unset, respects an explicit `0`, and
+silences Django's built-in HTTPS/HSTS deploy warnings that do not apply to
+deliberate localhost HTTP testing.
 
 Environment variables:
 
@@ -220,12 +222,12 @@ reverse-proxy HTTPS deployments have different answers.
 The Django admin is an operator/recovery hatch, not the Product UI. The settings
 default and `.env.example` disable URL exposure with
 `SECOND_PASS_ENABLE_DJANGO_ADMIN=0`; the local production helper sets it to `1`
-for local operator testing. To expose `/admin/` in a trusted deployment, set
-`SECOND_PASS_ENABLE_DJANGO_ADMIN=1` and restrict access outside the app where
-practical: LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent
-network controls. Disabling admin removes the `/admin/` URL route; it does not
-remove admin classes or repair code. See `docs/admin.md` for admin-only repair
-workflows.
+only when the variable is unset, and respects an explicit `0`. To expose
+`/admin/` in a trusted deployment, set `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` and
+restrict access outside the app where practical: LAN-only access, VPN,
+reverse-proxy IP allowlisting, or equivalent network controls. Disabling admin
+removes the `/admin/` URL route; it does not remove admin classes or repair
+code. See `docs/admin.md` for admin-only repair workflows.
 
 CORS remains open for `/api/` and `/.well-known/` with credentials disabled.
 This is for independent bearer-token browser clients such as the reading

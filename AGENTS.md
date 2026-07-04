@@ -132,6 +132,7 @@ core      -> shared base models, health checks, utilities
 accounts  -> user profile, roles, current-user API
 library   -> books, authors, series, EPUB files, import
 reading   -> devices, reading sessions, progress, annotations
+shelves   -> shelves and shelf items
 ```
 
 Do not create new apps unless there is a clear domain boundary.
@@ -171,7 +172,7 @@ Do not implement per-user private libraries unless explicitly requested.
 - Public is protected: it should not be deleted, and it must not allow Curator memberships.
 - Public is the only special built-in `LibraryGroup` right now; special behavior is based on `is_public_group()` / `get_public_group()`, not a boolean flag.
 - Book access remains controlled by `LibraryGroupMembership` and `BookGroupAssignment`.
-- Group assignment changes should go through `library.group_services.add_book_to_group()` / `remove_book_from_group()` (avoid scattered `BookGroupAssignment` writes).
+- Group assignment changes should go through `library.groups.services.add_book_to_group()` / `remove_book_from_group()` (avoid scattered `BookGroupAssignment` writes).
 
 ### Reading metadata
 
@@ -228,8 +229,6 @@ Runtime/user data belongs under:
 userdata/
   db/
   media/
-  static/
-  logs/
   imports/
 ```
 
@@ -258,9 +257,11 @@ This is acceptable.
 
 Current expectation:
 
-- DRF uses Django session authentication and DRF basic authentication for development/testing convenience.
+- DRF uses Django session authentication for the Product UI and browsable API.
+- Selected reader-client endpoints use Client API bearer tokens.
+- HTTP Basic authentication is not enabled.
 - `/api-auth/` exists for the DRF browsable API login/logout flow.
-- Django `/admin/` remains a service hatch (not the product UI).
+- Django `/admin/` remains a service hatch when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` (not the product UI).
 
 Guardrails:
 
@@ -406,7 +407,8 @@ Long-term, the product should have a separate UI (and potentially a separate sim
 Do not remove Django admin.
 
 Django admin URL exposure is controlled by `SECOND_PASS_ENABLE_DJANGO_ADMIN`.
-The code default is disabled; local operator scripts may explicitly enable it.
+The code default is disabled; `scripts/start-local-production.ps1` opts in only
+when the variable is unset and respects an explicit `0`.
 
 Do not build a frontend yet.
 

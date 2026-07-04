@@ -155,7 +155,6 @@ All runtime and user-generated data lives under `userdata/` (ignored by Git):
 userdata/
   db/
   media/
-  static/
   imports/
 ```
 
@@ -180,3 +179,8 @@ The library import pipeline follows a focused-module structure:
 - `library/imports/opf.py`: OPF sidecar parsing and merge helpers
 - `library/imports/book_import.py`: persistence/orchestration for new `Book` records (create-only)
 - `library/cover_services.py`: cover validation/storage and embedded cover discovery
+
+Library browse/catalog and group code also use focused packages:
+
+- `library/catalog/`: catalog list/detail API and preview-book helpers
+- `library/groups/`: LibraryGroup APIs, public-group helpers, and safe group assignment services

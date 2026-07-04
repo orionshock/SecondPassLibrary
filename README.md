@@ -80,7 +80,7 @@ Imports currently support:
 
 - `.epub`
 - `.zip` archives containing EPUB files
-- OPF sidecar metadata for new books when present
+- OPF sidecar metadata for new books when present in ZIP imports
 
 Marginalia export is available for:
 
