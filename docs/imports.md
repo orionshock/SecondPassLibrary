@@ -168,6 +168,10 @@ Server-side apply follows these rules:
   processing and is cleaned after the synchronous import completes.
 - Final stored EPUB files are written to content-addressed storage under `userdata/media/books/<first2>/<next2>/<sha256>.epub`.
 - Product policy: Books are import-only and file-backed. In normal flows a `Book` is created together with its `BookFile` as one logical import operation; fileless metadata-only Books are not a supported state.
+- If a legacy/operator mistake leaves a Book without a `BookFile`, or a
+  `BookFile` row points to a missing physical EPUB, use the Django admin
+  BookFile repair workflow in `docs/admin.md`. Do not use delete and re-import
+  as the normal repair path when preserving reading data matters.
 
 ## Management command note
 

@@ -9,6 +9,8 @@ Notes:
 - `Book.subtitle` may be blank.
 - `Book.series_index` supports integers or one decimal place (e.g. `5` or `5.1`).
 - `BookIdentifier` is editable bibliographic metadata (scheme/value/source/is_primary) and does not automatically rewrite `Book.isbn`.
+- Fileless Books and missing physical EPUB files are repair states, not normal
+  product states. See `docs/admin.md` for the admin BookFile repair workflow.
 
 ## Identifiers
 

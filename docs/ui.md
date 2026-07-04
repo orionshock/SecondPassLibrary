@@ -154,6 +154,8 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
 - The product UI should not expose the service hatch as a normal nav item; it is linked from the Owner-only Server Settings page (`/server/`).
+- Admin-only recovery workflows, including BookFile repair, are documented in
+  `docs/admin.md`.
 - The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role, owner flag, or object-scoped capabilities.
 - The UI should not hardcode role logic in many places. It should treat `GET /api/v1/accounts/me/` as the bootstrap source of truth for:
   - identity (`username`, `email`)

@@ -10,6 +10,9 @@ Current apps:
 - `reading`: reading sessions, progress, annotations
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
 
+Operator recovery workflows in the Django admin are documented in
+`docs/admin.md`.
+
 ## Server-wide settings
 
 Server-wide configuration lives in the database as `core.ServerSetting` and is accessed through the cached service helpers in `core.server_settings` to avoid a DB hit on every request.
@@ -172,6 +175,12 @@ userdata/
 EPUB files are stored content-addressed by checksum (SHA-256). Imported filenames are diagnostic context only; human-readable filenames are derived from metadata when downloading/exporting.
 
 Product policy: Books are import-only and file-backed. While the schema allows a `Book` row to exist without a `BookFile`, normal import flows create them together and the product does not support metadata-only/fileless Books.
+
+If an existing Book loses its `BookFile` row, or a `BookFile` row points to a
+missing physical EPUB on disk, treat that as an operator repair state. Use the
+Django admin BookFile repair workflow in `docs/admin.md`; do not delete and
+re-import the Book merely to restore the EPUB, because Book deletion can destroy
+related user reading data.
 
 ## Library import services (current)
 

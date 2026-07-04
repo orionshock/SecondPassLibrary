@@ -186,7 +186,8 @@ reverse-proxy HTTPS deployments have different answers.
 The Django admin remains available at `/admin/` as a service and recovery
 hatch. For exposed deployments, restrict it outside the app where practical:
 LAN-only access, VPN, reverse-proxy IP allowlisting, or equivalent network
-controls.
+controls. See `docs/admin.md` for admin-only repair workflows and the expected
+future direction of hiding the admin behind an explicit configuration flag.
 
 CORS remains open for `/api/` and `/.well-known/` with credentials disabled.
 This is for independent bearer-token browser clients such as the reading
