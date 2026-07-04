@@ -58,7 +58,6 @@ Runtime and user data live under `userdata/`:
   raw-public under `/media/covers/`; EPUB/book files are delivered through
   authenticated app/API endpoints.
 - `userdata/imports/` for staged imports
-- `userdata/logs/` for logs
 
 `userdata/` is ignored by Git and should be backed up separately.
 Collected static files are generated deploy artifacts under `var/static/`.
@@ -150,7 +149,7 @@ Edit `.env` before starting: set `DJANGO_SECRET_KEY` to the generated value and
 set `DJANGO_ALLOWED_HOSTS` to the hostnames or LAN IPs users will use. Edit
 `compose.yml` if you need to customize ports, volumes, or restart policy.
 The container serves Django on port `8000` and bind-mounts `./userdata` for the
-SQLite database, stored EPUBs, covers, imports, and logs.
+SQLite database, stored EPUBs, covers, and imports.
 
 For updates: `git pull`, review `.env.example` and `compose.example.yml` for
 new options, merge any changes you want into your local files, then run

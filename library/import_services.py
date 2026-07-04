@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path, PurePath
 import posixpath
 import uuid
@@ -17,6 +18,8 @@ MAX_ZIP_MEMBERS = 5000
 MAX_ZIP_EPUB_MEMBER_BYTES = 200 * 1024 * 1024
 MAX_ZIP_TOTAL_EPUB_BYTES = 2 * 1024 * 1024 * 1024
 COPY_CHUNK_BYTES = 1024 * 1024
+
+logger = logging.getLogger(__name__)
 
 
 class ImportResourceLimitError(ValueError):
@@ -136,6 +139,51 @@ def _safe_import_source_name(source_name: str) -> str:
     return PurePath((source_name or "").replace("\\", "/")).name
 
 
+def _log_extra(
+    *,
+    run_id: str | None = None,
+    source_type: str | None = None,
+    source_name: str | None = None,
+    status: str | None = None,
+    safe_message: str | None = None,
+    item_status: str | None = None,
+    item_source_name: str | None = None,
+    exception_class: str | None = None,
+    result: "ImportRunResult | None" = None,
+) -> dict[str, object]:
+    extra: dict[str, object] = {}
+    if result is not None:
+        extra.update(
+            {
+                "run_id": result.run_id,
+                "source_type": result.source_type,
+                "source_name": _safe_import_source_name(result.source_filename),
+                "status": result.status,
+                "total_found": result.total_found,
+                "imported_count": result.imported_count,
+                "duplicate_count": result.duplicate_count,
+                "failed_count": result.failed_count,
+            }
+        )
+    if run_id is not None:
+        extra["run_id"] = run_id
+    if source_type is not None:
+        extra["source_type"] = source_type
+    if source_name is not None:
+        extra["source_name"] = _safe_import_source_name(source_name)
+    if status is not None:
+        extra["status"] = status
+    if safe_message is not None:
+        extra["safe_message"] = safe_message
+    if item_status is not None:
+        extra["item_status"] = item_status
+    if item_source_name is not None:
+        extra["item_source_name"] = _safe_import_source_name(item_source_name)
+    if exception_class is not None:
+        extra["exception_class"] = exception_class
+    return extra
+
+
 def _imports_dir() -> Path:
     return Path(getattr(settings, "IMPORTS_DIR", getattr(settings, "USERDATA_DIR")))  # type: ignore[arg-type]
 
@@ -160,9 +208,17 @@ def _validate_uploaded_size(*, uploaded_file: UploadedFile, source_type: str) ->
     max_bytes = _max_upload_bytes_for_source(source_type)
     if size is not None and size > max_bytes:
         label = "ZIP" if source_type == ImportSourceType.ZIP else "EPUB"
-        raise ImportResourceLimitError(
-            f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
+        message = f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
+        logger.warning(
+            "library import upload rejected by size limit",
+            extra=_log_extra(
+                source_type=source_type,
+                source_name=getattr(uploaded_file, "name", ""),
+                status=ImportResultStatus.FAILED,
+                safe_message=message,
+            ),
         )
+        raise ImportResourceLimitError(message)
 
 
 def _copy_fileobj_capped(*, src: BinaryIO, dst_path: Path, max_bytes: int) -> int:
@@ -204,9 +260,18 @@ def _stage_uploaded_file(
                 written += len(chunk)
                 if written > max_bytes:
                     label = "ZIP" if source_type == ImportSourceType.ZIP else "EPUB"
-                    raise ImportResourceLimitError(
-                        f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
+                    message = f"{label} upload exceeds the {_format_mib(max_bytes)} limit."
+                    logger.warning(
+                        "library import upload rejected by streaming size limit",
+                        extra=_log_extra(
+                            run_id=run_id,
+                            source_type=source_type,
+                            source_name=getattr(uploaded_file, "name", ""),
+                            status=ImportResultStatus.FAILED,
+                            safe_message=message,
+                        ),
                     )
+                    raise ImportResourceLimitError(message)
                 out.write(chunk)
     except Exception:
         staged_path.unlink(missing_ok=True)
@@ -231,6 +296,14 @@ def create_import_result_from_upload(
     elif lower.endswith(".zip"):
         source_type = ImportSourceType.ZIP
     else:
+        logger.warning(
+            "library import upload rejected by type",
+            extra=_log_extra(
+                source_name=name,
+                status=ImportResultStatus.FAILED,
+                safe_message="Upload must be a .epub or .zip file.",
+            ),
+        )
         raise ValueError("Upload must be a .epub or .zip file.")
 
     _validate_uploaded_size(uploaded_file=uploaded_file, source_type=source_type)
@@ -245,13 +318,31 @@ def create_import_result_from_upload(
         source_type=source_type,
         source_filename=name,
     )
-    return process_import_result(
-        result=result,
-        staged_rel=staged_rel,
-        import_epub_func=import_epub_func,
-        max_opf_xml_bytes=max_opf_xml_bytes,
-        max_cover_bytes=max_cover_bytes,
+    logger.info(
+        "library import started",
+        extra=_log_extra(result=result),
     )
+    try:
+        return process_import_result(
+            result=result,
+            staged_rel=staged_rel,
+            import_epub_func=import_epub_func,
+            max_opf_xml_bytes=max_opf_xml_bytes,
+            max_cover_bytes=max_cover_bytes,
+        )
+    except ImportResourceLimitError:
+        raise
+    except Exception as exc:
+        logger.error(
+            "library import failed unexpectedly",
+            extra=_log_extra(
+                result=result,
+                status=ImportResultStatus.FAILED,
+                exception_class=exc.__class__.__name__,
+            ),
+            exc_info=True,
+        )
+        raise
 
 
 def _safe_zip_member_name(name: str) -> str | None:
@@ -349,10 +440,20 @@ def process_import_result(
                     ),
                 )
             except Exception as e:
+                safe_message = sanitize_import_error_message(e)
+                logger.warning(
+                    "library import item failed",
+                    extra=_log_extra(
+                        result=result,
+                        item_status=ImportItemStatus.FAILED,
+                        item_source_name=result.source_filename,
+                        safe_message=safe_message,
+                    ),
+                )
                 item = ImportRunItem(
                     status=ImportItemStatus.FAILED,
                     source_name=_safe_import_source_name(result.source_filename or ""),
-                    message=sanitize_import_error_message(e),
+                    message=safe_message,
                 )
             result.items.append(item)
         else:
@@ -361,9 +462,12 @@ def process_import_result(
             with zipfile.ZipFile(staged_path, "r") as zf:
                 all_infos = zf.infolist()
                 if len(all_infos) > MAX_ZIP_MEMBERS:
-                    raise ImportResourceLimitError(
-                        f"ZIP contains more than {MAX_ZIP_MEMBERS} entries."
+                    message = f"ZIP contains more than {MAX_ZIP_MEMBERS} entries."
+                    logger.warning(
+                        "library import rejected by zip member count limit",
+                        extra=_log_extra(result=result, safe_message=message),
                     )
+                    raise ImportResourceLimitError(message)
 
                 members_index: dict[str, zipfile.ZipInfo] = {}
                 epub_members: list[zipfile.ZipInfo] = []
@@ -509,16 +613,30 @@ def process_import_result(
                             )
                         )
                     except Exception as e:
+                        safe_message = sanitize_import_error_message(e)
+                        logger.warning(
+                            "library import item failed",
+                            extra=_log_extra(
+                                result=result,
+                                item_status=ImportItemStatus.FAILED,
+                                item_source_name=safe_source_name,
+                                safe_message=safe_message,
+                            ),
+                        )
                         result.items.append(
                             ImportRunItem(
                                 status=ImportItemStatus.FAILED,
                                 source_name=safe_source_name,
-                                message=sanitize_import_error_message(e),
+                                message=safe_message,
                             )
                         )
                         continue
 
         result.finalize_counts()
+        logger.info(
+            "library import finished",
+            extra=_log_extra(result=result),
+        )
         return result
     finally:
         if extracted_dir is not None and extracted_dir.exists():

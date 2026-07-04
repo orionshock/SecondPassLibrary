@@ -41,6 +41,10 @@ container, and mounts `./userdata` at `/app/userdata`. Startup runs:
 Docker does not auto-generate `DJANGO_SECRET_KEY`; settings fail fast if `.env`
 is missing, unset, or still using the documented placeholder.
 
+Application diagnostics, including library import diagnostics, are emitted
+through standard stdout/stderr logging for container log capture. The app does
+not manage a separate file-log directory under `userdata/`.
+
 Update flow:
 
 ```powershell

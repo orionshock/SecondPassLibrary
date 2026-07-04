@@ -164,7 +164,6 @@ userdata/
   db/
   media/
   static/
-  logs/
   imports/
 ```
 

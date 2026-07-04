@@ -78,7 +78,6 @@ RUNNING_TESTS = "test" in sys.argv
 # Ensure required directories exist
 os.makedirs(USERDATA_DIR / "db", exist_ok=True)
 os.makedirs(USERDATA_DIR / "media", exist_ok=True)
-os.makedirs(USERDATA_DIR / "logs", exist_ok=True)
 os.makedirs(USERDATA_DIR / "imports", exist_ok=True)
 IMPORTS_DIR = USERDATA_DIR / "imports"
 
@@ -214,6 +213,26 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "core.pagination.DefaultPageNumberPagination",
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+        "null": {
+            "class": "logging.NullHandler",
+        },
+    },
+    "loggers": {
+        "library.import_services": {
+            "handlers": ["null"] if RUNNING_TESTS else ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
 }
 
 # Static files (CSS, JavaScript, Images)

@@ -82,6 +82,12 @@ The import response is transient and cannot be retrieved later:
 support notes. It is not a database id and is not retrievable through a detail
 endpoint.
 
+Synchronous library imports emit minimal diagnostics through standard Python
+logging for container/stdout/stderr capture: start, finish, expected upload or
+per-item failures, and unexpected server-side failures. Logs use safe fields
+such as `run_id`, source type, safe basenames, status, counts, and sanitized
+messages; they do not use a database import log or an app-managed file log.
+
 ### Unsupported (non-goals)
 
 - Calibre sync/import of `metadata.db` (Second Pass Library is not a Calibre sync target)

@@ -206,9 +206,10 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(
-            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
-        )
+        with self.assertLogs("library.import_services", level="WARNING") as captured:
+            response = cast_response(
+                self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+            )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
@@ -219,6 +220,26 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertNotIn("private/nested", item["message"])
         self.assertNotIn("C:\\tmp", item["message"])
         self.assertNotIn("leaky.epub", item["message"])
+
+        failed_item_logs = [
+            record
+            for record in captured.records
+            if record.getMessage() == "library import item failed"
+        ]
+        self.assertEqual(len(failed_item_logs), 1)
+        failed_item_log = failed_item_logs[0]
+        self.assertEqual(failed_item_log.item_source_name, "leaky.epub")
+        self.assertEqual(
+            failed_item_log.safe_message,
+            "Invalid or unsupported EPUB file.",
+        )
+        safe_log_text = (
+            f"{failed_item_log.getMessage()} "
+            f"{failed_item_log.item_source_name} "
+            f"{failed_item_log.safe_message}"
+        )
+        self.assertNotIn("private/nested", safe_log_text)
+        self.assertNotIn("C:\\tmp", safe_log_text)
 
     @patch("library.services.epub.read_epub")
     @patch("library.import_services.MAX_SINGLE_EPUB_UPLOAD_BYTES", 4)
@@ -340,9 +361,10 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
-        response = cast_response(
-            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
-        )
+        with self.assertLogs("library.import_services", level="INFO") as captured:
+            response = cast_response(
+                self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+            )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
 
@@ -364,6 +386,23 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertIsNotNone(item["book_file"])
         self.assertEqual(Book.objects.count(), 1)
         self.assertEqual(BookFile.objects.count(), 1)
+
+        messages = [record.getMessage() for record in captured.records]
+        self.assertIn("library import started", messages)
+        self.assertIn("library import finished", messages)
+        finish_log = next(
+            record
+            for record in captured.records
+            if record.getMessage() == "library import finished"
+        )
+        self.assertEqual(finish_log.run_id, data["run_id"])
+        self.assertEqual(finish_log.source_type, "epub")
+        self.assertEqual(finish_log.source_name, "Original Name.epub")
+        self.assertEqual(finish_log.status, "completed")
+        self.assertEqual(finish_log.total_found, 1)
+        self.assertEqual(finish_log.imported_count, 1)
+        self.assertEqual(finish_log.duplicate_count, 0)
+        self.assertEqual(finish_log.failed_count, 0)
 
     @patch("library.services.epub.read_epub")
     def test_duplicate_epub_upload_creates_duplicate_item(self, mock_read_epub):
