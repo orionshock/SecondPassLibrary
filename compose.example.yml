@@ -7,8 +7,6 @@ services:
         APP_GID: ${APP_GID:-1000}
     env_file:
       - .env
-    environment:
-      SECOND_PASS_USERDATA_DIR: /app/userdata
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

@@ -127,7 +127,7 @@ class DockerStartupContractTests(SimpleTestCase):
         self.assertIn("APP_GID: ${APP_GID:-1000}", source)
         self.assertIn("env_file:", source)
         self.assertIn("- .env", source)
-        self.assertIn("SECOND_PASS_USERDATA_DIR: /app/userdata", source)
+        self.assertNotIn("SECOND_PASS_USERDATA_DIR: /app/userdata", source)
         self.assertIn("- ./userdata:/app/userdata", source)
         self.assertIn('- "127.0.0.1:8000:8000"', source)
         self.assertNotIn('- "8000:8000"', source)
