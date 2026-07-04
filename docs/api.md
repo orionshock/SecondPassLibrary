@@ -20,7 +20,7 @@ Authentication non-goals (current):
 - No email verification
 - No email-based password reset
 - No MFA
-- No OIDC/OAuth
+- No OIDC/OAuth/SAML/LDAP provider integration
 
 See `docs/development.md` for practical local usage notes and `docs/architecture.md` for the intentionally-deferred production direction. Session revocation and web/client session tracking are documented in `docs/session-management.md`. Implemented reader-client code authorization is documented in `docs/client-api-auth.md`.
 

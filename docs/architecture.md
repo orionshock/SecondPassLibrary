@@ -99,9 +99,8 @@ privilege escalation, cross-user access, sensitive metadata leaks, and unsafe
 session or bearer-token handling. It is not intended to become a general
 enterprise IAM platform without a concrete product need.
 
-The primary account lifecycle paths are Owner/Manager-managed local users,
-local username/password login, and a future optional SSO/OIDC login or
-just-in-time provisioning flow. Django `User` remains the canonical local
+The primary account lifecycle paths are Owner/Manager-managed local users and
+local username/password login. Django `User` remains the canonical local
 account, `UserProfile.id` remains the stable server-local public `profile_id`,
 and SPL roles and LibraryGroup memberships remain local authorization data.
 Django admin remains an acceptable service hatch for account recovery in
@@ -110,7 +109,7 @@ self-hosted deployments.
 Email is optional contact and management metadata:
 
 - SMTP and email are not required for core SPL operation or local login.
-- Email is not an identity key and is not required for future OIDC linking.
+- Email is not an identity key for local login.
 - Email may appear in existing management/admin contexts, but compact/public
   user payloads must not expose it.
 - Accounts must not be linked solely by email, especially unverified email.
@@ -120,34 +119,23 @@ account-recovery workflows are not current core requirements. Future versions
 may add them under an explicit policy, but self-hosted deployments must not be
 assumed to have working SMTP.
 
-### Future direction (intentionally deferred)
+### External auth reserve (future)
 
-The production/self-hosted client authentication story is intentionally not settled yet. Near-term priorities are:
+Current user management is local. No OIDC/OAuth/SAML/LDAP provider integration
+is currently implemented.
 
-- Keep a stable REST/JSON API surface while the domain model hardens.
-- Avoid committing to an auth protocol that would force early client/UI decisions.
+`accounts.ExternalIdentity` is reserved for possible future external-auth
+support. It is not used by any active login flow, API authentication class, or
+client pairing flow.
 
-Expected future options include external authentication (OIDC), reverse-proxy/auth-header setups, or other self-host-friendly approaches, but none are implemented by default today.
+Client API bearer pairing is not OAuth/OIDC and does not depend on
+`accounts.ExternalIdentity`. It remains a separate reader-client authorization
+flow tied to local Django users.
 
-If/when external auth is added, it is expected to map into the same canonical Django `User` record (not replace it).
-
-`accounts.ExternalIdentity` is reserved infrastructure for future external
-authentication. It is not used by any active login flow. Future identity
-resolution must use the normalized OIDC issuer plus opaque subject (`iss` +
-`sub`), never email or username alone. A local user may have multiple external
-identities, including identities from multiple providers.
-
-Username remains the local display handle. Email is contact/display data and
-may participate only in a future explicit linking policy; accounts must never
-be auto-linked solely by an unverified email claim. First and last name may be
-populated from claims under a future documented synchronization policy.
-`UserProfile.id` remains the server-local public user identifier exposed as
-`profile_id`.
-
-External providers authenticate identity only. SPL global roles and
-LibraryGroup memberships remain local authorization data. Provider groups or
-claims do not grant SPL roles by default. Local password authentication remains
-supported alongside any future external login.
+Future external auth must preserve local Owner recovery, local role policy,
+and LibraryGroup authorization. External authentication, if added later, should
+map into local Django users rather than replace the account and permission
+model.
 
 Notes for future browser UI:
 
