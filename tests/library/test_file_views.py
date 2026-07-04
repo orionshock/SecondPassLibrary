@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from io import BytesIO
+import hashlib
 from typing import Any, cast
+import zipfile
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from library.book_file_services import repair_book_file_for_book
 from library.group_services import ensure_book_public_assignment
 from library.models import Author, BookFile
 
@@ -16,6 +22,14 @@ from tests.library.helpers import (
 )
 from tests.library.utils import IsolatedMediaRootMixin
 from tests.utils.books import create_fileless_book_for_integrity_edge_case
+
+
+def _epub_bytes(label: str = "book") -> bytes:
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("mimetype", "application/epub+zip")
+        zf.writestr("META-INF/container.xml", f"<container>{label}</container>")
+    return buffer.getvalue()
 
 class BaseBookFileDownloadAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
@@ -44,6 +58,35 @@ class BaseBookFileDownloadAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_download_succeeds_after_missing_file_is_repaired(self):
+        epub_bytes = _epub_bytes("restored")
+        checksum = hashlib.sha256(epub_bytes).hexdigest()
+        self.book_file.checksum = checksum
+        self.book_file.save(update_fields=["checksum", "updated_at"])
+
+        before = cast(
+            Response,
+            self.client.get(
+                f"/api/v1/library/book-files/{self.book_file.id}/download/"
+            ),
+        )
+        self.assertEqual(before.status_code, status.HTTP_404_NOT_FOUND)
+
+        repair_book_file_for_book(
+            book=self.book,
+            upload=SimpleUploadedFile(
+                "restored.epub",
+                epub_bytes,
+                content_type="application/epub+zip",
+            ),
+        )
+
+        after = self.client.get(
+            f"/api/v1/library/book-files/{self.book_file.id}/download/"
+        )
+        self.assertEqual(after.status_code, status.HTTP_200_OK)
+        self.assertEqual(after.get("Content-Type"), "application/epub+zip")
 
 class BookFileDownloadAPITest(BaseBookFileDownloadAPITest):
     pass

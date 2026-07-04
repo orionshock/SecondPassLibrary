@@ -2,12 +2,21 @@ from typing import Any, cast
 
 from django import forms
 from django.contrib import admin
+from django.contrib import messages
 from django.contrib.admin import DateFieldListFilter
+from django.core.exceptions import ValidationError
 from django.db.models import Count
-from django.urls import reverse
+from django.http import HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils.html import format_html
 
-from .book_file_services import BookFileUploadMetadata, inspect_epub_upload
+from .book_file_services import (
+    BookFileUploadMetadata,
+    book_file_storage_exists,
+    inspect_epub_upload,
+    repair_book_file_for_book,
+)
 from .cover_services import set_book_cover_from_bytes, MAX_COVER_BYTES
 from .models import (
     Author,
@@ -94,6 +103,26 @@ class BookAdminForm(forms.ModelForm):
         return f
 
 
+class BookFileRepairAdminForm(forms.Form):
+    file = forms.FileField(
+        label="Replacement EPUB",
+        help_text="Attach or restore the stored EPUB for this existing book.",
+    )
+    replace_existing_file = forms.BooleanField(
+        required=False,
+        label="Replace existing stored file",
+        help_text="Required when the current stored file still exists.",
+    )
+    allow_checksum_mismatch = forms.BooleanField(
+        required=False,
+        label="Allow different checksum",
+        help_text=(
+            "Use only when you intentionally accept that EPUB CFI anchors may no "
+            "longer match the replacement file."
+        ),
+    )
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookAdminForm
@@ -105,6 +134,8 @@ class BookAdmin(admin.ModelAdmin):
         "publisher",
         "language",
         "published_date",
+        "book_file_status",
+        "book_file_repair_link",
         "created_at",
     ]
     search_fields = [
@@ -128,6 +159,11 @@ class BookAdmin(admin.ModelAdmin):
         "cover_mime",
         "cover_width",
         "cover_height",
+        "book_file_status",
+        "book_file_checksum",
+        "book_file_size",
+        "book_file_internal_path",
+        "book_file_repair_link",
         "created_at",
         "updated_at",
     ]
@@ -164,8 +200,31 @@ class BookAdmin(admin.ModelAdmin):
             "Bibliographic",
             {"fields": ("publisher", "language", "published_date", "isbn", "subjects")},
         ),
+        (
+            "Stored EPUB",
+            {
+                "fields": (
+                    "book_file_status",
+                    "book_file_checksum",
+                    "book_file_size",
+                    "book_file_internal_path",
+                    "book_file_repair_link",
+                )
+            },
+        ),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<path:object_id>/repair-file/",
+                self.admin_site.admin_view(self.repair_file_view),
+                name="library_book_repair_file",
+            ),
+        ]
+        return custom_urls + urls
 
     def has_add_permission(self, request):
         # Books are file-backed and created via import only. Django admin remains
@@ -196,6 +255,99 @@ class BookAdmin(admin.ModelAdmin):
     def cover_internal_path(self, obj: Book) -> str:
         cover = getattr(obj, "cover_file", None)
         return cover.name if cover else ""
+
+    def _book_file_or_none(self, obj: Book) -> BookFile | None:
+        try:
+            return cast(Any, obj).file
+        except BookFile.DoesNotExist:
+            return None
+
+    @admin.display(description="Stored EPUB")
+    def book_file_status(self, obj: Book) -> str:
+        book_file = self._book_file_or_none(obj)
+        if book_file is None:
+            return "No BookFile row"
+        if book_file_storage_exists(book_file):
+            return "Stored file present"
+        return "BookFile row exists; stored file missing"
+
+    @admin.display(description="EPUB checksum")
+    def book_file_checksum(self, obj: Book) -> str:
+        book_file = self._book_file_or_none(obj)
+        return book_file.checksum_short(16) if book_file is not None else ""
+
+    @admin.display(description="EPUB size")
+    def book_file_size(self, obj: Book) -> str:
+        book_file = self._book_file_or_none(obj)
+        return book_file.file_size_human() if book_file is not None else ""
+
+    @admin.display(description="EPUB stored path")
+    def book_file_internal_path(self, obj: Book) -> str:
+        book_file = self._book_file_or_none(obj)
+        return book_file.file.name if book_file is not None and book_file.file else ""
+
+    @admin.display(description="Repair EPUB")
+    def book_file_repair_link(self, obj: Book) -> str:
+        if obj.pk is None:
+            return ""
+        url = reverse("admin:library_book_repair_file", args=[obj.pk])
+        return format_html('<a href="{}">Repair stored EPUB</a>', url)
+
+    def repair_file_view(self, request, object_id: str):
+        book = self.get_object(request, object_id)
+        if book is None:
+            from django.http import Http404
+
+            raise Http404("Book not found.")
+        if not self.has_change_permission(request, book):
+            from django.core.exceptions import PermissionDenied
+
+            raise PermissionDenied
+
+        if request.method == "POST":
+            form = BookFileRepairAdminForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    result = repair_book_file_for_book(
+                        book=book,
+                        upload=form.cleaned_data["file"],
+                        replace_existing_file=bool(
+                            form.cleaned_data["replace_existing_file"]
+                        ),
+                        allow_checksum_mismatch=bool(
+                            form.cleaned_data["allow_checksum_mismatch"]
+                        ),
+                    )
+                except (ValidationError, ValueError) as exc:
+                    form.add_error(None, exc)
+                else:
+                    action = "created" if result.created else "repaired"
+                    self.message_user(
+                        request,
+                        f"BookFile {action} for this book.",
+                        messages.SUCCESS,
+                    )
+                    return HttpResponseRedirect(
+                        reverse("admin:library_book_change", args=[book.pk])
+                    )
+        else:
+            form = BookFileRepairAdminForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "original": book,
+            "title": "Repair stored EPUB",
+            "form": form,
+            "book": book,
+            "book_file_status": self.book_file_status(book),
+            "has_change_permission": self.has_change_permission(request, book),
+        }
+        return TemplateResponse(
+            request,
+            "admin/library/book/repair_file.html",
+            context,
+        )
 
     def save_model(self, request, obj: Book, form, change):
         super().save_model(request, obj, form, change)

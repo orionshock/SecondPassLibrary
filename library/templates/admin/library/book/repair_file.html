@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <p>
+      Repair the stored EPUB for <strong>{{ book }}</strong>. This does not update
+      book metadata, authors, identifiers, covers, reading sessions, progress, or
+      annotations.
+    </p>
+    <p><strong>Current file state:</strong> {{ book_file_status }}</p>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="submit-row">
+        <input type="submit" value="Repair stored EPUB" class="default">
+        <a href="{% url 'admin:library_book_change' book.pk %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
