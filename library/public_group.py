@@ -63,17 +63,6 @@ def get_public_group() -> LibraryGroup:
         if group is not None:
             return group
 
-    # Repair path for existing installs: prefer the legacy display name before
-    # the new default display name. Identity remains the setting value.
-    existing = (
-        LibraryGroup.objects.filter(name__in=["Public", DEFAULT_PUBLIC_GROUP_NAME])
-        .order_by("created_at", "id")
-        .first()
-    )
-    if existing is not None:
-        set_public_group_id(str(existing.id))
-        return existing
-
     group = LibraryGroup.objects.create(
         name=DEFAULT_PUBLIC_GROUP_NAME,
         description=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
