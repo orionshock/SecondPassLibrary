@@ -7,6 +7,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 
+from .book_file_services import BookFileUploadMetadata, inspect_epub_upload
 from .cover_services import set_book_cover_from_bytes, MAX_COVER_BYTES
 from .models import (
     Author,
@@ -247,8 +248,52 @@ class BookAdmin(admin.ModelAdmin):
             return
 
 
+class BookFileAdminForm(forms.ModelForm):
+    computed_upload_metadata: BookFileUploadMetadata | None = None
+
+    class Meta:
+        model = BookFile
+        fields = "__all__"
+
+    def clean_file(self):
+        upload = self.cleaned_data.get("file")
+        if not upload:
+            return upload
+
+        try:
+            metadata = inspect_epub_upload(upload)
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc)) from exc
+
+        duplicate = BookFile.objects.filter(checksum=metadata.checksum)
+        if self.instance and self.instance.pk:
+            duplicate = duplicate.exclude(pk=self.instance.pk)
+        if duplicate.exists():
+            raise forms.ValidationError(
+                "An EPUB with this checksum is already stored."
+            )
+
+        self.computed_upload_metadata = metadata
+        return upload
+
+    def clean(self):
+        cleaned_data = super().clean()
+        book = cleaned_data.get("book")
+        if book is None:
+            return cleaned_data
+
+        existing = BookFile.objects.filter(book=book)
+        if self.instance and self.instance.pk:
+            existing = existing.exclude(pk=self.instance.pk)
+        if existing.exists():
+            self.add_error("book", "Selected book already has a stored file.")
+
+        return cleaned_data
+
+
 @admin.register(BookFile)
 class BookFileAdmin(admin.ModelAdmin):
+    form = BookFileAdminForm
     list_display = [
         "book",
         "file_format",
@@ -300,6 +345,14 @@ class BookFileAdmin(admin.ModelAdmin):
         if obj is None:
             return self.add_fieldsets
         return self.change_fieldsets
+
+    def save_model(self, request, obj: BookFile, form, change):
+        metadata = getattr(form, "computed_upload_metadata", None)
+        if metadata is not None:
+            obj.checksum = metadata.checksum
+            obj.file_size = metadata.file_size
+            obj.source_filename = metadata.source_filename
+        super().save_model(request, obj, form, change)
 
     @admin.display(description="Format", ordering="format")
     def file_format(self, obj):
