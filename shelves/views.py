@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any, NoReturn, cast
 
 from django.db.models import Count, Exists, F, OuterRef, Window
@@ -17,6 +16,11 @@ from rest_framework import serializers
 
 from library import policies as library_policies
 from library.models import Book, BookGroupAssignment, LibraryGroup
+from library.preview_books import (
+    PREVIEW_BOOK_LIMIT,
+    attach_preview_books_from_queryset,
+    include_preview_books,
+)
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 
@@ -41,17 +45,6 @@ from .services import (
 )
 from .policies import can_edit_shelf_for_request, visible_shelf_filter
 from .querysets import build_visible_shelf_list_queryset
-
-
-PREVIEW_BOOK_LIMIT = 6
-
-
-def _truthy_query_param(value: str | None) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
-def _include_preview_books(request) -> bool:
-    return _truthy_query_param(request.query_params.get("include_preview_books"))
 
 
 def _attach_shelf_preview_books(*, shelves, user) -> None:
@@ -85,12 +78,11 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
         .order_by("_preview_parent_id", "_preview_rank")
     )
 
-    grouped = defaultdict(list)
-    for item in queryset:
-        grouped[str(getattr(item, "_preview_parent_id"))].append(item.book)
-
-    for shelf in shelf_list:
-        shelf._preview_books = grouped.get(str(shelf.id), [])
+    attach_preview_books_from_queryset(
+        parents=shelf_list,
+        queryset=queryset,
+        get_book=lambda item: item.book,
+    )
 
 
 class ShelfViewSet(
@@ -150,7 +142,7 @@ class ShelfViewSet(
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = _include_preview_books(self.request)
+        context["include_preview_books"] = include_preview_books(self.request)
         return context
 
     def _raise_drf_validation(self, exc: DjangoValidationError) -> NoReturn:
@@ -190,7 +182,7 @@ class ShelfViewSet(
         page = self.paginate_queryset(queryset)
         shelves = list(page) if page is not None else list(queryset)
 
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_shelf_preview_books(shelves=shelves, user=request.user)
 
         serializer = self.get_serializer(shelves, many=True)
@@ -200,7 +192,7 @@ class ShelfViewSet(
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_shelf_preview_books(shelves=[instance], user=request.user)
 
         serializer = self.get_serializer(instance)

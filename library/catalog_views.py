@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Window
 from django.db.models.functions import Random, RowNumber
@@ -21,18 +19,12 @@ from .catalog_serializers import (
     SeriesSerializer,
 )
 from .models import Author, Book, BookGroupAssignment, BookIdentifier, Series
+from .preview_books import (
+    PREVIEW_BOOK_LIMIT,
+    attach_preview_books_from_queryset,
+    include_preview_books,
+)
 from .view_mixins import ClientBearerReadOnlyMixin
-
-
-PREVIEW_BOOK_LIMIT = 6
-
-
-def _truthy_query_param(value: str | None) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
-def _include_preview_books(request) -> bool:
-    return _truthy_query_param(request.query_params.get("include_preview_books"))
 
 
 def _visible_book_preview_queryset(user):
@@ -68,12 +60,11 @@ def _attach_author_preview_books(*, authors, user) -> None:
         .order_by("_preview_parent_id", "_preview_rank")
     )
 
-    grouped = defaultdict(list)
-    for book in queryset:
-        grouped[str(getattr(book, "_preview_parent_id"))].append(book)
-
-    for author in author_list:
-        author._preview_books = grouped.get(str(author.id), [])
+    attach_preview_books_from_queryset(
+        parents=author_list,
+        queryset=queryset,
+        get_book=lambda book: book,
+    )
 
 
 def _attach_series_preview_books(*, series, user) -> None:
@@ -100,12 +91,11 @@ def _attach_series_preview_books(*, series, user) -> None:
         .order_by("_preview_parent_id", "_preview_rank")
     )
 
-    grouped = defaultdict(list)
-    for book in queryset:
-        grouped[str(getattr(book, "_preview_parent_id"))].append(book)
-
-    for item in series_list:
-        item._preview_books = grouped.get(str(item.id), [])
+    attach_preview_books_from_queryset(
+        parents=series_list,
+        queryset=queryset,
+        get_book=lambda book: book,
+    )
 
 
 class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
@@ -116,7 +106,7 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = _include_preview_books(self.request)
+        context["include_preview_books"] = include_preview_books(self.request)
         return context
 
     def get_queryset(self):
@@ -153,7 +143,7 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         authors = list(page) if page is not None else list(queryset)
 
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_author_preview_books(authors=authors, user=request.user)
 
         serializer = self.get_serializer(authors, many=True)
@@ -163,7 +153,7 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_author_preview_books(authors=[instance], user=request.user)
 
         serializer = self.get_serializer(instance)
@@ -178,7 +168,7 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = _include_preview_books(self.request)
+        context["include_preview_books"] = include_preview_books(self.request)
         return context
 
     def get_queryset(self):
@@ -215,7 +205,7 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         series = list(page) if page is not None else list(queryset)
 
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_series_preview_books(series=series, user=request.user)
 
         serializer = self.get_serializer(series, many=True)
@@ -225,7 +215,7 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_series_preview_books(series=[instance], user=request.user)
 
         serializer = self.get_serializer(instance)

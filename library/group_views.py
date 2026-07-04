@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Any, cast
 
 from django.core.exceptions import ValidationError
@@ -41,18 +40,13 @@ from .models import (
     LibraryGroup,
     LibraryGroupMembership,
 )
+from .preview_books import (
+    PREVIEW_BOOK_LIMIT,
+    attach_preview_books_from_queryset,
+    include_preview_books,
+)
 from .public_group import get_public_group, is_public_group
 from .view_mixins import ClientBearerReadOnlyMixin
-
-PREVIEW_BOOK_LIMIT = 6
-
-
-def _truthy_query_param(value: str | None) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
-def _include_preview_books(request) -> bool:
-    return _truthy_query_param(request.query_params.get("include_preview_books"))
 
 
 def _attach_group_preview_books(*, groups, user) -> None:
@@ -85,12 +79,11 @@ def _attach_group_preview_books(*, groups, user) -> None:
         .order_by("_preview_parent_id", "_preview_rank")
     )
 
-    grouped = defaultdict(list)
-    for assignment in queryset:
-        grouped[str(getattr(assignment, "_preview_parent_id"))].append(assignment.book)
-
-    for group in group_list:
-        group._preview_books = grouped.get(str(group.id), [])
+    attach_preview_books_from_queryset(
+        parents=group_list,
+        queryset=queryset,
+        get_book=lambda assignment: assignment.book,
+    )
 
 
 def _membership_payload(membership: LibraryGroupMembership) -> dict[str, Any]:
@@ -134,7 +127,7 @@ class LibraryGroupViewSet(
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = _include_preview_books(self.request)
+        context["include_preview_books"] = include_preview_books(self.request)
         return context
 
     def get_queryset(self):
@@ -157,7 +150,7 @@ class LibraryGroupViewSet(
         page = self.paginate_queryset(queryset)
         groups = list(page) if page is not None else list(queryset)
 
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_group_preview_books(groups=groups, user=request.user)
 
         serializer = self.get_serializer(groups, many=True)
@@ -167,7 +160,7 @@ class LibraryGroupViewSet(
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if _include_preview_books(request):
+        if include_preview_books(request):
             _attach_group_preview_books(groups=[instance], user=request.user)
 
         serializer = self.get_serializer(instance)
