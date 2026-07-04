@@ -11,29 +11,31 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-import os
 import sys
 
 from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env()
 
 
-# Environment helpers (no django-environ dependency)
 def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
+    value = env.str(name, default=None)
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "t", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "f", "no", "n", "off"}:
+        return False
+    raise ImproperlyConfigured(f"{name} must be a boolean value.")
 
 
-def _env_csv(name: str, default: list[str]) -> list[str]:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return [item.strip() for item in value.split(",") if item.strip()]
+def _env_list(name: str, default: list[str]) -> list[str]:
+    return [item.strip() for item in env.list(name, default=default) if item.strip()]
 
 
 def _staticfiles_backend(*, debug: bool) -> str:
@@ -57,7 +59,7 @@ PLACEHOLDER_SECRET_KEYS = {
 
 
 def _secret_key(*, debug: bool) -> str:
-    value = os.getenv("DJANGO_SECRET_KEY")
+    value = env.str("DJANGO_SECRET_KEY", default=None)
     if debug:
         return value or INSECURE_FALLBACK_SECRET_KEY
     if (
@@ -72,17 +74,19 @@ def _secret_key(*, debug: bool) -> str:
 
 
 # User data directory for runtime data
-USERDATA_DIR = Path(os.getenv("SECOND_PASS_USERDATA_DIR", BASE_DIR / "userdata"))
+USERDATA_DIR = Path(env.path("SECOND_PASS_USERDATA_DIR", default=str(BASE_DIR / "userdata")))
 RUNNING_TESTS = "test" in sys.argv
 
-SECOND_PASS_SERVER_VERSION = os.getenv("SECOND_PASS_SERVER_VERSION", "0.1.0-dev")
-SECOND_PASS_SERVER_RELEASE = os.getenv("SECOND_PASS_SERVER_RELEASE", "pre-release")
-SECOND_PASS_SERVER_RELEASE_DATE = os.getenv("SECOND_PASS_SERVER_RELEASE_DATE", "2026-07-03")
+SECOND_PASS_SERVER_VERSION = env.str("SECOND_PASS_SERVER_VERSION", default="0.1.0-dev")
+SECOND_PASS_SERVER_RELEASE = env.str("SECOND_PASS_SERVER_RELEASE", default="pre-release")
+SECOND_PASS_SERVER_RELEASE_DATE = env.str(
+    "SECOND_PASS_SERVER_RELEASE_DATE", default="2026-07-03"
+)
 
 # Ensure required directories exist
-os.makedirs(USERDATA_DIR / "db", exist_ok=True)
-os.makedirs(USERDATA_DIR / "media", exist_ok=True)
-os.makedirs(USERDATA_DIR / "imports", exist_ok=True)
+(USERDATA_DIR / "db").mkdir(parents=True, exist_ok=True)
+(USERDATA_DIR / "media").mkdir(parents=True, exist_ok=True)
+(USERDATA_DIR / "imports").mkdir(parents=True, exist_ok=True)
 IMPORTS_DIR = USERDATA_DIR / "imports"
 
 
@@ -91,16 +95,16 @@ IMPORTS_DIR = USERDATA_DIR / "imports"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool("DJANGO_DEBUG", False)
-SILENCED_SYSTEM_CHECKS = _env_csv("DJANGO_SILENCED_SYSTEM_CHECKS", [])
+SILENCED_SYSTEM_CHECKS = _env_list("DJANGO_SILENCED_SYSTEM_CHECKS", [])
 SECOND_PASS_ENABLE_DJANGO_ADMIN = _env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = _secret_key(debug=DEBUG or RUNNING_TESTS)
 
 LOCAL_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
-ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS", LOCAL_ALLOWED_HOSTS)
+ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", LOCAL_ALLOWED_HOSTS)
 
-CSRF_TRUSTED_ORIGINS = _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS", [])
+CSRF_TRUSTED_ORIGINS = _env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
 
 SECURE_PROXY_SSL_HEADER = _secure_proxy_ssl_header()
 USE_X_FORWARDED_HOST = _env_bool("DJANGO_USE_X_FORWARDED_HOST", False)
@@ -195,7 +199,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "America/Phoenix")
+TIME_ZONE = env.str("DJANGO_TIME_ZONE", default="America/Phoenix")
 
 USE_I18N = True
 

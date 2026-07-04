@@ -14,7 +14,7 @@ from secondpass.settings import (
     INSECURE_FALLBACK_SECRET_KEY,
     PLACEHOLDER_SECRET_KEYS,
     _env_bool,
-    _env_csv,
+    _env_list,
     _secure_proxy_ssl_header,
 )
 
@@ -43,7 +43,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
         source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
 
         self.assertIn('DEBUG = _env_bool("DJANGO_DEBUG", False)', source)
-        self.assertIn('ALLOWED_HOSTS = _env_csv("DJANGO_ALLOWED_HOSTS"', source)
+        self.assertIn('ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS"', source)
         self.assertEqual(settings.ALLOWED_HOSTS[:3], ["localhost", "127.0.0.1", "[::1]"])
         self.assertNotIn("*", settings.ALLOWED_HOSTS)
 
@@ -53,18 +53,18 @@ class DjangoSettingsContractTests(SimpleTestCase):
             {"DJANGO_ALLOWED_HOSTS": "books.example.com, 192.168.1.25, my-server.local"},
         ):
             self.assertEqual(
-                _env_csv("DJANGO_ALLOWED_HOSTS", []),
+                _env_list("DJANGO_ALLOWED_HOSTS", []),
                 ["books.example.com", "192.168.1.25", "my-server.local"],
             )
 
         with patch.dict("os.environ", {"DJANGO_ALLOWED_HOSTS": "*"}):
-            self.assertEqual(_env_csv("DJANGO_ALLOWED_HOSTS", []), ["*"])
+            self.assertEqual(_env_list("DJANGO_ALLOWED_HOSTS", []), ["*"])
 
     def test_silenced_system_checks_are_env_driven(self):
         source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
 
         self.assertIn(
-            'SILENCED_SYSTEM_CHECKS = _env_csv("DJANGO_SILENCED_SYSTEM_CHECKS", [])',
+            'SILENCED_SYSTEM_CHECKS = _env_list("DJANGO_SILENCED_SYSTEM_CHECKS", [])',
             source,
         )
         with patch.dict(
@@ -72,7 +72,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
             {"DJANGO_SILENCED_SYSTEM_CHECKS": "security.W004, security.W008"},
         ):
             self.assertEqual(
-                _env_csv("DJANGO_SILENCED_SYSTEM_CHECKS", []),
+                _env_list("DJANGO_SILENCED_SYSTEM_CHECKS", []),
                 ["security.W004", "security.W008"],
             )
 
@@ -88,6 +88,21 @@ class DjangoSettingsContractTests(SimpleTestCase):
             self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), False)
         with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "1"}):
             self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), True)
+        with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "false"}):
+            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", True), False)
+        with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "true"}):
+            self.assertIs(_env_bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", False), True)
+
+    def test_invalid_boolean_env_values_fail_clearly(self):
+        result = self._settings_import(
+            {
+                "DJANGO_DEBUG": "maybe",
+                "DJANGO_SECRET_KEY": "test-explicit-production-secret-key",
+            }
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("DJANGO_DEBUG must be a boolean value", result.stderr)
 
     def test_csrf_trusted_origins_are_env_driven(self):
         with patch.dict(
@@ -99,7 +114,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
             },
         ):
             self.assertEqual(
-                _env_csv("DJANGO_CSRF_TRUSTED_ORIGINS", []),
+                _env_list("DJANGO_CSRF_TRUSTED_ORIGINS", []),
                 ["https://books.example.com", "http://192.168.1.25:8000"],
             )
         self.assertEqual(settings.CSRF_TRUSTED_ORIGINS, [])
