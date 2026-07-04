@@ -23,7 +23,7 @@ from accounts import policies as account_policies
 from library import policies as library_policies
 from core import server_settings as server_settings_service
 from library.models import Book
-from reading.session_queries import list_sessions_for_book, list_sessions_for_user
+from reading.sessions.queries import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
 
 

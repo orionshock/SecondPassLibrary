@@ -14,9 +14,9 @@ from core.pagination import DefaultPageNumberPagination
 from library import policies as library_policies
 from library.models import Book
 
-from .models import Annotation, ReadingSession
-from .profile import CURRENT_READING_PROFILE_VERSION
-from .session_queries import (
+from ..models import Annotation, ReadingSession
+from ..profile import CURRENT_READING_PROFILE_VERSION
+from .queries import (
     apply_session_filters,
     build_activity_summary,
     build_session_list_context,
@@ -26,14 +26,14 @@ from .session_queries import (
     recent_sessions_for_user,
     resolve_visible_book_for_session_filter,
 )
-from .serializers import (
+from ..serializers import (
     AnnotationSerializer,
     ReadingProgressSerializer,
     ReadingSessionPatchSerializer,
     ReadingSessionSerializer,
     ReadingSessionSummarySerializer,
 )
-from .services import (
+from ..services import (
     assert_session_writable,
     close_session,
     get_or_create_active_session,

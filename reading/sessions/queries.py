@@ -12,7 +12,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from library import policies as library_policies
 from library.models import Book
 
-from .models import ReadingSession
+from ..models import ReadingSession
 
 
 def get_user_session_queryset(user) -> QuerySet[ReadingSession]:
