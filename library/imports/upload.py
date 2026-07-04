@@ -2,21 +2,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
-from pathlib import Path, PurePath
-import posixpath
+from pathlib import Path
 import uuid
-import zipfile
 from typing import BinaryIO, Callable
 
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
+from .archives import (
+    MAX_ZIP_EPUB_MEMBER_BYTES,
+    MAX_ZIP_MEMBERS,
+    MAX_ZIP_TOTAL_EPUB_BYTES,
+    MAX_ZIP_UPLOAD_BYTES,
+    copy_fileobj_capped,
+    format_mib,
+    process_zip_import_path,
+    safe_import_source_name,
+)
 
 MAX_SINGLE_EPUB_UPLOAD_BYTES = 200 * 1024 * 1024
-MAX_ZIP_UPLOAD_BYTES = 1024 * 1024 * 1024
-MAX_ZIP_MEMBERS = 5000
-MAX_ZIP_EPUB_MEMBER_BYTES = 200 * 1024 * 1024
-MAX_ZIP_TOTAL_EPUB_BYTES = 2 * 1024 * 1024 * 1024
 COPY_CHUNK_BYTES = 1024 * 1024
 
 logger = logging.getLogger(__name__)
@@ -136,7 +140,7 @@ def _safe_import_result_message(*, status: str, message: object) -> str:
 
 
 def _safe_import_source_name(source_name: str) -> str:
-    return PurePath((source_name or "").replace("\\", "/")).name
+    return safe_import_source_name(source_name)
 
 
 def _log_extra(
@@ -189,7 +193,7 @@ def _imports_dir() -> Path:
 
 
 def _format_mib(byte_count: int) -> str:
-    return f"{byte_count // (1024 * 1024)} MiB"
+    return format_mib(byte_count)
 
 
 def _uploaded_size(uploaded_file: UploadedFile) -> int | None:
@@ -222,23 +226,10 @@ def _validate_uploaded_size(*, uploaded_file: UploadedFile, source_type: str) ->
 
 
 def _copy_fileobj_capped(*, src: BinaryIO, dst_path: Path, max_bytes: int) -> int:
-    written = 0
     try:
-        with dst_path.open("wb") as dst:
-            while True:
-                chunk = src.read(COPY_CHUNK_BYTES)
-                if not chunk:
-                    break
-                written += len(chunk)
-                if written > max_bytes:
-                    raise ImportResourceLimitError(
-                        f"EPUB member exceeds the {_format_mib(max_bytes)} uncompressed limit."
-                    )
-                dst.write(chunk)
-    except Exception:
-        dst_path.unlink(missing_ok=True)
-        raise
-    return written
+        return copy_fileobj_capped(src=src, dst_path=dst_path, max_bytes=max_bytes)
+    except ValueError as exc:
+        raise ImportResourceLimitError(str(exc)) from exc
 
 
 def _stage_uploaded_file(
@@ -345,52 +336,23 @@ def create_import_result_from_upload(
         raise
 
 
-def _safe_zip_member_name(name: str) -> str | None:
-    if not name:
-        return None
-    if name.startswith(("/", "\\")) or ":" in name:
-        return None
-    name = name.replace("\\", "/")
-
-    # Normalize harmless "./" segments so directory matching (e.g. metadata.opf)
-    # remains stable across ZIP tools.
-    parts = [p for p in name.split("/") if p != "."]
-    if any(p in {"", ".."} for p in parts):
-        return None
-    normalized = "/".join(parts)
-    if not normalized:
-        return None
-    if normalized.startswith("/"):
-        return None
-    if normalized.startswith("../") or normalized == "..":
-        return None
-    return normalized
+def _log_zip_item_failure(*, result: ImportRunResult, item_source_name: str, safe_message: str) -> None:
+    logger.warning(
+        "library import item failed",
+        extra=_log_extra(
+            result=result,
+            item_status=ImportItemStatus.FAILED,
+            item_source_name=item_source_name,
+            safe_message=safe_message,
+        ),
+    )
 
 
-def _zip_sidecar_opf_for_epub(
-    *,
-    epub_member: str,
-    opfs_by_dir: dict[str, list[str]],
-    members_index: dict[str, zipfile.ZipInfo],
-) -> str | None:
-    epub_member = epub_member.replace("\\", "/")
-    d = posixpath.dirname(epub_member)
-    base = posixpath.basename(epub_member)
-    stem, _ext = posixpath.splitext(base)
-
-    preferred = posixpath.join(d, "metadata.opf") if d else "metadata.opf"
-    if preferred in members_index:
-        return preferred
-
-    same_base = posixpath.join(d, f"{stem}.opf") if d else f"{stem}.opf"
-    if same_base in members_index:
-        return same_base
-
-    opfs = opfs_by_dir.get(d or "", [])
-    if len(opfs) == 1:
-        return opfs[0]
-
-    return None
+def _log_zip_archive_rejected(*, result: ImportRunResult, safe_message: str) -> None:
+    logger.warning(
+        "library import rejected by zip member count limit",
+        extra=_log_extra(result=result, safe_message=safe_message),
+    )
 
 
 def process_import_result(
@@ -458,179 +420,22 @@ def process_import_result(
             result.items.append(item)
         else:
             extracted_dir = imports_dir / "jobs" / result.run_id / "extracted"
-            extracted_dir.mkdir(parents=True, exist_ok=True)
-            with zipfile.ZipFile(staged_path, "r") as zf:
-                all_infos = zf.infolist()
-                if len(all_infos) > MAX_ZIP_MEMBERS:
-                    message = f"ZIP contains more than {MAX_ZIP_MEMBERS} entries."
-                    logger.warning(
-                        "library import rejected by zip member count limit",
-                        extra=_log_extra(result=result, safe_message=message),
-                    )
-                    raise ImportResourceLimitError(message)
-
-                members_index: dict[str, zipfile.ZipInfo] = {}
-                epub_members: list[zipfile.ZipInfo] = []
-                opfs_by_dir: dict[str, list[str]] = {}
-                collisions: set[str] = set()
-
-                for info in all_infos:
-                    if info.is_dir():
-                        continue
-                    safe_name = _safe_zip_member_name(info.filename)
-                    if safe_name is None:
-                        continue
-                    if safe_name in members_index:
-                        collisions.add(safe_name)
-                        continue
-                    info.filename = safe_name
-                    members_index[safe_name] = info
-
-                    lower = safe_name.lower()
-                    if lower.endswith(".epub"):
-                        epub_members.append(info)
-                    elif lower.endswith(".opf"):
-                        d = posixpath.dirname(safe_name)
-                        opfs_by_dir.setdefault(d, []).append(safe_name)
-
-                if collisions:
-                    members_index = {
-                        k: v for (k, v) in members_index.items() if k not in collisions
-                    }
-                    epub_members = [
-                        i for i in epub_members if i.filename not in collisions
-                    ]
-                    for d, names in list(opfs_by_dir.items()):
-                        filtered = [n for n in names if n not in collisions]
-                        if filtered:
-                            opfs_by_dir[d] = filtered
-                        else:
-                            opfs_by_dir.pop(d, None)
-
-                members = epub_members
-                result.total_found = len(members)
-
-                copied_epub_bytes = 0
-                for info in members:
-                    source_name = info.filename
-                    safe_source_name = _safe_import_source_name(source_name)
-                    try:
-                        if info.file_size > MAX_ZIP_EPUB_MEMBER_BYTES:
-                            raise ImportResourceLimitError(
-                                "EPUB member exceeds the "
-                                f"{_format_mib(MAX_ZIP_EPUB_MEMBER_BYTES)} uncompressed limit."
-                            )
-                        if copied_epub_bytes + info.file_size > MAX_ZIP_TOTAL_EPUB_BYTES:
-                            raise ImportResourceLimitError(
-                                "ZIP EPUB contents exceed the "
-                                f"{_format_mib(MAX_ZIP_TOTAL_EPUB_BYTES)} total uncompressed limit."
-                            )
-
-                        extracted_name = f"{uuid.uuid4().hex}.epub"
-                        extracted_path = extracted_dir / extracted_name
-                        with zf.open(info, "r") as src:
-                            written = _copy_fileobj_capped(
-                                src=src,
-                                dst_path=extracted_path,
-                                max_bytes=MAX_ZIP_EPUB_MEMBER_BYTES,
-                            )
-                        if copied_epub_bytes + written > MAX_ZIP_TOTAL_EPUB_BYTES:
-                            extracted_path.unlink(missing_ok=True)
-                            raise ImportResourceLimitError(
-                                "ZIP EPUB contents exceed the "
-                                f"{_format_mib(MAX_ZIP_TOTAL_EPUB_BYTES)} total uncompressed limit."
-                            )
-                        copied_epub_bytes += written
-
-                        sidecar_opf_member = _zip_sidecar_opf_for_epub(
-                            epub_member=source_name,
-                            opfs_by_dir=opfs_by_dir,
-                            members_index=members_index,
-                        )
-                        sidecar_opf_bytes: bytes | None = None
-                        sidecar_opf_dir: str | None = None
-                        if sidecar_opf_member is not None:
-                            try:
-                                with zf.open(sidecar_opf_member, "r") as opf_fp:
-                                    sidecar_opf_bytes = opf_fp.read(max_opf_xml_bytes + 1)
-                                if (
-                                    sidecar_opf_bytes
-                                    and len(sidecar_opf_bytes) > max_opf_xml_bytes
-                                ):
-                                    sidecar_opf_bytes = None
-                                else:
-                                    sidecar_opf_dir = posixpath.dirname(sidecar_opf_member)
-                            except Exception:
-                                sidecar_opf_bytes = None
-                                sidecar_opf_dir = None
-
-                        def asset_reader(member: str) -> bytes | None:
-                            safe = _safe_zip_member_name(member)
-                            if safe is None:
-                                return None
-                            if safe in collisions:
-                                return None
-                            if safe not in members_index:
-                                return None
-                            try:
-                                with zf.open(safe, "r") as fp:
-                                    data = fp.read(max_cover_bytes + 1)
-                                if len(data) > max_cover_bytes:
-                                    return None
-                                return data
-                            except Exception:
-                                return None
-
-                        import_result = import_epub_func(
-                            str(extracted_path),
-                            sidecar_opf_bytes=sidecar_opf_bytes,
-                            sidecar_opf_dir=sidecar_opf_dir,
-                            sidecar_asset_reader=(
-                                asset_reader
-                                if sidecar_opf_bytes and sidecar_opf_dir
-                                else None
-                            ),
-                        )
-
-                        status_val = getattr(import_result, "status", None)
-                        item_status = (
-                            ImportItemStatus.IMPORTED
-                            if status_val == "imported"
-                            else ImportItemStatus.DUPLICATE
-                            if status_val == "duplicate"
-                            else ImportItemStatus.FAILED
-                        )
-                        result.items.append(
-                            ImportRunItem(
-                                status=item_status,
-                                source_name=safe_source_name,
-                                book=getattr(import_result, "book", None),
-                                book_file=getattr(import_result, "book_file", None),
-                                message=_safe_import_result_message(
-                                    status=item_status,
-                                    message=getattr(import_result, "message", "") or "",
-                                ),
-                            )
-                        )
-                    except Exception as e:
-                        safe_message = sanitize_import_error_message(e)
-                        logger.warning(
-                            "library import item failed",
-                            extra=_log_extra(
-                                result=result,
-                                item_status=ImportItemStatus.FAILED,
-                                item_source_name=safe_source_name,
-                                safe_message=safe_message,
-                            ),
-                        )
-                        result.items.append(
-                            ImportRunItem(
-                                status=ImportItemStatus.FAILED,
-                                source_name=safe_source_name,
-                                message=safe_message,
-                            )
-                        )
-                        continue
+            process_zip_import_path(
+                result=result,
+                zip_path=staged_path,
+                extraction_dir=extracted_dir,
+                import_epub_func=import_epub_func,
+                max_opf_xml_bytes=max_opf_xml_bytes,
+                max_cover_bytes=max_cover_bytes,
+                import_run_item_factory=ImportRunItem,
+                resource_limit_error_class=ImportResourceLimitError,
+                sanitize_error_message=sanitize_import_error_message,
+                log_item_failure=_log_zip_item_failure,
+                log_archive_rejected=_log_zip_archive_rejected,
+                max_zip_members=MAX_ZIP_MEMBERS,
+                max_zip_epub_member_bytes=MAX_ZIP_EPUB_MEMBER_BYTES,
+                max_zip_total_epub_bytes=MAX_ZIP_TOTAL_EPUB_BYTES,
+            )
 
         result.finalize_counts()
         logger.info(

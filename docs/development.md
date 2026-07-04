@@ -307,6 +307,16 @@ python manage.py import_epub "path\to\book.epub"
 The command does not support ZIP files or OPF sidecars. It warns but continues
 when the file exceeds the normal Product/API single-EPUB upload limit.
 
+Import a local ZIP archive of EPUBs (operator-only host/container path):
+
+```powershell
+python manage.py import_books "path\to\books.zip"
+```
+
+The command supports ZIP OPF sidecars, uses the same ZIP limits as Product/API
+imports, and does not create durable import history. `import_epub` remains the
+single-EPUB command.
+
 See also:
 - `docs/api.md` (endpoint index)
 - `docs/imports.md` (import workflow)

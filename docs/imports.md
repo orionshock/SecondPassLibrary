@@ -1,8 +1,8 @@
 # Imports
 
 Second Pass Library is EPUB-first. Product imports are intended to be API-mediated.
-An operator-only management command is available for direct single-EPUB imports
-from a host/container filesystem path.
+Operator-only management commands are available for direct local imports from a
+host/container filesystem path.
 
 ## API-mediated imports (synchronous uploads)
 
@@ -194,3 +194,18 @@ The command shares the core single-EPUB checksum, metadata, duplicate detection,
 cover extraction, and persistence path. It warns when the local file exceeds the
 normal Product/API single-EPUB upload limit, but it does not block the import for
 size alone because operators may need to handle large local files deliberately.
+
+`python manage.py import_books <file_path>` is an operator-only host-side import
+path for one local `.zip` archive of EPUB files.
+
+It supports the same ZIP behavior as Product/API imports:
+
+- EPUB member discovery
+- ZIP OPF sidecars for new books
+- duplicate detection by EPUB checksum
+- safe per-item errors
+- the same ZIP archive, entry-count, per-member EPUB, and total EPUB payload limits
+
+The command does not create durable import history or database ImportJob records.
+It prints a summary for the immediate run and emits structured logs for normal
+process/container capture. `import_epub` remains single local `.epub` only.
