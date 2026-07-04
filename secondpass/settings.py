@@ -236,6 +236,11 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "library.management.commands.import_epub": {
+            "handlers": ["null"] if RUNNING_TESTS else ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 

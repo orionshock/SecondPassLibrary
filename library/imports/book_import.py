@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 from django.core.files import File
+from django.db import transaction
 
 from ..groups.services import ensure_book_public_assignment
 from ..models import Author, Book, BookFile, BookIdentifier, Series
@@ -115,19 +116,20 @@ def persist_new_imported_book(
     Import semantics are create-only: this function assumes the caller has already
     handled duplicate detection and is creating a new Book + BookFile.
     """
-    book = create_book_from_import_metadata(
-        metadata=metadata,
-        fallback_title=source_path.stem,
-        added_by=added_by,
-    )
+    with transaction.atomic():
+        book = create_book_from_import_metadata(
+            metadata=metadata,
+            fallback_title=source_path.stem,
+            added_by=added_by,
+        )
 
-    identifiers: list[dict[str, Any]] = cast(list[dict[str, Any]], metadata.get("identifiers") or [])
-    create_book_identifiers(book=book, identifiers=identifiers)
+        identifiers: list[dict[str, Any]] = cast(list[dict[str, Any]], metadata.get("identifiers") or [])
+        create_book_identifiers(book=book, identifiers=identifiers)
 
-    if cover_hook is not None:
-        cover_hook(book)
+        if cover_hook is not None:
+            cover_hook(book)
 
-    book_file = create_book_file_for_import(
-        book=book, source_path=source_path, checksum=checksum, file_size=file_size
-    )
+        book_file = create_book_file_for_import(
+            book=book, source_path=source_path, checksum=checksum, file_size=file_size
+        )
     return book, book_file

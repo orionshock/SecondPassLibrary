@@ -1,6 +1,8 @@
 # Imports
 
-Second Pass Library is EPUB-first. Imports are intended to be API-mediated, with a dev/admin management command available for convenience.
+Second Pass Library is EPUB-first. Product imports are intended to be API-mediated.
+An operator-only management command is available for direct single-EPUB imports
+from a host/container filesystem path.
 
 ## API-mediated imports (synchronous uploads)
 
@@ -173,6 +175,22 @@ Server-side apply follows these rules:
   BookFile repair workflow in `docs/admin.md`. Do not use delete and re-import
   as the normal repair path when preserving reading data matters.
 
-## Management command note
+## Operator management command
 
-`python manage.py import_epub ...` is a dev/admin utility (host-side). The intended product import path is the API upload workflow above.
+`python manage.py import_epub <file_path>` is an operator-only host-side import
+path for one local `.epub` file.
+
+It intentionally does not support:
+
+- ZIP imports
+- OPF sidecars
+- Product UI upload workflows
+
+OPF sidecar support is ZIP-import behavior only. Use the API upload workflow for
+Product UI/API imports, ZIP batches, sidecar OPF metadata, transient run results,
+and user-facing safe per-item error responses.
+
+The command shares the core single-EPUB checksum, metadata, duplicate detection,
+cover extraction, and persistence path. It warns when the local file exceeds the
+normal Product/API single-EPUB upload limit, but it does not block the import for
+size alone because operators may need to handle large local files deliberately.

@@ -63,7 +63,7 @@ Examples:
 
 ```text
 Good:
-library/services.py::import_epub()
+library/imports/epub.py::import_epub()
 reading/services.py::get_or_create_active_session()
 reading/services.py::start_new_reading_session()
 

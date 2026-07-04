@@ -298,11 +298,14 @@ Safety:
 
 ## Common commands
 
-Import a single EPUB (dev/admin utility):
+Import a single local EPUB (operator-only host/container path):
 
 ```powershell
 python manage.py import_epub "path\to\book.epub"
 ```
+
+The command does not support ZIP files or OPF sidecars. It warns but continues
+when the file exceeds the normal Product/API single-EPUB upload limit.
 
 See also:
 - `docs/api.md` (endpoint index)
