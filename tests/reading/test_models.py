@@ -73,8 +73,29 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
             selector_value="epubcfi(/6/2[chap]!/4/2/6)",
             highlight_text="Hello world",
         )
-        self.assertIn("Highlight", str(annotation))
-        self.assertIn("Test Book", str(annotation))
+        self.assertEqual(
+            str(annotation),
+            f"Highlighting in Test Book by reader in {str(session.id)[:8]}",
+        )
+
+    def test_annotation_display_label_uses_session_name_when_present(self):
+        session = ReadingSession.objects.create(
+            user=self.user, book=self.book, name="First pass"
+        )
+        annotation = Annotation.objects.create(
+            session=session,
+            book=self.book,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+            selector_kind=SELECTOR_KIND_EPUB_CFI,
+            selector_value="epubcfi(/6/2[chap]!/4/2/6)",
+            highlight_text="Hello world",
+        )
+
+        self.assertEqual(
+            str(annotation),
+            "Highlighting in Test Book by reader in First pass",
+        )
 
     def test_annotation_motivation_choices(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)

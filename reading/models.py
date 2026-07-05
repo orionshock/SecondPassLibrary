@@ -170,7 +170,11 @@ class Annotation(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.get_anchor_kind_display()} on {self.session}"  # type: ignore[attr-defined]
+        session_name = (self.session.name or "").strip() or str(self.session_id)[:8]
+        return (
+            f"{self.get_motivation_display()} in {self.book.title} "
+            f"by {self.session.user.get_username()} in {session_name}"
+        )
 
     def clean(self):
         super().clean()
