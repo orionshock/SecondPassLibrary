@@ -153,8 +153,8 @@ Product UI and API missing-route behavior intentionally differ:
 Useful focused checks:
 
 ```powershell
-.\.venv\Scripts\python.exe manage.py test tests.core.test_api_route_errors --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.contracts.test_error_pages --keepdb
+.\.venv\Scripts\python.exe -m pytest tests/core/test_api_route_errors.py -q
+.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/contracts/test_error_pages.py -q
 .\.venv\Scripts\python.exe tools\static_hygiene.py
 .\.venv\Scripts\python.exe -m ruff check .
 ```
@@ -184,7 +184,7 @@ Practical notes:
 
 ```powershell
 python manage.py check
-python manage.py test
+python -m pytest
 npm run typecheck
 ```
 
@@ -214,41 +214,15 @@ Marker intent:
 - `integration`: broad cross-app or API flow tests.
 - `slow`: tests known to be slow enough to avoid in routine focused runs.
 
-`manage.py test` remains available for compatibility checks and legacy workflows.
-
-Targeted Django-runner commands:
-
-Product UI:
+Targeted pytest examples:
 
 ```powershell
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_sessions_static --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_book_marginalia_static --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_import_static --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.reading.test_export_static --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.core.product_ui.contracts.test_html_entity_contracts --keepdb
-```
-
-Reading:
-
-```powershell
-.\.venv\Scripts\python.exe manage.py test tests.reading.sessions --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.reading.progress --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.reading.annotations --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.reading.imports --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.reading.exports --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.reading --keepdb
-```
-
-Library:
-
-```powershell
-.\.venv\Scripts\python.exe manage.py test tests.library.test_catalog_list_views --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.library.test_book_visibility --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.library.test_file_views --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.library.test_author_series_views --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.library.test_book_identifiers --keepdb
-.\.venv\Scripts\python.exe manage.py test tests.library --keepdb
+.\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
+.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/reading -q
+.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/contracts -q
+.\.venv\Scripts\python.exe -m pytest tests/reading -q
+.\.venv\Scripts\python.exe -m pytest tests/library -q
+.\.venv\Scripts\python.exe -m pytest tests/accounts -q
 ```
 
 Hygiene:

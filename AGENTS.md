@@ -317,7 +317,7 @@ At minimum, run:
 
 ```bash
 python manage.py check
-python manage.py test
+pytest
 ```
 
 Prefer focused tests for:
@@ -332,12 +332,13 @@ Prefer focused tests for:
 
 ## Testing strategy
 
-- Prefer focused tests during implementation:
-  - `py manage.py test <app>`
-  - `py manage.py test <module>`
-  - `py manage.py test <TestCase>`
-- Use `--keepdb` for repeated local runs when appropriate.
+- Prefer focused tests during implementation using pytest:
+  - `pytest tests.accounts`
+  - `pytest tests/library`
+  - `pytest tests/reading/test_views.py`
+- Use scoped package/module runs; avoid broad suites unless a change is cross-cutting.
 - Run the full suite before finalizing broad changes, shared policy changes, migrations, or before committing.
+- Do not use Django's `manage.py test` as the workflow; pytest is the canonical test runner.
 - Always run `python manage.py check` for meaningful code changes.
 - Do not skip tests entirely unless the user explicitly asks.
 
@@ -446,13 +447,13 @@ Permission model documentation lives in `docs/permissions.md` (roles, groups, an
 Verification guidance:
 
 1. Always run `python manage.py check` for meaningful code changes.
-2. Prefer focused tests for the area changed (use `--keepdb` for repeated runs):
-   - accounts changes: `python manage.py test tests.accounts --keepdb`
-   - library changes: `python manage.py test tests.library --keepdb`
-   - reading changes: `python manage.py test tests.reading --keepdb`
-   - core/policy/shared changes: `python manage.py test tests.core --keepdb` (plus any affected app tests)
-   - product UI/template/static changes: `python manage.py test tests.core.product_ui --keepdb`
-3. Run the full suite (`python manage.py test`) only when:
+2. Prefer focused tests for the area changed with pytest:
+   - accounts changes: `pytest tests/accounts`
+   - library changes: `pytest tests/library`
+   - reading changes: `pytest tests/reading`
+   - core/policy/shared changes: `pytest tests/core`
+   - product UI/template/static changes: `pytest tests/core/product_ui`
+3. Run the full suite (`pytest`) only when:
    - migrations changed broadly
    - settings/middleware/global API behavior changed
    - shared policy/helper behavior affects multiple apps
