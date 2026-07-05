@@ -10,7 +10,7 @@ from tests.library.helpers import (
     create_librarian_user,
     create_reader_user,
 )
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import (
     assert_response,

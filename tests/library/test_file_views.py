@@ -17,7 +17,7 @@ from tests.library.helpers import (
     create_librarian_user,
     create_reader_user,
 )
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_fileless_book_for_integrity_edge_case
 from tests.utils.responses import (
     assert_http_response,

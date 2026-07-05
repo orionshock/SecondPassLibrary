@@ -18,7 +18,8 @@ from library.groups.services import (
     ensure_user_public_membership,
 )
 from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
-from tests.library.utils import IsolatedMediaRootMixin, paginated_results
+from tests.testenv.filesystem import IsolatedMediaRootMixin
+from tests.utils.responses import paginated_results
 from tests.utils.responses import (
     assert_response,
     payload_list,

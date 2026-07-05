@@ -21,7 +21,8 @@ from library.models import (
 )
 from tests.utils.books import create_fileless_book_for_integrity_edge_case
 
-from tests.library.utils import IsolatedMediaRootMixin, paginated_results
+from tests.testenv.filesystem import IsolatedMediaRootMixin
+from tests.utils.responses import paginated_results
 from tests.utils.responses import (
     assert_http_response,
     assert_response,

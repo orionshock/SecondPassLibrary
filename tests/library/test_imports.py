@@ -13,7 +13,7 @@ from library.imports.epub import calculate_file_sha256, ImportStatus
 from library.imports.epub import import_epub
 from tests.utils.books import create_file_backed_book
 
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 class NoUnboundedReadBytesIO(BytesIO):
@@ -44,7 +44,9 @@ class ChunkedUpload:
             yield self.data[start : start + size]
 
     def read(self, size: int = -1) -> bytes:
-        raise AssertionError("checksum helper should use UploadedFile.chunks() when available")
+        raise AssertionError(
+            "checksum helper should use UploadedFile.chunks() when available"
+        )
 
 
 class EPUBImportTest(IsolatedMediaRootMixin, TestCase):

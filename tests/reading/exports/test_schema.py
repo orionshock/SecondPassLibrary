@@ -15,7 +15,7 @@ from tests.reading.exports.schema_assertions import (
     load_marginalia_export_schema,
     SchemaValidationError,
 )
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.responses import assert_response
 
 

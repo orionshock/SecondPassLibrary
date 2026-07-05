@@ -33,6 +33,10 @@ def response_data_list(response: Response) -> list[Any]:
     return cast(list[Any], data)
 
 
+def paginated_results(response: Response) -> list[Any]:
+    return response_data_list(response)
+
+
 def payload_dict(payload: Mapping[str, Any], key: str) -> dict[str, Any]:
     value = payload[key]
     assert isinstance(value, dict)

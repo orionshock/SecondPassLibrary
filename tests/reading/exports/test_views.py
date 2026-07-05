@@ -18,7 +18,7 @@ from tests.reading.exports.helpers import (
 from tests.reading.exports.schema_assertions import (
     assert_valid_marginalia_export,
 )
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import assert_response
 

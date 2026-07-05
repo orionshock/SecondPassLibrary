@@ -13,7 +13,7 @@ from library.cover_services import (
     set_book_cover_from_bytes,
     validate_cover_image_bytes,
 )
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 
@@ -44,7 +44,9 @@ class CoverValidationTests(TestCase):
 
     def test_rejects_svg(self):
         with self.assertRaises(ValueError):
-            validate_cover_image_bytes(data=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>")
+            validate_cover_image_bytes(
+                data=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+            )
 
     def test_rejects_gif(self):
         with self.assertRaises(ValueError):

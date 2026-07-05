@@ -15,7 +15,7 @@ from library.imports.epub import ImportStatus
 from library.models import BookFile
 from library.imports.epub import import_epub
 
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 pytestmark = [pytest.mark.filesystem]
@@ -37,13 +37,16 @@ def _write_epub_zip(
     cover_bytes: bytes | None = None,
     container_xml: str | None = None,
 ) -> None:
-    container_xml = container_xml or f"""<?xml version="1.0"?>
+    container_xml = (
+        container_xml
+        or f"""<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
     <rootfile full-path="{opf_path}" media-type="application/oebps-package+xml"/>
   </rootfiles>
 </container>
 """
+    )
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("mimetype", "application/epub+zip")
         zf.writestr("META-INF/container.xml", container_xml)
@@ -195,7 +198,9 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
         self.assertFalse(bool(book.cover_file))
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_unsafe_embedded_opf_xml_is_ignored_and_import_succeeds(self, mock_read_epub):
+    def test_unsafe_embedded_opf_xml_is_ignored_and_import_succeeds(
+        self, mock_read_epub
+    ):
         mock_book = MagicMock()
         mock_book.get_metadata.return_value = []
         mock_read_epub.return_value = mock_book
@@ -243,7 +248,13 @@ class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
   </manifest>
 </package>
 """
-        _write_epub_zip(out_path=epub_path, opf_path=opf_path, opf_xml=opf_xml, cover_member="secret.png", cover_bytes=_png_bytes())
+        _write_epub_zip(
+            out_path=epub_path,
+            opf_path=opf_path,
+            opf_xml=opf_xml,
+            cover_member="secret.png",
+            cover_bytes=_png_bytes(),
+        )
 
         result = import_epub(epub_path)
         self.assertEqual(result.status, ImportStatus.IMPORTED)

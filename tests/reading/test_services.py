@@ -8,7 +8,7 @@ from reading.services import (
     start_over_book,
     update_progress,
 )
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 
 

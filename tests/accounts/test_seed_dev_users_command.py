@@ -13,7 +13,7 @@ from core import server_settings
 from library.groups.public_group import get_public_group
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 
@@ -117,7 +117,9 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(owner.password, password_hash)
         self.assertEqual(profile.role, UserProfile.ROLE_READER)
         self.assertEqual(User.objects.filter(is_superuser=True).count(), 1)
-        self.assertIn("Owner: existing active superuser existing-admin", output.getvalue())
+        self.assertIn(
+            "Owner: existing active superuser existing-admin", output.getvalue()
+        )
 
     @override_settings(DEBUG=True)
     def test_existing_demo_user_is_not_overwritten(self):
@@ -207,7 +209,9 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
             ).count(),
             1,
         )
-        self.assertFalse(LibraryGroupMembership.objects.filter(is_curator=True).exists())
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(is_curator=True).exists()
+        )
         self.assertEqual(
             list(
                 LibraryGroupMembership.objects.filter(
@@ -231,7 +235,9 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         )
 
         public = get_public_group()
-        self.assertEqual(Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_USER).count(), 8)
+        self.assertEqual(
+            Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_USER).count(), 8
+        )
         self.assertEqual(
             Shelf.objects.filter(
                 owner_type=Shelf.OWNER_TYPE_GROUP,
@@ -258,8 +264,12 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
             },
         )
         self.assertEqual(ShelfItem.objects.count(), 0)
-        self.assertIn("No books found; shelf item population skipped.", output.getvalue())
-        self.assertIn("Book population: skipped because no books exist.", output.getvalue())
+        self.assertIn(
+            "No books found; shelf item population skipped.", output.getvalue()
+        )
+        self.assertIn(
+            "Book population: skipped because no books exist.", output.getvalue()
+        )
 
     @override_settings(DEBUG=True)
     def test_simple_mode_populates_public_and_user_shelves_without_custom_groups(self):
@@ -288,7 +298,9 @@ class SeedDevUsersCommandTests(IsolatedMediaRootMixin, TestCase):
         self.assertIn("Book population seed: fixture-seed", output.getvalue())
 
     @override_settings(DEBUG=True)
-    def test_advanced_mode_creates_custom_groups_memberships_shelves_and_assignments(self):
+    def test_advanced_mode_creates_custom_groups_memberships_shelves_and_assignments(
+        self,
+    ):
         self._create_setup_owner()
         server_settings.set_advanced_library_groups_enabled(True)
         for index in range(12):

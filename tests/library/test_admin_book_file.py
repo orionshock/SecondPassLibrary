@@ -13,7 +13,7 @@ from library.admin import BookAdmin, BookFileAdmin, BookFileAdminForm
 from library.book_file_services import repair_book_file_for_book
 from library.models import Book, BookFile
 from reading.models import Annotation, ReadingSession
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import (
     create_file_backed_book,
     create_fileless_book_for_integrity_edge_case,
@@ -171,7 +171,9 @@ class BookFileAdminUploadTest(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(book_file.file_size, len(epub_bytes))
         self.assertEqual(book_file.source_filename, "repair.epub")
 
-    def test_repair_missing_file_updates_existing_row_and_preserves_annotation_reference(self):
+    def test_repair_missing_file_updates_existing_row_and_preserves_annotation_reference(
+        self,
+    ):
         book = create_fileless_book_for_integrity_edge_case(
             title="Missing File", assign_public=False
         )
@@ -305,5 +307,7 @@ class BookFileAdminUploadTest(IsolatedMediaRootMixin, TestCase):
         existing.book_file.refresh_from_db()
         self.assertFalse(result.created)
         self.assertEqual(existing.book_file.pk, book_file_id)
-        self.assertEqual(existing.book_file.checksum, hashlib.sha256(epub_bytes).hexdigest())
+        self.assertEqual(
+            existing.book_file.checksum, hashlib.sha256(epub_bytes).hexdigest()
+        )
         self.assertEqual(existing.book.title, "Replace")

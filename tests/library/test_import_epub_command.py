@@ -10,7 +10,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 
 from library.models import Book
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 
@@ -26,7 +26,9 @@ def _mock_epub(*, title: str = "Command Book") -> MagicMock:
 
 class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        self._temporary_directory = TemporaryDirectory(prefix="secondpass-import-epub-command-")
+        self._temporary_directory = TemporaryDirectory(
+            prefix="secondpass-import-epub-command-"
+        )
         self.temp_dir = Path(self._temporary_directory.name)
         self.epub_path = self.temp_dir / "Command Book.epub"
         self.epub_path.write_bytes(b"command-epub")
@@ -38,7 +40,9 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         missing = self.temp_dir / "missing.epub"
 
         with self.assertRaises(CommandError) as cm:
-            call_command("import_epub", str(missing), stdout=StringIO(), stderr=StringIO())
+            call_command(
+                "import_epub", str(missing), stdout=StringIO(), stderr=StringIO()
+            )
 
         self.assertIn("File does not exist", str(cm.exception))
         self.assertIn(str(missing), str(cm.exception))
@@ -59,7 +63,9 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_epub", level="INFO") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_epub", level="INFO"
+        ) as captured:
             call_command("import_epub", str(self.epub_path), stdout=out, stderr=err)
 
         self.assertIn("Starting EPUB import: Command Book.epub", out.getvalue())
@@ -100,7 +106,9 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_epub", level="INFO") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_epub", level="INFO"
+        ) as captured:
             call_command("import_epub", str(self.epub_path), stdout=out, stderr=err)
 
         self.assertIn("Starting EPUB import: Command Book.epub", out.getvalue())
@@ -130,10 +138,14 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_epub", level="WARNING") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_epub", level="WARNING"
+        ) as captured:
             call_command("import_epub", str(self.epub_path), stdout=out, stderr=err)
 
-        self.assertIn("Successfully imported EPUB: Oversize Command Book", out.getvalue())
+        self.assertIn(
+            "Successfully imported EPUB: Oversize Command Book", out.getvalue()
+        )
         self.assertIn("exceeds the normal Product/API", err.getvalue())
         self.assertTrue(Book.objects.filter(title="Oversize Command Book").exists())
         messages = [record.getMessage() for record in captured.records]
@@ -148,19 +160,25 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         )
 
     @patch("library.management.commands.import_epub.import_epub")
-    def test_unexpected_import_failure_reports_clear_message_without_traceback_dump(self, mock_import):
+    def test_unexpected_import_failure_reports_clear_message_without_traceback_dump(
+        self, mock_import
+    ):
         mock_import.side_effect = RuntimeError(
             r"Traceback parsing C:\secret\private.epub with noisy internals"
         )
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_epub", level="ERROR") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_epub", level="ERROR"
+        ) as captured:
             with self.assertRaises(CommandError) as cm:
                 call_command("import_epub", str(self.epub_path), stdout=out, stderr=err)
 
         self.assertIn("Starting EPUB import: Command Book.epub", out.getvalue())
-        self.assertIn("Failed to import EPUB: Invalid or unsupported EPUB file.", err.getvalue())
+        self.assertIn(
+            "Failed to import EPUB: Invalid or unsupported EPUB file.", err.getvalue()
+        )
         self.assertEqual(str(cm.exception), "Invalid or unsupported EPUB file.")
         self.assertNotIn("Traceback", err.getvalue())
         self.assertNotIn("C:\\secret", err.getvalue())
@@ -184,6 +202,8 @@ class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
         mock_book_file_create.side_effect = RuntimeError("database write failed")
 
         with self.assertRaises(CommandError):
-            call_command("import_epub", str(self.epub_path), stdout=StringIO(), stderr=StringIO())
+            call_command(
+                "import_epub", str(self.epub_path), stdout=StringIO(), stderr=StringIO()
+            )
 
         self.assertFalse(Book.objects.filter(title="Rollback Command Book").exists())

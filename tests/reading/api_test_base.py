@@ -1,12 +1,14 @@
-
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
-from library.groups.services import ensure_book_public_assignment, ensure_user_public_membership
+from library.groups.services import (
+    ensure_book_public_assignment,
+    ensure_user_public_membership,
+)
 from reading.models import Annotation, ReadingSession
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.test import TestCase
 
 from reading.profile.locators import normalize_locator
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 
 
 class LocatorNormalizationTest(IsolatedUserdataMixin, TestCase):

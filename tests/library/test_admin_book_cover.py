@@ -13,7 +13,7 @@ from PIL import Image
 from library.admin import BookAdmin
 from library.models import Book
 
-from tests.library.utils import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 
@@ -46,7 +46,9 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
         request.user = self.staff
 
         upload = _png_upload(size=(21, 22))
-        form = SimpleNamespace(cleaned_data={"cover_upload": upload, "clear_cover": False})
+        form = SimpleNamespace(
+            cleaned_data={"cover_upload": upload, "clear_cover": False}
+        )
 
         self.admin.save_model(request, book, cast(Any, form), change=True)
 
@@ -63,13 +65,17 @@ class BookAdminCoverTest(IsolatedMediaRootMixin, TestCase):
         request.user = self.staff
 
         upload = _png_upload(size=(10, 11))
-        form_upload = SimpleNamespace(cleaned_data={"cover_upload": upload, "clear_cover": False})
+        form_upload = SimpleNamespace(
+            cleaned_data={"cover_upload": upload, "clear_cover": False}
+        )
         self.admin.save_model(request, book, cast(Any, form_upload), change=True)
 
         book.refresh_from_db()
         self.assertTrue(bool(book.cover_file))
 
-        form_clear = SimpleNamespace(cleaned_data={"cover_upload": None, "clear_cover": True})
+        form_clear = SimpleNamespace(
+            cleaned_data={"cover_upload": None, "clear_cover": True}
+        )
         self.admin.save_model(request, book, cast(Any, form_clear), change=True)
 
         book.refresh_from_db()

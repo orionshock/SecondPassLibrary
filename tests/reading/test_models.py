@@ -3,8 +3,13 @@ from django.db import IntegrityError
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 
-from reading.models import Annotation, ReadingProgress, ReadingSession, SELECTOR_KIND_EPUB_CFI
-from tests.reading.utils import IsolatedUserdataMixin
+from reading.models import (
+    Annotation,
+    ReadingProgress,
+    ReadingSession,
+    SELECTOR_KIND_EPUB_CFI,
+)
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 
 
@@ -103,7 +108,9 @@ class ReadingModelsTest(IsolatedUserdataMixin, TestCase):
         )
 
         self.assertEqual(highlight.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT)
-        self.assertEqual(highlight_with_note.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT)
+        self.assertEqual(
+            highlight_with_note.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT
+        )
         self.assertEqual(bookmark.anchor_kind, Annotation.ANCHOR_KIND_BOOKMARK)
 
     def test_annotation_full_clean_rejects_unsupported_selector_kind(self):
