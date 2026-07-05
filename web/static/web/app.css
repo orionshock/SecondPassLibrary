@@ -706,6 +706,13 @@ input[type="file"]:disabled::file-selector-button {
   font-size: 13px;
   font-weight: 650;
 }
+.server-settings-info-icon {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 16px;
+  vertical-align: text-bottom;
+  cursor: help;
+}
 
 .server-settings-display {
   color: var(--text);

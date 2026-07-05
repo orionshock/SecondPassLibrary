@@ -47,19 +47,23 @@
         </div>
 
         <div class="server-settings-field">
-          <label class="server-settings-label" for="server-settings-description-input">Description</label>
+          <label class="server-settings-label" for="server-settings-description-input">
+            Server Description
+            <span class="material-symbols-outlined server-settings-info-icon" title="Shows on Login page and Client Discovery" aria-label="Shows on Login page and Client Discovery">info</span>
+          </label>
           <span id="server-settings-description-display" class="server-settings-display">Loading...</span>
           <textarea id="server-settings-description-input" class="form-control form-control--textarea is-hidden server-settings-control" maxlength="1000"></textarea>
-          <div class="server-settings-help muted">Shown to reader clients via discovery (optional).</div>
         </div>
       </div>
 
       <div id="server-settings-panel-dashboard" class="tab-panel server-settings-panel is-hidden" data-tab-panel="dashboard" role="tabpanel" aria-labelledby="server-settings-tab-dashboard">
         <div class="server-settings-field">
-          <label class="server-settings-label" for="server-settings-banner-input">Server banner message</label>
+          <label class="server-settings-label" for="server-settings-banner-input">
+            Banner Text
+            <span class="material-symbols-outlined server-settings-info-icon" title="Server's Message for the Dashboard" aria-label="Server's Message for the Dashboard">info</span>
+          </label>
           <span id="server-settings-banner-display" class="server-settings-display">Loading...</span>
           <textarea id="server-settings-banner-input" class="form-control form-control--textarea is-hidden server-settings-control server-settings-control--banner" maxlength="500"></textarea>
-          <div class="server-settings-help muted">Shown at the top of the dashboard. Leave blank to hide.</div>
         </div>
       </div>
 
