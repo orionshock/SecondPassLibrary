@@ -97,13 +97,19 @@ class IsolatedMediaRootMixin:
         parent_set_up = getattr(super(), "setUpClass", None)
         if callable(parent_set_up):
             parent_set_up()
-        cls._runtime_paths = RuntimePathIsolation(media=True)
-        cls._runtime_paths.enable()
+
+        cls._media_runtime_paths_owned = False
+        if getattr(cls, "_runtime_paths", None) is None:
+            cls._runtime_paths = RuntimePathIsolation(media=True)
+            cls._runtime_paths.enable()
+            cls._media_runtime_paths_owned = True
         cls._media_root = str(cls._runtime_paths.media_root)
 
     @classmethod
     def tearDownClass(cls):
-        cls._runtime_paths.disable()
+        if getattr(cls, "_media_runtime_paths_owned", False):
+            cls._runtime_paths.disable()
+        cls._media_runtime_paths_owned = False
         parent_tear_down = getattr(super(), "tearDownClass", None)
         if callable(parent_tear_down):
             parent_tear_down()
@@ -119,14 +125,19 @@ class IsolatedImportsMixin:
         parent_set_up = getattr(super(), "setUpClass", None)
         if callable(parent_set_up):
             parent_set_up()
-        cls._runtime_paths = RuntimePathIsolation(media=True, imports=True)
-        cls._runtime_paths.enable()
+        cls._imports_runtime_paths_owned = False
+        if getattr(cls, "_runtime_paths", None) is None:
+            cls._runtime_paths = RuntimePathIsolation(media=True, imports=True)
+            cls._runtime_paths.enable()
+            cls._imports_runtime_paths_owned = True
         cls._imports_root = str(cls._runtime_paths.imports_dir)
         cls._media_root = str(cls._runtime_paths.media_root)
 
     @classmethod
     def tearDownClass(cls):
-        cls._runtime_paths.disable()
+        if getattr(cls, "_imports_runtime_paths_owned", False):
+            cls._runtime_paths.disable()
+        cls._imports_runtime_paths_owned = False
         parent_tear_down = getattr(super(), "tearDownClass", None)
         if callable(parent_tear_down):
             parent_tear_down()
@@ -142,13 +153,16 @@ class IsolatedUserdataMixin:
         parent_set_up = getattr(super(), "setUpClass", None)
         if callable(parent_set_up):
             parent_set_up()
-        cls._runtime_paths = RuntimePathIsolation(
-            userdata=True,
-            media=True,
-            imports=True,
-            static=True,
-        )
-        cls._runtime_paths.enable()
+        cls._userdata_runtime_paths_owned = False
+        if getattr(cls, "_runtime_paths", None) is None:
+            cls._runtime_paths = RuntimePathIsolation(
+                userdata=True,
+                media=True,
+                imports=True,
+                static=True,
+            )
+            cls._runtime_paths.enable()
+            cls._userdata_runtime_paths_owned = True
         cls._userdata_root = cls._runtime_paths.userdata_root
         cls._media_root = str(cls._runtime_paths.media_root)
         cls._imports_root = str(cls._runtime_paths.imports_dir)
@@ -156,7 +170,9 @@ class IsolatedUserdataMixin:
 
     @classmethod
     def tearDownClass(cls):
-        cls._runtime_paths.disable()
+        if getattr(cls, "_userdata_runtime_paths_owned", False):
+            cls._runtime_paths.disable()
+        cls._userdata_runtime_paths_owned = False
         parent_tear_down = getattr(super(), "tearDownClass", None)
         if callable(parent_tear_down):
             parent_tear_down()
