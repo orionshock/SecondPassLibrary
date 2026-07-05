@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
-
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from library.groups.services import ensure_user_public_membership
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
+from tests.utils.responses import assert_response, payload_list, response_data_list
 
 
 User = get_user_model()
@@ -44,12 +41,11 @@ class ManagedUsersGroupsPayloadAPITest(APITestCase):
 
     def test_manager_user_list_includes_groups_summary(self):
         self.client.login(username="manager", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        response = assert_response(self.client.get("/api/v1/accounts/users/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], response.data)
-        results = cast(list[dict[str, Any]], payload["results"])
+        results = response_data_list(response)
         reader_row = next(u for u in results if u["username"] == "reader")
-        groups = cast(list[dict[str, Any]], reader_row["groups"])
+        groups = payload_list(reader_row, "groups")
         self.assertGreaterEqual(len(groups), 1)
 
         names = {g["name"] for g in groups}

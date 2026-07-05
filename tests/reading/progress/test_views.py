@@ -1,8 +1,5 @@
-from typing import cast
-
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.response import Response
 
 from accounts.models import UserProfile
 from library.groups.services import ensure_user_public_membership
@@ -12,9 +9,12 @@ from reading.profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
     MAX_CURRENT_LOCATION_JSON_BYTES,
 )
-from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
+from tests.reading.api_test_base import (
+    ReadingAPITestBase,
+    ReadingClientBearerAPITestBase,
+)
 from tests.utils.books import create_file_backed_book
-from tests.utils.responses import response_data_dict
+from tests.utils.responses import assert_response, response_data_dict
 
 
 User = get_user_model()
@@ -22,7 +22,9 @@ User = get_user_model()
 
 class ReadingProgressAPITest(ReadingAPITestBase):
     def _make_lost_access_session(self):
-        user = User.objects.create_user(username="lost", password="pass", email="lost@example.com")
+        user = User.objects.create_user(
+            username="lost", password="pass", email="lost@example.com"
+        )
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
@@ -44,8 +46,7 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.get(f"/api/v1/reading/sessions/{session.id}/progress/"),
         )
 
@@ -67,8 +68,7 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         )
         before_updated_at = session.updated_at
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.get(f"/api/v1/reading/sessions/{session.id}/progress/"),
         )
 
@@ -86,8 +86,7 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.put(
                 f"/api/v1/reading/sessions/{session.id}/progress/",
                 data={"current_location": {"cfi": "/6/4"}, "progression": 0.5},
@@ -102,12 +101,10 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         self.assertEqual(data["progression"], 0.5)
         self.assertEqual(data["profile_version"], CURRENT_READING_PROFILE_VERSION)
 
-
     def test_progress_update_rejects_unsupported_profile_version(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.put(
                 f"/api/v1/reading/sessions/{session.id}/progress/",
                 data={"current_location": {"cfi": "/6/2"}, "profile_version": "9.9.9"},
@@ -116,13 +113,11 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-
     def test_progress_update_requires_current_book_access(self):
         _user, session = self._make_lost_access_session()
         self.client.login(username="lost", password="pass")
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.patch(
                 f"/api/v1/reading/sessions/{session.id}/progress/",
                 data={"current_location": {"cfi": "epubcfi(/6/4)"}, "progression": 0.5},
@@ -135,13 +130,11 @@ class ReadingProgressAPITest(ReadingAPITestBase):
         self.assertEqual(session.progress.current_location["cfi"], "epubcfi(/6/2)")
         self.assertEqual(session.progress.progression, 0.25)
 
-
     def test_progress_read_still_allowed_after_book_access_lost(self):
         _user, session = self._make_lost_access_session()
         self.client.login(username="lost", password="pass")
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.get(f"/api/v1/reading/sessions/{session.id}/progress/"),
         )
 
@@ -155,8 +148,7 @@ class ReadingProgressBearerAPITest(ReadingClientBearerAPITestBase):
     def test_progress_update_rejects_unknown_field(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.put(
                 f"/api/v1/reading/sessions/{session.id}/progress/",
                 data={"current_location": {"cfi": "/6/2"}, "weird": 1},
@@ -165,13 +157,11 @@ class ReadingProgressBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-
     def test_progress_current_location_size_limit_rejected(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         big = "x" * (MAX_CURRENT_LOCATION_JSON_BYTES + 1024)
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.put(
                 f"/api/v1/reading/sessions/{session.id}/progress/",
                 data={"current_location": {"cfi": "/6/2", "href": big}},
@@ -179,4 +169,3 @@ class ReadingProgressBearerAPITest(ReadingClientBearerAPITestBase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-
