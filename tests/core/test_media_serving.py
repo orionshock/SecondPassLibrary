@@ -1,41 +1,25 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-import uuid
 from io import BytesIO
-from typing import Any, cast
+from pathlib import Path
 
-from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
-import django.core.files.storage as storage
-from django.utils.functional import empty
 
 from PIL import Image
 
 from library.cover_services import set_book_cover_from_bytes
+from tests.env.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 
-class CoverMediaServingSmokeTest(TestCase):
+class CoverMediaServingSmokeTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self._media_root = str(temp_root / f"tmp_media_serve_{uuid.uuid4().hex}")
-        os.makedirs(self._media_root, exist_ok=True)
-
-        self._override = override_settings(DEBUG=True, MEDIA_ROOT=self._media_root)
+        self._override = override_settings(DEBUG=True)
         self._override.enable()
-
-        handler = cast(Any, getattr(storage, "storages"))
-        handler._storages = {}
-        handler._backends = None
-        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
 
     def tearDown(self):
         self._override.disable()
-        __import__("shutil").rmtree(self._media_root, ignore_errors=True)
 
     def _png_bytes(self) -> bytes:
         img = Image.new("RGB", (10, 12), color=(1, 2, 3))
@@ -52,6 +36,7 @@ class CoverMediaServingSmokeTest(TestCase):
         url = book.cover_file.url
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
+        resp.close()
 
         private_dir = Path(self._media_root) / "books" / "aa" / "bb"
         private_dir.mkdir(parents=True)
@@ -64,24 +49,13 @@ class CoverMediaServingSmokeTest(TestCase):
         self.assertEqual(other_resp.status_code, 404)
 
 
-class DirectServerCoverServingTest(TestCase):
+class DirectServerCoverServingTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self._media_root = str(temp_root / f"tmp_cover_serve_{uuid.uuid4().hex}")
-        os.makedirs(self._media_root, exist_ok=True)
-
-        self._override = override_settings(DEBUG=False, MEDIA_ROOT=self._media_root)
+        self._override = override_settings(DEBUG=False)
         self._override.enable()
-
-        handler = cast(Any, getattr(storage, "storages"))
-        handler._storages = {}
-        handler._backends = None
-        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
 
     def tearDown(self):
         self._override.disable()
-        __import__("shutil").rmtree(self._media_root, ignore_errors=True)
 
     def _png_bytes(self) -> bytes:
         img = Image.new("RGB", (10, 12), color=(1, 2, 3))
@@ -98,6 +72,7 @@ class DirectServerCoverServingTest(TestCase):
         response = self.client.get(book.cover_file.url)
 
         self.assertEqual(response.status_code, 200)
+        response.close()
 
     def test_non_debug_missing_cover_returns_404(self):
         response = self.client.get("/media/covers/aa/bb/missing.jpg")

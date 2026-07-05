@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 import io
-import os
 from pathlib import Path
 from typing import Any, cast
-import uuid
 import zipfile
 from unittest.mock import MagicMock, patch
 
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test.utils import override_settings
-import django.core.files.storage as storage
-from django.utils.functional import empty
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -23,44 +17,8 @@ from library.groups.services import ensure_user_public_membership
 from library.imports.upload import ImportResourceLimitError, _copy_fileobj_capped
 from library.models import Book, BookFile
 from core.errors import ErrorCode
+from tests.env.filesystem import IsolatedImportsMixin
 from tests.utils.responses import response_data_dict
-
-
-class IsolatedImportsMixin:
-    """
-    Isolate staging under TestFiles/ so tests don't pollute real userdata/imports.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        parent_set_up = getattr(super(), "setUpClass", None)
-        if callable(parent_set_up):
-            parent_set_up()
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        cls._imports_root = str(temp_root / f"tmp_imports_{uuid.uuid4().hex}")
-        cls._media_root = str(temp_root / f"tmp_media_{uuid.uuid4().hex}")
-        os.makedirs(cls._imports_root, exist_ok=True)
-        os.makedirs(cls._media_root, exist_ok=True)
-        cls._override = override_settings(
-            IMPORTS_DIR=Path(cls._imports_root),
-            MEDIA_ROOT=cls._media_root,
-        )
-        cls._override.enable()
-
-        handler = cast(Any, getattr(storage, "storages"))
-        handler._storages = {}
-        handler._backends = None
-        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._override.disable()
-        __import__("shutil").rmtree(cls._imports_root, ignore_errors=True)
-        __import__("shutil").rmtree(cls._media_root, ignore_errors=True)
-        parent_tear_down = getattr(super(), "tearDownClass", None)
-        if callable(parent_tear_down):
-            parent_tear_down()
 
 
 def _mock_epub() -> MagicMock:

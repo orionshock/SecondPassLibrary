@@ -9,6 +9,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.core.checks import Tags, run_checks
 from django.test import SimpleTestCase
+import pytest
 
 from secondpass.settings import (
     INSECURE_FALLBACK_SECRET_KEY,
@@ -20,6 +21,11 @@ from secondpass.settings import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.django_db
+def test_pytest_django_db_smoke():
+    assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3"
 
 
 class DjangoSettingsContractTests(SimpleTestCase):

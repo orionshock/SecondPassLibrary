@@ -14,7 +14,7 @@ from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
 from reading.imports.staging import stage_marginalia_import, staged_import_path
 from reading.models import Annotation, ReadingSession
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.env.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 

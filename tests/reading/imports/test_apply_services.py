@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 from reading.imports.apply import apply_marginalia_import
 from reading.imports.services import preview_marginalia_import
 from reading.models import Annotation, ReadingSession
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.env.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 

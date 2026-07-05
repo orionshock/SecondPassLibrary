@@ -65,7 +65,9 @@ def _secret_key(*, debug: bool) -> str:
 
 # User data directory for runtime data
 USERDATA_DIR = Path(env.path("SECOND_PASS_USERDATA_DIR", default=str(BASE_DIR / "userdata")))
-RUNNING_TESTS = "test" in sys.argv
+RUNNING_TESTS = "test" in sys.argv or any(
+    Path(argument).name.startswith("pytest") for argument in sys.argv
+) or "pytest" in sys.modules
 
 SECOND_PASS_SERVER_VERSION = env.str("SECOND_PASS_SERVER_VERSION", default="0.1.0-dev")
 SECOND_PASS_SERVER_RELEASE = env.str("SECOND_PASS_SERVER_RELEASE", default="pre-release")

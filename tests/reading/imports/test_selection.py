@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from reading.models import Annotation, ReadingSession
-from tests.reading.utils import IsolatedUserdataMixin
+from tests.env.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 
