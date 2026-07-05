@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import Any, cast
 import zipfile
 from unittest.mock import MagicMock, patch
 
@@ -10,7 +9,6 @@ import pytest
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
@@ -19,7 +17,13 @@ from library.imports.upload import ImportResourceLimitError, _copy_fileobj_cappe
 from library.models import Book, BookFile
 from core.errors import ErrorCode
 from tests.env.filesystem import IsolatedImportsMixin
-from tests.utils.responses import response_data_dict
+from tests.utils.responses import (
+    assert_http_response,
+    assert_response,
+    payload_dict,
+    payload_list,
+    response_data_dict,
+)
 
 
 pytestmark = [pytest.mark.filesystem, pytest.mark.integration, pytest.mark.slow]
@@ -89,7 +93,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         epub = SimpleUploadedFile(
             "book.epub", b"epub-bytes", content_type="application/epub+zip"
         )
-        create = cast_response(
+        create = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
         self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
@@ -100,7 +104,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
-        created = cast_response(
+        created = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
         self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
@@ -111,13 +115,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
 
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={}, format="multipart")
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
         self.assertIn("error", data)
-        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.MISSING_UPLOAD_FILE)
+        self.assertEqual(payload_dict(data, "error")["code"], ErrorCode.MISSING_UPLOAD_FILE)
 
     def test_invalid_upload_type_returns_error_envelope(self):
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -126,13 +130,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         bad = SimpleUploadedFile("bad.txt", b"x", content_type="text/plain")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": bad}, format="multipart")
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
         self.assertIn("error", data)
-        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_UPLOAD_TYPE)
+        self.assertEqual(payload_dict(data, "error")["code"], ErrorCode.INVALID_UPLOAD_TYPE)
 
     @patch("library.imports.epub.epub.read_epub")
     def test_single_epub_failure_message_does_not_expose_temp_path(self, mock_read_epub):
@@ -142,13 +146,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self._login_librarian()
 
         epub = SimpleUploadedFile("bad.epub", b"not-an-epub", content_type="application/epub+zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
-        item = cast(list[dict[str, Any]], data["items"])[0]
+        item = payload_list(data, "items")[0]
         self.assertEqual(item["status"], "failed")
         self.assertEqual(item["message"], "Invalid or unsupported EPUB file.")
         self.assertNotIn("SecondPassLibrary", item["message"])
@@ -169,13 +173,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
         with self.assertLogs("library.imports.upload", level="WARNING") as captured:
-            response = cast_response(
+            response = assert_response(
                 self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
             )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
-        item = cast(list[dict[str, Any]], data["items"])[0]
+        item = payload_list(data, "items")[0]
         self.assertEqual(item["status"], "failed")
         self.assertEqual(item["source_name"], "leaky.epub")
         self.assertEqual(item["message"], "Invalid or unsupported EPUB file.")
@@ -212,14 +216,15 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self._login_librarian()
 
         epub = SimpleUploadedFile("book.epub", b"12345", content_type="application/epub+zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
-        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
-        self.assertIn("EPUB upload exceeds", cast(dict[str, Any], data["error"])["detail"])
+        error = payload_dict(data, "error")
+        self.assertEqual(error["code"], ErrorCode.INVALID_REQUEST)
+        self.assertIn("EPUB upload exceeds", error["detail"])
         mock_read_epub.assert_not_called()
         self.assertEqual(BookFile.objects.count(), 0)
 
@@ -228,14 +233,15 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self._login_librarian()
 
         upload = SimpleUploadedFile("bundle.zip", b"12345", content_type="application/zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
-        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
-        self.assertIn("ZIP upload exceeds", cast(dict[str, Any], data["error"])["detail"])
+        error = payload_dict(data, "error")
+        self.assertEqual(error["code"], ErrorCode.INVALID_REQUEST)
+        self.assertIn("ZIP upload exceeds", error["detail"])
         self.assertEqual(BookFile.objects.count(), 0)
 
     @patch("library.imports.upload.MAX_ZIP_MEMBERS", 1)
@@ -248,14 +254,15 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
-        self.assertEqual(cast(dict[str, Any], data["error"])["code"], ErrorCode.INVALID_REQUEST)
-        self.assertIn("ZIP contains more than 1 entries", cast(dict[str, Any], data["error"])["detail"])
+        error = payload_dict(data, "error")
+        self.assertEqual(error["code"], ErrorCode.INVALID_REQUEST)
+        self.assertIn("ZIP contains more than 1 entries", error["detail"])
         self.assertEqual(BookFile.objects.count(), 0)
 
     @patch("library.imports.epub.epub.read_epub")
@@ -268,7 +275,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
         )
 
@@ -277,7 +284,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["total_found"], 1)
         self.assertEqual(data["imported_count"], 0)
         self.assertEqual(data["failed_count"], 1)
-        self.assertIn("uncompressed limit", cast(list[dict[str, Any]], data["items"])[0]["message"])
+        self.assertIn("uncompressed limit", payload_list(data, "items")[0]["message"])
         mock_read_epub.assert_not_called()
 
     @patch("library.imports.epub.epub.read_epub")
@@ -293,7 +300,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
         )
 
@@ -303,7 +310,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["imported_count"], 1)
         self.assertEqual(data["failed_count"], 1)
         self.assertEqual(mock_read_epub.call_count, 1)
-        messages = [item["message"] for item in cast(list[dict[str, Any]], data["items"])]
+        messages = [item["message"] for item in payload_list(data, "items")]
         self.assertTrue(any("total uncompressed limit" in message for message in messages))
 
     @patch("library.imports.epub.epub.read_epub")
@@ -312,7 +319,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -327,7 +334,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
 
         epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
         with self.assertLogs("library.imports.upload", level="INFO") as captured:
-            response = cast_response(
+            response = assert_response(
                 self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
             )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -345,7 +352,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["imported_count"], 1)
         self.assertEqual(data["duplicate_count"], 0)
         self.assertEqual(data["failed_count"], 0)
-        item = cast(list[dict[str, Any]], data["items"])[0]
+        item = payload_list(data, "items")[0]
         self.assertEqual(item["status"], "imported")
         self.assertIsNotNone(item["book"])
         self.assertIsNotNone(item["book_file"])
@@ -396,17 +403,17 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.client.login(username="u1", password="pw")
 
         epub1 = SimpleUploadedFile("book.epub", b"dup-bytes", content_type="application/epub+zip")
-        r1 = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub1}, format="multipart"))
+        r1 = assert_response(self.client.post("/api/v1/library/imports/", data={"file": epub1}, format="multipart"))
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
 
         epub2 = SimpleUploadedFile("book.epub", b"dup-bytes", content_type="application/epub+zip")
-        r2 = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub2}, format="multipart"))
+        r2 = assert_response(self.client.post("/api/v1/library/imports/", data={"file": epub2}, format="multipart"))
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(r2)
         self.assertEqual(data["duplicate_count"], 1)
         self.assertEqual(data["imported_count"], 0)
         self.assertEqual(data["failed_count"], 0)
-        self.assertEqual(cast(list[dict[str, Any]], data["items"])[0]["status"], "duplicate")
+        self.assertEqual(payload_list(data, "items")[0]["status"], "duplicate")
 
     @patch("library.imports.epub.epub.read_epub")
     def test_authenticated_can_upload_zip_with_multiple_epubs_ignores_non_epub_and_path_traversal(self, mock_read_epub):
@@ -425,14 +432,15 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
         self.assertEqual(data["source_type"], "zip")
         self.assertEqual(data["total_found"], 2)
-        self.assertEqual(len(cast(list[Any], data["items"])), 2)
+        items = payload_list(data, "items")
+        self.assertEqual(len(items), 2)
         self.assertTrue(
-            all(item["status"] in {"imported", "duplicate", "failed"} for item in cast(list[dict[str, Any]], data["items"]))
+            all(item["status"] in {"imported", "duplicate", "failed"} for item in items)
         )
 
     @patch("library.imports.epub.epub.read_epub")
@@ -464,7 +472,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
         self.assertEqual(data["total_found"], 1)
@@ -489,12 +497,12 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
         # Ambiguous/unsafe normalized paths are skipped (no items created).
         self.assertEqual(data["total_found"], 0)
-        self.assertEqual(len(cast(list[Any], data["items"])), 0)
+        self.assertEqual(len(payload_list(data, "items")), 0)
 
     @patch("library.imports.epub.epub.read_epub")
     def test_zip_sidecar_metadata_opf_precedence_and_cover(self, mock_read_epub):
@@ -531,7 +539,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("calibre.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         book = Book.objects.get(title="OPF Title")
@@ -573,7 +581,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Meta OPF Title").exists())
         self.assertFalse(Book.objects.filter(title="Basename OPF Title").exists())
@@ -599,7 +607,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Basename Only").exists())
 
@@ -624,7 +632,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Only OPF").exists())
 
@@ -657,7 +665,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         book = Book.objects.get(title="OPF Title 2")
@@ -702,7 +710,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         b1 = Book.objects.get(title="OPF Bad Href")
@@ -734,7 +742,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         buf.seek(0)
 
         upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = cast_response(
+        response = assert_response(
             self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
         )
 
@@ -768,7 +776,7 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
                 zf.writestr("dir/metadata.opf", opf_xml)
             buf.seek(0)
             upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-            return cast_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+            return assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
 
         r1 = upload_zip(opf1)
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
@@ -789,14 +797,14 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
         epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
-        created = cast_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
+        created = assert_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
         created_data = response_data_dict(created)
         run_id = created_data["run_id"]
 
-        listing = cast_response(self.client.get("/api/v1/library/imports/"))
+        listing = assert_response(self.client.get("/api/v1/library/imports/"))
         self.assertEqual(listing.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        detail = cast_response(self.client.get(f"/api/v1/library/imports/{run_id}/"))
+        detail = assert_http_response(self.client.get(f"/api/v1/library/imports/{run_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -808,7 +816,3 @@ class CappedZipCopyTests(IsolatedImportsMixin, APITestCase):
             _copy_fileobj_capped(src=io.BytesIO(b"12345"), dst_path=destination, max_bytes=4)
 
         self.assertFalse(destination.exists())
-
-
-def cast_response(resp) -> Response:
-    return resp  # DRF test client returns Response already
