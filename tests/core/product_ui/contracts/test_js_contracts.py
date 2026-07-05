@@ -1,6 +1,7 @@
 """Tests for Product UI JavaScript helper contracts."""
 from pathlib import Path
 
+from tests.core.product_ui.css import product_ui_css_text
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 class ProductUiJsContractsTests(ProductUiTestCase):
@@ -163,7 +164,7 @@ class ProductUiJsContractsTests(ProductUiTestCase):
         edit_js = Path("web/static/web/js/shelves/edit.js").read_text(encoding="utf-8")
         book_edit_shelves_js = Path("web/static/web/js/book_edit/shelves.js").read_text(encoding="utf-8")
         groups_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
-        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
+        css = product_ui_css_text()
 
         self.assertIn("export function userDisplayName", identity_js)
         self.assertIn("export function userHandle", identity_js)
@@ -705,7 +706,7 @@ class ProductUiJsContractsTests(ProductUiTestCase):
         groups_shared_js = user_identity_modules[
             "web/static/web/js/groups/shared.js"
         ]
-        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
+        css = product_ui_css_text()
 
         for module_js in user_identity_modules.values():
             self.assertIn("renderUserIdentity", module_js)

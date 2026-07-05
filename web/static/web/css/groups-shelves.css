@@ -1,0 +1,129 @@
+.group-edit-summary {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.group-edit-summary__description { margin-top: 10px; }
+
+.danger-zone {
+  margin-top: 16px;
+  border-color: rgba(251, 113, 133, 0.6);
+  background: rgba(251, 113, 133, 0.06);
+}
+.danger-zone__list { margin-top: 6px; }
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+.shelf-owner-identity {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+.shelf-metadata-piece + .shelf-metadata-piece::before {
+  content: "\2022";
+  margin: 0 7px;
+  color: var(--muted);
+}
+.shelf-view-heading {
+  display: flex;
+  gap: 8px 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.shelf-view-summary {
+  color: var(--muted);
+}
+.shelf-view-summary .shelf-metadata {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.shelf-view-context {
+  margin-top: 12px;
+}
+.shelf-view-description {
+  max-width: 72ch;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.shelf-view-created-by {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.shelf-view-items {
+  margin-top: 12px;
+}
+.shelf-view-items #shelf-view-items-results {
+  margin-top: 8px;
+}
+.shelves-sections {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+}
+.shelves-section {
+  min-width: 0;
+}
+.shelves-section__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.shelves-section__results {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+.shelf-list-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
+  gap: 10px 14px;
+  align-items: start;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.shelf-list-card:hover,
+.shelf-list-card:focus-within {
+  border-color: rgba(125, 211, 252, 0.45);
+  background: rgba(125, 211, 252, 0.055);
+}
+.shelf-list-card a,
+.shelf-list-card button {
+  cursor: pointer;
+}
+.shelf-list-card__main {
+  min-width: 0;
+}
+.shelf-list-card__description,
+.shelf-list-card__metadata {
+  margin-top: 4px;
+}
+.shelf-list-card .cover-preview-strip {
+  justify-content: flex-end;
+}
+.group-list-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
+  gap: 10px 14px;
+  align-items: start;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.group-list-card:hover,
+.group-list-card:focus-within {
+  border-color: rgba(125, 211, 252, 0.45);
+  background: rgba(125, 211, 252, 0.055);
+}
+.group-list-card a,
+.group-list-card button {
+  cursor: pointer;
+}
+.group-list-card__main {
+  min-width: 0;
+}
+.group-list-card__description {
+  margin-top: 4px;
+}
+.group-list-card .cover-preview-strip {
+  justify-content: flex-end;
+}

@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from library.groups.services import add_book_to_group, ensure_user_public_membership
 from library.models import LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingSession
+from tests.core.product_ui.css import product_ui_css_text
 from tests.core.product_ui.helpers import ProductUiTestCase
 from tests.utils.books import create_file_backed_book
 
@@ -205,7 +206,7 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
     def test_reading_sessions_js_wires_filters_search_page_size_and_book_context(self):
         js = Path("web/static/web/js/reading/sessions.js").read_text(encoding="utf-8")
         main_js = Path("web/static/web/js/main.js").read_text(encoding="utf-8")
-        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
+        css = product_ui_css_text()
 
         self.assertIn("const DEFAULT_PAGE_SIZE = 10", js)
         self.assertIn('from "../ui/breadcrumbs.js"', js)

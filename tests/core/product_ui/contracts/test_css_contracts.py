@@ -1,13 +1,44 @@
 """Tests for Product UI CSS contracts."""
 from pathlib import Path
 
+from tests.core.product_ui.css import CSS_ENTRYPOINT, product_ui_css_text
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 class ProductUiCssContractsTests(ProductUiTestCase):
     """Test shared UI contracts and component helpers."""
 
+    def test_product_ui_css_manifest_imports_split_bundles(self):
+        manifest = CSS_ENTRYPOINT.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            manifest.splitlines(),
+            [
+                '@import url("./css/base.css");',
+                '@import url("./css/components.css");',
+                '@import url("./css/auth.css");',
+                '@import url("./css/product.css");',
+                '@import url("./css/library.css");',
+                '@import url("./css/reading.css");',
+                '@import url("./css/groups-shelves.css");',
+                '@import url("./css/users.css");',
+                '@import url("./css/imports.css");',
+            ],
+        )
+        for css_path in (
+            "web/static/web/css/base.css",
+            "web/static/web/css/components.css",
+            "web/static/web/css/auth.css",
+            "web/static/web/css/product.css",
+            "web/static/web/css/library.css",
+            "web/static/web/css/reading.css",
+            "web/static/web/css/groups-shelves.css",
+            "web/static/web/css/users.css",
+            "web/static/web/css/imports.css",
+        ):
+            self.assertTrue(Path(css_path).is_file(), msg=f"{css_path} is missing")
+
     def test_product_ui_has_themed_controls_and_fixed_header(self):
-        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
+        css = product_ui_css_text()
         base_template = Path("web/templates/web/base.html").read_text(
             encoding="utf-8"
         )

@@ -1,6 +1,7 @@
 """Tests for Product UI HTML entity and text guardrails."""
 from pathlib import Path
 
+from tests.core.product_ui.css import product_ui_css_text
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 class ProductUiHtmlEntityContractsTests(ProductUiTestCase):
@@ -41,7 +42,7 @@ class ProductUiHtmlEntityContractsTests(ProductUiTestCase):
         self.assertNotIn('class="pill back-link"', template_text)
         self.assertNotIn("Back to Dashboard", template_text)
 
-        css = Path("web/static/web/app.css").read_text(encoding="utf-8")
+        css = product_ui_css_text()
         self.assertNotIn(".back-link", css)
         self.assertIn(".meta-item + .meta-item::before", css)
         self.assertIn(".metadata-piece + .metadata-piece::before", css)

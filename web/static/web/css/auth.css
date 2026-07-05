@@ -1,0 +1,246 @@
+.setup-page {
+  padding-top: 0;
+}
+.login-page {
+  min-height: 100%;
+  padding-top: 0;
+  background: var(--bg);
+}
+body.login-page .login-shell {
+  width: min(820px, calc(100% - 32px));
+  margin: 76px auto 0;
+  padding: 0 0 32px;
+}
+body.login-page .login-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.85fr) minmax(320px, 1.15fr);
+  gap: 28px;
+  align-items: center;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+}
+body.login-page .login-brand-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  border-right: 1px solid var(--border);
+  padding-right: 28px;
+}
+body.login-page .login-logo {
+  display: block;
+  width: 220px;
+  height: 220px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+body.login-page .login-form-panel {
+  min-width: 0;
+}
+body.login-page .login-heading {
+  display: grid;
+  gap: 4px;
+}
+body.login-page .login-server-name {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+body.login-page .login-subtitle {
+  margin: 0;
+}
+body.login-page .login-description {
+  margin: 6px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+body.login-page .login-form {
+  margin-top: 20px;
+  display: grid;
+  gap: 14px;
+}
+body.login-page .login-form input:not([type="hidden"]) {
+  width: 100%;
+}
+body.login-page .login-form .form-actions {
+  margin-top: 0;
+}
+body.login-page .login-error {
+  padding: 10px 12px;
+  border: 1px solid rgba(251, 113, 133, 0.45);
+  border-radius: 10px;
+  background: rgba(251, 113, 133, 0.08);
+}
+body.login-page .login-field--error input {
+  border-color: rgba(251, 113, 133, 0.65);
+}
+body.login-page .login-submit {
+  width: 100%;
+}
+@media (max-width: 720px) {
+  body.login-page .login-shell {
+    width: min(440px, calc(100% - 32px));
+    margin-top: 32px;
+  }
+  body.login-page .login-card {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 22px;
+  }
+  body.login-page .login-brand-panel {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 0 18px;
+  }
+  body.login-page .login-logo {
+    width: 112px;
+    height: 112px;
+  }
+}
+.setup-shell {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+.setup-card {
+  padding: 22px;
+}
+.setup-brand {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+}
+.setup-form {
+  display: grid;
+  gap: 14px;
+}
+.setup-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  grid-template-areas:
+    "owner server"
+    "owner public"
+    "owner advanced";
+  gap: 14px;
+  align-items: start;
+}
+.setup-section {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.setup-section--server { grid-area: server; }
+.setup-section--public { grid-area: public; }
+.setup-section--owner { grid-area: owner; }
+.setup-section--advanced { grid-area: advanced; }
+.setup-section legend {
+  padding: 0 6px;
+  color: var(--text);
+  font-weight: 700;
+}
+.setup-field {
+  display: grid;
+  gap: 6px;
+}
+.setup-field--checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+.setup-field--checkbox label {
+  grid-column: 2;
+}
+.setup-field--checkbox input {
+  grid-row: 1;
+  grid-column: 1;
+  width: auto;
+  margin-top: 3px;
+}
+.setup-field--checkbox .setup-help,
+.setup-field--checkbox .error {
+  grid-column: 2;
+}
+.setup-field input {
+  width: 100%;
+}
+.setup-help {
+  font-size: 12px;
+}
+.setup-advanced-summary {
+  display: grid;
+  gap: 4px;
+}
+.setup-advanced-summary p {
+  margin: 0;
+  color: var(--muted);
+}
+.setup-advanced-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.setup-advanced-status {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  border-radius: 10px;
+  background: rgba(125, 211, 252, 0.08);
+}
+.setup-js .setup-advanced-fallback {
+  display: none;
+}
+.setup-dialog {
+  max-width: min(520px, calc(100% - 32px));
+  padding: 0;
+  border: 1px solid rgba(251, 113, 133, 0.45);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+.setup-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+.setup-dialog__panel {
+  padding: 16px;
+}
+.setup-dialog__panel h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+.setup-dialog__panel p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.setup-dialog__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+.setup-help ul,
+.setup-field .error ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
+@media (max-width: 760px) {
+  .setup-shell {
+    padding-top: 20px;
+  }
+  .setup-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "server"
+      "public"
+      "owner"
+      "advanced";
+  }
+}
