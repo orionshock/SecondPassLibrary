@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 from core import server_settings
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
+from tests.utils.responses import (
+    assert_response,
+    payload_dict,
+    payload_list,
+    response_data_dict,
+    response_data_list,
+)
 
 
 User = get_user_model()
@@ -55,9 +60,9 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_me_endpoint_still_works(self):
         self.client.login(username="reader", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["username"], "reader")
         self.assertEqual(data["profile_id"], str(cast(Any, self.reader).profile.id))
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
@@ -67,7 +72,7 @@ class ManagedUsersAPITest(APITestCase):
         self.assertNotIn("id", data)
         self.assertNotIn("capabilities", data)
 
-        groups = cast(list[dict[str, Any]], data["groups"])
+        groups = payload_list(data, "groups")
         self.assertGreaterEqual(len(groups), 1)
         public_groups = [g for g in groups if g["is_public_group"]]
         self.assertEqual(len(public_groups), 1)
@@ -80,10 +85,10 @@ class ManagedUsersAPITest(APITestCase):
         server_settings.set_server_banner_message("Maintenance tonight.")
 
         self.client.login(username="reader", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         for key in (
             "username",
             "email",
@@ -108,26 +113,26 @@ class ManagedUsersAPITest(APITestCase):
         server_settings.enable_advanced_library_groups()
 
         self.client.login(username="reader", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertTrue(data["advanced_library_groups_enabled"])
 
     def test_me_manager_payload_uses_role_without_capabilities(self):
         self.client.login(username="manager", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertFalse(data["is_owner"])
         self.assertEqual(data["role"], UserProfile.ROLE_MANAGER)
         self.assertNotIn("capabilities", data)
 
     def test_me_owner_payload_uses_owner_flag_without_capabilities(self):
         self.client.login(username="owner", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertTrue(data["is_owner"])
         self.assertNotIn("capabilities", data)
 
@@ -137,9 +142,9 @@ class ManagedUsersAPITest(APITestCase):
         )
 
         self.client.login(username="owner2", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["username"], second_owner.username)
         self.assertTrue(data["is_owner"])
         self.assertNotIn("capabilities", data)
@@ -155,41 +160,42 @@ class ManagedUsersAPITest(APITestCase):
         )
 
         self.client.login(username="reader", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
         self.assertFalse(data["is_owner"])
         self.assertNotIn("capabilities", data)
 
-        groups = cast(list[dict[str, Any]], data["groups"])
+        groups = payload_list(data, "groups")
         group_row = next(row for row in groups if row["name"] == "Fantasy Club")
         self.assertTrue(group_row["is_curator"])
         self.assertNotIn("curated_group_ids", data)
 
     def test_reader_and_librarian_cannot_access_user_management_endpoints(self):
         self.client.login(username="reader", password="pw")
-        r1 = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        r1 = assert_response(self.client.get("/api/v1/accounts/users/"))
         self.assertEqual(r1.status_code, status.HTTP_403_FORBIDDEN)
-        r2 = cast(Response, self.client.get(f"/api/v1/accounts/users/{self.reader.profile.id}/"))
+        r2 = assert_response(
+            self.client.get(f"/api/v1/accounts/users/{self.reader.profile.id}/")
+        )
         self.assertEqual(r2.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.logout()
         self.client.login(username="librarian", password="pw")
-        r3 = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        r3 = assert_response(self.client.get("/api/v1/accounts/users/"))
         self.assertEqual(r3.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_manager_can_list_users_but_owner_is_excluded(self):
         self.client.login(username="manager", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        response = assert_response(self.client.get("/api/v1/accounts/users/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data)
-        payload = cast(Mapping[str, Any], response.data)
+        payload = response_data_dict(response)
         self.assertIn("count", payload)
         self.assertIn("next", payload)
         self.assertIn("previous", payload)
         self.assertIn("results", payload)
-        data = cast(list[dict[str, Any]], payload["results"])
+        data = payload_list(payload, "results")
         for row in data:
             self.assertIn("profile_id", row)
             self.assertNotIn("id", row)
@@ -202,29 +208,27 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_owner_can_list_users(self):
         self.client.login(username="owner", password="pw")
-        response = cast(Response, self.client.get("/api/v1/accounts/users/"))
+        response = assert_response(self.client.get("/api/v1/accounts/users/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data)
-        payload = cast(Mapping[str, Any], response.data)
-        data = cast(list[dict[str, Any]], payload["results"])
+        data = response_data_list(response)
         usernames = {u["username"] for u in data}
         self.assertIn("owner", usernames)
         self.assertIn("manager", usernames)
 
     def test_manager_cannot_retrieve_owner(self):
         self.client.login(username="manager", password="pw")
-        response = cast(
-            Response, self.client.get(f"/api/v1/accounts/users/{self.owner.profile.id}/")
+        response = assert_response(
+            self.client.get(f"/api/v1/accounts/users/{self.owner.profile.id}/")
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_response_does_not_expose_sensitive_auth_fields(self):
         self.client.login(username="owner", password="pw")
-        response = cast(
-            Response, self.client.get(f"/api/v1/accounts/users/{self.reader.profile.id}/")
+        response = assert_response(
+            self.client.get(f"/api/v1/accounts/users/{self.reader.profile.id}/")
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["profile_id"], str(cast(Any, self.reader).profile.id))
         self.assertNotIn("id", data)
         self.assertNotIn("password", data)
@@ -234,8 +238,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_owner_can_assign_and_demote_manager_role(self):
         self.client.login(username="owner", password="pw")
-        promote = cast(
-            Response,
+        promote = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.reader.profile.id}/",
                 data={"role": UserProfile.ROLE_MANAGER},
@@ -243,11 +246,10 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(promote.status_code, status.HTTP_200_OK)
-        promote_data = cast(Mapping[str, Any], promote.data)
+        promote_data = response_data_dict(promote)
         self.assertEqual(promote_data["role"], UserProfile.ROLE_MANAGER)
 
-        demote = cast(
-            Response,
+        demote = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.manager2.profile.id}/",
                 data={"role": UserProfile.ROLE_READER},
@@ -255,13 +257,12 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(demote.status_code, status.HTTP_200_OK)
-        demote_data = cast(Mapping[str, Any], demote.data)
+        demote_data = response_data_dict(demote)
         self.assertEqual(demote_data["role"], UserProfile.ROLE_READER)
 
     def test_manager_can_assign_librarian_or_reader_but_not_manager(self):
         self.client.login(username="manager", password="pw")
-        ok = cast(
-            Response,
+        ok = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.reader.profile.id}/",
                 data={"role": UserProfile.ROLE_LIBRARIAN},
@@ -269,11 +270,10 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
-        ok_data = cast(Mapping[str, Any], ok.data)
+        ok_data = response_data_dict(ok)
         self.assertEqual(ok_data["role"], UserProfile.ROLE_LIBRARIAN)
 
-        denied = cast(
-            Response,
+        denied = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.librarian.profile.id}/",
                 data={"role": UserProfile.ROLE_MANAGER},
@@ -284,8 +284,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_manager_cannot_demote_existing_manager(self):
         self.client.login(username="manager", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.manager2.profile.id}/",
                 data={"role": UserProfile.ROLE_READER},
@@ -296,8 +295,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_manager_cannot_edit_another_manager_or_self_role(self):
         self.client.login(username="manager", password="pw")
-        other = cast(
-            Response,
+        other = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.manager2.profile.id}/",
                 data={"email": "new@example.com"},
@@ -306,8 +304,7 @@ class ManagedUsersAPITest(APITestCase):
         )
         self.assertEqual(other.status_code, status.HTTP_403_FORBIDDEN)
 
-        self_user = cast(
-            Response,
+        self_user = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.manager.profile.id}/",
                 data={"role": UserProfile.ROLE_READER},
@@ -318,8 +315,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_no_user_can_deactivate_self(self):
         self.client.login(username="manager", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.manager.profile.id}/",
                 data={"is_active": False},
@@ -330,8 +326,7 @@ class ManagedUsersAPITest(APITestCase):
 
         self.client.logout()
         self.client.login(username="owner", password="pw")
-        response2 = cast(
-            Response,
+        response2 = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.owner.profile.id}/",
                 data={"is_active": False},
@@ -342,8 +337,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_manager_can_deactivate_reader_or_librarian(self):
         self.client.login(username="manager", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.reader.profile.id}/",
                 data={"is_active": False},
@@ -356,8 +350,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_owner_can_deactivate_other_user(self):
         self.client.login(username="owner", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.manager.profile.id}/",
                 data={"is_active": False},
@@ -370,8 +363,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_invalid_role_returns_400(self):
         self.client.login(username="owner", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/accounts/users/{self.reader.profile.id}/",
                 data={"role": "nope"},
@@ -380,10 +372,11 @@ class ManagedUsersAPITest(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_owner_can_create_manager_and_response_includes_temporary_password_once(self):
+    def test_owner_can_create_manager_and_response_includes_temporary_password_once(
+        self,
+    ):
         self.client.login(username="owner", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={
@@ -398,14 +391,17 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertIn("user", data)
         self.assertIn("temporary_password", data)
         self.assertIn("message", data)
         self.assertTrue(str(data["temporary_password"]))
 
-        user_payload = cast(Mapping[str, Any], data["user"])
-        self.assertEqual(user_payload["profile_id"], str(cast(Any, User.objects.get(username="newmanager")).profile.id))
+        user_payload = payload_dict(data, "user")
+        self.assertEqual(
+            user_payload["profile_id"],
+            str(cast(Any, User.objects.get(username="newmanager")).profile.id),
+        )
         self.assertNotIn("id", user_payload)
         self.assertEqual(user_payload["username"], "newmanager")
         self.assertEqual(user_payload["role"], UserProfile.ROLE_MANAGER)
@@ -428,34 +424,39 @@ class ManagedUsersAPITest(APITestCase):
         ok = self.client.login(username="newmanager", password=temp_pw)
         self.assertTrue(ok)
 
-        list_response = cast(Response, self.client.get("/api/v1/accounts/users/"))
-        self.assertIn(list_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN})
+        list_response = assert_response(self.client.get("/api/v1/accounts/users/"))
+        self.assertIn(
+            list_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN}
+        )
         if list_response.status_code == status.HTTP_200_OK:
-            list_payload = cast(Mapping[str, Any], list_response.data)
-            results = cast(list[dict[str, Any]], list_payload["results"])
+            results = response_data_list(list_response)
             for row in results:
                 self.assertNotIn("temporary_password", row)
                 self.assertNotIn("password", row)
 
-        detail_response = cast(
-            Response, self.client.get(f"/api/v1/accounts/users/{created_user.profile.id}/")
+        detail_response = assert_response(
+            self.client.get(f"/api/v1/accounts/users/{created_user.profile.id}/")
         )
-        self.assertIn(detail_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN})
+        self.assertIn(
+            detail_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN}
+        )
         if detail_response.status_code == status.HTTP_200_OK:
-            detail_payload = cast(Mapping[str, Any], detail_response.data)
+            detail_payload = response_data_dict(detail_response)
             self.assertNotIn("temporary_password", detail_payload)
             self.assertNotIn("password", detail_payload)
             self.assertNotIn("id", detail_payload)
 
-        integer_detail_response = cast(
-            Response, self.client.get(f"/api/v1/accounts/users/{created_user.pk}/")
+        integer_detail_response = assert_response(
+            self.client.get(f"/api/v1/accounts/users/{created_user.pk}/")
         )
-        self.assertIn(integer_detail_response.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND})
+        self.assertIn(
+            integer_detail_response.status_code,
+            {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND},
+        )
 
     def test_owner_can_create_librarian_and_reader(self):
         self.client.login(username="owner", password="pw")
-        r1 = cast(
-            Response,
+        r1 = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "lib1", "role": UserProfile.ROLE_LIBRARIAN},
@@ -463,8 +464,7 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
-        r2 = cast(
-            Response,
+        r2 = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "reader1", "role": UserProfile.ROLE_READER},
@@ -472,15 +472,24 @@ class ManagedUsersAPITest(APITestCase):
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(UserProfile.objects.get(user__username="lib1").role, UserProfile.ROLE_LIBRARIAN)
-        self.assertEqual(UserProfile.objects.get(user__username="reader1").role, UserProfile.ROLE_READER)
-        self.assertTrue(UserProfile.objects.get(user__username="lib1").must_change_password)
-        self.assertTrue(UserProfile.objects.get(user__username="reader1").must_change_password)
+        self.assertEqual(
+            UserProfile.objects.get(user__username="lib1").role,
+            UserProfile.ROLE_LIBRARIAN,
+        )
+        self.assertEqual(
+            UserProfile.objects.get(user__username="reader1").role,
+            UserProfile.ROLE_READER,
+        )
+        self.assertTrue(
+            UserProfile.objects.get(user__username="lib1").must_change_password
+        )
+        self.assertTrue(
+            UserProfile.objects.get(user__username="reader1").must_change_password
+        )
 
     def test_manager_can_create_librarian_or_reader_but_not_manager(self):
         self.client.login(username="manager", password="pw")
-        ok = cast(
-            Response,
+        ok = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "oklib", "role": UserProfile.ROLE_LIBRARIAN},
@@ -489,8 +498,7 @@ class ManagedUsersAPITest(APITestCase):
         )
         self.assertEqual(ok.status_code, status.HTTP_201_CREATED)
 
-        denied = cast(
-            Response,
+        denied = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "badmgr", "role": UserProfile.ROLE_MANAGER},
@@ -501,8 +509,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_librarian_and_reader_cannot_create_users(self):
         self.client.login(username="librarian", password="pw")
-        denied1 = cast(
-            Response,
+        denied1 = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "nope1", "role": UserProfile.ROLE_READER},
@@ -513,8 +520,7 @@ class ManagedUsersAPITest(APITestCase):
 
         self.client.logout()
         self.client.login(username="reader", password="pw")
-        denied2 = cast(
-            Response,
+        denied2 = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "nope2", "role": UserProfile.ROLE_READER},
@@ -525,8 +531,7 @@ class ManagedUsersAPITest(APITestCase):
 
     def test_duplicate_username_returns_400(self):
         self.client.login(username="owner", password="pw")
-        first = cast(
-            Response,
+        first = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "dupe", "role": UserProfile.ROLE_READER},
@@ -535,8 +540,7 @@ class ManagedUsersAPITest(APITestCase):
         )
         self.assertEqual(first.status_code, status.HTTP_201_CREATED)
 
-        second = cast(
-            Response,
+        second = assert_response(
             self.client.post(
                 "/api/v1/accounts/users/",
                 data={"username": "dupe", "role": UserProfile.ROLE_READER},

@@ -2,7 +2,6 @@ from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from reading.annotations.views import BATCH_CREATE_LIMIT
@@ -15,7 +14,7 @@ from reading.profile.validation import (
 from reading.serializers import AnnotationSerializer
 from tests.reading.api_test_base import ReadingAPITestBase
 from tests.utils.books import create_file_backed_book
-from tests.utils.responses import response_data_dict
+from tests.utils.responses import assert_response, response_data_dict
 
 
 User = get_user_model()
@@ -58,16 +57,14 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        missing = cast(
-            Response,
+        missing = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data=highlight_payload(session),
                 format="json",
             ),
         )
-        blank = cast(
-            Response,
+        blank = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data=highlight_payload(session, value="/6/4", color=""),
@@ -84,9 +81,10 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        for idx, token in enumerate(("yellow", "green", "blue", "pink", "purple", "orange"), start=1):
-            response = cast(
-                Response,
+        for idx, token in enumerate(
+            ("yellow", "green", "blue", "pink", "purple", "orange"), start=1
+        ):
+            response = assert_response(
                 self.client.post(
                     "/api/v1/reading/annotations/",
                     data=highlight_payload(session, value=f"/6/{idx}", color=token),
@@ -100,8 +98,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        create = cast(
-            Response,
+        create = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data=highlight_payload(session, color="red"),
@@ -120,8 +117,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             highlight_color="yellow",
         )
         for color in ("", "red"):
-            patch = cast(
-                Response,
+            patch = assert_response(
                 self.client.patch(
                     f"/api/v1/reading/annotations/{ann.id}/",
                     data={"highlight_color": color},
@@ -134,8 +130,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data={
@@ -153,8 +148,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data={
@@ -174,8 +168,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data=highlight_payload(session, quote={"exact": "HELLO"}),
@@ -189,8 +182,7 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
 
-        ok = cast(
-            Response,
+        ok = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data=bookmark_payload(session, "/6/2"),
@@ -206,15 +198,20 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             {"kind": "epub_cfi", "value": ""},
             {"kind": "epub_cfi", "value": "x" * (MAX_SELECTOR_VALUE_CHARS + 1)},
         ):
-            response = cast(
-                Response,
+            response = assert_response(
                 self.client.post(
                     "/api/v1/reading/annotations/",
-                    data={"session": str(session.id), "kind": "bookmark", "selector": selector},
+                    data={
+                        "session": str(session.id),
+                        "kind": "bookmark",
+                        "selector": selector,
+                    },
                     format="json",
                 ),
             )
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, selector)
+            self.assertEqual(
+                response.status_code, status.HTTP_400_BAD_REQUEST, selector
+            )
 
     def test_quote_and_text_length_limits(self):
         self.client.login(username="u1", password="pass1")
@@ -222,14 +219,19 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
 
         cases = [
             highlight_payload(session, text="x" * (MAX_BODY_VALUE_CHARS + 1)),
-            highlight_payload(session, quote={"exact": "x" * (MAX_BODY_VALUE_CHARS + 1)}),
-            highlight_payload(session, quote={"prefix": "x" * (MAX_TEXT_QUOTE_CONTEXT_CHARS + 1)}),
-            highlight_payload(session, quote={"suffix": "x" * (MAX_TEXT_QUOTE_CONTEXT_CHARS + 1)}),
+            highlight_payload(
+                session, quote={"exact": "x" * (MAX_BODY_VALUE_CHARS + 1)}
+            ),
+            highlight_payload(
+                session, quote={"prefix": "x" * (MAX_TEXT_QUOTE_CONTEXT_CHARS + 1)}
+            ),
+            highlight_payload(
+                session, quote={"suffix": "x" * (MAX_TEXT_QUOTE_CONTEXT_CHARS + 1)}
+            ),
             highlight_payload(session, comment="x" * (MAX_BODY_VALUE_CHARS + 1)),
         ]
         for payload in cases:
-            response = cast(
-                Response,
+            response = assert_response(
                 self.client.post(
                     "/api/v1/reading/annotations/",
                     data=payload,
@@ -238,7 +240,9 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             )
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_annotation_serializer_representation_does_not_raise_for_unknown_selector_kind(self):
+    def test_annotation_serializer_representation_does_not_raise_for_unknown_selector_kind(
+        self,
+    ):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
         ann = Annotation(
@@ -249,23 +253,29 @@ class ReadingAnnotationValidationAPITest(ReadingAPITestBase):
             selector_value="epubcfi(/6/2)",
         )
 
-        payload = cast(dict[str, Any], AnnotationSerializer(ann, context={"request": None}).data)
+        payload = cast(
+            dict[str, Any], AnnotationSerializer(ann, context={"request": None}).data
+        )
 
-        self.assertEqual(payload["selector"], {"kind": "weird_kind", "value": "epubcfi(/6/2)"})
+        self.assertEqual(
+            payload["selector"], {"kind": "weird_kind", "value": "epubcfi(/6/2)"}
+        )
 
 
 class AnnotationBatchValidationAPITest(ReadingAPITestBase):
     def test_batch_rejects_too_many_annotations(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/batch/",
                 data={
                     "session": str(session.id),
                     "annotations": [
-                        {"kind": "bookmark", "selector": {"kind": "epub_cfi", "value": f"/6/{idx}"}}
+                        {
+                            "kind": "bookmark",
+                            "selector": {"kind": "epub_cfi", "value": f"/6/{idx}"},
+                        }
                         for idx in range(BATCH_CREATE_LIMIT + 1)
                     ],
                 },
@@ -279,14 +289,15 @@ class AnnotationBatchValidationAPITest(ReadingAPITestBase):
 
 class AnnotationHighlightColorTokenTests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="u1", password="pw", email="u1@example.com")
+        self.user = User.objects.create_user(
+            username="u1", password="pw", email="u1@example.com"
+        )
         self.client.login(username="u1", password="pw")
         self.book = create_file_backed_book(title="B").book
         self.session = ReadingSession.objects.create(user=self.user, book=self.book)
 
     def test_standalone_comment_is_not_supported(self):
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data={
@@ -302,8 +313,7 @@ class AnnotationHighlightColorTokenTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_bookmark_without_highlight_color_is_accepted(self):
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/reading/annotations/",
                 data=bookmark_payload(self.session),

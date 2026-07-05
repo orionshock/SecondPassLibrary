@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -13,6 +12,7 @@ from reading.imports.services import preview_marginalia_import
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
+from tests.utils.responses import assert_response
 
 
 User = get_user_model()
@@ -29,7 +29,7 @@ class MarginaliaImportApplyApiTests(
 
     def test_apply_creates_sessions_and_annotations_for_matched_books(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(self.marginalia_payload()))
+        r = assert_response(self.post_apply_staged_payload(self.marginalia_payload()))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(
             r.data["summary"],
@@ -69,7 +69,7 @@ class MarginaliaImportApplyApiTests(
         preview = preview_marginalia_import(user=self.user, payload=payload)
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(payload))
+        r = assert_response(self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -96,7 +96,7 @@ class MarginaliaImportApplyApiTests(
         invalid["annotations"][0]["target"]["selector"]["value"] = "not-a-cfi"
         payload["books"][0]["sessions"].append(invalid)
 
-        r = cast(Any, self.post_apply_staged_payload(payload))
+        r = assert_response(self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["sessions_created"], 1)
@@ -127,7 +127,7 @@ class MarginaliaImportApplyApiTests(
             }
         )
 
-        r = cast(Any, self.post_apply_staged_payload(payload))
+        r = assert_response(self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["annotations_created"], 3)
@@ -156,7 +156,7 @@ class MarginaliaImportApplyApiTests(
             {"type": "TextualBody", "purpose": "commenting", "value": "ignored note"},
         ]
 
-        r = cast(Any, self.post_apply_staged_payload(payload))
+        r = assert_response(self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         bookmark_model = Annotation.objects.get(
@@ -185,7 +185,7 @@ class MarginaliaImportApplyApiTests(
         ]
         payload["books"][0]["sessions"][0]["annotations"].append(malformed)
 
-        r = cast(Any, self.post_apply_staged_payload(payload))
+        r = assert_response(self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["annotations_created"], 3)
@@ -207,7 +207,7 @@ class MarginaliaImportApplyApiTests(
     def test_apply_skips_unmatched_books(self):
         self.client.force_login(self.user)
         payload = self.marginalia_payload(checksum="0" * 64, title="Missing Book")
-        r = cast(Any, self.post_apply_staged_payload(payload))
+        r = assert_response(self.post_apply_staged_payload(payload))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["books_matched"], 0)
         self.assertEqual(r.data["summary"]["books_skipped"], 1)
@@ -217,8 +217,7 @@ class MarginaliaImportApplyApiTests(
 
     def test_apply_active_exported_session_imports_historical(self):
         self.client.force_login(self.user)
-        r = cast(
-            Any,
+        r = assert_response(
             self.post_apply_staged_payload(
                 self.marginalia_payload(status_value="active")
             ),
@@ -238,7 +237,7 @@ class MarginaliaImportApplyApiTests(
             is_active=False,
         )
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(self.marginalia_payload()))
+        r = assert_response(self.post_apply_staged_payload(self.marginalia_payload()))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["sessions_created"], 1)
         self.assertEqual(ReadingSession.objects.count(), 2)

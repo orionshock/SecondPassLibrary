@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
-
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.groups.services import ensure_book_public_assignment
@@ -17,6 +13,8 @@ from tests.library.helpers import (
 )
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import assert_response, response_data_dict
+
 
 class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
@@ -62,7 +60,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         BookGroupAssignment.objects.create(book=self.book_hidden, group=self.group_y)
 
     def test_reader_author_list_filtered(self):
-        response = cast(Response, self.client.get("/api/v1/library/authors/"))
+        response = assert_response(self.client.get("/api/v1/library/authors/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = sorted([a["name"] for a in paginated_results(response)])
         self.assertEqual(names, ["Public Author", "X Author"])
@@ -72,7 +70,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_reader_series_list_filtered(self):
-        response = cast(Response, self.client.get("/api/v1/library/series/"))
+        response = assert_response(self.client.get("/api/v1/library/series/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = sorted([s["name"] for s in paginated_results(response)])
         self.assertEqual(names, ["Public Series", "X Series"])
@@ -80,6 +78,7 @@ class AuthorSeriesVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_reader_series_retrieve_404_for_inaccessible_only(self):
         response = self.client.get(f"/api/v1/library/series/{self.series_hidden.id}/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
 
 class AuthorSeriesCreatePermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
@@ -89,37 +88,72 @@ class AuthorSeriesCreatePermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_reader_cannot_create_author_or_series(self):
         self.client.login(username="reader2", password="pw")
-        r1 = cast(Response, self.client.post("/api/v1/library/authors/", data={"name": "Nope"}, format="json"))
-        r2 = cast(Response, self.client.post("/api/v1/library/series/", data={"name": "Nope"}, format="json"))
+        r1 = assert_response(
+            self.client.post(
+                "/api/v1/library/authors/", data={"name": "Nope"}, format="json"
+            )
+        )
+        r2 = assert_response(
+            self.client.post(
+                "/api/v1/library/series/", data={"name": "Nope"}, format="json"
+            )
+        )
         self.assertEqual(r1.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(r2.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_librarian_can_create_author_and_series(self):
         self.client.login(username="librarian2", password="pw")
-        r1 = cast(Response, self.client.post("/api/v1/library/authors/", data={"name": "New Author"}, format="json"))
-        r2 = cast(Response, self.client.post("/api/v1/library/series/", data={"name": "New Series"}, format="json"))
+        r1 = assert_response(
+            self.client.post(
+                "/api/v1/library/authors/",
+                data={"name": "New Author"},
+                format="json",
+            )
+        )
+        r2 = assert_response(
+            self.client.post(
+                "/api/v1/library/series/",
+                data={"name": "New Series"},
+                format="json",
+            )
+        )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        self.assertIn("id", cast(Mapping[str, Any], r1.data))
-        self.assertIn("id", cast(Mapping[str, Any], r2.data))
+        self.assertIn("id", response_data_dict(r1))
+        self.assertIn("id", response_data_dict(r2))
 
     def test_book_patch_accepts_authors_and_series_ids(self):
         self.client.login(username="librarian2", password="pw")
-        author = cast(dict[str, Any], cast(Response, self.client.post("/api/v1/library/authors/", data={"name": "A"}, format="json")).data)
-        series = cast(dict[str, Any], cast(Response, self.client.post("/api/v1/library/series/", data={"name": "S"}, format="json")).data)
+        author = response_data_dict(
+            assert_response(
+                self.client.post(
+                    "/api/v1/library/authors/", data={"name": "A"}, format="json"
+                )
+            )
+        )
+        series = response_data_dict(
+            assert_response(
+                self.client.post(
+                    "/api/v1/library/series/", data={"name": "S"}, format="json"
+                )
+            )
+        )
 
         book = create_file_backed_book(title="T", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{book.id}/",
-                data={"authors": [author["id"]], "series": series["id"], "series_index": 1},
+                data={
+                    "authors": [author["id"]],
+                    "series": series["id"],
+                    "series_index": 1,
+                },
                 format="json",
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], resp.data)
+        payload = response_data_dict(resp)
         self.assertEqual([a["id"] for a in payload["authors"]], [author["id"]])
         self.assertEqual(payload["series"]["id"], series["id"])

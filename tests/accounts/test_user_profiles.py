@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any, cast
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import ExternalIdentity, UserProfile
 from accounts.services import user_supports_local_password
+from tests.utils.responses import (
+    assert_response,
+    response_data_dict,
+    response_data_list,
+)
 
 
 class UserProfileModelTest(TestCase):
@@ -53,10 +56,9 @@ class UserProfileAPITest(APITestCase):
         self.client.login(username="testuser", password="testpass")
 
     def test_authenticated_access(self):
-        response = cast(Response, self.client.get("/api/v1/accounts/profiles/"))
+        response = assert_response(self.client.get("/api/v1/accounts/profiles/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
-        profile = cast(list[dict[str, Any]], data["results"])[0]
+        profile = response_data_list(response)[0]
         self.assertNotIn("external_subject_id", profile)
 
     def test_profile_api_disallows_protected_field_updates_and_delete(self):
@@ -89,8 +91,7 @@ class UserProfileAPITest(APITestCase):
 
     def test_safe_me_update_preserves_profile_id(self):
         profile_id = cast(Any, self.user).profile.id
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 "/api/v1/accounts/me/",
                 data={
@@ -102,7 +103,7 @@ class UserProfileAPITest(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["profile_id"], str(profile_id))
         self.assertEqual(data["email"], "updated@example.com")
         self.assertEqual(data["first_name"], "Updated")
@@ -111,10 +112,9 @@ class UserProfileAPITest(APITestCase):
         self.assertEqual(cast(Any, self.user).profile.id, profile_id)
 
     def test_authenticated_access_me(self):
-        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["username"], "testuser")
         self.assertEqual(data["email"], "test@example.com")
         self.assertEqual(data["first_name"], "")
@@ -197,11 +197,11 @@ class ExternalIdentityModelTest(TestCase):
         self.user.save(update_fields=["password"])
         self.client.login(username="external-user", password="pw")
 
-        profile_response = cast(
-            Response, self.client.get("/api/v1/accounts/profiles/")
+        profile_response = assert_response(
+            self.client.get("/api/v1/accounts/profiles/")
         )
         self.assertNotContains(profile_response, "private-subject")
-        me_response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+        me_response = assert_response(self.client.get("/api/v1/accounts/me/"))
         self.assertNotContains(me_response, "private-subject")
 
 

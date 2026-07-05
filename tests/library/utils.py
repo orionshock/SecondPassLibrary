@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
+from typing import Any
 
 from rest_framework.response import Response
 
 from tests.testenv.filesystem import IsolatedMediaRootMixin
+from tests.utils.responses import response_data_list
 
 __all__ = ["IsolatedMediaRootMixin", "paginated_results"]
 
 
-def paginated_results(response: Response) -> list[dict[str, Any]]:
-    assert response.data is not None
-    payload = cast(Mapping[str, Any], response.data)
-    results = payload.get("results")
-    assert isinstance(results, list)
-    return cast(list[dict[str, Any]], results)
+def paginated_results(response: Response) -> list[Any]:
+    return response_data_list(response)

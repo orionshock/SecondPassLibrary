@@ -17,6 +17,7 @@ from rest_framework.test import APITestCase
 from reading.imports.staging import cleanup_staged_imports
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
+from tests.utils.responses import assert_http_response, assert_response
 
 
 User = get_user_model()
@@ -101,7 +102,7 @@ class MarginaliaImportPreviewApiTests(
     def test_preview_creates_staged_file_with_user_and_payload(self):
         self.client.force_login(self.user)
         payload = self.preview_marginalia_payload()
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         path = Path(settings.IMPORTS_DIR) / "staged" / f"{r.data['import_token']}.json"
@@ -118,9 +119,8 @@ class MarginaliaImportPreviewApiTests(
         )["books"][0]
         payload["books"].append(unmatched)
 
-        preview = cast(Any, self.post_preview_payload(payload))
-        r = cast(
-            Any,
+        preview = assert_response(self.post_preview_payload(payload))
+        r = assert_http_response(
             self.client.get(
                 preview.data["unmatched_download_url"],
                 HTTP_ACCEPT="text/html,application/xhtml+xml,*/*",
@@ -145,8 +145,7 @@ class MarginaliaImportPreviewApiTests(
     def test_unmatched_download_requires_current_user_staged_preview(self):
         self.client.force_login(self.user)
         other = User.objects.create_user(username="other", password="pw")
-        preview = cast(
-            Any,
+        preview = assert_response(
             self.post_preview_payload(
                 self.preview_marginalia_payload(
                     file_hash="0" * 64, title="Missing Book"

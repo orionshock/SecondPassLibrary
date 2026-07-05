@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, cast
-
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -9,6 +7,7 @@ from rest_framework.test import APITestCase
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
+from tests.utils.responses import assert_response
 
 
 User = get_user_model()
@@ -47,7 +46,9 @@ class MarginaliaImportApplyApiTests(
         }
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(payload, selection=selection))
+        r = assert_response(
+            self.post_apply_staged_payload(payload, selection=selection)
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["sessions_created"], 1)
@@ -58,8 +59,7 @@ class MarginaliaImportApplyApiTests(
 
     def test_apply_malformed_selection_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
-        r = cast(
-            Any,
+        r = assert_response(
             self.post_apply_staged_payload(
                 self.marginalia_payload(), selection="{not-json"
             ),
@@ -82,7 +82,9 @@ class MarginaliaImportApplyApiTests(
         }
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(payload, selection=selection))
+        r = assert_response(
+            self.post_apply_staged_payload(payload, selection=selection)
+        )
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
@@ -101,7 +103,9 @@ class MarginaliaImportApplyApiTests(
         }
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(payload, selection=selection))
+        r = assert_response(
+            self.post_apply_staged_payload(payload, selection=selection)
+        )
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])

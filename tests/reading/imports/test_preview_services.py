@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.utils.dateparse import parse_datetime
@@ -12,6 +11,7 @@ from rest_framework.test import APITestCase
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
+from tests.utils.responses import assert_response
 
 
 User = get_user_model()
@@ -28,7 +28,9 @@ class MarginaliaImportPreviewApiTests(
 
     def test_valid_export_returns_summary_counts_and_file_hash_match(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_preview_payload(self.preview_marginalia_payload()))
+        r = assert_response(
+            self.post_preview_payload(self.preview_marginalia_payload())
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["valid"])
@@ -93,8 +95,7 @@ class MarginaliaImportPreviewApiTests(
 
     def test_matching_only_uses_visible_books(self):
         self.client.force_login(self.user)
-        r = cast(
-            Any,
+        r = assert_response(
             self.post_preview_payload(
                 self.preview_marginalia_payload(
                     file_hash=self.hidden.file.checksum, title="Hidden Match"
@@ -112,7 +113,7 @@ class MarginaliaImportPreviewApiTests(
             file_hash="0" * 64, title="Missing Book", authors=["Nobody"]
         )
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertFalse(r.data["can_apply"])
@@ -162,7 +163,7 @@ class MarginaliaImportPreviewApiTests(
         )
         payload["books"].extend([first_unmatched, second_unmatched])
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["apply_plan"]["matched_books"], 1)
@@ -198,7 +199,7 @@ class MarginaliaImportPreviewApiTests(
         payload["books"][0]["source"] = "book:sha256:" + ("1" * 64)
         payload["books"][0]["file_hash"] = "sha256:" + ("1" * 64)
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
@@ -213,7 +214,7 @@ class MarginaliaImportPreviewApiTests(
         )
         payload["books"][0]["isbn"] = "9780345816023"
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
@@ -228,7 +229,7 @@ class MarginaliaImportPreviewApiTests(
         invalid["annotations"][0]["target"]["selector"]["value"] = "not-a-cfi"
         payload["books"][0]["sessions"].append(invalid)
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["can_apply"])
@@ -273,7 +274,7 @@ class MarginaliaImportPreviewApiTests(
             "updated_at": "2026-06-01T12:00:00+00:00",
         }
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertFalse(r.data["can_apply"])
@@ -305,7 +306,7 @@ class MarginaliaImportPreviewApiTests(
         payload["books"][0]["sessions"][0]["progress"] = None
         payload["books"][0]["sessions"][0]["annotations"] = []
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["books"][0]["sessions"][0]["will_import"])
@@ -315,7 +316,7 @@ class MarginaliaImportPreviewApiTests(
         self.client.force_login(self.user)
         payload = self.preview_marginalia_payload(session_status="active")
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["can_apply"])
@@ -342,7 +343,9 @@ class MarginaliaImportPreviewApiTests(
         session.save(update_fields=["started_at", "updated_at"])
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_preview_payload(self.preview_marginalia_payload()))
+        r = assert_response(
+            self.post_preview_payload(self.preview_marginalia_payload())
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["can_apply"])

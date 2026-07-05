@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, cast
-
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
@@ -9,6 +7,7 @@ from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
+from tests.utils.responses import assert_response, response_data_list
 
 
 User = get_user_model()
@@ -56,9 +55,9 @@ class CurrentUserClientSessionsApiTests(APITestCase):
 
     def test_list_returns_only_current_user_active_sessions_and_no_token_hash(self):
         self.client.force_login(self.user1)
-        r = cast(Any, self.client.get("/api/v1/accounts/me/client-sessions/"))
+        r = assert_response(self.client.get("/api/v1/accounts/me/client-sessions/"))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        data = cast(list[dict[str, Any]], r.data)
+        data = response_data_list(r)
         ids = {row["id"] for row in data}
         self.assertIn(str(self.s1.id), ids)
         self.assertIn(str(self.s2.id), ids)
@@ -74,12 +73,11 @@ class CurrentUserClientSessionsApiTests(APITestCase):
         self.s1.refresh_from_db(from_queryset=None)
         self.assertIsNotNone(self.s1.revoked_at)
 
-        r2 = cast(Any, self.client.get("/api/v1/accounts/me/client-sessions/"))
-        ids = {row["id"] for row in cast(list[dict[str, Any]], r2.data)}
+        r2 = assert_response(self.client.get("/api/v1/accounts/me/client-sessions/"))
+        ids = {row["id"] for row in response_data_list(r2)}
         self.assertNotIn(str(self.s1.id), ids)
 
     def test_delete_other_users_session_is_404(self):
         self.client.force_login(self.user1)
         r = self.client.delete(f"/api/v1/accounts/me/client-sessions/{self.other.id}/")
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
-

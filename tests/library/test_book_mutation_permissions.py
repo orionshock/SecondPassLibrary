@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
-
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.groups.services import ensure_book_public_assignment
@@ -16,6 +12,8 @@ from tests.library.helpers import (
 )
 from tests.library.utils import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import assert_response, response_data_dict
+
 
 class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
@@ -24,8 +22,7 @@ class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_reader_cannot_create_book(self):
         self.client.login(username="reader", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/library/books/",
                 data={"title": "X", "authors": [], "subjects": []},
@@ -36,8 +33,7 @@ class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_librarian_cannot_create_book(self):
         self.client.login(username="librarian", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.post(
                 "/api/v1/library/books/",
                 data={"title": "X", "authors": [], "subjects": []},
@@ -45,6 +41,7 @@ class LibraryPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
@@ -63,8 +60,7 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_reader_cannot_patch_book_metadata(self):
         self.client.login(username="reader", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"title": "Nope"},
@@ -75,8 +71,7 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_librarian_can_patch_basic_book_metadata(self):
         self.client.login(username="librarian", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={
@@ -90,8 +85,7 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data)
-        data = cast(Mapping[str, Any], response.data)
+        data = response_data_dict(response)
         self.assertEqual(data["title"], "Updated title")
         self.assertEqual(data["publisher"], "Pub")
         self.assertEqual(data["published_date"], "2018-01-23")
@@ -100,8 +94,7 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
 
     def test_librarian_can_patch_blank_subtitle(self):
         self.client.login(username="librarian", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"subtitle": ""},
@@ -109,14 +102,13 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], response.data)
+        payload = response_data_dict(response)
         self.assertEqual(payload["subtitle"], "")
 
     def test_series_index_accepts_integer_or_one_decimal_and_rejects_invalid(self):
         self.client.login(username="librarian", password="pw")
 
-        r1 = cast(
-            Response,
+        r1 = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"series_index": 5},
@@ -124,10 +116,9 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(r1.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], r1.data)["series_index"], "5.0")
+        self.assertEqual(response_data_dict(r1)["series_index"], "5.0")
 
-        r2 = cast(
-            Response,
+        r2 = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"series_index": "5.1"},
@@ -135,10 +126,9 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(r2.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], r2.data)["series_index"], "5.1")
+        self.assertEqual(response_data_dict(r2)["series_index"], "5.1")
 
-        r3 = cast(
-            Response,
+        r3 = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"series_index": None},
@@ -146,10 +136,9 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(r3.status_code, status.HTTP_200_OK)
-        self.assertIsNone(cast(Mapping[str, Any], r3.data)["series_index"])
+        self.assertIsNone(response_data_dict(r3)["series_index"])
 
-        r4 = cast(
-            Response,
+        r4 = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"series_index": "5.12"},
@@ -158,8 +147,7 @@ class BookPatchPermissionsAPITest(IsolatedMediaRootMixin, APITestCase):
         )
         self.assertEqual(r4.status_code, status.HTTP_400_BAD_REQUEST)
 
-        r5 = cast(
-            Response,
+        r5 = assert_response(
             self.client.patch(
                 f"/api/v1/library/books/{self.book.id}/",
                 data={"series_index": -1},

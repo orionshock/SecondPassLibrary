@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
-
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.groups.services import ensure_book_public_assignment
@@ -16,6 +12,8 @@ from tests.library.helpers import (
 )
 from tests.library.utils import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import assert_response, payload_list, response_data_dict
+
 
 class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
@@ -37,26 +35,30 @@ class BookGroupsSummaryVisibilityAPITest(IsolatedMediaRootMixin, APITestCase):
         )
 
         # Book is viewable via Public, but also assigned to an unlisted non-member group.
-        self.book = create_file_backed_book(title="Public+Hidden", assign_public=False).book
+        self.book = create_file_backed_book(
+            title="Public+Hidden", assign_public=False
+        ).book
         ensure_book_public_assignment(book=self.book, added_by=None)
         BookGroupAssignment.objects.create(book=self.book, group=self.hidden_group)
 
     def test_manager_sees_all_assigned_groups(self):
         self.client.login(username="manager", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/library/books/{self.book.id}/"))
+        response = assert_response(
+            self.client.get(f"/api/v1/library/books/{self.book.id}/")
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], response.data)
-        groups = cast(list[dict[str, Any]], payload["groups"])
+        groups = payload_list(response_data_dict(response), "groups")
         names = {g["name"] for g in groups}
         self.assertIn("Common Room", names)
         self.assertIn("Hidden", names)
 
     def test_reader_only_sees_viewable_groups(self):
         self.client.login(username="reader", password="pw")
-        response = cast(Response, self.client.get(f"/api/v1/library/books/{self.book.id}/"))
+        response = assert_response(
+            self.client.get(f"/api/v1/library/books/{self.book.id}/")
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], response.data)
-        groups = cast(list[dict[str, Any]], payload["groups"])
+        groups = payload_list(response_data_dict(response), "groups")
         names = {g["name"] for g in groups}
         self.assertIn("Common Room", names)
         self.assertNotIn("Hidden", names)

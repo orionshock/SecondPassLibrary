@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, cast
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from rest_framework import status
@@ -16,6 +15,12 @@ from library.groups.services import (
 from library.models import LibraryGroup
 from shelves.models import Shelf, ShelfItem
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import (
+    assert_response,
+    payload_list,
+    response_data_dict,
+    response_data_list,
+)
 
 User = get_user_model()
 
@@ -42,8 +47,12 @@ class ShelfPreviewBooksAPITest(APITestCase):
             created_by=self.reader,
         )
 
-        self.hidden_book = create_file_backed_book(title="Hidden 00", assign_public=False).book
-        add_book_to_group(actor=self.owner, book=self.hidden_book, group=self.hidden_group)
+        self.hidden_book = create_file_backed_book(
+            title="Hidden 00", assign_public=False
+        ).book
+        add_book_to_group(
+            actor=self.owner, book=self.hidden_book, group=self.hidden_group
+        )
         ShelfItem.objects.create(
             shelf=self.shelf,
             book=self.hidden_book,
@@ -66,49 +75,61 @@ class ShelfPreviewBooksAPITest(APITestCase):
                 added_by=self.reader,
             )
 
-    def _results(self, response: Response) -> list[dict[str, Any]]:
-        payload = cast(Mapping[str, Any], response.data)
-        return cast(list[dict[str, Any]], payload["results"])
+    def _results(self, response: Response) -> list[Any]:
+        return response_data_list(response)
 
     def test_shelf_list_and_detail_preview_books_are_opt_in(self):
         self.client.login(username="reader", password="pw")
 
-        list_default = cast(Response, self.client.get("/api/v1/shelves/"))
+        list_default = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(list_default.status_code, status.HTTP_200_OK)
-        default_row = next(row for row in self._results(list_default) if row["id"] == str(self.shelf.id))
+        default_row = next(
+            row
+            for row in self._results(list_default)
+            if row["id"] == str(self.shelf.id)
+        )
         self.assertNotIn("preview_books", default_row)
 
-        detail_default = cast(Response, self.client.get(f"/api/v1/shelves/{self.shelf.id}/"))
+        detail_default = assert_response(
+            self.client.get(f"/api/v1/shelves/{self.shelf.id}/")
+        )
         self.assertEqual(detail_default.status_code, status.HTTP_200_OK)
-        self.assertNotIn("preview_books", cast(Mapping[str, Any], detail_default.data))
+        self.assertNotIn("preview_books", response_data_dict(detail_default))
 
-        list_preview = cast(
-            Response,
+        list_preview = assert_response(
             self.client.get("/api/v1/shelves/?include_preview_books=true"),
         )
         self.assertEqual(list_preview.status_code, status.HTTP_200_OK)
-        preview_row = next(row for row in self._results(list_preview) if row["id"] == str(self.shelf.id))
+        preview_row = next(
+            row
+            for row in self._results(list_preview)
+            if row["id"] == str(self.shelf.id)
+        )
         self.assertIn("preview_books", preview_row)
 
-        detail_preview = cast(
-            Response,
-            self.client.get(f"/api/v1/shelves/{self.shelf.id}/?include_preview_books=true"),
+        detail_preview = assert_response(
+            self.client.get(
+                f"/api/v1/shelves/{self.shelf.id}/?include_preview_books=true"
+            ),
         )
         self.assertEqual(detail_preview.status_code, status.HTTP_200_OK)
-        self.assertIn("preview_books", cast(Mapping[str, Any], detail_preview.data))
+        self.assertIn("preview_books", response_data_dict(detail_preview))
 
     def test_shelf_preview_books_shape_cap_order_and_visibility(self):
         self.client.login(username="reader", password="pw")
-        response = cast(
-            Response,
-            self.client.get(f"/api/v1/shelves/{self.shelf.id}/?include_preview_books=true"),
+        response = assert_response(
+            self.client.get(
+                f"/api/v1/shelves/{self.shelf.id}/?include_preview_books=true"
+            ),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], response.data)
-        previews = cast(list[dict[str, Any]], payload["preview_books"])
+        previews = payload_list(response_data_dict(response), "preview_books")
 
         self.assertEqual(len(previews), 6)
-        self.assertEqual([row["title"] for row in previews], [f"Visible {index:02d}" for index in range(6)])
+        self.assertEqual(
+            [row["title"] for row in previews],
+            [f"Visible {index:02d}" for index in range(6)],
+        )
         self.assertNotIn("Hidden 00", {row["title"] for row in previews})
         for row in previews:
             self.assertEqual(set(row.keys()), {"id", "title", "cover_url"})

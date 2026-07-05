@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
-from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -16,6 +15,7 @@ from reading.imports.staging import stage_marginalia_import, staged_import_path
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
+from tests.utils.responses import assert_response
 
 
 User = get_user_model()
@@ -52,7 +52,7 @@ class MarginaliaImportPreviewApiTests(
 
     def test_invalid_json_returns_400(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_preview_payload(b"{not-json"))
+        r = assert_response(self.post_preview_payload(b"{not-json"))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["valid"])
         self.assertIn("errors", r.data)
@@ -60,7 +60,7 @@ class MarginaliaImportPreviewApiTests(
     @patch("reading.imports.services.MAX_MARGINALIA_IMPORT_BYTES", 4)
     def test_oversized_marginalia_json_preview_upload_is_rejected_before_staging(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_preview_payload(b'{"x":1}'))
+        r = assert_response(self.post_preview_payload(b'{"x":1}'))
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["valid"])
@@ -73,7 +73,7 @@ class MarginaliaImportPreviewApiTests(
         payload = self.preview_marginalia_payload()
         del payload["books"][0]["sessions"][0]["annotations"][0]["target"]
 
-        r = cast(Any, self.post_preview_payload(payload))
+        r = assert_response(self.post_preview_payload(payload))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["valid"])
         self.assertIn(
@@ -113,7 +113,7 @@ class MarginaliaImportApplyApiTests(
 
     def test_apply_without_import_token_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.post(self._url(), {}, format="multipart"))
+        r = assert_response(self.client.post(self._url(), {}, format="multipart"))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
         self.assertIn("import_token", r.data["errors"][0]["message"])
@@ -125,7 +125,7 @@ class MarginaliaImportApplyApiTests(
     ):
         self.client.force_login(self.user)
         payload = self.marginalia_payload()
-        r = cast(Any, self.post_apply_payload(payload))
+        r = assert_response(self.post_apply_payload(payload))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
         self.assertIn("import_token", r.data["errors"][0]["message"])
@@ -137,7 +137,7 @@ class MarginaliaImportApplyApiTests(
         payload = self.marginalia_payload()
         del payload["books"][0]["sessions"][0]["annotations"][0]["target"]
         token = stage_marginalia_import(user=self.user, payload=payload)
-        r = cast(Any, self.post_apply_token(token))
+        r = assert_response(self.post_apply_token(token))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
         self.assertEqual(ReadingSession.objects.count(), 0)
@@ -149,7 +149,7 @@ class MarginaliaImportApplyApiTests(
         path = staged_import_path(token)
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_token(token))
+        r = assert_response(self.post_apply_token(token))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["sessions_created"], 1)
@@ -161,7 +161,7 @@ class MarginaliaImportApplyApiTests(
         token = stage_marginalia_import(user=other, payload=self.marginalia_payload())
 
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_token(token))
+        r = assert_response(self.post_apply_token(token))
 
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
@@ -171,7 +171,7 @@ class MarginaliaImportApplyApiTests(
     def test_apply_with_invalid_or_traversal_token_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
         for token in ["../bad", "bad.json", "short"]:
-            r = cast(Any, self.post_apply_token(token))
+            r = assert_response(self.post_apply_token(token))
             self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertFalse(r.data["applied"])
         self.assertEqual(ReadingSession.objects.count(), 0)
@@ -187,8 +187,8 @@ class MarginaliaImportApplyApiTests(
         path.write_text(json.dumps(staged), encoding="utf-8")
 
         self.client.force_login(self.user)
-        expired = cast(Any, self.post_apply_token(token))
-        missing = cast(Any, self.post_apply_token("A" * 40))
+        expired = assert_response(self.post_apply_token(token))
+        missing = assert_response(self.post_apply_token("A" * 40))
 
         self.assertEqual(expired.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)

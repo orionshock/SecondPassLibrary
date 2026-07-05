@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -21,6 +20,7 @@ from tests.reading.exports.schema_assertions import (
 )
 from tests.reading.utils import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import assert_response
 
 
 User = get_user_model()
@@ -29,7 +29,9 @@ User = get_user_model()
 pytestmark = [pytest.mark.filesystem, pytest.mark.integration]
 
 
-class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+class ReadingExportApiTests(
+    SingleBookExportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_single_book_export_world()
 
@@ -56,7 +58,7 @@ class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin,
 
     def test_book_export_includes_only_request_user_sessions_for_book(self):
         self.client.force_login(self.user)
-        r = cast(Any, self._post_book())
+        r = assert_response(self._post_book())
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
@@ -81,17 +83,23 @@ class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin,
         self.assertEqual(book["title"], "Export Book")
         self.assertTrue(book["source"].startswith("book:sha256:"))
         self.assertTrue(book["file_hash"].startswith("sha256:"))
-        self.assertLess(list(book.keys()).index("source"), list(book.keys()).index("sessions"))
-        self.assertLess(list(book.keys()).index("file_hash"), list(book.keys()).index("sessions"))
+        self.assertLess(
+            list(book.keys()).index("source"), list(book.keys()).index("sessions")
+        )
+        self.assertLess(
+            list(book.keys()).index("file_hash"), list(book.keys()).index("sessions")
+        )
         sessions = book["sessions"]
-        self.assertEqual([s["export_session_id"] for s in sessions], ["session-1", "session-2"])
+        self.assertEqual(
+            [s["export_session_id"] for s in sessions], ["session-1", "session-2"]
+        )
         self.assertEqual({s["name"] for s in sessions}, {"First pass", "Second pass"})
         self.assertNotIn(str(self.other_user_session.id), str(data))
         self.assertNotIn(str(self.other_book_session.id), str(data))
 
     def test_session_export_includes_only_selected_session(self):
         self.client.force_login(self.user)
-        r = cast(Any, self._post_book(sessions=[str(self.session1.id)]))
+        r = assert_response(self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
@@ -149,7 +157,9 @@ class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin,
     def test_old_book_and_session_export_routes_are_removed(self):
         self.client.force_login(self.user)
         self.assertEqual(
-            self.client.get(f"/api/v1/reading/export/books/{self.book.id}/").status_code,
+            self.client.get(
+                f"/api/v1/reading/export/books/{self.book.id}/"
+            ).status_code,
             status.HTTP_404_NOT_FOUND,
         )
         self.assertEqual(
@@ -158,7 +168,9 @@ class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin,
         )
 
 
-class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+class AllMarginaliaExportApiTests(
+    AllExportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_all_export_world()
 
@@ -180,7 +192,7 @@ class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, 
 
     def test_all_export_download_header_and_scope(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url()))
+        r = assert_response(self.client.get(self._url()))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
@@ -194,7 +206,7 @@ class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, 
 
     def test_all_export_includes_current_user_visible_books_with_sessions(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url()))
+        r = assert_response(self.client.get(self._url()))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         books = r.data["books"]
@@ -205,7 +217,9 @@ class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, 
 
         self.assertEqual(books[0]["sessions"][0]["export_session_id"], "session-1")
         self.assertEqual(books[1]["sessions"][0]["export_session_id"], "session-1")
-        self.assertEqual(books[0]["sessions"][0]["annotations"][0]["body"][0]["value"], "alpha quote")
+        self.assertEqual(
+            books[0]["sessions"][0]["annotations"][0]["body"][0]["value"], "alpha quote"
+        )
         self.assertNotIn(str(self.other_session.id), str(r.data))
 
     def test_all_export_includes_owned_hidden_book_sessions(self):
@@ -217,7 +231,7 @@ class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, 
         ReadingSession.objects.create(user=self.user, book=hidden, name="Hidden pass")
 
         self.client.force_login(self.user)
-        r = cast(Any, self.client.get(self._url()))
+        r = assert_response(self.client.get(self._url()))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         books = r.data["books"]
@@ -226,17 +240,23 @@ class AllMarginaliaExportApiTests(AllExportFixtureMixin, IsolatedUserdataMixin, 
         self.assertEqual(by_title["Hidden Owned"]["sessions"][0]["name"], "Hidden pass")
 
 
-class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+class SelectedBookMarginaliaExportApiTests(
+    SelectedExportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_selected_export_world()
 
     def test_selected_book_export_includes_only_requested_sessions(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.post(
-            self._url(),
-            self._body({"book_id": str(self.book.id), "sessions": [str(self.session2.id)]}),
-            format="json",
-        ))
+        r = assert_response(
+            self.client.post(
+                self._url(),
+                self._body(
+                    {"book_id": str(self.book.id), "sessions": [str(self.session2.id)]}
+                ),
+                format="json",
+            )
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
@@ -248,7 +268,9 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
             r.data["scope"],
             {
                 "type": "selected",
-                "books": [{"book": r.data["books"][0]["source"], "session_filter": "selected"}],
+                "books": [
+                    {"book": r.data["books"][0]["source"], "session_filter": "selected"}
+                ],
             },
         )
 
@@ -261,16 +283,18 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
 
     def test_selected_book_export_preserves_query_order(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.post(
-            self._url(),
-            self._body(
-                {
-                    "book_id": str(self.book.id),
-                    "sessions": [str(self.session2.id), str(self.session1.id)],
-                }
-            ),
-            format="json",
-        ))
+        r = assert_response(
+            self.client.post(
+                self._url(),
+                self._body(
+                    {
+                        "book_id": str(self.book.id),
+                        "sessions": [str(self.session2.id), str(self.session1.id)],
+                    }
+                ),
+                format="json",
+            )
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         names = [session["name"] for session in r.data["books"][0]["sessions"]]
@@ -278,11 +302,13 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
 
     def test_book_export_without_session_params_still_exports_all_sessions(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.post(
-            self._url(),
-            self._body({"book_id": str(self.book.id), "sessions": "all"}),
-            format="json",
-        ))
+        r = assert_response(
+            self.client.post(
+                self._url(),
+                self._body({"book_id": str(self.book.id), "sessions": "all"}),
+                format="json",
+            )
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["scope"]["type"], "selected")
@@ -292,17 +318,22 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
 
     def test_selected_export_supports_multiple_books(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.client.post(
-            self._url(),
-            self._body(
-                {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]},
-                {"book_id": str(self.other_book.id), "sessions": "all"},
-            ),
-            format="json",
-        ))
+        r = assert_response(
+            self.client.post(
+                self._url(),
+                self._body(
+                    {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]},
+                    {"book_id": str(self.other_book.id), "sessions": "all"},
+                ),
+                format="json",
+            )
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertEqual([book["title"] for book in r.data["books"]], ["Selected Export", "Other Book"])
+        self.assertEqual(
+            [book["title"] for book in r.data["books"]],
+            ["Selected Export", "Other Book"],
+        )
         self.assertEqual(r.data["scope"]["books"][0]["session_filter"], "selected")
         self.assertEqual(r.data["scope"]["books"][1]["session_filter"], "all")
 
@@ -328,7 +359,12 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
         self.client.force_login(self.user)
         r = self.client.post(
             self._url(),
-            self._body({"book_id": str(self.book.id), "sessions": [str(self.other_book_session.id)]}),
+            self._body(
+                {
+                    "book_id": str(self.book.id),
+                    "sessions": [str(self.other_book_session.id)],
+                }
+            ),
             format="json",
         )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
@@ -337,7 +373,12 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
         self.client.force_login(self.user)
         r = self.client.post(
             self._url(),
-            self._body({"book_id": str(self.book.id), "sessions": [str(self.other_user_session.id)]}),
+            self._body(
+                {
+                    "book_id": str(self.book.id),
+                    "sessions": [str(self.other_user_session.id)],
+                }
+            ),
             format="json",
         )
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
@@ -370,7 +411,9 @@ class SelectedBookMarginaliaExportApiTests(SelectedExportFixtureMixin, IsolatedU
 
         r = self.client.post(
             self._url(),
-            self._body({"book_id": str(self.book.id), "sessions": [str(self.session1.id)]}),
+            self._body(
+                {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]}
+            ),
             format="json",
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
