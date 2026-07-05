@@ -14,6 +14,7 @@
     "LineCount.excludes": [
       "*.md",
       "*.png",
+      "**/__init__.py",
       "**/__pycache__/**",
       "**/TestFiles/**",
       "**/.ruff_cache/**",
@@ -23,7 +24,9 @@
       "**/node_modules/**",
       "**/out/**",
       "**/test/**",
+      "**/tests/**",
       "**/userdata/**",
+      "**/var/**",
       ".env.example",
       ".gitattributes",
       ".git",

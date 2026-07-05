@@ -42,25 +42,120 @@ class FirstRunProductUiTests(TestCase):
         self.assertContains(response, 'name="public_group_description"')
         self.assertContains(response, "Main Public Library Room for everyone")
         self.assertContains(response, 'name="advanced_library_groups_enabled"')
-        self.assertContains(
-            response,
-            (
-                "Advanced library groups let you create separate curator-managed "
-                "library rooms with their own memberships and group-owned shelves. "
-                "Leave this off if you only need the Common Room, managed by librarians "
-                "as the shared public library space."
-            ),
-        )
         self.assertContains(response, 'name="username"')
         self.assertContains(response, 'name="first_name"')
         self.assertContains(response, 'name="last_name"')
         self.assertContains(response, 'name="email"')
         self.assertContains(response, 'name="password1"')
         self.assertContains(response, 'name="password2"')
+
+    def test_setup_advanced_groups_default_off(self):
+        response = self.client.get("/setup/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="advanced_library_groups_enabled"')
         self.assertNotContains(
             response,
             'name="advanced_library_groups_enabled" checked',
         )
+
+    def test_setup_advanced_groups_compact_default_off_copy(self):
+        response = self.client.get("/setup/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Advanced library groups default to off.",
+        )
+        self.assertContains(
+            response,
+            "Leave this disabled. Consult documentation and help for more information.",
+        )
+
+    def test_setup_advanced_groups_modal_warning_and_enable_markup(self):
+        response = self.client.get("/setup/")
+        content = response.content.decode("utf-8")
+        advanced_fieldset = content.split(
+            '<fieldset class="setup-section setup-section--advanced">',
+            maxsplit=1,
+        )[1].split("<dialog", maxsplit=1)[0]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="setup-advanced-groups-open"')
+        self.assertContains(response, "Enable advanced library groups")
+        self.assertContains(response, 'id="setup-advanced-groups-dialog"')
+        self.assertContains(response, "Keep disabled")
+        self.assertContains(response, "Enable advanced groups")
+        self.assertContains(response, 'class="setup-dialog__actions"')
+        self.assertContains(
+            response,
+            '<button class="button button--danger" value="enable">Enable advanced groups</button>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<button class="button button--success-outline" value="cancel">Keep disabled</button>',
+            html=False,
+        )
+        self.assertContains(response, 'id="setup-advanced-groups-enabled-status"')
+        self.assertContains(response, "Disable before setup")
+        self.assertContains(
+            response,
+            (
+                "Advanced Library Groups allows for additional groups to be "
+                "created and assigned their own members and book restrictions."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "Disabling this feature is an Admin Recovery Action that is "
+                "intentionally difficult to get to."
+            ),
+        )
+        self.assertContains(
+            response,
+            "Please see documentation and help files for further information.",
+        )
+        self.assertContains(
+            response,
+            "data-advanced-groups-actions",
+        )
+        self.assertLess(
+            content.index('value="enable">Enable advanced groups'),
+            content.index('value="cancel">Keep disabled'),
+        )
+        self.assertNotIn("Admin Recovery Action", advanced_fieldset)
+        self.assertNotIn("documentation and help files", advanced_fieldset)
+
+    def test_setup_advanced_groups_final_submit_confirmation_markup(self):
+        response = self.client.get("/setup/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-advanced-groups-confirm")
+        self.assertContains(response, "window.confirm")
+        self.assertContains(response, "checkbox.checked")
+
+    def test_setup_submit_with_advanced_groups_off_keeps_feature_disabled(self):
+        response = self.client.post("/setup/", self.setup_data, follow=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/")
+        self.assertFalse(server_settings.get_advanced_library_groups_enabled())
+
+    def test_setup_submit_with_advanced_groups_on_enables_feature(self):
+        response = self.client.post(
+            "/setup/",
+            {
+                **self.setup_data,
+                "advanced_library_groups_enabled": "on",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/api-auth/login/")
+        self.assertTrue(server_settings.get_advanced_library_groups_enabled())
 
     @override_settings(DEBUG=False)
     def test_setup_page_is_available_in_production_mode(self):

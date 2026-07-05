@@ -41,14 +41,12 @@ class FirstOwnerSetupForm(UserCreationForm):
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
     email = forms.EmailField(label="Email", required=False)
     advanced_library_groups_enabled = forms.BooleanField(
-        label="Enable Advanced Library Group Usage",
+        label="I understand and want advanced library groups",
         required=False,
         initial=False,
         help_text=(
-            "Advanced library groups let you create separate curator-managed "
-            "library rooms with their own memberships and group-owned shelves. "
-            "Leave this off if you only need the Common Room, managed by librarians "
-            "as the shared public library space."
+            "Most households should leave this off unless they know they need "
+            "multiple managed library rooms."
         ),
     )
 

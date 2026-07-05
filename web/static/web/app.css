@@ -832,6 +832,58 @@ input[type="file"]:disabled::file-selector-button {
 .setup-help {
   font-size: 12px;
 }
+.setup-advanced-summary {
+  display: grid;
+  gap: 4px;
+}
+.setup-advanced-summary p {
+  margin: 0;
+  color: var(--muted);
+}
+.setup-advanced-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.setup-advanced-status {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  border-radius: 10px;
+  background: rgba(125, 211, 252, 0.08);
+}
+.setup-js .setup-advanced-fallback {
+  display: none;
+}
+.setup-dialog {
+  max-width: min(520px, calc(100% - 32px));
+  padding: 0;
+  border: 1px solid rgba(251, 113, 133, 0.45);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+.setup-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+.setup-dialog__panel {
+  padding: 16px;
+}
+.setup-dialog__panel h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+.setup-dialog__panel p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.setup-dialog__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 14px;
+}
 .setup-help ul,
 .setup-field .error ul {
   margin: 4px 0 0;
@@ -872,6 +924,14 @@ input[type="file"]:disabled::file-selector-button {
 .button--secondary:hover,
 .button--secondary:focus-visible {
   color: var(--text);
+}
+.button--success-outline {
+  border-color: rgba(74, 222, 128, 0.65);
+  background: rgba(74, 222, 128, 0.08);
+}
+.button--success-outline:hover,
+.button--success-outline:focus-visible {
+  background: rgba(74, 222, 128, 0.14);
 }
 
 .group-edit-summary {
