@@ -6,6 +6,7 @@ from typing import Any, cast
 import zipfile
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
@@ -19,6 +20,9 @@ from library.models import Book, BookFile
 from core.errors import ErrorCode
 from tests.env.filesystem import IsolatedImportsMixin
 from tests.utils.responses import response_data_dict
+
+
+pytestmark = [pytest.mark.filesystem, pytest.mark.integration, pytest.mark.slow]
 
 
 def _mock_epub() -> MagicMock:

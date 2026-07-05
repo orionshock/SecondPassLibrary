@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 from uuid import uuid4
 
+import pytest
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -23,6 +24,9 @@ from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
+
+
+pytestmark = [pytest.mark.filesystem, pytest.mark.integration]
 
 
 class ReadingExportApiTests(SingleBookExportFixtureMixin, IsolatedUserdataMixin, APITestCase):

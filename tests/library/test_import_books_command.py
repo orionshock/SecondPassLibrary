@@ -5,6 +5,7 @@ from pathlib import Path
 import zipfile
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
@@ -12,6 +13,9 @@ from django.test import TestCase
 from library.models import Book, BookFile
 from tests.env.filesystem import RuntimePathIsolation
 from tests.utils.books import create_file_backed_book
+
+
+pytestmark = [pytest.mark.filesystem, pytest.mark.integration]
 
 
 def _mock_epub(*, title: str = "Command ZIP Book") -> MagicMock:

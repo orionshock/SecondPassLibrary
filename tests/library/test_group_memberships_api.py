@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
+import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
@@ -17,6 +18,9 @@ from library.models import LibraryGroup, LibraryGroupMembership
 
 
 User = get_user_model()
+
+
+pytestmark = [pytest.mark.integration]
 
 
 class LibraryGroupMembershipFeatureGateAPITest(APITestCase):

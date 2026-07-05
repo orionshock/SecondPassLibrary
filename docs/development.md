@@ -178,7 +178,7 @@ Practical notes:
 - HTTP Basic authentication is not enabled. Non-browser reader clients should use
   the Client API bearer-token flow where supported.
 
-## Run checks and tests
+## Run Checks And Tests
 
 ```powershell
 python manage.py check
@@ -191,7 +191,30 @@ It is intended to catch ordinary Python mistakes without treating Django's
 dynamic model/runtime attributes as hard errors.
 If PowerShell blocks `npm.ps1`, use `npm.cmd run typecheck`.
 
-Targeted test commands:
+Prefer pytest for focused test runs. Run the smallest package, module, class,
+or test that covers the change. Broad suites are intentional, not the default.
+Use markers to keep routine runs away from known slow integration areas:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/library/test_imports_api.py -q
+.\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
+.\.venv\Scripts\python.exe -m pytest -m static_contract tests/core/product_ui -q
+.\.venv\Scripts\python.exe -m pytest tests/reading/annotations/test_views.py -q --durations=10
+```
+
+Marker intent:
+
+- `unit`: no database, pure logic/static parsing.
+- `db`: database-backed tests.
+- `filesystem`: writes generated files or temp paths.
+- `product_ui`: Product UI route/static/template tests.
+- `static_contract`: source/static/template contract tests that avoid runtime flows.
+- `integration`: broad cross-app or API flow tests.
+- `slow`: tests known to be slow enough to avoid in routine focused runs.
+
+`manage.py test` remains available for compatibility checks and legacy workflows.
+
+Targeted Django-runner commands:
 
 Product UI:
 

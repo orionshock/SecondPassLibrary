@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Any, cast
 
+import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
@@ -16,6 +17,9 @@ from tests.utils.responses import response_data_dict, response_data_list
 
 
 User = get_user_model()
+
+
+pytestmark = [pytest.mark.integration]
 
 
 def bookmark_payload(session: ReadingSession, value: str = "epubcfi(/6/2)") -> dict[str, Any]:

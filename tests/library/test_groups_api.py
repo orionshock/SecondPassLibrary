@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, cast
 
+import pytest
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.response import Response
@@ -21,6 +22,9 @@ from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
+
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 class LibraryGroupVisibilityAPITest(APITestCase):

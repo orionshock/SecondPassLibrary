@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 import zipfile
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.test import TestCase
 
 from PIL import Image
@@ -15,6 +16,9 @@ from library.models import BookFile
 from library.imports.epub import import_epub
 
 from tests.library.utils import IsolatedMediaRootMixin
+
+
+pytestmark = [pytest.mark.filesystem]
 
 
 def _png_bytes(*, size: tuple[int, int] = (40, 60)) -> bytes:

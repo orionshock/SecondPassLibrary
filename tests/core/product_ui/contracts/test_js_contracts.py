@@ -1,8 +1,14 @@
 """Tests for Product UI JavaScript helper contracts."""
 from pathlib import Path
 
+import pytest
+
 from tests.core.product_ui.css import product_ui_css_text
 from tests.core.product_ui.helpers import ProductUiTestCase
+
+
+pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
+
 
 class ProductUiJsContractsTests(ProductUiTestCase):
     """Test shared UI contracts and component helpers."""
