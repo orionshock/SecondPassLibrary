@@ -52,9 +52,10 @@ Optional: copy `.env.example` to `.env` and set environment variables for your s
 .\scripts\start-dev.ps1
 ```
 
-The script sets `DJANGO_DEBUG=1` when it is not already set, runs
-`python manage.py migrate --noinput`, and only then starts Django's development
-server. Set `PYTHON` to override the Python executable. Additional arguments
+The script sets `DJANGO_DEBUG=1`, disables WhiteNoise runtime caching for faster
+template/static iteration, runs `python manage.py migrate --noinput`, and only
+then starts Django's development server. Set `PYTHON` to override the Python
+executable. Additional arguments
 are passed through to `runserver`, for example:
 
 ```powershell
@@ -65,6 +66,10 @@ Raw `python manage.py runserver` uses the normal settings defaults. Because
 `DEBUG` defaults to false, local development behavior requires either the
 development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
 running raw `runserver`.
+
+For production-likeness, use `.\scripts\start-local-production.ps1`; it keeps
+`DJANGO_DEBUG=0`, runs `collectstatic`, and uses WhiteNoise in manifest-backed
+mode.
 
 The development script also sets `DJANGO_ALLOWED_HOSTS` to
 `localhost,127.0.0.1,[::1]` when it is not already set. Preserve or override

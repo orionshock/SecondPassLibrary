@@ -421,9 +421,7 @@ class BookFileAdminForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             duplicate = duplicate.exclude(pk=self.instance.pk)
         if duplicate.exists():
-            raise forms.ValidationError(
-                "An EPUB with this checksum is already stored."
-            )
+            raise forms.ValidationError("An EPUB with this checksum is already stored.")
 
         self.computed_upload_metadata = metadata
         return upload
@@ -556,13 +554,16 @@ class LibraryGroupMembershipAdmin(admin.ModelAdmin):
     raw_id_fields = ["user", "group"]
     readonly_fields = ["created_at", "updated_at"]
 
-    def has_delete_permission(self, request, obj=None):
-        # Public membership may be removed if another group remains.
-        return super().has_delete_permission(request, obj=obj)
-
     def has_add_permission(self, request):
-        # Membership creation should be managed via services/policies later.
-        return super().has_add_permission(request)
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        return super().has_delete_permission(request, obj=obj)
 
 
 @admin.register(BookGroupAssignment)
@@ -572,3 +573,12 @@ class BookGroupAssignmentAdmin(admin.ModelAdmin):
     list_filter = [("created_at", DateFieldListFilter), "group"]
     raw_id_fields = ["book", "group", "added_by"]
     readonly_fields = ["created_at", "updated_at"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

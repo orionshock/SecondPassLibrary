@@ -11,10 +11,19 @@ from django.test import RequestFactory, TestCase
 from core import server_settings
 from core.admin import ServerSettingAdmin, ServerSettingAdminForm
 from core.models import ServerSetting
-from library.admin import LibraryGroupAdmin, LibraryGroupMembershipAdmin
+from library.admin import (
+    BookGroupAssignmentAdmin,
+    LibraryGroupAdmin,
+    LibraryGroupMembershipAdmin,
+)
 from library.groups.services import ensure_user_public_membership
 from library.groups.public_group import get_public_group
-from library.models import LibraryGroup, LibraryGroupMembership
+from library.models import (
+    Book,
+    BookGroupAssignment,
+    LibraryGroup,
+    LibraryGroupMembership,
+)
 
 
 class _DummySite(AdminSite):
@@ -28,6 +37,9 @@ class LibraryAdminSafetyTest(TestCase):
             LibraryGroupMembership, self.site
         )
         self.group_admin = LibraryGroupAdmin(LibraryGroup, self.site)
+        self.book_group_assignment_admin = BookGroupAssignmentAdmin(
+            BookGroupAssignment, self.site
+        )
         self.factory = RequestFactory()
 
         self.staff = User.objects.create_user(
@@ -39,6 +51,12 @@ class LibraryAdminSafetyTest(TestCase):
         self.membership = LibraryGroupMembership.objects.get(
             user=self.staff, group=self.public
         )
+        book = Book.objects.create(title="Admin Safety Book")
+        self.assignment = BookGroupAssignment.objects.create(
+            book=book,
+            group=self.public,
+            added_by=self.staff,
+        )
 
     def test_public_membership_not_deletable_in_admin(self):
         request = self.factory.get("/admin/library/librarygroupmembership/")
@@ -46,11 +64,60 @@ class LibraryAdminSafetyTest(TestCase):
         self.assertFalse(
             self.membership_admin.has_delete_permission(request, obj=self.membership)
         )
+        self.assertFalse(self.membership_admin.has_add_permission(request))
+        self.assertFalse(
+            self.membership_admin.has_change_permission(request, obj=self.membership)
+        )
 
     def test_public_group_not_deletable_in_admin(self):
         request = self.factory.get("/admin/library/librarygroup/")
         request.user = self.staff
-        self.assertFalse(self.group_admin.has_delete_permission(request, obj=self.public))
+        self.assertFalse(
+            self.group_admin.has_delete_permission(request, obj=self.public)
+        )
+
+    def test_library_group_membership_admin_mutations_disabled(self):
+        request = self.factory.get("/admin/library/librarygroupmembership/")
+        request.user = self.staff
+
+        self.assertFalse(self.membership_admin.has_add_permission(request))
+        self.assertFalse(
+            self.membership_admin.has_change_permission(request, obj=self.membership)
+        )
+        self.assertFalse(
+            self.membership_admin.has_delete_permission(request, obj=self.membership)
+        )
+
+    def test_library_group_membership_admin_superusers_can_delete_for_fallback_maintenance(
+        self,
+    ):
+        owner = User.objects.create_superuser(
+            username="owner-membership-admin", email="owner2@example.com", password="pw"
+        )
+        owner_request = self.factory.get("/admin/library/librarygroupmembership/")
+        owner_request.user = owner
+
+        self.assertTrue(
+            self.membership_admin.has_delete_permission(
+                owner_request, obj=self.membership
+            )
+        )
+
+    def test_book_group_assignment_admin_mutations_disabled(self):
+        request = self.factory.get("/admin/library/bookgroupassignment/")
+        request.user = self.staff
+
+        self.assertFalse(self.book_group_assignment_admin.has_add_permission(request))
+        self.assertFalse(
+            self.book_group_assignment_admin.has_change_permission(
+                request, obj=self.assignment
+            )
+        )
+        self.assertFalse(
+            self.book_group_assignment_admin.has_delete_permission(
+                request, obj=self.assignment
+            )
+        )
 
     def test_public_group_name_is_readonly_in_admin(self):
         request = self.factory.get("/admin/library/librarygroup/")
@@ -100,17 +167,13 @@ class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
             value=True,
             description="test",
         )
-        request = self.factory.get(
-            f"/admin/core/serversetting/{setting.pk}/change/"
-        )
+        request = self.factory.get(f"/admin/core/serversetting/{setting.pk}/change/")
         request.user = self.owner
 
         response = self.admin.change_view(request, str(setting.pk))
         fieldsets = self.admin.get_fieldsets(request, obj=setting)
         flattened_fields = [
-            field
-            for _title, options in fieldsets
-            for field in options["fields"]
+            field for _title, options in fieldsets for field in options["fields"]
         ]
 
         self.assertEqual(response.status_code, 200)
@@ -184,7 +247,9 @@ class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
             response.template_name,
             "admin/core/serversetting/advanced_groups_disable_complete.html",
         )
-        self.assertEqual(response.context_data["title"], "Advanced library groups disabled")
+        self.assertEqual(
+            response.context_data["title"], "Advanced library groups disabled"
+        )
         self.assertEqual(response.context_data["plan"].public_group_name, "Common Room")
         self.assertEqual(response.context_data["summary"]["custom_groups"], 0)
         self.assertIn(
@@ -218,4 +283,7 @@ class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(server_settings.advanced_library_groups_enabled() is False)
-        self.assertEqual(response.context_data["form"].initial["fingerprint"], response.context_data["plan"].fingerprint)
+        self.assertEqual(
+            response.context_data["form"].initial["fingerprint"],
+            response.context_data["plan"].fingerprint,
+        )
