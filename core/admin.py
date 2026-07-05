@@ -66,6 +66,12 @@ class ServerSettingAdmin(admin.ModelAdmin):
     search_fields = ["key", "description"]
     readonly_fields = ["key", "created_at", "updated_at"]
 
+    def _is_advanced_groups_setting(self, obj) -> bool:
+        return (
+            obj is not None
+            and obj.key == server_settings.ADVANCED_LIBRARY_GROUPS_SETTING
+        )
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -77,11 +83,77 @@ class ServerSettingAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    def get_fieldsets(self, request, obj=None):
+        if self._is_advanced_groups_setting(obj):
+            return (
+                (
+                    "Advanced library groups",
+                    {
+                        "fields": (
+                            "advanced_groups_status",
+                            "advanced_groups_recovery_summary",
+                            "advanced_groups_recovery_link",
+                        )
+                    },
+                ),
+                (
+                    "Database metadata",
+                    {"classes": ("collapse",), "fields": ("key", "created_at", "updated_at")},
+                ),
+            )
+        return super().get_fieldsets(request, obj=obj)
+
     def get_readonly_fields(self, request, obj=None):
         fields = list(super().get_readonly_fields(request, obj=obj))
-        if obj is not None and obj.key == server_settings.ADVANCED_LIBRARY_GROUPS_SETTING:
-            fields.append("advanced_groups_recovery_link")
-        return fields
+        if self._is_advanced_groups_setting(obj):
+            fields.extend(
+                [
+                    "value",
+                    "description",
+                    "advanced_groups_status",
+                    "advanced_groups_recovery_summary",
+                    "advanced_groups_recovery_link",
+                ]
+            )
+        return list(dict.fromkeys(fields))
+
+    def has_delete_permission(self, request, obj=None):
+        if self._is_advanced_groups_setting(obj):
+            return False
+        return super().has_delete_permission(request, obj=obj)
+
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        if self._is_advanced_groups_setting(obj):
+            context.update(
+                {
+                    "show_save": False,
+                    "show_save_and_add_another": False,
+                    "show_save_and_continue": False,
+                    "show_delete": False,
+                }
+            )
+        return super().render_change_form(
+            request,
+            context,
+            add=add,
+            change=change,
+            form_url=form_url,
+            obj=obj,
+        )
+
+    @admin.display(description="Current status")
+    def advanced_groups_status(self, obj):
+        return "Enabled" if obj.value is True else "Disabled"
+
+    @admin.display(description="Recovery guidance")
+    def advanced_groups_recovery_summary(self, obj):
+        return format_html(
+            "<strong>{}</strong> "
+            "Product UI can enable advanced groups, but disabling after use must "
+            "run the recovery flow so custom group shelves, books, users, and "
+            "containers are consolidated safely into Public Library.",
+            "Do not edit this database setting directly.",
+        )
 
     @admin.display(description="Recovery action")
     def advanced_groups_recovery_link(self, obj):

@@ -92,6 +92,39 @@ class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("recovery flow", str(form.errors))
 
+    def test_advanced_groups_setting_change_page_is_recovery_oriented(self):
+        setting = server_settings.set_server_setting(
+            key=server_settings.ADVANCED_LIBRARY_GROUPS_SETTING,
+            value=True,
+            description="test",
+        )
+        request = self.factory.get(
+            f"/admin/core/serversetting/{setting.pk}/change/"
+        )
+        request.user = self.owner
+
+        response = self.admin.change_view(request, str(setting.pk))
+        fieldsets = self.admin.get_fieldsets(request, obj=setting)
+        flattened_fields = [
+            field
+            for _title, options in fieldsets
+            for field in options["fields"]
+        ]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("advanced_groups_status", flattened_fields)
+        self.assertIn("advanced_groups_recovery_summary", flattened_fields)
+        self.assertIn("advanced_groups_recovery_link", flattened_fields)
+        self.assertNotIn("value", flattened_fields)
+        self.assertNotIn("description", flattened_fields)
+        self.assertFalse(response.context_data["show_save"])
+        self.assertFalse(response.context_data["show_save_and_continue"])
+        self.assertFalse(response.context_data["show_delete"])
+        self.assertIn(
+            "Do not edit this database setting directly",
+            str(self.admin.advanced_groups_recovery_summary(setting)),
+        )
+
     def test_recovery_view_requires_superuser(self):
         request = self.factory.get("/admin/core/serversetting/advanced-groups-disable/")
         request.user = self.staff
