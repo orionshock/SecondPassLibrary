@@ -21,14 +21,26 @@ function renderShelfOwnerIdentity(shelf) {
   if (!shelf) return null;
   const ownerType = shelf.owner_type ? String(shelf.owner_type) : "";
   if (ownerType === "user") {
-    const identity = renderUserIdentity(shelf.owner_user, {
-      className: "shelf-owner-identity",
-    });
-    identity.dataset.ownerType = "user";
-    return identity;
+    if (String(shelf.visibility || "") !== "listed") return null;
+    const container = document.createElement("span");
+    container.className = "shelf-owner-identity shelf-owner-identity--shared-by";
+    container.dataset.ownerType = "user";
+
+    const label = document.createElement("span");
+    label.className = "shelf-owner-identity__prefix";
+    label.textContent = "Shared by";
+    container.appendChild(label);
+    container.appendChild(
+      renderUserIdentity(shelf.owner_user, {
+        className: "shelf-owner-identity__user",
+      })
+    );
+    return container;
   }
   if (ownerType === "group") {
-    if (!advancedLibraryGroupsEnabled()) return null;
+    const ownerGroup = shelf.owner_group || null;
+    const isPublicGroup = !!(ownerGroup && ownerGroup.is_public_group);
+    if (!isPublicGroup && !advancedLibraryGroupsEnabled()) return null;
     const badge = renderGroupBadge(shelf.owner_group, {
       compact: true,
       className: "shelf-owner-identity",

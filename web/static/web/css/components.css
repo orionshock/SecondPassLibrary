@@ -108,6 +108,10 @@
   color: var(--text);
   cursor: pointer;
 }
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .button--danger {
   border-color: rgba(251, 113, 133, 0.6);
   background: rgba(251, 113, 133, 0.12);
@@ -128,8 +132,6 @@
 .button--success-outline:hover,
 .button--success-outline:focus-visible {
   background: rgba(74, 222, 128, 0.14);
-}
-
 }
 
 .icon-button {

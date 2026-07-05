@@ -11,12 +11,10 @@
   background: rgba(251, 113, 133, 0.06);
 }
 .danger-zone__list { margin-top: 6px; }
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 .shelf-owner-identity {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   vertical-align: middle;
 }
 .shelf-metadata-piece + .shelf-metadata-piece::before {

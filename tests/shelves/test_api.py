@@ -258,15 +258,30 @@ class ShelvesAPITest(APITestCase):
             self.client.get("/api/v1/shelves/?scope=shared"),
         )
         self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
+        shared_rows = cast(
+            list[dict[str, Any]],
+            cast(Mapping[str, Any], shared_response.data)["results"],
+        )
         shared_ids = {
             row["id"]
-            for row in cast(
-                list[dict[str, Any]],
-                cast(Mapping[str, Any], shared_response.data)["results"],
-            )
+            for row in shared_rows
         }
         self.assertEqual(shared_ids, {str(other_listed.id), str(group_shelf.id)})
         self.assertNotIn(str(other_private.id), shared_ids)
+        other_listed_row = next(
+            row for row in shared_rows if row["id"] == str(other_listed.id)
+        )
+        group_shelf_row = next(
+            row for row in shared_rows if row["id"] == str(group_shelf.id)
+        )
+        self._assert_compact_user_payload(
+            cast(Mapping[str, Any], other_listed_row["owner_user"]),
+            user=self.other,
+        )
+        self.assertEqual(
+            cast(Mapping[str, Any], group_shelf_row["owner_group"])["name"],
+            "G",
+        )
 
         for username in ("manager", "owner"):
             self.client.logout()
@@ -555,7 +570,11 @@ class ShelvesAPITest(APITestCase):
         self.client.login(username="reader", password="pw")
         detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], detail.data)["can_edit"], False)
+        detail_payload = cast(Mapping[str, Any], detail.data)
+        self.assertEqual(detail_payload["can_edit"], False)
+        owner_group = cast(Mapping[str, Any], detail_payload["owner_group"])
+        self.assertEqual(owner_group["name"], self.public.name)
+        self.assertTrue(owner_group["is_public_group"])
 
         self.client.logout()
         self.client.login(username="librarian", password="pw")
