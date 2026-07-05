@@ -11,7 +11,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 
 from library.models import Book, BookFile
-from tests.env.filesystem import RuntimePathIsolation
+from tests.testenv.filesystem import RuntimePathIsolation
 from tests.utils.books import create_file_backed_book
 
 
@@ -49,7 +49,9 @@ class ImportBooksCommandTests(TestCase):
         missing = self.temp_dir / "missing.zip"
 
         with self.assertRaises(CommandError) as cm:
-            call_command("import_books", str(missing), stdout=StringIO(), stderr=StringIO())
+            call_command(
+                "import_books", str(missing), stdout=StringIO(), stderr=StringIO()
+            )
 
         self.assertIn("File does not exist", str(cm.exception))
         self.assertIn(str(missing), str(cm.exception))
@@ -65,13 +67,17 @@ class ImportBooksCommandTests(TestCase):
         self.assertIn(str(bad), str(cm.exception))
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_successful_zip_imports_multiple_epubs_and_logs_summary(self, mock_read_epub):
+    def test_successful_zip_imports_multiple_epubs_and_logs_summary(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         _write_zip(self.zip_path, {"a.epub": b"bytes-a", "nested/b.epub": b"bytes-b"})
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_books", level="INFO") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_books", level="INFO"
+        ) as captured:
             call_command("import_books", str(self.zip_path), stdout=out, stderr=err)
 
         self.assertIn("Starting ZIP book import: Command Books.zip", out.getvalue())
@@ -115,7 +121,9 @@ class ImportBooksCommandTests(TestCase):
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_books", level="INFO") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_books", level="INFO"
+        ) as captured:
             call_command("import_books", str(self.zip_path), stdout=out, stderr=err)
 
         self.assertIn("Found: 1", out.getvalue())
@@ -142,9 +150,13 @@ class ImportBooksCommandTests(TestCase):
   <dc:title>OPF Command Title</dc:title>
 </metadata></package>
 """
-        _write_zip(self.zip_path, {"dir/book.epub": b"epub-bytes", "dir/metadata.opf": opf_xml})
+        _write_zip(
+            self.zip_path, {"dir/book.epub": b"epub-bytes", "dir/metadata.opf": opf_xml}
+        )
 
-        call_command("import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO())
+        call_command(
+            "import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO()
+        )
 
         self.assertTrue(Book.objects.filter(title="OPF Command Title").exists())
         self.assertFalse(Book.objects.filter(title="EPUB Fallback Title").exists())
@@ -173,7 +185,9 @@ class ImportBooksCommandTests(TestCase):
         _write_zip(self.zip_path, {"a.epub": b"a", "b.epub": b"b"})
 
         with self.assertRaises(CommandError) as cm:
-            call_command("import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO())
+            call_command(
+                "import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO()
+            )
 
         self.assertIn("ZIP contains more than 1 entries", str(cm.exception))
         self.assertEqual(BookFile.objects.count(), 0)
@@ -184,7 +198,9 @@ class ImportBooksCommandTests(TestCase):
         self.zip_path.write_bytes(b"12345")
 
         with self.assertRaises(CommandError) as cm:
-            call_command("import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO())
+            call_command(
+                "import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO()
+            )
 
         self.assertIn("ZIP archive exceeds", str(cm.exception))
         self.assertEqual(BookFile.objects.count(), 0)
@@ -197,7 +213,9 @@ class ImportBooksCommandTests(TestCase):
         out = StringIO()
         err = StringIO()
 
-        with self.assertLogs("library.management.commands.import_books", level="WARNING") as captured:
+        with self.assertLogs(
+            "library.management.commands.import_books", level="WARNING"
+        ) as captured:
             call_command("import_books", str(self.zip_path), stdout=out, stderr=err)
 
         self.assertIn("Found: 1", out.getvalue())
@@ -248,7 +266,9 @@ class ImportBooksCommandTests(TestCase):
         call_command("import_books", str(self.zip_path), stdout=out, stderr=err)
 
         self.assertIn("Failed: 1", out.getvalue())
-        self.assertIn("Failed item member.epub: Invalid or unsupported EPUB file.", err.getvalue())
+        self.assertIn(
+            "Failed item member.epub: Invalid or unsupported EPUB file.", err.getvalue()
+        )
         self.assertNotIn("private/member", err.getvalue())
         self.assertNotIn("C:\\tmp", err.getvalue())
 
@@ -259,8 +279,12 @@ class ImportBooksCommandTests(TestCase):
         )
         _write_zip(self.zip_path, {"private/member.epub": b"bad"})
 
-        with self.assertLogs("library.management.commands.import_books", level="WARNING") as captured:
-            call_command("import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO())
+        with self.assertLogs(
+            "library.management.commands.import_books", level="WARNING"
+        ) as captured:
+            call_command(
+                "import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO()
+            )
 
         item_logs = [
             record.getMessage()
@@ -278,7 +302,11 @@ class ImportBooksCommandTests(TestCase):
         self.zip_path.write_bytes(b"not-a-zip")
 
         with self.assertRaises(CommandError) as cm:
-            call_command("import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO())
+            call_command(
+                "import_books", str(self.zip_path), stdout=StringIO(), stderr=StringIO()
+            )
 
-        self.assertEqual(str(cm.exception), "Invalid or unsupported EPUB/ZIP structure.")
+        self.assertEqual(
+            str(cm.exception), "Invalid or unsupported EPUB/ZIP structure."
+        )
         self.assertTrue(self.zip_path.exists())

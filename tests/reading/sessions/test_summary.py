@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, cast
 from uuid import uuid4
 
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.groups.services import (
@@ -16,7 +14,13 @@ from tests.reading.sessions.helpers import (
     SessionVisibilityFixtureMixin,
 )
 from tests.utils.books import create_file_backed_book
-from tests.utils.responses import response_data_list
+from tests.utils.responses import (
+    assert_response,
+    payload_dict,
+    payload_list,
+    response_data_dict,
+    response_data_list,
+)
 
 
 class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITestCase):
@@ -24,7 +28,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         self.set_up_session_visibility_world()
 
     def test_list_includes_progression_annotation_count_and_compact_book(self):
-        resp = cast(Response, self.client.get("/api/v1/reading/sessions/"))
+        resp = assert_response(self.client.get("/api/v1/reading/sessions/"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         results = response_data_list(resp)
         by_id = {r["id"]: r for r in results}
@@ -36,30 +40,29 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         self.assertEqual(visible["progression"], 0.25)
         self.assertEqual(visible["annotation_count"], 1)
         self.assertIn("book", visible)
-        book = cast(dict[str, Any], visible["book"])
+        book = payload_dict(visible, "book")
         self.assertEqual(book["id"], str(self.book.id))
         self.assertEqual(book["title"], "Visible")
         self.assertIsInstance(book["authors"], list)
         self.assertIn("cover_url", book)
 
     def test_detail_omits_legacy_book_title_field(self):
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.get(f"/api/v1/reading/sessions/{self.session_visible.id}/"),
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        payload = cast(dict[str, Any], resp.data)
+        payload = response_data_dict(resp)
         self.assertNotIn("book_title", payload)
         self.assertEqual(payload["book_id"], str(self.book.id))
-        self.assertEqual(cast(dict[str, Any], payload["book"])["title"], "Visible")
+        self.assertEqual(payload_dict(payload, "book")["title"], "Visible")
 
     def test_list_does_not_leak_hidden_book_metadata(self):
-        resp = cast(Response, self.client.get("/api/v1/reading/sessions/"))
+        resp = assert_response(self.client.get("/api/v1/reading/sessions/"))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         results = response_data_list(resp)
         hidden = next(r for r in results if r["id"] == str(self.session_hidden.id))
         self.assertIs(hidden["can_open"], False)
-        book = cast(dict[str, Any], hidden["book"])
+        book = payload_dict(hidden, "book")
         self.assertEqual(book["id"], str(self.hidden_book.id))
         self.assertEqual(book["title"], "")
         self.assertEqual(book["authors"], [])
@@ -69,7 +72,9 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
     def test_activity_summary_counts_current_user_visible_books_in_request_order(self):
         zero = create_file_backed_book(title="No Sessions", assign_public=False).book
         ensure_book_public_assignment(book=zero, added_by=None)
-        other_session = ReadingSession.objects.create(user=self.owner, book=self.book, is_active=True)
+        other_session = ReadingSession.objects.create(
+            user=self.owner, book=self.book, is_active=True
+        )
         completed = ReadingSession.objects.create(
             user=self.user,
             book=self.book,
@@ -81,8 +86,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         active.is_active = True
         active.save(update_fields=["status", "is_active", "updated_at"])
 
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.post(
                 "/api/v1/reading/books/activity-summary/",
                 data={
@@ -98,8 +102,10 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        rows = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data)["results"])
-        self.assertEqual([row["book"] for row in rows], [str(zero.id), str(self.book.id)])
+        rows = payload_list(response_data_dict(resp), "results")
+        self.assertEqual(
+            [row["book"] for row in rows], [str(zero.id), str(self.book.id)]
+        )
         self.assertEqual(rows[0]["session_count"], 0)
         self.assertEqual(rows[0]["active_session_count"], 0)
         self.assertIsNone(rows[0]["active_session_id"])
@@ -115,11 +121,14 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         self.assertIsNotNone(other_session.id)
 
     def test_activity_summary_validation_errors(self):
-        missing = cast(Response, self.client.post("/api/v1/reading/books/activity-summary/", data={}, format="json"))
+        missing = assert_response(
+            self.client.post(
+                "/api/v1/reading/books/activity-summary/", data={}, format="json"
+            )
+        )
         self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
 
-        invalid_type = cast(
-            Response,
+        invalid_type = assert_response(
             self.client.post(
                 "/api/v1/reading/books/activity-summary/",
                 data={"books": "not-a-list"},
@@ -128,8 +137,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         )
         self.assertEqual(invalid_type.status_code, status.HTTP_400_BAD_REQUEST)
 
-        malformed = cast(
-            Response,
+        malformed = assert_response(
             self.client.post(
                 "/api/v1/reading/books/activity-summary/",
                 data={"books": ["not-a-uuid"]},
@@ -138,8 +146,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         )
         self.assertEqual(malformed.status_code, status.HTTP_400_BAD_REQUEST)
 
-        too_many = cast(
-            Response,
+        too_many = assert_response(
             self.client.post(
                 "/api/v1/reading/books/activity-summary/",
                 data={"books": [str(uuid4()) for _ in range(101)]},
@@ -149,9 +156,11 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         self.assertEqual(too_many.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_activity_summary_does_not_enrich_library_book_payloads(self):
-        resp = cast(Response, self.client.get(f"/api/v1/library/books/{self.book.id}/"))
+        resp = assert_response(
+            self.client.get(f"/api/v1/library/books/{self.book.id}/")
+        )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        payload = cast(dict[str, Any], resp.data)
+        payload = response_data_dict(resp)
         for key in [
             "session_count",
             "active_session_count",
@@ -164,7 +173,9 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
             self.assertNotIn(key, payload)
 
     def test_recent_sessions_omits_inaccessible_active_sessions(self):
-        hidden = create_file_backed_book(title="Hidden Recent", assign_public=False).book
+        hidden = create_file_backed_book(
+            title="Hidden Recent", assign_public=False
+        ).book
         hidden_session = ReadingSession.objects.create(
             user=self.user,
             book=hidden,
@@ -177,10 +188,10 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         visible_session.status = ReadingSession.STATUS_ACTIVE
         visible_session.save(update_fields=["is_active", "status", "updated_at"])
 
-        resp = cast(Response, self.client.get("/api/v1/reading/sessions/recent/"))
+        resp = assert_response(self.client.get("/api/v1/reading/sessions/recent/"))
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        rows = cast(list[dict[str, Any]], cast(dict[str, Any], resp.data)["results"])
+        rows = payload_list(response_data_dict(resp), "results")
         ids = {row["session"]["id"] for row in rows}
         self.assertIn(str(visible_session.id), ids)
         self.assertNotIn(str(hidden_session.id), ids)
@@ -191,29 +202,34 @@ class ReadingSessionSummaryBearerTests(SessionBearerFixtureMixin, APITestCase):
         self.set_up_session_bearer_world()
 
     def test_bearer_list_includes_compact_book(self):
-        resp = cast(Response, self.client.get("/api/v1/reading/sessions/", HTTP_AUTHORIZATION=self._auth))
+        resp = assert_response(
+            self.client.get("/api/v1/reading/sessions/", HTTP_AUTHORIZATION=self._auth)
+        )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         results = response_data_list(resp)
         self.assertEqual(len(results), 1)
         s0 = results[0]
         self.assertNotIn("book_title", s0)
         self.assertIn("book", s0)
-        book = cast(dict[str, Any], s0["book"])
+        book = payload_dict(s0, "book")
         self.assertEqual(book["id"], str(self.book.id))
 
     def test_bearer_book_filter_context_and_activity_summary(self):
-        list_resp = cast(
-            Response,
+        list_resp = assert_response(
             self.client.get(
                 f"/api/v1/reading/sessions/?book={self.book.id}",
                 HTTP_AUTHORIZATION=self._auth,
             ),
         )
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(dict[str, Any], cast(dict[str, Any], list_resp.data)["context"])["book"]["id"], str(self.book.id))
+        self.assertEqual(
+            payload_dict(
+                payload_dict(response_data_dict(list_resp), "context"), "book"
+            )["id"],
+            str(self.book.id),
+        )
 
-        summary_resp = cast(
-            Response,
+        summary_resp = assert_response(
             self.client.post(
                 "/api/v1/reading/books/activity-summary/",
                 data={"books": [str(self.book.id)]},
@@ -222,6 +238,6 @@ class ReadingSessionSummaryBearerTests(SessionBearerFixtureMixin, APITestCase):
             ),
         )
         self.assertEqual(summary_resp.status_code, status.HTTP_200_OK)
-        rows = cast(list[dict[str, Any]], cast(dict[str, Any], summary_resp.data)["results"])
+        rows = payload_list(response_data_dict(summary_resp), "results")
         self.assertEqual(rows[0]["book"], str(self.book.id))
         self.assertEqual(rows[0]["session_count"], 1)

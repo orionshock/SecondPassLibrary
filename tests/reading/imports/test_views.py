@@ -14,13 +14,16 @@ from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
 from reading.imports.staging import stage_marginalia_import, staged_import_path
 from reading.models import Annotation, ReadingSession
-from tests.env.filesystem import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 
 User = get_user_model()
 
-class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+
+class MarginaliaImportPreviewApiTests(
+    MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_import_books()
 
@@ -73,11 +76,15 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         r = cast(Any, self.post_preview_payload(payload))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["valid"])
-        self.assertIn("$.books[0].sessions[0].annotations[0]", r.data["errors"][0]["path"])
+        self.assertIn(
+            "$.books[0].sessions[0].annotations[0]", r.data["errors"][0]["path"]
+        )
         self.assertIn("target", r.data["errors"][0]["message"])
 
 
-class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+class MarginaliaImportApplyApiTests(
+    MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_import_books()
 
@@ -113,7 +120,9 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         self.assertEqual(ReadingSession.objects.count(), 0)
         self.assertEqual(Annotation.objects.count(), 0)
 
-    def test_apply_with_uploaded_file_but_no_import_token_returns_400_and_no_writes(self):
+    def test_apply_with_uploaded_file_but_no_import_token_returns_400_and_no_writes(
+        self,
+    ):
         self.client.force_login(self.user)
         payload = self.marginalia_payload()
         r = cast(Any, self.post_apply_payload(payload))
@@ -169,7 +178,9 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         self.assertEqual(Annotation.objects.count(), 0)
 
     def test_apply_with_missing_or_expired_token_returns_400_and_no_writes(self):
-        token = stage_marginalia_import(user=self.user, payload=self.marginalia_payload())
+        token = stage_marginalia_import(
+            user=self.user, payload=self.marginalia_payload()
+        )
         path = staged_import_path(token)
         staged = json.loads(path.read_text(encoding="utf-8"))
         staged["staged_at"] = (timezone.now() - timedelta(hours=25)).isoformat()

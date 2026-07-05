@@ -1,21 +1,22 @@
-from typing import Any, cast
-
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.response import Response
 
 from accounts.models import UserClientSession
 from reading.models import ReadingSession
 from reading.profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
 )
-from tests.reading.api_test_base import ReadingAPITestBase, ReadingClientBearerAPITestBase
-from tests.utils.responses import response_data_dict
+from tests.reading.api_test_base import (
+    ReadingAPITestBase,
+    ReadingClientBearerAPITestBase,
+)
+from tests.utils.responses import assert_response, payload_list, response_data_dict
 from tests.utils.responses import response_data_list
 
 
 User = get_user_model()
+
 
 class ReadingAuthenticationAPITest(ReadingAPITestBase):
     def test_anonymous_cannot_access_reading_apis(self):
@@ -28,8 +29,7 @@ class ReadingAuthenticationAPITest(ReadingAPITestBase):
 class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
     def test_bearer_sessions_active_session_start_over_and_progress(self):
         # Active session requires book access (Public assignment makes it accessible here).
-        active = cast(
-            Response,
+        active = assert_response(
             self.client.get(
                 f"/api/v1/reading/books/{self.book.id}/active-session/",
                 HTTP_AUTHORIZATION=self._auth_header,
@@ -38,8 +38,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertEqual(active.status_code, status.HTTP_200_OK)
         session_id = response_data_dict(active)["id"]
 
-        sessions = cast(
-            Response,
+        sessions = assert_response(
             self.client.get(
                 "/api/v1/reading/sessions/",
                 HTTP_AUTHORIZATION=self._auth_header,
@@ -54,8 +53,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             HTTP_AUTHORIZATION=self._auth_header,
         )
         self.assertEqual(other.status_code, status.HTTP_404_NOT_FOUND)
-        ok = cast(
-            Response,
+        ok = assert_response(
             self.client.put(
                 f"/api/v1/reading/sessions/{session_id}/progress/",
                 data={"current_location": {"cfi": "/6/2"}, "progression": 0.1},
@@ -65,8 +63,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(ok.status_code, status.HTTP_200_OK)
 
-        start_over = cast(
-            Response,
+        start_over = assert_response(
             self.client.post(
                 f"/api/v1/reading/books/{self.book.id}/start-over/",
                 data={"name": "Reread"},
@@ -76,7 +73,9 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(start_over.status_code, status.HTTP_201_CREATED)
         start_over_data = response_data_dict(start_over)
-        self.assertEqual(start_over_data["profile_version"], CURRENT_READING_PROFILE_VERSION)
+        self.assertEqual(
+            start_over_data["profile_version"], CURRENT_READING_PROFILE_VERSION
+        )
         self.assertIn("session", start_over_data)
         self.assertIn("progress", start_over_data)
         self.assertIn("annotations", start_over_data)
@@ -92,10 +91,11 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertEqual(bad_progress.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_bearer_can_close_own_session_and_cannot_close_cross_user(self):
-        session1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True)
+        session1 = ReadingSession.objects.create(
+            user=self.user1, book=self.book, is_active=True
+        )
 
-        ok = cast(
-            Response,
+        ok = assert_response(
             self.client.post(
                 f"/api/v1/reading/sessions/{session1.id}/close/",
                 data={},
@@ -110,8 +110,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertFalse(data["is_active"])
         self.assertIsNotNone(data["completed_at"])
 
-        cross = cast(
-            Response,
+        cross = assert_response(
             self.client.post(
                 f"/api/v1/reading/sessions/{self.session2.id}/close/",
                 data={},
@@ -122,17 +121,21 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertEqual(cross.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_bearer_can_call_recent_sessions(self):
-        s1 = ReadingSession.objects.create(user=self.user1, book=self.book, is_active=True, status=ReadingSession.STATUS_ACTIVE)
-        r = cast(
-            Response,
+        s1 = ReadingSession.objects.create(
+            user=self.user1,
+            book=self.book,
+            is_active=True,
+            status=ReadingSession.STATUS_ACTIVE,
+        )
+        r = assert_response(
             self.client.get(
                 "/api/v1/reading/sessions/recent/",
                 HTTP_AUTHORIZATION=self._auth_header,
             ),
         )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        payload = cast(dict[str, Any], r.data)
-        results = cast(list[dict[str, Any]], payload["results"])
+        payload = response_data_dict(r)
+        results = payload_list(payload, "results")
         ids = {row["session"]["id"] for row in results}
         self.assertIn(str(s1.id), ids)
         # Shape includes session name and progress summary.
@@ -143,8 +146,7 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertNotIn(str(self.session2.id), ids)
 
     def test_bearer_can_open_endpoint(self):
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.post(
                 f"/api/v1/reading/books/{self.book.id}/open/",
                 data={},
@@ -160,12 +162,16 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
         self.assertIn("results", data["annotations"])
 
     def test_revoked_and_inactive_bearer_token_rejected(self):
-        UserClientSession.objects.filter(user=self.user1).update(revoked_at=timezone.now())
+        UserClientSession.objects.filter(user=self.user1).update(
+            revoked_at=timezone.now()
+        )
         r = self.client.get(
             "/api/v1/reading/sessions/",
             HTTP_AUTHORIZATION=self._auth_header,
         )
-        self.assertIn(r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.assertIn(
+            r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )
 
         self.user1.is_active = False
         self.user1.save(update_fields=["is_active"])
@@ -174,4 +180,6 @@ class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
             "/api/v1/reading/sessions/",
             HTTP_AUTHORIZATION=self._auth_header,
         )
-        self.assertIn(r2.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.assertIn(
+            r2.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )

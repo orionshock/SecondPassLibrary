@@ -16,7 +16,7 @@ from library.groups.services import ensure_user_public_membership
 from library.imports.upload import ImportResourceLimitError, _copy_fileobj_capped
 from library.models import Book, BookFile
 from core.errors import ErrorCode
-from tests.env.filesystem import IsolatedImportsMixin
+from tests.testenv.filesystem import IsolatedImportsMixin
 from tests.utils.responses import (
     assert_http_response,
     assert_response,
@@ -94,7 +94,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             "book.epub", b"epub-bytes", content_type="application/epub+zip"
         )
         create = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+            )
         )
         self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -103,9 +105,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         mock_read_epub.return_value = _mock_epub()
         self.client.login(username="u1", password="pw")
 
-        epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
+        epub = SimpleUploadedFile(
+            "book.epub", b"x", content_type="application/epub+zip"
+        )
         created = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+            )
         )
         self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -121,7 +127,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
         self.assertIn("error", data)
-        self.assertEqual(payload_dict(data, "error")["code"], ErrorCode.MISSING_UPLOAD_FILE)
+        self.assertEqual(
+            payload_dict(data, "error")["code"], ErrorCode.MISSING_UPLOAD_FILE
+        )
 
     def test_invalid_upload_type_returns_error_envelope(self):
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
@@ -131,23 +139,33 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
 
         bad = SimpleUploadedFile("bad.txt", b"x", content_type="text/plain")
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": bad}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": bad}, format="multipart"
+            )
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response_data_dict(response)
         self.assertIn("error", data)
-        self.assertEqual(payload_dict(data, "error")["code"], ErrorCode.INVALID_UPLOAD_TYPE)
+        self.assertEqual(
+            payload_dict(data, "error")["code"], ErrorCode.INVALID_UPLOAD_TYPE
+        )
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_single_epub_failure_message_does_not_expose_temp_path(self, mock_read_epub):
+    def test_single_epub_failure_message_does_not_expose_temp_path(
+        self, mock_read_epub
+    ):
         mock_read_epub.side_effect = ValueError(
             r"Failed parsing C:\projects\SecondPassLibrary\userdata\imports\jobs\secret\bad.epub"
         )
         self._login_librarian()
 
-        epub = SimpleUploadedFile("bad.epub", b"not-an-epub", content_type="application/epub+zip")
+        epub = SimpleUploadedFile(
+            "bad.epub", b"not-an-epub", content_type="application/epub+zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -160,7 +178,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertNotIn("bad.epub", item["message"])
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_member_failure_message_does_not_expose_member_path_or_temp_path(self, mock_read_epub):
+    def test_zip_member_failure_message_does_not_expose_member_path_or_temp_path(
+        self, mock_read_epub
+    ):
         mock_read_epub.side_effect = ValueError(
             r"Failed parsing member private/nested/leaky.epub at C:\tmp\jobs\abc\extracted\file.epub"
         )
@@ -171,10 +191,16 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("private/nested/leaky.epub", b"not-an-epub")
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
         with self.assertLogs("library.imports.upload", level="WARNING") as captured:
             response = assert_response(
-                self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+                self.client.post(
+                    "/api/v1/library/imports/",
+                    data={"file": upload},
+                    format="multipart",
+                )
             )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -196,7 +222,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         failed_item_log = failed_item_logs[0]
         self.assertIn("source_name=leaky.epub", failed_item_log.getMessage())
         self.assertIn("status=failed", failed_item_log.getMessage())
-        self.assertIn("message=Invalid or unsupported EPUB file.", failed_item_log.getMessage())
+        self.assertIn(
+            "message=Invalid or unsupported EPUB file.", failed_item_log.getMessage()
+        )
         self.assertEqual(failed_item_log.item_source_name, "leaky.epub")
         self.assertEqual(
             failed_item_log.safe_message,
@@ -212,12 +240,18 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
 
     @patch("library.imports.epub.epub.read_epub")
     @patch("library.imports.upload.MAX_SINGLE_EPUB_UPLOAD_BYTES", 4)
-    def test_oversized_single_epub_upload_is_rejected_before_import_parse(self, mock_read_epub):
+    def test_oversized_single_epub_upload_is_rejected_before_import_parse(
+        self, mock_read_epub
+    ):
         self._login_librarian()
 
-        epub = SimpleUploadedFile("book.epub", b"12345", content_type="application/epub+zip")
+        epub = SimpleUploadedFile(
+            "book.epub", b"12345", content_type="application/epub+zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -232,9 +266,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
     def test_oversized_zip_upload_is_rejected(self):
         self._login_librarian()
 
-        upload = SimpleUploadedFile("bundle.zip", b"12345", content_type="application/zip")
+        upload = SimpleUploadedFile(
+            "bundle.zip", b"12345", content_type="application/zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -253,9 +291,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("b.epub", b"b")
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -267,16 +309,22 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
 
     @patch("library.imports.epub.epub.read_epub")
     @patch("library.imports.upload.MAX_ZIP_EPUB_MEMBER_BYTES", 4)
-    def test_zip_epub_member_over_uncompressed_limit_is_skipped_safely(self, mock_read_epub):
+    def test_zip_epub_member_over_uncompressed_limit_is_skipped_safely(
+        self, mock_read_epub
+    ):
         self._login_librarian()
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("big.epub", b"12345")
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -299,9 +347,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("b.epub", b"22222")
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -311,31 +363,45 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(data["failed_count"], 1)
         self.assertEqual(mock_read_epub.call_count, 1)
         messages = [item["message"] for item in payload_list(data, "items")]
-        self.assertTrue(any("total uncompressed limit" in message for message in messages))
+        self.assertTrue(
+            any("total uncompressed limit" in message for message in messages)
+        )
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_authenticated_can_upload_single_epub_and_stages_with_generated_name(self, mock_read_epub):
+    def test_authenticated_can_upload_single_epub_and_stages_with_generated_name(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         self.client.login(username="u1", password="pw")
 
-        epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
+        epub = SimpleUploadedFile(
+            "Original Name.epub", b"same-bytes", content_type="application/epub+zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+            )
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_librarian_can_upload_single_epub_and_receives_transient_result(self, mock_read_epub):
+    def test_librarian_can_upload_single_epub_and_receives_transient_result(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
 
-        epub = SimpleUploadedFile("Original Name.epub", b"same-bytes", content_type="application/epub+zip")
+        epub = SimpleUploadedFile(
+            "Original Name.epub", b"same-bytes", content_type="application/epub+zip"
+        )
         with self.assertLogs("library.imports.upload", level="INFO") as captured:
             response = assert_response(
-                self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart")
+                self.client.post(
+                    "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+                )
             )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
@@ -402,12 +468,24 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
 
-        epub1 = SimpleUploadedFile("book.epub", b"dup-bytes", content_type="application/epub+zip")
-        r1 = assert_response(self.client.post("/api/v1/library/imports/", data={"file": epub1}, format="multipart"))
+        epub1 = SimpleUploadedFile(
+            "book.epub", b"dup-bytes", content_type="application/epub+zip"
+        )
+        r1 = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub1}, format="multipart"
+            )
+        )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
 
-        epub2 = SimpleUploadedFile("book.epub", b"dup-bytes", content_type="application/epub+zip")
-        r2 = assert_response(self.client.post("/api/v1/library/imports/", data={"file": epub2}, format="multipart"))
+        epub2 = SimpleUploadedFile(
+            "book.epub", b"dup-bytes", content_type="application/epub+zip"
+        )
+        r2 = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub2}, format="multipart"
+            )
+        )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(r2)
         self.assertEqual(data["duplicate_count"], 1)
@@ -416,7 +494,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(payload_list(data, "items")[0]["status"], "duplicate")
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_authenticated_can_upload_zip_with_multiple_epubs_ignores_non_epub_and_path_traversal(self, mock_read_epub):
+    def test_authenticated_can_upload_zip_with_multiple_epubs_ignores_non_epub_and_path_traversal(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -431,8 +511,14 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("nested/b.epub", b"bytes-b")
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
         self.assertEqual(data["source_type"], "zip")
@@ -444,7 +530,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         )
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_member_dot_segment_is_normalized_for_sidecar_matching(self, mock_read_epub):
+    def test_zip_member_dot_segment_is_normalized_for_sidecar_matching(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -471,8 +559,14 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("dir/cover.png", _png_bytes())
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
         self.assertEqual(data["total_found"], 1)
@@ -496,8 +590,14 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("dir/./book.epub", b"bytes-b")
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response_data_dict(response)
         # Ambiguous/unsafe normalized paths are skipped (no items created).
@@ -533,13 +633,26 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
 
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("CalibreLibrary/Jim Butcher/Academ's Fury (126)/Academ's Fury - Jim Butcher.epub", b"epub-bytes")
-            zf.writestr("CalibreLibrary/Jim Butcher/Academ's Fury (126)/metadata.opf", opf_xml)
-            zf.writestr("CalibreLibrary/Jim Butcher/Academ's Fury (126)/cover.png", _png_bytes())
+            zf.writestr(
+                "CalibreLibrary/Jim Butcher/Academ's Fury (126)/Academ's Fury - Jim Butcher.epub",
+                b"epub-bytes",
+            )
+            zf.writestr(
+                "CalibreLibrary/Jim Butcher/Academ's Fury (126)/metadata.opf", opf_xml
+            )
+            zf.writestr(
+                "CalibreLibrary/Jim Butcher/Academ's Fury (126)/cover.png", _png_bytes()
+            )
         buf.seek(0)
 
-        upload = SimpleUploadedFile("calibre.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "calibre.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         book = Book.objects.get(title="OPF Title")
@@ -555,7 +668,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(book.cover_source, "opf_sidecar")
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_sidecar_metadata_opf_detection_order_prefers_metadata_opf(self, mock_read_epub):
+    def test_zip_sidecar_metadata_opf_detection_order_prefers_metadata_opf(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -580,14 +695,22 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("dir/Foo.opf", base_opf)
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Meta OPF Title").exists())
         self.assertFalse(Book.objects.filter(title="Basename OPF Title").exists())
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_sidecar_metadata_opf_detection_same_basename_fallback(self, mock_read_epub):
+    def test_zip_sidecar_metadata_opf_detection_same_basename_fallback(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -606,13 +729,21 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("dir/Foo.opf", base_opf)
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Basename Only").exists())
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_sidecar_metadata_opf_detection_unique_opf_fallback(self, mock_read_epub):
+    def test_zip_sidecar_metadata_opf_detection_unique_opf_fallback(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -631,13 +762,21 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("dir/random.opf", lone_opf)
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Book.objects.filter(title="Only OPF").exists())
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_sidecar_cover_invalid_falls_back_to_embedded_epub_cover(self, mock_read_epub):
+    def test_zip_sidecar_cover_invalid_falls_back_to_embedded_epub_cover(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -661,11 +800,19 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("dir/book.epub", epub_bytes)
             zf.writestr("dir/metadata.opf", opf_xml)
-            zf.writestr("dir/cover.svg", b"<svg xmlns='http://www.w3.org/2000/svg'></svg>")
+            zf.writestr(
+                "dir/cover.svg", b"<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+            )
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         book = Book.objects.get(title="OPF Title 2")
@@ -675,7 +822,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertEqual(book.cover_height, 10)
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_sidecar_security_bad_href_and_malformed_or_too_big_opf_ignored(self, mock_read_epub):
+    def test_zip_sidecar_security_bad_href_and_malformed_or_too_big_opf_ignored(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -709,8 +858,14 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("c/metadata.opf", too_big)
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-        response = assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
+        response = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         b1 = Book.objects.get(title="OPF Bad Href")
@@ -720,7 +875,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(Book.objects.filter(title="Test Title").exists())
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_sidecar_opf_with_doctype_entity_is_ignored_safely(self, mock_read_epub):
+    def test_zip_sidecar_opf_with_doctype_entity_is_ignored_safely(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         self._login_librarian()
 
@@ -741,9 +898,13 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
             zf.writestr("dir/metadata.opf", unsafe_opf)
         buf.seek(0)
 
-        upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
+        upload = SimpleUploadedFile(
+            "bundle.zip", buf.read(), content_type="application/zip"
+        )
         response = assert_response(
-            self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart")
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": upload}, format="multipart"
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -751,7 +912,9 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         self.assertTrue(Book.objects.filter(title="Test Title").exists())
 
     @patch("library.imports.epub.epub.read_epub")
-    def test_zip_duplicate_epub_does_not_refresh_metadata_from_sidecar_opf(self, mock_read_epub):
+    def test_zip_duplicate_epub_does_not_refresh_metadata_from_sidecar_opf(
+        self, mock_read_epub
+    ):
         mock_read_epub.return_value = _mock_epub()
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.role = UserProfile.ROLE_LIBRARIAN
@@ -775,8 +938,16 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
                 zf.writestr("dir/book.epub", b"dup-bytes")
                 zf.writestr("dir/metadata.opf", opf_xml)
             buf.seek(0)
-            upload = SimpleUploadedFile("bundle.zip", buf.read(), content_type="application/zip")
-            return assert_response(self.client.post("/api/v1/library/imports/", data={"file": upload}, format="multipart"))
+            upload = SimpleUploadedFile(
+                "bundle.zip", buf.read(), content_type="application/zip"
+            )
+            return assert_response(
+                self.client.post(
+                    "/api/v1/library/imports/",
+                    data={"file": upload},
+                    format="multipart",
+                )
+            )
 
         r1 = upload_zip(opf1)
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
@@ -796,15 +967,23 @@ class ImportApiTest(IsolatedImportsMixin, APITestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
         self.client.login(username="u1", password="pw")
-        epub = SimpleUploadedFile("book.epub", b"x", content_type="application/epub+zip")
-        created = assert_response(self.client.post("/api/v1/library/imports/", data={"file": epub}, format="multipart"))
+        epub = SimpleUploadedFile(
+            "book.epub", b"x", content_type="application/epub+zip"
+        )
+        created = assert_response(
+            self.client.post(
+                "/api/v1/library/imports/", data={"file": epub}, format="multipart"
+            )
+        )
         created_data = response_data_dict(created)
         run_id = created_data["run_id"]
 
         listing = assert_response(self.client.get("/api/v1/library/imports/"))
         self.assertEqual(listing.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        detail = assert_http_response(self.client.get(f"/api/v1/library/imports/{run_id}/"))
+        detail = assert_http_response(
+            self.client.get(f"/api/v1/library/imports/{run_id}/")
+        )
         self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -813,6 +992,8 @@ class CappedZipCopyTests(IsolatedImportsMixin, APITestCase):
         destination = Path(self._imports_root) / "partial.epub"
 
         with self.assertRaises(ImportResourceLimitError):
-            _copy_fileobj_capped(src=io.BytesIO(b"12345"), dst_path=destination, max_bytes=4)
+            _copy_fileobj_capped(
+                src=io.BytesIO(b"12345"), dst_path=destination, max_bytes=4
+            )
 
         self.assertFalse(destination.exists())

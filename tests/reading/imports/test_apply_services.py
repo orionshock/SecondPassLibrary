@@ -11,13 +11,16 @@ from rest_framework.test import APITestCase
 from reading.imports.apply import apply_marginalia_import
 from reading.imports.services import preview_marginalia_import
 from reading.models import Annotation, ReadingSession
-from tests.env.filesystem import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 
 User = get_user_model()
 
-class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+
+class MarginaliaImportApplyApiTests(
+    MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_import_books()
 
@@ -69,8 +72,12 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         r = cast(Any, self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertEqual(r.data["summary"]["books_matched"], preview["apply_plan"]["matched_books"])
-        self.assertEqual(r.data["summary"]["books_skipped"], preview["apply_plan"]["skipped_books"])
+        self.assertEqual(
+            r.data["summary"]["books_matched"], preview["apply_plan"]["matched_books"]
+        )
+        self.assertEqual(
+            r.data["summary"]["books_skipped"], preview["apply_plan"]["skipped_books"]
+        )
         self.assertEqual(
             r.data["summary"]["sessions_created"],
             preview["apply_plan"]["sessions_to_create"],
@@ -94,7 +101,9 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["sessions_created"], 1)
         self.assertEqual(ReadingSession.objects.filter(user=self.user).count(), 1)
-        self.assertFalse(ReadingSession.objects.filter(user=self.user, name="Bad locator").exists())
+        self.assertFalse(
+            ReadingSession.objects.filter(user=self.user, name="Bad locator").exists()
+        )
 
     def test_apply_skips_comment_only_profile_annotation(self):
         self.client.force_login(self.user)
@@ -102,8 +111,16 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         payload["books"][0]["sessions"][0]["annotations"].append(
             {
                 "motivation": ["commenting"],
-                "target": {"selector": {"type": "FragmentSelector", "value": "epubcfi(/6/12)"}},
-                "body": [{"type": "TextualBody", "purpose": "commenting", "value": "orphan note"}],
+                "target": {
+                    "selector": {"type": "FragmentSelector", "value": "epubcfi(/6/12)"}
+                },
+                "body": [
+                    {
+                        "type": "TextualBody",
+                        "purpose": "commenting",
+                        "value": "orphan note",
+                    }
+                ],
                 "is_deleted": False,
                 "created_at": "2026-06-01T12:00:00+00:00",
                 "updated_at": "2026-06-01T12:00:00+00:00",
@@ -122,7 +139,12 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         bookmark = payload["books"][0]["sessions"][0]["annotations"][0]
         bookmark["target"]["selector"] = [
             {"type": "FragmentSelector", "value": "epubcfi(/6/2)"},
-            {"type": "TextQuoteSelector", "exact": "ignored quote", "prefix": "pre", "suffix": "suf"},
+            {
+                "type": "TextQuoteSelector",
+                "exact": "ignored quote",
+                "prefix": "pre",
+                "suffix": "suf",
+            },
         ]
         bookmark["body"] = [
             {
@@ -137,7 +159,9 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
         r = cast(Any, self.post_apply_staged_payload(payload))
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        bookmark_model = Annotation.objects.get(anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK)
+        bookmark_model = Annotation.objects.get(
+            anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK
+        )
         self.assertEqual(bookmark_model.selector_value, "epubcfi(/6/2)")
         self.assertEqual(bookmark_model.highlight_text, "")
         self.assertEqual(bookmark_model.highlight_color, "")
@@ -153,7 +177,11 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
             "selector": {"type": "FragmentSelector", "value": "epubcfi(/6/12)"}
         }
         malformed["body"] = [
-            {"type": "TextualBody", "purpose": "commenting", "value": "note without range"}
+            {
+                "type": "TextualBody",
+                "purpose": "commenting",
+                "value": "note without range",
+            }
         ]
         payload["books"][0]["sessions"][0]["annotations"].append(malformed)
 
@@ -161,7 +189,9 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["summary"]["annotations_created"], 3)
-        self.assertFalse(Annotation.objects.filter(comment_text="note without range").exists())
+        self.assertFalse(
+            Annotation.objects.filter(comment_text="note without range").exists()
+        )
 
     def test_apply_rolls_back_if_annotation_write_fails(self):
         payload = self.marginalia_payload()
@@ -187,7 +217,12 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
 
     def test_apply_active_exported_session_imports_historical(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(self.marginalia_payload(status_value="active")))
+        r = cast(
+            Any,
+            self.post_apply_staged_payload(
+                self.marginalia_payload(status_value="active")
+            ),
+        )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         session = ReadingSession.objects.get()
         self.assertEqual(session.status, ReadingSession.STATUS_COMPLETED)

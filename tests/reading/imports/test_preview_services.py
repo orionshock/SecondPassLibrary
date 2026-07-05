@@ -10,13 +10,16 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from reading.models import Annotation, ReadingSession
-from tests.env.filesystem import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 
 User = get_user_model()
 
-class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+
+class MarginaliaImportPreviewApiTests(
+    MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_import_books()
 
@@ -35,7 +38,9 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         self.assertTrue(r.data["can_apply"])
         self.assertEqual(r.data["schema_version"], "0.1.0")
         self.assertEqual(r.data["scope"]["type"], "book")
-        self.assertEqual(r.data["summary"], {"books": 1, "sessions": 1, "annotations": 3})
+        self.assertEqual(
+            r.data["summary"], {"books": 1, "sessions": 1, "annotations": 3}
+        )
         self.assertEqual(
             r.data["apply_plan"],
             {
@@ -88,7 +93,14 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
 
     def test_matching_only_uses_visible_books(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_preview_payload(self.preview_marginalia_payload(file_hash=self.hidden.file.checksum, title="Hidden Match")))
+        r = cast(
+            Any,
+            self.post_preview_payload(
+                self.preview_marginalia_payload(
+                    file_hash=self.hidden.file.checksum, title="Hidden Match"
+                )
+            ),
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["books"][0]["match"]["status"], "unmatched")
@@ -96,7 +108,9 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
 
     def test_unmatched_book_reported(self):
         self.client.force_login(self.user)
-        payload = self.preview_marginalia_payload(file_hash="0" * 64, title="Missing Book", authors=["Nobody"])
+        payload = self.preview_marginalia_payload(
+            file_hash="0" * 64, title="Missing Book", authors=["Nobody"]
+        )
 
         r = cast(Any, self.post_preview_payload(payload))
 
@@ -118,7 +132,10 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
             ],
         )
         self.assertEqual(r.data["unmatched_entries"], 1)
-        self.assertIn("/api/v1/reading/import/unmatched/?import_token=", r.data["unmatched_download_url"])
+        self.assertIn(
+            "/api/v1/reading/import/unmatched/?import_token=",
+            r.data["unmatched_download_url"],
+        )
 
     def test_multiple_unmatched_books_have_one_summary_warning(self):
         self.client.force_login(self.user)
@@ -151,7 +168,10 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         self.assertEqual(r.data["apply_plan"]["matched_books"], 1)
         self.assertEqual(r.data["apply_plan"]["skipped_books"], 2)
         self.assertEqual(r.data["unmatched_entries"], 2)
-        self.assertIn("/api/v1/reading/import/unmatched/?import_token=", r.data["unmatched_download_url"])
+        self.assertIn(
+            "/api/v1/reading/import/unmatched/?import_token=",
+            r.data["unmatched_download_url"],
+        )
         self.assertEqual(
             r.data["warnings"].count(
                 "2 export books did not match by file hash. "
@@ -188,7 +208,9 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         self.visible.isbn = "9780345816023"
         self.visible.save(update_fields=["isbn", "updated_at"])
         self.client.force_login(self.user)
-        payload = self.preview_marginalia_payload(file_hash="1" * 64, title="Different Title", authors=["Other"])
+        payload = self.preview_marginalia_payload(
+            file_hash="1" * 64, title="Different Title", authors=["Other"]
+        )
         payload["books"][0]["isbn"] = "9780345816023"
 
         r = cast(Any, self.post_preview_payload(payload))
@@ -220,7 +242,9 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         self.assertFalse(sessions[0]["needs_reader"])
         self.assertFalse(sessions[1]["will_import"])
         self.assertTrue(sessions[1]["needs_reader"])
-        self.assertEqual(sessions[1]["warning"], "Malformed EPUB CFI locator. Needs Reader.")
+        self.assertEqual(
+            sessions[1]["warning"], "Malformed EPUB CFI locator. Needs Reader."
+        )
         self.assertIn(
             "1 session has malformed locators and needs Reader-assisted import.",
             r.data["warnings"],
@@ -228,9 +252,14 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
         unmatched = json.loads(
             self.client.get(r.data["unmatched_download_url"]).content.decode("utf-8")
         )
-        self.assertEqual([book["title"] for book in unmatched["books"]], ["Visible Match"])
         self.assertEqual(
-            [session["export_session_id"] for session in unmatched["books"][0]["sessions"]],
+            [book["title"] for book in unmatched["books"]], ["Visible Match"]
+        )
+        self.assertEqual(
+            [
+                session["export_session_id"]
+                for session in unmatched["books"][0]["sessions"]
+            ],
             ["session-bad"],
         )
 
@@ -259,9 +288,14 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
             unmatched["books"][0]["sessions"][0]["progress"]["current_location"]["cfi"],
             "not-a-cfi",
         )
-        self.assertEqual([book["title"] for book in unmatched["books"]], ["Visible Match"])
         self.assertEqual(
-            [session["export_session_id"] for session in unmatched["books"][0]["sessions"]],
+            [book["title"] for book in unmatched["books"]], ["Visible Match"]
+        )
+        self.assertEqual(
+            [
+                session["export_session_id"]
+                for session in unmatched["books"][0]["sessions"]
+            ],
             ["session-1"],
         )
 
@@ -285,8 +319,12 @@ class MarginaliaImportPreviewApiTests(MarginaliaImportFixtureMixin, IsolatedUser
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertTrue(r.data["can_apply"])
-        self.assertEqual(r.data["apply_plan"]["active_sessions_will_import_as_historical"], 1)
-        self.assertEqual(r.data["books"][0]["active_sessions_will_import_as_historical"], 1)
+        self.assertEqual(
+            r.data["apply_plan"]["active_sessions_will_import_as_historical"], 1
+        )
+        self.assertEqual(
+            r.data["books"][0]["active_sessions_will_import_as_historical"], 1
+        )
         self.assertIn("not active sessions", r.data["warnings"][0])
 
     def test_possible_duplicate_warning_does_not_block_apply(self):

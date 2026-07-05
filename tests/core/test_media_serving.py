@@ -9,7 +9,7 @@ from django.test.utils import override_settings
 from PIL import Image
 
 from library.cover_services import set_book_cover_from_bytes
-from tests.env.filesystem import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 

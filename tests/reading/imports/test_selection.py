@@ -7,13 +7,16 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from reading.models import Annotation, ReadingSession
-from tests.env.filesystem import IsolatedUserdataMixin
+from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
 
 
 User = get_user_model()
 
-class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase):
+
+class MarginaliaImportApplyApiTests(
+    MarginaliaImportFixtureMixin, IsolatedUserdataMixin, APITestCase
+):
     def setUp(self):
         self.set_up_import_books()
 
@@ -55,7 +58,12 @@ class MarginaliaImportApplyApiTests(MarginaliaImportFixtureMixin, IsolatedUserda
 
     def test_apply_malformed_selection_returns_400_and_no_writes(self):
         self.client.force_login(self.user)
-        r = cast(Any, self.post_apply_staged_payload(self.marginalia_payload(), selection="{not-json"))
+        r = cast(
+            Any,
+            self.post_apply_staged_payload(
+                self.marginalia_payload(), selection="{not-json"
+            ),
+        )
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(r.data["applied"])
         self.assertIn("selection", r.data["errors"][0]["path"])

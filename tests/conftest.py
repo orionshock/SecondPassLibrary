@@ -4,7 +4,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.env.filesystem import RuntimePathIsolation
+from tests.testenv.filesystem import RuntimePathIsolation
 
 
 @pytest.fixture

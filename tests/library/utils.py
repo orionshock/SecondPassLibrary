@@ -5,7 +5,7 @@ from typing import Any, cast
 
 from rest_framework.response import Response
 
-from tests.env.filesystem import IsolatedMediaRootMixin
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 __all__ = ["IsolatedMediaRootMixin", "paginated_results"]
 
