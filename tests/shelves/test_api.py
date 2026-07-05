@@ -1,21 +1,31 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.groups.services import add_book_to_group, ensure_book_public_assignment, ensure_user_public_membership
+from library.groups.services import (
+    add_book_to_group,
+    ensure_book_public_assignment,
+    ensure_user_public_membership,
+)
 from library.groups.public_group import get_public_group
 from library.cover_services import set_book_cover_from_bytes
 from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
 from tests.utils.books import create_file_backed_book
+from tests.utils.responses import (
+    assert_response,
+    payload_dict,
+    payload_list,
+    response_data_dict,
+    response_data_list,
+)
 
 
 User = get_user_model()
@@ -49,7 +59,9 @@ class ShelvesAPITest(APITestCase):
         profile.role = UserProfile.ROLE_READER
         profile.save(update_fields=["role", "updated_at"])
 
-        self.other = User.objects.create_user(username="other", password="pw", first_name="Owen", last_name="Other")
+        self.other = User.objects.create_user(
+            username="other", password="pw", first_name="Owen", last_name="Other"
+        )
         ensure_user_public_membership(user=self.other)
 
         self.group = LibraryGroup.objects.create(name="G")
@@ -68,13 +80,17 @@ class ShelvesAPITest(APITestCase):
         profile.role = UserProfile.ROLE_LIBRARIAN
         profile.save(update_fields=["role", "updated_at"])
 
-        self.manager = User.objects.create_user(username="manager", password="pw", is_staff=True)
+        self.manager = User.objects.create_user(
+            username="manager", password="pw", is_staff=True
+        )
         ensure_user_public_membership(user=self.manager)
         profile, _ = UserProfile.objects.get_or_create(user=self.manager)
         profile.role = UserProfile.ROLE_MANAGER
         profile.save(update_fields=["role", "updated_at"])
 
-        self.book_in_group = create_file_backed_book(title="B1", assign_public=False).book
+        self.book_in_group = create_file_backed_book(
+            title="B1", assign_public=False
+        ).book
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
         self.book_public = create_file_backed_book(title="PB", assign_public=False).book
@@ -82,7 +98,9 @@ class ShelvesAPITest(APITestCase):
 
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
         self.book_hidden = create_file_backed_book(title="HB", assign_public=False).book
-        add_book_to_group(actor=self.owner, book=self.book_hidden, group=self.hidden_group)
+        add_book_to_group(
+            actor=self.owner, book=self.book_hidden, group=self.hidden_group
+        )
 
     def _assert_compact_user_payload(
         self,
@@ -109,42 +127,60 @@ class ShelvesAPITest(APITestCase):
 
     def test_create_user_shelf_and_list_visibility_private_vs_listed(self):
         self.client.login(username="reader", password="pw")
-        r1 = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "Private", "owner_type": "user"}, format="json"))
+        r1 = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "Private", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
-        private_id = cast(Mapping[str, Any], r1.data)["id"]
-        private_owner = cast(Mapping[str, Any], cast(Mapping[str, Any], r1.data)["owner_user"])
-        private_creator = cast(Mapping[str, Any], cast(Mapping[str, Any], r1.data)["created_by"])
+        private_payload = response_data_dict(r1)
+        private_id = private_payload["id"]
+        private_owner = payload_dict(private_payload, "owner_user")
+        private_creator = payload_dict(private_payload, "created_by")
         self._assert_compact_user_payload(private_owner, user=self.reader)
         self._assert_compact_user_payload(private_creator, user=self.reader)
-        private_detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
+        private_detail = assert_response(
+            self.client.get(f"/api/v1/shelves/{private_id}/")
+        )
         self.assertEqual(private_detail.status_code, status.HTTP_200_OK)
-        private_detail_payload = cast(Mapping[str, Any], private_detail.data)
-        self._assert_compact_user_payload(cast(Mapping[str, Any], private_detail_payload["owner_user"]), user=self.reader)
-        self._assert_compact_user_payload(cast(Mapping[str, Any], private_detail_payload["created_by"]), user=self.reader)
+        private_detail_payload = response_data_dict(private_detail)
+        self._assert_compact_user_payload(
+            payload_dict(private_detail_payload, "owner_user"), user=self.reader
+        )
+        self._assert_compact_user_payload(
+            payload_dict(private_detail_payload, "created_by"), user=self.reader
+        )
 
-        r2 = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "Listed", "owner_type": "user", "visibility": "listed"}, format="json"))
+        r2 = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "Listed", "owner_type": "user", "visibility": "listed"},
+                format="json",
+            )
+        )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        listed_id = cast(Mapping[str, Any], r2.data)["id"]
+        listed_id = response_data_dict(r2)["id"]
 
         self.client.logout()
         self.client.login(username="other", password="pw")
-        list_resp = cast(Response, self.client.get("/api/v1/shelves/"))
+        list_resp = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], list_resp.data)
-        results = cast(list[dict[str, Any]], payload["results"])
+        payload = response_data_dict(list_resp)
+        results = payload_list(payload, "results")
         ids = {row["id"] for row in results}
         self.assertIn(listed_id, ids)
         self.assertNotIn(private_id, ids)
         listed_row = next(row for row in results if row["id"] == listed_id)
-        owner_user = cast(Mapping[str, Any], listed_row["owner_user"])
-        created_by = cast(Mapping[str, Any], listed_row["created_by"])
+        owner_user = payload_dict(listed_row, "owner_user")
+        created_by = payload_dict(listed_row, "created_by")
         self._assert_compact_user_payload(owner_user, user=self.reader)
         self._assert_compact_user_payload(created_by, user=self.reader)
 
     def test_list_and_detail_visibility_matrix_for_user_owned_shelves(self):
         self.client.login(username="reader", password="pw")
-        private = cast(
-            Response,
+        private = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={"name": "Reader Private", "owner_type": "user"},
@@ -152,37 +188,48 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(private.status_code, status.HTTP_201_CREATED)
-        private_id = cast(Mapping[str, Any], private.data)["id"]
+        private_id = response_data_dict(private)["id"]
 
-        listed = cast(
-            Response,
+        listed = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
-                data={"name": "Reader Listed", "owner_type": "user", "visibility": "listed"},
+                data={
+                    "name": "Reader Listed",
+                    "owner_type": "user",
+                    "visibility": "listed",
+                },
                 format="json",
             ),
         )
         self.assertEqual(listed.status_code, status.HTTP_201_CREATED)
-        listed_id = cast(Mapping[str, Any], listed.data)["id"]
+        listed_id = response_data_dict(listed)["id"]
 
-        owner_list = cast(Response, self.client.get("/api/v1/shelves/"))
+        owner_list = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(owner_list.status_code, status.HTTP_200_OK)
-        owner_ids = {row["id"] for row in cast(list[dict[str, Any]], cast(Mapping[str, Any], owner_list.data)["results"])}
+        owner_ids = {row["id"] for row in response_data_list(owner_list)}
         self.assertIn(private_id, owner_ids)
         self.assertIn(listed_id, owner_ids)
-        owner_detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
+        owner_detail = assert_response(
+            self.client.get(f"/api/v1/shelves/{private_id}/")
+        )
         self.assertEqual(owner_detail.status_code, status.HTTP_200_OK)
 
         for username in ["other", "manager", "owner"]:
             self.client.logout()
             self.client.login(username=username, password="pw")
-            list_resp = cast(Response, self.client.get("/api/v1/shelves/"))
+            list_resp = assert_response(self.client.get("/api/v1/shelves/"))
             self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-            ids = {row["id"] for row in cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])}
-            self.assertNotIn(private_id, ids, f"{username} should not see another user's private shelf in list")
-            self.assertIn(listed_id, ids, f"{username} should see another user's listed shelf")
+            ids = {row["id"] for row in response_data_list(list_resp)}
+            self.assertNotIn(
+                private_id,
+                ids,
+                f"{username} should not see another user's private shelf in list",
+            )
+            self.assertIn(
+                listed_id, ids, f"{username} should see another user's listed shelf"
+            )
 
-            detail = cast(Response, self.client.get(f"/api/v1/shelves/{private_id}/"))
+            detail = assert_response(self.client.get(f"/api/v1/shelves/{private_id}/"))
             self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_list_scope_personal_and_shared_preserve_visibility_rules(self):
@@ -224,15 +271,9 @@ class ShelvesAPITest(APITestCase):
 
         self.client.login(username="reader", password="pw")
 
-        default_response = cast(Response, self.client.get("/api/v1/shelves/"))
+        default_response = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(default_response.status_code, status.HTTP_200_OK)
-        default_ids = {
-            row["id"]
-            for row in cast(
-                list[dict[str, Any]],
-                cast(Mapping[str, Any], default_response.data)["results"],
-            )
-        }
+        default_ids = {row["id"] for row in response_data_list(default_response)}
         self.assertEqual(
             default_ids,
             {
@@ -243,33 +284,19 @@ class ShelvesAPITest(APITestCase):
             },
         )
 
-        personal_response = cast(
-            Response,
+        personal_response = assert_response(
             self.client.get("/api/v1/shelves/?scope=personal"),
         )
         self.assertEqual(personal_response.status_code, status.HTTP_200_OK)
-        personal_ids = {
-            row["id"]
-            for row in cast(
-                list[dict[str, Any]],
-                cast(Mapping[str, Any], personal_response.data)["results"],
-            )
-        }
+        personal_ids = {row["id"] for row in response_data_list(personal_response)}
         self.assertEqual(personal_ids, {str(own_private.id), str(own_listed.id)})
 
-        shared_response = cast(
-            Response,
+        shared_response = assert_response(
             self.client.get("/api/v1/shelves/?scope=shared"),
         )
         self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
-        shared_rows = cast(
-            list[dict[str, Any]],
-            cast(Mapping[str, Any], shared_response.data)["results"],
-        )
-        shared_ids = {
-            row["id"]
-            for row in shared_rows
-        }
+        shared_rows = response_data_list(shared_response)
+        shared_ids = {row["id"] for row in shared_rows}
         self.assertEqual(shared_ids, {str(other_listed.id), str(group_shelf.id)})
         self.assertNotIn(str(other_private.id), shared_ids)
         other_listed_row = next(
@@ -279,11 +306,11 @@ class ShelvesAPITest(APITestCase):
             row for row in shared_rows if row["id"] == str(group_shelf.id)
         )
         self._assert_compact_user_payload(
-            cast(Mapping[str, Any], other_listed_row["owner_user"]),
+            payload_dict(other_listed_row, "owner_user"),
             user=self.other,
         )
         self.assertEqual(
-            cast(Mapping[str, Any], group_shelf_row["owner_group"])["name"],
+            payload_dict(group_shelf_row, "owner_group")["name"],
             "G",
         )
 
@@ -291,17 +318,10 @@ class ShelvesAPITest(APITestCase):
             self.client.logout()
             self.client.login(username=username, password="pw")
             for scope in ("personal", "shared"):
-                response = cast(
-                    Response,
+                response = assert_response(
                     self.client.get(f"/api/v1/shelves/?scope={scope}"),
                 )
-                ids = {
-                    row["id"]
-                    for row in cast(
-                        list[dict[str, Any]],
-                        cast(Mapping[str, Any], response.data)["results"],
-                    )
-                }
+                ids = {row["id"] for row in response_data_list(response)}
                 self.assertNotIn(
                     str(other_private.id),
                     ids,
@@ -311,85 +331,97 @@ class ShelvesAPITest(APITestCase):
     def test_group_shelf_visibility(self):
         # Owner can create a group shelf.
         self.client.login(username="owner", password="pw")
-        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "GS",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                },
+                format="json",
+            )
+        )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], create.data)["id"]
-        create_payload = cast(Mapping[str, Any], create.data)
+        shelf_id = response_data_dict(create)["id"]
+        create_payload = response_data_dict(create)
         self.assertIsNone(create_payload["owner_user"])
-        self._assert_compact_user_payload(cast(Mapping[str, Any], create_payload["created_by"]), user=self.owner)
+        self._assert_compact_user_payload(
+            payload_dict(create_payload, "created_by"), user=self.owner
+        )
 
         # Member can see it in list.
         self.client.logout()
         self.client.login(username="reader", password="pw")
-        list_resp = cast(Response, self.client.get("/api/v1/shelves/"))
+        list_resp = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        results = response_data_list(list_resp)
         self.assertIn(shelf_id, {r["id"] for r in results})
         group_row = next(row for row in results if row["id"] == shelf_id)
         self.assertIsNone(group_row["owner_user"])
-        self._assert_compact_user_payload(cast(Mapping[str, Any], group_row["created_by"]), user=self.owner)
-        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        self._assert_compact_user_payload(
+            payload_dict(group_row, "created_by"), user=self.owner
+        )
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
-        detail_payload = cast(Mapping[str, Any], detail.data)
+        detail_payload = response_data_dict(detail)
         self.assertIsNone(detail_payload["owner_user"])
-        self._assert_compact_user_payload(cast(Mapping[str, Any], detail_payload["created_by"]), user=self.owner)
+        self._assert_compact_user_payload(
+            payload_dict(detail_payload, "created_by"), user=self.owner
+        )
 
         # Non-member cannot retrieve it (404).
         self.client.logout()
         self.client.login(username="other", password="pw")
-        list_for_non_member = cast(Response, self.client.get("/api/v1/shelves/"))
+        list_for_non_member = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(list_for_non_member.status_code, status.HTTP_200_OK)
-        non_member_ids = {
-            row["id"]
-            for row in cast(list[dict[str, Any]], cast(Mapping[str, Any], list_for_non_member.data)["results"])
-        }
+        non_member_ids = {row["id"] for row in response_data_list(list_for_non_member)}
         self.assertNotIn(shelf_id, non_member_ids)
-        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_list_filter_owner_group(self):
         self.client.login(username="owner", password="pw")
-        created = cast(
-            Response,
+        created = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
-                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                data={
+                    "name": "GS",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                },
                 format="json",
             ),
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        shelf_id = response_data_dict(created)["id"]
 
-        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?owner_group={self.group.id}"))
+        list_resp = assert_response(
+            self.client.get(f"/api/v1/shelves/?owner_group={self.group.id}")
+        )
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        results = response_data_list(list_resp)
         self.assertIn(shelf_id, {r["id"] for r in results})
 
-        shared_response = cast(
-            Response,
+        shared_response = assert_response(
             self.client.get(
                 f"/api/v1/shelves/?scope=shared&owner_group={self.group.id}"
             ),
         )
         self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
-        shared_results = cast(
-            list[dict[str, Any]],
-            cast(Mapping[str, Any], shared_response.data)["results"],
-        )
+        shared_results = response_data_list(shared_response)
         self.assertIn(shelf_id, {row["id"] for row in shared_results})
 
     def test_list_filters_reject_invalid_scope_and_malformed_uuids(self):
         self.client.login(username="reader", password="pw")
 
-        invalid_scope = cast(
-            Response,
+        invalid_scope = assert_response(
             self.client.get("/api/v1/shelves/?scope=unknown"),
         )
         self.assertEqual(invalid_scope.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("scope", cast(Mapping[str, Any], invalid_scope.data))
+        self.assertIn("scope", response_data_dict(invalid_scope))
 
-        malformed_owner_group = cast(
-            Response,
+        malformed_owner_group = assert_response(
             self.client.get("/api/v1/shelves/?owner_group=not-a-uuid"),
         )
         self.assertEqual(
@@ -398,55 +430,69 @@ class ShelvesAPITest(APITestCase):
         )
         self.assertIn(
             "owner_group",
-            cast(Mapping[str, Any], malformed_owner_group.data),
+            response_data_dict(malformed_owner_group),
         )
 
-        malformed_book = cast(
-            Response,
+        malformed_book = assert_response(
             self.client.get("/api/v1/shelves/?book=not-a-uuid"),
         )
         self.assertEqual(malformed_book.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("book", cast(Mapping[str, Any], malformed_book.data))
+        self.assertIn("book", response_data_dict(malformed_book))
 
     def test_list_filter_rejects_personal_scope_with_owner_group(self):
         self.client.login(username="reader", password="pw")
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.get(
                 f"/api/v1/shelves/?scope=personal&owner_group={self.group.id}"
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("owner_group", cast(Mapping[str, Any], response.data))
+        self.assertIn("owner_group", response_data_dict(response))
 
     def test_list_filter_book_does_not_leak_private_user_shelves(self):
         # Create a private user shelf for reader and add book_in_group.
         self.client.login(username="reader", password="pw")
-        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "P", "owner_type": "user"}, format="json"))
+        created = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "P", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
-        add = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(self.book_in_group.id)}, format="json"))
+        shelf_id = response_data_dict(created)["id"]
+        add = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+            )
+        )
         self.assertEqual(add.status_code, status.HTTP_201_CREATED)
 
         # Other user can view the book (Public membership), but must not see reader's private shelf.
         self.client.logout()
         self.client.login(username="other", password="pw")
-        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?book={self.book_in_group.id}"))
+        list_resp = assert_response(
+            self.client.get(f"/api/v1/shelves/?book={self.book_in_group.id}")
+        )
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        results = response_data_list(list_resp)
         self.assertNotIn(shelf_id, {r["id"] for r in results})
 
     def test_list_filter_book_includes_matched_item_id(self):
         self.client.login(username="reader", password="pw")
-        created = cast(
-            Response,
-            self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"),
+        created = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            ),
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        shelf_id = response_data_dict(created)["id"]
 
-        add = cast(
-            Response,
+        add = assert_response(
             self.client.post(
                 f"/api/v1/shelves/{shelf_id}/items/",
                 data={"book": str(self.book_public.id)},
@@ -454,36 +500,43 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(add.status_code, status.HTTP_201_CREATED)
-        item_id = cast(Mapping[str, Any], add.data)["id"]
+        item_id = response_data_dict(add)["id"]
 
-        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?book={self.book_public.id}"))
+        list_resp = assert_response(
+            self.client.get(f"/api/v1/shelves/?book={self.book_public.id}")
+        )
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        results = response_data_list(list_resp)
 
         row = next((r for r in results if r.get("id") == shelf_id), None)
         self.assertIsNotNone(row)
-        self.assertEqual(cast(dict[str, Any], row).get("matched_item_id"), item_id)
+        self.assertEqual(row.get("matched_item_id"), item_id)
 
     def test_can_edit_user_shelf_owner_true_other_false(self):
         self.client.login(username="reader", password="pw")
-        created = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "P", "owner_type": "user"}, format="json"))
+        created = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "P", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        shelf_id = response_data_dict(created)["id"]
 
-        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], detail.data)["can_edit"], True)
+        self.assertEqual(response_data_dict(detail)["can_edit"], True)
 
         self.client.logout()
         self.client.login(username="other", password="pw")
-        detail2 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail2 = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail2.status_code, status.HTTP_404_NOT_FOUND)
 
         # Listed shelf should be visible but not editable to other users.
         self.client.logout()
         self.client.login(username="reader", password="pw")
-        created2 = cast(
-            Response,
+        created2 = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={"name": "L", "owner_type": "user", "visibility": "listed"},
@@ -491,18 +544,17 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(created2.status_code, status.HTTP_201_CREATED)
-        shelf2_id = cast(Mapping[str, Any], created2.data)["id"]
+        shelf2_id = response_data_dict(created2)["id"]
 
         self.client.logout()
         self.client.login(username="other", password="pw")
-        detail3 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf2_id}/"))
+        detail3 = assert_response(self.client.get(f"/api/v1/shelves/{shelf2_id}/"))
         self.assertEqual(detail3.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], detail3.data)["can_edit"], False)
+        self.assertEqual(response_data_dict(detail3)["can_edit"], False)
 
     def test_put_shelf_behaves_like_partial_update(self):
         self.client.login(username="reader", password="pw")
-        created = cast(
-            Response,
+        created = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={
@@ -515,10 +567,9 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        shelf_id = response_data_dict(created)["id"]
 
-        put = cast(
-            Response,
+        put = assert_response(
             self.client.put(
                 f"/api/v1/shelves/{shelf_id}/",
                 data={"name": "After"},
@@ -526,7 +577,7 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(put.status_code, status.HTTP_200_OK)
-        payload = cast(Mapping[str, Any], put.data)
+        payload = response_data_dict(put)
         self.assertEqual(payload["name"], "After")
         # PUT behaves like PATCH here: omitted fields are preserved.
         self.assertEqual(payload["description"], "Desc")
@@ -534,68 +585,83 @@ class ShelvesAPITest(APITestCase):
 
     def test_can_edit_group_shelf_curator_true_reader_false(self):
         self.client.login(username="owner", password="pw")
-        created = cast(
-            Response,
+        created = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
-                data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)},
+                data={
+                    "name": "GS",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                },
                 format="json",
             ),
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        shelf_id = response_data_dict(created)["id"]
 
         self.client.logout()
         self.client.login(username="curator", password="pw")
-        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], detail.data)["can_edit"], True)
+        self.assertEqual(response_data_dict(detail)["can_edit"], True)
 
         self.client.logout()
         self.client.login(username="reader", password="pw")
-        detail2 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail2 = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail2.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], detail2.data)["can_edit"], False)
+        self.assertEqual(response_data_dict(detail2)["can_edit"], False)
 
     def test_can_edit_public_group_shelf_reader_false_librarian_true(self):
         self.client.login(username="owner", password="pw")
-        created = cast(
-            Response,
+        created = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
-                data={"name": "PGS", "owner_type": "group", "owner_group": str(self.public.id)},
+                data={
+                    "name": "PGS",
+                    "owner_type": "group",
+                    "owner_group": str(self.public.id),
+                },
                 format="json",
             ),
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], created.data)["id"]
+        shelf_id = response_data_dict(created)["id"]
 
         self.client.logout()
         self.client.login(username="reader", password="pw")
-        detail = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
-        detail_payload = cast(Mapping[str, Any], detail.data)
+        detail_payload = response_data_dict(detail)
         self.assertEqual(detail_payload["can_edit"], False)
-        owner_group = cast(Mapping[str, Any], detail_payload["owner_group"])
+        owner_group = payload_dict(detail_payload, "owner_group")
         self.assertEqual(owner_group["name"], self.public.name)
         self.assertTrue(owner_group["is_public_group"])
 
         self.client.logout()
         self.client.login(username="librarian", password="pw")
-        detail2 = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        detail2 = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
         self.assertEqual(detail2.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], detail2.data)["can_edit"], True)
+        self.assertEqual(response_data_dict(detail2)["can_edit"], True)
 
     def test_reader_cannot_create_group_shelf_for_reader_membership(self):
         self.client.login(username="reader", password="pw")
-        resp = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "GS", "owner_type": "group", "owner_group": str(self.group.id)}, format="json"))
+        resp = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "GS",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                },
+                format="json",
+            )
+        )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_curator_can_create_shelf_only_for_curated_non_public_group(self):
         self.client.login(username="curator", password="pw")
 
-        allowed = cast(
-            Response,
+        allowed = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={
@@ -608,8 +674,7 @@ class ShelvesAPITest(APITestCase):
         )
         self.assertEqual(allowed.status_code, status.HTTP_201_CREATED)
 
-        unrelated = cast(
-            Response,
+        unrelated = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={
@@ -622,8 +687,7 @@ class ShelvesAPITest(APITestCase):
         )
         self.assertEqual(unrelated.status_code, status.HTTP_403_FORBIDDEN)
 
-        public = cast(
-            Response,
+        public = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={
@@ -641,8 +705,7 @@ class ShelvesAPITest(APITestCase):
             with self.subTest(username=username):
                 self.client.logout()
                 self.client.login(username=username, password="pw")
-                response = cast(
-                    Response,
+                response = assert_response(
                     self.client.post(
                         "/api/v1/shelves/",
                         data={
@@ -657,8 +720,7 @@ class ShelvesAPITest(APITestCase):
 
     def test_group_shelf_with_listed_visibility_returns_400(self):
         self.client.login(username="owner", password="pw")
-        resp = cast(
-            Response,
+        resp = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
                 data={
@@ -674,11 +736,14 @@ class ShelvesAPITest(APITestCase):
 
     def test_owner_group_filter_does_not_leak_to_non_member(self):
         self.client.login(username="owner", password="pw")
-        create = cast(
-            Response,
+        create = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
-                data={"name": "HiddenShelf", "owner_type": "group", "owner_group": str(self.hidden_group.id)},
+                data={
+                    "name": "HiddenShelf",
+                    "owner_type": "group",
+                    "owner_group": str(self.hidden_group.id),
+                },
                 format="json",
             ),
         )
@@ -686,70 +751,121 @@ class ShelvesAPITest(APITestCase):
 
         self.client.logout()
         self.client.login(username="reader", password="pw")
-        list_resp = cast(Response, self.client.get(f"/api/v1/shelves/?owner_group={self.hidden_group.id}"))
+        list_resp = assert_response(
+            self.client.get(f"/api/v1/shelves/?owner_group={self.hidden_group.id}")
+        )
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], list_resp.data)["results"])
+        results = response_data_list(list_resp)
         self.assertEqual(results, [])
 
     def test_add_and_list_items_filters_by_access(self):
         self.client.login(username="reader", password="pw")
-        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
-        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
+        shelf_id = response_data_dict(create)["id"]
 
-        add_ok = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(self.book_in_group.id)}, format="json"))
+        add_ok = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+            )
+        )
         self.assertEqual(add_ok.status_code, status.HTTP_201_CREATED)
 
         # Reader cannot add a book they cannot view.
-        add_denied = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(self.book_hidden.id)}, format="json"))
+        add_denied = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_hidden.id)},
+                format="json",
+            )
+        )
         self.assertEqual(add_denied.status_code, status.HTTP_403_FORBIDDEN)
 
-        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        items = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
         self.assertEqual(items.status_code, status.HTTP_200_OK)
-        items_payload = cast(Mapping[str, Any], items.data)
-        results = cast(list[dict[str, Any]], items_payload["results"])
+        items_payload = response_data_dict(items)
+        results = payload_list(items_payload, "results")
         self.assertEqual(len(results), 1)
-        added_by = cast(Mapping[str, Any], results[0]["added_by"])
+        added_by = payload_dict(results[0], "added_by")
         self._assert_compact_user_payload(added_by, user=self.reader)
 
     def test_shelf_items_include_book_cover_url_when_present(self):
         self.client.login(username="reader", password="pw")
-        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+        shelf_id = response_data_dict(create)["id"]
 
-        set_book_cover_from_bytes(book=self.book_in_group, data=self._png_bytes(), source="manual")
+        set_book_cover_from_bytes(
+            book=self.book_in_group, data=self._png_bytes(), source="manual"
+        )
 
-        add_ok = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(self.book_in_group.id)}, format="json"))
+        add_ok = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+            )
+        )
         self.assertEqual(add_ok.status_code, status.HTTP_201_CREATED)
 
-        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        items = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
         self.assertEqual(items.status_code, status.HTTP_200_OK)
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        results = response_data_list(items)
         self.assertEqual(len(results), 1)
-        book = cast(dict[str, Any], results[0]["book"])
+        book = payload_dict(results[0], "book")
         self.assertIn("cover_url", book)
         self.assertIsInstance(book["cover_url"], str)
         self.assertTrue(str(book["cover_url"]).startswith("http://testserver/"))
 
     def test_item_patch_duplicate_position_canonicalizes_response_and_list(self):
         self.client.login(username="reader", password="pw")
-        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+        shelf_id = response_data_dict(create)["id"]
 
         book_z = create_file_backed_book(title="Zulu", assign_public=False).book
         ensure_book_public_assignment(book=book_z, added_by=None)
         book_a = create_file_backed_book(title="Alpha", assign_public=False).book
         ensure_book_public_assignment(book=book_a, added_by=None)
 
-        add_z = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(book_z.id)}, format="json"))
+        add_z = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(book_z.id)},
+                format="json",
+            )
+        )
         self.assertEqual(add_z.status_code, status.HTTP_201_CREATED)
-        add_a = cast(Response, self.client.post(f"/api/v1/shelves/{shelf_id}/items/", data={"book": str(book_a.id)}, format="json"))
+        add_a = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(book_a.id)},
+                format="json",
+            )
+        )
         self.assertEqual(add_a.status_code, status.HTTP_201_CREATED)
-        item_a_id = cast(Mapping[str, Any], add_a.data)["id"]
+        item_a_id = response_data_dict(add_a)["id"]
 
-        patch = cast(
-            Response,
+        patch = assert_response(
             self.client.patch(
                 f"/api/v1/shelves/{shelf_id}/items/{item_a_id}/",
                 data={"position": 0},
@@ -757,24 +873,32 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(patch.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], patch.data)["position"], 0)
+        self.assertEqual(response_data_dict(patch)["position"], 0)
 
-        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
-        self.assertEqual([(row["book"]["title"], row["position"]) for row in results], [("Alpha", 0), ("Zulu", 1)])
+        items = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        results = response_data_list(items)
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in results],
+            [("Alpha", 0), ("Zulu", 1)],
+        )
 
     def test_item_patch_position_moves_item_down_and_shifts_intervening_items(self):
         self.client.login(username="reader", password="pw")
-        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        shelf_id = cast(Mapping[str, Any], create.data)["id"]
+        shelf_id = response_data_dict(create)["id"]
 
         item_ids: dict[str, str] = {}
         for title in ["A", "B", "C", "D"]:
             book = create_file_backed_book(title=title, assign_public=False).book
             ensure_book_public_assignment(book=book, added_by=None)
-            added = cast(
-                Response,
+            added = assert_response(
                 self.client.post(
                     f"/api/v1/shelves/{shelf_id}/items/",
                     data={"book": str(book.id)},
@@ -782,10 +906,9 @@ class ShelvesAPITest(APITestCase):
                 ),
             )
             self.assertEqual(added.status_code, status.HTTP_201_CREATED)
-            item_ids[title] = str(cast(Mapping[str, Any], added.data)["id"])
+            item_ids[title] = str(response_data_dict(added)["id"])
 
-        patch = cast(
-            Response,
+        patch = assert_response(
             self.client.patch(
                 f"/api/v1/shelves/{shelf_id}/items/{item_ids['B']}/",
                 data={"position": 3},
@@ -793,10 +916,10 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(patch.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], patch.data)["position"], 3)
+        self.assertEqual(response_data_dict(patch)["position"], 3)
 
-        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        items = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        results = response_data_list(items)
         self.assertEqual(
             [(row["book"]["title"], row["position"]) for row in results],
             [("A", 0), ("C", 1), ("D", 2), ("B", 3)],
@@ -804,9 +927,15 @@ class ShelvesAPITest(APITestCase):
 
     def test_item_patch_move_canonicalizes_legacy_duplicates_before_swapping(self):
         self.client.login(username="reader", password="pw")
-        create = cast(Response, self.client.post("/api/v1/shelves/", data={"name": "S", "owner_type": "user"}, format="json"))
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        shelf = Shelf.objects.get(pk=cast(Mapping[str, Any], create.data)["id"])
+        shelf = Shelf.objects.get(pk=response_data_dict(create)["id"])
 
         books = [
             create_file_backed_book(title=title, assign_public=False).book
@@ -815,13 +944,20 @@ class ShelvesAPITest(APITestCase):
         for book in books:
             ensure_book_public_assignment(book=book, added_by=None)
 
-        ShelfItem.objects.create(shelf=shelf, book=books[0], position=0, added_by=self.reader)
-        target = ShelfItem.objects.create(shelf=shelf, book=books[1], position=1, added_by=self.reader)
-        ShelfItem.objects.create(shelf=shelf, book=books[2], position=1, added_by=self.reader)
-        ShelfItem.objects.create(shelf=shelf, book=books[3], position=3, added_by=self.reader)
+        ShelfItem.objects.create(
+            shelf=shelf, book=books[0], position=0, added_by=self.reader
+        )
+        target = ShelfItem.objects.create(
+            shelf=shelf, book=books[1], position=1, added_by=self.reader
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=books[2], position=1, added_by=self.reader
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=books[3], position=3, added_by=self.reader
+        )
 
-        patch = cast(
-            Response,
+        patch = assert_response(
             self.client.patch(
                 f"/api/v1/shelves/{shelf.id}/items/{target.id}/",
                 data={"move": "up"},
@@ -829,10 +965,10 @@ class ShelvesAPITest(APITestCase):
             ),
         )
         self.assertEqual(patch.status_code, status.HTTP_200_OK)
-        self.assertEqual(cast(Mapping[str, Any], patch.data)["position"], 1)
+        self.assertEqual(response_data_dict(patch)["position"], 1)
 
-        items = cast(Response, self.client.get(f"/api/v1/shelves/{shelf.id}/items/"))
-        results = cast(list[dict[str, Any]], cast(Mapping[str, Any], items.data)["results"])
+        items = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/items/"))
+        results = response_data_list(items)
         self.assertEqual(
             [(row["book"]["title"], row["position"]) for row in results],
             [("Gamma", 0), ("Zulu", 1), ("Alpha", 2), ("Omega", 3)],
