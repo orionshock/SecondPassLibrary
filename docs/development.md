@@ -198,7 +198,7 @@ or test that covers the change. Broad suites are intentional, not the default.
 Use markers to keep routine runs away from known slow integration areas:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/library/test_imports_api.py -q
+.\.venv\Scripts\python.exe -m pytest tests/library/imports/api -q
 .\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
 .\.venv\Scripts\python.exe -m pytest -m static_contract tests/core/product_ui -q
 .\.venv\Scripts\python.exe -m pytest tests/reading/annotations/test_views.py -q --durations=10

@@ -3,16 +3,19 @@ from __future__ import annotations
 import hashlib
 from io import BytesIO
 import zipfile
+import importlib
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.urls import clear_url_caches, set_urlconf
 
 from library.admin import BookAdmin, BookFileAdmin, BookFileAdminForm
 from library.book_file_services import repair_book_file_for_book
 from library.models import Book, BookFile
 from reading.models import Annotation, ReadingSession
+import secondpass.urls
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import (
     create_file_backed_book,
@@ -22,6 +25,12 @@ from tests.utils.books import (
 
 class _DummySite(AdminSite):
     pass
+
+
+def _reload_project_urls() -> None:
+    clear_url_caches()
+    set_urlconf(None)
+    importlib.reload(secondpass.urls)
 
 
 def _epub_bytes(label: str = "book") -> bytes:
@@ -127,12 +136,17 @@ class BookFileAdminUploadTest(IsolatedMediaRootMixin, TestCase):
         self.assertIn("file", form.errors)
 
     def test_book_admin_exposes_file_status_and_repair_link(self):
-        book = create_fileless_book_for_integrity_edge_case(
-            title="Status", assign_public=False
-        )
+        with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True):
+            _reload_project_urls()
+            book = create_fileless_book_for_integrity_edge_case(
+                title="Status", assign_public=False
+            )
 
-        self.assertEqual(self.book_admin.book_file_status(book), "No BookFile row")
-        self.assertIn("Repair stored EPUB", self.book_admin.book_file_repair_link(book))
+            self.assertEqual(self.book_admin.book_file_status(book), "No BookFile row")
+            self.assertIn(
+                "Repair stored EPUB", self.book_admin.book_file_repair_link(book)
+            )
+        _reload_project_urls()
 
         epub_bytes = _epub_bytes("status")
         checksum = hashlib.sha256(epub_bytes).hexdigest()
