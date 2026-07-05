@@ -132,11 +132,56 @@ class ProductUiRouteTests(ProductUiTestCase):
     def test_login_page_uses_configured_server_identity(self):
         server_settings.set_server_name("My Library")
         server_settings.set_server_description("Private family library.")
-        response = self.client.get("/api-auth/login/")
+        server_settings.set_server_banner_message("Dashboard only.")
+        response = self.client.get("/api-auth/login/?next=/dashboard/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "My Library")
         self.assertContains(response, "A SecondPass Library")
         self.assertContains(response, "Private family library.")
+        self.assertContains(response, "/static/web/app.css")
+        self.assertContains(response, 'class="login-page"')
+        self.assertContains(response, 'class="login-shell"')
+        self.assertContains(response, 'class="login-card"')
+        self.assertContains(response, 'class="login-brand-panel"')
+        self.assertContains(response, 'class="login-logo"')
+        self.assertContains(response, 'width="220"')
+        self.assertContains(response, 'height="220"')
+        self.assertContains(response, 'class="login-form-panel"')
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="password"')
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
+        self.assertContains(response, 'name="next" value="/dashboard/"')
+        self.assertNotContains(response, "Dashboard only.")
+
+    def test_invalid_login_uses_product_ui_template_and_preserves_next(self):
+        response = self.client.post(
+            "/api-auth/login/?next=/dashboard/",
+            data={
+                "username": "u",
+                "password": "wrong",
+                "next": "/dashboard/",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="login-page"')
+        self.assertContains(response, "login-error")
+        self.assertContains(response, 'name="next" value="/dashboard/"')
+        self.assertContains(response, "Please enter a correct username and password")
+
+    def test_successful_login_preserves_next_redirect(self):
+        response = self.client.post(
+            "/api-auth/login/?next=/dashboard/",
+            data={
+                "username": "u",
+                "password": "pw",
+                "next": "/dashboard/",
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/dashboard/")
 
     def test_base_template_has_no_service_hatch_nav_link(self):
         self.client.force_login(self.user)

@@ -1,12 +1,83 @@
-{% extends "rest_framework/login_base.html" %}
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Log in - {{ server_name }}</title>
+    <link rel="icon" href="{% static 'web/favicon.png' %}" type="image/png" />
+    <link rel="stylesheet" href="{% static 'web/app.css' %}" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-card">
+        <div class="login-brand-panel">
+          <img class="login-logo" src="{% static 'web/favicon.png' %}" width="220" height="220" alt="" aria-hidden="true" />
+        </div>
+        <div class="login-form-panel">
+          <div class="login-heading">
+            <div class="login-server-name">{{ server_name }}</div>
+            <h1 class="page-title">Log in</h1>
+            <p class="muted login-subtitle">A SecondPass Library</p>
+            {% if server_description %}
+              <p class="login-description">{{ server_description }}</p>
+            {% endif %}
+          </div>
 
-{% block branding %}
-  <h3 style="margin: 0 0 8px;">{{ server_name }}</h3>
-  <div class="muted" style="margin: 0 0 8px;">A SecondPass Library</div>
-  {% if server_description %}
-    <div class="muted" style="margin: 0 0 20px;">{{ server_description }}</div>
-  {% else %}
-    <div style="margin: 0 0 20px;"></div>
-  {% endif %}
-{% endblock %}
+          <form class="form login-form" action="{% url 'login' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}" />
 
+            {% if form.non_field_errors %}
+              <div class="error login-error" role="alert">
+                {% for error in form.non_field_errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="setup-field{% if form.username.errors %} login-field--error{% endif %}">
+              <label for="id_username">{{ form.username.label }}</label>
+              <input
+                id="id_username"
+                name="username"
+                type="text"
+                maxlength="100"
+                autocapitalize="off"
+                autocorrect="off"
+                autocomplete="username"
+                required
+                autofocus
+                {% if form.username.value %}value="{{ form.username.value }}"{% endif %}
+              />
+              {% if form.username.errors %}
+                <div class="error" role="alert">{{ form.username.errors|striptags }}</div>
+              {% endif %}
+            </div>
+
+            <div class="setup-field{% if form.password.errors %} login-field--error{% endif %}">
+              <label for="id_password">{{ form.password.label }}</label>
+              <input
+                id="id_password"
+                name="password"
+                type="password"
+                maxlength="100"
+                autocapitalize="off"
+                autocorrect="off"
+                autocomplete="current-password"
+                required
+              />
+              {% if form.password.errors %}
+                <div class="error" role="alert">{{ form.password.errors|striptags }}</div>
+              {% endif %}
+            </div>
+
+            <div class="form-actions">
+              <button class="button login-submit" type="submit" name="submit" value="Log in">Log in</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
