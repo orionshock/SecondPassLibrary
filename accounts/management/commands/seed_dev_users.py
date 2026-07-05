@@ -11,14 +11,15 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import UserProfile
+from accounts.bootstrap import has_active_owner
 from accounts.services import get_or_create_profile
+from core import server_settings
 from library.groups.services import (
     add_book_to_group,
     add_user_to_group,
-    ensure_user_public_membership,
     remove_user_from_group,
 )
-from library.models import Book, LibraryGroup, LibraryGroupMembership
+from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem
 from shelves.services import add_book_to_shelf, create_shelf
@@ -58,6 +59,7 @@ class SeedCounts:
     shelves_created: int = 0
     shelves_existing: int = 0
     shelf_items_added: int = 0
+    book_group_assignments_added: int = 0
 
 
 DEMO_USERS = [
@@ -220,6 +222,10 @@ class Command(BaseCommand):
             raise CommandError("--users must be at least 1.")
         if group_count < 1:
             raise CommandError("--groups must be at least 1.")
+        if not has_active_owner():
+            raise CommandError(
+                "First-run setup is incomplete. Complete setup before running seed_dev_users."
+            )
 
         self.stdout.write(
             self.style.WARNING(
@@ -236,20 +242,28 @@ class Command(BaseCommand):
 
         counts = SeedCounts()
         public = get_public_group()
-        owner, owner_created = self._ensure_owner()
+        owner = self._get_owner()
+        advanced_groups_enabled = server_settings.advanced_library_groups_enabled()
         self.stdout.write(f"Public group: {public.name} ({public.id})")
+        self.stdout.write(
+            "Advanced library groups: "
+            + ("enabled; adding demo rooms." if advanced_groups_enabled else "disabled; simple Public demo only.")
+        )
 
         user_specs = _expanded_user_specs(user_count)
         users, created_usernames = self._ensure_demo_users(user_specs, counts)
-        groups = self._ensure_groups(_expanded_group_specs(group_count), counts)
-        self._ensure_memberships(
-            owner=owner,
-            users=users,
-            created_usernames=created_usernames,
-            groups=groups,
-            public=public,
-            counts=counts,
-        )
+        self._ensure_simple_memberships(users=users, public=public, counts=counts)
+        groups: list[LibraryGroup] = []
+        if advanced_groups_enabled:
+            groups = self._ensure_groups(_expanded_group_specs(group_count), counts)
+            self._ensure_advanced_memberships(
+                owner=owner,
+                users=users,
+                created_usernames=created_usernames,
+                groups=groups,
+                public=public,
+                counts=counts,
+            )
 
         no_books = False
         if skip_shelves:
@@ -277,12 +291,7 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         self.stdout.write("Demo fixture summary:")
-        owner_summary = (
-            f"created {owner.username}"
-            if owner_created
-            else f"existing active superuser {owner.username} found; skipped"
-        )
-        self.stdout.write(f"Owner bootstrap: {owner_summary}")
+        self.stdout.write(f"Owner: existing active superuser {owner.username}")
         self.stdout.write(
             f"Users: {counts.users_created} created, "
             f"{counts.users_existing} existing/skipped"
@@ -295,6 +304,7 @@ class Command(BaseCommand):
             f"Memberships: {counts.memberships_created} created, "
             f"{counts.memberships_existing} existing/skipped"
         )
+        self.stdout.write(f"Book group assignments added: {counts.book_group_assignments_added}")
         self.stdout.write(
             f"Shelves: {counts.shelves_created} created, "
             f"{counts.shelves_existing} existing/skipped"
@@ -311,41 +321,17 @@ class Command(BaseCommand):
             )
         )
 
-    def _ensure_owner(self) -> tuple[Any, bool]:
+    def _get_owner(self) -> Any:
         existing = (
             User.objects.filter(is_active=True, is_superuser=True)
             .order_by("date_joined", "pk")
             .first()
         )
-        if existing is not None:
-            return existing, False
-
-        base_username = "lorem-admin"
-        username = base_username
-        suffix = 2
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}-{suffix}"
-            suffix += 1
-
-        owner = User(
-            username=username,
-            first_name="Lorem",
-            last_name="Administrator",
-            email=f"{username}@example.test",
-            is_active=True,
-            is_staff=True,
-            is_superuser=True,
-        )
-        owner.set_password(DEV_PASSWORD)
-        owner.full_clean()
-        owner.save()
-
-        profile = get_or_create_profile(user=owner)
-        profile.role = UserProfile.ROLE_MANAGER
-        profile.must_change_password = False
-        profile.save(update_fields=["role", "must_change_password", "updated_at"])
-        ensure_user_public_membership(user=owner)
-        return owner, True
+        if existing is None:
+            raise CommandError(
+                "First-run setup is incomplete. Complete setup before running seed_dev_users."
+            )
+        return existing
 
     def _ensure_demo_users(
         self,
@@ -405,7 +391,29 @@ class Command(BaseCommand):
             groups.append(group)
         return groups
 
-    def _ensure_memberships(
+    def _ensure_simple_memberships(
+        self,
+        *,
+        users: dict[str, Any],
+        public: LibraryGroup,
+        counts: SeedCounts,
+    ) -> None:
+        for user in users.values():
+            membership, created = LibraryGroupMembership.objects.get_or_create(
+                user=user,
+                group=public,
+                defaults={"is_curator": False},
+            )
+            if membership.is_curator:
+                membership.is_curator = False
+                membership.full_clean()
+                membership.save(update_fields=["is_curator", "updated_at"])
+            if created:
+                counts.memberships_created += 1
+            else:
+                counts.memberships_existing += 1
+
+    def _ensure_advanced_memberships(
         self,
         *,
         owner: Any,
@@ -611,6 +619,7 @@ class Command(BaseCommand):
                     actor=actor,
                     shelf=shelf,
                     book=book,
+                    counts=counts,
                 )
                 add_book_to_shelf(actor, shelf=shelf, book=book)
                 counts.shelf_items_added += 1
@@ -622,12 +631,19 @@ class Command(BaseCommand):
         actor: Any,
         shelf: Shelf,
         book: Book,
+        counts: SeedCounts,
     ) -> None:
         if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
             shelf_group = shelf.owner_group
             if shelf_group is None:
                 raise ValueError("Group-owned shelf is missing owner_group.")
+            already_assigned = BookGroupAssignment.objects.filter(
+                book=book,
+                group=shelf_group,
+            ).exists()
             add_book_to_group(actor=owner, book=book, group=shelf_group)
+            if not already_assigned:
+                counts.book_group_assignments_added += 1
             return
 
         profile = get_or_create_profile(user=actor)
@@ -644,4 +660,10 @@ class Command(BaseCommand):
             .first()
         )
         if membership is not None:
+            already_assigned = BookGroupAssignment.objects.filter(
+                book=book,
+                group=membership.group,
+            ).exists()
             add_book_to_group(actor=owner, book=book, group=membership.group)
+            if not already_assigned:
+                counts.book_group_assignments_added += 1

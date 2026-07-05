@@ -287,27 +287,24 @@ python manage.py seed_dev_users
 The command:
 
 - applies pending migrations before reading the database
-- creates a predictable lorem-named Owner only when no active superuser exists
+- requires first-run setup to be complete; it does not create the Owner account
 - ensures the configured Public group exists (`Common Room` on a default server)
-- ensures about 20 lorem-named demo users and five non-Public library groups
-- creates varied ordinary memberships and explicit `is_curator` flags without removing existing
-  memberships, with at least one reader-profile curator/steward for every demo
-  non-Public group
+- ensures about 20 lorem-named demo users
 - keeps Manager and Librarian demo accounts as broad-role users with their
-  normal default Common Room membership, but does not add them to non-Public
-  demo groups or assign them curator flags
-- represents demo curators as Reader-role accounts with `is_curator=true` in
-  specific non-Public groups
+  normal default Common Room membership
 - never assigns curator flags to the Public/Common Room group
-- creates personal, group-owned, and Common Room shelves; shared shelf names
-  include the owning group name so they remain distinguishable in combined lists
+- creates personal shelves and Common Room shelves
 - deterministically adds 5-10 existing books to each shelf when books are available
+- when advanced library groups are enabled, additionally creates five non-Public
+  demo groups, varied ordinary memberships, reader curators, group-owned
+  shelves, and custom group book assignments
 
 The command is non-destructive by default. Existing users with matching
 usernames retain their names, email addresses, passwords, flags, and profile
-roles. Existing groups and shelves are reused without overwriting their
+roles. Existing shelves are reused without overwriting their
 descriptions or other fields. Re-running with the same seed does not duplicate
-memberships, shelves, or shelf items.
+memberships, shelves, or shelf items. Existing demo groups are reused when
+advanced library groups are enabled.
 
 Useful options:
 
