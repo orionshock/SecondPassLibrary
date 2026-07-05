@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <h1>Advanced library groups disabled</h1>
+    <p>
+      Custom group state was consolidated into
+      <strong>{{ plan.public_group_name }}</strong>.
+    </p>
+
+    <h2>Completed Summary</h2>
+    <ul>
+      <li>Custom groups deleted: {{ summary.custom_groups }}</li>
+      <li>Shelves renamed and moved: {{ summary.shelves_moved }}</li>
+      <li>Shelf items preserved: {{ summary.shelf_items_preserved }}</li>
+      <li>Book/group associations removed: {{ summary.book_assignments_removed }}</li>
+      <li>Books restored to Public: {{ summary.books_expected_public_fallback }}</li>
+      <li>Memberships removed: {{ summary.memberships_removed }}</li>
+      <li>Curator assignments removed: {{ summary.curator_assignments_removed }}</li>
+      <li>Users restored to Public: {{ summary.users_expected_public_fallback }}</li>
+      <li>Shelf name collision warnings: {{ summary.shelf_name_collisions }}</li>
+    </ul>
+
+    <h2>Completed Phases</h2>
+    <ol>
+      <li>Shelves renamed/moved: {{ summary.shelves_moved }}</li>
+      <li>Shelf items preserved: {{ summary.shelf_items_preserved }}</li>
+      <li>Book/group associations removed: {{ summary.book_assignments_removed }}</li>
+      <li>Books restored/expected to Public: {{ summary.books_expected_public_fallback }}</li>
+      <li>
+        Memberships/curators removed:
+        {{ summary.memberships_removed }} memberships,
+        {{ summary.curator_assignments_removed }} curator assignments
+      </li>
+      <li>Users restored/expected to Public: {{ summary.users_expected_public_fallback }}</li>
+      <li>Custom groups deleted: {{ summary.custom_groups }}</li>
+      <li>Advanced groups disabled</li>
+    </ol>
+
+    <div class="submit-row">
+      <a class="button default" href="{% url 'admin:core_serversetting_changelist' %}">
+        Return to Server Settings
+      </a>
+      <a class="button" href="{% url 'web:dashboard' %}">
+        Return to Product UI
+      </a>
+      <a class="button" href="{% url 'web:shelves' %}">
+        View Shelves
+      </a>
+    </div>
+  </div>
+{% endblock %}

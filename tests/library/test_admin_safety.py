@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from django.contrib.admin.sites import AdminSite
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.auth.models import User
@@ -153,6 +155,52 @@ class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data["form"].is_valid())
+
+    def test_recovery_success_renders_completion_without_raw_dict_flash(self):
+        server_settings.set_advanced_library_groups_enabled(True)
+        preview_request = self.factory.get(
+            "/admin/core/serversetting/advanced-groups-disable/"
+        )
+        preview_request.user = self.owner
+        preview = self.admin.advanced_groups_disable_view(preview_request)
+        fingerprint = preview.context_data["plan"].fingerprint
+
+        request = self.factory.post(
+            "/admin/core/serversetting/advanced-groups-disable/",
+            data={
+                "fingerprint": fingerprint,
+                "confirm": "on",
+                "confirmation_text": "DISABLE ADVANCED GROUPS",
+            },
+        )
+        request.user = self.owner
+        self._attach_messages(request)
+
+        response = self.admin.advanced_groups_disable_view(request)
+        messages = [message.message for message in request._messages._queued_messages]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.template_name,
+            "admin/core/serversetting/advanced_groups_disable_complete.html",
+        )
+        self.assertEqual(response.context_data["title"], "Advanced library groups disabled")
+        self.assertEqual(response.context_data["plan"].public_group_name, "Common Room")
+        self.assertEqual(response.context_data["summary"]["custom_groups"], 0)
+        self.assertIn(
+            "Advanced library groups disabled and consolidated into Public Library.",
+            messages,
+        )
+        self.assertNotIn("{", "\n".join(messages))
+        self.assertFalse(server_settings.advanced_library_groups_enabled())
+
+        template = Path(
+            "core/templates/admin/core/serversetting/advanced_groups_disable_complete.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Shelves renamed/moved", template)
+        self.assertIn("Book/group associations removed", template)
+        self.assertIn("Users restored/expected to Public", template)
+        self.assertIn("Advanced groups disabled", template)
 
     def test_recovery_stale_fingerprint_does_not_execute(self):
         request = self.factory.post(

@@ -141,12 +141,23 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
         group, member, book_file, session, annotation, shelf, item = self._custom_group_fixture()
         plan = build_advanced_groups_disable_plan()
 
-        result = execute_advanced_groups_disable_plan(
-            actor=self.owner,
-            expected_fingerprint=plan.fingerprint,
-        )
+        with self.assertLogs("library.groups.consolidation", level="INFO") as logs:
+            result = execute_advanced_groups_disable_plan(
+                actor=self.owner,
+                expected_fingerprint=plan.fingerprint,
+            )
 
         self.assertEqual(result.summary["custom_groups"], 1)
+        output = "\n".join(logs.output)
+        self.assertIn("advanced groups recovery started", output)
+        self.assertIn("advanced groups recovery shelves moved count=1", output)
+        self.assertIn("book assignments removed count=1 books_public_fallback=1", output)
+        self.assertIn(
+            "memberships removed count=1 curator_assignments_removed=1 users_public_fallback=1",
+            output,
+        )
+        self.assertIn("advanced groups recovery groups deleted count=1", output)
+        self.assertIn("advanced groups recovery completed duration_ms=", output)
         self.assertFalse(server_settings.advanced_library_groups_enabled())
         self.assertFalse(LibraryGroup.objects.filter(pk=group.pk).exists())
         self.assertFalse(BookGroupAssignment.objects.filter(group_id=group.pk).exists())
@@ -183,10 +194,11 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
         with patch(
             "library.groups.consolidation.delete_library_group",
             side_effect=AdvancedGroupsConsolidationError("boom"),
-        ):
+        ), patch("library.groups.consolidation_logging.logger.exception") as log_failure:
             with self.assertRaises(AdvancedGroupsConsolidationError):
                 execute_advanced_groups_disable_plan(actor=self.owner)
 
+        log_failure.assert_called_once_with("advanced groups recovery failed")
         self.assertTrue(server_settings.advanced_library_groups_enabled())
         shelf.refresh_from_db()
         self.assertEqual(shelf.name, "Favorites")

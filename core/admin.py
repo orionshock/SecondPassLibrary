@@ -193,12 +193,9 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 else:
                     messages.success(
                         request,
-                        (
-                            "Advanced library groups disabled and custom group "
-                            f"state consolidated into Public Library: {result.summary}"
-                        ),
+                        "Advanced library groups disabled and consolidated into Public Library.",
                     )
-                    return HttpResponseRedirect(reverse("admin:core_serversetting_changelist"))
+                    return self._advanced_groups_completion_response(request, result)
         else:
             form = AdvancedGroupsDisableAdminForm(initial={"fingerprint": plan.fingerprint})
 
@@ -213,5 +210,20 @@ class ServerSettingAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request,
             "admin/core/serversetting/advanced_groups_disable.html",
+            context,
+        )
+
+    def _advanced_groups_completion_response(self, request, result):
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": "Advanced library groups disabled",
+            "result": result,
+            "plan": result.plan,
+            "summary": result.summary,
+        }
+        return TemplateResponse(
+            request,
+            "admin/core/serversetting/advanced_groups_disable_complete.html",
             context,
         )

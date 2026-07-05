@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 import hashlib
 import json
-import logging
+from time import perf_counter
 from typing import Any
 
 from django.db import transaction
@@ -14,6 +14,7 @@ from shelves.models import Shelf
 
 from .public_group import get_public_group
 from .services import delete_library_group, remove_book_from_group, remove_user_from_group
+from . import consolidation_logging
 from .consolidation_types import (
     PHASES,
     AdvancedGroupsConsolidationError,
@@ -28,9 +29,6 @@ from .consolidation_types import (
     ShelfMovePlan,
     UserPublicFallbackPlan,
 )
-
-
-logger = logging.getLogger(__name__)
 
 
 def _display_group_name(group: LibraryGroup) -> str:
@@ -67,9 +65,7 @@ def build_advanced_groups_disable_plan(
 ) -> AdvancedGroupsDisablePlan:
     public = get_public_group()
     public_id = str(public.id)
-    custom_groups = tuple(
-        LibraryGroup.objects.exclude(id=public.id).order_by("name", "id")
-    )
+    custom_groups = tuple(LibraryGroup.objects.exclude(id=public.id).order_by("name", "id"))
     group_ids = tuple(group.id for group in custom_groups)
     group_names = {str(group.id): _display_group_name(group) for group in custom_groups}
 
@@ -241,63 +237,96 @@ def execute_advanced_groups_disable_plan(
     actor,
     expected_fingerprint: str | None = None,
 ) -> AdvancedGroupsDisableResult:
-    with transaction.atomic():
-        plan = build_advanced_groups_disable_plan(display_limit=None)
-        if expected_fingerprint and expected_fingerprint != plan.fingerprint:
-            raise AdvancedGroupsPlanStale("The recovery plan changed. Review it again.")
-        if not plan.enabled_before and not plan.has_custom_group_data:
-            raise AdvancedGroupsConsolidationNotNeeded(
-                "Advanced library groups are already disabled and no custom group data remains."
-            )
+    started = perf_counter()
+    try:
+        with transaction.atomic():
+            plan = build_advanced_groups_disable_plan(display_limit=None)
+            if expected_fingerprint and expected_fingerprint != plan.fingerprint:
+                raise AdvancedGroupsPlanStale("The recovery plan changed. Review it again.")
+            if not plan.enabled_before and not plan.has_custom_group_data:
+                raise AdvancedGroupsConsolidationNotNeeded(
+                    "Advanced library groups are already disabled and no custom group data remains."
+                )
 
-        public = get_public_group()
-        for op in plan.shelf_moves:
-            shelf = Shelf.objects.select_for_update().get(pk=op.shelf_id)
-            shelf.name = op.new_name
-            shelf.owner_type = Shelf.OWNER_TYPE_GROUP
-            shelf.owner_group = public
-            shelf.owner_user = None
-            shelf.save(update_fields=["name", "owner_type", "owner_group", "owner_user", "updated_at"])
+            consolidation_logging.recovery_started(actor=actor, plan=plan)
 
-        group_ids = _custom_group_ids(plan)
-        if Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_GROUP, owner_group_id__in=group_ids).exists():
-            raise AdvancedGroupsConsolidationError("Shelf transfer failed: non-Public shelves remain.")
+            public = get_public_group()
+            for op in plan.shelf_moves:
+                shelf = Shelf.objects.select_for_update().get(pk=op.shelf_id)
+                shelf.name = op.new_name
+                shelf.owner_type = Shelf.OWNER_TYPE_GROUP
+                shelf.owner_group = public
+                shelf.owner_user = None
+                shelf.save(
+                    update_fields=[
+                        "name",
+                        "owner_type",
+                        "owner_group",
+                        "owner_user",
+                        "updated_at",
+                    ]
+                )
+            consolidation_logging.shelves_moved(plan)
 
-        for op in plan.book_assignment_removals:
-            assignment = (
-                BookGroupAssignment.objects.select_related("book", "group")
-                .filter(pk=op.assignment_id)
-                .first()
-            )
-            if assignment is not None:
-                remove_book_from_group(actor=actor, book=assignment.book, group=assignment.group)
-        if BookGroupAssignment.objects.filter(group_id__in=group_ids).exists():
-            raise AdvancedGroupsConsolidationError(
-                "Book assignment removal failed: non-Public assignments remain."
-            )
+            group_ids = _custom_group_ids(plan)
+            if Shelf.objects.filter(
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group_id__in=group_ids,
+            ).exists():
+                raise AdvancedGroupsConsolidationError(
+                    "Shelf transfer failed: non-Public shelves remain."
+                )
 
-        for op in plan.membership_removals:
-            membership = (
-                LibraryGroupMembership.objects.select_related("user", "group")
-                .filter(pk=op.membership_id)
-                .first()
-            )
-            if membership is not None:
-                remove_user_from_group(actor=actor, membership=membership)
-        if LibraryGroupMembership.objects.filter(group_id__in=group_ids).exists():
-            raise AdvancedGroupsConsolidationError(
-                "Membership removal failed: non-Public memberships remain."
-            )
+            for op in plan.book_assignment_removals:
+                assignment = (
+                    BookGroupAssignment.objects.select_related("book", "group")
+                    .filter(pk=op.assignment_id)
+                    .first()
+                )
+                if assignment is not None:
+                    remove_book_from_group(
+                        actor=actor,
+                        book=assignment.book,
+                        group=assignment.group,
+                    )
+            consolidation_logging.book_assignments_removed(plan)
+            if BookGroupAssignment.objects.filter(group_id__in=group_ids).exists():
+                raise AdvancedGroupsConsolidationError(
+                    "Book assignment removal failed: non-Public assignments remain."
+                )
 
-        _assert_no_rows_remain(group_ids, phase="Before group deletion")
-        for op in plan.group_deletions:
-            group = LibraryGroup.objects.filter(pk=op.group_id).first()
-            if group is not None:
-                delete_library_group(actor=actor, group=group)
-        if LibraryGroup.objects.exclude(pk=public.pk).exists():
-            raise AdvancedGroupsConsolidationError("Group deletion failed: non-Public groups remain.")
+            for op in plan.membership_removals:
+                membership = (
+                    LibraryGroupMembership.objects.select_related("user", "group")
+                    .filter(pk=op.membership_id)
+                    .first()
+                )
+                if membership is not None:
+                    remove_user_from_group(actor=actor, membership=membership)
+            consolidation_logging.memberships_removed(plan)
+            if LibraryGroupMembership.objects.filter(group_id__in=group_ids).exists():
+                raise AdvancedGroupsConsolidationError(
+                    "Membership removal failed: non-Public memberships remain."
+                )
 
-        server_settings.set_advanced_library_groups_enabled(False)
+            _assert_no_rows_remain(group_ids, phase="Before group deletion")
+            for op in plan.group_deletions:
+                group = LibraryGroup.objects.filter(pk=op.group_id).first()
+                if group is not None:
+                    delete_library_group(actor=actor, group=group)
+            consolidation_logging.groups_deleted(plan)
+            if LibraryGroup.objects.exclude(pk=public.pk).exists():
+                raise AdvancedGroupsConsolidationError(
+                    "Group deletion failed: non-Public groups remain."
+                )
 
-    logger.info("advanced groups consolidated into public", extra={"summary": plan.summary})
-    return AdvancedGroupsDisableResult(plan=plan, summary=plan.summary)
+            server_settings.set_advanced_library_groups_enabled(False)
+
+        duration_ms = int((perf_counter() - started) * 1000)
+        consolidation_logging.recovery_completed(duration_ms=duration_ms, plan=plan)
+        return AdvancedGroupsDisableResult(plan=plan, summary=plan.summary)
+    except (AdvancedGroupsPlanStale, AdvancedGroupsConsolidationNotNeeded):
+        raise
+    except Exception:
+        consolidation_logging.recovery_failed()
+        raise
