@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from io import StringIO
 from pathlib import Path
-import shutil
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
-from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
@@ -27,15 +26,13 @@ def _mock_epub(*, title: str = "Command Book") -> MagicMock:
 
 class ImportEpubCommandTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self.temp_dir = temp_root / f"tmp_import_epub_command_{self._testMethodName}"
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
+        self._temporary_directory = TemporaryDirectory(prefix="secondpass-import-epub-command-")
+        self.temp_dir = Path(self._temporary_directory.name)
         self.epub_path = self.temp_dir / "Command Book.epub"
         self.epub_path.write_bytes(b"command-epub")
 
     def tearDown(self):
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        self._temporary_directory.cleanup()
 
     def test_missing_file_raises_useful_command_error(self):
         missing = self.temp_dir / "missing.epub"

@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import os
 from io import BytesIO
-from pathlib import Path
-import uuid
+from tempfile import TemporaryDirectory
 import zipfile
 from unittest.mock import MagicMock, patch
 
-from django.conf import settings
 from django.test import TestCase
 
 from PIL import Image
@@ -52,13 +50,11 @@ def _write_epub_zip(
 
 class EmbeddedEpubCoverExtractionTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self.temp_dir = str(temp_root / f"tmp_epub_cover_{uuid.uuid4().hex}")
-        os.makedirs(self.temp_dir, exist_ok=True)
+        self._temporary_directory = TemporaryDirectory(prefix="secondpass-epub-cover-")
+        self.temp_dir = self._temporary_directory.name
 
     def tearDown(self):
-        __import__("shutil").rmtree(self.temp_dir, ignore_errors=True)
+        self._temporary_directory.cleanup()
 
     @patch("library.imports.epub.epub.read_epub")
     def test_epub3_cover_image_properties_extracted(self, mock_read_epub):

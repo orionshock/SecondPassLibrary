@@ -3,12 +3,10 @@ from __future__ import annotations
 import hashlib
 from io import BytesIO
 import os
-from pathlib import Path
-import shutil
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 import uuid
 
-from django.conf import settings
 from django.test import TestCase
 
 from library.imports.epub import calculate_file_sha256, ImportStatus
@@ -51,17 +49,14 @@ class ChunkedUpload:
 
 class EPUBImportTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        # Create a temporary EPUB file for testing
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self.temp_dir = str(temp_root / f"tmp_epub_{uuid.uuid4().hex}")
-        os.makedirs(self.temp_dir, exist_ok=True)
+        self._temporary_directory = TemporaryDirectory(prefix="secondpass-epub-import-")
+        self.temp_dir = self._temporary_directory.name
         self.epub_path = os.path.join(self.temp_dir, "test.epub")
         with open(self.epub_path, "wb") as f:
             f.write(uuid.uuid4().hex.encode("utf-8"))
 
     def tearDown(self):
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        self._temporary_directory.cleanup()
 
     def test_stream_sha256_uses_bounded_reads_for_regular_file_and_rewinds(self):
         data = b"abcdef"

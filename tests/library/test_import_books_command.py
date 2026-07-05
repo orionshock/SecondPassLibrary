@@ -2,21 +2,15 @@ from __future__ import annotations
 
 from io import StringIO
 from pathlib import Path
-import shutil
-from typing import Any, cast
-import uuid
 import zipfile
 from unittest.mock import MagicMock, patch
 
-from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
-from django.test.utils import override_settings
-from django.utils.functional import empty
-import django.core.files.storage as storage
 
 from library.models import Book, BookFile
+from tests.env.filesystem import RuntimePathIsolation
 from tests.utils.books import create_file_backed_book
 
 
@@ -38,29 +32,14 @@ def _write_zip(path: Path, members: dict[str, bytes]) -> None:
 
 class ImportBooksCommandTests(TestCase):
     def setUp(self):
-        temp_root = Path(settings.BASE_DIR) / "TestFiles"
-        temp_root.mkdir(parents=True, exist_ok=True)
-        self.temp_dir = temp_root / f"tmp_import_books_command_{uuid.uuid4().hex}"
-        self.imports_dir = self.temp_dir / "imports"
-        self.media_dir = self.temp_dir / "media"
-        self.imports_dir.mkdir(parents=True, exist_ok=True)
-        self.media_dir.mkdir(parents=True, exist_ok=True)
-        self.override = override_settings(
-            IMPORTS_DIR=self.imports_dir,
-            MEDIA_ROOT=str(self.media_dir),
-        )
-        self.override.enable()
-
-        handler = cast(Any, getattr(storage, "storages"))
-        handler._storages = {}
-        handler._backends = None
-        setattr(cast(Any, storage.default_storage), "_wrapped", empty)
-
+        self._runtime_paths = RuntimePathIsolation(media=True, imports=True)
+        self._runtime_paths.enable()
+        assert self._runtime_paths.root is not None
+        self.temp_dir = self._runtime_paths.root
         self.zip_path = self.temp_dir / "Command Books.zip"
 
     def tearDown(self):
-        self.override.disable()
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        self._runtime_paths.disable()
 
     def test_missing_file_raises_useful_command_error(self):
         missing = self.temp_dir / "missing.zip"
