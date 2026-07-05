@@ -17,6 +17,14 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 import environ
 
+try:
+    import django_stubs_ext
+except ImportError:
+    django_stubs_ext = None
+
+if django_stubs_ext is not None:
+    django_stubs_ext.monkeypatch()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()

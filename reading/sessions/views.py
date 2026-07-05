@@ -132,7 +132,7 @@ class ReadingSessionViewSet(
 
     def update(self, request, *args, **kwargs):
         # Disallow full PUT updates; only PATCH is supported for name/notes.
-        if request.method.upper() == "PUT":
+        if (request.method or "").upper() == "PUT":
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 

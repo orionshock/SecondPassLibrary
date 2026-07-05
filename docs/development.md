@@ -7,11 +7,13 @@ Practical local development workflow (Windows/PowerShell).
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 npm install
 ```
 
-Note: `requirements.txt` includes Pillow for cover image validation.
+Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
+adds local test/type tooling such as Django/DRF typing packages.
+Pillow is included for cover image validation.
 EPUB imports also attempt best-effort embedded cover extraction (JPEG/PNG/WebP only).
 ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) to bootstrap metadata and cover for new books only.
 

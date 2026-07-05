@@ -120,7 +120,7 @@ class ShelfViewSet(
         if isinstance(getattr(request, "auth", None), UserClientSession):
             action = getattr(self, "action", "") or ""
             allowed = self.client_bearer_allowed.get(str(action), set())
-            if request.method.upper() not in allowed:
+            if (request.method or "").upper() not in allowed:
                 raise PermissionDenied("Client API tokens are not allowed for this endpoint/action.")
 
     def _request_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:

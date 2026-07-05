@@ -1,0 +1,5 @@
+-r requirements.txt
+
+django-types==0.24.0
+django-stubs-ext==6.0.6
+djangorestframework-types==0.9.0
