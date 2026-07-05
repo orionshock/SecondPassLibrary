@@ -126,9 +126,13 @@ They are also not enabled for marginalia export endpoints; exports are product U
 Discovery:
 
 - `GET /.well-known/secondpass` returns compact server identity and
-  `api_base_url`. It does not include per-endpoint route metadata.
+  `api_base_url`. It is public discovery and does not include banner text,
+  advanced group state, capabilities, or per-endpoint route metadata.
 - `GET /api/v1/client-api/discovery/` returns the detailed Client API pairing
   discovery document.
+- Authenticated clients should refresh `GET /api/v1/accounts/me/` for current
+  user context plus small server context such as `advanced_library_groups_enabled`
+  and `banner_text`.
 
 Client API route conventions under `api_base_url`:
 
@@ -193,6 +197,8 @@ Notes:
 - Am I an Owner?
 - Which LibraryGroups am I a member of?
 - Which group memberships are marked as curator/steward relationships?
+- Are advanced library groups currently enabled?
+- What single server banner text should be shown, if any?
 
 It includes a `groups` array listing the caller's `LibraryGroupMembership`s.
 
@@ -220,6 +226,13 @@ Additional identity fields:
 - `first_name`, `last_name`
 - `must_change_password` (force change via product UI redirect)
 
+Refreshable server context:
+
+- `advanced_library_groups_enabled` (boolean): reader clients can use this to
+  show or hide group browsing UI.
+- `banner_text` (string): the current server banner text, or an empty string
+  when unset.
+
 Broad Product UI affordances should be derived from `role` and `is_owner`. Object-specific affordances should come from object payloads, such as LibraryGroup `capabilities.can_curate` and shelf `can_edit`.
 
 Example response:
@@ -234,6 +247,8 @@ Example response:
   "role": "reader",
   "must_change_password": false,
   "is_owner": false,
+  "advanced_library_groups_enabled": false,
+  "banner_text": "",
   "groups": [
     {
       "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",
@@ -650,6 +665,15 @@ Reading payload notes:
 ## Core
 
 - Health check: `GET /api/v1/health/`
+- Public discovery: `GET /.well-known/secondpass`
+  - `server_name`
+  - `server_description`
+  - `server_version`
+  - `server_release`
+  - `server_release_date`
+  - `api_base_url`
+  - does not include banner text, advanced library group state, capabilities,
+    or client route manifests
 - Owner server settings: `GET/PATCH /api/v1/server/settings/`
   - `server_name`
   - `server_description`

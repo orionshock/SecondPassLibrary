@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
+from core import server_settings
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 
@@ -18,6 +19,7 @@ User = get_user_model()
 
 class ManagedUsersAPITest(APITestCase):
     def setUp(self):
+        server_settings.clear_server_settings_cache()
         self.public = get_public_group()
         self.owner = User.objects.create_superuser(
             username="owner", email="owner@example.com", password="pw"
@@ -60,6 +62,8 @@ class ManagedUsersAPITest(APITestCase):
         self.assertEqual(data["profile_id"], str(cast(Any, self.reader).profile.id))
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
         self.assertFalse(data["is_owner"])
+        self.assertFalse(data["advanced_library_groups_enabled"])
+        self.assertEqual(data["banner_text"], "")
         self.assertNotIn("id", data)
         self.assertNotIn("capabilities", data)
 
@@ -71,6 +75,44 @@ class ManagedUsersAPITest(APITestCase):
         self.assertFalse(public_groups[0]["is_curator"])
         self.assertNotIn("membership_role", public_groups[0])
         self.assertNotIn("curated_group_ids", data)
+
+    def test_me_includes_refreshable_server_context(self):
+        server_settings.set_server_banner_message("Maintenance tonight.")
+
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(Mapping[str, Any], response.data)
+        for key in (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "profile_id",
+            "role",
+            "must_change_password",
+            "is_owner",
+            "groups",
+            "advanced_library_groups_enabled",
+            "banner_text",
+        ):
+            self.assertIn(key, data)
+        self.assertFalse(data["advanced_library_groups_enabled"])
+        self.assertEqual(data["banner_text"], "Maintenance tonight.")
+        self.assertNotIn("capabilities", data)
+        self.assertNotIn("routes", data)
+        self.assertNotIn("route_manifest", data)
+
+    def test_me_advanced_library_groups_enabled_reflects_server_setting(self):
+        server_settings.enable_advanced_library_groups()
+
+        self.client.login(username="reader", password="pw")
+        response = cast(Response, self.client.get("/api/v1/accounts/me/"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = cast(Mapping[str, Any], response.data)
+        self.assertTrue(data["advanced_library_groups_enabled"])
 
     def test_me_manager_payload_uses_role_without_capabilities(self):
         self.client.login(username="manager", password="pw")

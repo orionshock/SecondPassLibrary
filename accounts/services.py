@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from accounts import policies
+from core import server_settings
 from library.groups.services import ensure_user_public_membership
 from library.models import LibraryGroupMembership
 from library.groups.public_group import is_public_group
@@ -368,5 +369,9 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "role": profile.role,
         "must_change_password": bool(profile.must_change_password),
         "is_owner": policies.is_owner(user),
+        "advanced_library_groups_enabled": (
+            server_settings.get_advanced_library_groups_enabled()
+        ),
+        "banner_text": server_settings.get_server_banner_message(),
         "groups": groups,
     }

@@ -58,6 +58,8 @@ class CurrentUserMePatchAPITest(APITestCase):
             "profile_id",
             "role",
             "is_owner",
+            "advanced_library_groups_enabled",
+            "banner_text",
             "groups",
         ):
             self.assertIn(key, data)

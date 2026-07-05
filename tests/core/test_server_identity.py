@@ -181,6 +181,16 @@ class ServerIdentitySettingsTests(TestCase):
                 "api_base_url": "http://testserver/api/v1/",
             },
         )
+        payload = response.json()
+        self.assertNotIn("banner_text", payload)
+        self.assertNotIn("advanced_library_groups_enabled", payload)
+        self.assertNotIn("capabilities", payload)
+        self.assertNotIn("client_api", payload)
+        self.assertNotIn("routes", payload)
+        self.assertNotIn("route_manifest", payload)
+        self.assertNotIn("login_request_endpoint", payload)
+        self.assertNotIn("authorize_url", payload)
+        self.assertNotIn("poll_endpoint_template", payload)
 
     def test_discovery_includes_server_identity(self):
         owner = User.objects.create_user(
@@ -205,7 +215,12 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(payload["server_release"], "pre-release")
         self.assertEqual(payload["server_release_date"], "2026-07-03")
         self.assertEqual(payload["api_base_url"], "http://testserver/api/v1/")
+        self.assertNotIn("banner_text", payload)
+        self.assertNotIn("advanced_library_groups_enabled", payload)
+        self.assertNotIn("capabilities", payload)
         self.assertNotIn("client_api", payload)
+        self.assertNotIn("routes", payload)
+        self.assertNotIn("route_manifest", payload)
         self.assertNotIn("login_request_endpoint", payload)
         self.assertNotIn("authorize_url", payload)
         self.assertNotIn("poll_endpoint_template", payload)

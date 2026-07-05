@@ -91,6 +91,13 @@ Client API (JSON):
 - `{api_base_url}client-api/login-requests/`
 - `{api_base_url}client-api/login-requests/{id}/poll/`
 
+`/.well-known/secondpass` is public server identity/discovery only. It includes
+`server_description`, but not banner text, advanced library group state,
+capabilities, or route manifests. Reader clients should use authenticated
+`GET /api/v1/accounts/me/` as refreshable context after pairing; `/me` includes
+`advanced_library_groups_enabled` for group browsing UI and `banner_text` for
+the single server banner.
+
 Product UI (Django templates):
 
 - `GET /client-api/authorize/` (code entry / confirmation UI; may accept `?code=...`)

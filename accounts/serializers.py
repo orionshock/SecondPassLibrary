@@ -32,6 +32,8 @@ class CurrentUserSerializer(serializers.Serializer):
     role = serializers.CharField()
     must_change_password = serializers.BooleanField()
     is_owner = serializers.BooleanField()
+    advanced_library_groups_enabled = serializers.BooleanField()
+    banner_text = serializers.CharField(allow_blank=True)
     groups = GroupSummarySerializer(many=True)
 
 
