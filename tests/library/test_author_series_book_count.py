@@ -15,6 +15,7 @@ from library.groups.services import (
 from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
 from library.groups.public_group import get_public_group
 from tests.utils.books import create_file_backed_book
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.responses import (
     assert_response,
     response_data_dict,
@@ -22,7 +23,7 @@ from tests.utils.responses import (
 )
 
 
-class _AuthorSeriesBookCountBase(APITestCase):
+class _AuthorSeriesBookCountBase(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.public = get_public_group()
         self.owner = User.objects.create_superuser(

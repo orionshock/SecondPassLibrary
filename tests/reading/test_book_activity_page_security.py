@@ -9,6 +9,7 @@ from library.groups.services import (
     ensure_user_public_membership,
 )
 from reading.models import Annotation, ReadingSession
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import assert_response, response_data_list
 
@@ -16,7 +17,7 @@ from tests.utils.responses import assert_response, response_data_list
 User = get_user_model()
 
 
-class BookActivityPageSecurityTest(TestCase):
+class BookActivityPageSecurityTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.user1 = User.objects.create_user(
             username="u1", password="pass1", email="u1@example.com"

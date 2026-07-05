@@ -24,13 +24,14 @@ from shelves.services import (
     visible_shelf_items_for_user,
 )
 from shelves.policies import can_create_shelf
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
 
 User = get_user_model()
 
 
-class ShelfModelTests(TestCase):
+class ShelfModelTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u", password="pw")
         ensure_user_public_membership(user=self.user)
@@ -74,11 +75,13 @@ class ShelfModelTests(TestCase):
             add_book_to_shelf(self.user, shelf=shelf, book=book)
 
 
-class ShelfServicePolicyTests(TestCase):
+class ShelfServicePolicyTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.public = get_public_group()
 
-        self.owner = User.objects.create_superuser(username="owner", password="pw", email="o@example.com")
+        self.owner = User.objects.create_superuser(
+            username="owner", password="pw", email="o@example.com"
+        )
         ensure_user_public_membership(user=self.owner)
 
         self.reader = User.objects.create_user(username="reader", password="pw")
@@ -100,10 +103,14 @@ class ShelfServicePolicyTests(TestCase):
             is_curator=True,
         )
 
-        self.book_in_group = create_file_backed_book(title="GBook", assign_public=False).book
+        self.book_in_group = create_file_backed_book(
+            title="GBook", assign_public=False
+        ).book
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
-        self.book_other = create_file_backed_book(title="OtherBook", assign_public=False).book
+        self.book_other = create_file_backed_book(
+            title="OtherBook", assign_public=False
+        ).book
         ensure_book_public_assignment(book=self.book_other, added_by=None)
 
     def test_user_cannot_create_shelf_for_other_user(self):
@@ -160,7 +167,9 @@ class ShelfServicePolicyTests(TestCase):
         add_book_to_shelf(self.reader, shelf=shelf, book=self.book_in_group)
         self.assertEqual(visible_shelf_items_for_user(self.reader, shelf).count(), 1)
 
-        LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).delete()
+        LibraryGroupMembership.objects.filter(
+            user=self.reader, group=self.group
+        ).delete()
         # Book remains on shelf, but is hidden until access returns.
         self.assertEqual(visible_shelf_items_for_user(self.reader, shelf).count(), 0)
 
@@ -172,13 +181,19 @@ class ShelfServicePolicyTests(TestCase):
             owner_group=self.group,
         )
         add_book_to_shelf(self.owner, shelf=shelf, book=self.book_in_group)
-        self.assertTrue(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
+        self.assertTrue(
+            ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists()
+        )
 
-        remove_book_from_group(actor=self.owner, book=self.book_in_group, group=self.group)
-        self.assertFalse(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
+        remove_book_from_group(
+            actor=self.owner, book=self.book_in_group, group=self.group
+        )
+        self.assertFalse(
+            ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists()
+        )
 
 
-class ShelfPositionServiceTests(TestCase):
+class ShelfPositionServiceTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="positions", password="pw")
         ensure_user_public_membership(user=self.user)
@@ -195,16 +210,30 @@ class ShelfPositionServiceTests(TestCase):
         return book
 
     def _items(self) -> list[ShelfItem]:
-        return list(ShelfItem.objects.select_related("book").filter(shelf=self.shelf).order_by("position"))
+        return list(
+            ShelfItem.objects.select_related("book")
+            .filter(shelf=self.shelf)
+            .order_by("position")
+        )
 
     def _titles_and_positions(self) -> list[tuple[str, int]]:
         return [(item.book.title, item.position) for item in self._items()]
 
-    def test_canonicalize_resolves_duplicate_positions_by_title_and_bumps_later_items(self):
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Zulu"), position=0, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Bravo"), position=1, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Alpha"), position=1, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Charlie"), position=2, added_by=self.user)
+    def test_canonicalize_resolves_duplicate_positions_by_title_and_bumps_later_items(
+        self,
+    ):
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Zulu"), position=0, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Bravo"), position=1, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Alpha"), position=1, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Charlie"), position=2, added_by=self.user
+        )
 
         canonicalize_shelf_positions(self.shelf)
 
@@ -216,49 +245,80 @@ class ShelfPositionServiceTests(TestCase):
     def test_same_title_duplicate_position_uses_stable_book_id_fallback(self):
         book_a = self._book("Same")
         book_b = self._book("Same")
-        ShelfItem.objects.create(shelf=self.shelf, book=book_b, position=0, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=book_a, position=0, added_by=self.user)
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=book_b, position=0, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=book_a, position=0, added_by=self.user
+        )
 
         canonicalize_shelf_positions(self.shelf)
 
         items = self._items()
         self.assertEqual([item.position for item in items], [0, 1])
-        self.assertEqual([str(item.book_id) for item in items], sorted([str(book_a.id), str(book_b.id)]))
+        self.assertEqual(
+            [str(item.book_id) for item in items],
+            sorted([str(book_a.id), str(book_b.id)]),
+        )
 
     def test_add_assigns_unique_contiguous_position_after_legacy_duplicates(self):
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Bravo"), position=0, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Alpha"), position=0, added_by=self.user)
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Bravo"), position=0, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Alpha"), position=0, added_by=self.user
+        )
 
-        item = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Charlie"))
+        item = add_book_to_shelf(
+            self.user, shelf=self.shelf, book=self._book("Charlie")
+        )
 
         self.assertEqual(item.position, 2)
-        self.assertEqual(self._titles_and_positions(), [("Alpha", 0), ("Bravo", 1), ("Charlie", 2)])
+        self.assertEqual(
+            self._titles_and_positions(), [("Alpha", 0), ("Bravo", 1), ("Charlie", 2)]
+        )
 
     def test_add_with_explicit_duplicate_position_is_canonicalized_by_title(self):
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Zulu"))
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Bravo"))
-        item = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("Alpha"), position=1)
+        item = add_book_to_shelf(
+            self.user, shelf=self.shelf, book=self._book("Alpha"), position=1
+        )
 
         self.assertEqual(item.position, 1)
-        self.assertEqual(self._titles_and_positions(), [("Zulu", 0), ("Alpha", 1), ("Bravo", 2)])
+        self.assertEqual(
+            self._titles_and_positions(), [("Zulu", 0), ("Alpha", 1), ("Bravo", 2)]
+        )
 
     def test_remove_compacts_positions(self):
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
         item_b = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
 
-        removed = remove_book_from_shelf(self.user, shelf=self.shelf, book_or_item=item_b)
+        removed = remove_book_from_shelf(
+            self.user, shelf=self.shelf, book_or_item=item_b
+        )
 
         self.assertTrue(removed)
         self.assertEqual(self._titles_and_positions(), [("A", 0), ("C", 1)])
 
     def test_move_canonicalizes_legacy_duplicates_before_swapping_true_neighbor(self):
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Gamma"), position=0, added_by=self.user)
-        target = ShelfItem.objects.create(shelf=self.shelf, book=self._book("Zulu"), position=1, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Alpha"), position=1, added_by=self.user)
-        ShelfItem.objects.create(shelf=self.shelf, book=self._book("Omega"), position=3, added_by=self.user)
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Gamma"), position=0, added_by=self.user
+        )
+        target = ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Zulu"), position=1, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Alpha"), position=1, added_by=self.user
+        )
+        ShelfItem.objects.create(
+            shelf=self.shelf, book=self._book("Omega"), position=3, added_by=self.user
+        )
 
-        moved = move_shelf_item(self.user, shelf=self.shelf, item=target, direction="up")
+        moved = move_shelf_item(
+            self.user, shelf=self.shelf, item=target, direction="up"
+        )
 
         self.assertEqual(moved.position, 1)
         self.assertEqual(
@@ -281,10 +341,14 @@ class ShelfPositionServiceTests(TestCase):
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("D"))
 
-        moved = set_shelf_item_position(self.user, shelf=self.shelf, item=item_b, position=3)
+        moved = set_shelf_item_position(
+            self.user, shelf=self.shelf, item=item_b, position=3
+        )
 
         self.assertEqual(moved.position, 3)
-        self.assertEqual(self._titles_and_positions(), [("A", 0), ("C", 1), ("D", 2), ("B", 3)])
+        self.assertEqual(
+            self._titles_and_positions(), [("A", 0), ("C", 1), ("D", 2), ("B", 3)]
+        )
 
     def test_set_position_moves_item_up_and_shifts_intervening_items_down(self):
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
@@ -292,20 +356,28 @@ class ShelfPositionServiceTests(TestCase):
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
         item_d = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("D"))
 
-        moved = set_shelf_item_position(self.user, shelf=self.shelf, item=item_d, position=1)
+        moved = set_shelf_item_position(
+            self.user, shelf=self.shelf, item=item_d, position=1
+        )
 
         self.assertEqual(moved.position, 1)
-        self.assertEqual(self._titles_and_positions(), [("A", 0), ("D", 1), ("B", 2), ("C", 3)])
+        self.assertEqual(
+            self._titles_and_positions(), [("A", 0), ("D", 1), ("B", 2), ("C", 3)]
+        )
 
     def test_set_position_clamps_out_of_range_targets(self):
         item_a = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("A"))
         add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("B"))
         item_c = add_book_to_shelf(self.user, shelf=self.shelf, book=self._book("C"))
 
-        moved_last = set_shelf_item_position(self.user, shelf=self.shelf, item=item_a, position=99)
+        moved_last = set_shelf_item_position(
+            self.user, shelf=self.shelf, item=item_a, position=99
+        )
         self.assertEqual(moved_last.position, 2)
         self.assertEqual(self._titles_and_positions(), [("B", 0), ("C", 1), ("A", 2)])
 
-        moved_first = set_shelf_item_position(self.user, shelf=self.shelf, item=item_c, position=-10)
+        moved_first = set_shelf_item_position(
+            self.user, shelf=self.shelf, item=item_c, position=-10
+        )
         self.assertEqual(moved_first.position, 0)
         self.assertEqual(self._titles_and_positions(), [("C", 0), ("B", 1), ("A", 2)])

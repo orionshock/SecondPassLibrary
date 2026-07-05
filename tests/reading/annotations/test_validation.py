@@ -3,6 +3,7 @@ from typing import Any, cast
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 from reading.annotations.views import BATCH_CREATE_LIMIT
 from reading.models import Annotation, ReadingSession
@@ -287,7 +288,7 @@ class AnnotationBatchValidationAPITest(ReadingAPITestBase):
         self.assertEqual(Annotation.objects.filter(session=session).count(), 0)
 
 
-class AnnotationHighlightColorTokenTests(APITestCase):
+class AnnotationHighlightColorTokenTests(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="u1", password="pw", email="u1@example.com"

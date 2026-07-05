@@ -14,16 +14,22 @@ from library.groups.consolidation import (
 )
 from library.groups.public_group import get_public_group
 from library.groups.services import ensure_user_public_membership
-from library.models import BookFile, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.models import (
+    BookFile,
+    BookGroupAssignment,
+    LibraryGroup,
+    LibraryGroupMembership,
+)
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.utils.books import create_file_backed_book
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 User = get_user_model()
 
 
-class AdvancedGroupsConsolidationPlanTest(TestCase):
+class AdvancedGroupsConsolidationPlanTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.public = get_public_group()
         self.owner = User.objects.create_superuser(
@@ -92,7 +98,7 @@ class AdvancedGroupsConsolidationPlanTest(TestCase):
         self.assertTrue(plan.shelf_moves[0].new_name.startswith("Unnamed group "))
 
 
-class AdvancedGroupsConsolidationExecutionTest(TestCase):
+class AdvancedGroupsConsolidationExecutionTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.public = get_public_group()
         self.owner = User.objects.create_superuser(
@@ -134,11 +140,15 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
             visibility=Shelf.VISIBILITY_PRIVATE,
             created_by=self.owner,
         )
-        item = ShelfItem.objects.create(shelf=shelf, book=book, position=7, added_by=self.owner)
+        item = ShelfItem.objects.create(
+            shelf=shelf, book=book, position=7, added_by=self.owner
+        )
         return group, member, backed.book_file, session, annotation, shelf, item
 
     def test_execute_consolidates_by_phase_and_preserves_user_value(self):
-        group, member, book_file, session, annotation, shelf, item = self._custom_group_fixture()
+        group, member, book_file, session, annotation, shelf, item = (
+            self._custom_group_fixture()
+        )
         plan = build_advanced_groups_disable_plan()
 
         with self.assertLogs("library.groups.consolidation", level="INFO") as logs:
@@ -151,7 +161,9 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
         output = "\n".join(logs.output)
         self.assertIn("advanced groups recovery started", output)
         self.assertIn("advanced groups recovery shelves moved count=1", output)
-        self.assertIn("book assignments removed count=1 books_public_fallback=1", output)
+        self.assertIn(
+            "book assignments removed count=1 books_public_fallback=1", output
+        )
         self.assertIn(
             "memberships removed count=1 curator_assignments_removed=1 users_public_fallback=1",
             output,
@@ -161,17 +173,29 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
         self.assertFalse(server_settings.advanced_library_groups_enabled())
         self.assertFalse(LibraryGroup.objects.filter(pk=group.pk).exists())
         self.assertFalse(BookGroupAssignment.objects.filter(group_id=group.pk).exists())
-        self.assertFalse(LibraryGroupMembership.objects.filter(group_id=group.pk).exists())
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(group_id=group.pk).exists()
+        )
 
         shelf.refresh_from_db()
         self.assertEqual(shelf.name, "Bedroom / Favorites")
         self.assertEqual(shelf.owner_group_id, self.public.id)
         self.assertEqual(shelf.owner_type, Shelf.OWNER_TYPE_GROUP)
         self.assertIsNone(shelf.owner_user_id)
-        self.assertTrue(ShelfItem.objects.filter(pk=item.pk, shelf=shelf, position=7).exists())
+        self.assertTrue(
+            ShelfItem.objects.filter(pk=item.pk, shelf=shelf, position=7).exists()
+        )
 
-        self.assertTrue(BookGroupAssignment.objects.filter(book=book_file.book, group=self.public).exists())
-        self.assertTrue(LibraryGroupMembership.objects.filter(user=member, group=self.public).exists())
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(
+                book=book_file.book, group=self.public
+            ).exists()
+        )
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=member, group=self.public
+            ).exists()
+        )
         self.assertTrue(BookFile.objects.filter(pk=book_file.pk).exists())
         self.assertTrue(ReadingSession.objects.filter(pk=session.pk).exists())
         self.assertTrue(ReadingProgress.objects.filter(session=session).exists())
@@ -189,12 +213,19 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
         self.assertTrue(server_settings.advanced_library_groups_enabled())
 
     def test_late_failure_rolls_back_consolidation(self):
-        group, member, _book_file, _session, _annotation, shelf, item = self._custom_group_fixture()
+        group, member, _book_file, _session, _annotation, shelf, item = (
+            self._custom_group_fixture()
+        )
 
-        with patch(
-            "library.groups.consolidation.delete_library_group",
-            side_effect=AdvancedGroupsConsolidationError("boom"),
-        ), patch("library.groups.consolidation_logging.logger.exception") as log_failure:
+        with (
+            patch(
+                "library.groups.consolidation.delete_library_group",
+                side_effect=AdvancedGroupsConsolidationError("boom"),
+            ),
+            patch(
+                "library.groups.consolidation_logging.logger.exception"
+            ) as log_failure,
+        ):
             with self.assertRaises(AdvancedGroupsConsolidationError):
                 execute_advanced_groups_disable_plan(actor=self.owner)
 
@@ -205,5 +236,7 @@ class AdvancedGroupsConsolidationExecutionTest(TestCase):
         self.assertEqual(shelf.owner_group_id, group.id)
         self.assertTrue(ShelfItem.objects.filter(pk=item.pk, shelf=shelf).exists())
         self.assertTrue(BookGroupAssignment.objects.filter(group=group).exists())
-        self.assertTrue(LibraryGroupMembership.objects.filter(user=member, group=group).exists())
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(user=member, group=group).exists()
+        )
         self.assertTrue(LibraryGroup.objects.filter(pk=group.pk).exists())

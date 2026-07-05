@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from PIL import Image
 from rest_framework.test import APITestCase
 
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from accounts.models import UserProfile
 from library.groups.services import (
     add_book_to_group,
@@ -22,7 +23,7 @@ from tests.utils.books import create_file_backed_book
 User = get_user_model()
 
 
-class BaseShelvesAPITest(APITestCase):
+class BaseShelvesAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.public = get_public_group()
 

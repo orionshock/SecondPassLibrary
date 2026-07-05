@@ -15,12 +15,13 @@ from library.groups.services import (
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group, is_public_group
 from tests.utils.books import create_file_backed_book
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 User = get_user_model()
 
 
-class GroupCurationServicesTest(TestCase):
+class GroupCurationServicesTest(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
         self.public = get_public_group()
         self.assertTrue(is_public_group(self.public))

@@ -16,6 +16,7 @@ from library.groups.services import (
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
 from tests.utils.books import create_file_backed_book
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.responses import (
     assert_response,
     payload_list,
@@ -26,7 +27,7 @@ from tests.utils.responses import (
 User = get_user_model()
 
 
-class LibraryGroupPreviewBooksAPITest(APITestCase):
+class LibraryGroupPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.public = get_public_group()
 

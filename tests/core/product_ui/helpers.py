@@ -1,12 +1,14 @@
-"""Shared helpers and base classes for product UI tests."""
+﻿"""Shared helpers and base classes for product UI tests."""
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 User = get_user_model()
 
 
-class ProductUiTestCase(TestCase):
+class ProductUiTestCase(IsolatedMediaRootMixin, TestCase):
     """Base test case with owner and user creation for product UI tests."""
 
     def setUp(self):

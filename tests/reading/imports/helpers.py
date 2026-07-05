@@ -1,10 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 from reading.imports.staging import stage_marginalia_import
 from tests.utils.books import create_file_backed_book
@@ -13,7 +14,7 @@ from tests.utils.books import create_file_backed_book
 User = get_user_model()
 
 
-class MarginaliaImportFixtureMixin:
+class MarginaliaImportFixtureMixin(IsolatedMediaRootMixin):
     def set_up_import_books(self) -> None:
         self.user = User.objects.create_user(username="reader", password="pw")
         self.visible = create_file_backed_book(
@@ -32,7 +33,9 @@ class MarginaliaImportFixtureMixin:
             content = payload
         else:
             content = json.dumps(payload).encode("utf-8")
-        return SimpleUploadedFile("marginalia.json", content, content_type="application/json")
+        return SimpleUploadedFile(
+            "marginalia.json", content, content_type="application/json"
+        )
 
     def post_preview_payload(self, payload: Any):
         return self.client.post(
@@ -44,10 +47,16 @@ class MarginaliaImportFixtureMixin:
     def post_apply_payload(self, payload: Any, *, selection: Any = None):
         data: dict[str, Any] = {"file": self.upload_payload(payload)}
         if selection is not None:
-            data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
-        return self.client.post("/api/v1/reading/import/apply/", data, format="multipart")
+            data["selection"] = (
+                selection if isinstance(selection, str) else json.dumps(selection)
+            )
+        return self.client.post(
+            "/api/v1/reading/import/apply/", data, format="multipart"
+        )
 
-    def post_apply_staged_payload(self, payload: dict[str, Any], *, selection: Any = None):
+    def post_apply_staged_payload(
+        self, payload: dict[str, Any], *, selection: Any = None
+    ):
         return self.post_apply_token(
             stage_marginalia_import(user=self.user, payload=payload),
             selection=selection,
@@ -56,8 +65,12 @@ class MarginaliaImportFixtureMixin:
     def post_apply_token(self, token: str, *, selection: Any = None):
         data: dict[str, Any] = {"import_token": token}
         if selection is not None:
-            data["selection"] = selection if isinstance(selection, str) else json.dumps(selection)
-        return self.client.post("/api/v1/reading/import/apply/", data, format="multipart")
+            data["selection"] = (
+                selection if isinstance(selection, str) else json.dumps(selection)
+            )
+        return self.client.post(
+            "/api/v1/reading/import/apply/", data, format="multipart"
+        )
 
     def preview_marginalia_payload(
         self,
@@ -102,7 +115,9 @@ class MarginaliaImportFixtureMixin:
                             "annotations": [
                                 self.bookmark_entry(),
                                 self.preview_highlight_entry("plain highlight", False),
-                                self.preview_highlight_entry("commented highlight", True),
+                                self.preview_highlight_entry(
+                                    "commented highlight", True
+                                ),
                             ],
                         }
                     ],
@@ -143,7 +158,9 @@ class MarginaliaImportFixtureMixin:
                             "name": "Imported session",
                             "status": status_value,
                             "started_at": "2026-06-01T12:00:00+00:00",
-                            "completed_at": None if status_value == "active" else "2026-06-02T12:00:00+00:00",
+                            "completed_at": None
+                            if status_value == "active"
+                            else "2026-06-02T12:00:00+00:00",
                             "created_at": "2026-06-01T12:00:00+00:00",
                             "updated_at": "2026-06-03T12:00:00+00:00",
                             "notes": "session notes",
@@ -162,7 +179,9 @@ class MarginaliaImportFixtureMixin:
     def bookmark_entry(self) -> dict[str, Any]:
         return {
             "motivation": ["bookmarking"],
-            "target": {"selector": {"type": "FragmentSelector", "value": "epubcfi(/6/2)"}},
+            "target": {
+                "selector": {"type": "FragmentSelector", "value": "epubcfi(/6/2)"}
+            },
             "body": [],
             "is_deleted": False,
             "created_at": "2026-06-01T12:00:00+00:00",
@@ -181,10 +200,14 @@ class MarginaliaImportFixtureMixin:
         motivations = ["highlighting"]
         if commented:
             motivations.append("commenting")
-            body.append({"type": "TextualBody", "purpose": "commenting", "value": "note"})
+            body.append(
+                {"type": "TextualBody", "purpose": "commenting", "value": "note"}
+            )
         return {
             "motivation": motivations,
-            "target": {"selector": {"type": "FragmentSelector", "value": "epubcfi(/6/4)"}},
+            "target": {
+                "selector": {"type": "FragmentSelector", "value": "epubcfi(/6/4)"}
+            },
             "body": body,
             "is_deleted": False,
             "created_at": "2026-06-01T12:00:00+00:00",
@@ -221,7 +244,9 @@ class MarginaliaImportFixtureMixin:
     def commented_highlight_entry(self) -> dict[str, Any]:
         return {
             "motivation": ["highlighting", "commenting"],
-            "target": {"selector": {"type": "FragmentSelector", "value": "epubcfi(/6/8)"}},
+            "target": {
+                "selector": {"type": "FragmentSelector", "value": "epubcfi(/6/8)"}
+            },
             "body": [
                 {
                     "type": "TextualBody",

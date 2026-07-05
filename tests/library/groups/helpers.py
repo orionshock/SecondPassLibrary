@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from rest_framework.test import APITestCase
 
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroupMembership
 
 
-class BaseLibraryGroupsAPITest(APITestCase):
+class BaseLibraryGroupsAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.public = get_public_group()

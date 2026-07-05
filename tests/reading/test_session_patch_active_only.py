@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from reading.models import ReadingSession
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import assert_response, response_data_dict
 
@@ -12,7 +13,7 @@ from tests.utils.responses import assert_response, response_data_dict
 User = get_user_model()
 
 
-class ReadingSessionPatchActiveOnlyTests(APITestCase):
+class ReadingSessionPatchActiveOnlyTests(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="u", password="pw", email="u@example.com"

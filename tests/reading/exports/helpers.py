@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 from accounts.models import UserProfile
 from accounts.services import get_or_create_profile
@@ -25,7 +26,7 @@ def selected_export_payload(*books):
     return {"books": list(books)}
 
 
-class ExportUserMixin:
+class ExportUserMixin(IsolatedMediaRootMixin):
     def create_librarian_user(self, *, username, password="pw"):
         user = User.objects.create_user(username=username, password=password)
         profile = get_or_create_profile(user=user)
@@ -39,14 +40,22 @@ class SingleBookExportFixtureMixin(ExportUserMixin):
         self.user = self.create_librarian_user(username="u1")
         self.other = self.create_librarian_user(username="u2")
 
-        self.book = create_file_backed_book(title="Export Book", epub_bytes=b"export-book").book
-        self.other_book = create_file_backed_book(title="Other Book", epub_bytes=b"other-book").book
+        self.book = create_file_backed_book(
+            title="Export Book", epub_bytes=b"export-book"
+        ).book
+        self.other_book = create_file_backed_book(
+            title="Other Book", epub_bytes=b"other-book"
+        ).book
 
         self.session1 = ReadingSession.objects.create(
             user=self.user, book=self.book, name="First pass", notes="Session notes"
         )
-        self.other_user_session = ReadingSession.objects.create(user=self.other, book=self.book)
-        self.other_book_session = ReadingSession.objects.create(user=self.user, book=self.other_book)
+        self.other_user_session = ReadingSession.objects.create(
+            user=self.other, book=self.book
+        )
+        self.other_book_session = ReadingSession.objects.create(
+            user=self.user, book=self.other_book
+        )
 
         ReadingProgress.objects.create(
             session=self.session1,
@@ -98,7 +107,9 @@ class SingleBookExportFixtureMixin(ExportUserMixin):
         self.session2.is_active = False
         self.session2.status = ReadingSession.STATUS_COMPLETED
         self.session2.completed_at = timezone.now()
-        self.session2.save(update_fields=["is_active", "status", "completed_at", "updated_at"])
+        self.session2.save(
+            update_fields=["is_active", "status", "completed_at", "updated_at"]
+        )
 
     def _book_url(self):
         return "/api/v1/reading/export/"
@@ -122,7 +133,9 @@ class AllExportFixtureMixin(ExportUserMixin):
         self.user = self.create_librarian_user(username="u1")
         self.other = User.objects.create_user(username="u2", password="pw")
 
-        self.book1 = create_file_backed_book(title="Alpha Book", epub_bytes=b"alpha").book
+        self.book1 = create_file_backed_book(
+            title="Alpha Book", epub_bytes=b"alpha"
+        ).book
         self.book2 = create_file_backed_book(title="Beta Book", epub_bytes=b"beta").book
         self.no_session_book = create_file_backed_book(
             title="No Session Book", epub_bytes=b"none"
@@ -159,10 +172,16 @@ class SelectedExportFixtureMixin(ExportUserMixin):
         self.user = self.create_librarian_user(username="u1")
         self.other = self.create_librarian_user(username="u2")
 
-        self.book = create_file_backed_book(title="Selected Export", epub_bytes=b"selected").book
-        self.other_book = create_file_backed_book(title="Other Book", epub_bytes=b"other").book
+        self.book = create_file_backed_book(
+            title="Selected Export", epub_bytes=b"selected"
+        ).book
+        self.other_book = create_file_backed_book(
+            title="Other Book", epub_bytes=b"other"
+        ).book
 
-        self.session1 = ReadingSession.objects.create(user=self.user, book=self.book, name="First")
+        self.session1 = ReadingSession.objects.create(
+            user=self.user, book=self.book, name="First"
+        )
         create_annotation(
             session=self.session1,
             anchor_kind="highlight",
@@ -174,7 +193,9 @@ class SelectedExportFixtureMixin(ExportUserMixin):
         self.session1.status = ReadingSession.STATUS_ARCHIVED
         self.session1.save(update_fields=["is_active", "status", "updated_at"])
 
-        self.session2 = ReadingSession.objects.create(user=self.user, book=self.book, name="Second")
+        self.session2 = ReadingSession.objects.create(
+            user=self.user, book=self.book, name="Second"
+        )
         create_annotation(
             session=self.session2,
             anchor_kind="bookmark",
@@ -184,10 +205,16 @@ class SelectedExportFixtureMixin(ExportUserMixin):
         self.session2.is_active = False
         self.session2.status = ReadingSession.STATUS_COMPLETED
         self.session2.completed_at = timezone.now()
-        self.session2.save(update_fields=["is_active", "status", "completed_at", "updated_at"])
+        self.session2.save(
+            update_fields=["is_active", "status", "completed_at", "updated_at"]
+        )
 
-        self.other_user_session = ReadingSession.objects.create(user=self.other, book=self.book)
-        self.other_book_session = ReadingSession.objects.create(user=self.user, book=self.other_book)
+        self.other_user_session = ReadingSession.objects.create(
+            user=self.other, book=self.book
+        )
+        self.other_book_session = ReadingSession.objects.create(
+            user=self.user, book=self.other_book
+        )
 
     def _url(self):
         return "/api/v1/reading/export/"

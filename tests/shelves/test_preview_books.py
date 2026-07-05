@@ -14,6 +14,7 @@ from library.groups.services import (
 )
 from library.models import LibraryGroup
 from shelves.models import Shelf, ShelfItem
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import (
     assert_response,
@@ -25,7 +26,7 @@ from tests.utils.responses import (
 User = get_user_model()
 
 
-class ShelfPreviewBooksAPITest(APITestCase):
+class ShelfPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.reader = User.objects.create_user(username="reader", password="pw")
         ensure_user_public_membership(user=self.reader)

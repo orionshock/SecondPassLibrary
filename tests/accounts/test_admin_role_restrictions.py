@@ -1,11 +1,15 @@
 from __future__ import annotations
+import importlib
 
 from typing import cast
 
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.urls import clear_url_caches, set_urlconf
+
+import secondpass.urls
 
 from accounts.admin import UserProfileAdmin
 from accounts.models import ExternalIdentity, UserProfile
@@ -14,6 +18,12 @@ from library.models import LibraryGroupMembership
 
 class _DummySite(AdminSite):
     pass
+
+
+def _reload_project_urls() -> None:
+    clear_url_caches()
+    set_urlconf(None)
+    importlib.reload(secondpass.urls)
 
 
 class UserProfileAdminRoleRestrictionTest(TestCase):
@@ -115,27 +125,31 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
             subject="target-subject",
         )
         target_id = self.target.pk
-        self.client.force_login(self.owner)
+        with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True):
+            _reload_project_urls()
+            self.client.force_login(self.owner)
 
-        confirmation = self.client.post(
-            "/admin/auth/user/",
-            {
-                "action": "delete_selected",
-                ACTION_CHECKBOX_NAME: [target_id],
-            },
-        )
-        self.assertEqual(confirmation.status_code, 200)
-        self.assertContains(confirmation, "Are you sure")
+            confirmation = self.client.post(
+                "/admin/auth/user/",
+                {
+                    "action": "delete_selected",
+                    ACTION_CHECKBOX_NAME: [target_id],
+                },
+            )
+            self.assertEqual(confirmation.status_code, 200)
+            self.assertContains(confirmation, "Are you sure")
 
-        response = self.client.post(
-            "/admin/auth/user/",
-            {
-                "action": "delete_selected",
-                ACTION_CHECKBOX_NAME: [target_id],
-                "post": "yes",
-            },
-            follow=False,
-        )
+            response = self.client.post(
+                "/admin/auth/user/",
+                {
+                    "action": "delete_selected",
+                    ACTION_CHECKBOX_NAME: [target_id],
+                    "post": "yes",
+                },
+                follow=False,
+            )
+
+        _reload_project_urls()
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(User.objects.filter(pk=target_id).exists())

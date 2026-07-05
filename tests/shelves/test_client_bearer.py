@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from accounts.services import get_or_create_profile
+from tests.testenv.filesystem import IsolatedMediaRootMixin
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.books import create_file_backed_book
@@ -23,7 +24,7 @@ from tests.utils.responses import (
 User = get_user_model()
 
 
-class ShelvesClientBearerTests(APITestCase):
+class ShelvesClientBearerTests(IsolatedMediaRootMixin, APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="u",
