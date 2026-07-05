@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from decimal import Decimal
 from io import BytesIO
-from typing import Any, cast
+from typing import Any
 
 from django.contrib.auth.models import User
 from PIL import Image
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
@@ -20,6 +19,11 @@ from library.groups.services import (
 )
 from library.models import Author, LibraryGroup, LibraryGroupMembership, Series
 from tests.library.utils import IsolatedMediaRootMixin, paginated_results
+from tests.utils.responses import (
+    assert_response,
+    payload_list,
+    response_data_dict,
+)
 from tests.utils.books import create_file_backed_book
 
 
@@ -86,7 +90,14 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
         self.client.login(username="manager", password="pw")
 
     def _preview_titles(self, row: dict[str, Any]) -> list[str]:
-        return [book["title"] for book in cast(list[dict[str, Any]], row["preview_books"])]
+        return [book["title"] for book in payload_list(row, "preview_books")]
+
+    def _first_row(self, response):
+        rows = paginated_results(response)
+        self.assertTrue(len(rows) >= 1)
+        first = rows[0]
+        self.assertIsInstance(first, dict)
+        return first
 
     def _assert_preview_shape(self, preview: dict[str, Any]):
         self.assertEqual(set(preview.keys()), {"id", "title", "cover_url"})
@@ -99,35 +110,33 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_author_list_omits_preview_books_without_opt_in(self):
         self._login_reader()
 
-        response = cast(Response, self.client.get("/api/v1/library/authors/"))
+        response = assert_response(self.client.get("/api/v1/library/authors/"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        row = cast(dict[str, Any], paginated_results(response)[0])
+        row = self._first_row(response)
         self.assertNotIn("preview_books", row)
 
     def test_author_list_false_opt_in_omits_preview_books(self):
         self._login_reader()
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.get("/api/v1/library/authors/?include_preview_books=false"),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        row = cast(dict[str, Any], paginated_results(response)[0])
+        row = self._first_row(response)
         self.assertNotIn("preview_books", row)
 
     def test_author_list_includes_capped_visible_preview_books_when_opted_in(self):
         self._login_reader()
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.get("/api/v1/library/authors/?include_preview_books=true"),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        row = cast(dict[str, Any], paginated_results(response)[0])
-        previews = cast(list[dict[str, Any]], row["preview_books"])
+        row = self._first_row(response)
+        previews = payload_list(row, "preview_books")
         self.assertEqual(len(previews), 6)
         preview_titles = set(self._preview_titles(row))
         public_titles = {book.title for book in self.public_books}
@@ -136,28 +145,29 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
         self._assert_preview_shape(previews[0])
         for preview in previews:
             if preview["cover_url"] is not None:
-                self.assertTrue(str(preview["cover_url"]).startswith("http://testserver/"))
+                self.assertTrue(
+                    str(preview["cover_url"]).startswith("http://testserver/")
+                )
 
     def test_series_list_omits_preview_books_without_opt_in(self):
         self._login_reader()
 
-        response = cast(Response, self.client.get("/api/v1/library/series/"))
+        response = assert_response(self.client.get("/api/v1/library/series/"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        row = cast(dict[str, Any], paginated_results(response)[0])
+        row = self._first_row(response)
         self.assertNotIn("preview_books", row)
 
     def test_series_list_includes_capped_visible_preview_books_when_opted_in(self):
         self._login_reader()
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.get("/api/v1/library/series/?include_preview_books=true"),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        row = cast(dict[str, Any], paginated_results(response)[0])
-        previews = cast(list[dict[str, Any]], row["preview_books"])
+        row = self._first_row(response)
+        previews = payload_list(row, "preview_books")
         self.assertEqual(len(previews), 6)
         self.assertEqual(
             self._preview_titles(row),
@@ -169,14 +179,13 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_broad_role_preview_books_include_otherwise_hidden_books(self):
         self._login_manager()
 
-        response = cast(
-            Response,
+        response = assert_response(
             self.client.get("/api/v1/library/authors/?include_preview_books=true"),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        row = cast(dict[str, Any], paginated_results(response)[0])
-        previews = cast(list[dict[str, Any]], row["preview_books"])
+        row = self._first_row(response)
+        previews = payload_list(row, "preview_books")
         preview_titles = set(self._preview_titles(row))
         all_titles = {book.title for book in self.public_books} | {"A Hidden"}
         self.assertEqual(len(previews), 6)
@@ -185,18 +194,19 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_author_detail_preview_books_are_opt_in(self):
         self._login_reader()
 
-        plain = cast(Response, self.client.get(f"/api/v1/library/authors/{self.author.id}/"))
-        opted_in = cast(
-            Response,
+        plain = assert_response(
+            self.client.get(f"/api/v1/library/authors/{self.author.id}/")
+        )
+        opted_in = assert_response(
             self.client.get(
                 f"/api/v1/library/authors/{self.author.id}/?include_preview_books=true"
             ),
         )
 
         self.assertEqual(plain.status_code, status.HTTP_200_OK)
-        self.assertNotIn("preview_books", cast(dict[str, Any], plain.data))
+        self.assertNotIn("preview_books", response_data_dict(plain))
         self.assertEqual(opted_in.status_code, status.HTTP_200_OK)
-        payload = cast(dict[str, Any], opted_in.data)
+        payload = response_data_dict(opted_in)
         self.assertEqual(len(payload["preview_books"]), 6)
         preview_titles = set(self._preview_titles(payload))
         self.assertLessEqual(preview_titles, {book.title for book in self.public_books})
@@ -205,18 +215,19 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
     def test_series_detail_preview_books_are_opt_in(self):
         self._login_reader()
 
-        plain = cast(Response, self.client.get(f"/api/v1/library/series/{self.series.id}/"))
-        opted_in = cast(
-            Response,
+        plain = assert_response(
+            self.client.get(f"/api/v1/library/series/{self.series.id}/")
+        )
+        opted_in = assert_response(
             self.client.get(
                 f"/api/v1/library/series/{self.series.id}/?include_preview_books=true"
             ),
         )
 
         self.assertEqual(plain.status_code, status.HTTP_200_OK)
-        self.assertNotIn("preview_books", cast(dict[str, Any], plain.data))
+        self.assertNotIn("preview_books", response_data_dict(plain))
         self.assertEqual(opted_in.status_code, status.HTTP_200_OK)
-        payload = cast(dict[str, Any], opted_in.data)
+        payload = response_data_dict(opted_in)
         self.assertEqual(len(payload["preview_books"]), 6)
         self.assertEqual(
             self._preview_titles(payload),

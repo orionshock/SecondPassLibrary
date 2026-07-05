@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, cast
-
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
@@ -69,96 +67,171 @@ class GroupCurationServicesTest(TestCase):
             group=self.group_reader_only,
         )
 
-        self.book_public = create_file_backed_book(title="Public", assign_public=False).book
+        self.book_public = create_file_backed_book(
+            title="Public", assign_public=False
+        ).book
         ensure_book_public_assignment(book=self.book_public, added_by=None)
 
-        self.book_hidden = create_file_backed_book(title="Hidden", assign_public=False).book
+        self.book_hidden = create_file_backed_book(
+            title="Hidden", assign_public=False
+        ).book
         hidden_group = LibraryGroup.objects.create(name="Hidden")
-        other_user = User.objects.create_user(username="other", email="other@example.com", password="pw")
+        other_user = User.objects.create_user(
+            username="other", email="other@example.com", password="pw"
+        )
         ensure_user_public_membership(user=other_user)
         LibraryGroupMembership.objects.create(user=other_user, group=hidden_group)
-        BookGroupAssignment.objects.create(book=self.book_hidden, group=hidden_group, added_by=self.owner)
+        BookGroupAssignment.objects.create(
+            book=self.book_hidden, group=hidden_group, added_by=self.owner
+        )
 
     def test_manager_can_add_book_to_group(self):
-        assignment = add_book_to_group(actor=self.manager, book=self.book_public, group=self.group)
-        self.assertEqual(cast(Any, assignment).book_id, self.book_public.id)
-        self.assertEqual(cast(Any, assignment).group_id, self.group.id)
+        assignment = add_book_to_group(
+            actor=self.manager, book=self.book_public, group=self.group
+        )
+        self.assertEqual(assignment.book_id, self.book_public.id)
+        self.assertEqual(assignment.group_id, self.group.id)
 
     def test_librarian_can_add_book_to_group(self):
-        assignment = add_book_to_group(actor=self.librarian, book=self.book_public, group=self.group)
-        self.assertEqual(cast(Any, assignment).book_id, self.book_public.id)
-        self.assertEqual(cast(Any, assignment).group_id, self.group.id)
+        assignment = add_book_to_group(
+            actor=self.librarian, book=self.book_public, group=self.group
+        )
+        self.assertEqual(assignment.book_id, self.book_public.id)
+        self.assertEqual(assignment.group_id, self.group.id)
 
     def test_reader_cannot_add_book_to_group(self):
         with self.assertRaises(PermissionDenied):
-            add_book_to_group(actor=self.reader, book=self.book_public, group=self.group)
+            add_book_to_group(
+                actor=self.reader, book=self.book_public, group=self.group
+            )
 
     def test_curator_can_add_visible_book_to_their_non_public_group(self):
-        self.assertTrue(policies.can_view_book(user=self.curator, book=self.book_public))
-        assignment = add_book_to_group(actor=self.curator, book=self.book_public, group=self.group)
-        self.assertEqual(cast(Any, assignment).book_id, self.book_public.id)
-        self.assertEqual(cast(Any, assignment).group_id, self.group.id)
+        self.assertTrue(
+            policies.can_view_book(user=self.curator, book=self.book_public)
+        )
+        assignment = add_book_to_group(
+            actor=self.curator, book=self.book_public, group=self.group
+        )
+        self.assertEqual(assignment.book_id, self.book_public.id)
+        self.assertEqual(assignment.group_id, self.group.id)
 
     def test_curator_cannot_add_inaccessible_book_to_their_group(self):
-        self.assertFalse(policies.can_view_book(user=self.curator, book=self.book_hidden))
+        self.assertFalse(
+            policies.can_view_book(user=self.curator, book=self.book_hidden)
+        )
         with self.assertRaises(PermissionDenied):
-            add_book_to_group(actor=self.curator, book=self.book_hidden, group=self.group)
+            add_book_to_group(
+                actor=self.curator, book=self.book_hidden, group=self.group
+            )
 
     def test_curator_cannot_add_book_to_public(self):
         with self.assertRaises(PermissionDenied):
-            add_book_to_group(actor=self.curator, book=self.book_public, group=self.public)
+            add_book_to_group(
+                actor=self.curator, book=self.book_public, group=self.public
+            )
 
     def test_add_existing_assignment_is_idempotent(self):
-        a1 = add_book_to_group(actor=self.manager, book=self.book_public, group=self.group)
-        a2 = add_book_to_group(actor=self.manager, book=self.book_public, group=self.group)
+        a1 = add_book_to_group(
+            actor=self.manager, book=self.book_public, group=self.group
+        )
+        a2 = add_book_to_group(
+            actor=self.manager, book=self.book_public, group=self.group
+        )
         self.assertEqual(a1.id, a2.id)
-        self.assertEqual(BookGroupAssignment.objects.filter(book=self.book_public, group=self.group).count(), 1)
+        self.assertEqual(
+            BookGroupAssignment.objects.filter(
+                book=self.book_public, group=self.group
+            ).count(),
+            1,
+        )
 
     def test_curator_can_remove_book_from_their_non_public_group(self):
         add_book_to_group(actor=self.manager, book=self.book_public, group=self.group)
-        removed = remove_book_from_group(actor=self.curator, book=self.book_public, group=self.group)
+        removed = remove_book_from_group(
+            actor=self.curator, book=self.book_public, group=self.group
+        )
         self.assertTrue(removed)
-        self.assertFalse(BookGroupAssignment.objects.filter(book=self.book_public, group=self.group).exists())
+        self.assertFalse(
+            BookGroupAssignment.objects.filter(
+                book=self.book_public, group=self.group
+            ).exists()
+        )
 
     def test_curator_cannot_remove_book_from_public(self):
-        self.assertTrue(BookGroupAssignment.objects.filter(book=self.book_public, group=self.public).exists())
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(
+                book=self.book_public, group=self.public
+            ).exists()
+        )
         with self.assertRaises(PermissionDenied):
-            remove_book_from_group(actor=self.curator, book=self.book_public, group=self.public)
+            remove_book_from_group(
+                actor=self.curator, book=self.book_public, group=self.public
+            )
 
     def test_curator_cannot_remove_book_from_group_where_they_are_only_reader(self):
-        add_book_to_group(actor=self.manager, book=self.book_public, group=self.group_reader_only)
+        add_book_to_group(
+            actor=self.manager, book=self.book_public, group=self.group_reader_only
+        )
         with self.assertRaises(PermissionDenied):
-            remove_book_from_group(actor=self.curator, book=self.book_public, group=self.group_reader_only)
+            remove_book_from_group(
+                actor=self.curator, book=self.book_public, group=self.group_reader_only
+            )
 
     def test_removing_last_assignment_reassigns_public(self):
         book = create_file_backed_book(title="OnlyGroup", assign_public=False).book
-        BookGroupAssignment.objects.create(book=book, group=self.group, added_by=self.owner)
-        self.assertFalse(BookGroupAssignment.objects.filter(book=book, group=self.public).exists())
+        BookGroupAssignment.objects.create(
+            book=book, group=self.group, added_by=self.owner
+        )
+        self.assertFalse(
+            BookGroupAssignment.objects.filter(book=book, group=self.public).exists()
+        )
 
-        removed = remove_book_from_group(actor=self.manager, book=book, group=self.group)
+        removed = remove_book_from_group(
+            actor=self.manager, book=book, group=self.group
+        )
         self.assertTrue(removed)
-        self.assertTrue(BookGroupAssignment.objects.filter(book=book, group=self.public).exists())
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(book=book, group=self.public).exists()
+        )
 
-    def test_removing_one_of_multiple_assignments_does_not_add_public_unnecessarily(self):
+    def test_removing_one_of_multiple_assignments_does_not_add_public_unnecessarily(
+        self,
+    ):
         book = create_file_backed_book(title="Multi", assign_public=False).book
         group_a = LibraryGroup.objects.create(name="A")
         group_b = LibraryGroup.objects.create(name="B")
-        BookGroupAssignment.objects.create(book=book, group=group_a, added_by=self.owner)
-        BookGroupAssignment.objects.create(book=book, group=group_b, added_by=self.owner)
+        BookGroupAssignment.objects.create(
+            book=book, group=group_a, added_by=self.owner
+        )
+        BookGroupAssignment.objects.create(
+            book=book, group=group_b, added_by=self.owner
+        )
 
         removed = remove_book_from_group(actor=self.manager, book=book, group=group_a)
         self.assertTrue(removed)
-        groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group_id", flat=True))
+        groups = set(
+            BookGroupAssignment.objects.filter(book=book).values_list(
+                "group_id", flat=True
+            )
+        )
         self.assertEqual(groups, {group_b.id})
 
     def test_manager_can_remove_public_assignment_when_other_assignment_remains(self):
         book = create_file_backed_book(title="TwoGroups", assign_public=False).book
         ensure_book_public_assignment(book=book, added_by=None)
-        BookGroupAssignment.objects.create(book=book, group=self.group, added_by=self.owner)
+        BookGroupAssignment.objects.create(
+            book=book, group=self.group, added_by=self.owner
+        )
 
-        removed = remove_book_from_group(actor=self.manager, book=book, group=self.public)
+        removed = remove_book_from_group(
+            actor=self.manager, book=book, group=self.public
+        )
         self.assertTrue(removed)
-        groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group_id", flat=True))
+        groups = set(
+            BookGroupAssignment.objects.filter(book=book).values_list(
+                "group_id", flat=True
+            )
+        )
         self.assertEqual(groups, {self.group.id})
 
     def test_removing_public_only_assignment_restores_public(self):
@@ -166,7 +239,13 @@ class GroupCurationServicesTest(TestCase):
         ensure_book_public_assignment(book=book, added_by=None)
         self.assertEqual(BookGroupAssignment.objects.filter(book=book).count(), 1)
 
-        removed = remove_book_from_group(actor=self.manager, book=book, group=self.public)
+        removed = remove_book_from_group(
+            actor=self.manager, book=book, group=self.public
+        )
         self.assertTrue(removed)
-        groups = set(BookGroupAssignment.objects.filter(book=book).values_list("group_id", flat=True))
+        groups = set(
+            BookGroupAssignment.objects.filter(book=book).values_list(
+                "group_id", flat=True
+            )
+        )
         self.assertEqual(groups, {self.public.id})
