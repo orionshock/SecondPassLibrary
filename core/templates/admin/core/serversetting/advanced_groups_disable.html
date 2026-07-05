@@ -1,0 +1,151 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <p>
+      This recovery action disables advanced library groups after consolidating
+      custom group state into <strong>{{ plan.public_group_name }}</strong>.
+      It is intentionally destructive to custom group containers.
+    </p>
+    <p>
+      Preserved: books, EPUB files, reading sessions, progress, annotations,
+      users, shelves, shelf items, shelf order, and the Public/Common Room group.
+    </p>
+    <p>
+      Deleted: non-Public group containers, custom memberships, curator
+      assignments, and non-Public book/group associations.
+    </p>
+
+    <h2>Summary</h2>
+    <ul>
+      <li>Advanced groups currently enabled: {{ plan.enabled_before }}</li>
+      <li>Custom groups deleted: {{ plan.summary.custom_groups }}</li>
+      <li>Shelves moved: {{ plan.summary.shelves_moved }}</li>
+      <li>Shelf items preserved: {{ plan.summary.shelf_items_preserved }}</li>
+      <li>Book/group associations removed: {{ plan.summary.book_assignments_removed }}</li>
+      <li>Books expected to fall back to Public: {{ plan.summary.books_expected_public_fallback }}</li>
+      <li>Memberships removed: {{ plan.summary.memberships_removed }}</li>
+      <li>Curator assignments removed: {{ plan.summary.curator_assignments_removed }}</li>
+      <li>Users expected to fall back to Public: {{ plan.summary.users_expected_public_fallback }}</li>
+      <li>Shelf name collision warnings: {{ plan.summary.shelf_name_collisions }}</li>
+    </ul>
+
+    {% if plan.display_limit %}
+      <p>
+        Itemized preview sections are capped at {{ plan.display_limit }} rows.
+        Summary counts show the full planned operation.
+      </p>
+    {% endif %}
+
+    <h2>1. Rename shelves</h2>
+    {% if plan.shelf_moves %}
+      <table>
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Current shelf</th>
+            <th>New shelf name</th>
+            <th>Items</th>
+            <th>Collision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for op in plan.shelf_moves %}
+            <tr>
+              <td>{{ op.group_name }}</td>
+              <td>{{ op.old_name }}</td>
+              <td>{{ op.new_name }}</td>
+              <td>{{ op.item_count }}</td>
+              <td>{{ op.name_collision }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No custom group shelves will be renamed.</p>
+    {% endif %}
+
+    <h2>2. Move shelves to Public Library</h2>
+    <p>
+      Every renamed shelf above will remain group-owned and will be reassigned
+      to <strong>{{ plan.public_group_name }}</strong>. Shelf items and order are preserved.
+    </p>
+
+    <h2>3. Remove non-Public book/group associations</h2>
+    <p>
+      Existing group services will remove these associations and restore books
+      to Public when the final custom association is removed.
+    </p>
+    {% if plan.book_public_fallbacks %}
+      <h3>Books expected to fall back to Public</h3>
+      <ul>
+        {% for op in plan.book_public_fallbacks %}
+          <li>{{ op.title }} from {{ op.removed_group_names|join:", " }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if plan.book_assignment_removals %}
+      <details>
+        <summary>Book association removals</summary>
+        <ul>
+          {% for op in plan.book_assignment_removals %}
+            <li>{{ op.title }} from {{ op.group_name }}</li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+
+    <h2>4. Remove group users/memberships/curators</h2>
+    <p>
+      Existing group services will remove memberships and restore users to
+      Public when the final custom membership is removed.
+    </p>
+    {% if plan.user_public_fallbacks %}
+      <h3>Users expected to fall back to Public</h3>
+      <ul>
+        {% for op in plan.user_public_fallbacks %}
+          <li>{{ op.username }} from {{ op.removed_group_names|join:", " }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if plan.membership_removals %}
+      <details>
+        <summary>Membership removals</summary>
+        <ul>
+          {% for op in plan.membership_removals %}
+            <li>
+              {{ op.username }} from {{ op.group_name }}
+              {% if op.is_curator %}(curator){% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+
+    <h2>5. Delete custom groups</h2>
+    {% if plan.group_deletions %}
+      <ul>
+        {% for op in plan.group_deletions %}
+          <li>{{ op.name }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No custom groups remain to delete.</p>
+    {% endif %}
+
+    <h2>6. Disable advanced groups</h2>
+    <p>
+      The setting is changed only after all consolidation phases and assertions succeed.
+    </p>
+
+    <form method="post" novalidate
+          onsubmit="return confirm('Disable advanced library groups and consolidate custom groups into Public Library?');">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="submit-row">
+        <input type="submit" value="Disable and consolidate" class="deletelink">
+        <a href="{% url 'admin:core_serversetting_changelist' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

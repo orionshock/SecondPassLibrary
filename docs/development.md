@@ -87,11 +87,13 @@ The setup page initializes:
   membership in the Public group
 
 Email and the display-name fields are optional account metadata. `Common Room`
-is the default display name for the protected shared public library space
+  is the default display name for the protected shared public library space
 managed by librarians and managers. Enabling advanced library groups presents
 separate curator-managed rooms as a first-class UI feature and enables normal
-non-Public group mutation workflows. Once an active Owner exists, `/setup/` is disabled
-and normal login at `/api-auth/login/` is used.
+non-Public group mutation workflows. Product UI does not provide a disable
+control after enablement; disabling is a Django admin recovery flow that
+consolidates custom group state into Public/Common Room. Once an active Owner
+exists, `/setup/` is disabled and normal login at `/api-auth/login/` is used.
 
 Raw `python manage.py runserver` remains available, but it does not create or
 migrate the database schema. If using raw `runserver`, set `DJANGO_DEBUG=1` for
@@ -171,6 +173,8 @@ Practical notes:
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is set. The local production helper sets
   this for operator testing only when the variable is unset and respects an
   explicit `0`; the settings default leaves the route unregistered.
+- Use the admin recovery action to disable advanced library groups after use;
+  do not manually flip `advanced_library_groups_enabled` false.
 - HTTP Basic authentication is not enabled. Non-browser reader clients should use
   the Client API bearer-token flow where supported.
 

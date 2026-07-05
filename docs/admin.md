@@ -21,10 +21,31 @@ Product UI with an explicit confirmation. Product UI does not offer a normal
 disable action after enablement.
 
 If an operator needs to reverse the setting, expose Django admin intentionally
-and edit `core.ServerSetting(advanced_library_groups_enabled)`. Treat disabling
-as recovery work: existing non-Public groups, memberships, assignments, and
-group-owned shelves remain data, but Product UI hides advanced management
-entry points and normal group mutation endpoints are blocked while disabled.
+and use the recovery action:
+
+```text
+/admin/core/serversetting/advanced-groups-disable/
+```
+
+Do not manually flip `core.ServerSetting(advanced_library_groups_enabled)` to
+false. Normal admin editing blocks that change. The recovery flow previews the
+planned changes, requires explicit confirmation, then runs inside one database
+transaction.
+
+The recovery flow:
+
+- renames non-Public group shelves as `<group name> / <shelf name>`
+- moves those shelves to the Public/Common Room group while preserving shelf
+  rows, shelf items, and item order
+- removes non-Public book/group associations through the existing group services
+  so orphaned books naturally fall back to Public
+- removes non-Public memberships and curator assignments through the existing
+  group services so orphaned users naturally fall back to Public
+- deletes the now-empty custom group containers
+- disables advanced library groups only after consolidation succeeds
+
+Books, BookFile rows/assets, users, reading sessions, progress, annotations,
+Public/Common Room identity, shelves, and shelf items are preserved.
 
 ## BookFile Repair
 

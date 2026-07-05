@@ -224,10 +224,14 @@ disabled.
 
 An Owner can enable advanced library groups from Product UI with an explicit
 confirmation. Product UI does not offer a disable action after enablement;
-disabling later is an operator recovery action through Django admin. Public
-Library/Common Room remains available while advanced groups are disabled:
-Public display name/description are still managed through Server Settings, and
-librarian/manager Public book assignment behavior remains available.
+disabling later is an operator recovery action through Django admin, not a
+manual setting edit. That recovery action renames and moves custom group-owned
+shelves into Public, removes custom group book/user associations through the
+normal group services, deletes the custom group containers, then disables the
+feature. Public Library/Common Room remains available while advanced groups are
+disabled: Public display name/description are still managed through Server
+Settings, and librarian/manager Public book assignment behavior remains
+available.
 
 Role constraints:
 

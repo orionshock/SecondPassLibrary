@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from django.contrib.admin.sites import AdminSite
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, TestCase
 
+from core import server_settings
+from core.admin import ServerSettingAdmin, ServerSettingAdminForm
+from core.models import ServerSetting
 from library.admin import LibraryGroupAdmin, LibraryGroupMembershipAdmin
 from library.groups.services import ensure_user_public_membership
 from library.groups.public_group import get_public_group
@@ -50,3 +55,86 @@ class LibraryAdminSafetyTest(TestCase):
         request.user = self.staff
         readonly = set(self.group_admin.get_readonly_fields(request, obj=self.public))
         self.assertIn("name", readonly)
+
+
+class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
+    def setUp(self):
+        self.site = _DummySite()
+        self.admin = ServerSettingAdmin(ServerSetting, self.site)
+        self.factory = RequestFactory()
+        self.staff = User.objects.create_user(
+            username="staff", email="staff@example.com", password="pw", is_staff=True
+        )
+        self.owner = User.objects.create_superuser(
+            username="owner", email="owner@example.com", password="pw"
+        )
+
+    def _attach_messages(self, request):
+        setattr(request, "session", {})
+        setattr(request, "_messages", FallbackStorage(request))
+
+    def test_normal_admin_form_cannot_flip_advanced_groups_false(self):
+        setting = server_settings.set_server_setting(
+            key=server_settings.ADVANCED_LIBRARY_GROUPS_SETTING,
+            value=True,
+            description="test",
+        )
+
+        form = ServerSettingAdminForm(
+            data={
+                "key": server_settings.ADVANCED_LIBRARY_GROUPS_SETTING,
+                "value": "false",
+                "description": "test",
+            },
+            instance=setting,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("recovery flow", str(form.errors))
+
+    def test_recovery_view_requires_superuser(self):
+        request = self.factory.get("/admin/core/serversetting/advanced-groups-disable/")
+        request.user = self.staff
+
+        with self.assertRaises(PermissionDenied):
+            self.admin.advanced_groups_disable_view(request)
+
+    def test_recovery_preview_renders_summary_context_for_superuser(self):
+        request = self.factory.get("/admin/core/serversetting/advanced-groups-disable/")
+        request.user = self.owner
+
+        response = self.admin.advanced_groups_disable_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context_data["plan"].phases[0], "Rename shelves")
+        self.assertEqual(response.context_data["display_limit"], 100)
+
+    def test_recovery_post_requires_confirmation(self):
+        request = self.factory.post(
+            "/admin/core/serversetting/advanced-groups-disable/",
+            data={"fingerprint": "anything"},
+        )
+        request.user = self.owner
+
+        response = self.admin.advanced_groups_disable_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context_data["form"].is_valid())
+
+    def test_recovery_stale_fingerprint_does_not_execute(self):
+        request = self.factory.post(
+            "/admin/core/serversetting/advanced-groups-disable/",
+            data={
+                "fingerprint": "stale",
+                "confirm": "on",
+                "confirmation_text": "DISABLE ADVANCED GROUPS",
+            },
+        )
+        request.user = self.owner
+        self._attach_messages(request)
+
+        response = self.admin.advanced_groups_disable_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(server_settings.advanced_library_groups_enabled() is False)
+        self.assertEqual(response.context_data["form"].initial["fingerprint"], response.context_data["plan"].fingerprint)
