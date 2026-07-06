@@ -18,6 +18,28 @@ SERVER_BANNER_MESSAGE_MAX_LEN = 500
 DEFAULT_SERVER_NAME = "Second Pass Library"
 ADVANCED_LIBRARY_GROUPS_SETTING = "advanced_library_groups_enabled"
 
+EDITABLE_SERVER_SETTING_DEFAULTS = {
+    SERVER_NAME_SETTING: {
+        "value": DEFAULT_SERVER_NAME,
+        "description": "Server display name used in UI and discovery.",
+    },
+    SERVER_DESCRIPTION_SETTING: {
+        "value": "",
+        "description": "Optional server description used in discovery.",
+    },
+    SERVER_BANNER_MESSAGE_SETTING: {
+        "value": "",
+        "description": "Optional banner message shown at the top of the dashboard.",
+    },
+    ADVANCED_LIBRARY_GROUPS_SETTING: {
+        "value": False,
+        "description": (
+            "Whether advanced multi-group management should be presented as a "
+            "first-class Product UI feature."
+        ),
+    },
+}
+
 
 def clear_server_settings_cache() -> None:
     cache.delete(SERVER_SETTINGS_CACHE_KEY)
@@ -44,7 +66,9 @@ def get_server_setting(key: str, default: Any | None = None) -> Any:
 
 def set_server_setting(*, key: str, value: Any, description: str = "") -> ServerSetting:
     with transaction.atomic():
-        obj, _created = ServerSetting.objects.get_or_create(key=key, defaults={"value": value})
+        obj, _created = ServerSetting.objects.get_or_create(
+            key=key, defaults={"value": value}
+        )
         updates: dict[str, Any] = {}
         if obj.value != value:
             updates["value"] = value
@@ -56,6 +80,22 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
             obj.save(update_fields=[*updates.keys(), "updated_at"])
     clear_server_settings_cache()
     return obj
+
+
+def ensure_editable_server_settings() -> None:
+    created = False
+    with transaction.atomic():
+        for key, defaults in EDITABLE_SERVER_SETTING_DEFAULTS.items():
+            _obj, was_created = ServerSetting.objects.get_or_create(
+                key=key,
+                defaults={
+                    "value": defaults["value"],
+                    "description": defaults["description"],
+                },
+            )
+            created = created or was_created
+    if created:
+        clear_server_settings_cache()
 
 
 def _normalize_str(value: Any) -> str:
@@ -76,7 +116,9 @@ def set_server_name(value: str) -> None:
     if not normalized:
         raise ValueError("Server name is required.")
     if len(normalized) > SERVER_NAME_MAX_LEN:
-        raise ValueError(f"Server name must be at most {SERVER_NAME_MAX_LEN} characters.")
+        raise ValueError(
+            f"Server name must be at most {SERVER_NAME_MAX_LEN} characters."
+        )
     set_server_setting(
         key=SERVER_NAME_SETTING,
         value=normalized,

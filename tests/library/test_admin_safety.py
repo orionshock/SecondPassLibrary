@@ -3,8 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from django.contrib.admin.sites import AdminSite
+from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.auth.models import User
+from django import forms
 from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, TestCase
 
@@ -18,7 +20,7 @@ from library.admin import (
     LibraryGroupMembershipAdmin,
 )
 from library.groups.services import ensure_user_public_membership
-from library.groups.public_group import get_public_group
+from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, get_public_group
 from library.models import (
     Book,
     BookGroupAssignment,
@@ -233,10 +235,123 @@ class AdvancedGroupsRecoveryAdminSafetyTest(TestCase):
         self.owner = User.objects.create_superuser(
             username="owner", email="owner@example.com", password="pw"
         )
+        self.public = get_public_group()
 
     def _attach_messages(self, request):
         setattr(request, "session", {})
         setattr(request, "_messages", FallbackStorage(request))
+
+    def test_server_settings_changelist_has_operator_columns(self):
+        self.assertEqual(
+            self.admin.list_display,
+            ["display_key", "value", "description", "updated_at"],
+        )
+
+    def test_server_settings_display_key_is_readable_without_changing_stored_key(self):
+        setting = ServerSetting(
+            key=server_settings.SERVER_NAME_SETTING,
+            value="Second Pass Library",
+            description="test",
+        )
+
+        self.assertEqual(str(setting.display_key), "Server Name")
+        self.assertEqual(str(setting), "Server Name")
+        self.assertEqual(str(self.admin.display_key(setting)), "Server Name")
+        self.assertEqual(setting.key, "server_name")
+
+    def test_server_settings_changelist_ensures_server_banner_row(self):
+        request = self.factory.get("/admin/core/serversetting/")
+        request.user = self.owner
+
+        keys = set(self.admin.get_queryset(request).values_list("key", flat=True))
+        banner = ServerSetting.objects.get(
+            key=server_settings.SERVER_BANNER_MESSAGE_SETTING
+        )
+
+        self.assertIn(server_settings.SERVER_BANNER_MESSAGE_SETTING, keys)
+        self.assertEqual(str(banner.display_key), "Server Banner Message")
+        self.assertEqual(banner.value, "")
+
+    def test_normal_server_setting_form_hides_key_and_locks_description_first(self):
+        setting = server_settings.set_server_setting(
+            key=server_settings.SERVER_NAME_SETTING,
+            value="Second Pass Library",
+            description="Server display name used in UI and discovery.",
+        )
+        request = self.factory.get(f"/admin/core/serversetting/{setting.pk}/change/")
+        request.user = self.owner
+
+        fieldsets = self.admin.get_fieldsets(request, obj=setting)
+        readonly = self.admin.get_readonly_fields(request, obj=setting)
+        fields = fieldsets[0][1]["fields"]
+
+        self.assertEqual(fields, ("description", "value", "created_at", "updated_at"))
+        self.assertIn("description", readonly)
+        self.assertNotIn("key", fields)
+
+    def test_server_name_setting_uses_one_line_value_field(self):
+        setting = ServerSetting(
+            key=server_settings.SERVER_NAME_SETTING,
+            value="Second Pass Library",
+            description="test",
+        )
+
+        form = ServerSettingAdminForm(instance=setting)
+
+        self.assertIsInstance(form.fields["value"].widget, forms.TextInput)
+        self.assertEqual(
+            form.fields["value"].max_length,
+            server_settings.SERVER_NAME_MAX_LEN,
+        )
+
+    def test_banner_and_description_settings_use_textarea_value_fields(self):
+        for key, max_length in (
+            (
+                server_settings.SERVER_BANNER_MESSAGE_SETTING,
+                server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
+            ),
+            (
+                server_settings.SERVER_DESCRIPTION_SETTING,
+                server_settings.SERVER_DESCRIPTION_MAX_LEN,
+            ),
+        ):
+            setting = ServerSetting(key=key, value="", description="test")
+
+            form = ServerSettingAdminForm(instance=setting)
+
+            self.assertIsInstance(form.fields["value"].widget, forms.Textarea)
+            self.assertFalse(form.fields["value"].required)
+            self.assertEqual(form.fields["value"].max_length, max_length)
+
+    def test_public_group_setting_uses_library_group_autocomplete_value_field(self):
+        setting = ServerSetting(
+            key=PUBLIC_GROUP_ID_SETTING,
+            value=str(self.public.id),
+            description="test",
+        )
+        request = self.factory.get("/admin/core/serversetting/")
+        request.user = self.owner
+        form_class = self.admin.get_form(request, obj=setting)
+
+        form = form_class(instance=setting)
+
+        self.assertIsInstance(form.fields["value"], forms.ModelChoiceField)
+        self.assertIsInstance(form.fields["value"].widget, AutocompleteSelect)
+        self.assertEqual(form.fields["value"].queryset.model, LibraryGroup)
+        self.assertEqual(form.fields["value"].widget.field.model, BookGroupAssignment)
+        self.assertEqual(form.fields["value"].widget.field.name, "group")
+
+    def test_public_group_setting_saves_group_id_as_json_value(self):
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        request = self.factory.get("/admin/core/serversetting/")
+        request.user = self.owner
+        form_class = self.admin.get_form(request, obj=setting)
+        other_group = LibraryGroup.objects.create(name="Other Room")
+
+        form = form_class(data={"value": str(other_group.id)}, instance=setting)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["value"], str(other_group.id))
 
     def test_normal_admin_form_cannot_flip_advanced_groups_false(self):
         setting = server_settings.set_server_setting(

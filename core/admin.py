@@ -1,11 +1,14 @@
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import AutocompleteSelect
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
+from library.models import BookGroupAssignment, LibraryGroup
 from library.groups.consolidation import (
     AdvancedGroupsConsolidationError,
     AdvancedGroupsConsolidationNotNeeded,
@@ -18,9 +21,59 @@ from .models import ServerSetting
 
 
 class ServerSettingAdminForm(forms.ModelForm):
+    admin_site = None
+
     class Meta:
         model = ServerSetting
-        fields = "__all__"
+        fields = ["value"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._configure_value_field()
+
+    def _configure_value_field(self):
+        value = self.instance.value if self.instance and self.instance.pk else None
+        key = self.instance.key if self.instance and self.instance.pk else ""
+
+        if key == server_settings.SERVER_NAME_SETTING:
+            self.fields["value"] = forms.CharField(
+                label="Value",
+                max_length=server_settings.SERVER_NAME_MAX_LEN,
+                widget=forms.TextInput,
+                initial=value,
+            )
+            return
+
+        if key == server_settings.SERVER_DESCRIPTION_SETTING:
+            self.fields["value"] = forms.CharField(
+                label="Value",
+                required=False,
+                max_length=server_settings.SERVER_DESCRIPTION_MAX_LEN,
+                widget=forms.Textarea,
+                initial=value,
+            )
+            return
+
+        if key == server_settings.SERVER_BANNER_MESSAGE_SETTING:
+            self.fields["value"] = forms.CharField(
+                label="Value",
+                required=False,
+                max_length=server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
+                widget=forms.Textarea,
+                initial=value,
+            )
+            return
+
+        if key == PUBLIC_GROUP_ID_SETTING:
+            group_field = BookGroupAssignment._meta.get_field("group")
+            widget = AutocompleteSelect(group_field, self.admin_site)
+            self.fields["value"] = forms.ModelChoiceField(
+                label="Value",
+                queryset=LibraryGroup.objects.order_by("name"),
+                required=True,
+                widget=widget,
+                initial=value,
+            )
 
     def clean(self):
         cleaned = super().clean()
@@ -36,6 +89,12 @@ class ServerSettingAdminForm(forms.ModelForm):
                 "Use the advanced library groups recovery flow to disable this setting."
             )
         return cleaned
+
+    def clean_value(self):
+        value = self.cleaned_data["value"]
+        if self.instance.key == PUBLIC_GROUP_ID_SETTING:
+            return str(value.pk)
+        return value
 
 
 class AdvancedGroupsDisableAdminForm(forms.Form):
@@ -62,15 +121,23 @@ class AdvancedGroupsDisableAdminForm(forms.Form):
 @admin.register(ServerSetting)
 class ServerSettingAdmin(admin.ModelAdmin):
     form = ServerSettingAdminForm
-    list_display = ["key", "updated_at"]
+    list_display = ["display_key", "value", "description", "updated_at"]
     search_fields = ["key", "description"]
-    readonly_fields = ["key", "created_at", "updated_at"]
+    readonly_fields = ["description", "created_at", "updated_at"]
 
     def _is_advanced_groups_setting(self, obj) -> bool:
         return (
             obj is not None
             and obj.key == server_settings.ADVANCED_LIBRARY_GROUPS_SETTING
         )
+
+    @admin.display(description="Key", ordering="key")
+    def display_key(self, obj):
+        return obj.display_key
+
+    def get_queryset(self, request):
+        server_settings.ensure_editable_server_settings()
+        return super().get_queryset(request)
 
     def get_urls(self):
         urls = super().get_urls()
@@ -98,10 +165,25 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 ),
                 (
                     "Database metadata",
-                    {"classes": ("collapse",), "fields": ("key", "created_at", "updated_at")},
+                    {
+                        "classes": ("collapse",),
+                        "fields": ("key", "created_at", "updated_at"),
+                    },
                 ),
             )
-        return super().get_fieldsets(request, obj=obj)
+        return (
+            (
+                None,
+                {
+                    "fields": (
+                        "description",
+                        "value",
+                        "created_at",
+                        "updated_at",
+                    )
+                },
+            ),
+        )
 
     def get_readonly_fields(self, request, obj=None):
         fields = list(super().get_readonly_fields(request, obj=obj))
@@ -117,12 +199,19 @@ class ServerSettingAdmin(admin.ModelAdmin):
             )
         return list(dict.fromkeys(fields))
 
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj=obj, change=change, **kwargs)
+        form.admin_site = self.admin_site
+        return form
+
     def has_delete_permission(self, request, obj=None):
         if self._is_advanced_groups_setting(obj):
             return False
         return super().has_delete_permission(request, obj=obj)
 
-    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+    def render_change_form(
+        self, request, context, add=False, change=False, form_url="", obj=None
+    ):
         if self._is_advanced_groups_setting(obj):
             context.update(
                 {
@@ -160,7 +249,9 @@ class ServerSettingAdmin(admin.ModelAdmin):
         if obj.key != server_settings.ADVANCED_LIBRARY_GROUPS_SETTING:
             return ""
         url = reverse("admin:core_serversetting_advanced_groups_disable")
-        return format_html('<a href="{}">Disable and consolidate into Public Library</a>', url)
+        return format_html(
+            '<a href="{}">Disable and consolidate into Public Library</a>', url
+        )
 
     def advanced_groups_disable_view(self, request):
         if not request.user.is_superuser:
@@ -183,7 +274,9 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     )
                 except AdvancedGroupsConsolidationNotNeeded as exc:
                     messages.info(request, str(exc))
-                    return HttpResponseRedirect(reverse("admin:core_serversetting_changelist"))
+                    return HttpResponseRedirect(
+                        reverse("admin:core_serversetting_changelist")
+                    )
                 except AdvancedGroupsConsolidationError as exc:
                     messages.error(request, f"Recovery failed: {exc}")
                     plan = build_advanced_groups_disable_plan(display_limit=100)
@@ -197,7 +290,9 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     )
                     return self._advanced_groups_completion_response(request, result)
         else:
-            form = AdvancedGroupsDisableAdminForm(initial={"fingerprint": plan.fingerprint})
+            form = AdvancedGroupsDisableAdminForm(
+                initial={"fingerprint": plan.fingerprint}
+            )
 
         context = {
             **self.admin_site.each_context(request),

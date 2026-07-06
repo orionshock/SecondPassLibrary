@@ -37,7 +37,16 @@
       "requirements.txt",
       "**/tools/**",
       "web/static/web/favicon.png"
-    ]
+    ],
+    "sqltools.connections": [
+      {
+        "previewLimit": 50,
+        "driver": "SQLite",
+        "database": "${workspaceFolder:SecondPassLibrary}/userdata/db/db.sqlite3",
+        "name": "SPL userdate db"
+      }
+    ],
+    "sqltools.useNodeRuntime": true
   },
   "extensions": {
     "recommendations": [

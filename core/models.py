@@ -5,6 +5,8 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+from .server_setting_labels import server_setting_display_name
+
 
 class UUIDModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -37,8 +39,12 @@ class ServerSetting(TimeStampedModel):
     class Meta:
         ordering = ["key"]
 
+    @property
+    def display_key(self):
+        return server_setting_display_name(self.key)
+
     def __str__(self):
-        return self.key
+        return str(self.display_key)
 
 
 def _default_idempotency_expires_at():

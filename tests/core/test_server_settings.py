@@ -13,6 +13,7 @@ from core.server_settings import (
     get_server_banner_message,
     get_server_setting,
     get_server_settings_map,
+    ensure_editable_server_settings,
     set_advanced_library_groups_enabled,
     set_server_banner_message,
     set_server_setting,
@@ -48,6 +49,14 @@ class ServerSettingsServiceTests(TestCase):
     def test_server_banner_message_rejects_overlong_value(self):
         with self.assertRaises(ValueError):
             set_server_banner_message("x" * 501)
+
+    def test_ensure_editable_server_settings_creates_optional_banner_row(self):
+        ensure_editable_server_settings()
+
+        setting = ServerSetting.objects.get(key="server_banner_message")
+
+        self.assertEqual(setting.value, "")
+        self.assertEqual(str(setting.display_key), "Server Banner Message")
 
     def test_advanced_library_groups_are_disabled_by_default(self):
         self.assertFalse(advanced_library_groups_enabled())
@@ -119,41 +128,59 @@ class ServerSettingsServiceTests(TestCase):
 
     def test_get_public_group_repairs_invalid_string_setting_to_new_default(self):
         existing = LibraryGroup.objects.create(name=DEFAULT_PUBLIC_GROUP_NAME)
-        set_server_setting(key=PUBLIC_GROUP_ID_SETTING, value="not-a-uuid", description="")
+        set_server_setting(
+            key=PUBLIC_GROUP_ID_SETTING, value="not-a-uuid", description=""
+        )
         clear_server_settings_cache()
 
         repaired = get_public_group()
         self.assertNotEqual(repaired.id, existing.id)
         self.assertEqual(repaired.name, DEFAULT_PUBLIC_GROUP_NAME)
-        self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(repaired.id))
+        self.assertEqual(
+            ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value,
+            str(repaired.id),
+        )
 
     def test_get_public_group_repairs_invalid_type_setting_to_new_default(self):
         existing = LibraryGroup.objects.create(name="Public")
-        set_server_setting(key=PUBLIC_GROUP_ID_SETTING, value=["not-a-uuid"], description="")
+        set_server_setting(
+            key=PUBLIC_GROUP_ID_SETTING, value=["not-a-uuid"], description=""
+        )
         clear_server_settings_cache()
 
         repaired = get_public_group()
         self.assertNotEqual(repaired.id, existing.id)
         self.assertEqual(repaired.name, DEFAULT_PUBLIC_GROUP_NAME)
-        self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(repaired.id))
+        self.assertEqual(
+            ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value,
+            str(repaired.id),
+        )
 
-    def test_get_public_group_does_not_adopt_group_named_public_when_setting_missing(self):
+    def test_get_public_group_does_not_adopt_group_named_public_when_setting_missing(
+        self,
+    ):
         ordinary = LibraryGroup.objects.create(name="Public")
 
         public = get_public_group()
 
         self.assertNotEqual(public.id, ordinary.id)
         self.assertEqual(public.name, DEFAULT_PUBLIC_GROUP_NAME)
-        self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id))
+        self.assertEqual(
+            ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id)
+        )
 
-    def test_get_public_group_does_not_adopt_group_named_default_when_setting_missing(self):
+    def test_get_public_group_does_not_adopt_group_named_default_when_setting_missing(
+        self,
+    ):
         ordinary = LibraryGroup.objects.create(name=DEFAULT_PUBLIC_GROUP_NAME)
 
         public = get_public_group()
 
         self.assertNotEqual(public.id, ordinary.id)
         self.assertEqual(public.name, DEFAULT_PUBLIC_GROUP_NAME)
-        self.assertEqual(ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id))
+        self.assertEqual(
+            ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value, str(public.id)
+        )
 
     def test_get_public_group_preserves_configured_display_name(self):
         group = get_public_group()
