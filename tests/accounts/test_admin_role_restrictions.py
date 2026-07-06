@@ -3,15 +3,16 @@ import importlib
 
 from typing import cast
 
+from django.contrib import admin
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import clear_url_caches, set_urlconf
 
 import secondpass.urls
 
-from accounts.admin import UserProfileAdmin
+from accounts.admin import SecondPassUserAdmin, UserProfileAdmin
 from accounts.models import ExternalIdentity, UserProfile
 from library.models import LibraryGroupMembership
 
@@ -107,15 +108,11 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
     def test_profile_delete_permission_uses_standard_admin_permissions(self):
         owner_request = self.factory.get("/")
         owner_request.user = self.owner
-        self.assertTrue(
-            self.admin.has_delete_permission(owner_request, self.profile)
-        )
+        self.assertTrue(self.admin.has_delete_permission(owner_request, self.profile))
 
         staff_request = self.factory.get("/")
         staff_request.user = self.staff
-        self.assertFalse(
-            self.admin.has_delete_permission(staff_request, self.profile)
-        )
+        self.assertFalse(self.admin.has_delete_permission(staff_request, self.profile))
 
     def test_owner_can_delete_user_through_django_admin(self):
         ExternalIdentity.objects.create(
@@ -168,3 +165,36 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
             UserProfileAdmin.username.admin_order_field,
             "user__username",
         )
+
+
+class BuiltInAuthAdminSurfaceTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.owner = User.objects.create_superuser(
+            username="owner-auth-admin",
+            email="owner-auth-admin@example.com",
+            password="pw",
+        )
+
+    def test_django_auth_group_model_is_not_registered_in_admin(self):
+        self.assertNotIn(Group, admin.site._registry)
+
+    def test_user_admin_keeps_status_fields_without_group_or_permission_pickers(self):
+        user_admin = admin.site._registry[User]
+        request = self.factory.get("/admin/auth/user/")
+        request.user = self.owner
+
+        fieldsets = user_admin.get_fieldsets(request, obj=self.owner)
+        flattened_fields = [
+            field for _title, options in fieldsets for field in options["fields"]
+        ]
+
+        self.assertIsInstance(user_admin, SecondPassUserAdmin)
+        self.assertIn("is_active", flattened_fields)
+        self.assertIn("is_staff", flattened_fields)
+        self.assertIn("is_superuser", flattened_fields)
+        self.assertNotIn("groups", flattened_fields)
+        self.assertNotIn("user_permissions", flattened_fields)
+        self.assertNotIn("groups", user_admin.filter_horizontal)
+        self.assertNotIn("user_permissions", user_admin.filter_horizontal)
+        self.assertNotIn("groups", user_admin.list_filter)
