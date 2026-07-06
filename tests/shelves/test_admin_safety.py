@@ -286,6 +286,12 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertFalse(widget.can_delete_related)
         self.assertTrue(hasattr(widget, "can_view_related"))
 
+    def assert_library_group_related_widget_is_view_only(self, widget):
+        self.assertFalse(widget.can_add_related)
+        self.assertFalse(widget.can_change_related)
+        self.assertFalse(widget.can_delete_related)
+        self.assertTrue(hasattr(widget, "can_view_related"))
+
     def test_shelf_admin_user_widgets_keep_only_view_related_control(self):
         self.request.user = self.superuser
 
@@ -293,3 +299,11 @@ class ShelfAdminSafetyTests(TestCase):
             field = Shelf._meta.get_field(field_name)
             formfield = self.shelf_admin.formfield_for_dbfield(field, self.request)
             self.assert_user_related_widget_is_view_only(formfield.widget)
+
+    def test_shelf_admin_group_widget_keeps_only_view_related_control(self):
+        self.request.user = self.superuser
+
+        field = Shelf._meta.get_field("owner_group")
+        formfield = self.shelf_admin.formfield_for_dbfield(field, self.request)
+
+        self.assert_library_group_related_widget_is_view_only(formfield.widget)

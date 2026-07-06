@@ -10,7 +10,11 @@ from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.utils.html import format_html
 
-from core.admin_widgets import UserRelatedViewOnlyControlsMixin
+from core.admin_widgets import (
+    UserRelatedViewOnlyControlsMixin,
+    keep_only_view_related_control_for_models,
+)
+from library.models import LibraryGroup
 
 from .models import Shelf, ShelfItem
 from .services import canonicalize_shelf_positions
@@ -58,6 +62,16 @@ class ShelfAdminForm(forms.ModelForm):
             self.add_error("owner_type", "Invalid owner type.")
 
         return cleaned_data
+
+
+class LibraryGroupRelatedViewOnlyControlsMixin:
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        return keep_only_view_related_control_for_models(
+            formfield,
+            db_field,
+            {LibraryGroup},
+        )
 
 
 class ShelfItemInlineFormSet(BaseInlineFormSet):
@@ -120,7 +134,11 @@ class ShelfItemInline(admin.TabularInline):
 
 
 @admin.register(Shelf)
-class ShelfAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
+class ShelfAdmin(
+    LibraryGroupRelatedViewOnlyControlsMixin,
+    UserRelatedViewOnlyControlsMixin,
+    admin.ModelAdmin,
+):
     form = ShelfAdminForm
     list_display = [
         "id",

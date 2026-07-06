@@ -1,10 +1,10 @@
 from django.contrib.auth import get_user_model
 
 
-def keep_only_user_view_related_control(formfield, db_field):
+def keep_only_view_related_control_for_models(formfield, db_field, models):
     remote_field = getattr(db_field, "remote_field", None)
     related_model = getattr(remote_field, "model", None)
-    if related_model is not get_user_model():
+    if related_model not in models:
         return formfield
 
     widget = formfield.widget
@@ -12,6 +12,14 @@ def keep_only_user_view_related_control(formfield, db_field):
         if hasattr(widget, flag):
             setattr(widget, flag, False)
     return formfield
+
+
+def keep_only_user_view_related_control(formfield, db_field):
+    return keep_only_view_related_control_for_models(
+        formfield,
+        db_field,
+        {get_user_model()},
+    )
 
 
 class UserRelatedViewOnlyControlsMixin:

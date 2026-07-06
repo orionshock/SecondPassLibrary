@@ -125,6 +125,12 @@ class LibraryAdminSafetyTest(TestCase):
         self.assertFalse(widget.can_delete_related)
         self.assertTrue(hasattr(widget, "can_view_related"))
 
+    def assert_library_group_related_widget_is_view_only(self, widget):
+        self.assertFalse(widget.can_add_related)
+        self.assertFalse(widget.can_change_related)
+        self.assertFalse(widget.can_delete_related)
+        self.assertTrue(hasattr(widget, "can_view_related"))
+
     def test_library_group_membership_admin_user_widget_is_view_only(self):
         request = self.factory.get("/admin/library/librarygroupmembership/")
         request.user = User.objects.create_superuser(
@@ -137,6 +143,19 @@ class LibraryAdminSafetyTest(TestCase):
         formfield = self.membership_admin.formfield_for_dbfield(field, request)
 
         self.assert_user_related_widget_is_view_only(formfield.widget)
+
+    def test_library_group_membership_admin_group_widget_is_view_only(self):
+        request = self.factory.get("/admin/library/librarygroupmembership/")
+        request.user = User.objects.create_superuser(
+            username="owner-membership-group-widget",
+            email="owner-membership-group-widget@example.com",
+            password="pw",
+        )
+
+        field = LibraryGroupMembership._meta.get_field("group")
+        formfield = self.membership_admin.formfield_for_dbfield(field, request)
+
+        self.assert_library_group_related_widget_is_view_only(formfield.widget)
 
     def test_book_group_assignment_admin_added_by_widget_is_view_only(self):
         request = self.factory.get("/admin/library/bookgroupassignment/")
@@ -153,6 +172,21 @@ class LibraryAdminSafetyTest(TestCase):
 
         self.assert_user_related_widget_is_view_only(formfield.widget)
 
+    def test_book_group_assignment_admin_group_widget_is_view_only(self):
+        request = self.factory.get("/admin/library/bookgroupassignment/")
+        request.user = User.objects.create_superuser(
+            username="owner-assignment-group-widget",
+            email="owner-assignment-group-widget@example.com",
+            password="pw",
+        )
+
+        field = BookGroupAssignment._meta.get_field("group")
+        formfield = self.book_group_assignment_admin.formfield_for_dbfield(
+            field, request
+        )
+
+        self.assert_library_group_related_widget_is_view_only(formfield.widget)
+
     def test_book_group_assignment_inline_added_by_widget_is_view_only(self):
         inline = BookGroupAssignmentInline(Book, self.site)
         request = self.factory.get("/admin/library/book/")
@@ -166,6 +200,20 @@ class LibraryAdminSafetyTest(TestCase):
         formfield = inline.formfield_for_dbfield(field, request)
 
         self.assert_user_related_widget_is_view_only(formfield.widget)
+
+    def test_book_group_assignment_inline_group_widget_is_view_only(self):
+        inline = BookGroupAssignmentInline(Book, self.site)
+        request = self.factory.get("/admin/library/book/")
+        request.user = User.objects.create_superuser(
+            username="owner-inline-group-widget",
+            email="owner-inline-group-widget@example.com",
+            password="pw",
+        )
+
+        field = BookGroupAssignment._meta.get_field("group")
+        formfield = inline.formfield_for_dbfield(field, request)
+
+        self.assert_library_group_related_widget_is_view_only(formfield.widget)
 
     def test_public_group_name_is_readonly_in_admin(self):
         request = self.factory.get("/admin/library/librarygroup/")

@@ -3,8 +3,11 @@ from types import SimpleNamespace
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase
 
-from core.admin_widgets import keep_only_user_view_related_control
-from library.models import Book
+from core.admin_widgets import (
+    keep_only_user_view_related_control,
+    keep_only_view_related_control_for_models,
+)
+from library.models import Book, LibraryGroup
 
 
 class AdminWidgetControlTests(SimpleTestCase):
@@ -40,4 +43,21 @@ class AdminWidgetControlTests(SimpleTestCase):
         self.assertTrue(widget.can_add_related)
         self.assertTrue(widget.can_change_related)
         self.assertTrue(widget.can_delete_related)
+        self.assertTrue(widget.can_view_related)
+
+    def test_configured_related_models_hide_mutations_and_preserve_view(self):
+        widget = SimpleNamespace(
+            can_add_related=True,
+            can_change_related=True,
+            can_delete_related=True,
+            can_view_related=True,
+        )
+        formfield = SimpleNamespace(widget=widget)
+        db_field = SimpleNamespace(remote_field=SimpleNamespace(model=LibraryGroup))
+
+        keep_only_view_related_control_for_models(formfield, db_field, {LibraryGroup})
+
+        self.assertFalse(widget.can_add_related)
+        self.assertFalse(widget.can_change_related)
+        self.assertFalse(widget.can_delete_related)
         self.assertTrue(widget.can_view_related)

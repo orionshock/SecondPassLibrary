@@ -11,7 +11,10 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from core.admin_widgets import UserRelatedViewOnlyControlsMixin
+from core.admin_widgets import (
+    UserRelatedViewOnlyControlsMixin,
+    keep_only_view_related_control_for_models,
+)
 
 from .book_file_services import (
     BookFileUploadMetadata,
@@ -34,6 +37,16 @@ from .groups.public_group import is_public_group
 
 
 ADMIN_ACTION_BUTTON_STYLE = "font-weight: 600; padding: 6px 10px;"
+
+
+class LibraryGroupRelatedViewOnlyControlsMixin:
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        return keep_only_view_related_control_for_models(
+            formfield,
+            db_field,
+            {LibraryGroup},
+        )
 
 
 @admin.register(Author)
@@ -75,7 +88,11 @@ class BookIdentifierInline(admin.TabularInline):
     readonly_fields = ["created_at", "updated_at"]
 
 
-class BookGroupAssignmentInline(UserRelatedViewOnlyControlsMixin, admin.TabularInline):
+class BookGroupAssignmentInline(
+    LibraryGroupRelatedViewOnlyControlsMixin,
+    UserRelatedViewOnlyControlsMixin,
+    admin.TabularInline,
+):
     model = BookGroupAssignment
     extra = 0
     autocomplete_fields = ["group", "added_by"]
@@ -589,7 +606,11 @@ class LibraryGroupAdmin(admin.ModelAdmin):
 
 
 @admin.register(LibraryGroupMembership)
-class LibraryGroupMembershipAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
+class LibraryGroupMembershipAdmin(
+    LibraryGroupRelatedViewOnlyControlsMixin,
+    UserRelatedViewOnlyControlsMixin,
+    admin.ModelAdmin,
+):
     list_display = ["user", "group", "is_curator", "created_at"]
     search_fields = ["user__username", "user__email", "group__name"]
     list_filter = ["is_curator", ("created_at", DateFieldListFilter)]
@@ -598,7 +619,11 @@ class LibraryGroupMembershipAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelA
 
 
 @admin.register(BookGroupAssignment)
-class BookGroupAssignmentAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
+class BookGroupAssignmentAdmin(
+    LibraryGroupRelatedViewOnlyControlsMixin,
+    UserRelatedViewOnlyControlsMixin,
+    admin.ModelAdmin,
+):
     list_display = ["book", "group", "added_by", "created_at"]
     search_fields = ["book__title", "group__name", "added_by__username"]
     list_filter = [("created_at", DateFieldListFilter), "group"]
