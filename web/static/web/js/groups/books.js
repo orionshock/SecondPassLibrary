@@ -7,7 +7,7 @@ import {
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
-import { isLibrarian, isManagerOrOwner, renderBooksCompact, truthy } from "./shared.js";
+import { renderBooksCompact, truthy } from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
 
 export async function initGroupBooksTab({
@@ -21,10 +21,6 @@ export async function initGroupBooksTab({
   bookSearchResults,
   bookSearchPrev,
   bookSearchNext,
-  uuidDebugDetails,
-  addBookForm,
-  addBookInput,
-  addBookStatus,
   booksStatus,
   booksResults,
   booksNext,
@@ -32,9 +28,6 @@ export async function initGroupBooksTab({
 }) {
   visible(bookSearchForm, allowBookManage);
   visible(bookSearchWrap, false);
-  // Keep the manual UUID add path as a collapsed debug-only fallback.
-  visible(uuidDebugDetails, allowBookManage && (isManagerOrOwner(me) || isLibrarian(me)));
-  visible(addBookForm, false);
 
   const booksCtl = await createPagedListController({
     statusEl: booksStatus,
@@ -48,9 +41,6 @@ export async function initGroupBooksTab({
 
   if (!allowBookManage) return { booksCtl };
 
-  function setAddBookStatus(text, isError) {
-    setStatus(addBookStatus, text, isError);
-  }
   function setBookSearchStatus(text, isError) {
     setStatus(bookSearchStatus, text, isError);
   }
@@ -224,38 +214,6 @@ export async function initGroupBooksTab({
     } catch (e2) {
       console.error("Failed to add book to group", { groupId, bookId, e2 });
       setBookSearchStatus(extractApiErrorMessage(e2), true);
-      setGlobalError(extractApiErrorMessage(e2));
-    }
-  });
-
-  addBookForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    setAddBookStatus("Adding...", false);
-    setGlobalError("");
-
-    const bookId = (addBookInput.value || "").trim();
-    if (!bookId) {
-      setAddBookStatus("Enter a book UUID.", true);
-      return;
-    }
-
-    try {
-      const csrf = getCsrfToken();
-      const headers = { Accept: "application/json", "Content-Type": "application/json" };
-      if (csrf) headers["X-CSRFToken"] = csrf;
-
-      await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ book: bookId }),
-      });
-
-      setAddBookStatus("Added.", false);
-      addBookInput.value = "";
-      await booksCtl.reloadFirstPage();
-    } catch (e2) {
-      console.error("Failed to add book to group", { groupId, bookId, e2 });
-      setAddBookStatus(extractApiErrorMessage(e2), true);
       setGlobalError(extractApiErrorMessage(e2));
     }
   });

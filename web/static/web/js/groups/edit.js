@@ -41,10 +41,6 @@ export async function initGroupEdit() {
   const bookSearchPrev = $("#group-edit-book-search-prev");
   const bookSearchNext = $("#group-edit-book-search-next");
 
-  const uuidDebugDetails = $("#group-edit-book-uuid-debug");
-  const addBookForm = $("#group-edit-add-book");
-  const addBookInput = $("#group-edit-book-id");
-  const addBookStatus = $("#group-edit-add-book-status");
   const booksStatus = $("#group-edit-books-status");
   const booksResults = $("#group-edit-books-results");
   const booksNext = $("#group-edit-books-next");
@@ -93,10 +89,6 @@ export async function initGroupEdit() {
     !bookSearchResults ||
     !bookSearchPrev ||
     !bookSearchNext ||
-    !uuidDebugDetails ||
-    !addBookForm ||
-    !addBookInput ||
-    !addBookStatus ||
     !booksStatus ||
     !booksResults ||
     !booksNext ||
@@ -255,10 +247,6 @@ export async function initGroupEdit() {
     bookSearchResults,
     bookSearchPrev,
     bookSearchNext,
-    uuidDebugDetails,
-    addBookForm,
-    addBookInput,
-    addBookStatus,
     booksStatus,
     booksResults,
     booksNext,

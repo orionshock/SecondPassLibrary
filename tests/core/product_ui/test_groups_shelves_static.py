@@ -106,6 +106,10 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'data-tab="shelves"')
         self.assertContains(response, 'id="group-edit-book-search-form"')
         self.assertContains(response, 'id="group-edit-book-search-results"')
+        self.assertNotContains(response, "Debug: add book by UUID")
+        self.assertNotContains(response, 'id="group-edit-book-uuid-debug"')
+        self.assertNotContains(response, 'id="group-edit-add-book"')
+        self.assertNotContains(response, 'id="group-edit-book-id"')
         self.assertContains(response, 'id="group-edit-shelves-results"')
         self.assertContains(response, 'id="group-edit-shelves-actions"')
         self.assertContains(response, 'id="group-delete-root"')
@@ -131,6 +135,21 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(
             response, "group-scoped management access to readers."
         )
+
+    def test_group_edit_books_js_has_no_manual_uuid_debug_path(self):
+        books_js = Path("web/static/web/js/groups/books.js").read_text(
+            encoding="utf-8"
+        )
+        edit_js = Path("web/static/web/js/groups/edit.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("uuidDebug", edit_js)
+        self.assertNotIn("group-edit-book-uuid-debug", edit_js)
+        self.assertNotIn("group-edit-add-book", edit_js)
+        self.assertNotIn("group-edit-book-id", edit_js)
+        self.assertNotIn("Enter a book UUID", books_js)
+        self.assertNotIn("addBookForm", books_js)
 
     def test_authenticated_group_edit_malformed_id_returns_404(self):
         self.client.force_login(self.user)
