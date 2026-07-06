@@ -4,6 +4,7 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
+from types import MethodType
 
 from .models import (
     ClientLoginRequest,
@@ -15,6 +16,13 @@ from .models import (
 
 
 UNUSED_AUTH_USER_FIELDS = {"groups", "user_permissions"}
+ACCOUNTS_ADMIN_MODEL_ORDER = {
+    "User": 10,
+    "UserProfile": 20,
+    "UserWebSession": 30,
+    "UserClientSession": 40,
+    "ClientLoginRequest": 50,
+}
 
 
 def _without_unused_auth_user_fields(fields):
@@ -52,6 +60,51 @@ try:
 except NotRegistered:
     pass
 admin.site.register(User, SecondPassUserAdmin)
+
+
+def _sort_accounts_admin_models(app):
+    app["models"].sort(
+        key=lambda model: (
+            ACCOUNTS_ADMIN_MODEL_ORDER.get(model["object_name"], 100),
+            model["name"],
+        )
+    )
+
+
+def _move_user_admin_into_accounts(app_list):
+    auth_app = next((app for app in app_list if app["app_label"] == "auth"), None)
+    accounts_app = next(
+        (app for app in app_list if app["app_label"] == "accounts"), None
+    )
+    if auth_app is None or accounts_app is None:
+        return app_list
+
+    auth_models = auth_app["models"]
+    user_models = [model for model in auth_models if model["model"] is User]
+    auth_app["models"] = [model for model in auth_models if model["model"] is not User]
+    accounts_app["models"].extend(user_models)
+    _sort_accounts_admin_models(accounts_app)
+
+    return [app for app in app_list if app["app_label"] != "auth" or app["models"]]
+
+
+def _install_secondpass_admin_app_list_ordering():
+    if hasattr(admin.site, "_secondpass_original_get_app_list"):
+        return
+
+    admin.site._secondpass_original_get_app_list = admin.site.get_app_list
+
+    def get_app_list(self, request, app_label=None):
+        app_list = self._secondpass_original_get_app_list(request, None)
+        app_list = _move_user_admin_into_accounts(app_list)
+        if app_label is not None:
+            app_list = [app for app in app_list if app["app_label"] == app_label]
+        return app_list
+
+    admin.site.get_app_list = MethodType(get_app_list, admin.site)
+
+
+_install_secondpass_admin_app_list_ordering()
 
 
 class UserProfileAdminForm(forms.ModelForm):
@@ -161,6 +214,9 @@ class ExternalIdentityAdmin(admin.ModelAdmin):
         "updated_at",
     ]
     list_select_related = ["user"]
+
+    def has_module_permission(self, request):
+        return False
 
     def has_add_permission(self, request):
         return False

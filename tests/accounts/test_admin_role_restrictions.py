@@ -13,7 +13,13 @@ from django.urls import clear_url_caches, set_urlconf
 import secondpass.urls
 
 from accounts.admin import SecondPassUserAdmin, UserProfileAdmin
-from accounts.models import ExternalIdentity, UserProfile
+from accounts.models import (
+    ClientLoginRequest,
+    ExternalIdentity,
+    UserClientSession,
+    UserProfile,
+    UserWebSession,
+)
 from library.models import LibraryGroupMembership
 
 
@@ -179,6 +185,60 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
     def test_django_auth_group_model_is_not_registered_in_admin(self):
         self.assertNotIn(Group, admin.site._registry)
 
+    def test_main_admin_menu_places_users_under_accounts(self):
+        request = self.factory.get("/admin/")
+        request.user = self.owner
+
+        with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True):
+            _reload_project_urls()
+            app_list = admin.site.get_app_list(request)
+        _reload_project_urls()
+
+        app_labels = [app["app_label"] for app in app_list]
+        accounts_app = next(app for app in app_list if app["app_label"] == "accounts")
+        account_model_names = [model["object_name"] for model in accounts_app["models"]]
+
+        self.assertNotIn("auth", app_labels)
+        self.assertEqual(
+            account_model_names,
+            [
+                "User",
+                "UserProfile",
+                "UserWebSession",
+                "UserClientSession",
+                "ClientLoginRequest",
+            ],
+        )
+
+    def test_accounts_app_index_uses_same_menu_order(self):
+        request = self.factory.get("/admin/accounts/")
+        request.user = self.owner
+
+        with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True):
+            _reload_project_urls()
+            app_list = admin.site.get_app_list(request, app_label="accounts")
+        _reload_project_urls()
+
+        account_model_names = [model["object_name"] for model in app_list[0]["models"]]
+
+        self.assertEqual(
+            account_model_names,
+            [
+                "User",
+                "UserProfile",
+                "UserWebSession",
+                "UserClientSession",
+                "ClientLoginRequest",
+            ],
+        )
+
+    def test_external_identities_are_hidden_from_admin_menu(self):
+        request = self.factory.get("/admin/accounts/externalidentity/")
+        request.user = self.owner
+        external_identity_admin = admin.site._registry[ExternalIdentity]
+
+        self.assertFalse(external_identity_admin.has_module_permission(request))
+
     def test_user_admin_keeps_status_fields_without_group_or_permission_pickers(self):
         user_admin = admin.site._registry[User]
         request = self.factory.get("/admin/auth/user/")
@@ -198,3 +258,10 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
         self.assertNotIn("groups", user_admin.filter_horizontal)
         self.assertNotIn("user_permissions", user_admin.filter_horizontal)
         self.assertNotIn("groups", user_admin.list_filter)
+
+    def test_accounts_models_remain_registered(self):
+        self.assertIn(User, admin.site._registry)
+        self.assertIn(UserProfile, admin.site._registry)
+        self.assertIn(UserWebSession, admin.site._registry)
+        self.assertIn(UserClientSession, admin.site._registry)
+        self.assertIn(ClientLoginRequest, admin.site._registry)
