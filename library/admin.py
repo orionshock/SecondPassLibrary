@@ -5,11 +5,13 @@ from django.contrib import admin
 from django.contrib import messages
 from django.contrib.admin import DateFieldListFilter
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
+
+from core.admin_widgets import UserRelatedViewOnlyControlsMixin
 
 from .book_file_services import (
     BookFileUploadMetadata,
@@ -29,6 +31,9 @@ from .models import (
     BookGroupAssignment,
 )
 from .groups.public_group import is_public_group
+
+
+ADMIN_ACTION_BUTTON_STYLE = "font-weight: 600; padding: 6px 10px;"
 
 
 @admin.register(Author)
@@ -70,10 +75,10 @@ class BookIdentifierInline(admin.TabularInline):
     readonly_fields = ["created_at", "updated_at"]
 
 
-class BookGroupAssignmentInline(admin.TabularInline):
+class BookGroupAssignmentInline(UserRelatedViewOnlyControlsMixin, admin.TabularInline):
     model = BookGroupAssignment
     extra = 0
-    raw_id_fields = ["group", "added_by"]
+    autocomplete_fields = ["group", "added_by"]
     fields = ["group", "added_by", "created_at", "updated_at"]
     readonly_fields = ["created_at", "updated_at"]
 
@@ -128,13 +133,9 @@ class BookAdmin(admin.ModelAdmin):
     form = BookAdminForm
     list_display = [
         "title",
-        "author_list",
+        "first_author",
         "series",
         "series_index",
-        "publisher",
-        "language",
-        "published_date",
-        "book_file_status",
         "book_file_repair_link",
         "created_at",
     ]
@@ -215,6 +216,9 @@ class BookAdmin(admin.ModelAdmin):
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
+    class Media:
+        css = {"all": ("admin/library/book_changelist.css",)}
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -231,9 +235,27 @@ class BookAdmin(admin.ModelAdmin):
         # a service hatch for editing existing records, not creating new books.
         return False
 
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("series")
+            .prefetch_related(
+                Prefetch(
+                    "authors",
+                    queryset=Author.objects.order_by("name"),
+                    to_attr="_admin_ordered_authors",
+                )
+            )
+        )
+
     @admin.display(description="Authors")
-    def author_list(self, obj):
-        return obj.author_list()
+    def first_author(self, obj):
+        authors = getattr(obj, "_admin_ordered_authors", None)
+        if authors is not None:
+            return authors[0].name if authors else "-"
+        author = obj.authors.order_by("name").first()
+        return author.name if author else "-"
 
     @admin.display(description="Cover")
     def cover_preview(self, obj: Book) -> str:
@@ -291,7 +313,11 @@ class BookAdmin(admin.ModelAdmin):
         if obj.pk is None:
             return ""
         url = reverse("admin:library_book_repair_file", args=[obj.pk])
-        return format_html('<a href="{}">Repair stored EPUB</a>', url)
+        return format_html(
+            ('<a class="button" href="{}" style="{}">Repair stored EPUB</a>'),
+            url,
+            ADMIN_ACTION_BUTTON_STYLE,
+        )
 
     def repair_file_view(self, request, object_id: str):
         book = self.get_object(request, object_id)
@@ -472,6 +498,7 @@ class BookFileAdmin(admin.ModelAdmin):
         "source_filename",
         "internal_stored_path",
         "download_epub_link",
+        "repair_epub_link",
     ]
 
     add_fieldsets = (
@@ -482,7 +509,7 @@ class BookFileAdmin(admin.ModelAdmin):
 
     change_fieldsets = (
         (None, {"fields": ("book", "format")}),
-        ("Download", {"fields": ("download_epub_link",)}),
+        ("Download", {"fields": ("download_epub_link", "repair_epub_link")}),
         (
             "File details",
             {"fields": ("checksum", "file_size", "file_size_human", "source_filename")},
@@ -524,7 +551,22 @@ class BookFileAdmin(admin.ModelAdmin):
     @admin.display(description="Download EPUB")
     def download_epub_link(self, obj: BookFile) -> str:
         url = reverse("library:bookfile-download", args=[obj.pk])
-        return format_html('<a href="{}">Download EPUB</a>', url)
+        return format_html(
+            '<a class="button" href="{}" style="{}">Download EPUB</a>',
+            url,
+            ADMIN_ACTION_BUTTON_STYLE,
+        )
+
+    @admin.display(description="Repair EPUB")
+    def repair_epub_link(self, obj: BookFile) -> str:
+        if obj.book_id is None:
+            return ""
+        url = reverse("admin:library_book_repair_file", args=[obj.book_id])
+        return format_html(
+            '<a class="button" href="{}" style="{}">Repair stored EPUB</a>',
+            url,
+            ADMIN_ACTION_BUTTON_STYLE,
+        )
 
 
 @admin.register(LibraryGroup)
@@ -547,38 +589,18 @@ class LibraryGroupAdmin(admin.ModelAdmin):
 
 
 @admin.register(LibraryGroupMembership)
-class LibraryGroupMembershipAdmin(admin.ModelAdmin):
+class LibraryGroupMembershipAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
     list_display = ["user", "group", "is_curator", "created_at"]
     search_fields = ["user__username", "user__email", "group__name"]
     list_filter = ["is_curator", ("created_at", DateFieldListFilter)]
-    raw_id_fields = ["user", "group"]
+    autocomplete_fields = ["user", "group"]
     readonly_fields = ["created_at", "updated_at"]
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        if request.user.is_superuser:
-            return True
-        return super().has_delete_permission(request, obj=obj)
 
 
 @admin.register(BookGroupAssignment)
-class BookGroupAssignmentAdmin(admin.ModelAdmin):
+class BookGroupAssignmentAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
     list_display = ["book", "group", "added_by", "created_at"]
     search_fields = ["book__title", "group__name", "added_by__username"]
     list_filter = [("created_at", DateFieldListFilter), "group"]
-    raw_id_fields = ["book", "group", "added_by"]
+    autocomplete_fields = ["book", "group", "added_by"]
     readonly_fields = ["created_at", "updated_at"]
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False

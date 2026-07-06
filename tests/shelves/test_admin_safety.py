@@ -33,7 +33,9 @@ class ShelfAdminSafetyTests(TestCase):
         self.shelf_item_inline = ShelfItemInline(Shelf, self.site)
         self.factory = RequestFactory()
         self.request = self.factory.get("/admin/shelves/shelf/")
-        self.user = User.objects.create_user(username="owner", email="owner@example.com", password="pw")
+        self.user = User.objects.create_user(
+            username="owner", email="owner@example.com", password="pw"
+        )
         self.superuser = User.objects.create_superuser(
             username="admin", email="admin@example.com", password="pw"
         )
@@ -211,7 +213,9 @@ class ShelfAdminSafetyTests(TestCase):
             [("A", 0), ("C", 1)],
         )
 
-    def test_standalone_shelf_item_admin_is_hidden_but_does_not_block_shelf_deletes(self):
+    def test_standalone_shelf_item_admin_is_hidden_but_does_not_block_shelf_deletes(
+        self,
+    ):
         self.request.user = self.user
 
         self.assertFalse(self.shelf_item_admin.has_add_permission(self.request))
@@ -275,3 +279,17 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertIn("item_count", self.shelf_admin.list_display)
         self.assertIn("owner_type", self.shelf_admin.list_display)
         self.assertIn("visibility", self.shelf_admin.list_display)
+
+    def assert_user_related_widget_is_view_only(self, widget):
+        self.assertFalse(widget.can_add_related)
+        self.assertFalse(widget.can_change_related)
+        self.assertFalse(widget.can_delete_related)
+        self.assertTrue(hasattr(widget, "can_view_related"))
+
+    def test_shelf_admin_user_widgets_keep_only_view_related_control(self):
+        self.request.user = self.superuser
+
+        for field_name in ["owner_user", "created_by"]:
+            field = Shelf._meta.get_field(field_name)
+            formfield = self.shelf_admin.formfield_for_dbfield(field, self.request)
+            self.assert_user_related_widget_is_view_only(formfield.widget)

@@ -12,6 +12,7 @@ from core import server_settings
 from core.admin import ServerSettingAdmin, ServerSettingAdminForm
 from core.models import ServerSetting
 from library.admin import (
+    BookGroupAssignmentInline,
     BookGroupAssignmentAdmin,
     LibraryGroupAdmin,
     LibraryGroupMembershipAdmin,
@@ -58,16 +59,25 @@ class LibraryAdminSafetyTest(TestCase):
             added_by=self.staff,
         )
 
-    def test_public_membership_not_deletable_in_admin(self):
+    def test_library_group_membership_admin_uses_standard_permissions(self):
         request = self.factory.get("/admin/library/librarygroupmembership/")
-        request.user = self.staff
-        self.assertFalse(
-            self.membership_admin.has_delete_permission(request, obj=self.membership)
+        request.user = User.objects.create_superuser(
+            username="owner-membership-admin",
+            email="owner-membership@example.com",
+            password="pw",
         )
-        self.assertFalse(self.membership_admin.has_add_permission(request))
-        self.assertFalse(
+
+        self.assertTrue(self.membership_admin.has_add_permission(request))
+        self.assertTrue(
             self.membership_admin.has_change_permission(request, obj=self.membership)
         )
+        self.assertTrue(
+            self.membership_admin.has_delete_permission(request, obj=self.membership)
+        )
+
+    def test_library_group_membership_admin_uses_autocomplete_widgets(self):
+        self.assertEqual(self.membership_admin.autocomplete_fields, ["user", "group"])
+        self.assertEqual(self.membership_admin.raw_id_fields, ())
 
     def test_public_group_not_deletable_in_admin(self):
         request = self.factory.get("/admin/library/librarygroup/")
@@ -76,48 +86,86 @@ class LibraryAdminSafetyTest(TestCase):
             self.group_admin.has_delete_permission(request, obj=self.public)
         )
 
-    def test_library_group_membership_admin_mutations_disabled(self):
-        request = self.factory.get("/admin/library/librarygroupmembership/")
-        request.user = self.staff
-
-        self.assertFalse(self.membership_admin.has_add_permission(request))
-        self.assertFalse(
-            self.membership_admin.has_change_permission(request, obj=self.membership)
-        )
-        self.assertFalse(
-            self.membership_admin.has_delete_permission(request, obj=self.membership)
-        )
-
-    def test_library_group_membership_admin_superusers_can_delete_for_fallback_maintenance(
-        self,
-    ):
-        owner = User.objects.create_superuser(
-            username="owner-membership-admin", email="owner2@example.com", password="pw"
-        )
-        owner_request = self.factory.get("/admin/library/librarygroupmembership/")
-        owner_request.user = owner
-
-        self.assertTrue(
-            self.membership_admin.has_delete_permission(
-                owner_request, obj=self.membership
-            )
-        )
-
-    def test_book_group_assignment_admin_mutations_disabled(self):
+    def test_book_group_assignment_admin_uses_standard_permissions(self):
         request = self.factory.get("/admin/library/bookgroupassignment/")
-        request.user = self.staff
+        request.user = User.objects.create_superuser(
+            username="owner-assignment-admin",
+            email="owner-assignment@example.com",
+            password="pw",
+        )
 
-        self.assertFalse(self.book_group_assignment_admin.has_add_permission(request))
-        self.assertFalse(
+        self.assertTrue(self.book_group_assignment_admin.has_add_permission(request))
+        self.assertTrue(
             self.book_group_assignment_admin.has_change_permission(
                 request, obj=self.assignment
             )
         )
-        self.assertFalse(
+        self.assertTrue(
             self.book_group_assignment_admin.has_delete_permission(
                 request, obj=self.assignment
             )
         )
+
+    def test_book_group_assignment_admin_uses_autocomplete_widgets(self):
+        self.assertEqual(
+            self.book_group_assignment_admin.autocomplete_fields,
+            ["book", "group", "added_by"],
+        )
+        self.assertEqual(self.book_group_assignment_admin.raw_id_fields, ())
+
+    def test_book_group_assignment_inline_uses_autocomplete_widgets(self):
+        inline = BookGroupAssignmentInline(Book, self.site)
+
+        self.assertEqual(inline.autocomplete_fields, ["group", "added_by"])
+        self.assertEqual(inline.raw_id_fields, ())
+
+    def assert_user_related_widget_is_view_only(self, widget):
+        self.assertFalse(widget.can_add_related)
+        self.assertFalse(widget.can_change_related)
+        self.assertFalse(widget.can_delete_related)
+        self.assertTrue(hasattr(widget, "can_view_related"))
+
+    def test_library_group_membership_admin_user_widget_is_view_only(self):
+        request = self.factory.get("/admin/library/librarygroupmembership/")
+        request.user = User.objects.create_superuser(
+            username="owner-membership-user-widget",
+            email="owner-membership-user-widget@example.com",
+            password="pw",
+        )
+
+        field = LibraryGroupMembership._meta.get_field("user")
+        formfield = self.membership_admin.formfield_for_dbfield(field, request)
+
+        self.assert_user_related_widget_is_view_only(formfield.widget)
+
+    def test_book_group_assignment_admin_added_by_widget_is_view_only(self):
+        request = self.factory.get("/admin/library/bookgroupassignment/")
+        request.user = User.objects.create_superuser(
+            username="owner-assignment-user-widget",
+            email="owner-assignment-user-widget@example.com",
+            password="pw",
+        )
+
+        field = BookGroupAssignment._meta.get_field("added_by")
+        formfield = self.book_group_assignment_admin.formfield_for_dbfield(
+            field, request
+        )
+
+        self.assert_user_related_widget_is_view_only(formfield.widget)
+
+    def test_book_group_assignment_inline_added_by_widget_is_view_only(self):
+        inline = BookGroupAssignmentInline(Book, self.site)
+        request = self.factory.get("/admin/library/book/")
+        request.user = User.objects.create_superuser(
+            username="owner-inline-user-widget",
+            email="owner-inline-user-widget@example.com",
+            password="pw",
+        )
+
+        field = BookGroupAssignment._meta.get_field("added_by")
+        formfield = inline.formfield_for_dbfield(field, request)
+
+        self.assert_user_related_widget_is_view_only(formfield.widget)
 
     def test_public_group_name_is_readonly_in_admin(self):
         request = self.factory.get("/admin/library/librarygroup/")

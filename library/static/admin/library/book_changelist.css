@@ -1,0 +1,50 @@
+body.app-library.model-book.change-list #result_list {
+  table-layout: fixed;
+}
+
+body.app-library.model-book.change-list #result_list th.column-title,
+body.app-library.model-book.change-list #result_list td.field-title {
+  width: 30%;
+}
+
+body.app-library.model-book.change-list #result_list th.column-first_author,
+body.app-library.model-book.change-list #result_list td.field-first_author {
+  width: 10rem;
+}
+
+body.app-library.model-book.change-list #result_list th.column-series,
+body.app-library.model-book.change-list #result_list td.field-series {
+  width: 14rem;
+}
+
+body.app-library.model-book.change-list #result_list th.column-series_index,
+body.app-library.model-book.change-list #result_list td.field-series_index {
+  width: 6rem;
+}
+
+body.app-library.model-book.change-list #result_list th.column-book_file_repair_link,
+body.app-library.model-book.change-list #result_list td.field-book_file_repair_link {
+  width: 9rem;
+}
+
+body.app-library.model-book.change-list #result_list th.column-created_at,
+body.app-library.model-book.change-list #result_list td.field-created_at {
+  width: 12rem;
+}
+
+body.app-library.model-book.change-list #result_list td.field-title,
+body.app-library.model-book.change-list #result_list td.field-first_author,
+body.app-library.model-book.change-list #result_list td.field-series {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.app-library.model-book.change-list
+  #result_list
+  td.field-book_file_repair_link
+  .button {
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
+}

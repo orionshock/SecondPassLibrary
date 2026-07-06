@@ -7,6 +7,8 @@ from django.contrib.admin.utils import quote
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html
 
+from core.admin_widgets import UserRelatedViewOnlyControlsMixin
+
 from .models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingProgress, ReadingSession
 
 
@@ -112,7 +114,7 @@ class ReadingProgressInline(admin.StackedInline):
 
 
 @admin.register(ReadingSession)
-class ReadingSessionAdmin(admin.ModelAdmin):
+class ReadingSessionAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
     list_display = [
         "short_session_id",
         "session_label",

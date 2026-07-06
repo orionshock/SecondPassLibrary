@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from io import BytesIO
+from pathlib import Path
 import zipfile
 import importlib
 
@@ -13,7 +14,7 @@ from django.urls import clear_url_caches, set_urlconf
 
 from library.admin import BookAdmin, BookFileAdmin, BookFileAdminForm
 from library.book_file_services import repair_book_file_for_book
-from library.models import Book, BookFile
+from library.models import Author, Book, BookFile
 from reading.models import Annotation, ReadingSession
 import secondpass.urls
 from tests.testenv.filesystem import IsolatedMediaRootMixin
@@ -25,6 +26,9 @@ from tests.utils.books import (
 
 class _DummySite(AdminSite):
     pass
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _reload_project_urls() -> None:
@@ -143,9 +147,10 @@ class BookFileAdminUploadTest(IsolatedMediaRootMixin, TestCase):
             )
 
             self.assertEqual(self.book_admin.book_file_status(book), "No BookFile row")
-            self.assertIn(
-                "Repair stored EPUB", self.book_admin.book_file_repair_link(book)
-            )
+            repair_link = str(self.book_admin.book_file_repair_link(book))
+            self.assertIn("Repair stored EPUB", repair_link)
+            self.assertIn('class="button"', repair_link)
+            self.assertIn("font-weight: 600", repair_link)
         _reload_project_urls()
 
         epub_bytes = _epub_bytes("status")
@@ -162,6 +167,76 @@ class BookFileAdminUploadTest(IsolatedMediaRootMixin, TestCase):
             self.book_admin.book_file_status(book),
             "BookFile row exists; stored file missing",
         )
+
+    def test_book_admin_changelist_uses_focused_operator_columns(self):
+        self.assertEqual(
+            self.book_admin.list_display,
+            [
+                "title",
+                "first_author",
+                "series",
+                "series_index",
+                "book_file_repair_link",
+                "created_at",
+            ],
+        )
+
+    def test_book_admin_changelist_loads_column_width_styles(self):
+        css_files = self.book_admin.media._css["all"]
+
+        self.assertIn("admin/library/book_changelist.css", css_files)
+
+        css = (
+            ROOT / "library" / "static" / "admin" / "library" / "book_changelist.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("td.field-title", css)
+        self.assertIn("td.field-first_author", css)
+        self.assertIn("td.field-series", css)
+        self.assertIn("text-overflow: ellipsis", css)
+        self.assertIn("td.field-book_file_repair_link", css)
+        self.assertIn("white-space: nowrap", css)
+
+    def test_book_admin_first_author_uses_first_ordered_author_only(self):
+        book = Book.objects.create(title="Authors")
+        book.authors.add(
+            Author.objects.create(name="Zed Author"),
+            Author.objects.create(name="Ada Author"),
+        )
+
+        self.assertEqual(self.book_admin.first_author(book), "Ada Author")
+
+        fileless_book = Book.objects.create(title="No Authors")
+        self.assertEqual(self.book_admin.first_author(fileless_book), "-")
+
+    def test_book_file_admin_download_link_is_action_button(self):
+        existing = create_file_backed_book(title="Download", assign_public=False)
+
+        download_link = str(self.admin.download_epub_link(existing.book_file))
+
+        self.assertIn("Download EPUB", download_link)
+        self.assertIn('class="button"', download_link)
+        self.assertIn("font-weight: 600", download_link)
+
+    def test_book_file_admin_exposes_repair_link_to_book_repair_flow(self):
+        with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True):
+            _reload_project_urls()
+            existing = create_file_backed_book(title="Repair", assign_public=False)
+
+            repair_link = str(self.admin.repair_epub_link(existing.book_file))
+
+            self.assertIn("Repair stored EPUB", repair_link)
+            self.assertIn('class="button"', repair_link)
+            self.assertIn("font-weight: 600", repair_link)
+            self.assertIn(
+                f"/admin/library/book/{existing.book.pk}/repair-file/",
+                repair_link,
+            )
+            self.assertIn("repair_epub_link", self.admin.readonly_fields)
+            self.assertIn(
+                ("Download", {"fields": ("download_epub_link", "repair_epub_link")}),
+                self.admin.change_fieldsets,
+            )
+        _reload_project_urls()
 
     def test_repair_creates_book_file_for_fileless_existing_book(self):
         book = create_fileless_book_for_integrity_edge_case(

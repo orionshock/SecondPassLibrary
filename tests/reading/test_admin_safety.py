@@ -105,6 +105,17 @@ class ReadingAdminDisplayTests(TestCase):
         self.assertIn("started_at", readonly)
         self.assertEqual(self.session_admin.autocomplete_fields, ["user", "book"])
 
+    def test_reading_session_user_widget_keeps_only_view_related_control(self):
+        self.request.user = self.superuser
+
+        field = ReadingSession._meta.get_field("user")
+        formfield = self.session_admin.formfield_for_dbfield(field, self.request)
+
+        self.assertFalse(formfield.widget.can_add_related)
+        self.assertFalse(formfield.widget.can_change_related)
+        self.assertFalse(formfield.widget.can_delete_related)
+        self.assertTrue(hasattr(formfield.widget, "can_view_related"))
+
     def test_reading_session_display_helpers_are_short_and_readable(self):
         self.assertEqual(
             self.session_admin.short_session_id(self.session),

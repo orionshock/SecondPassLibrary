@@ -10,6 +10,8 @@ from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.utils.html import format_html
 
+from core.admin_widgets import UserRelatedViewOnlyControlsMixin
+
 from .models import Shelf, ShelfItem
 from .services import canonicalize_shelf_positions
 
@@ -29,7 +31,9 @@ class ShelfAdminForm(forms.ModelForm):
 
         if owner_type == Shelf.OWNER_TYPE_USER:
             if owner_user is None:
-                self.add_error("owner_user", "User-owned shelf must have an owner user.")
+                self.add_error(
+                    "owner_user", "User-owned shelf must have an owner user."
+                )
             if owner_group is not None:
                 self.add_error(
                     "owner_group", "User-owned shelf must not have an owner group."
@@ -116,7 +120,7 @@ class ShelfItemInline(admin.TabularInline):
 
 
 @admin.register(Shelf)
-class ShelfAdmin(admin.ModelAdmin):
+class ShelfAdmin(UserRelatedViewOnlyControlsMixin, admin.ModelAdmin):
     form = ShelfAdminForm
     list_display = [
         "id",
@@ -183,7 +187,15 @@ class ShelfItemAdmin(admin.ModelAdmin):
     list_display = ["id", "shelf", "book", "position", "added_by", "updated_at"]
     list_filter = ["shelf__owner_type", ("created_at", DateFieldListFilter)]
     search_fields = ["shelf__name", "book__title", "added_by__username"]
-    readonly_fields = ["id", "shelf", "book", "position", "added_by", "created_at", "updated_at"]
+    readonly_fields = [
+        "id",
+        "shelf",
+        "book",
+        "position",
+        "added_by",
+        "created_at",
+        "updated_at",
+    ]
     raw_id_fields = ["shelf", "book", "added_by"]
 
     def has_add_permission(self, request):
@@ -193,9 +205,9 @@ class ShelfItemAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.has_perm("shelves.delete_shelf") or super().has_delete_permission(
-            request, obj=obj
-        )
+        return request.user.has_perm(
+            "shelves.delete_shelf"
+        ) or super().has_delete_permission(request, obj=obj)
 
     def has_module_permission(self, request):
         return False
