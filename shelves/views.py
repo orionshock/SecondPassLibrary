@@ -21,6 +21,11 @@ from library.catalog.preview_books import (
     attach_preview_books_from_queryset,
     include_preview_books,
 )
+from library.catalog.ordering import (
+    apply_shelf_item_ordering,
+    apply_shelf_ordering,
+    parse_ordering_param,
+)
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 
@@ -99,7 +104,6 @@ class ShelfViewSet(
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
-    ordering = ["name", "created_at"]
 
     # Map of DRF action -> allowed HTTP methods for client bearer auth.
     client_bearer_allowed: dict[str, set[str]] = {
@@ -167,7 +171,15 @@ class ShelfViewSet(
             )
         else:
             visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
-        return visible_qs.order_by("name", "created_at")
+        if self.action == "list":
+            ordering = parse_ordering_param(
+                self.request,
+                allowed={"name", "-item_count"},
+                default="name",
+            )
+            return apply_shelf_ordering(visible_qs, ordering)
+
+        return visible_qs.order_by("name", "id")
 
     def get_object(self):
         obj = super().get_object()
@@ -260,6 +272,12 @@ class ShelfViewSet(
 
     def _items_get(self, request, shelf: Shelf) -> Response:
         qs = visible_shelf_items_for_user(request.user, shelf)
+        ordering = parse_ordering_param(
+            request,
+            allowed={"position", "title", "author"},
+            default="position",
+        )
+        qs = apply_shelf_item_ordering(qs, ordering)
         page = self.paginate_queryset(qs)
         items = list(page) if page is not None else list(qs)
         out = ShelfItemSerializer(items, many=True, context={"request": request})

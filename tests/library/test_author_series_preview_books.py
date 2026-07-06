@@ -192,6 +192,26 @@ class AuthorSeriesPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(len(previews), 6)
         self.assertLessEqual(preview_titles, all_titles)
 
+    def test_ordering_by_book_count_composes_with_preview_books(self):
+        other_author = Author.objects.create(name="Author Z")
+        other_book = create_file_backed_book(title="Other Book", assign_public=False).book
+        other_book.authors.add(other_author)
+        ensure_book_public_assignment(book=other_book, added_by=None)
+
+        self._login_reader()
+        response = assert_response(
+            self.client.get(
+                "/api/v1/library/authors/?ordering=-book_count&include_preview_books=true"
+            ),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rows = paginated_results(response)
+        self.assertEqual(rows[0]["name"], "Author A")
+        self.assertEqual(rows[0]["book_count"], 7)
+        self.assertIn("preview_books", rows[0])
+        self.assertEqual(len(rows[0]["preview_books"]), 6)
+
     def test_author_detail_preview_books_are_opt_in(self):
         self._login_reader()
 

@@ -18,6 +18,11 @@ from .serializers import (
     BookSerializer,
     SeriesSerializer,
 )
+from .ordering import (
+    apply_book_ordering,
+    apply_taxonomy_ordering,
+    parse_ordering_param,
+)
 from ..models import Author, Book, BookGroupAssignment, BookIdentifier, Series
 from .preview_books import (
     PREVIEW_BOOK_LIMIT,
@@ -113,14 +118,13 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         if policies.can_manage_library(user):
-            return queryset.annotate(book_count=Count("books", distinct=True)).order_by("name")
+            return queryset.annotate(book_count=Count("books", distinct=True))
 
         visible_books = Q(books__group_assignments__group__memberships__user=user)
         return (
             queryset.filter(visible_books)
             .annotate(book_count=Count("books", filter=visible_books, distinct=True))
             .distinct()
-            .order_by("name")
         )
 
     def perform_create(self, serializer):
@@ -140,6 +144,12 @@ class AuthorViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        ordering = parse_ordering_param(
+            request,
+            allowed={"name", "-book_count"},
+            default="name",
+        )
+        queryset = apply_taxonomy_ordering(queryset, ordering)
         page = self.paginate_queryset(queryset)
         authors = list(page) if page is not None else list(queryset)
 
@@ -175,14 +185,13 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         if policies.can_manage_library(user):
-            return queryset.annotate(book_count=Count("books", distinct=True)).order_by("name")
+            return queryset.annotate(book_count=Count("books", distinct=True))
 
         visible_books = Q(books__group_assignments__group__memberships__user=user)
         return (
             queryset.filter(visible_books)
             .annotate(book_count=Count("books", filter=visible_books, distinct=True))
             .distinct()
-            .order_by("name")
         )
 
     def perform_create(self, serializer):
@@ -202,6 +211,12 @@ class SeriesViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        ordering = parse_ordering_param(
+            request,
+            allowed={"name", "-book_count"},
+            default="name",
+        )
+        queryset = apply_taxonomy_ordering(queryset, ordering)
         page = self.paginate_queryset(queryset)
         series = list(page) if page is not None else list(queryset)
 
@@ -242,8 +257,6 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
     )
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
-    ordering_fields = ["title", "created_at", "updated_at", "published_date", "series_index"]
-    ordering = ["title", "created_at"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -283,12 +296,18 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
         elif has_files in {"false", "0", "no", "n", "off"}:
             queryset = queryset.filter(file__isnull=True)
 
-        ordering = (request.query_params.get("ordering") or "").strip()
-        if ordering:
-            field = ordering.lstrip("-")
-            if field in set(self.ordering_fields):
-                queryset = queryset.order_by(ordering, "created_at")
-        return queryset.distinct()
+        allowed_ordering = {"title", "author", "series"}
+        default_ordering = "title"
+        if series_id:
+            allowed_ordering.add("series_index")
+            default_ordering = "series_index"
+
+        ordering = parse_ordering_param(
+            request,
+            allowed=allowed_ordering,
+            default=default_ordering,
+        )
+        return apply_book_ordering(queryset.distinct(), ordering)
 
     def perform_create(self, serializer):
         # Books are file-backed and should be created via import only.
@@ -384,5 +403,4 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
         serializer = BookIdentifierSerializer(ident)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 

@@ -4,6 +4,7 @@ import pytest
 from rest_framework import status
 
 from library.cover_services import set_book_cover_from_bytes
+from library.models import Author
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.books import create_file_backed_book
@@ -141,6 +142,126 @@ class ShelfItemTests(BaseShelvesAPITest):
         self.assertEqual(
             [(row["book"]["title"], row["position"]) for row in results],
             [("Alpha", 0), ("Zulu", 1)],
+        )
+
+    def test_items_default_position_ordering_and_invalid_ordering(self):
+        self.client.login(username="reader", password="pw")
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
+        shelf_id = response_data_dict(create)["id"]
+
+        from library.groups.services import ensure_book_public_assignment
+
+        for title in ["Zulu", "Alpha"]:
+            book = create_file_backed_book(title=title, assign_public=False).book
+            ensure_book_public_assignment(book=book, added_by=None)
+            add = assert_response(
+                self.client.post(
+                    f"/api/v1/shelves/{shelf_id}/items/",
+                    data={"book": str(book.id)},
+                    format="json",
+                )
+            )
+            self.assertEqual(add.status_code, status.HTTP_201_CREATED)
+
+        default = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
+        self.assertEqual(default.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(default)],
+            [("Zulu", 0), ("Alpha", 1)],
+        )
+
+        explicit = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf_id}/items/?ordering=position")
+        )
+        self.assertEqual(explicit.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(explicit)],
+            [("Zulu", 0), ("Alpha", 1)],
+        )
+
+        invalid = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf_id}/items/?ordering=created_at")
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("ordering", response_data_dict(invalid))
+
+    def test_items_title_ordering_does_not_mutate_stored_positions(self):
+        self.client.login(username="reader", password="pw")
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
+        shelf = Shelf.objects.get(pk=response_data_dict(create)["id"])
+
+        from library.groups.services import ensure_book_public_assignment
+
+        zulu = create_file_backed_book(title="Zulu", assign_public=False).book
+        alpha = create_file_backed_book(title="Alpha", assign_public=False).book
+        for book in (zulu, alpha):
+            ensure_book_public_assignment(book=book, added_by=None)
+        ShelfItem.objects.create(shelf=shelf, book=zulu, position=0, added_by=self.reader)
+        ShelfItem.objects.create(shelf=shelf, book=alpha, position=1, added_by=self.reader)
+
+        response = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/items/?ordering=title")
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(response)],
+            [("Alpha", 1), ("Zulu", 0)],
+        )
+
+        stored = list(ShelfItem.objects.filter(shelf=shelf).order_by("position"))
+        self.assertEqual([(item.book.title, item.position) for item in stored], [("Zulu", 0), ("Alpha", 1)])
+
+    def test_items_author_ordering_and_pagination(self):
+        self.client.login(username="reader", password="pw")
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={"name": "S", "owner_type": "user"},
+                format="json",
+            )
+        )
+        shelf = Shelf.objects.get(pk=response_data_dict(create)["id"])
+
+        author_a = Author.objects.create(name="Ada Author")
+        author_z = Author.objects.create(name="Zed Author")
+        from library.groups.services import ensure_book_public_assignment
+
+        zulu = create_file_backed_book(title="Zulu", assign_public=False).book
+        zulu.authors.add(author_z)
+        alpha = create_file_backed_book(title="Alpha", assign_public=False).book
+        alpha.authors.add(author_a)
+        beta = create_file_backed_book(title="Beta", assign_public=False).book
+        beta.authors.add(author_z)
+        for book in (zulu, alpha, beta):
+            ensure_book_public_assignment(book=book, added_by=None)
+        ShelfItem.objects.create(shelf=shelf, book=zulu, position=0, added_by=self.reader)
+        ShelfItem.objects.create(shelf=shelf, book=alpha, position=1, added_by=self.reader)
+        ShelfItem.objects.create(shelf=shelf, book=beta, position=2, added_by=self.reader)
+
+        response = assert_response(
+            self.client.get(
+                f"/api/v1/shelves/{shelf.id}/items/?ordering=author&page_size=2"
+            )
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response_data_dict(response)
+        self.assertEqual(payload["count"], 3)
+        self.assertIsNotNone(payload["next"])
+        self.assertEqual(
+            [row["book"]["title"] for row in payload["results"]],
+            ["Alpha", "Beta"],
         )
 
     def test_item_patch_position_moves_item_down_and_shifts_intervening_items(self):

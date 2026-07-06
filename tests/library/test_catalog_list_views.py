@@ -30,7 +30,9 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
 
         self.author_a = Author.objects.create(name="Alice Author")
         self.author_b = Author.objects.create(name="Bob Writer")
+        self.author_c = Author.objects.create(name="Carl Writer")
         self.series_s = Series.objects.create(name="Saga Series")
+        self.series_a = Series.objects.create(name="Arc Series")
 
         # Intentionally fileless: this test suite exercises has_files filtering.
         self.book1 = create_fileless_book_for_integrity_edge_case(
@@ -63,6 +65,18 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
             file_size=9,
             source_filename="b.epub",
         )
+
+        self.book3 = create_fileless_book_for_integrity_edge_case(
+            title="Gamma",
+            assign_public=False,
+            book_fields={
+                "language": "de",
+                "series": self.series_a,
+                "series_index": Decimal("2"),
+            },
+        )
+        self.book3.authors.add(self.author_c)
+        ensure_book_public_assignment(book=self.book3, added_by=None)
 
     def _titles(self, response: Response):
         data = paginated_results(response)
@@ -125,6 +139,80 @@ class BookBrowseFiltersAPITest(IsolatedMediaRootMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._titles_in_order(response), ["Alpha", "Zero", "Gamma"])
+
+    def test_books_ordering_allowlist_title_author_series(self):
+        title = assert_response(
+            self.client.get("/api/v1/library/books/?ordering=title"),
+        )
+        self.assertEqual(title.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles_in_order(title), ["Alpha", "Beta", "Gamma"])
+
+        author = assert_response(
+            self.client.get("/api/v1/library/books/?ordering=author"),
+        )
+        self.assertEqual(author.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles_in_order(author), ["Alpha", "Beta", "Gamma"])
+
+        series = assert_response(
+            self.client.get("/api/v1/library/books/?ordering=series"),
+        )
+        self.assertEqual(series.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles_in_order(series), ["Gamma", "Alpha", "Beta"])
+
+    def test_books_ordering_rejects_invalid_or_time_fields(self):
+        for ordering in ("created_at", "-updated_at", "weird"):
+            response = assert_response(
+                self.client.get(f"/api/v1/library/books/?ordering={ordering}"),
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("ordering", response_data_dict(response))
+
+    def test_books_ordering_composes_with_pagination(self):
+        response = assert_response(
+            self.client.get("/api/v1/library/books/?ordering=title&page_size=2"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response_data_dict(response)
+        self.assertEqual(payload["count"], 3)
+        self.assertIsNotNone(payload["next"])
+        self.assertEqual(
+            [row["title"] for row in payload_list(payload, "results")],
+            ["Alpha", "Beta"],
+        )
+
+    def test_series_filtered_books_default_to_series_index(self):
+        self.book1.series_index = Decimal("2")
+        self.book1.save(update_fields=["series_index", "updated_at"])
+
+        b0 = create_file_backed_book(
+            title="Zero",
+            assign_public=False,
+            book_fields={"series": self.series_s, "series_index": 0},
+        ).book
+        ensure_book_public_assignment(book=b0, added_by=None)
+
+        response = assert_response(
+            self.client.get(f"/api/v1/library/books/?series={self.series_s.id}"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles_in_order(response), ["Zero", "Alpha"])
+
+    def test_series_filtered_books_support_author_ordering(self):
+        b0 = create_file_backed_book(
+            title="Aardvark",
+            assign_public=False,
+            book_fields={"series": self.series_s, "series_index": 0},
+        ).book
+        b0.authors.add(self.author_b)
+        ensure_book_public_assignment(book=b0, added_by=None)
+
+        response = assert_response(
+            self.client.get(
+                f"/api/v1/library/books/?series={self.series_s.id}&ordering=author"
+            ),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._titles_in_order(response), ["Alpha", "Aardvark"])
 
     def test_filter_by_language(self):
         response = assert_response(

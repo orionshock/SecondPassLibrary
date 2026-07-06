@@ -22,6 +22,11 @@ from ..catalog.preview_books import (
     attach_preview_books_from_queryset,
     include_preview_books,
 )
+from ..catalog.ordering import (
+    apply_book_ordering,
+    apply_group_ordering,
+    parse_ordering_param,
+)
 from ..catalog.serializers import BookSerializer
 from .serializers import (
     BookGroupAssignmentSerializer,
@@ -133,7 +138,6 @@ class LibraryGroupViewSet(
     client_bearer_allowed = {"list": {"GET"}, "retrieve": {"GET"}, "books": {"GET"}}
     queryset = LibraryGroup.objects.all()
     permission_classes = [IsAuthenticated]
-    ordering = ["name", "created_at"]
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -148,7 +152,7 @@ class LibraryGroupViewSet(
         return context
 
     def get_queryset(self):
-        queryset = super().get_queryset().order_by(*self.ordering)
+        queryset = super().get_queryset()
         user = self.request.user
 
         membership_qs = LibraryGroupMembership.objects.filter(user=user)
@@ -164,6 +168,12 @@ class LibraryGroupViewSet(
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        ordering = parse_ordering_param(
+            request,
+            allowed={"name"},
+            default="name",
+        )
+        queryset = apply_group_ordering(queryset, ordering)
         page = self.paginate_queryset(queryset)
         groups = list(page) if page is not None else list(queryset)
 
@@ -244,6 +254,12 @@ class LibraryGroupViewSet(
                 ).values("id")
                 queryset = queryset.filter(id__in=accessible_ids)
 
+            ordering = parse_ordering_param(
+                request,
+                allowed={"title", "author", "series"},
+                default="title",
+            )
+            queryset = apply_book_ordering(queryset, ordering)
             page = self.paginate_queryset(queryset)
             serializer = BookSerializer(
                 page if page is not None else queryset,

@@ -11,7 +11,7 @@ from library.groups.services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
 )
-from library.models import BookGroupAssignment, LibraryGroup
+from library.models import Author, BookGroupAssignment, LibraryGroup, Series
 from tests.library.groups.helpers import BaseLibraryGroupsAPITest
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import (
@@ -133,6 +133,51 @@ class LibraryGroupBooksAndCurationAPITest(BaseLibraryGroupsAPITest):
         titles = {b["title"] for b in payload_list(payload, "results")}
         self.assertIn("Public Book", titles)
         self.assertIn("Inaccessible", titles)
+
+    def test_group_books_ordering_title_author_series_and_invalid(self):
+        author_a = Author.objects.create(name="Ada Author")
+        author_z = Author.objects.create(name="Zed Author")
+        series_a = Series.objects.create(name="Alpha Series")
+        series_z = Series.objects.create(name="Zulu Series")
+
+        self.book_public.title = "Charlie"
+        self.book_public.series = series_z
+        self.book_public.series_index = 1
+        self.book_public.save(update_fields=["title", "series", "series_index", "updated_at"])
+        self.book_public.authors.set([author_z])
+
+        self.book_inaccessible.title = "Bravo"
+        self.book_inaccessible.series = series_a
+        self.book_inaccessible.series_index = 2
+        self.book_inaccessible.save(update_fields=["title", "series", "series_index", "updated_at"])
+        self.book_inaccessible.authors.set([author_a])
+
+        self.client.login(username="librarian", password="pw")
+
+        expectations = {
+            "title": ["Bravo", "Charlie"],
+            "author": ["Bravo", "Charlie"],
+            "series": ["Bravo", "Charlie"],
+        }
+        for ordering, expected_titles in expectations.items():
+            response = assert_response(
+                self.client.get(
+                    f"/api/v1/library/groups/{self.visible_group.id}/books/?ordering={ordering}"
+                ),
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, ordering)
+            self.assertEqual(
+                [row["title"] for row in payload_list(response_data_dict(response), "results")],
+                expected_titles,
+            )
+
+        invalid = assert_response(
+            self.client.get(
+                f"/api/v1/library/groups/{self.visible_group.id}/books/?ordering=created_at"
+            ),
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("ordering", response_data_dict(invalid))
 
     def test_reader_cannot_add_or_remove_books(self):
         self.client.login(username="reader", password="pw")

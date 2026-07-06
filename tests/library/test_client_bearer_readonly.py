@@ -163,7 +163,7 @@ class ClientBearerLibraryReadOnlyAPITest(IsolatedMediaRootMixin, APITestCase):
 
         r3 = assert_response(
             self.client.get(
-                "/api/v1/library/books/?ordering=-updated_at",
+                "/api/v1/library/books/?ordering=title",
                 HTTP_AUTHORIZATION=self._auth_header,
             ),
         )

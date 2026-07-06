@@ -63,3 +63,18 @@ class LibraryGroupVisibilityAPITest(BaseLibraryGroupsAPITest):
         data = payload_list(payload, "results")
         names = {g["name"] for g in data}
         self.assertTrue({"Common Room", "MemberGroup", "OtherGroup"}.issubset(names))
+
+    def test_group_list_ordering_name_and_invalid(self):
+        self.client.login(username="manager", password="pw")
+        ordered = assert_response(
+            self.client.get("/api/v1/library/groups/?ordering=name")
+        )
+        self.assertEqual(ordered.status_code, status.HTTP_200_OK)
+        names = [row["name"] for row in response_data_dict(ordered)["results"]]
+        self.assertEqual(names, sorted(names))
+
+        invalid = assert_response(
+            self.client.get("/api/v1/library/groups/?ordering=-book_count")
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("ordering", response_data_dict(invalid))
