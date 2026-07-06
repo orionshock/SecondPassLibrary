@@ -244,32 +244,38 @@ class LibraryGroupViewSet(
         group: LibraryGroup = self.get_object()
 
         if request.method == "GET":
-            if not policies.can_view_library_group(user=request.user, group=group):
-                raise Http404()
+            return self._list_group_books(request, group)
 
-            queryset = Book.objects.filter(group_assignments__group=group).distinct()
-            if not policies.can_manage_library(request.user):
-                accessible_ids = Book.objects.filter(
-                    group_assignments__group__memberships__user=request.user
-                ).values("id")
-                queryset = queryset.filter(id__in=accessible_ids)
+        return self._add_group_book(request, group)
 
-            ordering = parse_ordering_param(
-                request,
-                allowed={"title", "author", "series"},
-                default="title",
-            )
-            queryset = apply_book_ordering(queryset, ordering)
-            page = self.paginate_queryset(queryset)
-            serializer = BookSerializer(
-                page if page is not None else queryset,
-                many=True,
-                context={"request": request},
-            )
-            if page is not None:
-                return self.get_paginated_response(serializer.data)
-            return Response(serializer.data)
+    def _list_group_books(self, request, group: LibraryGroup) -> Response:
+        if not policies.can_view_library_group(user=request.user, group=group):
+            raise Http404()
 
+        queryset = Book.objects.filter(group_assignments__group=group).distinct()
+        if not policies.can_manage_library(request.user):
+            accessible_ids = Book.objects.filter(
+                group_assignments__group__memberships__user=request.user
+            ).values("id")
+            queryset = queryset.filter(id__in=accessible_ids)
+
+        ordering = parse_ordering_param(
+            request,
+            allowed={"title", "author", "series"},
+            default="title",
+        )
+        queryset = apply_book_ordering(queryset, ordering)
+        page = self.paginate_queryset(queryset)
+        serializer = BookSerializer(
+            page if page is not None else queryset,
+            many=True,
+            context={"request": request},
+        )
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def _add_group_book(self, request, group: LibraryGroup) -> Response:
         if (
             not is_public_group(group)
             and not server_settings.advanced_library_groups_enabled()

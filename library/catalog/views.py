@@ -258,18 +258,17 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        request = self.request
-
-        if not policies.can_manage_library(request.user):
+    def _filter_visible_books(self, queryset):
+        if not policies.can_manage_library(self.request.user):
             queryset = queryset.filter(
-                group_assignments__group__memberships__user=request.user
+                group_assignments__group__memberships__user=self.request.user
             )
+        return queryset
 
-        q = (request.query_params.get("q") or "").strip()
+    def _apply_search_filter(self, queryset):
+        q = (self.request.query_params.get("q") or "").strip()
         if q:
-            queryset = queryset.filter(
+            return queryset.filter(
                 Q(title__icontains=q)
                 | Q(subtitle__icontains=q)
                 | Q(authors__name__icontains=q)
@@ -277,25 +276,30 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
                 | Q(isbn__icontains=q)
                 | Q(identifiers__value__icontains=q)
             )
+        return queryset
 
-        author_id = (request.query_params.get("author") or "").strip()
+    def _apply_book_filters(self, queryset):
+        author_id = (self.request.query_params.get("author") or "").strip()
         if author_id:
             queryset = queryset.filter(authors__id=author_id)
 
-        series_id = (request.query_params.get("series") or "").strip()
+        series_id = (self.request.query_params.get("series") or "").strip()
         if series_id:
             queryset = queryset.filter(series__id=series_id)
 
-        language = (request.query_params.get("language") or "").strip()
+        language = (self.request.query_params.get("language") or "").strip()
         if language:
             queryset = queryset.filter(language__iexact=language)
 
-        has_files = (request.query_params.get("has_files") or "").strip().lower()
+        has_files = (self.request.query_params.get("has_files") or "").strip().lower()
         if has_files in {"true", "1", "yes", "y", "on"}:
             queryset = queryset.filter(file__isnull=False)
         elif has_files in {"false", "0", "no", "n", "off"}:
             queryset = queryset.filter(file__isnull=True)
 
+        return queryset, series_id
+
+    def _apply_book_list_ordering(self, queryset, *, series_id: str):
         allowed_ordering = {"title", "author", "series"}
         default_ordering = "title"
         if series_id:
@@ -303,11 +307,17 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
             default_ordering = "series_index"
 
         ordering = parse_ordering_param(
-            request,
+            self.request,
             allowed=allowed_ordering,
             default=default_ordering,
         )
         return apply_book_ordering(queryset.distinct(), ordering)
+
+    def get_queryset(self):
+        queryset = self._filter_visible_books(super().get_queryset())
+        queryset = self._apply_search_filter(queryset)
+        queryset, series_id = self._apply_book_filters(queryset)
+        return self._apply_book_list_ordering(queryset, series_id=series_id)
 
     def perform_create(self, serializer):
         # Books are file-backed and should be created via import only.
@@ -403,4 +413,3 @@ class BookViewSet(ClientBearerReadOnlyMixin, viewsets.ModelViewSet):
 
         serializer = BookIdentifierSerializer(ident)
         return Response(serializer.data, status=status.HTTP_200_OK)
-

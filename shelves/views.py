@@ -169,9 +169,6 @@ class ShelfViewSet(
                 user=user,
                 query_params=self.request.query_params,
             )
-        else:
-            visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
-        if self.action == "list":
             ordering = parse_ordering_param(
                 self.request,
                 allowed={"name", "-item_count"},
@@ -179,6 +176,7 @@ class ShelfViewSet(
             )
             return apply_shelf_ordering(visible_qs, ordering)
 
+        visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
         return visible_qs.order_by("name", "id")
 
     def get_object(self):
