@@ -6,30 +6,15 @@ $WaitressThreads = if ($env:WAITRESS_THREADS) { $env:WAITRESS_THREADS } else { "
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 $env:DJANGO_DEBUG = "0"
-if (-not $env:DJANGO_SECRET_KEY) {
-    $env:DJANGO_SECRET_KEY = "secondpass-local-production-mode-not-for-real-deployments"
-}
-if (-not $env:DJANGO_ALLOWED_HOSTS) {
-    $env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,[::1]"
-}
-if (-not $env:DJANGO_CSRF_TRUSTED_ORIGINS) {
-    $env:DJANGO_CSRF_TRUSTED_ORIGINS = "http://localhost:8000,http://127.0.0.1:8000"
-}
-if (-not $env:DJANGO_SECURE_COOKIES) {
-    $env:DJANGO_SECURE_COOKIES = "0"
-}
-if (-not $env:DJANGO_TRUST_X_FORWARDED_PROTO) {
-    $env:DJANGO_TRUST_X_FORWARDED_PROTO = "0"
-}
-if (-not $env:DJANGO_USE_X_FORWARDED_HOST) {
-    $env:DJANGO_USE_X_FORWARDED_HOST = "0"
-}
-if (-not (Test-Path Env:\SECOND_PASS_ENABLE_DJANGO_ADMIN)) {
-    $env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
-}
-if (-not $env:DJANGO_SILENCED_SYSTEM_CHECKS) {
-    $env:DJANGO_SILENCED_SYSTEM_CHECKS = "security.W004,security.W008,security.W012,security.W016"
-}
+$env:SECOND_PASS_ENABLE_WHITENOISE = "1"
+$env:DJANGO_SECRET_KEY = "secondpass-local-production-mode-not-for-real-deployments"
+$env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,[::1]"
+$env:DJANGO_CSRF_TRUSTED_ORIGINS = "http://localhost:8000,http://127.0.0.1:8000"
+$env:DJANGO_SECURE_COOKIES = "0"
+$env:DJANGO_TRUST_X_FORWARDED_PROTO = "0"
+$env:DJANGO_USE_X_FORWARDED_HOST = "0"
+$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
+$env:DJANGO_SILENCED_SYSTEM_CHECKS = "security.W004,security.W008,security.W012,security.W016"
 
 Write-Host "SECOND_PASS_ENABLE_DJANGO_ADMIN=$env:SECOND_PASS_ENABLE_DJANGO_ADMIN"
 

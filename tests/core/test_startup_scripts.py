@@ -14,7 +14,9 @@ class StartupScriptContractTests(SimpleTestCase):
 
         self.assertIn('$ErrorActionPreference = "Stop"', source)
         self.assertIn("$env:PYTHON", source)
-        self.assertIn('$env:DJANGO_DEBUG = if ($env:DJANGO_DEBUG)', source)
+        self.assertNotIn("Restore-ScopedEnvironment", source)
+        self.assertIn('$env:DJANGO_DEBUG = "1"', source)
+        self.assertIn('$env:SECOND_PASS_ENABLE_WHITENOISE = "0"', source)
         self.assertIn("DJANGO_ALLOWED_HOSTS", source)
         self.assertIn("localhost,127.0.0.1,[::1]", source)
         self.assertLess(
@@ -31,7 +33,9 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn('$ErrorActionPreference = "Stop"', source)
         self.assertIn('"127.0.0.1:8000"', source)
         self.assertIn('$WaitressThreads = if ($env:WAITRESS_THREADS)', source)
+        self.assertNotIn("Restore-ScopedEnvironment", source)
         self.assertIn('$env:DJANGO_DEBUG = "0"', source)
+        self.assertIn('$env:SECOND_PASS_ENABLE_WHITENOISE = "1"', source)
         self.assertIn("DJANGO_SECRET_KEY", source)
         self.assertIn("secondpass-local-production-mode-not-for-real-deployments", source)
         self.assertIn("DJANGO_ALLOWED_HOSTS", source)
@@ -42,7 +46,6 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn("DJANGO_TRUST_X_FORWARDED_PROTO", source)
         self.assertIn("DJANGO_USE_X_FORWARDED_HOST", source)
         self.assertIn("SECOND_PASS_ENABLE_DJANGO_ADMIN", source)
-        self.assertIn("Test-Path Env:\\SECOND_PASS_ENABLE_DJANGO_ADMIN", source)
         self.assertIn('$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"', source)
         self.assertIn(
             'Write-Host "SECOND_PASS_ENABLE_DJANGO_ADMIN=$env:SECOND_PASS_ENABLE_DJANGO_ADMIN"',
