@@ -6,5 +6,5 @@ The wider project may be red while the library backend is rebuilt in place.
 Old pre-release library APIs, models, imports, admin behavior, and tests are not
 being preserved for compatibility.
 
-Use `docs/internal/library_LibraryReWrite2607.md` as the source of truth for the new catalog
-design.
+Use `docs/internal/LibraryReWrite2607.md` as the source of truth for the new
+catalog design.
