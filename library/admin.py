@@ -1,5 +1,5 @@
 """
-Library catalog vNext admin placeholder.
+Library catalog LibraryReWrite2607 admin placeholder.
 
-Admin registrations will be rebuilt with the vNext models.
+Admin registrations will be rebuilt with the LibraryReWrite2607 models.
 """

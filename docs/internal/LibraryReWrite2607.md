@@ -1,4 +1,4 @@
-# Library Catalog vNext Design
+# Library Catalog LibraryReWrite2607 Design
 
 Internal design note for a future in-place rewrite of the library/catalog
 backend. This is documentation only; it is not an implementation plan for the
@@ -76,7 +76,7 @@ Fields:
 - `author`
 - `position`
 
-Authors are authors. Do not add contributor roles in vNext. `position` defines
+Authors are authors. Do not add contributor roles in LibraryReWrite2607. `position` defines
 the display/order convention for multi-author books.
 
 ### Series
@@ -403,7 +403,7 @@ Resolved decisions:
 
 Remaining questions:
 
-- Exact vNext identifier scheme enum/list copied from current model.
+- Exact LibraryReWrite2607 identifier scheme enum/list copied from current model.
 - Exact published-date storage shape:
   - separate year/month/day fields
   - or date value plus precision field
