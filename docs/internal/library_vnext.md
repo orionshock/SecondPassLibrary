@@ -42,11 +42,12 @@ Fields:
 - `subtitle`
 - `language`
 - `publisher`
-- `published_date`
+- `published_date_value` plus `published_date_precision` (placeholder; exact
+  storage shape unresolved)
 - `description`
 - `cover_file`
 - `book_file`
-- `file_format`: `epub | cbz`
+- `file_format`: `epub` initially; `cbz` later
 - `checksum`
 - `file_size`
 - `source_filename`
@@ -120,6 +121,7 @@ Fields:
 - `book`
 - `scheme`
 - `value`
+- `normalized_value`
 
 Identifiers are book metadata for import, detail display, export, and duplicate
 handling. They are not a navigation axis and do not get browse endpoints.
@@ -289,7 +291,7 @@ Expected EPUB/OPF/Calibre mapping:
 - series index -> `BookSeries.series_index`
 - subjects/tags/genres/moods -> `CatalogTag` + `BookCatalogTag`
 - publisher -> `Book.publisher`
-- published date -> `Book.published_date`
+- published date -> `Book` partial-date fields
 - language -> `Book.language`
 - description -> `Book.description`
 - cover -> `Book.cover_file`
@@ -405,5 +407,4 @@ Remaining questions:
 - Exact published-date storage shape:
   - separate year/month/day fields
   - or date value plus precision field
-- Whether sort fields appear on the main edit form or a metadata section; they
-  should still be editable either way.
+- Exact Product UI placement for editable sort fields.
