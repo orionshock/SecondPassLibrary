@@ -42,9 +42,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         request = cast(Request, self.request)
-        queryset = Annotation.objects.select_related(
-            "session", "book", "book_file"
-        ).filter(session__user=self.request.user)
+        queryset = Annotation.objects.select_related("session", "book").filter(
+            session__user=self.request.user
+        )
 
         include_deleted = (
             (request.query_params.get("include_deleted") or "")

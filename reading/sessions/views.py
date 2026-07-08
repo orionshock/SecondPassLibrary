@@ -45,7 +45,7 @@ def _build_open_response_payload(*, request: Request, session: ReadingSession, v
     progress = get_or_create_progress(session=session)
 
     annotations_qs = (
-        Annotation.objects.select_related("session", "book", "book_file")
+        Annotation.objects.select_related("session", "book")
         .filter(session=session, is_deleted=False)
         .order_by(*Annotation._meta.ordering)  # type: ignore[arg-type]
     )
@@ -263,5 +263,4 @@ class OpenBookView(APIView):
         return Response(
             payload, status=(status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         )
-
 

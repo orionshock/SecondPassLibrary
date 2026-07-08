@@ -132,10 +132,9 @@ def create_annotation(
     quote_suffix: str = "",
     highlight_color: str = "",
     comment_text: str = "",
-) -> Annotation:
+    ) -> Annotation:
     assert_session_writable(session=session)
     book = session.book
-    book_file = getattr(book, "file", None)
 
     if (highlight_text or highlight_color) and not highlight_color:
         highlight_color = HIGHLIGHT_COLOR_YELLOW
@@ -149,7 +148,6 @@ def create_annotation(
     return Annotation.objects.create(
         session=session,
         book=book,
-        book_file=book_file,
         motivation=motivation,
         anchor_kind=anchor_kind,
         selector_kind=selector_kind,

@@ -71,7 +71,7 @@ class AnnotationInline(admin.TabularInline):
         return (
             super()
             .get_queryset(request)
-            .select_related("book", "book_file")
+            .select_related("book")
             .order_by("-created_at")
         )
 

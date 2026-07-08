@@ -141,7 +141,6 @@ def _create_annotation(
     annotation = Annotation.objects.create(
         session=session,
         book=session.book,
-        book_file=getattr(session.book, "file", None),
         motivation=compact["motivation"],
         anchor_kind=compact["anchor_kind"],
         selector_kind=SELECTOR_KIND_EPUB_CFI,

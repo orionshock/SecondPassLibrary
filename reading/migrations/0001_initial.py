@@ -68,7 +68,6 @@ class Migration(migrations.Migration):
                 ('profile_version', models.CharField(default='0.1.0', max_length=16)),
                 ('is_deleted', models.BooleanField(default=False)),
                 ('book', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='annotations', to='library.book')),
-                ('book_file', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='annotations', to='library.bookfile')),
                 ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='annotations', to='reading.readingsession')),
             ],
             options={

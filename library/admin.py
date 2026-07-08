@@ -1,5 +1,18 @@
-"""
-Library catalog LibraryReWrite2607 admin placeholder.
+from django.contrib import admin
 
-Admin registrations will be rebuilt with the LibraryReWrite2607 models.
-"""
+from .models import Book, CatalogTag, LibraryGroup
+
+
+@admin.register(Book)
+class BookAdmin(admin.ModelAdmin):
+    search_fields = ["title", "sort_title", "checksum"]
+
+
+@admin.register(LibraryGroup)
+class LibraryGroupAdmin(admin.ModelAdmin):
+    search_fields = ["name"]
+
+
+@admin.register(CatalogTag)
+class CatalogTagAdmin(admin.ModelAdmin):
+    search_fields = ["name", "normalized_name"]

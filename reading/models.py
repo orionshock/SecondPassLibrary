@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Q
 
 from core.models import TimeStampedModel
-from library.models import Book, BookFile
+from library.models import Book
 
 
 SELECTOR_KIND_EPUB_CFI = "epub_cfi"
@@ -106,7 +106,6 @@ class Annotation(TimeStampedModel):
     if TYPE_CHECKING:
         session_id: int
         book_id: int
-        book_file_id: int | None
 
     MOTIVATION_HIGHLIGHTING = "highlighting"
     MOTIVATION_COMMENTING = "commenting"
@@ -130,13 +129,6 @@ class Annotation(TimeStampedModel):
         ReadingSession, on_delete=models.CASCADE, related_name="annotations"
     )
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="annotations")
-    book_file = models.ForeignKey(
-        BookFile,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="annotations",
-    )
     motivation = models.CharField(
         max_length=32, choices=MOTIVATION_CHOICES, null=True, blank=True
     )

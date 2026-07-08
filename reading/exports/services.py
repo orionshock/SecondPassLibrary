@@ -24,14 +24,12 @@ def _iso(value) -> str | None:
 
 
 def _file_hash(book: Book) -> str:
-    book_file = getattr(book, "file", None)
-    checksum = getattr(book_file, "checksum", None) if book_file is not None else None
+    checksum = getattr(book, "checksum", None)
     return f"sha256:{checksum}" if checksum else ""
 
 
 def _book_source(book: Book) -> str:
-    book_file = getattr(book, "file", None)
-    checksum = getattr(book_file, "checksum", None) if book_file is not None else None
+    checksum = getattr(book, "checksum", None)
     return f"book:sha256:{checksum}" if checksum else ""
 
 
