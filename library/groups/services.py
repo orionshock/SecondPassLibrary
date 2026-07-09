@@ -12,6 +12,7 @@ from library.groups.public_group import (
     is_public_group,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from shelves.library_hooks import remove_book_from_group_owned_shelves
 
 
 PUBLIC_GROUP_SETTING_DESCRIPTION = "LibraryReWrite2607 Public/Common Room group id."
@@ -102,6 +103,8 @@ def add_book_to_group(
 
 def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
     with transaction.atomic():
+        if BookGroupAssignment.objects.filter(book=book, group=group).exists():
+            remove_book_from_group_owned_shelves(book=book, group=group)
         deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
         ensure_book_has_at_least_one_group(book=book, added_by=actor)
     return bool(deleted)
