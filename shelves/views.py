@@ -22,10 +22,9 @@ from library.catalog.preview_books import (
     include_preview_books,
 )
 from library.catalog.ordering import (
-    apply_shelf_item_ordering,
-    apply_shelf_ordering,
     parse_ordering_param,
 )
+from library.compat.shelves import apply_shelf_item_ordering, apply_shelf_ordering
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 

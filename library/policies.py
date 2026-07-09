@@ -12,9 +12,15 @@ def can_view_book(*, user, book: Book) -> bool:
     return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
 
 
-def can_download_book_file(*, user, book_file) -> bool:
-    book = getattr(book_file, "book", None) or book_file
+def can_download_book(*, user, book: Book) -> bool:
     return can_view_book(user=user, book=book)
+
+
+def can_download_book_file(*, user, book_file) -> bool:
+    # LibraryReWrite2607 temporary alias for old downstream imports. Download/open
+    # policy should take Book directly when that path is reconnected.
+    book = getattr(book_file, "book", None) or book_file
+    return can_download_book(user=user, book=book)
 
 
 def can_create_library_group(user) -> bool:

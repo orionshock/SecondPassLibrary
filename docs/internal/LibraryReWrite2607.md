@@ -42,8 +42,10 @@ Fields:
 - `subtitle`
 - `language`
 - `publisher`
-- `published_date_value` plus `published_date_precision` (placeholder; exact
-  storage shape unresolved)
+- `published_year`
+- `published_month`
+- `published_day`
+- `published_date_precision`
 - `description`
 - `cover_file`
 - `book_file`
@@ -358,16 +360,16 @@ Import rules:
 - Import should preserve actor/provenance where assignments are created.
 - Identifier duplicate handling belongs in import/service logic, not view code.
 
-Published dates should support partial precision. At minimum, preserve year or
-year-month when that is all the source metadata provides. Do not force fake UTC
-datetimes for book publication metadata.
+Published dates use partial-precision fields:
 
-Candidate storage shapes:
+- `published_year`
+- `published_month`
+- `published_day`
+- `published_date_precision`
 
-- `published_year`, `published_month`, `published_day`
-- or `published_date_value` plus `published_date_precision`
-
-Avoid pretending unknown month/day values are real.
+At minimum, preserve year or year-month when that is all the source metadata
+provides. Do not force fake UTC datetimes for book publication metadata. Avoid
+pretending unknown month/day values are real.
 
 ## 10. Query Performance Rules
 
@@ -456,7 +458,4 @@ Resolved decisions:
 Remaining questions:
 
 - Exact LibraryReWrite2607 identifier scheme enum/list copied from current model.
-- Exact published-date storage shape:
-  - separate year/month/day fields
-  - or date value plus precision field
 - Exact Product UI placement for editable sort fields.
