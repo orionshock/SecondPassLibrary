@@ -6,9 +6,6 @@ from rest_framework.exceptions import ValidationError
 from library.models import Author, Book, CatalogTag, Series
 
 
-FILTER_UUID_PARAMS = {"author", "series", "tag"}
-
-
 def apply_book_filters(queryset: QuerySet[Book], query_params) -> QuerySet[Book]:
     queryset = _apply_search(queryset, query_params.get("q", "").strip())
 
@@ -24,6 +21,10 @@ def apply_book_filters(queryset: QuerySet[Book], query_params) -> QuerySet[Book]
     if tag_id:
         queryset = queryset.filter(book_catalog_tags__catalog_tag_id=tag_id)
 
+    publisher = (query_params.get("publisher") or "").strip()
+    if publisher:
+        queryset = queryset.filter(publisher__iexact=publisher)
+
     return queryset.distinct()
 
 
@@ -35,6 +36,7 @@ def _apply_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
         | Q(sort_title__icontains=term)
         | Q(subtitle__icontains=term)
         | Q(description__icontains=term)
+        | Q(publisher__icontains=term)
         | Q(book_authors__author__name__icontains=term)
         | Q(book_series__series__name__icontains=term)
         | Q(book_catalog_tags__catalog_tag__name__icontains=term)

@@ -256,6 +256,7 @@ Use current DRF-style query params:
 - `author`
 - `series`
 - `tag`
+- `publisher`
 - `ordering`
 
 Rules:
@@ -264,15 +265,66 @@ Rules:
 - `q` searches inside the selected context.
 - `ordering` is explicit and allowlisted.
 - No arbitrary model-field ordering.
-- No time-based ordering unless explicitly added later.
+- No time-based ordering.
 - Invalid ordering returns `400` for visible resources.
 - Hidden/inaccessible parent resources return `404` before ordering/filter
   validation.
 
+Public browse/filter/order axes should be catalog-meaningful, not implementation
+or archival metadata. Allowed public axes are:
+
+- title
+- author
+- series
+- series index
+- CatalogTag/tag
+- publisher
+- language, only when a concrete browse need appears
+
+Do not expose these as normal browse sort/filter axes:
+
+- `file_format`
+- checksum/file hash
+- `file_size`
+- `source_filename`
+- `book_file` path
+- cover metadata
+- identifier fields such as ISBN/ASIN/DOI
+- `created_at` or `updated_at`
+- published date fields for now
+- arbitrary internal model fields
+
+Book `q` search may match:
+
+- title and subtitle
+- author
+- series
+- CatalogTag/tag
+- publisher
+- description, as long as the query remains bounded to the visible book context
+
+Ordering uses DRF-style values. Supported book ordering values:
+
+- `title`, `-title`
+- `author`, `-author`
+- `series`, `-series`
+- `series_index`, `-series_index`
+- `publisher`, `-publisher`
+
+Future author, series, and tag browse endpoints should default to `name` and may
+support `name`, `-name`, `book_count`, and `-book_count`.
+
+Default ordering:
+
+- books default to `title`
+- series-filtered books default to `series_index`
+- future authors/series/tags default to `name`
+
 Examples:
 
-- `/api/v1/library/books/?q=dresden&author=<id>&ordering=title`
+- `/api/v1/library/books/?q=dresden&author=<id>&ordering=-title`
 - `/api/v1/library/books/?series=<id>&ordering=series_index`
+- `/api/v1/library/books/?publisher=Orbit&ordering=publisher`
 - `/api/v1/library/groups/<id>/books/?tag=<id>&ordering=author`
 - `/api/v1/library/authors/?q=butcher&ordering=name`
 - `/api/v1/library/tags/?ordering=-book_count`

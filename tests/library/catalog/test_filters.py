@@ -12,6 +12,30 @@ class LibraryReWrite2607CatalogBookFilterTests(LibraryCatalogApiFixtureMixin, Te
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Visible One"])
 
+    def test_q_search_matches_subtitle(self):
+        response = self.client.get("/api/v1/library/books/", {"q": "storm"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Visible One"])
+
+    def test_q_search_matches_description(self):
+        response = self.client.get("/api/v1/library/books/", {"q": "case file"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Visible One"])
+
+    def test_q_search_matches_publisher(self):
+        response = self.client.get("/api/v1/library/books/", {"q": "zeta house"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Visible Three"])
+
+    def test_q_search_matches_catalog_tag(self):
+        response = self.client.get("/api/v1/library/books/", {"q": "mystery"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Visible Two"])
+
     def test_author_filter(self):
         response = self.client.get("/api/v1/library/books/", {"author": self.alpha.id})
 
@@ -30,10 +54,21 @@ class LibraryReWrite2607CatalogBookFilterTests(LibraryCatalogApiFixtureMixin, Te
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Visible One", "Visible Three"])
 
+    def test_publisher_filter(self):
+        response = self.client.get("/api/v1/library/books/", {"publisher": "Alpha House"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Visible Two"])
+
     def test_filters_compose(self):
         response = self.client.get(
             "/api/v1/library/books/",
-            {"author": self.beta.id, "tag": self.fantasy.id, "q": "visible"},
+            {
+                "author": self.beta.id,
+                "publisher": "Beta House",
+                "tag": self.fantasy.id,
+                "q": "visible",
+            },
         )
 
         self.assertEqual(response.status_code, 200)

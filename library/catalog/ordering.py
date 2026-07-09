@@ -7,7 +7,8 @@ from rest_framework.exceptions import ValidationError
 from library.models import BookAuthor
 
 
-BOOK_ORDERINGS = {"title", "author", "series", "series_index"}
+BOOK_ORDERING_AXES = {"title", "author", "series", "series_index", "publisher"}
+BOOK_ORDERINGS = BOOK_ORDERING_AXES | {f"-{axis}" for axis in BOOK_ORDERING_AXES}
 
 
 def parse_ordering_param(request, *, allowed: set[str], default: str) -> str:
@@ -27,31 +28,48 @@ def parse_book_ordering(request) -> str:
 
 
 def apply_book_ordering(queryset: QuerySet, ordering: str) -> QuerySet:
-    if ordering == "title":
-        return _with_title_sort(queryset).order_by("_title_sort", "title", "id")
-    if ordering == "author":
+    descending = ordering.startswith("-")
+    axis = ordering.removeprefix("-")
+
+    if axis == "title":
+        return _with_title_sort(queryset).order_by(_ordered("_title_sort", descending), "title", "id")
+    if axis == "author":
         return _with_primary_author_sort(queryset).order_by(
-            F("_primary_author_sort").asc(nulls_last=True),
-            "_title_sort",
+            _ordered("_primary_author_sort", descending),
+            _ordered("_title_sort", descending),
             "title",
             "id",
         )
-    if ordering == "series":
+    if axis == "series":
         return _with_series_sort(queryset).order_by(
-            F("_series_sort").asc(nulls_last=True),
+            _ordered("_series_sort", descending),
             F("book_series__series_index").asc(nulls_last=True),
-            "_title_sort",
+            _ordered("_title_sort", descending),
             "title",
             "id",
         )
-    if ordering == "series_index":
+    if axis == "series_index":
         return _with_title_sort(queryset).order_by(
-            F("book_series__series_index").asc(nulls_last=True),
-            "_title_sort",
+            _ordered("book_series__series_index", descending),
+            _ordered("_title_sort", descending),
+            "title",
+            "id",
+        )
+    if axis == "publisher":
+        return _with_publisher_sort(queryset).order_by(
+            _ordered("_publisher_sort", descending),
+            _ordered("_title_sort", descending),
             "title",
             "id",
         )
     raise ValidationError({"ordering": "Invalid ordering."})
+
+
+def _ordered(field_name: str, descending: bool):
+    expression = F(field_name)
+    if descending:
+        return expression.desc(nulls_last=True)
+    return expression.asc(nulls_last=True)
 
 
 def _with_title_sort(queryset: QuerySet) -> QuerySet:
@@ -85,6 +103,10 @@ def _with_series_sort(queryset: QuerySet) -> QuerySet:
             F("book_series__series__name"),
         )
     )
+
+
+def _with_publisher_sort(queryset: QuerySet) -> QuerySet:
+    return _with_title_sort(queryset).annotate(_publisher_sort=NullIf("publisher", Value("")))
 
 
 def apply_shelf_ordering(queryset: QuerySet, ordering: str) -> QuerySet:

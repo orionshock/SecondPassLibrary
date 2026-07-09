@@ -39,9 +39,16 @@ def create_catalog_book(
     series: Series | None = None,
     series_index: str | None = None,
     tag: CatalogTag | None = None,
+    subtitle: str = "",
+    publisher: str = "",
     description: str = "",
 ) -> Book:
-    book = Book.objects.create(title=title, description=description)
+    book = Book.objects.create(
+        title=title,
+        subtitle=subtitle,
+        publisher=publisher,
+        description=description,
+    )
     BookAuthor.objects.create(book=book, author=author, position=0)
     if series is not None:
         BookSeries.objects.create(book=book, series=series, series_index=series_index)
@@ -79,6 +86,8 @@ class LibraryCatalogApiFixtureMixin:
             series_index="2.00",
             tag=self.fantasy,
             group=self.public,
+            subtitle="Storm Front",
+            publisher="Beta House",
             description="dresden case file",
         )
         self.visible_two = create_catalog_book(
@@ -88,6 +97,7 @@ class LibraryCatalogApiFixtureMixin:
             series_index="1.00",
             tag=self.mystery,
             group=self.public,
+            publisher="Alpha House",
         )
         self.visible_three = create_catalog_book(
             "Visible Three",
@@ -96,6 +106,7 @@ class LibraryCatalogApiFixtureMixin:
             series_index="1.00",
             tag=self.fantasy,
             group=self.public,
+            publisher="Zeta House",
         )
         self.hidden_book = create_catalog_book(
             "Hidden Dresden",
@@ -104,12 +115,15 @@ class LibraryCatalogApiFixtureMixin:
             series_index="9.00",
             tag=self.fantasy,
             group=self.hidden,
+            subtitle="Hidden Storm",
+            publisher="Hidden House",
             description="dresden hidden file",
         )
         self.multi_group = create_catalog_book(
             "Multi Group",
             author=self.alpha,
             group=self.public,
+            publisher="",
         )
         BookGroupAssignment.objects.create(book=self.multi_group, group=self.hidden)
 
