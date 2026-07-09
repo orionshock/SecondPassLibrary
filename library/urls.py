@@ -15,6 +15,10 @@ from library.groups.browse_views import (
     GroupCatalogTagListView,
     GroupSeriesListView,
 )
+from library.groups.membership_views import (
+    LibraryGroupMembershipDetailView,
+    LibraryGroupMembershipListView,
+)
 from library.groups.views import LibraryGroupDetailView, LibraryGroupListView
 
 
@@ -29,6 +33,16 @@ urlpatterns = [
     path("groups/<uuid:group_id>/", LibraryGroupDetailView.as_view(), name="group-detail"),
     path("groups/<uuid:group_id>/authors/", GroupAuthorListView.as_view(), name="group-author-list"),
     path("groups/<uuid:group_id>/books/", GroupBookListView.as_view(), name="group-book-list"),
+    path(
+        "groups/<uuid:group_id>/memberships/",
+        LibraryGroupMembershipListView.as_view(),
+        name="group-membership-list",
+    ),
+    path(
+        "groups/<uuid:group_id>/memberships/<uuid:user_id>/",
+        LibraryGroupMembershipDetailView.as_view(),
+        name="group-membership-detail",
+    ),
     path("groups/<uuid:group_id>/series/", GroupSeriesListView.as_view(), name="group-series-list"),
     path("groups/<uuid:group_id>/tags/", GroupCatalogTagListView.as_view(), name="group-tag-list"),
     path("series/", SeriesListView.as_view(), name="series-list"),
