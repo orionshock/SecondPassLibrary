@@ -313,14 +313,41 @@ Ordering uses DRF-style values. Supported book ordering values:
 - `series_index`, `-series_index`
 - `publisher`, `-publisher`
 
-Future author, series, and tag browse endpoints should default to `name` and may
-support `name`, `-name`, `book_count`, and `-book_count`.
+Author, series, and tag browse endpoints default to `name` and support `name`,
+`-name`, `book_count`, and `-book_count`.
 
 Default ordering:
 
 - books default to `title`
 - series-filtered books default to `series_index`
-- future authors/series/tags default to `name`
+- authors/series/tags default to `name`
+
+Author endpoint fields:
+
+- `id`
+- `name`
+- `sort_name`
+- `book_count`
+
+Series endpoint fields:
+
+- `id`
+- `name`
+- `sort_name`
+- `book_count`
+
+Tag endpoint fields:
+
+- `id`
+- `name`
+- `sort_name`
+- `normalized_name`
+- `book_count`
+
+Axis detail endpoints return `404` when the requested author, series, or tag
+has no visible books for the requesting user. Axis list/detail payloads do not
+embed book lists; clients can use the books endpoint with `author`, `series`, or
+`tag` filters.
 
 Examples:
 

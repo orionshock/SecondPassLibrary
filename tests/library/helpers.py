@@ -26,6 +26,14 @@ def response_titles(response) -> list[str]:
     return [row["title"] for row in response.json()["results"]]
 
 
+def response_names(response) -> list[str]:
+    return [row["name"] for row in response.json()["results"]]
+
+
+def response_book_counts(response) -> dict[str, int]:
+    return {row["name"]: row["book_count"] for row in response.json()["results"]}
+
+
 def set_user_role(user, role: str) -> None:
     user.profile.role = role
     user.profile.save(update_fields=["role", "updated_at"])

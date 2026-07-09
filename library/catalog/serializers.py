@@ -37,6 +37,33 @@ class CatalogTagSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class AuthorAxisSerializer(serializers.ModelSerializer):
+    book_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Author
+        fields = ["id", "name", "sort_name", "book_count"]
+        read_only_fields = fields
+
+
+class SeriesAxisSerializer(serializers.ModelSerializer):
+    book_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Series
+        fields = ["id", "name", "sort_name", "book_count"]
+        read_only_fields = fields
+
+
+class CatalogTagAxisSerializer(serializers.ModelSerializer):
+    book_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = CatalogTag
+        fields = ["id", "name", "sort_name", "normalized_name", "book_count"]
+        read_only_fields = fields
+
+
 class BookSeriesSummarySerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series.id")
     name = serializers.CharField(source="series.name")
