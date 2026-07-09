@@ -7,13 +7,10 @@ from django.test import TestCase
 from accounts.models import UserProfile
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.queries import visible_books_for_group, visible_books_for_user
+from tests.library.helpers import queryset_titles, set_user_role
 
 
-def _titles(queryset) -> list[str]:
-    return list(queryset.order_by("title").values_list("title", flat=True))
-
-
-class LibraryReWrite2607VisibilityQueryTests(TestCase):
+class LibraryReWrite2607QueryTests(TestCase):
     def setUp(self):
         cache.clear()
         User = get_user_model()
@@ -23,14 +20,10 @@ class LibraryReWrite2607VisibilityQueryTests(TestCase):
         self.librarian = User.objects.create_user(username="librarian")
         self.owner = User.objects.create_superuser(username="owner")
 
-        self.reader.profile.role = UserProfile.ROLE_READER
-        self.reader.profile.save(update_fields=["role", "updated_at"])
-        self.other.profile.role = UserProfile.ROLE_READER
-        self.other.profile.save(update_fields=["role", "updated_at"])
-        self.manager.profile.role = UserProfile.ROLE_MANAGER
-        self.manager.profile.save(update_fields=["role", "updated_at"])
-        self.librarian.profile.role = UserProfile.ROLE_LIBRARIAN
-        self.librarian.profile.save(update_fields=["role", "updated_at"])
+        set_user_role(self.reader, UserProfile.ROLE_READER)
+        set_user_role(self.other, UserProfile.ROLE_READER)
+        set_user_role(self.manager, UserProfile.ROLE_MANAGER)
+        set_user_role(self.librarian, UserProfile.ROLE_LIBRARIAN)
 
         self.public = LibraryGroup.objects.create(name="Common Room")
         self.club = LibraryGroup.objects.create(name="Club")
@@ -53,38 +46,41 @@ class LibraryReWrite2607VisibilityQueryTests(TestCase):
 
     def test_user_sees_books_assigned_to_any_group_they_belong_to(self):
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=False)),
+            queryset_titles(visible_books_for_user(self.reader, cached=False)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
     def test_user_does_not_see_books_only_in_unrelated_groups(self):
-        self.assertNotIn("Hidden Book", _titles(visible_books_for_user(self.reader, cached=False)))
+        self.assertNotIn(
+            "Hidden Book",
+            queryset_titles(visible_books_for_user(self.reader, cached=False)),
+        )
 
     def test_manager_librarian_and_owner_have_broad_access(self):
         expected = ["Club Book", "Hidden Book", "Multi Book", "Public Book"]
 
-        self.assertEqual(_titles(visible_books_for_user(self.manager, cached=False)), expected)
-        self.assertEqual(_titles(visible_books_for_user(self.librarian, cached=False)), expected)
-        self.assertEqual(_titles(visible_books_for_user(self.owner, cached=False)), expected)
+        self.assertEqual(queryset_titles(visible_books_for_user(self.manager, cached=False)), expected)
+        self.assertEqual(queryset_titles(visible_books_for_user(self.librarian, cached=False)), expected)
+        self.assertEqual(queryset_titles(visible_books_for_user(self.owner, cached=False)), expected)
 
     def test_group_scoped_visibility_only_returns_books_assigned_to_that_group(self):
         self.assertEqual(
-            _titles(visible_books_for_group(self.reader, self.club, cached=False)),
+            queryset_titles(visible_books_for_group(self.reader, self.club, cached=False)),
             ["Club Book", "Multi Book"],
         )
 
     def test_group_scoped_visibility_hides_unviewable_groups(self):
-        self.assertEqual(_titles(visible_books_for_group(self.reader, self.hidden, cached=False)), [])
+        self.assertEqual(queryset_titles(visible_books_for_group(self.reader, self.hidden, cached=False)), [])
 
     def test_duplicate_group_intersections_do_not_duplicate_books(self):
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=False)).count("Multi Book"),
+            queryset_titles(visible_books_for_user(self.reader, cached=False)).count("Multi Book"),
             1,
         )
 
     def test_cached_true_reuses_cached_visible_book_ids(self):
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=True)),
+            queryset_titles(visible_books_for_user(self.reader, cached=True)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
@@ -92,13 +88,13 @@ class LibraryReWrite2607VisibilityQueryTests(TestCase):
         BookGroupAssignment.objects.create(book=new_book, group=self.public)
 
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=True)),
+            queryset_titles(visible_books_for_user(self.reader, cached=True)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
     def test_cached_false_recomputes_current_visibility(self):
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=True)),
+            queryset_titles(visible_books_for_user(self.reader, cached=True)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
@@ -106,32 +102,32 @@ class LibraryReWrite2607VisibilityQueryTests(TestCase):
         BookGroupAssignment.objects.create(book=new_book, group=self.public)
 
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=False)),
+            queryset_titles(visible_books_for_user(self.reader, cached=False)),
             ["Club Book", "Multi Book", "New Book", "Public Book"],
         )
 
     def test_cache_staleness_is_accepted_for_browse(self):
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=True)),
+            queryset_titles(visible_books_for_user(self.reader, cached=True)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
         LibraryGroupMembership.objects.filter(user=self.reader, group=self.club).delete()
 
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=True)),
+            queryset_titles(visible_books_for_user(self.reader, cached=True)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
     def test_uncached_visibility_supports_authorization_sensitive_callers(self):
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=True)),
+            queryset_titles(visible_books_for_user(self.reader, cached=True)),
             ["Club Book", "Multi Book", "Public Book"],
         )
 
         LibraryGroupMembership.objects.filter(user=self.reader, group=self.club).delete()
 
         self.assertEqual(
-            _titles(visible_books_for_user(self.reader, cached=False)),
+            queryset_titles(visible_books_for_user(self.reader, cached=False)),
             ["Multi Book", "Public Book"],
         )
