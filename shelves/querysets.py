@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from django.db.models import F, Min, OuterRef, QuerySet, Subquery
+from django.db.models import Count, F, Min, OuterRef, Q, QuerySet, Subquery
 from rest_framework.exceptions import ValidationError
+
+from library.queries import visible_books_for_user
 
 from .models import Shelf, ShelfItem
 from .policies import visible_shelf_filter
@@ -98,6 +100,20 @@ def build_visible_shelf_list_queryset(
         )
 
     return visible_qs
+
+
+def with_visible_item_count(queryset: QuerySet[Shelf], *, user: Any) -> QuerySet[Shelf]:
+    visible_books = visible_books_for_user(user, cached=False)
+    visible_item_filter = (
+        Q(owner_type=Shelf.OWNER_TYPE_USER, items__book__in=visible_books)
+        | Q(
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            items__book__group_assignments__group=F("owner_group"),
+        )
+    )
+    return queryset.annotate(
+        item_count=Count("items", filter=visible_item_filter, distinct=True)
+    )
 
 
 def apply_shelf_ordering(queryset: QuerySet[Shelf], ordering: str) -> QuerySet[Shelf]:

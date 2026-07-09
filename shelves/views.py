@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, NoReturn, cast
 
-from django.db.models import Count
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
@@ -46,6 +45,7 @@ from .querysets import (
     apply_shelf_item_ordering,
     apply_shelf_ordering,
     build_visible_shelf_list_queryset,
+    with_visible_item_count,
 )
 
 
@@ -134,8 +134,8 @@ class ShelfViewSet(
             super()
             .get_queryset()
             .select_related("owner_user", "owner_group", "created_by")
-            .annotate(item_count=Count("items"))
         )
+        qs = with_visible_item_count(qs, user=user)
 
         if self.action == "list":
             visible_qs = build_visible_shelf_list_queryset(

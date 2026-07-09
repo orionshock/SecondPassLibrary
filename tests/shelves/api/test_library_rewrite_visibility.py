@@ -119,6 +119,93 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
             [self.book_in_group.title],
         )
 
+    def test_shelf_item_count_excludes_hidden_books(self):
+        shelf = Shelf.objects.create(
+            name="Mixed shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book_in_group, position=0, added_by=self.reader
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book_hidden, position=1, added_by=self.reader
+        )
+
+        self.client.login(username="reader", password="pw")
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data_dict(detail)["item_count"], 1)
+
+    def test_group_shelf_item_count_excludes_books_removed_from_owner_group(self):
+        shelf = Shelf.objects.create(
+            name="Group shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.group,
+            created_by=self.curator,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book_in_group, position=0, added_by=self.curator
+        )
+        from library.groups.services import remove_book_from_group
+
+        remove_book_from_group(actor=self.owner, book=self.book_in_group, group=self.group)
+
+        self.client.login(username="reader", password="pw")
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data_dict(detail)["item_count"], 0)
+        self.assertTrue(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
+
+    def test_user_shelf_item_count_excludes_books_no_longer_visible_to_user(self):
+        shelf = Shelf.objects.create(
+            name="Access changed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book_in_group, position=0, added_by=self.reader
+        )
+        LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).delete()
+
+        self.client.login(username="reader", password="pw")
+        detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/"))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data_dict(detail)["item_count"], 0)
+
+    def test_order_by_item_count_uses_visible_item_count(self):
+        visible_shelf = Shelf.objects.create(
+            name="Visible count",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        hidden_shelf = Shelf.objects.create(
+            name="Hidden raw count",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=visible_shelf, book=self.book_in_group, position=0, added_by=self.reader
+        )
+        ShelfItem.objects.create(
+            shelf=hidden_shelf, book=self.book_hidden, position=0, added_by=self.reader
+        )
+        hidden_2 = create_file_backed_book(title="Second hidden", assign_public=False).book
+        add_book_to_group(actor=self.owner, book=hidden_2, group=self.hidden_group)
+        ShelfItem.objects.create(shelf=hidden_shelf, book=hidden_2, position=1, added_by=self.reader)
+
+        self.client.login(username="reader", password="pw")
+        response = assert_response(self.client.get("/api/v1/shelves/?ordering=-item_count"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [(row["name"], row["item_count"]) for row in response_data_list(response)],
+            [("Visible count", 1), ("Hidden raw count", 0)],
+        )
+
     def _create_user_shelf(self) -> Shelf:
         response = assert_response(
             self.client.post(
