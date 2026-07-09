@@ -34,6 +34,16 @@ def response_book_counts(response) -> dict[str, int]:
     return {row["name"]: row["book_count"] for row in response.json()["results"]}
 
 
+def assert_axis_detail_ignores_list_params(testcase, *, url: str, expected_name: str) -> None:
+    q_response = testcase.client.get(url, {"q": "definitely-no-match"})
+    invalid_ordering_response = testcase.client.get(url, {"ordering": "created_at"})
+
+    testcase.assertEqual(q_response.status_code, 200)
+    testcase.assertEqual(q_response.json()["name"], expected_name)
+    testcase.assertEqual(invalid_ordering_response.status_code, 200)
+    testcase.assertEqual(invalid_ordering_response.json()["name"], expected_name)
+
+
 def set_user_role(user, role: str) -> None:
     user.profile.role = role
     user.profile.save(update_fields=["role", "updated_at"])

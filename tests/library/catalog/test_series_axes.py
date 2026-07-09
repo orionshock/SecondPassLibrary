@@ -5,6 +5,7 @@ from django.test import TestCase
 from library.models import Series
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
+    assert_axis_detail_ignores_list_params,
     create_catalog_book,
     response_book_counts,
     response_names,
@@ -63,6 +64,13 @@ class LibraryReWrite2607SeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase)
         self.assertEqual(response.json()["name"], "First Series")
         self.assertEqual(response.json()["book_count"], 2)
 
+    def test_detail_ignores_list_only_params(self):
+        assert_axis_detail_ignores_list_params(
+            self,
+            url=f"/api/v1/library/series/{self.first_series.id}/",
+            expected_name="First Series",
+        )
+
     def test_detail_with_no_visible_books_returns_404(self):
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
         create_catalog_book(
@@ -73,6 +81,22 @@ class LibraryReWrite2607SeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase)
         )
 
         response = self.client.get(f"/api/v1/library/series/{hidden_only.id}/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
+        hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
+        create_catalog_book(
+            "Hidden Series Book",
+            author=self.alpha,
+            series=hidden_only,
+            group=self.hidden,
+        )
+
+        response = self.client.get(
+            f"/api/v1/library/series/{hidden_only.id}/",
+            {"ordering": "created_at"},
+        )
 
         self.assertEqual(response.status_code, 404)
 

@@ -28,6 +28,10 @@ class _BaseAxisMixin:
     def axis_queryset(self):
         raise NotImplementedError
 
+
+class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
+    use_cached_visibility = True
+
     def get_queryset(self):
         queryset = self.axis_queryset()
         queryset = apply_axis_search(
@@ -38,12 +42,11 @@ class _BaseAxisMixin:
         return apply_axis_ordering(queryset, parse_axis_ordering(self.request))
 
 
-class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
-    use_cached_visibility = True
-
-
 class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
     use_cached_visibility = False
+
+    def get_queryset(self):
+        return self.axis_queryset()
 
 
 class AuthorAxisMixin(_BaseAxisMixin):

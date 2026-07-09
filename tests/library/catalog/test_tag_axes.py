@@ -5,6 +5,7 @@ from django.test import TestCase
 from library.models import CatalogTag
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
+    assert_axis_detail_ignores_list_params,
     create_catalog_book,
     response_book_counts,
     response_names,
@@ -61,11 +62,29 @@ class LibraryReWrite2607TagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.json()["normalized_name"], "fantasy")
         self.assertEqual(response.json()["book_count"], 2)
 
+    def test_detail_ignores_list_only_params(self):
+        assert_axis_detail_ignores_list_params(
+            self,
+            url=f"/api/v1/library/tags/{self.fantasy.id}/",
+            expected_name="Fantasy",
+        )
+
     def test_detail_with_no_visible_books_returns_404(self):
         hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden")
         create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)
 
         response = self.client.get(f"/api/v1/library/tags/{hidden_only.id}/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
+        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden")
+        create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)
+
+        response = self.client.get(
+            f"/api/v1/library/tags/{hidden_only.id}/",
+            {"ordering": "created_at"},
+        )
 
         self.assertEqual(response.status_code, 404)
 

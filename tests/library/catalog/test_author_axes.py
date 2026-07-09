@@ -5,6 +5,7 @@ from django.test import TestCase
 from library.models import Author
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
+    assert_axis_detail_ignores_list_params,
     create_catalog_book,
     response_book_counts,
     response_names,
@@ -61,11 +62,29 @@ class LibraryReWrite2607AuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase)
         self.assertEqual(response.json()["name"], "Alpha Author")
         self.assertEqual(response.json()["book_count"], 2)
 
+    def test_detail_ignores_list_only_params(self):
+        assert_axis_detail_ignores_list_params(
+            self,
+            url=f"/api/v1/library/authors/{self.alpha.id}/",
+            expected_name="Alpha Author",
+        )
+
     def test_detail_with_no_visible_books_returns_404(self):
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
         create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
 
         response = self.client.get(f"/api/v1/library/authors/{hidden_only.id}/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
+        hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
+        create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
+
+        response = self.client.get(
+            f"/api/v1/library/authors/{hidden_only.id}/",
+            {"ordering": "created_at"},
+        )
 
         self.assertEqual(response.status_code, 404)
 
