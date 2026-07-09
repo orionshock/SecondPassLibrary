@@ -15,6 +15,7 @@ from library.groups.browse_views import (
     GroupCatalogTagListView,
     GroupSeriesListView,
 )
+from library.groups.views import LibraryGroupDetailView, LibraryGroupListView
 
 
 app_name = "library"
@@ -24,6 +25,8 @@ urlpatterns = [
     path("authors/<uuid:axis_id>/", AuthorDetailView.as_view(), name="author-detail"),
     path("books/", BookListView.as_view(), name="book-list"),
     path("books/<uuid:book_id>/", BookDetailView.as_view(), name="book-detail"),
+    path("groups/", LibraryGroupListView.as_view(), name="group-list"),
+    path("groups/<uuid:group_id>/", LibraryGroupDetailView.as_view(), name="group-detail"),
     path("groups/<uuid:group_id>/authors/", GroupAuthorListView.as_view(), name="group-author-list"),
     path("groups/<uuid:group_id>/books/", GroupBookListView.as_view(), name="group-book-list"),
     path("groups/<uuid:group_id>/series/", GroupSeriesListView.as_view(), name="group-series-list"),

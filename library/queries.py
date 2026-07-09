@@ -35,6 +35,14 @@ def can_view_group(*, user, group: LibraryGroup) -> bool:
     return LibraryGroupMembership.objects.filter(user=user, group=group).exists()
 
 
+def visible_groups_for_user(user) -> QuerySet[LibraryGroup]:
+    if can_manage_library(user):
+        return LibraryGroup.objects.all()
+    if user is None or getattr(user, "is_anonymous", False):
+        return LibraryGroup.objects.none()
+    return LibraryGroup.objects.filter(memberships__user=user).distinct()
+
+
 def _visible_book_ids_cache_key(user) -> str:
     return f"libraryrewrite2607:visible-book-ids:user:{getattr(user, 'pk', 'anonymous')}"
 
