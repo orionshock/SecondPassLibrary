@@ -24,19 +24,22 @@ def create_library_group(*, name: str, description: str = "") -> LibraryGroup:
 def update_library_group(
     *, group: LibraryGroup, name: str | None = None, description: str | None = None
 ) -> LibraryGroup:
+    update_fields: list[str] = []
     if name is not None:
         group.name = _required_name(name)
+        update_fields.append("name")
     if description is not None:
         group.description = description
-    group.save(update_fields=["name", "description", "updated_at"])
+        update_fields.append("description")
+    if update_fields:
+        group.save(update_fields=[*update_fields, "updated_at"])
     return group
 
 
 def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
-    if is_public_group(group):
-        raise ValidationError("Public/Common Room group cannot be deleted.")
-
     with transaction.atomic():
+        if is_public_group(group):
+            raise ValidationError("Public/Common Room group cannot be deleted.")
         user_ids = list(group.memberships.values_list("user_id", flat=True))
         book_ids = list(group.book_assignments.values_list("book_id", flat=True))
         deleted_count, _ = group.delete()
@@ -46,12 +49,13 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
 
 
 def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
-    group = LibraryGroup.objects.create(
-        name=name or DEFAULT_PUBLIC_GROUP_NAME,
-        description=description or DEFAULT_PUBLIC_GROUP_DESCRIPTION,
-    )
-    _store_public_group_id(group)
-    return group
+    with transaction.atomic():
+        group = _get_or_create_public_group()
+        group.name = name or DEFAULT_PUBLIC_GROUP_NAME
+        group.description = description or DEFAULT_PUBLIC_GROUP_DESCRIPTION
+        group.save(update_fields=["name", "description", "updated_at"])
+        _store_public_group_id(group)
+        return group
 
 
 def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) -> LibraryGroupMembership:
