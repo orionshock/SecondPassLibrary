@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from core.server_settings import set_server_setting
@@ -9,24 +9,74 @@ from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
     get_public_group,
+    is_public_group,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 
 
-def configure_public_group(*, name: str, description: str = ""):
+PUBLIC_GROUP_SETTING_DESCRIPTION = "LibraryReWrite2607 Public/Common Room group id."
+
+
+def create_library_group(*, name: str, description: str = "") -> LibraryGroup:
+    return LibraryGroup.objects.create(name=_required_name(name), description=description or "")
+
+
+def update_library_group(
+    *, group: LibraryGroup, name: str | None = None, description: str | None = None
+) -> LibraryGroup:
+    if name is not None:
+        group.name = _required_name(name)
+    if description is not None:
+        group.description = description
+    group.save(update_fields=["name", "description", "updated_at"])
+    return group
+
+
+def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
+    if is_public_group(group):
+        raise ValidationError("Public/Common Room group cannot be deleted.")
+
+    with transaction.atomic():
+        user_ids = list(group.memberships.values_list("user_id", flat=True))
+        book_ids = list(group.book_assignments.values_list("book_id", flat=True))
+        deleted_count, _ = group.delete()
+        _restore_users_without_groups(user_ids)
+        _restore_books_without_groups(book_ids, added_by=actor)
+    return bool(deleted_count)
+
+
+def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
     group = LibraryGroup.objects.create(
         name=name or DEFAULT_PUBLIC_GROUP_NAME,
         description=description or DEFAULT_PUBLIC_GROUP_DESCRIPTION,
     )
-    set_server_setting(
-        key=PUBLIC_GROUP_ID_SETTING,
-        value=str(group.id),
-        description="LibraryReWrite2607 Public/Common Room group id.",
-    )
+    _store_public_group_id(group)
     return group
 
 
-def ensure_user_public_membership(*, user):
+def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) -> LibraryGroupMembership:
+    if group is None:
+        raise ValidationError("Group is required.")
+    with transaction.atomic():
+        membership, created = LibraryGroupMembership.objects.get_or_create(
+            user=user,
+            group=group,
+            defaults={"is_curator": bool(is_curator)},
+        )
+        if not created and is_curator and not membership.is_curator:
+            membership.is_curator = True
+            membership.save(update_fields=["is_curator", "updated_at"])
+        return membership
+
+
+def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
+    with transaction.atomic():
+        deleted, _ = LibraryGroupMembership.objects.filter(user=user, group=group).delete()
+        ensure_user_has_at_least_one_group(user=user)
+    return bool(deleted)
+
+
+def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
     group = _get_or_create_public_group()
     membership, _created = LibraryGroupMembership.objects.get_or_create(user=user, group=group)
     return membership
@@ -37,14 +87,25 @@ def ensure_user_has_at_least_one_group(*, user) -> None:
         ensure_user_public_membership(user=user)
 
 
-def ensure_book_public_assignment(*, book, added_by=None):
+def add_book_to_group(
+    *, book, group: LibraryGroup, actor=None, added_by=None
+) -> BookGroupAssignment:
+    if group is None:
+        raise ValidationError("Group is required.")
+    creator = added_by if added_by is not None else actor
+    return _create_book_assignment(book=book, group=group, added_by=creator)
+
+
+def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
+    with transaction.atomic():
+        deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
+        ensure_book_has_at_least_one_group(book=book, added_by=actor)
+    return bool(deleted)
+
+
+def ensure_book_public_assignment(*, book, added_by=None) -> BookGroupAssignment:
     group = _get_or_create_public_group()
-    assignment, _created = BookGroupAssignment.objects.get_or_create(
-        book=book,
-        group=group,
-        defaults={"added_by": added_by},
-    )
-    return assignment
+    return _create_book_assignment(book=book, group=group, added_by=added_by)
 
 
 def ensure_book_has_at_least_one_group(*, book, added_by=None) -> None:
@@ -56,36 +117,47 @@ def bootstrap_public_group_membership_and_assignments() -> None:
     _get_or_create_public_group()
 
 
-def add_book_to_group(*, actor, book, group):
-    if group is None:
-        raise PermissionDenied("Missing group.")
+def _restore_users_without_groups(user_ids: list) -> None:
+    for user_id in user_ids:
+        if not LibraryGroupMembership.objects.filter(user_id=user_id).exists():
+            group = _get_or_create_public_group()
+            LibraryGroupMembership.objects.get_or_create(user_id=user_id, group=group)
+
+
+def _restore_books_without_groups(book_ids: list, *, added_by=None) -> None:
+    for book_id in book_ids:
+        if not BookGroupAssignment.objects.filter(book_id=book_id).exists():
+            group = _get_or_create_public_group()
+            BookGroupAssignment.objects.get_or_create(
+                book_id=book_id,
+                group=group,
+                defaults={"added_by": added_by},
+            )
+
+
+def _create_book_assignment(*, book, group: LibraryGroup, added_by=None) -> BookGroupAssignment:
     assignment, _created = BookGroupAssignment.objects.get_or_create(
         book=book,
         group=group,
-        defaults={"added_by": actor},
+        defaults={"added_by": added_by},
     )
     return assignment
 
 
-def remove_book_from_group(*, actor, book, group) -> bool:
-    deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
-    return bool(deleted)
-
-
 def _get_or_create_public_group() -> LibraryGroup:
-    try:
-        return get_public_group()
-    except LibraryGroup.DoesNotExist:
-        pass
+    return get_public_group()
 
-    with transaction.atomic():
-        group = LibraryGroup.objects.create(
-            name=DEFAULT_PUBLIC_GROUP_NAME,
-            description=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
-        )
-        set_server_setting(
-            key=PUBLIC_GROUP_ID_SETTING,
-            value=str(group.id),
-            description="LibraryReWrite2607 Public/Common Room group id.",
-        )
-    return group
+
+def _store_public_group_id(group: LibraryGroup) -> None:
+    set_server_setting(
+        key=PUBLIC_GROUP_ID_SETTING,
+        value=str(group.id),
+        description=PUBLIC_GROUP_SETTING_DESCRIPTION,
+    )
+
+
+def _required_name(name: str) -> str:
+    value = str(name or "").strip()
+    if not value:
+        raise ValidationError("Group name is required.")
+    return value
