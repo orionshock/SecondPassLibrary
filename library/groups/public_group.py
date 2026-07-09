@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.server_settings import get_server_setting
+from core.server_settings import get_server_setting, set_server_setting
 
 
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
@@ -28,6 +28,19 @@ def get_public_group():
     from library.models import LibraryGroup
 
     public_id = get_public_group_id()
-    if not public_id:
-        raise LibraryGroup.DoesNotExist("Public group is not configured.")
-    return LibraryGroup.objects.get(pk=public_id)
+    if public_id:
+        try:
+            return LibraryGroup.objects.get(pk=public_id)
+        except LibraryGroup.DoesNotExist:
+            pass
+
+    group = LibraryGroup.objects.create(
+        name=DEFAULT_PUBLIC_GROUP_NAME,
+        description=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
+    )
+    set_server_setting(
+        key=PUBLIC_GROUP_ID_SETTING,
+        value=str(group.id),
+        description="LibraryReWrite2607 Public/Common Room group id.",
+    )
+    return group

@@ -173,7 +173,7 @@ class ShelfServicePolicyTests(IsolatedMediaRootMixin, TestCase):
         # Book remains on shelf, but is hidden until access returns.
         self.assertEqual(visible_shelf_items_for_user(self.reader, shelf).count(), 0)
 
-    def test_removing_book_from_group_removes_from_group_shelves(self):
+    def test_removing_book_from_group_hides_group_shelf_item_without_deleting_it(self):
         shelf = create_shelf(
             self.owner,
             name="GroupShelf",
@@ -188,9 +188,10 @@ class ShelfServicePolicyTests(IsolatedMediaRootMixin, TestCase):
         remove_book_from_group(
             actor=self.owner, book=self.book_in_group, group=self.group
         )
-        self.assertFalse(
+        self.assertTrue(
             ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists()
         )
+        self.assertEqual(visible_shelf_items_for_user(self.owner, shelf).count(), 0)
 
 
 class ShelfPositionServiceTests(IsolatedMediaRootMixin, TestCase):

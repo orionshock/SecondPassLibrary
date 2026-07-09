@@ -4,7 +4,8 @@ from django.db.models import Q
 
 from accounts.models import UserClientSession
 from library import policies as library_policies
-from library.models import Book, BookGroupAssignment, LibraryGroupMembership
+from library.models import Book, LibraryGroupMembership
+from library.queries import visible_books_for_group, visible_books_for_user
 from library.groups.public_group import is_public_group
 
 from .models import Shelf
@@ -124,13 +125,13 @@ def can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
         return False
 
     if shelf.owner_type == Shelf.OWNER_TYPE_USER:
-        return library_policies.can_view_book(user=user, book=book)
+        return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
 
     if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
         group = shelf.owner_group
         if group is None:
             return False
-        return BookGroupAssignment.objects.filter(book=book, group=group).exists()
+        return visible_books_for_group(user, group, cached=False).filter(pk=book.pk).exists()
 
     return False
 

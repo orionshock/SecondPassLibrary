@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import hashlib
+from uuid import uuid4
 from dataclasses import dataclass
+from typing import Any
 
 from django.core.files.base import ContentFile
 
 from library.groups.services import ensure_book_public_assignment
-from library.models import Book, BookFile
+from library.models import Book
 
 
 @dataclass(frozen=True)
 class FileBackedBook:
     book: Book
-    book_file: BookFile
+    book_file: Any
 
 
 def create_file_backed_book(
@@ -24,7 +26,7 @@ def create_file_backed_book(
     book_fields: dict | None = None,
 ) -> FileBackedBook:
     """
-    Test helper: create a minimal valid Book + BookFile pair.
+    Test helper: create a minimal Book with Book-owned file fields.
 
     The product invariant is that Books are file-backed; tests should use this
     helper instead of creating fileless Books unless explicitly testing an
@@ -32,19 +34,18 @@ def create_file_backed_book(
     """
     fields = dict(book_fields or {})
     fields.setdefault("title", title)
+    if epub_bytes == b"dummy epub":
+        epub_bytes = f"dummy epub:{title}:{source_filename}:{uuid4()}".encode()
+    checksum = hashlib.sha256(epub_bytes).hexdigest()
+    fields.setdefault("checksum", checksum)
+    fields.setdefault("file_size", len(epub_bytes))
+    fields.setdefault("source_filename", source_filename)
     book = Book.objects.create(**fields)
+    book.book_file.save(source_filename, ContentFile(epub_bytes), save=True)
     if assign_public:
         ensure_book_public_assignment(book=book, added_by=None)
 
-    checksum = hashlib.sha256(epub_bytes).hexdigest()
-    book_file = BookFile.objects.create(
-        book=book,
-        checksum=checksum,
-        file=ContentFile(epub_bytes, name=source_filename),
-        format=BookFile.FORMAT_EPUB,
-        file_size=len(epub_bytes),
-        source_filename=source_filename,
-    )
+    book_file = book.book_file
     return FileBackedBook(book=book, book_file=book_file)
 
 

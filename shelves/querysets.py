@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from django.db.models import OuterRef, QuerySet, Subquery
+from django.db.models import F, Min, OuterRef, QuerySet, Subquery
 from rest_framework.exceptions import ValidationError
 
 from .models import Shelf, ShelfItem
@@ -98,3 +98,24 @@ def build_visible_shelf_list_queryset(
         )
 
     return visible_qs
+
+
+def apply_shelf_ordering(queryset: QuerySet[Shelf], ordering: str) -> QuerySet[Shelf]:
+    if ordering == "name":
+        return queryset.order_by("name", "id")
+    if ordering == "-item_count":
+        return queryset.order_by("-item_count", "name", "id")
+    raise ValidationError({"ordering": "Invalid ordering."})
+
+
+def apply_shelf_item_ordering(queryset: QuerySet[ShelfItem], ordering: str) -> QuerySet[ShelfItem]:
+    if ordering == "position":
+        return queryset.order_by("position", "id", "book_id")
+    if ordering == "title":
+        return queryset.order_by("book__title", "id", "book_id")
+    if ordering == "author":
+        return (
+            queryset.annotate(_primary_author_name=Min("book__authors__sort_name"))
+            .order_by(F("_primary_author_name").asc(nulls_last=True), "book__title", "id")
+        )
+    raise ValidationError({"ordering": "Invalid ordering."})

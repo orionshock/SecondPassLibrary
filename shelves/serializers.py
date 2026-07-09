@@ -111,12 +111,18 @@ class ShelfPatchSerializer(serializers.Serializer):
 
 class BookSummarySerializer(serializers.ModelSerializer):
     authors = AuthorSummarySerializer(many=True, read_only=True)
-    series = SeriesSummarySerializer(read_only=True, allow_null=True)
+    series = serializers.SerializerMethodField(read_only=True)
     has_file = serializers.SerializerMethodField(read_only=True)
     cover_url = serializers.SerializerMethodField(read_only=True)
 
+    def get_series(self, obj: Book) -> dict[str, Any] | None:
+        link = getattr(obj, "book_series", None)
+        if link is None:
+            return None
+        return cast(dict[str, Any], SeriesSummarySerializer(link.series).data)
+
     def get_has_file(self, obj: Book) -> bool:
-        return bool(getattr(obj, "file", None))
+        return bool(getattr(obj, "book_file", None))
 
     def get_cover_url(self, obj: Book) -> str | None:
         cover = getattr(obj, "cover_file", None)

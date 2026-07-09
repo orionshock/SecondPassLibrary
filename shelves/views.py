@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any, NoReturn, cast
 
-from django.db.models import Count, Exists, F, OuterRef, Window
-from django.db.models.functions import RowNumber
+from django.db.models import Count
 from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
@@ -14,17 +13,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from library import policies as library_policies
-from library.models import Book, BookGroupAssignment, LibraryGroup
+from library.models import Book, LibraryGroup
 from library.catalog.preview_books import (
     PREVIEW_BOOK_LIMIT,
-    attach_preview_books_from_queryset,
     include_preview_books,
 )
-from library.catalog.ordering import (
-    parse_ordering_param,
-)
-from library.compat.shelves import apply_shelf_item_ordering, apply_shelf_ordering
+from library.catalog.ordering import parse_ordering_param
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 
@@ -48,7 +42,11 @@ from .services import (
     visible_shelf_items_for_user,
 )
 from .policies import can_edit_shelf_for_request, visible_shelf_filter
-from .querysets import build_visible_shelf_list_queryset
+from .querysets import (
+    apply_shelf_item_ordering,
+    apply_shelf_ordering,
+    build_visible_shelf_list_queryset,
+)
 
 
 def _attach_shelf_preview_books(*, shelves, user) -> None:
@@ -57,36 +55,13 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
     if not shelf_ids:
         return
 
-    queryset = ShelfItem.objects.select_related("book").filter(shelf_id__in=shelf_ids)
-    if not library_policies.can_manage_library(user):
-        visible_assignment = BookGroupAssignment.objects.filter(
-            book_id=OuterRef("book_id"),
-            group__memberships__user=user,
-        )
-        queryset = queryset.filter(Exists(visible_assignment))
-
-    queryset = (
-        queryset.annotate(
-            _preview_parent_id=F("shelf_id"),
-            _preview_rank=Window(
-                expression=RowNumber(),
-                partition_by=[F("shelf_id")],
-                order_by=[
-                    F("position").asc(),
-                    F("id").asc(),
-                    F("book_id").asc(),
-                ],
-            ),
-        )
-        .filter(_preview_rank__lte=PREVIEW_BOOK_LIMIT)
-        .order_by("_preview_parent_id", "_preview_rank")
-    )
-
-    attach_preview_books_from_queryset(
-        parents=shelf_list,
-        queryset=queryset,
-        get_book=lambda item: item.book,
-    )
+    for shelf in shelf_list:
+        shelf._preview_books = [
+            item.book
+            for item in visible_shelf_items_for_user(user, shelf).order_by("position", "id")[
+                :PREVIEW_BOOK_LIMIT
+            ]
+        ]
 
 
 class ShelfViewSet(

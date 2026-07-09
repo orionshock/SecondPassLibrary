@@ -25,7 +25,11 @@ export function initShelfBookSearch({
       return;
     }
     setStatus(searchStatus, "Searching...", false);
-    const payload = await fetchJSON(`/api/v1/library/books/?q=${encodeURIComponent(term)}`);
+    const baseUrl =
+      ownerType === "group" && ownerGroupId
+        ? `/api/v1/library/groups/${encodeURIComponent(String(ownerGroupId))}/books/`
+        : "/api/v1/library/books/";
+    const payload = await fetchJSON(`${baseUrl}?q=${encodeURIComponent(term)}`);
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
 
     if (!results.length) {
@@ -46,24 +50,7 @@ export function initShelfBookSearch({
         const inShelf = bid && currentShelfBookIds.has(bid);
         if (inShelf) return "";
 
-        let canAdd = !!bid;
-        let badgeText = "";
-        if (!badgeText && ownerType === "group" && ownerGroupId) {
-          const groups = Array.isArray(b.groups) ? b.groups : null;
-          if (groups && groups.length) {
-            const inGroup = groups.some((g) => g && String(g.id) === String(ownerGroupId));
-            if (!inGroup) {
-              badgeText = "Not in group";
-              canAdd = false;
-            } else {
-              badgeText = "In group";
-            }
-          } else {
-            badgeText = "Group assignment unknown";
-          }
-        }
-
-        const badge = badgeText ? `<span class="pill">${escapeHtml(badgeText)}</span>` : "";
+        const canAdd = !!bid;
         const addBtn = canAdd
           ? `<button class="button" type="button" data-action="add-book" data-book-id="${escapeHtml(bid)}">Add</button>`
           : "";
@@ -74,7 +61,6 @@ export function initShelfBookSearch({
               <div style="flex: 1;">
                 <h3 class="book__title">${escapeHtml(title)}</h3>
                 ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
-                ${badge ? `<div class="muted" style="margin-top: 6px;">${badge}</div>` : ""}
               </div>
               <div>
                 ${addBtn}
