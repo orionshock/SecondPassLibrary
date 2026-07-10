@@ -28,7 +28,16 @@ class ImportNormalizationTests(TestCase):
 
         self.assertEqual((isbn.scheme, isbn.normalized_value), ("isbn_10", "0123456479"))
         self.assertEqual((asin.scheme, asin.normalized_value), ("asin", "B00TEST"))
-        self.assertEqual((unknown.scheme, unknown.normalized_value), ("vendor", "vendor id"))
+        self.assertEqual((unknown.scheme, unknown.normalized_value), ("other", "vendor id"))
+
+    def test_generic_isbn_scheme_resolves_by_normalized_value_length(self):
+        isbn_10 = normalize_identifier(scheme="ISBN", value="0-123456-47-9")
+        isbn_13 = normalize_identifier(scheme="ISBN", value="978-0-00-000001-1")
+        invalid = normalize_identifier(scheme="ISBN", value="12345")
+
+        self.assertEqual((isbn_10.scheme, isbn_10.normalized_value), ("isbn_10", "0123456479"))
+        self.assertEqual((isbn_13.scheme, isbn_13.normalized_value), ("isbn_13", "9780000000011"))
+        self.assertEqual((invalid.scheme, invalid.normalized_value), ("other", "12345"))
 
     def test_partial_date_year_only(self):
         self.assertEqual(parse_partial_date("1999"), (1999, None, None, DATE_PRECISION_YEAR))

@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 import re
 
-from library.imports.results import ImportIdentifier, ImportTag
+from library.imports.dto import ImportIdentifier, ImportTag
 
 
 DATE_PRECISION_YEAR = "year"
@@ -58,10 +58,10 @@ def build_import_tags(labels: list[str]) -> list[ImportTag]:
 
 
 def normalize_identifier(*, scheme: str, value: str) -> ImportIdentifier | None:
-    normalized_scheme = normalize_identifier_scheme(scheme)
     display_value = collapse_whitespace(value)
     if not display_value:
         return None
+    normalized_scheme = normalize_identifier_scheme(scheme, value=display_value)
     return ImportIdentifier(
         scheme=normalized_scheme,
         value=display_value,
@@ -72,11 +72,12 @@ def normalize_identifier(*, scheme: str, value: str) -> ImportIdentifier | None:
     )
 
 
-def normalize_identifier_scheme(scheme: str | None) -> str:
-    value = collapse_whitespace(scheme).casefold().replace("-", "_")
-    value = value.removeprefix("scheme:")
+def normalize_identifier_scheme(scheme: str | None, *, value: str = "") -> str:
+    scheme_value = collapse_whitespace(scheme).casefold().replace("-", "_")
+    scheme_value = scheme_value.removeprefix("scheme:")
+    if scheme_value == "isbn":
+        return _generic_isbn_scheme(raw_identifier=value)
     mapping = {
-        "isbn": SCHEME_ISBN_13,
         "isbn_10": SCHEME_ISBN_10,
         "isbn10": SCHEME_ISBN_10,
         "isbn_13": SCHEME_ISBN_13,
@@ -96,7 +97,16 @@ def normalize_identifier_scheme(scheme: str | None) -> str:
         "urn": SCHEME_URI,
         "uuid": SCHEME_UUID,
     }
-    return mapping.get(value, value or SCHEME_OTHER)
+    return mapping.get(scheme_value, SCHEME_OTHER)
+
+
+def _generic_isbn_scheme(*, raw_identifier: str) -> str:
+    normalized = normalize_identifier_value(scheme=SCHEME_ISBN_13, value=raw_identifier)
+    if len(normalized) == 10:
+        return SCHEME_ISBN_10
+    if len(normalized) == 13:
+        return SCHEME_ISBN_13
+    return SCHEME_OTHER
 
 
 def normalize_identifier_value(*, scheme: str, value: str) -> str:

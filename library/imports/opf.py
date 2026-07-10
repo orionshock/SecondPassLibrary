@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from xml.etree import ElementTree
+
+from defusedxml import ElementTree
 
 from library.imports.normalization import (
     build_import_tags,
@@ -11,7 +12,7 @@ from library.imports.normalization import (
     parse_partial_date,
     parse_series_index,
 )
-from library.imports.results import ImportAuthor, ImportMetadata, ImportSeries
+from library.imports.dto import ImportAuthor, ImportIdentifier, ImportMetadata, ImportSeries
 
 
 def parse_opf_metadata(opf_xml: str | bytes) -> ImportMetadata:
@@ -77,7 +78,7 @@ def _parse_series(metadata: ElementTree.Element) -> ImportSeries | None:
     )
 
 
-def _parse_identifiers(metadata: ElementTree.Element):
+def _parse_identifiers(metadata: ElementTree.Element) -> list[ImportIdentifier]:
     identifiers = []
     seen = set()
     for item in _children(metadata, "identifier"):

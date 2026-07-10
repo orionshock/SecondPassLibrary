@@ -3,6 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 from unittest import TestCase
 
+from defusedxml.common import EntitiesForbidden
+
 from library.imports.opf import parse_opf_metadata
 
 
@@ -107,6 +109,68 @@ class OpfImportMetadataTests(TestCase):
             [(identifier.scheme, identifier.normalized_value) for identifier in metadata.identifiers],
             [("isbn_13", "9780000000011"), ("doi", "10.1000/abc")],
         )
+
+    def test_duplicate_identifiers_collapse_by_scheme_and_normalized_value(self):
+        metadata = parse_opf_metadata(
+            opf_metadata(
+                """
+                <dc:title>Book</dc:title>
+                <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
+                <dc:identifier opf:scheme="ISBN-13">9780000000011</dc:identifier>
+                """
+            )
+        )
+
+        self.assertEqual(len(metadata.identifiers), 1)
+        self.assertEqual(metadata.identifiers[0].scheme, "isbn_13")
+
+    def test_invalid_series_index_is_blank(self):
+        metadata = parse_opf_metadata(
+            opf_metadata(
+                """
+                <dc:title>Book</dc:title>
+                <meta name="calibre:series" content="Earthsea"/>
+                <meta name="calibre:series_index" content="not-a-number"/>
+                """
+            )
+        )
+
+        self.assertIsNone(metadata.series.series_index)
+
+    def test_opf_without_calibre_metadata_uses_boring_defaults(self):
+        metadata = parse_opf_metadata(
+            opf_metadata(
+                """
+                <dc:title>Book</dc:title>
+                <dc:creator>Jane Writer</dc:creator>
+                """
+            )
+        )
+
+        self.assertEqual(metadata.sort_title, "Book")
+        self.assertEqual(metadata.authors[0].sort_name, "Jane Writer")
+        self.assertIsNone(metadata.series)
+
+    def test_opf_without_metadata_section_uses_root_as_metadata(self):
+        metadata = parse_opf_metadata(
+            """<package xmlns:dc="http://purl.org/dc/elements/1.1/">
+                <dc:title>Root Metadata Book</dc:title>
+            </package>"""
+        )
+
+        self.assertEqual(metadata.title, "Root Metadata Book")
+
+    def test_unsafe_xml_entities_are_rejected(self):
+        with self.assertRaises(EntitiesForbidden):
+            parse_opf_metadata(
+                """<?xml version="1.0"?>
+                <!DOCTYPE package [
+                  <!ENTITY unsafe "entity text">
+                ]>
+                <package xmlns:dc="http://purl.org/dc/elements/1.1/">
+                  <metadata><dc:title>&unsafe;</dc:title></metadata>
+                </package>"""
+            )
 
     def test_missing_sort_fields_fall_back_predictably(self):
         metadata = parse_opf_metadata(
