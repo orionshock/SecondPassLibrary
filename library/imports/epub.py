@@ -10,18 +10,28 @@ from defusedxml import ElementTree
 from django.core.files.base import ContentFile
 from ebooklib import epub
 
+from library.imports.errors import (
+    INVALID_EPUB_MESSAGE,
+    InvalidEpubImportError,
+    UnsupportedImportSourceError,
+    operator_import_detail,
+    safe_import_message,
+)
 from library.imports.opf import parse_opf_metadata
-from library.imports.services import ImportPersistenceResult, persist_imported_book
+from library.imports.results import (
+    IMPORT_STATUS_CONFLICT,
+    IMPORT_STATUS_DUPLICATE,
+    IMPORT_STATUS_FAILED,
+    IMPORT_STATUS_IMPORTED,
+    ImportItemResult,
+)
+from library.imports.services import persist_imported_book
 
 
-EPUB_IMPORT_ERROR_MESSAGE = "Invalid or unsupported EPUB file."
+EPUB_IMPORT_ERROR_MESSAGE = INVALID_EPUB_MESSAGE
 READ_CHUNK_BYTES = 1024 * 1024
 MAX_CONTAINER_XML_BYTES = 128 * 1024
 MAX_PACKAGE_OPF_BYTES = 1024 * 1024
-
-
-class InvalidEpubImportError(ValueError):
-    pass
 
 
 def import_epub_file(
@@ -29,16 +39,52 @@ def import_epub_file(
     *,
     source_filename: str,
     actor=None,
-) -> ImportPersistenceResult:
+) -> ImportItemResult:
+    source_label = safe_source_label(source_filename)
+    try:
+        return _import_epub_file(
+            file_obj,
+            source_filename=source_filename,
+            source_label=source_label,
+            actor=actor,
+        )
+    except (InvalidEpubImportError, UnsupportedImportSourceError) as exc:
+        return ImportItemResult(
+            status=IMPORT_STATUS_FAILED,
+            source_label=source_label,
+            safe_message=safe_import_message(exc),
+            operator_detail=operator_import_detail(exc),
+        )
+    except Exception as exc:
+        return ImportItemResult(
+            status=IMPORT_STATUS_FAILED,
+            source_label=source_label,
+            safe_message=safe_import_message(exc),
+            operator_detail=operator_import_detail(exc),
+        )
+
+
+def safe_source_label(source_filename: str) -> str:
+    value = (source_filename or "").replace("\\", "/").strip()
+    return value.rsplit("/", 1)[-1] or "unknown.epub"
+
+
+def _import_epub_file(
+    file_obj,
+    *,
+    source_filename: str,
+    source_label: str,
+    actor=None,
+) -> ImportItemResult:
     source_filename = (source_filename or "").strip()
     if not source_filename.lower().endswith(".epub"):
-        raise InvalidEpubImportError("Source filename must have .epub extension.")
+        raise UnsupportedImportSourceError("Source filename must have .epub extension.")
 
     data, checksum, file_size = read_file_with_sha256(file_obj)
     _validate_with_ebooklib(data)
     metadata = _read_import_metadata(data)
 
-    return persist_imported_book(
+    persistence_result = persist_imported_book(
         metadata=metadata,
         checksum=checksum,
         file_size=file_size,
@@ -46,6 +92,31 @@ def import_epub_file(
         book_file=ContentFile(data, name=source_filename),
         actor=actor,
     )
+    return _item_result_from_persistence_result(
+        source_label=source_label,
+        status=persistence_result.status,
+        book=persistence_result.book,
+        message=persistence_result.message,
+    )
+
+
+def _item_result_from_persistence_result(
+    *,
+    source_label: str,
+    status: str,
+    book,
+    message: str,
+) -> ImportItemResult:
+    if status == IMPORT_STATUS_IMPORTED:
+        safe_message = message or "Successfully imported EPUB."
+    elif status == IMPORT_STATUS_DUPLICATE:
+        safe_message = message or "A book with this checksum already exists."
+    elif status == IMPORT_STATUS_CONFLICT:
+        safe_message = message or "An identifier from this import already belongs to another book."
+    else:
+        status = IMPORT_STATUS_FAILED
+        safe_message = message or INVALID_EPUB_MESSAGE
+    return ImportItemResult(status=status, source_label=source_label, book=book, safe_message=safe_message)
 
 
 def read_file_with_sha256(file_obj, *, chunk_size: int = READ_CHUNK_BYTES) -> tuple[bytes, str, int]:
@@ -80,7 +151,7 @@ def _validate_with_ebooklib(data: bytes) -> None:
     try:
         epub.read_epub(BytesIO(data), options={"ignore_ncx": True})
     except Exception as exc:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE) from exc
+        raise InvalidEpubImportError() from exc
 
 
 def _read_import_metadata(data: bytes):
@@ -89,7 +160,7 @@ def _read_import_metadata(data: bytes):
     except InvalidEpubImportError:
         raise
     except Exception as exc:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE) from exc
+        raise InvalidEpubImportError() from exc
 
 
 def _read_package_opf_xml(data: bytes) -> bytes:
@@ -109,22 +180,22 @@ def _read_package_opf_xml(data: bytes) -> bytes:
     except InvalidEpubImportError:
         raise
     except Exception as exc:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE) from exc
+        raise InvalidEpubImportError() from exc
 
 
 def _read_zip_member_bytes(*, zf: zipfile.ZipFile, member: str, max_bytes: int) -> bytes:
     try:
         info = zf.getinfo(member)
     except KeyError as exc:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE) from exc
+        raise InvalidEpubImportError() from exc
 
     if info.file_size > max_bytes:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE)
+        raise InvalidEpubImportError()
 
     with zf.open(info, "r") as fp:
         data = fp.read(max_bytes + 1)
     if len(data) > max_bytes:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE)
+        raise InvalidEpubImportError()
     return data
 
 
@@ -132,7 +203,7 @@ def _find_package_path(container_xml: bytes) -> str:
     try:
         root = ElementTree.fromstring(container_xml)
     except Exception as exc:
-        raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE) from exc
+        raise InvalidEpubImportError() from exc
 
     for item in root.iter():
         if _local_name(item.tag) != "rootfile":
@@ -145,7 +216,7 @@ def _find_package_path(container_xml: bytes) -> str:
         if safe_path:
             return safe_path
 
-    raise InvalidEpubImportError(EPUB_IMPORT_ERROR_MESSAGE)
+    raise InvalidEpubImportError()
 
 
 def _safe_posix_relpath(path: str) -> str | None:

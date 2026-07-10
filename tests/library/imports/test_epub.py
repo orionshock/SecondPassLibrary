@@ -8,13 +8,19 @@ import library.models as library_models
 from django.test import TestCase
 
 from library.groups.public_group import get_public_group
-from library.imports.epub import EPUB_IMPORT_ERROR_MESSAGE, InvalidEpubImportError, import_epub_file
-from library.imports.services import IMPORT_STATUS_DUPLICATE
+from library.imports.epub import EPUB_IMPORT_ERROR_MESSAGE, import_epub_file
+from library.imports.results import (
+    IMPORT_STATUS_CONFLICT,
+    IMPORT_STATUS_DUPLICATE,
+    IMPORT_STATUS_FAILED,
+    IMPORT_STATUS_IMPORTED,
+)
 from library.models import (
     Book,
     BookAuthor,
     BookCatalogTag,
     BookGroupAssignment,
+    BookIdentifier,
     BookSeries,
     CatalogTag,
 )
@@ -34,8 +40,12 @@ class SingleEpubImportServiceTests(
             actor=self.actor,
         )
 
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(result.safe_message, "Successfully imported EPUB.")
+        self.assertEqual(result.operator_detail, "")
         self.assertEqual(result.book.title, "Sample EPUB")
         self.assertEqual(result.book.file_format, Book.FILE_FORMAT_EPUB)
+        self.assertEqual(result.source_label, "sample.epub")
         self.assertTrue(
             BookGroupAssignment.objects.filter(
                 book=result.book,
@@ -63,36 +73,40 @@ class SingleEpubImportServiceTests(
 
         self.assertEqual(second.status, IMPORT_STATUS_DUPLICATE)
         self.assertEqual(second.book, first.book)
+        self.assertEqual(second.operator_detail, "")
         self.assertEqual(Book.objects.filter(checksum=first.book.checksum).count(), 1)
 
     def test_invalid_extension_fails_safely(self):
-        with self.assertRaises(InvalidEpubImportError) as context:
-            import_epub_file(BytesIO(minimal_epub_bytes()), source_filename="sample.txt")
+        result = import_epub_file(BytesIO(minimal_epub_bytes()), source_filename="sample.txt")
 
-        self.assertEqual(str(context.exception), "Source filename must have .epub extension.")
+        self.assertEqual(result.status, IMPORT_STATUS_FAILED)
+        self.assertEqual(result.safe_message, "Unsupported import source.")
+        self.assertIn("UnsupportedImportSourceError", result.operator_detail)
+        self.assertFalse(Book.objects.exists())
 
     def test_malformed_epub_zip_fails_safely(self):
-        with self.assertRaises(InvalidEpubImportError) as context:
-            import_epub_file(BytesIO(b"not a zip"), source_filename="bad.epub")
+        result = import_epub_file(BytesIO(b"not a zip"), source_filename="bad.epub")
 
-        self.assertEqual(str(context.exception), EPUB_IMPORT_ERROR_MESSAGE)
-        self.assertNotIn("SecondPassLibrary", str(context.exception))
+        self.assertEqual(result.status, IMPORT_STATUS_FAILED)
+        self.assertEqual(result.safe_message, EPUB_IMPORT_ERROR_MESSAGE)
+        self.assertNotIn("SecondPassLibrary", result.safe_message)
+        self.assertFalse(Book.objects.exists())
 
     def test_missing_epub_package_metadata_fails_safely(self):
         data = _epub_without_package()
 
-        with self.assertRaises(InvalidEpubImportError) as context:
-            import_epub_file(BytesIO(data), source_filename="missing-package.epub")
+        result = import_epub_file(BytesIO(data), source_filename="missing-package.epub")
 
-        self.assertEqual(str(context.exception), EPUB_IMPORT_ERROR_MESSAGE)
+        self.assertEqual(result.status, IMPORT_STATUS_FAILED)
+        self.assertEqual(result.safe_message, EPUB_IMPORT_ERROR_MESSAGE)
 
     def test_malformed_opf_xml_fails_safely(self):
         data = _epub_with_raw_opf("<package><metadata")
 
-        with self.assertRaises(InvalidEpubImportError) as context:
-            import_epub_file(BytesIO(data), source_filename="malformed-opf.epub")
+        result = import_epub_file(BytesIO(data), source_filename="malformed-opf.epub")
 
-        self.assertEqual(str(context.exception), EPUB_IMPORT_ERROR_MESSAGE)
+        self.assertEqual(result.status, IMPORT_STATUS_FAILED)
+        self.assertEqual(result.safe_message, EPUB_IMPORT_ERROR_MESSAGE)
 
     def test_calibre_metadata_maps_through_import_dto_semantics(self):
         metadata_xml = """
@@ -131,6 +145,42 @@ class SingleEpubImportServiceTests(
 
         self.assertFalse(hasattr(library_models, "BookFile"))
         self.assertTrue(result.book.book_file.name)
+
+    def test_identifier_conflict_returns_conflict_item_result(self):
+        existing_book = Book.objects.create(title="Existing", checksum="existing-book")
+        BookIdentifier.objects.create(
+            book=existing_book,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780000000011",
+            normalized_value="9780000000011",
+        )
+        metadata_xml = """
+        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
+                  xmlns:opf="http://www.idpf.org/2007/opf">
+          <dc:title>Conflicting Identifier</dc:title>
+          <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
+        </metadata>
+        """
+
+        result = import_epub_file(
+            BytesIO(minimal_epub_bytes(metadata_xml=metadata_xml)),
+            source_filename="conflict.epub",
+        )
+
+        self.assertEqual(result.status, IMPORT_STATUS_CONFLICT)
+        self.assertEqual(result.book, existing_book)
+        self.assertEqual(
+            result.safe_message,
+            "An identifier from this import already belongs to another book.",
+        )
+
+    def test_source_label_uses_safe_filename_only(self):
+        result = import_epub_file(
+            BytesIO(minimal_epub_bytes()),
+            source_filename=r"C:\unsafe\path\label.epub",
+        )
+
+        self.assertEqual(result.source_label, "label.epub")
 
 
 def _epub_without_package() -> bytes:
