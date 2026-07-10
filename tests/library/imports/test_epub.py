@@ -80,6 +80,7 @@ class SingleEpubImportServiceTests(
         result = import_epub_file(BytesIO(minimal_epub_bytes()), source_filename="sample.txt")
 
         self.assertEqual(result.status, IMPORT_STATUS_FAILED)
+        self.assertNotEqual(result.status, "skipped")
         self.assertEqual(result.safe_message, "Unsupported import source.")
         self.assertIn("UnsupportedImportSourceError", result.operator_detail)
         self.assertFalse(Book.objects.exists())
@@ -88,6 +89,7 @@ class SingleEpubImportServiceTests(
         result = import_epub_file(BytesIO(b"not a zip"), source_filename="bad.epub")
 
         self.assertEqual(result.status, IMPORT_STATUS_FAILED)
+        self.assertNotEqual(result.status, "skipped")
         self.assertEqual(result.safe_message, EPUB_IMPORT_ERROR_MESSAGE)
         self.assertNotIn("SecondPassLibrary", result.safe_message)
         self.assertFalse(Book.objects.exists())
@@ -99,6 +101,7 @@ class SingleEpubImportServiceTests(
 
         self.assertEqual(result.status, IMPORT_STATUS_FAILED)
         self.assertEqual(result.safe_message, EPUB_IMPORT_ERROR_MESSAGE)
+        self.assertFalse(Book.objects.exists())
 
     def test_malformed_opf_xml_fails_safely(self):
         data = _epub_with_raw_opf("<package><metadata")

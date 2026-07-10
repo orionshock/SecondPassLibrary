@@ -26,9 +26,12 @@ class ImportBatchResult:
     source_label: str
     run_id: str = field(default_factory=lambda: str(uuid4()))
     items: list[ImportItemResult] = field(default_factory=list)
+    discovered_count: int | None = None
 
     @property
     def total_found(self) -> int:
+        if self.discovered_count is not None:
+            return self.discovered_count
         return len(self.items)
 
     @property

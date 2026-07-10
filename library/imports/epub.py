@@ -40,6 +40,13 @@ def import_epub_file(
     source_filename: str,
     actor=None,
 ) -> ImportItemResult:
+    """
+    Safe item-level import wrapper.
+
+    Normal import/domain failures are converted to failed ImportItemResult rows.
+    Unexpected exceptions are also captured here for future batch entrypoints,
+    but operator_detail exposes only the exception class for those cases.
+    """
     source_label = safe_source_label(source_filename)
     try:
         return _import_epub_file(

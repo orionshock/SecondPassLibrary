@@ -11,6 +11,11 @@ from library.imports.results import (
     ImportBatchResult,
     ImportItemResult,
 )
+from library.imports.errors import (
+    InvalidEpubImportError,
+    operator_import_detail,
+    safe_import_message,
+)
 
 
 class ImportResultTests(TestCase):
@@ -33,3 +38,42 @@ class ImportResultTests(TestCase):
         self.assertEqual(result.conflict_count, 1)
         self.assertEqual(result.failed_count, 1)
         self.assertEqual(result.skipped_count, 1)
+
+    def test_batch_result_total_found_defaults_to_item_count(self):
+        result = ImportBatchResult(
+            source_type="epub",
+            source_label="book.epub",
+            items=[
+                ImportItemResult(status=IMPORT_STATUS_IMPORTED, source_label="book.epub"),
+            ],
+        )
+
+        self.assertEqual(result.total_found, 1)
+
+    def test_batch_result_total_found_can_use_discovered_count(self):
+        result = ImportBatchResult(
+            source_type="zip",
+            source_label="bundle.zip",
+            discovered_count=3,
+            items=[
+                ImportItemResult(status=IMPORT_STATUS_IMPORTED, source_label="a.epub"),
+                ImportItemResult(status=IMPORT_STATUS_FAILED, source_label="b.epub"),
+            ],
+        )
+
+        self.assertEqual(result.total_found, 3)
+        self.assertEqual(len(result.items), 2)
+
+    def test_unexpected_operator_detail_exposes_exception_class_only(self):
+        detail = operator_import_detail(Exception(r"C:\secret\path.epub"))
+
+        self.assertEqual(detail, "Exception")
+
+    def test_domain_error_safe_message_is_stable(self):
+        error = InvalidEpubImportError("raw parser detail")
+
+        self.assertEqual(safe_import_message(error), "Invalid or unsupported EPUB file.")
+        self.assertEqual(
+            operator_import_detail(error),
+            "InvalidEpubImportError: raw parser detail",
+        )
