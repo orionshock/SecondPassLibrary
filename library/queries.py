@@ -5,8 +5,9 @@ from collections.abc import Iterable
 from django.core.cache import cache
 from django.db.models import QuerySet
 
+from accounts.roles import is_librarian
+
 from .models import Book, LibraryGroup, LibraryGroupMembership
-from .roles import is_librarian
 
 
 VISIBLE_BOOK_IDS_CACHE_SECONDS = 120

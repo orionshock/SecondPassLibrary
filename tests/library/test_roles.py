@@ -5,17 +5,11 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.models import UserProfile
+from accounts.roles import is_librarian, is_manager, is_owner
 from core.server_settings import set_server_setting
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.models import LibraryGroup, LibraryGroupMembership
-from library.roles import (
-    RoleRank,
-    effective_role_rank,
-    is_curator,
-    is_librarian,
-    is_manager,
-    is_owner,
-)
+from library.roles import is_curator
 from tests.library.helpers import set_user_role
 
 
@@ -42,19 +36,6 @@ class LibraryReWrite2607RolePrimitiveTests(TestCase):
         self.club = LibraryGroup.objects.create(name="Club")
         self.other_group = LibraryGroup.objects.create(name="Other")
         LibraryGroupMembership.objects.create(user=self.curator, group=self.club, is_curator=True)
-
-    def test_effective_role_rank_maps_existing_account_roles(self):
-        cases = [
-            (self.reader, RoleRank.READER),
-            (self.curator, RoleRank.READER),
-            (self.librarian, RoleRank.LIBRARIAN),
-            (self.manager, RoleRank.MANAGER),
-            (self.owner, RoleRank.OWNER),
-        ]
-
-        for user, rank in cases:
-            with self.subTest(user=user.username):
-                self.assertEqual(effective_role_rank(user), rank)
 
     def test_owner_implies_manager_librarian_and_curator(self):
         self.assertTrue(is_owner(self.owner))

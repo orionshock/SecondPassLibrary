@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from accounts.roles import is_librarian, is_manager
+
 from .groups.public_group import is_public_group
 from .models import Book, LibraryGroup
 from .queries import can_view_group, visible_books_for_user
-from .roles import is_curator, is_librarian, is_manager
+from .roles import is_curator
 
 
 def can_import_books(user) -> bool:
