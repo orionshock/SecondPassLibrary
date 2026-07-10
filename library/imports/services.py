@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
+from django.core.exceptions import ValidationError
+from django.core.files.base import File
 from django.db import transaction
 
 from library.groups.public_group import get_public_group
@@ -22,6 +23,7 @@ from library.models import (
 
 IMPORT_STATUS_IMPORTED = "imported"
 IMPORT_STATUS_DUPLICATE = "duplicate"
+IMPORT_STATUS_CONFLICT = "conflict"
 
 
 @dataclass(frozen=True)
@@ -34,18 +36,26 @@ class ImportPersistenceResult:
 def persist_imported_book(
     *,
     metadata: ImportMetadata,
-    checksum: str,
+    checksum: str | None,
     file_size: int | None = None,
     source_filename: str = "",
-    book_file: Any = None,
+    book_file: File | None = None,
     actor=None,
 ) -> ImportPersistenceResult:
+    _validate_import_inputs(metadata=metadata, checksum=checksum, book_file=book_file)
     existing = Book.objects.filter(checksum=checksum).first()
     if existing is not None:
         return ImportPersistenceResult(
             status=IMPORT_STATUS_DUPLICATE,
             book=existing,
             message="A book with this checksum already exists.",
+        )
+    identifier_conflict = _find_identifier_conflict(metadata)
+    if identifier_conflict is not None:
+        return ImportPersistenceResult(
+            status=IMPORT_STATUS_CONFLICT,
+            book=identifier_conflict.book,
+            message="An identifier from this import already belongs to another book.",
         )
 
     with transaction.atomic():
@@ -78,11 +88,33 @@ def persist_imported_book(
 
 def _attach_book_file(*, book: Book, book_file, source_filename: str) -> None:
     filename = source_filename or f"{book.checksum}.{book.file_format}"
-    if hasattr(book_file, "read"):
-        book.book_file.save(filename, book_file, save=True)
-        return
-    book.book_file = book_file
-    book.save(update_fields=["book_file", "updated_at"])
+    book.book_file.save(filename, book_file, save=True)
+
+
+def _validate_import_inputs(
+    *, metadata: ImportMetadata, checksum: str | None, book_file: File | None
+) -> None:
+    if not str(checksum or "").strip():
+        raise ValidationError("Checksum is required.")
+    if not metadata.title.strip():
+        raise ValidationError("Title is required.")
+    if book_file is not None and not isinstance(book_file, File):
+        raise ValidationError("book_file must be a Django File.")
+
+
+def _find_identifier_conflict(metadata: ImportMetadata) -> BookIdentifier | None:
+    for identifier in metadata.identifiers:
+        existing = (
+            BookIdentifier.objects.filter(
+                scheme=identifier.scheme,
+                normalized_value=identifier.normalized_value,
+            )
+            .select_related("book")
+            .first()
+        )
+        if existing is not None:
+            return existing
+    return None
 
 
 def _persist_authors(*, book: Book, metadata: ImportMetadata) -> None:
@@ -101,6 +133,7 @@ def _persist_authors(*, book: Book, metadata: ImportMetadata) -> None:
 def _get_or_create_author(*, name: str, sort_name: str) -> Author:
     existing = Author.objects.filter(name__iexact=name).order_by("id").first()
     if existing is not None:
+        _fill_blank_sort_name(existing, sort_name=sort_name)
         return existing
     return Author.objects.create(name=name, sort_name=sort_name)
 
@@ -122,8 +155,16 @@ def _persist_series(*, book: Book, metadata: ImportMetadata) -> None:
 def _get_or_create_series(*, name: str, sort_name: str) -> Series:
     existing = Series.objects.filter(name__iexact=name).order_by("id").first()
     if existing is not None:
+        _fill_blank_sort_name(existing, sort_name=sort_name)
         return existing
     return Series.objects.create(name=name, sort_name=sort_name)
+
+
+def _fill_blank_sort_name(instance, *, sort_name: str) -> None:
+    if instance.sort_name or not sort_name:
+        return
+    instance.sort_name = sort_name
+    instance.save(update_fields=["sort_name", "updated_at"])
 
 
 def _persist_tags(*, book: Book, metadata: ImportMetadata) -> None:

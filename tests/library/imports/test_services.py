@@ -3,6 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -15,6 +17,7 @@ from library.imports.dto import (
     ImportTag,
 )
 from library.imports.services import (
+    IMPORT_STATUS_CONFLICT,
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_IMPORTED,
     persist_imported_book,
@@ -28,6 +31,7 @@ from library.models import (
     BookIdentifier,
     BookSeries,
     CatalogTag,
+    Series,
 )
 
 
@@ -103,6 +107,32 @@ class ImportPersistenceServiceTests(TestCase):
         self.assertEqual(Author.objects.count(), 1)
         self.assertEqual(BookAuthor.objects.get(book=result.book).author, existing)
 
+    def test_existing_author_blank_sort_name_is_filled(self):
+        existing = Author.objects.create(name="Existing Author", sort_name="")
+
+        persist_imported_book(
+            metadata=sample_metadata(
+                authors=[ImportAuthor(name="existing author", sort_name="Author, Existing", position=0)]
+            ),
+            checksum="fill-author-sort",
+        )
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.sort_name, "Author, Existing")
+
+    def test_existing_author_nonblank_sort_name_is_preserved(self):
+        existing = Author.objects.create(name="Existing Author", sort_name="Original Sort")
+
+        persist_imported_book(
+            metadata=sample_metadata(
+                authors=[ImportAuthor(name="existing author", sort_name="Different Sort", position=0)]
+            ),
+            checksum="preserve-author-sort",
+        )
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.sort_name, "Original Sort")
+
     def test_creates_series_and_book_series_index(self):
         result = persist_imported_book(
             metadata=sample_metadata(
@@ -118,6 +148,32 @@ class ImportPersistenceServiceTests(TestCase):
         row = BookSeries.objects.get(book=result.book)
         self.assertEqual(row.series.name, "Series Name")
         self.assertEqual(row.series_index, Decimal("2.50"))
+
+    def test_existing_series_blank_sort_name_is_filled(self):
+        existing = Series.objects.create(name="Series Name", sort_name="")
+
+        persist_imported_book(
+            metadata=sample_metadata(
+                series=ImportSeries(name="series name", sort_name="Series Sort", series_index=None)
+            ),
+            checksum="fill-series-sort",
+        )
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.sort_name, "Series Sort")
+
+    def test_existing_series_nonblank_sort_name_is_preserved(self):
+        existing = Series.objects.create(name="Series Name", sort_name="Original Series Sort")
+
+        persist_imported_book(
+            metadata=sample_metadata(
+                series=ImportSeries(name="series name", sort_name="Different Sort", series_index=None)
+            ),
+            checksum="preserve-series-sort",
+        )
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.sort_name, "Original Series Sort")
 
     def test_creates_and_reuses_catalog_tags_by_normalized_name(self):
         existing = CatalogTag.objects.create(
@@ -184,6 +240,44 @@ class ImportPersistenceServiceTests(TestCase):
         self.assertEqual(result.book, existing)
         self.assertEqual(Book.objects.filter(checksum="duplicate123").count(), 1)
 
+    def test_blank_checksum_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            persist_imported_book(metadata=sample_metadata(), checksum="")
+
+    def test_missing_checksum_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            persist_imported_book(metadata=sample_metadata(), checksum=None)
+
+    def test_blank_title_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            persist_imported_book(metadata=sample_metadata(title=""), checksum="blank-title")
+
+    def test_duplicate_identifier_on_another_book_returns_conflict(self):
+        existing_book = Book.objects.create(title="Existing", checksum="existing-identifier")
+        BookIdentifier.objects.create(
+            book=existing_book,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780000000011",
+            normalized_value="9780000000011",
+        )
+
+        result = persist_imported_book(
+            metadata=sample_metadata(
+                identifiers=[
+                    ImportIdentifier(
+                        scheme=BookIdentifier.SCHEME_ISBN_13,
+                        value="978-0-00-000001-1",
+                        normalized_value="9780000000011",
+                    )
+                ]
+            ),
+            checksum="identifier-conflict",
+        )
+
+        self.assertEqual(result.status, IMPORT_STATUS_CONFLICT)
+        self.assertEqual(result.book, existing_book)
+        self.assertFalse(Book.objects.filter(checksum="identifier-conflict").exists())
+
     def test_new_book_is_assigned_to_public_common_room(self):
         result = persist_imported_book(metadata=sample_metadata(), checksum="public123")
 
@@ -206,6 +300,32 @@ class ImportPersistenceServiceTests(TestCase):
 
         self.assertFalse(hasattr(__import__("library.models").models, "BookFile"))
         self.assertEqual(result.book.book_file.name, "")
+
+    def test_omitted_book_file_leaves_book_file_blank(self):
+        result = persist_imported_book(metadata=sample_metadata(), checksum="omit-book-file")
+
+        self.assertEqual(result.book.book_file.name, "")
+
+    def test_file_object_attachment_is_saved_to_book_file(self):
+        checksum = "a" * 64
+
+        result = persist_imported_book(
+            metadata=sample_metadata(),
+            checksum=checksum,
+            source_filename="upload.epub",
+            book_file=ContentFile(b"epub bytes", name="upload.epub"),
+        )
+
+        self.assertTrue(result.book.book_file.name.startswith("books/aa/aa/"))
+        self.assertTrue(result.book.book_file.name.endswith(".epub"))
+
+    def test_non_file_book_file_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            persist_imported_book(
+                metadata=sample_metadata(),
+                checksum="bad-book-file",
+                book_file="not-a-file",
+            )
 
     def test_transaction_rolls_back_related_rows_on_persistence_error(self):
         with self.assertRaises(IntegrityError):
