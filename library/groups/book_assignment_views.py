@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-from library import policies
+from accounts.roles import is_librarian
 from library.groups.book_assignment_serializers import (
     BookGroupAssignmentCreateSerializer,
     BookGroupAssignmentSerializer,
@@ -15,7 +15,8 @@ from library.groups.book_assignment_serializers import (
 from library.groups.browse_views import GroupBookListView, GroupBrowseMixin
 from library.groups.services import add_book_to_group, remove_book_from_group
 from library.models import Book
-from library.queries import can_manage_library
+from library.queries import visible_books_for_user
+from library.roles import is_curator
 
 
 class GroupBookAssignmentListView(GroupBookListView):
@@ -29,7 +30,7 @@ class GroupBookAssignmentListView(GroupBookListView):
             user=request.user,
             book_id=serializer.validated_data["book_id"],
         )
-        if not policies.can_add_book_to_group(user=request.user, book=book, group=group):
+        if not _user_may_add_book_to_group(user=request.user, book=book, group=group):
             raise PermissionDenied("Not allowed to add books to this group.")
         assignment = add_book_to_group(book=book, group=group, actor=request.user)
         out = self.assignment_serializer_class(assignment)
@@ -46,7 +47,7 @@ class GroupBookAssignmentDetailView(GroupBrowseMixin, GenericAPIView):
             user=request.user,
             book_id=self.kwargs[self.book_url_kwarg],
         )
-        if not policies.can_remove_book_from_group(user=request.user, book=book, group=group):
+        if not is_curator(request.user, group):
             raise PermissionDenied("Not allowed to remove books from this group.")
         try:
             remove_book_from_group(book=book, group=group, actor=request.user)
@@ -60,8 +61,18 @@ def _visible_mutation_book_or_404(*, user, book_id) -> Book:
         book = Book.objects.get(pk=book_id)
     except Book.DoesNotExist as exc:
         raise Http404 from exc
-    if can_manage_library(user):
+    if is_librarian(user):
         return book
-    if not policies.can_view_book(user=user, book=book):
+    if not _book_is_visible_to_user(user=user, book=book):
         raise Http404
     return book
+
+
+def _user_may_add_book_to_group(*, user, book: Book, group) -> bool:
+    if is_librarian(user):
+        return True
+    return is_curator(user, group) and _book_is_visible_to_user(user=user, book=book)
+
+
+def _book_is_visible_to_user(*, user, book: Book) -> bool:
+    return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()

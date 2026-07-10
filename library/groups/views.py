@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
-from library import policies
+from accounts.roles import is_manager
 from library.groups.public_group import is_public_group
 from library.groups.querysets import (
     apply_group_ordering,
@@ -35,7 +35,7 @@ class LibraryGroupListView(ListAPIView):
         return apply_group_ordering(queryset, parse_group_ordering(self.request))
 
     def post(self, request, *args, **kwargs):
-        if not policies.can_create_library_group(request.user):
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to create library groups.")
 
         serializer = LibraryGroupCreateSerializer(data=request.data or {})
@@ -54,7 +54,7 @@ class LibraryGroupDetailView(RetrieveAPIView):
 
     def patch(self, request, *args, **kwargs):
         group = self.get_object()
-        if not policies.can_manage_group_identity(user=request.user, group=group):
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to update this library group.")
 
         serializer = LibraryGroupPatchSerializer(data=request.data or {}, partial=True)
@@ -70,7 +70,7 @@ class LibraryGroupDetailView(RetrieveAPIView):
         group = self.get_object()
         if is_public_group(group):
             raise _drf_validation_error("Public/Common Room group cannot be deleted.")
-        if not policies.can_delete_library_group(request.user, group):
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to delete this library group.")
 
         try:

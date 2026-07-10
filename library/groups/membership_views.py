@@ -7,7 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from accounts.models import UserProfile
-from library import policies
+from accounts.roles import is_manager
 from library.groups.membership_serializers import (
     LibraryGroupMembershipSerializer,
     MembershipCreateSerializer,
@@ -39,15 +39,15 @@ class LibraryGroupMembershipListView(GenericAPIView):
         )
 
     def get(self, request, *args, **kwargs):
-        group = self.get_group()
-        if not policies.can_manage_group_membership(user=request.user, group=group):
+        self.get_group()
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to view group memberships.")
         serializer = self.get_serializer(self.get_queryset(), many=True)
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
         group = self.get_group()
-        if not policies.can_manage_group_membership(user=request.user, group=group):
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to manage group memberships.")
 
         serializer = MembershipCreateSerializer(data=request.data or {})
@@ -98,8 +98,8 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
         return membership
 
     def patch(self, request, *args, **kwargs):
-        group = self.get_group()
-        if not policies.can_manage_group_membership(user=request.user, group=group):
+        self.get_group()
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to manage group memberships.")
         membership = self.get_membership()
         serializer = MembershipPatchSerializer(data=request.data or {}, partial=True)
@@ -119,7 +119,7 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         group = self.get_group()
-        if not policies.can_manage_group_membership(user=request.user, group=group):
+        if not is_manager(request.user):
             raise PermissionDenied("Not allowed to manage group memberships.")
         try:
             profile = UserProfile.objects.select_related("user").get(

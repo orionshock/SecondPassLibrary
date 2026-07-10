@@ -13,18 +13,14 @@ from .models import Book, LibraryGroup, LibraryGroupMembership
 VISIBLE_BOOK_IDS_CACHE_SECONDS = 120
 
 
-def can_manage_library(user) -> bool:
-    return is_librarian(user)
-
-
 def effective_group_ids_for_user(user) -> QuerySet:
     if user is None or getattr(user, "is_anonymous", False):
         return LibraryGroupMembership.objects.none().values_list("group_id", flat=True)
     return LibraryGroupMembership.objects.filter(user=user).values_list("group_id", flat=True)
 
 
-def can_view_group(*, user, group: LibraryGroup) -> bool:
-    if can_manage_library(user):
+def group_is_visible_to_user(*, user, group: LibraryGroup) -> bool:
+    if is_librarian(user):
         return True
     if user is None or getattr(user, "is_anonymous", False):
         return False
@@ -32,7 +28,7 @@ def can_view_group(*, user, group: LibraryGroup) -> bool:
 
 
 def visible_groups_for_user(user) -> QuerySet[LibraryGroup]:
-    if can_manage_library(user):
+    if is_librarian(user):
         return LibraryGroup.objects.all()
     if user is None or getattr(user, "is_anonymous", False):
         return LibraryGroup.objects.none()
@@ -52,7 +48,7 @@ def _books_by_ids(ids: Iterable[str]) -> QuerySet[Book]:
 
 
 def _visible_books_for_user_uncached(user) -> QuerySet[Book]:
-    if can_manage_library(user):
+    if is_librarian(user):
         return Book.objects.all()
     if user is None or getattr(user, "is_anonymous", False):
         return Book.objects.none()
@@ -83,7 +79,7 @@ def visible_books_for_group(user, group: LibraryGroup, cached: bool = True) -> Q
     """
     Return books assigned to a group after confirming the user can see the group.
     """
-    if not can_view_group(user=user, group=group):
+    if not group_is_visible_to_user(user=user, group=group):
         return Book.objects.none()
 
     base = visible_books_for_user(user, cached=cached)

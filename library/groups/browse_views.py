@@ -22,7 +22,7 @@ from library.catalog.serializers import (
 )
 from library.catalog.views import book_browse_queryset
 from library.models import LibraryGroup
-from library.queries import can_view_group, visible_books_for_group
+from library.queries import group_is_visible_to_user, visible_books_for_group
 
 
 class GroupBrowseMixin:
@@ -30,7 +30,7 @@ class GroupBrowseMixin:
 
     def get_group(self) -> LibraryGroup:
         group = get_object_or_404(LibraryGroup, pk=self.kwargs[self.group_url_kwarg])
-        if not can_view_group(user=self.request.user, group=group):
+        if not group_is_visible_to_user(user=self.request.user, group=group):
             raise Http404
         return group
 

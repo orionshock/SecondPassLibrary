@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from library.models import LibraryGroupMembership
-from library.policies import can_curate_group
+from library.roles import is_curator
 from tests.library.groups.membership_helpers import (
     LibraryGroupMembershipApiTestCase,
     json_body,
@@ -20,4 +20,4 @@ class LibraryReWrite2607PublicMembershipApiTests(LibraryGroupMembershipApiTestCa
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(can_curate_group(user=self.target, group=self.public))
+        self.assertFalse(is_curator(self.target, self.public))
