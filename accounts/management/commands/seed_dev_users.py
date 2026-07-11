@@ -472,8 +472,7 @@ class Command(BaseCommand):
                     continue
 
                 add_user_to_group(
-                    actor=owner,
-                    target_user=user,
+                    user=user,
                     group=group,
                     is_curator=is_curator,
                 )
@@ -485,7 +484,7 @@ class Command(BaseCommand):
                     group=public,
                 ).first()
                 if public_membership is not None:
-                    remove_user_from_group(actor=owner, membership=public_membership)
+                    remove_user_from_group(user=user, group=public)
 
     @staticmethod
     def _ensure_each_group_has_curator(
@@ -510,8 +509,7 @@ class Command(BaseCommand):
                 ).exists():
                     continue
                 add_user_to_group(
-                    actor=owner,
-                    target_user=user,
+                    user=user,
                     group=group,
                     is_curator=True,
                 )

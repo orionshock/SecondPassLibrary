@@ -33,10 +33,10 @@ from .services import (
     update_user_via_management_api,
 )
 from .user_payloads import managed_user_create_envelope, managed_user_payload
-from accounts import policies
 from accounts import session_control
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
+from accounts.roles import is_manager, is_owner
 
 
 User = get_user_model()
@@ -165,7 +165,7 @@ class ManagedUserViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        if not policies.can_manage_users(user):
+        if not is_manager(user):
             raise PermissionDenied("Not allowed.")
 
         qs = (
@@ -174,7 +174,7 @@ class ManagedUserViewSet(
             .order_by("username")
             .prefetch_related("library_group_memberships__group")
         )
-        if policies.is_owner(user):
+        if is_owner(user):
             return qs
 
         # Managers should not see Owner accounts via normal product APIs.

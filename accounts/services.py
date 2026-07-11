@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
-from accounts import policies
+from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
 from core import server_settings
 from library.groups.services import ensure_user_public_membership
 from library.models import LibraryGroupMembership
@@ -42,6 +42,62 @@ class ManagedPasswordResetResult:
     @property
     def copy_block(self) -> str:
         return f"Username: {self.username}\nPassword: {self.temporary_password}"
+
+
+def _is_exact_manager(user) -> bool:
+    return effective_role_rank(user) == RoleRank.MANAGER
+
+
+def _valid_managed_role(role: str) -> bool:
+    return role in {
+        UserProfile.ROLE_MANAGER,
+        UserProfile.ROLE_LIBRARIAN,
+        UserProfile.ROLE_READER,
+    }
+
+
+def _can_create_user_with_role(*, actor, role: str) -> bool:
+    if not _valid_managed_role(role):
+        return False
+    if is_owner(actor):
+        return True
+    if not _is_exact_manager(actor):
+        return False
+    return role != UserProfile.ROLE_MANAGER
+
+
+def _can_assign_global_role(*, actor, target_user, new_role: str) -> bool:
+    if not _valid_managed_role(new_role):
+        return False
+    if is_owner(actor):
+        return True
+    if not _is_exact_manager(actor):
+        return False
+    if is_owner(target_user):
+        return False
+    if new_role == UserProfile.ROLE_MANAGER:
+        return False
+    return not _is_exact_manager(target_user)
+
+
+def _can_manage_user(*, actor, target_user) -> bool:
+    if is_owner(actor):
+        return True
+    if not _is_exact_manager(actor):
+        return False
+    if is_owner(target_user):
+        return False
+    return not _is_exact_manager(target_user)
+
+
+def _can_reset_user_password(*, actor, target_user) -> bool:
+    if getattr(actor, "is_anonymous", False):
+        return False
+    if getattr(actor, "id", None) == getattr(target_user, "id", None):
+        return False
+    if is_owner(actor):
+        return True
+    return _can_manage_user(actor=actor, target_user=target_user)
 
 
 def get_or_create_profile(*, user) -> UserProfile:
@@ -85,10 +141,10 @@ def create_managed_user(
     if role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
         raise ValidationError({"role": "Invalid role."})
 
-    if not policies.can_manage_users(actor):
+    if not is_manager(actor):
         raise PermissionDenied("Not allowed.")
 
-    if not policies.can_create_user_with_role(actor=actor, role=role):
+    if not _can_create_user_with_role(actor=actor, role=role):
         raise PermissionDenied("Not allowed.")
 
     username = (username or "").strip()
@@ -149,7 +205,7 @@ def update_user_via_management_api(
     """
     Safe path for app-level user management (no password handling).
 
-    Rules are enforced via accounts.policies helpers plus a small amount of self-protection.
+    Rules are enforced via service-local account action helpers plus self-protection.
     """
     if getattr(actor, "is_anonymous", False):
         raise PermissionDenied("Not allowed.")
@@ -161,40 +217,40 @@ def update_user_via_management_api(
     profile_updates: dict[str, Any] = {}
 
     if email is not None:
-        if not policies.can_manage_user(actor=actor, target_user=target_user):
+        if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
         user_updates["email"] = email
 
     if first_name is not None:
-        if not policies.can_manage_user(actor=actor, target_user=target_user):
+        if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
         user_updates["first_name"] = first_name
 
     if last_name is not None:
-        if not policies.can_manage_user(actor=actor, target_user=target_user):
+        if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
         user_updates["last_name"] = last_name
 
     if is_active is not None:
         if getattr(actor, "id", None) == getattr(target_user, "id", None):
             raise PermissionDenied("Cannot change your own active status.")
-        if not policies.can_manage_user(actor=actor, target_user=target_user):
+        if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
         user_updates["is_active"] = is_active
 
     if role is not None:
         if role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
             raise ValidationError({"role": "Invalid role."})
-        if getattr(actor, "id", None) == getattr(target_user, "id", None) and policies.is_manager(actor):
+        if getattr(actor, "id", None) == getattr(target_user, "id", None) and is_manager(actor):
             raise PermissionDenied("Managers cannot change their own role.")
-        if not policies.can_assign_global_role(actor=actor, target_user=target_user, new_role=role):
+        if not _can_assign_global_role(actor=actor, target_user=target_user, new_role=role):
             raise PermissionDenied("Not allowed.")
         profile_updates["role"] = role
 
     if must_change_password is not None:
         if getattr(actor, "id", None) == getattr(target_user, "id", None):
             raise PermissionDenied("Cannot change your own must-change-password flag.")
-        if not policies.can_manage_user(actor=actor, target_user=target_user):
+        if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
         profile_updates["must_change_password"] = bool(must_change_password)
 
@@ -316,7 +372,7 @@ def reset_managed_user_password(
     if getattr(actor, "id", None) == getattr(target_user, "id", None):
         raise PermissionDenied("Cannot reset your own password here.")
 
-    if not policies.can_reset_user_password(actor=actor, target_user=target_user):
+    if not _can_reset_user_password(actor=actor, target_user=target_user):
         raise PermissionDenied("Not allowed.")
 
     temporary_password = _generate_temporary_password()
@@ -368,7 +424,7 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "profile_id": profile.id,
         "role": profile.role,
         "must_change_password": bool(profile.must_change_password),
-        "is_owner": policies.is_owner(user),
+        "is_owner": is_owner(user),
         "advanced_library_groups_enabled": (
             server_settings.get_advanced_library_groups_enabled()
         ),

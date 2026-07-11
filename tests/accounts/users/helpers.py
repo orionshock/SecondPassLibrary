@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from accounts.models import UserProfile
 from core import server_settings
 from library.groups.public_group import get_public_group
+from library.groups.services import ensure_user_public_membership
 from rest_framework.test import APITestCase
 
 
@@ -44,3 +45,4 @@ class ManagedUsersApiTestMixin(APITestCase):
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
         user_profile.role = role
         user_profile.save(update_fields=["role", "updated_at"])
+        ensure_user_public_membership(user=user)

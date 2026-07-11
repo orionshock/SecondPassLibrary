@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from accounts import policies
+from accounts.roles import is_owner
 from library.models import LibraryGroupMembership
 from library.groups.public_group import is_public_group
 
@@ -50,7 +50,7 @@ def managed_user_payload(user) -> dict[str, Any]:
         "is_active": bool(getattr(user, "is_active", True)),
         "date_joined": user.date_joined,
         "last_login": user.last_login,
-        "is_owner": policies.is_owner(user),
+        "is_owner": is_owner(user),
         "role": profile.role,
         "must_change_password": bool(profile.must_change_password),
         "groups": managed_user_group_payloads(user),
