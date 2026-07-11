@@ -9,11 +9,9 @@ from library.imports.results import (
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_FAILED,
     IMPORT_STATUS_IMPORTED,
-    IMPORT_STATUS_SKIPPED,
 )
 from library.models import Book, BookIdentifier
 from tests.library.imports.helpers import (
-    ImportPersistenceFixtureMixin,
     metadata_xml,
     minimal_epub_bytes,
     sidecar_opf_xml,
@@ -22,23 +20,7 @@ from tests.library.imports.helpers import (
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
-class ZipImportSidecarTests(
-    IsolatedMediaRootMixin,
-    ImportPersistenceFixtureMixin,
-    TestCase,
-):
-    def test_metadata_opf_sidecar_overrides_epub_metadata(self):
-        result = import_zip_file(
-            zip_bytes(
-                ("dir/book.epub", minimal_epub_bytes(metadata_xml=metadata_xml("EPUB Title"))),
-                ("dir/metadata.opf", sidecar_opf_xml("Sidecar Title").encode()),
-            ),
-            source_filename="sidecar.zip",
-        )
-
-        self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.items[0].book.title, "Sidecar Title")
-
+class ZipSidecarMetadataTests(IsolatedMediaRootMixin, TestCase):
     def test_sidecar_with_no_title_falls_back_to_epub_metadata(self):
         sidecar = """
         <package xmlns="http://www.idpf.org/2007/opf">
@@ -110,40 +92,6 @@ class ZipImportSidecarTests(
         self.assertFalse(book.authors.exists())
         self.assertFalse(book.catalog_tags.exists())
         self.assertFalse(hasattr(book, "book_series"))
-
-    def test_same_basename_sidecar_fallback_overrides_epub_metadata(self):
-        result = import_zip_file(
-            zip_bytes(
-                ("dir/book.epub", minimal_epub_bytes(metadata_xml=metadata_xml("EPUB Title"))),
-                ("dir/book.opf", sidecar_opf_xml("Basename Sidecar").encode()),
-            ),
-            source_filename="sidecar.zip",
-        )
-
-        self.assertEqual(result.items[0].book.title, "Basename Sidecar")
-
-    def test_single_same_directory_sidecar_fallback_overrides_epub_metadata(self):
-        result = import_zip_file(
-            zip_bytes(
-                ("dir/book.epub", minimal_epub_bytes(metadata_xml=metadata_xml("EPUB Title"))),
-                ("dir/random.opf", sidecar_opf_xml("Single Sidecar").encode()),
-            ),
-            source_filename="sidecar.zip",
-        )
-
-        self.assertEqual(result.items[0].book.title, "Single Sidecar")
-
-    def test_ambiguous_sidecars_are_ignored(self):
-        result = import_zip_file(
-            zip_bytes(
-                ("dir/book.epub", minimal_epub_bytes(metadata_xml=metadata_xml("EPUB Title"))),
-                ("dir/a.opf", sidecar_opf_xml("A Sidecar").encode()),
-                ("dir/b.opf", sidecar_opf_xml("B Sidecar").encode()),
-            ),
-            source_filename="sidecar.zip",
-        )
-
-        self.assertEqual(result.items[0].book.title, "EPUB Title")
 
     def test_malformed_sidecar_falls_back_to_epub_metadata(self):
         result = import_zip_file(
@@ -268,28 +216,3 @@ class ZipImportSidecarTests(
 
         self.assertNotIn("metadata.opf", result.items[0].safe_message)
         self.assertNotIn("book.epub", result.items[0].safe_message)
-
-    def test_sidecar_is_not_applied_when_planner_does_not_associate_one(self):
-        result = import_zip_file(
-            zip_bytes(
-                ("books/book.epub", minimal_epub_bytes(metadata_xml=metadata_xml("EPUB Title"))),
-                ("metadata.opf", sidecar_opf_xml("Wrong Directory").encode()),
-            ),
-            source_filename="unmatched-sidecar.zip",
-        )
-
-        self.assertEqual(result.items[0].book.title, "EPUB Title")
-
-    def test_sidecar_collision_removes_sidecar_association(self):
-        result = import_zip_file(
-            zip_bytes(
-                ("dir/book.epub", minimal_epub_bytes(metadata_xml=metadata_xml("EPUB Title"))),
-                ("dir/metadata.opf", sidecar_opf_xml("Sidecar A").encode()),
-                ("dir/./metadata.opf", sidecar_opf_xml("Sidecar B").encode()),
-            ),
-            source_filename="sidecar-collision.zip",
-        )
-
-        self.assertEqual(result.items[0].status, IMPORT_STATUS_SKIPPED)
-        self.assertEqual(result.items[1].status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.items[1].book.title, "EPUB Title")

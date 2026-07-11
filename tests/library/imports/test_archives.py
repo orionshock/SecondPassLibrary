@@ -11,6 +11,7 @@ from library.imports.archives import (
     zip_sidecar_opf_for_epub,
 )
 from library.imports.results import IMPORT_STATUS_FAILED, IMPORT_STATUS_SKIPPED
+from tests.library.imports.helpers import zip_bytes
 
 
 class ZipMemberSafetyTests(TestCase):
@@ -51,7 +52,7 @@ class ZipIndexTests(TestCase):
         self.assertNotIn("dir/", index.members_index)
 
     def test_one_epub_member_becomes_one_candidate(self):
-        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"book")))
+        plan = plan_zip_import(zip_bytes(("dir/book.epub", b"book")))
 
         self.assertEqual(len(plan.candidates), 1)
         self.assertEqual(plan.candidates[0].safe_name, "dir/book.epub")
@@ -59,14 +60,14 @@ class ZipIndexTests(TestCase):
         self.assertEqual(plan.discovered_count, 1)
 
     def test_non_epub_ordinary_file_is_ignored(self):
-        plan = plan_zip_import(_zip_bytes(("notes.txt", b"notes")))
+        plan = plan_zip_import(zip_bytes(("notes.txt", b"notes")))
 
         self.assertEqual(plan.candidates, [])
         self.assertEqual(plan.item_results, [])
         self.assertEqual(plan.discovered_count, 0)
 
     def test_normalized_collisions_skip_all_colliding_entries(self):
-        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")))
+        plan = plan_zip_import(zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")))
 
         self.assertEqual(plan.candidates, [])
         self.assertEqual(plan.discovered_count, 0)
@@ -77,7 +78,7 @@ class ZipIndexTests(TestCase):
 
     def test_epub_opf_collision_removes_sidecar_from_association(self):
         plan = plan_zip_import(
-            _zip_bytes(
+            zip_bytes(
                 ("dir/book.epub", b"book"),
                 ("dir/metadata.opf", b"opf-a"),
                 ("dir/./metadata.opf", b"opf-b"),
@@ -89,14 +90,14 @@ class ZipIndexTests(TestCase):
         self.assertEqual(plan.collisions, {"dir/metadata.opf": 2})
 
     def test_two_epub_collision_emits_no_candidate(self):
-        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")))
+        plan = plan_zip_import(zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")))
 
         self.assertEqual(plan.candidates, [])
         self.assertEqual(plan.collisions, {"dir/book.epub": 2})
         self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_SKIPPED)
 
     def test_archive_with_zero_epub_candidates_is_empty_successful_plan(self):
-        plan = plan_zip_import(_zip_bytes(("notes.txt", b"notes"), ("dir/metadata.opf", b"opf")))
+        plan = plan_zip_import(zip_bytes(("notes.txt", b"notes"), ("dir/metadata.opf", b"opf")))
 
         self.assertEqual(plan.candidates, [])
         self.assertEqual(plan.item_results, [])
@@ -105,7 +106,7 @@ class ZipIndexTests(TestCase):
 
 class ZipSidecarPlanningTests(TestCase):
     def test_opf_sidecar_is_associated_but_not_read(self):
-        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"book"), ("dir/metadata.opf", b"not xml")))
+        plan = plan_zip_import(zip_bytes(("dir/book.epub", b"book"), ("dir/metadata.opf", b"not xml")))
 
         self.assertEqual(plan.candidates[0].sidecar_opf_name, "dir/metadata.opf")
 
@@ -128,18 +129,18 @@ class ZipSidecarPlanningTests(TestCase):
         )
 
     def test_same_basename_opf_fallback(self):
-        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"book"), ("dir/book.opf", b"base")))
+        plan = plan_zip_import(zip_bytes(("dir/book.epub", b"book"), ("dir/book.opf", b"base")))
 
         self.assertEqual(plan.candidates[0].sidecar_opf_name, "dir/book.opf")
 
     def test_single_same_directory_opf_fallback(self):
-        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"book"), ("dir/random.opf", b"opf")))
+        plan = plan_zip_import(zip_bytes(("dir/book.epub", b"book"), ("dir/random.opf", b"opf")))
 
         self.assertEqual(plan.candidates[0].sidecar_opf_name, "dir/random.opf")
 
     def test_ambiguous_multiple_same_directory_opfs_yields_no_sidecar(self):
         plan = plan_zip_import(
-            _zip_bytes(
+            zip_bytes(
                 ("dir/book.epub", b"book"),
                 ("dir/a.opf", b"a"),
                 ("dir/b.opf", b"b"),
@@ -152,7 +153,7 @@ class ZipSidecarPlanningTests(TestCase):
 class ZipPlannerLimitTests(TestCase):
     def test_too_many_zip_members_produces_failed_result(self):
         plan = plan_zip_import(
-            _zip_bytes(("a.epub", b"a"), ("b.epub", b"b")),
+            zip_bytes(("a.epub", b"a"), ("b.epub", b"b")),
             max_zip_members=1,
         )
 
@@ -162,7 +163,7 @@ class ZipPlannerLimitTests(TestCase):
 
     def test_oversized_epub_member_produces_failed_item(self):
         plan = plan_zip_import(
-            _zip_bytes(("big.epub", b"12345")),
+            zip_bytes(("big.epub", b"12345")),
             max_epub_member_bytes=4,
         )
 
@@ -173,7 +174,7 @@ class ZipPlannerLimitTests(TestCase):
 
     def test_total_epub_size_limit_is_enforced(self):
         plan = plan_zip_import(
-            _zip_bytes(("a.epub", b"1111"), ("b.epub", b"22222")),
+            zip_bytes(("a.epub", b"1111"), ("b.epub", b"22222")),
             max_epub_member_bytes=10,
             max_total_epub_bytes=8,
         )
@@ -185,7 +186,7 @@ class ZipPlannerLimitTests(TestCase):
 
     def test_oversized_epub_member_does_not_consume_total_payload_budget(self):
         plan = plan_zip_import(
-            _zip_bytes(("oversized.epub", b"12345"), ("accepted.epub", b"2222")),
+            zip_bytes(("oversized.epub", b"12345"), ("accepted.epub", b"2222")),
             max_epub_member_bytes=4,
             max_total_epub_bytes=4,
         )
@@ -203,15 +204,6 @@ class ZipPlannerLimitTests(TestCase):
         self.assertEqual(plan.item_results[0].safe_message, "Invalid or unsupported ZIP archive.")
 
 
-def _zip_bytes(*entries: tuple[str, bytes]) -> BytesIO:
-    out = BytesIO()
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, data in entries:
-            archive.writestr(name, data)
-    out.seek(0)
-    return out
-
-
 def _zip_infos(*entries: tuple[str, bytes]) -> list[zipfile.ZipInfo]:
-    with zipfile.ZipFile(_zip_bytes(*entries), "r") as archive:
+    with zipfile.ZipFile(zip_bytes(*entries), "r") as archive:
         return archive.infolist()
