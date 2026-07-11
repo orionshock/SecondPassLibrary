@@ -138,7 +138,7 @@ def create_managed_user(
     if getattr(actor, "is_anonymous", False):
         raise PermissionDenied("Not allowed.")
 
-    if role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
+    if not _valid_managed_role(role):
         raise ValidationError({"role": "Invalid role."})
 
     if not is_manager(actor):
@@ -219,17 +219,17 @@ def update_user_via_management_api(
     if email is not None:
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["email"] = email
+        user_updates["email"] = email.strip()
 
     if first_name is not None:
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["first_name"] = first_name
+        user_updates["first_name"] = first_name.strip()
 
     if last_name is not None:
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["last_name"] = last_name
+        user_updates["last_name"] = last_name.strip()
 
     if is_active is not None:
         if getattr(actor, "id", None) == getattr(target_user, "id", None):
@@ -239,7 +239,7 @@ def update_user_via_management_api(
         user_updates["is_active"] = is_active
 
     if role is not None:
-        if role not in {UserProfile.ROLE_MANAGER, UserProfile.ROLE_LIBRARIAN, UserProfile.ROLE_READER}:
+        if not _valid_managed_role(role):
             raise ValidationError({"role": "Invalid role."})
         if getattr(actor, "id", None) == getattr(target_user, "id", None) and is_manager(actor):
             raise PermissionDenied("Managers cannot change their own role.")
@@ -257,24 +257,30 @@ def update_user_via_management_api(
     if not user_updates and not profile_updates:
         return UserUpdateResult(user=target_user, profile=profile)
 
-    if user_updates:
-        for key, value in user_updates.items():
-            setattr(target_user, key, value)
+    for key, value in user_updates.items():
+        setattr(target_user, key, value)
+    for key, value in profile_updates.items():
+        setattr(profile, key, value)
+
+    disable_after_save = False
+    with transaction.atomic():
         target_user.full_clean()
-        target_user.save(update_fields=[*user_updates.keys()])
-
-        # If a user is being disabled, revoke all their web sessions.
-        # Re-enabling does not restore sessions.
-        if "is_active" in user_updates and user_updates.get("is_active") is False and was_active is True:
-            from accounts import session_control
-
-            session_control.disable_user(target_user)
-
-    if profile_updates:
-        for key, value in profile_updates.items():
-            setattr(profile, key, value)
         profile.full_clean()
-        profile.save(update_fields=[*profile_updates.keys(), "updated_at"])
+        if user_updates:
+            target_user.save(update_fields=[*user_updates.keys()])
+        if profile_updates:
+            profile.save(update_fields=[*profile_updates.keys(), "updated_at"])
+        if (
+            "is_active" in user_updates
+            and user_updates.get("is_active") is False
+            and was_active is True
+        ):
+            disable_after_save = True
+
+    if disable_after_save:
+        from accounts import session_control
+
+        session_control.disable_user(target_user)
 
     return UserUpdateResult(user=target_user, profile=profile)
 
