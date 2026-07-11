@@ -17,13 +17,13 @@ from shelves.models import Shelf, ShelfItem
 from shelves.services import (
     add_book_to_shelf,
     canonicalize_shelf_positions,
+    can_create_shelf,
     create_shelf,
     move_shelf_item,
     remove_book_from_shelf,
     set_shelf_item_position,
     visible_shelf_items_for_user,
 )
-from shelves.policies import can_create_shelf
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 

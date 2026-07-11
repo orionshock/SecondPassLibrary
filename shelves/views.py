@@ -39,12 +39,13 @@ from .services import (
     set_shelf_item_position,
     update_shelf,
     visible_shelf_items_for_user,
+    can_edit_shelf,
 )
-from .policies import can_edit_shelf_for_request, visible_shelf_filter
 from .querysets import (
     apply_shelf_item_ordering,
     apply_shelf_ordering,
     build_visible_shelf_list_queryset,
+    visible_shelf_filter,
     with_visible_item_count,
 )
 
@@ -62,6 +63,17 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
                 :PREVIEW_BOOK_LIMIT
             ]
         ]
+
+
+def _request_can_edit_shelf(*, request, shelf: Shelf) -> bool:
+    user = getattr(request, "user", None)
+    if user is None:
+        return False
+    if isinstance(getattr(request, "auth", None), UserClientSession):
+        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
+            return False
+        return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
+    return can_edit_shelf(user=user, shelf=shelf)
 
 
 class ShelfViewSet(
@@ -102,7 +114,7 @@ class ShelfViewSet(
                 raise PermissionDenied("Client API tokens are not allowed for this endpoint/action.")
 
     def _request_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
-        return can_edit_shelf_for_request(request=request, shelf=shelf)
+        return _request_can_edit_shelf(request=request, shelf=shelf)
 
     def _write_denied_message(self, *, request, items: bool = False) -> str:
         if isinstance(getattr(request, "auth", None), UserClientSession):
@@ -154,12 +166,7 @@ class ShelfViewSet(
         return visible_qs.order_by("name", "id")
 
     def get_object(self):
-        obj = super().get_object()
-        from .policies import can_view_shelf
-
-        if not can_view_shelf(user=self.request.user, shelf=obj):
-            raise Http404()
-        return obj
+        return super().get_object()
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

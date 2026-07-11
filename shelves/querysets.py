@@ -7,10 +7,10 @@ from uuid import UUID
 from django.db.models import Count, F, Min, OuterRef, Q, QuerySet, Subquery
 from rest_framework.exceptions import ValidationError
 
+from accounts.roles import is_librarian
 from library.queries import visible_books_for_user
 
 from .models import Shelf, ShelfItem
-from .policies import visible_shelf_filter
 
 
 @dataclass(frozen=True)
@@ -18,6 +18,24 @@ class ShelfListFilters:
     scope: str | None = None
     owner_group_id: UUID | None = None
     book_id: UUID | None = None
+
+
+def visible_shelf_filter(user) -> Q:
+    if getattr(user, "is_anonymous", False):
+        return Q(pk__isnull=True)
+
+    user_shelves = Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user) | Q(
+        owner_type=Shelf.OWNER_TYPE_USER,
+        visibility=Shelf.VISIBILITY_LISTED,
+    )
+    group_shelves = Q(
+        owner_type=Shelf.OWNER_TYPE_GROUP,
+        owner_group__memberships__user=user,
+    )
+    if is_librarian(user):
+        group_shelves = Q(owner_type=Shelf.OWNER_TYPE_GROUP)
+
+    return user_shelves | group_shelves
 
 
 def _parse_uuid_query_param(query_params, name: str) -> UUID | None:

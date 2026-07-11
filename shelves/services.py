@@ -7,15 +7,81 @@ from django.db import transaction
 from django.db.models import Max, QuerySet
 from django.utils import timezone
 
+from accounts.roles import is_librarian
+from library.groups.public_group import is_public_group
 from library.models import Book
 from library.queries import visible_books_for_group, visible_books_for_user
+from library.roles import is_curator
 
-from . import policies
 from .models import Shelf, ShelfItem
+from .querysets import visible_shelf_filter
 
 
 def _normalized_title(value: str | None) -> str:
     return (value or "").casefold()
+
+
+def can_create_shelf(
+    *,
+    user,
+    owner_type: str,
+    owner_user=None,
+    owner_group=None,
+) -> bool:
+    if getattr(user, "is_anonymous", False):
+        return False
+
+    if owner_type == Shelf.OWNER_TYPE_USER:
+        target_user = owner_user or user
+        return getattr(target_user, "id", None) == getattr(user, "id", None)
+
+    if owner_type == Shelf.OWNER_TYPE_GROUP:
+        if owner_group is None:
+            return False
+        if is_librarian(user):
+            return True
+        if is_public_group(owner_group):
+            return False
+        return is_curator(user, owner_group)
+
+    return False
+
+
+def can_edit_shelf(*, user, shelf: Shelf) -> bool:
+    if getattr(user, "is_anonymous", False):
+        return False
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_USER:
+        owner_user_id = getattr(shelf, "owner_user_id", None)
+        return owner_user_id == getattr(user, "id", None)
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
+        group = shelf.owner_group
+        if group is None:
+            return False
+        return can_create_shelf(
+            user=user,
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=group,
+        )
+
+    return False
+
+
+def _can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
+    if not can_edit_shelf(user=user, shelf=shelf):
+        return False
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_USER:
+        return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
+
+    if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
+        group = shelf.owner_group
+        if group is None:
+            return False
+        return visible_books_for_group(user, group, cached=False).filter(pk=book.pk).exists()
+
+    return False
 
 
 def canonicalize_shelf_positions(shelf: Shelf) -> list[ShelfItem]:
@@ -56,7 +122,7 @@ def create_shelf(
     if owner_type == Shelf.OWNER_TYPE_USER:
         owner_user = owner_user or actor
 
-    if not policies.can_create_shelf(
+    if not can_create_shelf(
         user=actor,
         owner_type=owner_type,
         owner_user=owner_user,
@@ -79,7 +145,7 @@ def create_shelf(
 
 
 def update_shelf(actor, shelf: Shelf, **fields: Any) -> Shelf:
-    if not policies.can_edit_shelf(user=actor, shelf=shelf):
+    if not can_edit_shelf(user=actor, shelf=shelf):
         raise PermissionDenied("Not allowed.")
 
     # Owner fields are immutable after creation.
@@ -99,13 +165,13 @@ def update_shelf(actor, shelf: Shelf, **fields: Any) -> Shelf:
 
 
 def delete_shelf(actor, shelf: Shelf) -> None:
-    if not policies.can_edit_shelf(user=actor, shelf=shelf):
+    if not can_edit_shelf(user=actor, shelf=shelf):
         raise PermissionDenied("Not allowed.")
     shelf.delete()
 
 
 def add_book_to_shelf(actor, shelf: Shelf, book: Book, position: int | None = None) -> ShelfItem:
-    if not policies.can_add_book_to_shelf(user=actor, book=book, shelf=shelf):
+    if not _can_add_book_to_shelf(user=actor, book=book, shelf=shelf):
         raise PermissionDenied("Not allowed.")
 
     with transaction.atomic():
@@ -139,7 +205,7 @@ def remove_book_from_shelf(actor, shelf: Shelf, book_or_item) -> bool:
     if not isinstance(book, Book):
         raise ValidationError("Invalid book/item.")
 
-    if not policies.can_remove_book_from_shelf(user=actor, book=book, shelf=shelf):
+    if not can_edit_shelf(user=actor, shelf=shelf):
         raise PermissionDenied("Not allowed.")
 
     if item is None:
@@ -152,7 +218,7 @@ def remove_book_from_shelf(actor, shelf: Shelf, book_or_item) -> bool:
 
 
 def set_shelf_item_position(actor, shelf: Shelf, item: ShelfItem, position: int) -> ShelfItem:
-    if not policies.can_edit_shelf(user=actor, shelf=shelf):
+    if not can_edit_shelf(user=actor, shelf=shelf):
         raise PermissionDenied("Not allowed.")
     if item.shelf_id != shelf.id:
         raise ValidationError("Shelf item does not belong to this shelf.")
@@ -185,7 +251,7 @@ def set_shelf_item_position(actor, shelf: Shelf, item: ShelfItem, position: int)
 
 
 def move_shelf_item(actor, shelf: Shelf, item: ShelfItem, direction: str) -> ShelfItem:
-    if not policies.can_edit_shelf(user=actor, shelf=shelf):
+    if not can_edit_shelf(user=actor, shelf=shelf):
         raise PermissionDenied("Not allowed.")
     if item.shelf_id != shelf.id:
         raise ValidationError("Shelf item does not belong to this shelf.")
@@ -223,7 +289,7 @@ def move_shelf_item(actor, shelf: Shelf, item: ShelfItem, direction: str) -> She
 
 
 def visible_shelf_items_for_user(user, shelf: Shelf) -> QuerySet[ShelfItem]:
-    if not policies.can_view_shelf(user=user, shelf=shelf):
+    if not Shelf.objects.filter(visible_shelf_filter(user), pk=shelf.pk).exists():
         raise PermissionDenied("Not allowed.")
 
     qs = ShelfItem.objects.select_related("book").filter(shelf=shelf)
