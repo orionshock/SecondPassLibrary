@@ -173,10 +173,25 @@ def _read_import_metadata(data: bytes, *, sidecar_opf_bytes: bytes | None = None
         raise InvalidEpubImportError() from exc
     if not sidecar_opf_bytes:
         return epub_metadata
+    return _read_sidecar_metadata_or_fallback(
+        sidecar_opf_bytes=sidecar_opf_bytes,
+        fallback_metadata=epub_metadata,
+    )
+
+
+def _read_sidecar_metadata_or_fallback(*, sidecar_opf_bytes: bytes, fallback_metadata):
     try:
-        return parse_opf_metadata(sidecar_opf_bytes)
+        sidecar_metadata = parse_opf_metadata(sidecar_opf_bytes)
     except Exception:
-        return epub_metadata
+        return fallback_metadata
+    if not _sidecar_has_real_title(sidecar_metadata):
+        return fallback_metadata
+    return sidecar_metadata
+
+
+def _sidecar_has_real_title(metadata) -> bool:
+    title = metadata.title.strip()
+    return bool(title) and title.casefold() != "untitled"
 
 
 def _read_package_opf_xml(data: bytes) -> bytes:

@@ -79,6 +79,7 @@ class ZipImportCandidate:
     file_size: int
     sidecar_opf_name: str | None = None
     archive_name: str = ""
+    # Internal ZIP lookup name. Do not expose this in result labels or API output.
     sidecar_archive_name: str = ""
 
 
