@@ -16,7 +16,13 @@ from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, get_public_grou
 from library.imports.views import ImportUploadView
 from library.models import Book, BookGroupAssignment, BookIdentifier, LibraryGroup
 from tests.library.helpers import set_user_role
-from tests.library.imports.helpers import metadata_xml, minimal_epub_bytes, zip_bytes
+from tests.library.imports.helpers import (
+    epub_with_cover_bytes,
+    image_bytes,
+    metadata_xml,
+    minimal_epub_bytes,
+    zip_bytes,
+)
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
@@ -341,6 +347,20 @@ class LibraryImportUploadApiTests(IsolatedMediaRootMixin, TestCase):
                 added_by=self.librarian,
             ).exists()
         )
+
+    def test_upload_api_response_unchanged_while_book_gets_cover(self):
+        self.assertTrue(self.client.login(username="librarian", password="pw"))
+
+        response = self.client.post(
+            self.url,
+            {"file": _upload("cover.epub", epub_with_cover_bytes(cover_bytes=image_bytes("PNG")))},
+        )
+
+        payload = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("cover_file", json.dumps(payload))
+        self.assertNotIn("cover_url", json.dumps(payload))
+        self.assertTrue(Book.objects.get(id=payload["items"][0]["book_id"]).cover_file.name)
 
     def test_no_bookfile_model_or_object_appears(self):
         self.assertTrue(self.client.login(username="librarian", password="pw"))

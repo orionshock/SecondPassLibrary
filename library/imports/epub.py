@@ -17,6 +17,7 @@ from library.imports.errors import (
     operator_import_detail,
     safe_import_message,
 )
+from library.imports.covers import attach_cover_to_book, extract_epub_cover
 from library.imports.opf import parse_opf_metadata
 from library.imports.results import (
     IMPORT_STATUS_CONFLICT,
@@ -102,12 +103,21 @@ def _import_epub_file(
         book_file=ContentFile(data, name=source_filename),
         actor=actor,
     )
+    if persistence_result.status == IMPORT_STATUS_IMPORTED:
+        _attach_import_cover_if_available(book=persistence_result.book, data=data)
     return _item_result_from_persistence_result(
         source_label=source_label,
         status=persistence_result.status,
         book=persistence_result.book,
         message=persistence_result.message,
     )
+
+
+def _attach_import_cover_if_available(*, book, data: bytes) -> None:
+    try:
+        attach_cover_to_book(book=book, cover=extract_epub_cover(data))
+    except Exception:
+        return
 
 
 def _item_result_from_persistence_result(
