@@ -42,7 +42,7 @@ class ZipIndex:
     members_index: dict[str, ZipMember] = field(default_factory=dict)
     epub_members: list[ZipMember] = field(default_factory=list)
     opfs_by_dir: dict[str, list[str]] = field(default_factory=dict)
-    collisions: set[str] = field(default_factory=set)
+    collisions: dict[str, int] = field(default_factory=dict)
 
     def without_collisions(self) -> ZipIndex:
         if not self.collisions:
@@ -66,7 +66,7 @@ class ZipIndex:
             members_index=members_index,
             epub_members=epub_members,
             opfs_by_dir=opfs_by_dir,
-            collisions=set(self.collisions),
+            collisions=dict(self.collisions),
         )
 
 
@@ -84,7 +84,7 @@ class ZipImportPlan:
     candidates: list[ZipImportCandidate] = field(default_factory=list)
     item_results: list[ImportItemResult] = field(default_factory=list)
     discovered_count: int = 0
-    collisions: set[str] = field(default_factory=set)
+    collisions: dict[str, int] = field(default_factory=dict)
 
 
 def format_mib(byte_count: int) -> str:
@@ -125,7 +125,7 @@ def build_zip_index(infos: list[zipfile.ZipInfo]) -> ZipIndex:
         if safe_name is None:
             continue
         if safe_name in index.members_index:
-            index.collisions.add(safe_name)
+            index.collisions[safe_name] = index.collisions.get(safe_name, 1) + 1
             continue
 
         member = ZipMember(safe_name=safe_name, file_size=info.file_size)
@@ -199,7 +199,7 @@ def plan_zip_import(
         )
 
     index = build_zip_index(infos)
-    plan = ZipImportPlan(collisions=set(index.collisions))
+    plan = ZipImportPlan(collisions=dict(index.collisions))
     for collision in sorted(index.collisions):
         plan.item_results.append(
             ImportItemResult(
@@ -237,6 +237,8 @@ def plan_zip_import(
             )
             continue
 
+        # Total payload limit applies to accepted/importable EPUB candidates only.
+        # Failed members do not consume this budget.
         total_epub_bytes += member.file_size
         sidecar = zip_sidecar_opf_for_epub(
             epub_member=member.safe_name,

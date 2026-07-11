@@ -20,6 +20,9 @@ class ZipMemberSafetyTests(TestCase):
     def test_safe_zip_member_name_normalizes_dot_segment(self):
         self.assertEqual(safe_zip_member_name("Authors/./Book.epub"), "Authors/Book.epub")
 
+    def test_safe_zip_member_name_normalizes_backslashes(self):
+        self.assertEqual(safe_zip_member_name(r"dir\book.epub"), "dir/book.epub")
+
     def test_safe_zip_member_name_rejects_empty_path(self):
         self.assertIsNone(safe_zip_member_name(""))
 
@@ -67,9 +70,37 @@ class ZipIndexTests(TestCase):
 
         self.assertEqual(plan.candidates, [])
         self.assertEqual(plan.discovered_count, 0)
-        self.assertEqual(plan.collisions, {"dir/book.epub"})
+        self.assertEqual(plan.collisions, {"dir/book.epub": 2})
         self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_SKIPPED)
         self.assertEqual(plan.item_results[0].source_label, "book.epub")
+        self.assertNotIn("dir/./book.epub", plan.item_results[0].safe_message)
+
+    def test_epub_opf_collision_removes_sidecar_from_association(self):
+        plan = plan_zip_import(
+            _zip_bytes(
+                ("dir/book.epub", b"book"),
+                ("dir/metadata.opf", b"opf-a"),
+                ("dir/./metadata.opf", b"opf-b"),
+            )
+        )
+
+        self.assertEqual(len(plan.candidates), 1)
+        self.assertIsNone(plan.candidates[0].sidecar_opf_name)
+        self.assertEqual(plan.collisions, {"dir/metadata.opf": 2})
+
+    def test_two_epub_collision_emits_no_candidate(self):
+        plan = plan_zip_import(_zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")))
+
+        self.assertEqual(plan.candidates, [])
+        self.assertEqual(plan.collisions, {"dir/book.epub": 2})
+        self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_SKIPPED)
+
+    def test_archive_with_zero_epub_candidates_is_empty_successful_plan(self):
+        plan = plan_zip_import(_zip_bytes(("notes.txt", b"notes"), ("dir/metadata.opf", b"opf")))
+
+        self.assertEqual(plan.candidates, [])
+        self.assertEqual(plan.item_results, [])
+        self.assertEqual(plan.discovered_count, 0)
 
 
 class ZipSidecarPlanningTests(TestCase):
@@ -151,6 +182,18 @@ class ZipPlannerLimitTests(TestCase):
         self.assertEqual(plan.discovered_count, 2)
         self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_FAILED)
         self.assertIn("total uncompressed limit", plan.item_results[0].safe_message)
+
+    def test_oversized_epub_member_does_not_consume_total_payload_budget(self):
+        plan = plan_zip_import(
+            _zip_bytes(("oversized.epub", b"12345"), ("accepted.epub", b"2222")),
+            max_epub_member_bytes=4,
+            max_total_epub_bytes=4,
+        )
+
+        self.assertEqual([candidate.safe_name for candidate in plan.candidates], ["accepted.epub"])
+        self.assertEqual(plan.discovered_count, 2)
+        self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_FAILED)
+        self.assertEqual(plan.item_results[0].source_label, "oversized.epub")
 
     def test_invalid_zip_produces_failed_result(self):
         plan = plan_zip_import(BytesIO(b"not a zip"))
