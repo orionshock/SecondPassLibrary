@@ -27,6 +27,7 @@ MAX_OPF_SIDECAR_XML_BYTES = 1024 * 1024
 class ZipMember:
     safe_name: str
     file_size: int
+    archive_name: str = ""
 
     @property
     def source_name(self) -> str:
@@ -77,6 +78,7 @@ class ZipImportCandidate:
     source_label: str
     file_size: int
     sidecar_opf_name: str | None = None
+    archive_name: str = ""
 
 
 @dataclass
@@ -128,7 +130,11 @@ def build_zip_index(infos: list[zipfile.ZipInfo]) -> ZipIndex:
             index.collisions[safe_name] = index.collisions.get(safe_name, 1) + 1
             continue
 
-        member = ZipMember(safe_name=safe_name, file_size=info.file_size)
+        member = ZipMember(
+            safe_name=safe_name,
+            file_size=info.file_size,
+            archive_name=info.filename,
+        )
         index.members_index[safe_name] = member
 
         lower = safe_name.lower()
@@ -252,6 +258,7 @@ def plan_zip_import(
                 source_label=member.source_label,
                 file_size=member.file_size,
                 sidecar_opf_name=sidecar,
+                archive_name=member.archive_name,
             )
         )
 
