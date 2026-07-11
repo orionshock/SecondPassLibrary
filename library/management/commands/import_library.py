@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
 from library.imports.results import (
+    IMPORT_STATUS_FAILED,
     ImportBatchResult,
     ImportItemResult,
 )
@@ -56,7 +57,7 @@ def _import_directory(source: Path) -> ImportBatchResult:
         if child.is_file() and child.suffix.casefold() in SUPPORTED_SUFFIXES
     ]
     for child in sorted(candidates, key=lambda path: (path.name.casefold(), path.name)):
-        item_result = _import_file_path(child)
+        item_result = _import_directory_child_path(child)
         if isinstance(item_result, ImportBatchResult):
             batch.items.extend(item_result.items)
             batch.discovered_count = (batch.discovered_count or 0) + item_result.total_found
@@ -74,9 +75,23 @@ def _import_file_path(source: Path) -> ImportItemResult | ImportBatchResult:
     raise CommandError(f"Unsupported import source: {source}")
 
 
+def _import_directory_child_path(source: Path) -> ImportItemResult | ImportBatchResult:
+    try:
+        return _import_file_path(source)
+    except OSError:
+        return ImportItemResult(
+            status=IMPORT_STATUS_FAILED,
+            source_label=source.name,
+            safe_message="Could not read import file.",
+        )
+
+
 def _import_epub_path(source: Path) -> ImportBatchResult:
-    with source.open("rb") as fp:
-        item = import_epub_file(fp, source_filename=source.name, actor=None)
+    try:
+        with source.open("rb") as fp:
+            item = import_epub_file(fp, source_filename=source.name, actor=None)
+    except OSError as exc:
+        raise CommandError(f"Could not read import file: {source}") from exc
     return ImportBatchResult(
         source_type="epub",
         source_label=source.name,
@@ -86,8 +101,11 @@ def _import_epub_path(source: Path) -> ImportBatchResult:
 
 
 def _import_zip_path(source: Path) -> ImportBatchResult:
-    with source.open("rb") as fp:
-        return import_zip_file(fp, source_filename=source.name, actor=None)
+    try:
+        with source.open("rb") as fp:
+            return import_zip_file(fp, source_filename=source.name, actor=None)
+    except OSError as exc:
+        raise CommandError(f"Could not read import file: {source}") from exc
 
 
 def _write_batch_result(command: BaseCommand, result: ImportBatchResult) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import library.models as library_models
 from django.core.management import call_command
@@ -69,6 +70,30 @@ class ImportLibraryCommandTests(
         self.assertEqual(Book.objects.count(), 2)
         self.assertIn("imported: 2", text)
 
+    def test_empty_directory_succeeds_with_zero_summary(self):
+        with TemporaryDirectory() as tmp:
+            output = StringIO()
+
+            call_command("import_library", tmp, stdout=output)
+
+        text = output.getvalue()
+        self.assertIn("imported: 0", text)
+        self.assertIn("duplicate: 0", text)
+        self.assertIn("conflict: 0", text)
+        self.assertIn("failed: 0", text)
+        self.assertIn("skipped: 0", text)
+
+    def test_directory_with_only_unsupported_files_succeeds_with_zero_summary(self):
+        with TemporaryDirectory() as tmp:
+            _write_file(Path(tmp) / "notes.txt", b"notes")
+            output = StringIO()
+
+            call_command("import_library", tmp, stdout=output)
+
+        text = output.getvalue()
+        self.assertIn("imported: 0", text)
+        self.assertIn("failed: 0", text)
+
     def test_unsupported_direct_file_returns_command_error(self):
         with TemporaryDirectory() as tmp:
             path = _write_file(Path(tmp) / "notes.txt", b"notes")
@@ -79,6 +104,42 @@ class ImportLibraryCommandTests(
     def test_missing_path_returns_command_error(self):
         with self.assertRaises(CommandError):
             call_command("import_library", "missing.epub", stdout=StringIO())
+
+    def test_unreadable_direct_file_open_failure_is_command_error(self):
+        with TemporaryDirectory() as tmp:
+            path = _write_file(Path(tmp) / "sample.epub", minimal_epub_bytes())
+
+            with patch.object(Path, "open", side_effect=OSError("permission denied")):
+                with self.assertRaises(CommandError) as cm:
+                    call_command("import_library", str(path), stdout=StringIO())
+
+        self.assertIn("Could not read import file", str(cm.exception))
+
+    def test_unreadable_directory_child_becomes_failed_item(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bad_path = _write_file(root / "bad.epub", minimal_epub_bytes())
+            _write_file(root / "good.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Good")))
+            output = StringIO()
+            error = StringIO()
+
+            def fake_open(path, *args, **kwargs):
+                if path == bad_path:
+                    raise OSError("permission denied")
+                return original_open(path, *args, **kwargs)
+
+            original_open = Path.open
+            with patch.object(Path, "open", fake_open):
+                with self.assertRaises(CommandError):
+                    call_command("import_library", str(root), stdout=output, stderr=error)
+
+        text = output.getvalue()
+        self.assertIn("[failed] bad.epub - Could not read import file.", text)
+        self.assertIn("[imported] good.epub", text)
+        self.assertIn("imported: 1", text)
+        self.assertIn("failed: 1", text)
+        self.assertNotIn("Traceback", text)
+        self.assertNotIn("Traceback", error.getvalue())
 
     def test_duplicate_checksum_reports_duplicate_and_exits_success(self):
         data = minimal_epub_bytes()
@@ -134,6 +195,30 @@ class ImportLibraryCommandTests(
 
         self.assertIn("[failed] bad.epub", output.getvalue())
         self.assertIn("failed: 1", output.getvalue())
+
+    def test_mixed_zip_failure_prints_items_summary_then_exits_nonzero(self):
+        with TemporaryDirectory() as tmp:
+            path = _write_file(
+                Path(tmp) / "mixed.zip",
+                zip_bytes(
+                    ("bad.epub", b"not an epub"),
+                    ("good.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Good"))),
+                ).getvalue(),
+            )
+            output = StringIO()
+            error = StringIO()
+
+            with self.assertRaises(CommandError):
+                call_command("import_library", str(path), stdout=output, stderr=error)
+
+        text = output.getvalue()
+        self.assertIn("[failed] bad.epub", text)
+        self.assertIn("[imported] good.epub", text)
+        self.assertIn("Summary:", text)
+        self.assertIn("imported: 1", text)
+        self.assertIn("failed: 1", text)
+        self.assertNotIn("Traceback", text)
+        self.assertNotIn("Traceback", error.getvalue())
 
     def test_public_assignment_happens_through_persistence(self):
         with TemporaryDirectory() as tmp:
