@@ -2,24 +2,19 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import UserProfile
 from accounts.services import update_current_user_via_me_api, update_user_via_management_api
-
-
-User = get_user_model()
+from tests.accounts.helpers import create_account_role_users
 
 
 class AccountManagementServiceTests(TestCase):
     def setUp(self):
-        self.owner = User.objects.create_superuser(username="owner", password="pw")
-        self.manager = User.objects.create_user(username="manager", password="pw")
-        self.reader = User.objects.create_user(username="reader", password="pw")
-        self.manager.profile.role = UserProfile.ROLE_MANAGER
-        self.manager.profile.save(update_fields=["role", "updated_at"])
+        users = create_account_role_users()
+        self.manager = users.manager
+        self.reader = users.reader
 
     def test_self_service_profile_update_is_not_manager_gated(self):
         update_current_user_via_me_api(
