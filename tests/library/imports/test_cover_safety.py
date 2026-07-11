@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
+from library.imports.covers import extract_epub_cover
 from library.imports.epub import import_epub_file
 from library.imports.results import IMPORT_STATUS_IMPORTED
 from tests.library.imports.helpers import epub_with_cover_bytes, image_bytes
@@ -57,65 +58,49 @@ class EpubCoverSafetyTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
         self.assertEqual(result.book.cover_file.name, "")
 
-    def test_backslash_traversal_cover_href_is_ignored(self):
-        result = import_epub_file(
-            BytesIO(
-                epub_with_cover_bytes(
-                    cover_bytes=image_bytes("PNG"),
-                    cover_href=r"..\cover.png",
-                    cover_member_name="cover.png",
-                )
-            ),
-            source_filename="cover.epub",
+    def test_backslash_traversal_cover_href_is_rejected_by_extractor(self):
+        cover = extract_epub_cover(
+            epub_with_cover_bytes(
+                cover_bytes=image_bytes("PNG"),
+                cover_href=r"..\cover.png",
+                cover_member_name="cover.png",
+            )
         )
 
-        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.book.cover_file.name, "")
+        self.assertIsNone(cover)
 
-    def test_absolute_cover_href_is_ignored(self):
-        result = import_epub_file(
-            BytesIO(
-                epub_with_cover_bytes(
-                    cover_bytes=image_bytes("PNG"),
-                    cover_href="/cover.png",
-                    cover_member_name="cover.png",
-                )
-            ),
-            source_filename="cover.epub",
+    def test_absolute_cover_href_is_rejected_by_extractor(self):
+        cover = extract_epub_cover(
+            epub_with_cover_bytes(
+                cover_bytes=image_bytes("PNG"),
+                cover_href="/cover.png",
+                cover_member_name="cover.png",
+            )
         )
 
-        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.book.cover_file.name, "")
+        self.assertIsNone(cover)
 
-    def test_windows_drive_cover_href_is_ignored(self):
-        result = import_epub_file(
-            BytesIO(
-                epub_with_cover_bytes(
-                    cover_bytes=image_bytes("PNG"),
-                    cover_href="C:/cover.png",
-                    cover_member_name="OEBPS/images/cover.png",
-                )
-            ),
-            source_filename="cover.epub",
+    def test_windows_drive_cover_href_is_rejected_by_extractor(self):
+        cover = extract_epub_cover(
+            epub_with_cover_bytes(
+                cover_bytes=image_bytes("PNG"),
+                cover_href="C:/cover.png",
+                cover_member_name="OEBPS/images/cover.png",
+            )
         )
 
-        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.book.cover_file.name, "")
+        self.assertIsNone(cover)
 
-    def test_url_like_cover_href_is_ignored(self):
-        result = import_epub_file(
-            BytesIO(
-                epub_with_cover_bytes(
-                    cover_bytes=image_bytes("PNG"),
-                    cover_href="https://example.test/cover.png",
-                    cover_member_name="OEBPS/images/cover.png",
-                )
-            ),
-            source_filename="cover.epub",
+    def test_url_like_cover_href_is_rejected_by_extractor(self):
+        cover = extract_epub_cover(
+            epub_with_cover_bytes(
+                cover_bytes=image_bytes("PNG"),
+                cover_href="https://example.test/cover.png",
+                cover_member_name="OEBPS/images/cover.png",
+            )
         )
 
-        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.book.cover_file.name, "")
+        self.assertIsNone(cover)
 
     def test_too_many_cover_pixels_is_ignored(self):
         with patch("library.imports.covers.MAX_COVER_IMAGE_PIXELS", 1):

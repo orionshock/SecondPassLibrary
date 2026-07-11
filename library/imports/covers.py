@@ -98,10 +98,12 @@ def _read_opf_root(archive: zipfile.ZipFile, package_path: str):
 
 def _find_cover_member(*, opf_root, package_path: str) -> str | None:
     manifest_items = _manifest_items(opf_root)
-    cover_item = _find_epub3_cover_item(manifest_items) or _find_epub2_cover_item(
-        opf_root=opf_root,
-        manifest_items=manifest_items,
-    )
+    cover_item = _find_epub3_cover_item(manifest_items)
+    if cover_item is None:
+        cover_item = _find_epub2_cover_item(
+            opf_root=opf_root,
+            manifest_items=manifest_items,
+        )
     if cover_item is None:
         return None
     media_type = (cover_item.attrib.get("media-type") or "").strip().lower()

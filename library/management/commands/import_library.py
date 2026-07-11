@@ -78,7 +78,7 @@ def _import_file_path(source: Path) -> ImportItemResult | ImportBatchResult:
 def _import_directory_child_path(source: Path) -> ImportItemResult | ImportBatchResult:
     try:
         return _import_file_path(source)
-    except OSError:
+    except (CommandError, OSError):
         return ImportItemResult(
             status=IMPORT_STATUS_FAILED,
             source_label=source.name,
