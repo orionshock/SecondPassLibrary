@@ -11,8 +11,8 @@ from rest_framework.views import APIView
 
 from accounts.authentication import ClientBearerAuthentication
 from core.pagination import DefaultPageNumberPagination
-from library import policies as library_policies
 from library.models import Book
+from library.queries import visible_books_for_user
 
 from ..models import Annotation, ReadingSession
 from ..profile.validation import CURRENT_READING_PROFILE_VERSION
@@ -40,6 +40,11 @@ from ..services import (
     get_or_create_progress,
     start_over_book,
 )
+
+
+def _can_view_book(*, user, book: Book) -> bool:
+    return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
+
 
 def _build_open_response_payload(*, request: Request, session: ReadingSession, view) -> dict[str, Any]:
     progress = get_or_create_progress(session=session)
@@ -152,7 +157,7 @@ class ActiveSessionView(APIView):
 
     def get(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
-        if not library_policies.can_view_book(user=request.user, book=book):
+        if not _can_view_book(user=request.user, book=book):
             raise NotFound()
 
         existing = ReadingSession.objects.filter(
@@ -174,7 +179,7 @@ class StartOverView(APIView):
 
     def post(self, request, book_id):
         book = get_object_or_404(Book, id=book_id)
-        if not library_policies.can_view_book(user=request.user, book=book):
+        if not _can_view_book(user=request.user, book=book):
             raise NotFound()
         name = request.data.get("name", "")
         session = start_over_book(user=request.user, book=book, name=name or "")
@@ -247,7 +252,7 @@ class OpenBookView(APIView):
         created = False
 
         book = get_object_or_404(Book, id=book_id)
-        if not library_policies.can_view_book(user=request.user, book=book):
+        if not _can_view_book(user=request.user, book=book):
             raise NotFound()
 
         session = ReadingSession.objects.select_related("book").filter(
@@ -263,4 +268,3 @@ class OpenBookView(APIView):
         return Response(
             payload, status=(status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         )
-

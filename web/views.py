@@ -21,9 +21,9 @@ from accounts.bootstrap import (
 )
 from accounts.forms import FirstOwnerSetupForm
 from accounts import policies as account_policies
-from library import policies as library_policies
 from core import server_settings as server_settings_service
 from library.models import Book
+from library.queries import visible_books_for_user
 from reading.sessions.queries import list_sessions_for_book, list_sessions_for_user
 from reading.models import ReadingSession
 
@@ -33,6 +33,10 @@ def _uuid_or_404(value: str) -> UUID:
         return UUID(str(value))
     except (TypeError, ValueError):
         raise Http404() from None
+
+
+def _can_view_book(*, user, book: Book) -> bool:
+    return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
 
 
 def product_login_required(
@@ -176,7 +180,7 @@ def reading_session_marginalia(
         {
             "book_id": str(book_uuid),
             "session_id": str(session_uuid),
-            "can_open": library_policies.can_view_book(user=request.user, book=session.book),
+            "can_open": _can_view_book(user=request.user, book=session.book),
         },
     )
 
@@ -192,7 +196,7 @@ def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpR
     )
     if book is None:
         raise Http404()
-    if not library_policies.can_view_book(user=request.user, book=book):
+    if not _can_view_book(user=request.user, book=book):
         raise Http404()
 
     sessions = list_sessions_for_book(user=request.user, book=book)

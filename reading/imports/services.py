@@ -10,8 +10,8 @@ from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from jsonschema import Draft202012Validator
 
-from library import policies as library_policies
 from library.models import Book
+from library.queries import visible_books_for_user
 from reading.profile.marginalia import count_profile_annotations, profile_selectors
 from reading.models import ReadingSession
 
@@ -376,18 +376,14 @@ def _warnings(book_summaries: list[dict[str, Any]], apply_plan: dict[str, int]) 
 
 
 def match_exported_book(*, user, exported: dict[str, Any]) -> tuple[Book | None, dict[str, str | None]]:
-    visible_books = [
-        book
-        for book in Book.objects.select_related("file")
-        .prefetch_related("authors", "identifiers", "group_assignments__group__memberships")
-        .all()
-        if library_policies.can_view_book(user=user, book=book)
-    ]
+    visible_books = list(
+        visible_books_for_user(user, cached=False).prefetch_related("authors", "identifiers")
+    )
 
     file_hash = _hash_value(exported.get("file_hash") or exported.get("source") or "")
     if file_hash:
         for book in visible_books:
-            checksum = getattr(getattr(book, "file", None), "checksum", "") or ""
+            checksum = getattr(book, "checksum", "") or ""
             if checksum.lower() == file_hash:
                 return book, _matched(book=book, method="file_hash")
 

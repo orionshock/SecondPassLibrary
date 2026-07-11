@@ -9,10 +9,15 @@ from django.db.models.functions import Coalesce, Greatest
 from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from library import policies as library_policies
+from accounts.roles import is_librarian
 from library.models import Book
+from library.queries import visible_books_for_user
 
 from ..models import ReadingSession
+
+
+def _can_view_book(*, user, book: Book) -> bool:
+    return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
 
 
 def get_user_session_queryset(user) -> QuerySet[ReadingSession]:
@@ -45,7 +50,7 @@ def resolve_visible_book_for_session_filter(*, user, raw_book: str) -> Book | No
         .filter(id=book_id)
         .first()
     )
-    if book is None or not library_policies.can_view_book(user=user, book=book):
+    if book is None or not _can_view_book(user=user, book=book):
         raise NotFound()
     return book
 
@@ -65,7 +70,7 @@ def apply_session_search(
         | Q(book__series__name__icontains=q)
     )
     visible_book_match = Q()
-    if not library_policies.can_manage_library(user):
+    if not is_librarian(user):
         visible_book_match = Q(book__group_assignments__group__memberships__user=user)
     return queryset.filter(session_match | (visible_book_match & book_match))
 
@@ -178,7 +183,7 @@ def recent_sessions_for_user(*, user, request, limit: int) -> list[dict[str, Any
             continue
 
         book = getattr(session, "book", None)
-        if book is None or not library_policies.can_view_book(user=user, book=book):
+        if book is None or not _can_view_book(user=user, book=book):
             continue
 
         seen_books.add(book_id)
@@ -254,7 +259,7 @@ def build_activity_summary(*, user, book_ids: list[UUID]) -> list[dict[str, Any]
         book = books_by_id.get(book_id)
         if book is None:
             continue
-        if not library_policies.can_view_book(user=user, book=book):
+        if not _can_view_book(user=user, book=book):
             continue
         visible_books.append(book)
 
@@ -415,7 +420,7 @@ def list_sessions_for_user(*, user) -> list[dict]:
         book = getattr(s, "book", None)
         if book is None:
             continue
-        can_open = library_policies.can_view_book(user=user, book=book)
+        can_open = _can_view_book(user=user, book=book)
 
         progress = getattr(s, "progress", None)
         progression = (

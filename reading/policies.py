@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from library import policies as library_policies
+from library.queries import visible_books_for_user
 
 from .models import ReadingSession
 
@@ -27,4 +27,4 @@ def can_edit_reading_metadata(*, user, obj) -> bool:
 
 
 def can_access_session_book(*, user, session: ReadingSession) -> bool:
-    return library_policies.can_view_book(user=user, book=session.book)
+    return visible_books_for_user(user, cached=False).filter(pk=session.book_id).exists()

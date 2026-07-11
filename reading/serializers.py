@@ -2,8 +2,8 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from library import policies as library_policies
 from library.models import Author, Book, Series
+from library.queries import visible_books_for_user
 
 from .models import (
     HIGHLIGHT_COLOR_TOKENS,
@@ -129,7 +129,7 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
         return bool(
             user is not None
             and book is not None
-            and library_policies.can_view_book(user=user, book=book)
+            and visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
         )
 
     def get_book(self, obj: ReadingSession) -> dict[str, Any]:
