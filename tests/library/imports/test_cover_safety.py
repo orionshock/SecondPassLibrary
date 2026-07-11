@@ -57,6 +57,51 @@ class EpubCoverSafetyTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
         self.assertEqual(result.book.cover_file.name, "")
 
+    def test_backslash_traversal_cover_href_is_ignored(self):
+        result = import_epub_file(
+            BytesIO(
+                epub_with_cover_bytes(
+                    cover_bytes=image_bytes("PNG"),
+                    cover_href=r"..\cover.png",
+                    cover_member_name="cover.png",
+                )
+            ),
+            source_filename="cover.epub",
+        )
+
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(result.book.cover_file.name, "")
+
+    def test_absolute_cover_href_is_ignored(self):
+        result = import_epub_file(
+            BytesIO(
+                epub_with_cover_bytes(
+                    cover_bytes=image_bytes("PNG"),
+                    cover_href="/cover.png",
+                    cover_member_name="cover.png",
+                )
+            ),
+            source_filename="cover.epub",
+        )
+
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(result.book.cover_file.name, "")
+
+    def test_windows_drive_cover_href_is_ignored(self):
+        result = import_epub_file(
+            BytesIO(
+                epub_with_cover_bytes(
+                    cover_bytes=image_bytes("PNG"),
+                    cover_href="C:/cover.png",
+                    cover_member_name="OEBPS/images/cover.png",
+                )
+            ),
+            source_filename="cover.epub",
+        )
+
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(result.book.cover_file.name, "")
+
     def test_url_like_cover_href_is_ignored(self):
         result = import_epub_file(
             BytesIO(
@@ -68,6 +113,16 @@ class EpubCoverSafetyTests(IsolatedMediaRootMixin, TestCase):
             ),
             source_filename="cover.epub",
         )
+
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(result.book.cover_file.name, "")
+
+    def test_too_many_cover_pixels_is_ignored(self):
+        with patch("library.imports.covers.MAX_COVER_IMAGE_PIXELS", 1):
+            result = import_epub_file(
+                BytesIO(epub_with_cover_bytes(cover_bytes=image_bytes("PNG"))),
+                source_filename="cover.epub",
+            )
 
         self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
         self.assertEqual(result.book.cover_file.name, "")

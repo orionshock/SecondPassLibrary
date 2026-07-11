@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from unittest.mock import patch
 
 import library.models as library_models
 from django.test import TestCase
@@ -23,6 +24,18 @@ from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 class EpubCoverImportIntegrationTests(IsolatedMediaRootMixin, TestCase):
+    def test_cover_storage_failure_is_swallowed_after_successful_import(self):
+        with patch("library.imports.epub.attach_cover_to_book", side_effect=RuntimeError("storage failed")):
+            result = import_epub_file(
+                BytesIO(epub_with_cover_bytes(cover_bytes=image_bytes("PNG"))),
+                source_filename="cover.epub",
+            )
+
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(result.safe_message, "Successfully imported EPUB.")
+        self.assertEqual(Book.objects.count(), 1)
+        self.assertEqual(Book.objects.get().cover_file.name, "")
+
     def test_duplicate_checksum_does_not_refresh_cover(self):
         data = epub_with_cover_bytes(cover_bytes=image_bytes("PNG"))
         first = import_epub_file(BytesIO(data), source_filename="first.epub")
