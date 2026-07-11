@@ -76,3 +76,36 @@ def minimal_epub_bytes(*, metadata_xml: str | None = None, opf_path: str = "OEBP
             "<html xmlns='http://www.w3.org/1999/xhtml'><body>Chapter</body></html>",
         )
     return out.getvalue()
+
+
+def zip_bytes(*entries: tuple[str, bytes]) -> BytesIO:
+    out = BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, data in entries:
+            archive.writestr(name, data)
+    out.seek(0)
+    return out
+
+
+def metadata_xml(title: str) -> str:
+    return f"""
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:title>{title}</dc:title>
+      <dc:creator>Sample Author</dc:creator>
+      <dc:language>en</dc:language>
+    </metadata>
+    """
+
+
+def sidecar_opf_xml(title: str, *, identifier: str = "") -> str:
+    return f"""
+    <package xmlns="http://www.idpf.org/2007/opf"
+             xmlns:opf="http://www.idpf.org/2007/opf">
+      <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <dc:title>{title}</dc:title>
+        <dc:creator>Sidecar Author</dc:creator>
+        <dc:language>en</dc:language>
+        {identifier}
+      </metadata>
+    </package>
+    """

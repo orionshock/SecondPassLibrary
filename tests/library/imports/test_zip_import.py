@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from io import BytesIO
-import zipfile
 
 import library.models as library_models
 from django.test import TestCase
@@ -16,7 +15,12 @@ from library.imports.results import (
     IMPORT_STATUS_SKIPPED,
 )
 from library.models import Book, BookGroupAssignment, BookIdentifier
-from tests.library.imports.helpers import ImportPersistenceFixtureMixin, minimal_epub_bytes
+from tests.library.imports.helpers import (
+    ImportPersistenceFixtureMixin,
+    metadata_xml,
+    minimal_epub_bytes,
+    zip_bytes,
+)
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
@@ -27,7 +31,7 @@ class ZipImportServiceTests(
 ):
     def test_valid_zip_with_one_epub_imports_one_book(self):
         result = import_zip_file(
-            _zip_bytes(("nested/sample.epub", minimal_epub_bytes())),
+            zip_bytes(("nested/sample.epub", minimal_epub_bytes())),
             source_filename="upload.zip",
             actor=self.actor,
         )
@@ -42,9 +46,9 @@ class ZipImportServiceTests(
 
     def test_batch_counts_imported_items(self):
         result = import_zip_file(
-            _zip_bytes(
-                ("one.epub", minimal_epub_bytes(metadata_xml=_metadata_xml("One"))),
-                ("two.epub", minimal_epub_bytes(metadata_xml=_metadata_xml("Two"))),
+            zip_bytes(
+                ("one.epub", minimal_epub_bytes(metadata_xml=metadata_xml("One"))),
+                ("two.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Two"))),
             ),
             source_filename="books.zip",
         )
@@ -55,7 +59,7 @@ class ZipImportServiceTests(
 
     def test_planner_skipped_item_results_are_included(self):
         result = import_zip_file(
-            _zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")),
+            zip_bytes(("dir/book.epub", b"a"), ("dir/./book.epub", b"b")),
             source_filename="colliding.zip",
         )
 
@@ -68,7 +72,7 @@ class ZipImportServiceTests(
         data = minimal_epub_bytes()
 
         result = import_zip_file(
-            _zip_bytes(("first.epub", data), ("second.epub", data)),
+            zip_bytes(("first.epub", data), ("second.epub", data)),
             source_filename="duplicates.zip",
         )
 
@@ -92,7 +96,7 @@ class ZipImportServiceTests(
         """
 
         result = import_zip_file(
-            _zip_bytes(("conflict.epub", minimal_epub_bytes(metadata_xml=metadata_xml))),
+            zip_bytes(("conflict.epub", minimal_epub_bytes(metadata_xml=metadata_xml))),
             source_filename="conflict.zip",
         )
 
@@ -102,9 +106,9 @@ class ZipImportServiceTests(
 
     def test_invalid_epub_member_fails_and_other_members_continue(self):
         result = import_zip_file(
-            _zip_bytes(
+            zip_bytes(
                 ("bad.epub", b"not an epub"),
-                ("good.epub", minimal_epub_bytes(metadata_xml=_metadata_xml("Good"))),
+                ("good.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Good"))),
             ),
             source_filename="mixed.zip",
         )
@@ -124,7 +128,7 @@ class ZipImportServiceTests(
 
     def test_zero_epub_zip_returns_empty_batch(self):
         result = import_zip_file(
-            _zip_bytes(("notes.txt", b"notes"), ("metadata.opf", b"opf")),
+            zip_bytes(("notes.txt", b"notes"), ("metadata.opf", b"opf")),
             source_filename="empty.zip",
         )
 
@@ -134,7 +138,7 @@ class ZipImportServiceTests(
 
     def test_discovered_count_comes_from_planner(self):
         result = import_zip_file(
-            _zip_bytes(("book.epub", minimal_epub_bytes()), ("notes.txt", b"notes")),
+            zip_bytes(("book.epub", minimal_epub_bytes()), ("notes.txt", b"notes")),
             source_filename="single.zip",
         )
 
@@ -143,7 +147,7 @@ class ZipImportServiceTests(
 
     def test_backslash_member_path_imports_from_original_archive_member(self):
         result = import_zip_file(
-            _zip_bytes((r"dir\book.epub", minimal_epub_bytes())),
+            zip_bytes((r"dir\book.epub", minimal_epub_bytes())),
             source_filename="backslash.zip",
         )
 
@@ -153,7 +157,7 @@ class ZipImportServiceTests(
 
     def test_actor_flows_to_public_assignment(self):
         result = import_zip_file(
-            _zip_bytes(("book.epub", minimal_epub_bytes())),
+            zip_bytes(("book.epub", minimal_epub_bytes())),
             source_filename="actor.zip",
             actor=self.actor,
         )
@@ -166,51 +170,20 @@ class ZipImportServiceTests(
             ).exists()
         )
 
-    def test_sidecar_opf_metadata_is_not_applied_yet(self):
-        sidecar_xml = """
-        <package xmlns="http://www.idpf.org/2007/opf">
-          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-            <dc:title>Sidecar Title</dc:title>
-          </metadata>
-        </package>
-        """
-
+    def test_dot_segment_member_path_imports_from_original_archive_member(self):
         result = import_zip_file(
-            _zip_bytes(
-                ("dir/book.epub", minimal_epub_bytes(metadata_xml=_metadata_xml("EPUB Title"))),
-                ("dir/metadata.opf", sidecar_xml.encode()),
-            ),
-            source_filename="sidecar.zip",
+            zip_bytes(("dir/./book.epub", minimal_epub_bytes())),
+            source_filename="dot-segment.zip",
         )
 
         self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
-        self.assertEqual(result.items[0].book.title, "EPUB Title")
-        self.assertFalse(Book.objects.filter(title="Sidecar Title").exists())
+        self.assertEqual(Book.objects.count(), 1)
 
     def test_no_bookfile_model_or_object_appears(self):
         result = import_zip_file(
-            _zip_bytes(("book.epub", minimal_epub_bytes())),
+            zip_bytes(("book.epub", minimal_epub_bytes())),
             source_filename="book.zip",
         )
 
         self.assertFalse(hasattr(library_models, "BookFile"))
         self.assertTrue(result.items[0].book.book_file.name)
-
-
-def _zip_bytes(*entries: tuple[str, bytes]) -> BytesIO:
-    out = BytesIO()
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, data in entries:
-            archive.writestr(name, data)
-    out.seek(0)
-    return out
-
-
-def _metadata_xml(title: str) -> str:
-    return f"""
-    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <dc:title>{title}</dc:title>
-      <dc:creator>Sample Author</dc:creator>
-      <dc:language>en</dc:language>
-    </metadata>
-    """

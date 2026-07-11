@@ -39,6 +39,7 @@ def import_epub_file(
     *,
     source_filename: str,
     actor=None,
+    sidecar_opf_bytes: bytes | None = None,
 ) -> ImportItemResult:
     """
     Safe item-level import wrapper.
@@ -54,6 +55,7 @@ def import_epub_file(
             source_filename=source_filename,
             source_label=source_label,
             actor=actor,
+            sidecar_opf_bytes=sidecar_opf_bytes,
         )
     except (InvalidEpubImportError, UnsupportedImportSourceError) as exc:
         return ImportItemResult(
@@ -82,6 +84,7 @@ def _import_epub_file(
     source_filename: str,
     source_label: str,
     actor=None,
+    sidecar_opf_bytes: bytes | None = None,
 ) -> ImportItemResult:
     source_filename = (source_filename or "").strip()
     if not source_filename.lower().endswith(".epub"):
@@ -89,7 +92,7 @@ def _import_epub_file(
 
     data, checksum, file_size = read_file_with_sha256(file_obj)
     _validate_with_ebooklib(data)
-    metadata = _read_import_metadata(data)
+    metadata = _read_import_metadata(data, sidecar_opf_bytes=sidecar_opf_bytes)
 
     persistence_result = persist_imported_book(
         metadata=metadata,
@@ -161,13 +164,19 @@ def _validate_with_ebooklib(data: bytes) -> None:
         raise InvalidEpubImportError() from exc
 
 
-def _read_import_metadata(data: bytes):
+def _read_import_metadata(data: bytes, *, sidecar_opf_bytes: bytes | None = None):
     try:
-        return parse_opf_metadata(_read_package_opf_xml(data))
+        epub_metadata = parse_opf_metadata(_read_package_opf_xml(data))
     except InvalidEpubImportError:
         raise
     except Exception as exc:
         raise InvalidEpubImportError() from exc
+    if not sidecar_opf_bytes:
+        return epub_metadata
+    try:
+        return parse_opf_metadata(sidecar_opf_bytes)
+    except Exception:
+        return epub_metadata
 
 
 def _read_package_opf_xml(data: bytes) -> bytes:

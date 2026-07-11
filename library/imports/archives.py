@@ -79,6 +79,7 @@ class ZipImportCandidate:
     file_size: int
     sidecar_opf_name: str | None = None
     archive_name: str = ""
+    sidecar_archive_name: str = ""
 
 
 @dataclass
@@ -259,6 +260,9 @@ def plan_zip_import(
                 file_size=member.file_size,
                 sidecar_opf_name=sidecar,
                 archive_name=member.archive_name,
+                sidecar_archive_name=(
+                    index.members_index[sidecar].archive_name if sidecar else ""
+                ),
             )
         )
 

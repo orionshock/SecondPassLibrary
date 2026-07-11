@@ -4,6 +4,7 @@ from io import BytesIO
 import zipfile
 
 from library.imports.archives import (
+    MAX_OPF_SIDECAR_XML_BYTES,
     ZipImportCandidate,
     plan_zip_import,
     safe_import_source_name,
@@ -81,7 +82,26 @@ def _import_zip_candidate(
         BytesIO(data),
         source_filename=candidate.source_name,
         actor=actor,
+        sidecar_opf_bytes=_read_sidecar_opf_bytes(archive, candidate),
     )
+
+
+def _read_sidecar_opf_bytes(
+    archive: zipfile.ZipFile,
+    candidate: ZipImportCandidate,
+) -> bytes | None:
+    if not candidate.sidecar_opf_name:
+        return None
+
+    try:
+        with archive.open(candidate.sidecar_archive_name or candidate.sidecar_opf_name, "r") as fp:
+            data = fp.read(MAX_OPF_SIDECAR_XML_BYTES + 1)
+    except Exception:
+        return None
+
+    if len(data) > MAX_OPF_SIDECAR_XML_BYTES:
+        return None
+    return data
 
 
 def _rewind_file(file_obj) -> None:
