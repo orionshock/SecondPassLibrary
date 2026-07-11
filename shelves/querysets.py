@@ -105,7 +105,16 @@ def build_visible_shelf_list_queryset(
         )
 
     if filters.book_id is not None:
+        visible_books = visible_books_for_user(user, cached=False)
+        visible_item_filter = (
+            Q(owner_type=Shelf.OWNER_TYPE_USER, items__book__in=visible_books)
+            | Q(
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                items__book__group_assignments__group=F("owner_group"),
+            )
+        )
         visible_qs = visible_qs.filter(
+            visible_item_filter,
             items__book_id=filters.book_id,
         ).distinct()
         visible_qs = visible_qs.annotate(
@@ -113,6 +122,13 @@ def build_visible_shelf_list_queryset(
                 ShelfItem.objects.filter(
                     shelf_id=OuterRef("pk"),
                     book_id=filters.book_id,
+                )
+                .filter(
+                    Q(shelf__owner_type=Shelf.OWNER_TYPE_USER, book__in=visible_books)
+                    | Q(
+                        shelf__owner_type=Shelf.OWNER_TYPE_GROUP,
+                        book__group_assignments__group_id=OuterRef("owner_group_id"),
+                    )
                 ).values("id")[:1]
             )
         )

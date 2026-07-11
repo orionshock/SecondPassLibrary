@@ -156,7 +156,7 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
         detail = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/"))
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
         self.assertEqual(response_data_dict(detail)["item_count"], 0)
-        self.assertTrue(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
+        self.assertFalse(ShelfItem.objects.filter(shelf=shelf, book=self.book_in_group).exists())
 
     def test_user_shelf_item_count_excludes_books_no_longer_visible_to_user(self):
         shelf = Shelf.objects.create(
@@ -205,6 +205,48 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
             [(row["name"], row["item_count"]) for row in response_data_list(response)],
             [("Visible count", 1), ("Hidden raw count", 0)],
         )
+
+    def test_book_filter_does_not_match_hidden_shelf_item(self):
+        shelf = Shelf.objects.create(
+            name="Hidden item shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book_hidden, position=0, added_by=self.reader
+        )
+
+        self.client.login(username="reader", password="pw")
+        response = assert_response(self.client.get(f"/api/v1/shelves/?book={self.book_hidden.id}"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rows = response_data_list(response)
+        self.assertEqual(rows, [])
+        self.assertFalse(any(row.get("matched_item_id") for row in rows))
+
+    def test_public_group_shelf_is_not_visible_after_public_membership_removed(self):
+        shelf = Shelf.objects.create(
+            name="Public shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.public,
+            created_by=self.owner,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book_public, position=0, added_by=self.owner
+        )
+        LibraryGroupMembership.objects.filter(user=self.reader, group=self.public).delete()
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).exists()
+        )
+
+        self.client.login(username="reader", password="pw")
+        list_response = assert_response(self.client.get("/api/v1/shelves/"))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertNotIn(str(shelf.id), {row["id"] for row in response_data_list(list_response)})
+
+        book_response = assert_response(self.client.get(f"/api/v1/shelves/?book={self.book_public.id}"))
+        self.assertEqual(book_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data_list(book_response), [])
 
     def _create_user_shelf(self) -> Shelf:
         response = assert_response(
