@@ -19,9 +19,9 @@ from rest_framework.decorators import action
 
 from accounts.authentication import ClientBearerAuthentication
 from core.models import IdempotencyRecord
+from library.queries import visible_books_for_user
 
 from ..models import HIGHLIGHT_COLOR_TOKENS, Annotation, ReadingSession
-from ..policies import can_access_session_book
 from ..serializers import AnnotationSerializer
 from ..services import (
     assert_session_writable,
@@ -31,6 +31,7 @@ from ..services import (
 
 
 BATCH_CREATE_LIMIT = 100
+
 
 class AnnotationViewSet(viewsets.ModelViewSet):
     authentication_classes = [
@@ -107,7 +108,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         """
         annotation = cast(Annotation, self.get_object())
         assert_session_writable(session=annotation.session)
-        if not can_access_session_book(user=request.user, session=annotation.session):
+        if not visible_books_for_user(request.user, cached=False).filter(
+            pk=annotation.session.book_id
+        ).exists():
             raise PermissionDenied("Book is not currently accessible.")
 
         initial = cast(dict[str, Any], getattr(request, "data", None) or {})
@@ -289,7 +292,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
 
     def _create_annotation_from_validated(self, validated: dict[str, Any]) -> Annotation:
         session = cast(ReadingSession, validated["session"])
-        if not can_access_session_book(user=self.request.user, session=session):
+        if not visible_books_for_user(self.request.user, cached=False).filter(
+            pk=session.book_id
+        ).exists():
             raise PermissionDenied("Book is not currently accessible.")
         selector = cast(dict[str, str], validated["selector"])
         quote = cast(dict[str, str], validated.get("quote") or {})
@@ -361,7 +366,9 @@ class AnnotationViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         annotation = self.get_object()
         assert_session_writable(session=annotation.session)
-        if not can_access_session_book(user=request.user, session=annotation.session):
+        if not visible_books_for_user(request.user, cached=False).filter(
+            pk=annotation.session.book_id
+        ).exists():
             raise PermissionDenied("Book is not currently accessible.")
         annotation.is_deleted = True
         annotation.save(update_fields=["is_deleted", "updated_at"])

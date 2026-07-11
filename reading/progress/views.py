@@ -8,12 +8,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.authentication import ClientBearerAuthentication
+from library.queries import visible_books_for_user
 
 from ..models import ReadingProgress, ReadingSession
-from ..policies import can_access_session_book
 from ..profile.validation import CURRENT_READING_PROFILE_VERSION
 from ..serializers import ReadingProgressSerializer
 from ..services import get_or_create_progress, is_session_closed, update_progress
+
 
 class ReadingProgressViewSet(viewsets.GenericViewSet):
     authentication_classes = [
@@ -50,7 +51,9 @@ class ReadingProgressViewSet(viewsets.GenericViewSet):
 
     def _update(self, request, session_id, partial):
         session = self._get_session(session_id)
-        if not can_access_session_book(user=request.user, session=session):
+        if not visible_books_for_user(request.user, cached=False).filter(
+            pk=session.book_id
+        ).exists():
             raise PermissionDenied("Book is not currently accessible.")
         progress = get_or_create_progress(session=session)
         serializer = ReadingProgressSerializer(

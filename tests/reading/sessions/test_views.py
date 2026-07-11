@@ -7,12 +7,12 @@ from django.utils import timezone
 from rest_framework import status
 
 from accounts.models import UserProfile
-from library import policies
 from library.groups.services import (
     ensure_book_public_assignment,
     ensure_user_public_membership,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.queries import visible_books_for_user
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from reading.profile.validation import (
     CURRENT_READING_PROFILE_VERSION,
@@ -67,7 +67,11 @@ class ReadingSessionsAPITest(ReadingAPITestBase):
         )
 
         LibraryGroupMembership.objects.filter(user=user, group=group).delete()
-        self.assertFalse(policies.can_view_book(user=user, book=restricted))
+        self.assertFalse(
+            visible_books_for_user(user, cached=False)
+            .filter(pk=restricted.pk)
+            .exists()
+        )
         return user, restricted, session
 
     def test_get_create_active_session(self):
