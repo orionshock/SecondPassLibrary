@@ -23,6 +23,7 @@ from library.groups.membership_views import (
     LibraryGroupMembershipListView,
 )
 from library.groups.views import LibraryGroupDetailView, LibraryGroupListView
+from library.imports.views import ImportUploadView
 
 
 app_name = "library"
@@ -57,6 +58,7 @@ urlpatterns = [
     ),
     path("groups/<uuid:group_id>/series/", GroupSeriesListView.as_view(), name="group-series-list"),
     path("groups/<uuid:group_id>/tags/", GroupCatalogTagListView.as_view(), name="group-tag-list"),
+    path("imports/", ImportUploadView.as_view(), name="import-upload"),
     path("series/", SeriesListView.as_view(), name="series-list"),
     path("series/<uuid:axis_id>/", SeriesDetailView.as_view(), name="series-detail"),
     path("tags/", CatalogTagListView.as_view(), name="tag-list"),
