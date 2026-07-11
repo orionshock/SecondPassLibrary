@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from accounts import policies
+from accounts.roles import is_owner
 from core import server_settings
 from library.groups.services import configure_public_group
 from library.groups.public_group import get_public_group
@@ -33,7 +33,7 @@ class ServerSettingsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _require_owner(self, request) -> None:
-        if not policies.is_owner(getattr(request, "user", None)):
+        if not is_owner(getattr(request, "user", None)):
             raise PermissionDenied("Not allowed.")
 
     def get(self, request):
@@ -110,7 +110,7 @@ class AdvancedLibraryGroupsEnableView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not policies.is_owner(getattr(request, "user", None)):
+        if not is_owner(getattr(request, "user", None)):
             raise PermissionDenied("Not allowed.")
 
         server_settings.enable_advanced_library_groups()

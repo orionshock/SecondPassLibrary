@@ -20,7 +20,7 @@ from accounts.bootstrap import (
     has_active_owner,
 )
 from accounts.forms import FirstOwnerSetupForm
-from accounts import policies as account_policies
+from accounts.roles import is_owner
 from core import server_settings as server_settings_service
 from library.models import Book
 from library.queries import visible_books_for_user
@@ -401,7 +401,7 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
 
 @product_login_required
 def server_settings(request: HttpRequest) -> HttpResponse:
-    if not account_policies.is_owner(getattr(request, "user", None)):
+    if not is_owner(getattr(request, "user", None)):
         raise PermissionDenied
     return render(
         request,
