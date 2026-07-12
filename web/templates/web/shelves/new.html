@@ -38,24 +38,20 @@
           <div class="muted" style="margin-top: 6px;">Listed shelves are visible to authenticated users but do not grant book access.</div>
         </div>
 
-        {% if advanced_library_groups_enabled %}
-        <div id="shelf-new-owner-type-row" class="kv__k"><label for="shelf-new-owner-type">Owner type</label></div>
-        <div id="shelf-new-owner-type-row-v" class="kv__v">
+        <div id="shelf-new-owner-type-row" class="kv__k is-hidden"><label for="shelf-new-owner-type">Owner type</label></div>
+        <div id="shelf-new-owner-type-row-v" class="kv__v is-hidden">
           <select id="shelf-new-owner-type">
             <option value="user">My shelf</option>
             <option value="group">Group shelf</option>
           </select>
+          <div id="shelf-new-public-group-help" class="muted is-hidden" style="margin-top: 6px;">This shelf is visible to members of the Public/Common Room group and remains subject to normal book access.</div>
         </div>
 
-        <div id="shelf-new-owner-group-row" class="kv__k"><label for="shelf-new-owner-group">Owner group</label></div>
-        <div id="shelf-new-owner-group-row-v" class="kv__v">
+        <div id="shelf-new-owner-group-row" class="kv__k is-hidden"><label for="shelf-new-owner-group">Owner group</label></div>
+        <div id="shelf-new-owner-group-row-v" class="kv__v is-hidden">
           <select id="shelf-new-owner-group"></select>
           <div class="muted" style="margin-top: 6px;">Group shelves are visible to group members and broad roles. Group shelves are always private.</div>
         </div>
-        {% else %}
-        <input id="shelf-new-owner-type" type="hidden" value="user" />
-        <select id="shelf-new-owner-group" class="is-hidden" aria-hidden="true"></select>
-        {% endif %}
       </div>
 
       <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">

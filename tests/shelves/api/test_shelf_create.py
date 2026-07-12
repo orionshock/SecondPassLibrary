@@ -12,6 +12,46 @@ pytestmark = [pytest.mark.integration]
 
 
 class ShelfCreateEndpointTests(BaseShelvesAPITest):
+    def test_public_group_shelf_create_authorization_when_advanced_groups_disabled(self):
+        server_settings.set_advanced_library_groups_enabled(False)
+
+        self.client.login(username="librarian", password="pw")
+        allowed = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Common Room Picks",
+                    "description": "Shared presentation shelf.",
+                    "owner_type": "group",
+                    "owner_group": str(self.public.id),
+                    "visibility": "private",
+                },
+                format="json",
+            )
+        )
+
+        self.assertEqual(allowed.status_code, status.HTTP_201_CREATED)
+        payload = response_data_dict(allowed)
+        self.assertEqual(payload["owner_type"], "group")
+        self.assertEqual(payload_dict(payload, "owner_group")["id"], self.public.id)
+        self.assertEqual(payload["visibility"], "private")
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        denied = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Reader Public Shelf",
+                    "owner_type": "group",
+                    "owner_group": str(self.public.id),
+                    "visibility": "private",
+                },
+                format="json",
+            )
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_create_personal_shelf_when_advanced_groups_disabled(self):
         server_settings.set_advanced_library_groups_enabled(False)
         self.client.login(username="reader", password="pw")

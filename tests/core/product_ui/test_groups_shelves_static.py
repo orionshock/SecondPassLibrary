@@ -197,8 +197,9 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-new-owner-type"')
         self.assertContains(response, 'id="shelf-new-owner-group"')
         self.assertContains(response, 'id="shelf-new-visibility"')
-        self.assertNotContains(response, 'id="shelf-new-owner-type-row"')
-        self.assertNotContains(response, 'id="shelf-new-owner-group-row"')
+        self.assertContains(response, 'id="shelf-new-owner-type-row" class="kv__k is-hidden"')
+        self.assertContains(response, 'id="shelf-new-owner-group-row" class="kv__k is-hidden"')
+        self.assertContains(response, 'id="shelf-new-public-group-help"')
 
     def test_authenticated_shelf_new_shows_group_owner_controls_when_enabled(self):
         server_settings.enable_advanced_library_groups()
@@ -223,9 +224,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertNotIn("membership_role", new_js)
         self.assertNotIn("can_create_shelf", new_js)
         self.assertIn("export function manageableShelfGroups(me, groups)", new_js)
+        self.assertIn("export function publicShelfGroup(me)", new_js)
+        self.assertIn("group.is_public_group === true", new_js)
         self.assertIn("availableGroups.filter", new_js)
         self.assertIn("visible(ownerTypeRow, canCreateGroupShelf)", new_js)
-        self.assertIn("visible(ownerGroupRow, canCreateGroupShelf)", new_js)
+        self.assertIn("visible(ownerGroupRow, canCreateAdvancedGroupShelf)", new_js)
+        self.assertIn("!groupUiEnabled && canManageLibrary(me) && !!publicGroup", new_js)
+        self.assertIn("results = [publicGroup]", new_js)
         self.assertIn('ownerTypeEl.value = "user"', new_js)
         self.assertIn(
             'canCreateGroupShelf && ownerTypeEl.value === "group"',
@@ -234,6 +239,8 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertIn("owner_type: ownerType", new_js)
         self.assertIn('if (ownerType === "user")', new_js)
         self.assertIn("body.visibility = visibilityEl.value", new_js)
+        self.assertIn("body.owner_group = ownerGroupEl.value", new_js)
+        self.assertIn('body.visibility = "private"', new_js)
         self.assertIn('fetchJSONWithOptions("/api/v1/shelves/"', new_js)
 
     def test_unauthenticated_shelf_detail_redirects_to_login(self):

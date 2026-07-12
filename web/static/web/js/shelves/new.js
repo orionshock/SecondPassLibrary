@@ -33,6 +33,11 @@ export function manageableShelfGroups(me, groups) {
   );
 }
 
+export function publicShelfGroup(me) {
+  const groups = Array.isArray(me && me.groups) ? me.groups : [];
+  return groups.find((group) => group && group.is_public_group === true) || null;
+}
+
 export async function initShelfNew() {
   const me = await loadMeAndInitShell();
   setGlobalError("");
@@ -44,12 +49,16 @@ export async function initShelfNew() {
   const nameEl = $("#shelf-new-name");
   const descEl = $("#shelf-new-description");
   const ownerTypeEl = $("#shelf-new-owner-type");
+  const groupOwnerOption = ownerTypeEl
+    ? ownerTypeEl.querySelector('option[value="group"]')
+    : null;
   const visibilityEl = $("#shelf-new-visibility");
   const ownerGroupEl = $("#shelf-new-owner-group");
   const ownerTypeRow = $("#shelf-new-owner-type-row");
   const ownerTypeRowValue = $("#shelf-new-owner-type-row-v");
   const ownerGroupRow = $("#shelf-new-owner-group-row");
   const ownerGroupRowValue = $("#shelf-new-owner-group-row-v");
+  const publicGroupHelpEl = $("#shelf-new-public-group-help");
   const submitStatusEl = $("#shelf-new-submit-status");
   if (
     !statusEl ||
@@ -74,21 +83,35 @@ export async function initShelfNew() {
   setErr("");
 
   const groupUiEnabled = advancedLibraryGroupsEnabled();
-  const canCreateGroupShelf = groupUiEnabled && canCreateGroupShelves(me);
+  const publicGroup = publicShelfGroup(me);
+  const canCreateAdvancedGroupShelf =
+    groupUiEnabled && canCreateGroupShelves(me);
+  const canCreateSimplePublicShelf =
+    !groupUiEnabled && canManageLibrary(me) && !!publicGroup;
+  const canCreateGroupShelf =
+    canCreateAdvancedGroupShelf || canCreateSimplePublicShelf;
   ownerTypeEl.value = "user";
+  if (groupOwnerOption) {
+    groupOwnerOption.disabled = !canCreateGroupShelf;
+    groupOwnerOption.textContent = canCreateSimplePublicShelf
+      ? `${String(publicGroup.name || "Public/Common Room")} shelf`
+      : "Group shelf";
+  }
   ownerGroupEl.disabled = true;
   visible(ownerTypeRow, canCreateGroupShelf);
   visible(ownerTypeRowValue, canCreateGroupShelf);
-  visible(ownerGroupRow, canCreateGroupShelf);
-  visible(ownerGroupRowValue, canCreateGroupShelf);
+  visible(ownerGroupRow, canCreateAdvancedGroupShelf);
+  visible(ownerGroupRowValue, canCreateAdvancedGroupShelf);
 
   let results = [];
-  if (canCreateGroupShelf) {
+  if (canCreateAdvancedGroupShelf) {
     const groups = await fetchJSON("/api/v1/library/groups/");
     const availableGroups = Array.isArray(groups && groups.results)
       ? groups.results
       : [];
     results = manageableShelfGroups(me, availableGroups);
+  } else if (canCreateSimplePublicShelf) {
+    results = [publicGroup];
   }
 
   ownerGroupEl.textContent = "";
@@ -114,6 +137,7 @@ export async function initShelfNew() {
     visibilityEl.disabled = isGroup;
     ownerGroupEl.disabled = !isGroup;
     if (isGroup) visibilityEl.value = "private";
+    visible(publicGroupHelpEl, canCreateSimplePublicShelf && isGroup);
   }
   ownerTypeEl.addEventListener("change", syncOwnerUI);
   syncOwnerUI();
@@ -137,7 +161,10 @@ export async function initShelfNew() {
       owner_type: ownerType,
     };
     if (ownerType === "user") body.visibility = visibilityEl.value;
-    if (ownerType === "group") body.owner_group = ownerGroupEl.value;
+    if (ownerType === "group") {
+      body.owner_group = ownerGroupEl.value;
+      body.visibility = "private";
+    }
 
     try {
       const csrf = getCsrfToken();
