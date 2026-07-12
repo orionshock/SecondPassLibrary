@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from library.groups.services import ensure_user_public_membership
 from reading.models import ReadingSession
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
@@ -18,6 +19,7 @@ class ReadingSessionPatchActiveOnlyTests(IsolatedMediaRootMixin, APITestCase):
         self.user = User.objects.create_user(
             username="u", password="pw", email="u@example.com"
         )
+        ensure_user_public_membership(user=self.user)
         self.client.login(username="u", password="pw")
         self.book = create_file_backed_book(title="B").book
 

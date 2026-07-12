@@ -94,8 +94,32 @@ class SeriesSummarySerializer(serializers.ModelSerializer):
 
 class ReadingSessionBookSummarySerializer(serializers.ModelSerializer):
     authors = AuthorSummarySerializer(many=True, read_only=True)
-    series = SeriesSummarySerializer(read_only=True, allow_null=True)
+    series = serializers.SerializerMethodField(read_only=True)
+    series_index = serializers.SerializerMethodField(read_only=True)
     cover_url = serializers.SerializerMethodField(read_only=True)
+
+    def _book_series_link(self, obj: Book):
+        try:
+            return obj.book_series
+        except Book.book_series.RelatedObjectDoesNotExist:
+            return None
+
+    def get_series(self, obj: Book) -> dict[str, Any] | None:
+        link = self._book_series_link(obj)
+        if link is None:
+            return None
+        return cast(dict[str, Any], SeriesSummarySerializer(link.series).data)
+
+    def get_series_index(self, obj: Book) -> str | None:
+        link = self._book_series_link(obj)
+        if link is None or link.series_index is None:
+            return None
+        formatted = format(link.series_index, "f")
+        if "." in formatted:
+            formatted = formatted.rstrip("0")
+            if formatted.endswith("."):
+                formatted += "0"
+        return formatted
 
     def get_cover_url(self, obj: Book) -> str | None:
         cover = getattr(obj, "cover_file", None)

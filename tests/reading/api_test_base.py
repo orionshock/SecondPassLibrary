@@ -23,6 +23,8 @@ class ReadingAPITestBase(IsolatedUserdataMixin, APITestCase):
         self.user2 = User.objects.create_user(
             username="u2", password="pass2", email="u2@example.com"
         )
+        ensure_user_public_membership(user=self.user1)
+        ensure_user_public_membership(user=self.user2)
         self.book = create_file_backed_book(title="Book 1").book
         ensure_book_public_assignment(book=self.book, added_by=None)
 

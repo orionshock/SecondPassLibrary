@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
+from library.groups.services import ensure_user_public_membership
 from reading.annotations.views import BATCH_CREATE_LIMIT
 from reading.models import Annotation, ReadingSession
 from reading.profile.validation import (
@@ -293,6 +294,7 @@ class AnnotationHighlightColorTokenTests(IsolatedMediaRootMixin, APITestCase):
         self.user = User.objects.create_user(
             username="u1", password="pw", email="u1@example.com"
         )
+        ensure_user_public_membership(user=self.user)
         self.client.login(username="u1", password="pw")
         self.book = create_file_backed_book(title="B").book
         self.session = ReadingSession.objects.create(user=self.user, book=self.book)

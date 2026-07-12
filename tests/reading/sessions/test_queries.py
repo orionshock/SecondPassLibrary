@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from library.groups.services import (
     ensure_book_public_assignment,
 )
-from library.models import Author, Series
+from library.models import Author, BookSeries, Series
 from reading.models import ReadingProgress, ReadingSession
 from reading.sessions.queries import list_sessions_for_book
 from tests.reading.sessions.helpers import (
@@ -119,8 +119,8 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         series = Series.objects.create(name="Dresden Files")
         self.book.title = "Blood Rites"
         self.book.subtitle = "A Dresden Case"
-        self.book.series = series
-        self.book.save(update_fields=["title", "subtitle", "series", "updated_at"])
+        self.book.save(update_fields=["title", "subtitle", "updated_at"])
+        BookSeries.objects.create(book=self.book, series=series)
         self.book.authors.add(author)
 
         cases = ["blood", "case", "butcher", "dresden"]
@@ -219,10 +219,8 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         hidden_series = Series.objects.create(name="Private Series")
         self.hidden_book.title = "Private Title"
         self.hidden_book.subtitle = "Private Subtitle"
-        self.hidden_book.series = hidden_series
-        self.hidden_book.save(
-            update_fields=["title", "subtitle", "series", "updated_at"]
-        )
+        self.hidden_book.save(update_fields=["title", "subtitle", "updated_at"])
+        BookSeries.objects.create(book=self.hidden_book, series=hidden_series)
         self.hidden_book.authors.add(hidden_author)
         self.session_hidden.name = "Owned secret session"
         self.session_hidden.notes = "Personal reread note"
@@ -263,9 +261,8 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         author = Author.objects.create(name="Jim Butcher")
         series = Series.objects.create(name="Dresden Files")
         self.book.title = "Blood Rites"
-        self.book.series = series
-        self.book.series_index = "6.0"  # type: ignore
-        self.book.save(update_fields=["title", "series", "series_index", "updated_at"])
+        self.book.save(update_fields=["title", "updated_at"])
+        BookSeries.objects.create(book=self.book, series=series, series_index="6.0")
         self.book.authors.add(author)
 
         resp = assert_response(

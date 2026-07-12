@@ -20,9 +20,29 @@ def _can_view_book(*, user, book: Book) -> bool:
     return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
 
 
+def _book_series_link(book: Book):
+    try:
+        return book.book_series
+    except Book.book_series.RelatedObjectDoesNotExist:
+        return None
+
+
+def _format_series_index(value) -> str | None:
+    if value is None:
+        return None
+    formatted = format(value, "f")
+    if "." in formatted:
+        formatted = formatted.rstrip("0")
+        if formatted.endswith("."):
+            formatted += "0"
+    return formatted
+
+
 def get_user_session_queryset(user) -> QuerySet[ReadingSession]:
     return (
-        ReadingSession.objects.select_related("book", "book__series", "progress")
+        ReadingSession.objects.select_related(
+            "book", "book__book_series", "book__book_series__series", "progress"
+        )
         .prefetch_related("book__authors")
         .filter(user=user)
         .annotate(
@@ -45,7 +65,7 @@ def resolve_visible_book_for_session_filter(*, user, raw_book: str) -> Book | No
         raise DRFValidationError({"book": "Invalid book id."})
 
     book = (
-        Book.objects.select_related("series")
+        Book.objects.select_related("book_series", "book_series__series")
         .prefetch_related("authors")
         .filter(id=book_id)
         .first()
@@ -67,7 +87,7 @@ def apply_session_search(
         Q(book__title__icontains=q)
         | Q(book__subtitle__icontains=q)
         | Q(book__authors__name__icontains=q)
-        | Q(book__series__name__icontains=q)
+        | Q(book__book_series__series__name__icontains=q)
     )
     visible_book_match = Q()
     if not is_librarian(user):
@@ -124,7 +144,8 @@ def book_context_payload(*, book: Book, request=None) -> dict[str, Any]:
         except Exception:
             cover_url = None
 
-    series = getattr(book, "series", None)
+    series_link = _book_series_link(book)
+    series = series_link.series if series_link is not None else None
     return {
         "id": str(book.id),
         "title": book.title,
@@ -134,7 +155,11 @@ def book_context_payload(*, book: Book, request=None) -> dict[str, Any]:
             if series is not None
             else None
         ),
-        "series_index": str(book.series_index) if book.series_index is not None else None,
+        "series_index": (
+            _format_series_index(series_link.series_index)
+            if series_link is not None
+            else None
+        ),
         "cover_url": cover_url,
     }
 
@@ -405,7 +430,9 @@ def list_sessions_for_user(*, user) -> list[dict]:
     )
 
     qs = (
-        ReadingSession.objects.select_related("book", "book__series", "progress")
+        ReadingSession.objects.select_related(
+            "book", "book__book_series", "book__book_series__series", "progress"
+        )
         .prefetch_related("book__authors")
         .filter(user=user)
         .annotate(
@@ -443,9 +470,16 @@ def list_sessions_for_user(*, user) -> list[dict]:
                     cover_url = ""
 
             authors = [a.name for a in book.authors.all()]
-            series_name = getattr(getattr(book, "series", None), "name", "") or ""
+            series_link = _book_series_link(book)
+            series_name = (
+                getattr(series_link.series, "name", "") if series_link is not None else ""
+            )
             subtitle = getattr(book, "subtitle", "") or ""
-            series_index = getattr(book, "series_index", None)
+            series_index = (
+                _format_series_index(series_link.series_index)
+                if series_link is not None
+                else None
+            )
             title = book.title
         else:
             cover_url = ""
