@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.test import TestCase
 
+from library.catalog.tag_services import resolve_catalog_tag
 from library.imports.dto import ImportIdentifier, ImportTag
 from library.imports.services import IMPORT_STATUS_CONFLICT, persist_imported_book
 from library.models import Book, BookCatalogTag, BookIdentifier, CatalogTag
@@ -10,18 +11,14 @@ from tests.library.imports.helpers import ImportPersistenceFixtureMixin, sample_
 
 class ImportPersistenceTagsIdentifierTests(ImportPersistenceFixtureMixin, TestCase):
     def test_creates_and_reuses_catalog_tags_by_normalized_name(self):
-        existing = CatalogTag.objects.create(
-            name="Science Fiction",
-            sort_name="Science Fiction",
-            normalized_name="science fiction",
-        )
+        existing = resolve_catalog_tag("Science Fiction")
 
         result = persist_imported_book(
             metadata=sample_metadata(
                 tags=[
                     ImportTag(
-                        name="sci fi display ignored",
-                        sort_name="sci fi display ignored",
+                        name="SCIENCE FICTION",
+                        sort_name="SCIENCE FICTION",
                         normalized_name="science fiction",
                     ),
                     ImportTag(name="Space Opera", sort_name="Space Opera", normalized_name="space opera"),

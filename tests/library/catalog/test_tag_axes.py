@@ -14,7 +14,7 @@ from tests.library.helpers import (
 
 class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_list_includes_only_tags_with_visible_books(self):
-        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden")
+        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden", slug="hidden")
         create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)
 
         response = self.client.get("/api/v1/library/tags/")
@@ -70,7 +70,7 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
 
     def test_detail_with_no_visible_books_returns_404(self):
-        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden")
+        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden", slug="hidden")
         create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)
 
         response = self.client.get(f"/api/v1/library/tags/{hidden_only.id}/")
@@ -78,7 +78,7 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
-        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden")
+        hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden", slug="hidden")
         create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)
 
         response = self.client.get(

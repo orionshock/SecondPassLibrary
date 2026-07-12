@@ -118,16 +118,13 @@ async function loadBreadcrumbContext(context) {
   }
 }
 
-function renderSubjectsPills(container, subjects) {
+function renderCatalogTagPills(container, tags) {
   clear(container);
-  if (!subjects) return;
-  const values = Array.isArray(subjects)
-    ? subjects.map((s) => String(s).trim()).filter(Boolean)
-    : typeof subjects === "string"
-      ? [subjects.trim()].filter(Boolean)
-      : [];
-  for (const v of values) {
-    container.appendChild(el("span", "pill", v));
+  const values = Array.isArray(tags) ? tags : [];
+  for (const tag of values) {
+    const name = tag && tag.name ? String(tag.name) : "";
+    if (!name) continue;
+    container.appendChild(el("span", "pill", name));
     container.appendChild(document.createTextNode(" "));
   }
 }
@@ -143,17 +140,11 @@ function renderIdentifiers(container, identifiers) {
     const li = document.createElement("li");
     const scheme = i && i.scheme ? String(i.scheme) : "";
     const value = i && i.value ? String(i.value) : "";
-    const isPrimary = !!(i && i.is_primary);
 
     const code = document.createElement("code");
     code.textContent = scheme;
     li.appendChild(code);
     li.appendChild(document.createTextNode(": " + value));
-
-    if (isPrimary) {
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(el("span", "pill", "primary"));
-    }
 
     ul.appendChild(li);
   }
@@ -171,6 +162,8 @@ function renderFile(container, file) {
   const format = file.format ? String(file.format).toUpperCase() : "EPUB";
   const size = formatBytes(file.file_size);
   wrap.appendChild(el("div", "", `${format}${size ? ` (${size})` : ""}`));
+  if (file.checksum) wrap.appendChild(el("div", "muted", `Checksum: ${file.checksum}`));
+  if (file.source_filename) wrap.appendChild(el("div", "muted", `Source filename: ${file.source_filename}`));
 
   const downloadUrl = file.download_url ? String(file.download_url) : "";
   if (downloadUrl) {
@@ -236,7 +229,7 @@ function renderBookMeta(container, book) {
   const subtitle = book && book.subtitle ? String(book.subtitle) : "";
   const authors = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
   const series = book && book.series && book.series.name ? String(book.series.name) : "";
-  const seriesIndex = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
+  const seriesIndex = book && book.series && book.series.series_index != null ? String(book.series.series_index) : "";
   const seriesLine = series ? `${series}${seriesIndex ? ` #${seriesIndex}` : ""}` : "";
 
   const wrap = el("div", "book-meta");
@@ -246,18 +239,46 @@ function renderBookMeta(container, book) {
   if (authors.length) wrap.appendChild(el("div", "book-meta__line", authors.join(", ")));
 
   const metaBits = [];
-  if (book && book.published_date) metaBits.push(String(book.published_date));
+  const publishedDate = formatPublishedDate(book);
+  if (publishedDate) metaBits.push(publishedDate);
+  if (book && book.publisher) metaBits.push(String(book.publisher));
   if (book && book.language) metaBits.push(String(book.language));
   if (metaBits.length) wrap.appendChild(el("div", "muted", metaBits.join(" - ")));
 
-  if (book && book.subjects) {
+  if (book && Array.isArray(book.catalog_tags) && book.catalog_tags.length) {
     const pills = document.createElement("div");
-    pills.className = "book-meta__subjects";
-    renderSubjectsPills(pills, book.subjects);
+    pills.className = "book-meta__tags";
+    renderCatalogTagPills(pills, book.catalog_tags);
     if (pills.textContent && pills.textContent.trim()) wrap.appendChild(pills);
   }
 
   container.appendChild(wrap);
+}
+
+function formatPublishedDate(book) {
+  if (!book || !book.published_year) return "";
+  const year = String(book.published_year).padStart(4, "0");
+  const month = book.published_month ? String(book.published_month).padStart(2, "0") : "";
+  const day = book.published_day ? String(book.published_day).padStart(2, "0") : "";
+  if (book.published_date_precision === "day" && month && day) return `${year}-${month}-${day}`;
+  if (book.published_date_precision === "month" && month) return `${year}-${month}`;
+  return year;
+}
+
+function renderMetadataDetails(container, book) {
+  clear(container);
+  const rows = [
+    ["Description", book && book.description],
+    ["Publisher", book && book.publisher],
+    ["Language", book && book.language],
+    ["Published date", formatPublishedDate(book)],
+  ];
+  const grid = el("div", "kv");
+  for (const [label, value] of rows) {
+    grid.appendChild(el("div", "kv__k", label));
+    grid.appendChild(el("div", "kv__v", value || "—"));
+  }
+  container.appendChild(grid);
 }
 
 export async function initBookDetail() {
@@ -272,6 +293,8 @@ export async function initBookDetail() {
   const editLinkEl = $("#book-edit-link");
   const idBody = $("#book-identifiers-body");
   const filesBody = $("#book-files-body");
+  const metadataBody = $("#book-metadata-body");
+  const catalogTagsBody = $("#book-catalog-tags-body");
   const groupsSection = $("#book-groups");
   const groupsBody = $("#book-groups-body");
   const groupsFeatureEnabled =
@@ -292,6 +315,8 @@ export async function initBookDetail() {
     !editLinkEl ||
     !idBody ||
     !filesBody ||
+    !metadataBody ||
+    !catalogTagsBody ||
     !shelvesSection ||
     !shelvesBody ||
     !downloadLink ||
@@ -339,6 +364,8 @@ export async function initBookDetail() {
     renderBookMeta(metaEl, book);
     renderIdentifiers(idBody, book.identifiers);
     renderFile(filesBody, book.file);
+    renderMetadataDetails(metadataBody, book);
+    renderCatalogTagPills(catalogTagsBody, book.catalog_tags);
     if (groupsFeatureEnabled) renderBookGroups(groupsBody, book.groups);
 
     // Primary action: download
@@ -356,7 +383,7 @@ export async function initBookDetail() {
       summaryWrapEl,
       summaryEl,
       toggleEl: summaryToggle,
-      summaryText: book && book.summary ? book.summary : "",
+      summaryText: book && book.description ? book.description : "",
     });
 
     // Default tab content should show something immediately.

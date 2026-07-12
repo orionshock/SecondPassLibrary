@@ -27,7 +27,7 @@ export function applyBookToMetadataForm({ book, dom, selectedAuthors }) {
   // selectedAuthors is tracked separately, but callers typically refresh it from book.authors before calling this.
 }
 
-export function buildBookPatchPayload({ dom, selectedAuthors, identifiers }) {
+export function buildBookPatchPayload({ dom, selectedAuthors, identifiers, catalogTags }) {
   const title = (dom.titleEl.value || "").trim();
   if (!title) return { error: "Title is required." };
 
@@ -68,6 +68,7 @@ export function buildBookPatchPayload({ dom, selectedAuthors, identifiers }) {
         scheme: String(identifier.scheme || "").trim(),
         value: String(identifier.value || "").trim(),
       })),
+      catalog_tags: catalogTags.map((tag) => String(tag.name || "").trim()).filter(Boolean),
     },
   };
 }

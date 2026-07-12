@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 
 from accounts.models import UserProfile
+from library.catalog.tag_services import resolve_catalog_tag
 from library.models import (
     Author,
     Book,
@@ -90,8 +91,8 @@ class LibraryCatalogApiFixtureMixin:
         self.zeta = Author.objects.create(name="Zeta Author", sort_name="Zeta Author")
         self.first_series = Series.objects.create(name="First Series", sort_name="First Series")
         self.second_series = Series.objects.create(name="Second Series", sort_name="Second Series")
-        self.fantasy = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy")
-        self.mystery = CatalogTag.objects.create(name="Mystery", normalized_name="mystery")
+        self.fantasy = resolve_catalog_tag("Fantasy")
+        self.mystery = resolve_catalog_tag("Mystery")
 
         self.visible_one = create_catalog_book(
             "Visible One",

@@ -71,6 +71,7 @@ class CatalogTag(TimeStampedModel):
     name = models.CharField(max_length=255)
     sort_name = models.CharField(max_length=255, blank=True)
     normalized_name = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=280, unique=True, editable=False, allow_unicode=True)
 
     class Meta:
         ordering = ["sort_name", "name", "id"]

@@ -35,7 +35,7 @@ class SeriesSummarySerializer(serializers.ModelSerializer):
 class CatalogTagSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = CatalogTag
-        fields = ["id", "name"]
+        fields = ["id", "name", "slug"]
         read_only_fields = fields
 
 
@@ -188,6 +188,7 @@ class BookListSerializer(serializers.ModelSerializer):
 
 class BookDetailSerializer(BookListSerializer):
     identifiers = BookIdentifierSerializer(many=True, read_only=True)
+    catalog_tags = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
 
     def get_file(self, obj: Book) -> dict | None:
@@ -195,8 +196,12 @@ class BookDetailSerializer(BookListSerializer):
             return None
         return BookFileSerializer(obj).data
 
+    def get_catalog_tags(self, obj: Book) -> list[dict]:
+        tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]
+        return CatalogTagSummarySerializer(tags, many=True).data
+
     class Meta(BookListSerializer.Meta):
-        fields = [*BookListSerializer.Meta.fields, "description", "identifiers", "file"]
+        fields = [*BookListSerializer.Meta.fields, "description", "identifiers", "catalog_tags", "file"]
         read_only_fields = fields
 
 
@@ -222,3 +227,8 @@ class BookUpdateSerializer(serializers.Serializer):
         allow_null=True,
     )
     identifiers = BookIdentifierWriteSerializer(many=True, required=False)
+    catalog_tags = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        required=False,
+        allow_empty=True,
+    )

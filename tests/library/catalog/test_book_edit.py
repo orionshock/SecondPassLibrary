@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from library.imports.normalization import normalize_identifier
-from library.models import BookIdentifier, BookSeries, Series
+from library.models import BookCatalogTag, BookIdentifier, BookSeries, CatalogTag, Series
 from tests.library.helpers import LibraryCatalogApiFixtureMixin
 
 
@@ -48,6 +48,92 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(payload["file"]["checksum"], self.visible_one.checksum)
         self.assertEqual(payload["file"]["source_filename"], "visible-one.epub")
         self.assertNotIn("book_file", payload["file"])
+        self.assertEqual(payload["catalog_tags"][0]["name"], "Fantasy")
+        self.assertEqual(payload["catalog_tags"][0]["slug"], "fantasy")
+
+    def test_patch_omitted_catalog_tags_preserves_relationships(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"description": "Tags stay"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([tag["name"] for tag in response.json()["catalog_tags"]], ["Fantasy"])
+
+    def test_patch_replaces_catalog_tags_and_deletes_orphan(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        orphan = CatalogTag.objects.create(
+            name="Temporary Tag",
+            normalized_name="temporary tag",
+            slug="temporary-tag",
+        )
+        BookCatalogTag.objects.filter(book=self.visible_one).delete()
+        BookCatalogTag.objects.create(book=self.visible_one, catalog_tag=orphan)
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"catalog_tags": ["  Urban   Fantasy  ", "urban fantasy", "Mystery"]},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [tag["name"] for tag in response.json()["catalog_tags"]],
+            ["Mystery", "Urban Fantasy"],
+        )
+        self.assertFalse(CatalogTag.objects.filter(pk=orphan.id).exists())
+        self.assertEqual(CatalogTag.objects.get(normalized_name="urban fantasy").slug, "urban-fantasy")
+
+    def test_patch_empty_catalog_tags_clears_and_deletes_orphan(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        orphan = CatalogTag.objects.create(
+            name="Clear Me",
+            normalized_name="clear me",
+            slug="clear-me",
+        )
+        BookCatalogTag.objects.filter(book=self.visible_one).delete()
+        BookCatalogTag.objects.create(book=self.visible_one, catalog_tag=orphan)
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"catalog_tags": []},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["catalog_tags"], [])
+        self.assertFalse(CatalogTag.objects.filter(pk=orphan.id).exists())
+
+    def test_invalid_catalog_tag_rolls_back_entire_book_edit(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"description": "Must roll back tags", "catalog_tags": ["   "]},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.description, "dresden case file")
+        self.assertTrue(BookCatalogTag.objects.filter(book=self.visible_one, catalog_tag=self.fantasy).exists())
+
+    def test_reader_cannot_mutate_catalog_tags(self):
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"catalog_tags": []},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(BookCatalogTag.objects.filter(book=self.visible_one, catalog_tag=self.fantasy).exists())
 
     def test_librarian_level_patch_updates_description_authors_and_book_series(self):
         self.client.logout()

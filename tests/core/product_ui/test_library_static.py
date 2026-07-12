@@ -102,6 +102,10 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'id="book-edit-series-select"')
         self.assertContains(response, 'id="book-edit-series-new"')
         self.assertContains(response, 'id="book-edit-series-index"')
+        self.assertContains(response, 'id="book-edit-catalog-tags"')
+        self.assertContains(response, 'id="book-edit-catalog-tag-input"')
+        self.assertContains(response, 'id="book-edit-catalog-tag-options"')
+        self.assertContains(response, 'id="book-edit-catalog-tag-add"')
         self.assertContains(response, 'step="0.1"')
         self.assertContains(response, 'id="book-edit-identifiers"')
         self.assertContains(response, 'id="book-edit-file-info"')
@@ -142,6 +146,9 @@ class ProductUiLibraryTests(ProductUiTestCase):
         template = Path("web/templates/web/library/book_edit.html").read_text(encoding="utf-8")
         main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
         metadata_js = Path("web/static/web/js/book_edit/metadata.js").read_text(encoding="utf-8")
+        catalog_tags_js = Path("web/static/web/js/book_edit/catalog_tags.js").read_text(
+            encoding="utf-8"
+        )
         identifiers_js = Path("web/static/web/js/book_edit/identifiers_actions.js").read_text(
             encoding="utf-8"
         )
@@ -168,7 +175,32 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertNotIn("data-ident-add-field", identifiers_js)
         self.assertIn("identifiers: state.identifiers", main_js)
         self.assertIn("identifiers: identifiers.map", metadata_js)
+        self.assertIn("catalog_tags: catalogTags.map", metadata_js)
+        self.assertIn("state.catalogTags", main_js)
+        self.assertIn("bindCatalogTagActions", main_js)
+        self.assertNotIn("fetchJSONWithOptions", catalog_tags_js)
+        self.assertIn("data-remove-catalog-tag", catalog_tags_js)
         self.assertIn('? { name: (dom.seriesNewEl.value || "").trim() }', metadata_js)
+
+    def test_book_detail_uses_current_metadata_contract(self):
+        template = Path("web/templates/web/library/book_detail.html").read_text(encoding="utf-8")
+        detail_js = Path("web/static/web/js/library/detail.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="book-metadata-body"', template)
+        self.assertIn('id="book-catalog-tags-body"', template)
+        self.assertIn("book.description", detail_js)
+        self.assertIn("book.publisher", detail_js)
+        self.assertIn("book.language", detail_js)
+        self.assertIn("book.published_date_precision", detail_js)
+        self.assertIn("book.identifiers", detail_js)
+        self.assertIn("book.catalog_tags", detail_js)
+        self.assertIn("book.file", detail_js)
+        self.assertIn("book.series.series_index", detail_js)
+        self.assertNotIn("book.summary", detail_js)
+        self.assertNotIn("book.subjects", detail_js)
+        self.assertNotIn("book.series_index", detail_js)
+        self.assertNotIn("book.files", detail_js)
+        self.assertNotIn("i.is_primary", detail_js)
 
     def test_authenticated_book_edit_malformed_id_returns_404(self):
         self.client.force_login(self.user)

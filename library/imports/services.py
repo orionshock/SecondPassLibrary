@@ -9,6 +9,7 @@ from django.db import transaction
 from library.groups.public_group import get_public_group
 from library.groups.services import add_book_to_group
 from library.imports.dto import ImportMetadata
+from library.catalog.tag_services import resolve_catalog_tag
 from library.models import (
     Author,
     Book,
@@ -16,7 +17,6 @@ from library.models import (
     BookCatalogTag,
     BookIdentifier,
     BookSeries,
-    CatalogTag,
     Series,
 )
 
@@ -169,10 +169,7 @@ def _fill_blank_sort_name(instance, *, sort_name: str) -> None:
 
 def _persist_tags(*, book: Book, metadata: ImportMetadata) -> None:
     for tag_metadata in metadata.tags:
-        tag, _created = CatalogTag.objects.get_or_create(
-            normalized_name=tag_metadata.normalized_name,
-            defaults={"name": tag_metadata.name, "sort_name": tag_metadata.sort_name},
-        )
+        tag = resolve_catalog_tag(tag_metadata.name)
         BookCatalogTag.objects.create(book=book, catalog_tag=tag)
 
 

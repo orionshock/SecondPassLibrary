@@ -43,8 +43,8 @@ class LibraryGroupBrowseTests(TestCase):
         self.gamma = Author.objects.create(name="Gamma Author", sort_name="Gamma Author")
         self.first_series = Series.objects.create(name="First Series", sort_name="First Series")
         self.second_series = Series.objects.create(name="Second Series", sort_name="Second Series")
-        self.fantasy = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy")
-        self.mystery = CatalogTag.objects.create(name="Mystery", normalized_name="mystery")
+        self.fantasy = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy", slug="fantasy")
+        self.mystery = CatalogTag.objects.create(name="Mystery", normalized_name="mystery", slug="mystery")
 
         self.club_alpha = create_catalog_book(
             "Club Alpha",

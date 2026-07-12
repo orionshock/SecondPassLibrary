@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from library.imports.normalization import normalize_identifier
+from library.catalog.tag_services import replace_book_catalog_tags
 from library.models import Author, Book, BookAuthor, BookIdentifier, BookSeries, Series
 
 
@@ -18,6 +19,7 @@ def update_book_metadata(
     series_index=None,
     series_index_supplied: bool = False,
     identifiers: list[dict] | None = None,
+    catalog_tags: list[str] | None = None,
 ) -> Book:
     for field, value in scalar_fields.items():
         setattr(book, field, value)
@@ -83,5 +85,8 @@ def update_book_metadata(
                 for item in normalized_identifiers
             ]
         )
+
+    if catalog_tags is not None:
+        replace_book_catalog_tags(book=book, names=catalog_tags)
 
     return book

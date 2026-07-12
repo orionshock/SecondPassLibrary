@@ -15,12 +15,24 @@ Notes:
   `scheme`/`value` shape and an internal normalized value for uniqueness.
 - Fileless Books and missing physical EPUB files are repair states, not normal
   product states.
+- `CatalogTag` stores a first-created display name, Unicode/casefold-normalized
+  identity, and generated unique slug. `BookCatalogTag` explicitly relates tags
+  to Books; tags are created lazily and deleted when their final relationship is removed.
 
 ## Identifiers
 
 - `BookIdentifier` stores external/source identifiers (ISBNs and non-ISBN identifiers like ASIN/DOI/OCLC/LCCN/Open Library IDs/Calibre IDs/EPUB unique identifiers/URI/URN/etc).
 - Book edits replace identifiers through `PATCH /api/v1/library/books/<book_id>/`.
   Omitting the field preserves existing identifiers; an empty list clears them.
+
+## Catalog Tags
+
+- EPUB subjects and existing Calibre tag metadata use the same CatalogTag resolver.
+- Book PATCH accepts `catalog_tags` as a complete replacement list of names.
+  Omitting it preserves relationships; `[]` clears them.
+- Display names preserve the first-created spelling and casing. Matching uses
+  Unicode normalization, collapsed whitespace, and casefolding.
+- Duplicate-checksum imports return the existing Book without refreshing tags.
 
 ## Import/cleanup philosophy
 

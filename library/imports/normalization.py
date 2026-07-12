@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal, InvalidOperation
 import re
+import unicodedata
 
 from library.imports.dto import ImportIdentifier, ImportTag
 
@@ -31,7 +32,7 @@ _DOI_PREFIX_RE = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/|doi:)", re.IGNOREC
 
 
 def collapse_whitespace(value: str | None) -> str:
-    return _WHITESPACE_RE.sub(" ", str(value or "").strip())
+    return _WHITESPACE_RE.sub(" ", unicodedata.normalize("NFKC", str(value or "")).strip())
 
 
 def fallback_sort_value(*, value: str, explicit_sort: str | None) -> str:

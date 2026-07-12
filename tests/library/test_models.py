@@ -81,14 +81,14 @@ class LibraryModelConstraintTests(TestCase):
             BookAuthor.objects.create(book=book, author=second, position=0)
 
     def test_catalog_tag_normalized_name_is_unique(self):
-        CatalogTag.objects.create(name="Science Fiction", normalized_name="science fiction")
+        CatalogTag.objects.create(name="Science Fiction", normalized_name="science fiction", slug="science-fiction")
 
         with self.assertRaises(IntegrityError), transaction.atomic():
-            CatalogTag.objects.create(name="Sci-Fi", normalized_name="science fiction")
+            CatalogTag.objects.create(name="Sci-Fi", normalized_name="science fiction", slug="sci-fi")
 
     def test_book_catalog_tag_is_unique_per_book(self):
         book = Book.objects.create(title="Book")
-        tag = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy")
+        tag = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy", slug="fantasy")
         BookCatalogTag.objects.create(book=book, catalog_tag=tag)
 
         with self.assertRaises(IntegrityError), transaction.atomic():

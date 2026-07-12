@@ -4,9 +4,10 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
 
-from library.imports.dto import ImportAuthor
+from library.catalog.tag_services import resolve_catalog_tag
+from library.imports.dto import ImportAuthor, ImportTag
 from library.imports.services import IMPORT_STATUS_DUPLICATE, persist_imported_book
-from library.models import Author, Book
+from library.models import Author, Book, BookCatalogTag
 from tests.library.imports.helpers import ImportPersistenceFixtureMixin, sample_metadata
 
 
@@ -19,6 +20,21 @@ class ImportPersistenceDuplicateValidationTests(ImportPersistenceFixtureMixin, T
         self.assertEqual(result.status, IMPORT_STATUS_DUPLICATE)
         self.assertEqual(result.book, existing)
         self.assertEqual(Book.objects.filter(checksum="duplicate123").count(), 1)
+
+    def test_duplicate_checksum_does_not_refresh_catalog_tags(self):
+        existing = Book.objects.create(title="Existing", checksum="duplicate-tags")
+        original_tag = resolve_catalog_tag("Original")
+        BookCatalogTag.objects.create(book=existing, catalog_tag=original_tag)
+
+        result = persist_imported_book(
+            metadata=sample_metadata(
+                tags=[ImportTag(name="Replacement", sort_name="Replacement", normalized_name="replacement")]
+            ),
+            checksum="duplicate-tags",
+        )
+
+        self.assertEqual(result.status, IMPORT_STATUS_DUPLICATE)
+        self.assertEqual(list(existing.catalog_tags.values_list("name", flat=True)), ["Original"])
 
     def test_blank_checksum_is_rejected(self):
         with self.assertRaises(ValidationError):

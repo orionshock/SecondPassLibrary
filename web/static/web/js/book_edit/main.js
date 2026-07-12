@@ -26,6 +26,7 @@ import { bindIdentifierActions, refreshIdentifiersContext } from "./identifiers_
 import { bindShelfActions } from "./shelf_actions.js";
 import { mountCovers } from "../ui/covers.js";
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
+import { bindCatalogTagActions, renderCatalogTags } from "./catalog_tags.js";
 
 function bookDisplayTitle(book) {
   return book && book.title ? String(book.title) : "Untitled book";
@@ -73,6 +74,10 @@ export async function initBookEdit() {
   const publisherEl = $("#book-edit-publisher");
   const languageEl = $("#book-edit-language");
   const publishedDateEl = $("#book-edit-published-date");
+  const catalogTagsEl = $("#book-edit-catalog-tags");
+  const catalogTagInputEl = $("#book-edit-catalog-tag-input");
+  const catalogTagOptionsEl = $("#book-edit-catalog-tag-options");
+  const catalogTagAddEl = $("#book-edit-catalog-tag-add");
 
   const authorsSelectedEl = $("#book-edit-authors-selected");
   const authorsStatusEl = $("#book-edit-authors-status");
@@ -126,6 +131,10 @@ export async function initBookEdit() {
     !publisherEl ||
     !languageEl ||
     !publishedDateEl ||
+    !catalogTagsEl ||
+    !catalogTagInputEl ||
+    !catalogTagOptionsEl ||
+    !catalogTagAddEl ||
     !authorsSelectedEl ||
     !authorsStatusEl ||
     !authorAddSelectEl ||
@@ -190,6 +199,8 @@ export async function initBookEdit() {
     allAuthors: [],
     allSeries: [],
     selectedAuthors: [],
+    catalogTags: [],
+    allCatalogTags: [],
     allGroups: [],
     groups: [],
   };
@@ -210,6 +221,7 @@ export async function initBookEdit() {
     state.book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     state.selectedAuthors = uniqueById(Array.isArray(state.book.authors) ? state.book.authors : []);
     state.identifiers = Array.isArray(state.book.identifiers) ? state.book.identifiers.slice() : [];
+    state.catalogTags = Array.isArray(state.book.catalog_tags) ? state.book.catalog_tags.slice() : [];
     state.groups =
       groupsFeatureEnabled && Array.isArray(state.book.groups) ? state.book.groups : [];
 
@@ -225,6 +237,7 @@ export async function initBookEdit() {
     mountCovers(headerEl);
     renderFileInfo({ book: state.book, fileInfoEl });
     renderSelectedAuthors({ selectedAuthors: state.selectedAuthors, authorsSelectedEl });
+    renderCatalogTags({ state, selectedEl: catalogTagsEl, optionsEl: catalogTagOptionsEl });
     syncAuthorSelectOptions({ allAuthors: state.allAuthors, selectedAuthors: state.selectedAuthors, authorAddSelectEl, authorAddBtnEl });
     syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
     if (groupsFeatureEnabled) {
@@ -278,6 +291,13 @@ export async function initBookEdit() {
   }
   syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book && state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
 
+  try {
+    state.allCatalogTags = uniqueById(await fetchAllPages("/api/v1/library/tags/"));
+  } catch (e) {
+    state.allCatalogTags = [];
+  }
+  renderCatalogTags({ state, selectedEl: catalogTagsEl, optionsEl: catalogTagOptionsEl });
+
   if (groupsFeatureEnabled) {
     setStatus(groupsStatusEl, "Loading...", false);
     try {
@@ -326,6 +346,14 @@ export async function initBookEdit() {
     setError,
     markDirty: () => setSaved(false),
   });
+  bindCatalogTagActions({
+    state,
+    selectedEl: catalogTagsEl,
+    inputEl: catalogTagInputEl,
+    addBtnEl: catalogTagAddEl,
+    rerender: () => renderCatalogTags({ state, selectedEl: catalogTagsEl, optionsEl: catalogTagOptionsEl }),
+    markDirty: () => setSaved(false),
+  });
 
   async function saveBook() {
     setError("");
@@ -335,6 +363,7 @@ export async function initBookEdit() {
       dom: { ...dom, seriesSelectEl, seriesNewEl },
       selectedAuthors: state.selectedAuthors,
       identifiers: state.identifiers,
+      catalogTags: state.catalogTags,
     });
     if (built && built.error) {
       setError(built.error);

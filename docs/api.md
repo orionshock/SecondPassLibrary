@@ -541,10 +541,13 @@ Book payload notes:
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.
 - `identifiers[]` response items include `id`, `scheme`, and `value`.
+- `catalog_tags[]` response items include `id`, `name`, and generated `slug`.
 - Book PATCH accepts `identifiers` as a complete replacement list of
   `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
   preserves existing rows; `identifiers: []` clears them.
-- Metadata, authors, BookSeries relationship data, and identifiers are updated
+- Book PATCH accepts `catalog_tags` as a complete replacement list of names.
+  Omitting it preserves current tags; `catalog_tags: []` clears them.
+- Metadata, authors, BookSeries relationship data, identifiers, and Catalog Tags are updated
   transactionally through the single Book detail PATCH endpoint.
 
 ## Imports
