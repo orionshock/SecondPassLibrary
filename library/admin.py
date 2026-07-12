@@ -5,6 +5,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.widgets import FilteredSelectMultiple, RelatedFieldWidgetWrapper
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
+from django.db.models import Prefetch
 from django.utils.html import format_html
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -297,9 +298,32 @@ class BookGroupAssignmentInline(admin.TabularInline):
     verbose_name_plural = "Book Group Assignments"
 
 
+class BookSeriesListFilter(admin.SimpleListFilter):
+    title = "Series"
+    parameter_name = "series"
+
+    def lookups(self, request, model_admin):
+        return Series.objects.values_list("id", "name")
+
+    def queryset(self, request, queryset):
+        if not self.value():
+            return queryset
+        return queryset.filter(book_series__series_id=self.value())
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookAdminForm
+    list_display = [
+        "title_display",
+        "authors_display",
+        "series_display",
+        "series_index_display",
+        "repair_epub_link",
+        "created_at_display",
+    ]
+    list_display_links = ["title_display"]
+    list_filter = [BookSeriesListFilter, "language", "created_at"]
     search_fields = ["title", "sort_title", "checksum"]
     readonly_fields = [
         "cover_preview",
@@ -361,6 +385,54 @@ class BookAdmin(admin.ModelAdmin):
         form_class = super().get_form(request, obj, change=change, **kwargs)
         form_class.admin_site = self.admin_site
         return form_class
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("book_series__series")
+            .prefetch_related(
+                Prefetch(
+                    "book_authors",
+                    queryset=BookAuthor.objects.select_related("author").order_by(
+                        "position", "id"
+                    ),
+                    to_attr="_admin_book_authors",
+                )
+            )
+        )
+
+    @admin.display(description="Title", ordering="title")
+    def title_display(self, obj):
+        return obj.title
+
+    @admin.display(description="Authors")
+    def authors_display(self, obj):
+        rows = getattr(obj, "_admin_book_authors", None)
+        if rows is None:
+            rows = obj.book_authors.select_related("author").order_by("position", "id")
+        return ", ".join(row.author.name for row in rows) or "-"
+
+    @admin.display(description="Series", ordering="book_series__series__name")
+    def series_display(self, obj):
+        book_series = getattr(obj, "book_series", None)
+        return book_series.series.name if book_series else "-"
+
+    @admin.display(description="Series Index", ordering="book_series__series_index")
+    def series_index_display(self, obj):
+        book_series = getattr(obj, "book_series", None)
+        if book_series is None or book_series.series_index is None:
+            return "-"
+        return book_series.series_index
+
+    @admin.display(description="Repair EPUB")
+    def repair_epub_link(self, obj):
+        url = reverse("admin:library_book_repair_stored_epub", args=[obj.pk])
+        return format_html('<a href="{}">Repair stored EPUB</a>', url)
+
+    @admin.display(description="Created At", ordering="created_at")
+    def created_at_display(self, obj):
+        return obj.created_at
 
     def get_inlines(self, request, obj):
         inlines = [BookSeriesInline, BookIdentifierInline]
