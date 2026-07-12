@@ -86,6 +86,30 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
         self.assertNotContains(response, 'id="reading-sessions-all-title">Sessions</h1>')
         self.assertNotContains(response, "<title>Reading Sessions", html=False)
         self.assertContains(response, 'id="reading-sessions-subtitle"')
+        self.assertContains(response, 'id="reading-sessions-actions"')
+        self.assertContains(response, 'href="/reading/import/"')
+        self.assertContains(response, 'href="/reading/export/"')
+        self.assertContains(
+            response,
+            '<span class="material-symbols-outlined" aria-hidden="true">upload</span>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<span class="material-symbols-outlined" aria-hidden="true">download</span>',
+            html=False,
+        )
+        self.assertContains(response, "<span>Import</span>", html=False)
+        self.assertContains(response, "<span>Export</span>", html=False)
+        markup = response.content.decode()
+        self.assertLess(
+            markup.index('id="reading-sessions-actions"'),
+            markup.index('id="reading-sessions-controls"'),
+        )
+        self.assertLess(
+            markup.index('id="reading-sessions-actions"'),
+            markup.index('id="reading-sessions-search-form"'),
+        )
         self.assertContains(response, 'class="sessions-controls"')
         self.assertContains(response, 'id="reading-sessions-controls"')
         self.assertContains(response, 'class="tabs sessions-controls__group sessions-status-filters"')

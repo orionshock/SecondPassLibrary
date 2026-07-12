@@ -351,3 +351,14 @@
   .book-hero { grid-template-columns: 92px 1fr; }
   .book-meta-grid { grid-template-columns: 1fr; }
 }
+.reading-sessions-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.reading-sessions-actions .button {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
