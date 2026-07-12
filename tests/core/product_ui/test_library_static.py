@@ -176,12 +176,9 @@ class ProductUiLibraryTests(ProductUiTestCase):
         ]:
             self.assertIn(f'id="{field_id}"', authors_panel)
 
-        self.assertIn("This is the human-facing book identity.", details_panel)
-        self.assertIn("This is the catalog/facet metadata bucket.", catalog_panel)
-        self.assertIn(
-            "This deserves to stay together because it controls major browse axes and display identity.",
-            authors_panel,
-        )
+        self.assertNotIn("This is the human-facing book identity.", template)
+        self.assertNotIn("This is the catalog/facet metadata bucket.", template)
+        self.assertNotIn("This deserves to stay together", template)
         self.assertIn('id="tab-shelves"', template)
         self.assertIn('id="book-edit-shelves"', template)
         self.assertIn('id="tab-idents"', template)
