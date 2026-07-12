@@ -450,6 +450,12 @@ Permission model documentation lives in `docs/permissions.md` (roles, groups, an
 * ARIA labels should use plain readable punctuation or words, not decorative
   separators.
 
+### Browser diagnostics
+
+* Playwright is optional for rendered UI, console/network, and difficult interaction diagnosis.
+* Keep browser tests focused and marked `e2e`; do not replace cheaper service/API/static-contract coverage.
+* Store generated browser artifacts only under the ignored `test-artifacts/` directory.
+
 ## Before Finishing Any Task
 
 Verification guidance:

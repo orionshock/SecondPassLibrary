@@ -20,6 +20,81 @@ ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) t
 `npm install` installs the pinned local Pyright dev tool. There is no frontend
 build step.
 
+## Optional browser diagnostics and E2E tests
+
+The development requirements include the Python `pytest-playwright` plugin for
+rendered-state inspection, JavaScript interaction diagnosis, console and
+network inspection, screenshots, and a small number of focused browser
+regressions. It is development-only. Service, API, Product UI template, and
+JavaScript static-contract tests remain the default for ordinary work.
+
+After installing or updating development dependencies, install Chromium
+separately for the active virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+```
+
+Browser binaries are managed outside the repository. Normal application
+startup does not install or update them. Firefox and WebKit are not part of the
+initial setup.
+
+Every browser test lives under `tests/e2e/` and must use the `e2e` marker.
+`pytest.ini` excludes that marker by default, including from an otherwise full
+pytest run. Run browser tests explicitly:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -q
+```
+
+Use the plugin's headed mode when the rendered browser needs inspection:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -q --headed
+```
+
+For the Playwright Inspector, use its documented `PWDEBUG=1` mode:
+
+```powershell
+$env:PWDEBUG='1'
+.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -s
+Remove-Item Env:PWDEBUG
+```
+
+Generated screenshots, traces, and videos belong under the ignored
+`test-artifacts/playwright/` directory. Opt into failure diagnostics with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -q --output=test-artifacts/playwright --tracing=retain-on-failure --screenshot=only-on-failure
+```
+
+Do not use `userdata/`, `var/`, or `TestFiles/` for browser output. Never retain
+real credentials, tokens, cookies, browser profiles, or authenticated storage
+state in artifacts. Browser tests should use Django live-server fixtures and
+isolated test data where practical instead of persistent local data, developer
+accounts, or a manually started server.
+
+The shared `e2e_install` fixture completes the real first-run setup form in the
+browser, logs in with an isolated test-only Owner, and runs the deterministic
+Lorem/demo seeder. Browser tests therefore start from a moderately populated
+installation with users, memberships, and shelves rather than an empty or
+persistent developer database.
+
+The `e2e_fixture_files` fixture also exposes these optional local inputs for
+focused import and marginalia scenarios:
+
+- `TestFiles/CalibreLibrary.zip`
+- `TestFiles/SPL-Marginalia-Verified-Good.json`
+- `TestFiles/SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json`
+- `TestFiles/second-pass-unmatched-marginalia.json`
+
+`TestFiles/` remains ignored and is input-only. Tests that use one of these
+files must skip clearly when it is absent. In particular, the large Calibre ZIP
+should be imported only by a test that needs a populated book library, not by
+every E2E test. Browser artifacts still belong only under
+`test-artifacts/playwright/`.
+
 ## Related docs
 
 - [API index](api.md)
@@ -252,6 +327,7 @@ Marker intent:
 - `static_contract`: source/static/template contract tests that avoid runtime flows.
 - `integration`: broad cross-app or API flow tests.
 - `slow`: tests known to be slow enough to avoid in routine focused runs.
+- `e2e`: opt-in Playwright browser tests; excluded by default.
 
 Targeted pytest examples:
 
