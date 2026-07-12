@@ -11,6 +11,7 @@ from library.imports.results import (
     ImportBatchResult,
     ImportItemResult,
 )
+from library.queries import defer_visible_books_cache_invalidation
 
 
 SUPPORTED_SUFFIXES = {".epub", ".zip"}
@@ -56,14 +57,15 @@ def _import_directory(source: Path) -> ImportBatchResult:
         for child in source.iterdir()
         if child.is_file() and child.suffix.casefold() in SUPPORTED_SUFFIXES
     ]
-    for child in sorted(candidates, key=lambda path: (path.name.casefold(), path.name)):
-        item_result = _import_directory_child_path(child)
-        if isinstance(item_result, ImportBatchResult):
-            batch.items.extend(item_result.items)
-            batch.discovered_count = (batch.discovered_count or 0) + item_result.total_found
-        else:
-            batch.items.append(item_result)
-            batch.discovered_count = (batch.discovered_count or 0) + 1
+    with defer_visible_books_cache_invalidation():
+        for child in sorted(candidates, key=lambda path: (path.name.casefold(), path.name)):
+            item_result = _import_directory_child_path(child)
+            if isinstance(item_result, ImportBatchResult):
+                batch.items.extend(item_result.items)
+                batch.discovered_count = (batch.discovered_count or 0) + item_result.total_found
+            else:
+                batch.items.append(item_result)
+                batch.discovered_count = (batch.discovered_count or 0) + 1
     return batch
 
 

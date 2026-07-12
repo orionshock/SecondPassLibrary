@@ -15,6 +15,7 @@ from library.imports.results import (
     ImportBatchResult,
     ImportItemResult,
 )
+from library.queries import defer_visible_books_cache_invalidation
 
 
 def import_zip_file(
@@ -37,7 +38,7 @@ def import_zip_file(
 
     _rewind_file(file_obj)
     try:
-        with zipfile.ZipFile(file_obj, "r") as archive:
+        with defer_visible_books_cache_invalidation(), zipfile.ZipFile(file_obj, "r") as archive:
             for candidate in plan.candidates:
                 batch.items.append(_import_zip_candidate(archive, candidate, actor=actor))
     except Exception as exc:

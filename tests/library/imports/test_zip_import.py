@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from io import BytesIO
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import library.models as library_models
-from django.test import TestCase
+from django.core.cache import cache
+from django.test import TestCase, TransactionTestCase
 
 from library.groups.public_group import get_public_group
 from library.imports.batches import import_zip_file
@@ -15,6 +18,7 @@ from library.imports.results import (
     IMPORT_STATUS_SKIPPED,
 )
 from library.models import Book, BookGroupAssignment, BookIdentifier
+from library.queries import VISIBLE_BOOK_IDS_CACHE_VERSION_KEY
 from tests.library.imports.helpers import (
     ImportPersistenceFixtureMixin,
     metadata_xml,
@@ -187,3 +191,28 @@ class ZipImportServiceTests(
 
         self.assertFalse(hasattr(library_models, "BookFile"))
         self.assertTrue(result.items[0].book.book_file.name)
+
+
+class ZipImportCacheInvalidationTests(
+    IsolatedMediaRootMixin,
+    ImportPersistenceFixtureMixin,
+    TransactionTestCase,
+):
+    def test_zip_import_coalesces_visible_books_cache_invalidation(self):
+        cache.clear()
+
+        with patch(
+            "library.queries.uuid4",
+            return_value=SimpleNamespace(hex="zip-import-version"),
+        ) as fake_uuid4:
+            result = import_zip_file(
+                zip_bytes(
+                    ("one.epub", minimal_epub_bytes(metadata_xml=metadata_xml("One"))),
+                    ("two.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Two"))),
+                ),
+                source_filename="books.zip",
+            )
+
+        self.assertEqual(result.imported_count, 2)
+        fake_uuid4.assert_called_once()
+        self.assertEqual(cache.get(VISIBLE_BOOK_IDS_CACHE_VERSION_KEY), "zip-import-version")

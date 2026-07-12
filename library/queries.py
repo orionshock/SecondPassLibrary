@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from contextlib import contextmanager
+from contextvars import ContextVar
 from uuid import uuid4
 
 from django.core.cache import cache
@@ -13,6 +15,14 @@ from .models import Book, LibraryGroup, LibraryGroupMembership
 
 VISIBLE_BOOK_IDS_CACHE_SECONDS = 120
 VISIBLE_BOOK_IDS_CACHE_VERSION_KEY = "libraryrewrite2607:visible-book-ids:version"
+_VISIBLE_BOOK_IDS_CACHE_DEFER_DEPTH: ContextVar[int] = ContextVar(
+    "visible_book_ids_cache_defer_depth",
+    default=0,
+)
+_VISIBLE_BOOK_IDS_CACHE_DEFER_DIRTY: ContextVar[bool] = ContextVar(
+    "visible_book_ids_cache_defer_dirty",
+    default=False,
+)
 
 
 def effective_group_ids_for_user(user) -> QuerySet:
@@ -43,6 +53,32 @@ def _visible_book_ids_cache_key(user) -> str:
 
 
 def invalidate_visible_books_cache() -> None:
+    if _VISIBLE_BOOK_IDS_CACHE_DEFER_DEPTH.get() > 0:
+        _VISIBLE_BOOK_IDS_CACHE_DEFER_DIRTY.set(True)
+        return
+    _write_visible_books_cache_version()
+
+
+@contextmanager
+def defer_visible_books_cache_invalidation():
+    depth = _VISIBLE_BOOK_IDS_CACHE_DEFER_DEPTH.get()
+    depth_token = _VISIBLE_BOOK_IDS_CACHE_DEFER_DEPTH.set(depth + 1)
+    dirty_token = None
+    if depth == 0:
+        dirty_token = _VISIBLE_BOOK_IDS_CACHE_DEFER_DIRTY.set(False)
+
+    try:
+        yield
+    finally:
+        should_invalidate = depth == 0 and _VISIBLE_BOOK_IDS_CACHE_DEFER_DIRTY.get()
+        _VISIBLE_BOOK_IDS_CACHE_DEFER_DEPTH.reset(depth_token)
+        if dirty_token is not None:
+            _VISIBLE_BOOK_IDS_CACHE_DEFER_DIRTY.reset(dirty_token)
+        if should_invalidate:
+            _write_visible_books_cache_version()
+
+
+def _write_visible_books_cache_version() -> None:
     cache.set(VISIBLE_BOOK_IDS_CACHE_VERSION_KEY, uuid4().hex, timeout=None)
 
 

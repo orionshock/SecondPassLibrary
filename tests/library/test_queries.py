@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.models import UserProfile
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-from library.queries import visible_books_for_group, visible_books_for_user
+from library.queries import (
+    VISIBLE_BOOK_IDS_CACHE_VERSION_KEY,
+    defer_visible_books_cache_invalidation,
+    invalidate_visible_books_cache,
+    visible_books_for_group,
+    visible_books_for_user,
+)
 from tests.library.helpers import queryset_titles, set_user_role
 
 
@@ -131,3 +140,17 @@ class LibraryReWrite2607QueryTests(TestCase):
             queryset_titles(visible_books_for_user(self.reader, cached=False)),
             ["Multi Book", "Public Book"],
         )
+
+    def test_deferred_cache_invalidation_coalesces_version_bumps(self):
+        with patch(
+            "library.queries.uuid4",
+            return_value=SimpleNamespace(hex="coalesced-version"),
+        ) as fake_uuid4:
+            with defer_visible_books_cache_invalidation():
+                invalidate_visible_books_cache()
+                invalidate_visible_books_cache()
+                fake_uuid4.assert_not_called()
+
+            fake_uuid4.assert_called_once()
+
+        self.assertEqual(cache.get(VISIBLE_BOOK_IDS_CACHE_VERSION_KEY), "coalesced-version")

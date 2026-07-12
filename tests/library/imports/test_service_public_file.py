@@ -66,10 +66,11 @@ class ImportPersistencePublicFileTests(ImportPersistenceFixtureMixin, TestCase):
 
         self.assertEqual(queryset_titles(visible_books_for_user(reader, cached=True)), [])
 
-        persist_imported_book(
-            metadata=sample_metadata(title="Fresh Import", sort_title="Fresh Import"),
-            checksum="fresh-cache-import",
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            persist_imported_book(
+                metadata=sample_metadata(title="Fresh Import", sort_title="Fresh Import"),
+                checksum="fresh-cache-import",
+            )
 
         self.assertEqual(
             queryset_titles(visible_books_for_user(reader, cached=True)),

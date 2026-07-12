@@ -12,6 +12,7 @@ from library.groups.public_group import (
     is_public_group,
 )
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.queries import invalidate_visible_books_cache
 from shelves.library_hooks import remove_book_from_group_owned_shelves
 
 
@@ -49,6 +50,8 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
         _restore_books_without_groups(
             book_ids, added_by=actor, public_group=public_group
         )
+        if deleted_count:
+            _invalidate_visible_books_cache_on_commit()
     return bool(deleted_count)
 
 
@@ -74,13 +77,17 @@ def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) ->
         if not created and is_curator and not membership.is_curator:
             membership.is_curator = True
             membership.save(update_fields=["is_curator", "updated_at"])
+        if created:
+            _invalidate_visible_books_cache_on_commit()
         return membership
 
 
 def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
     with transaction.atomic():
         deleted, _ = LibraryGroupMembership.objects.filter(user=user, group=group).delete()
-        ensure_user_has_at_least_one_group(user=user)
+        restored = ensure_user_has_at_least_one_group(user=user)
+        if deleted and not restored:
+            _invalidate_visible_books_cache_on_commit()
     return bool(deleted)
 
 
@@ -88,15 +95,19 @@ def ensure_user_public_membership(
     *, user, public_group: LibraryGroup | None = None
 ) -> LibraryGroupMembership:
     group = public_group or _get_or_create_public_group()
-    membership, _created = LibraryGroupMembership.objects.get_or_create(user=user, group=group)
+    membership, created = LibraryGroupMembership.objects.get_or_create(user=user, group=group)
+    if created:
+        _invalidate_visible_books_cache_on_commit()
     return membership
 
 
 def ensure_user_has_at_least_one_group(
     *, user, public_group: LibraryGroup | None = None
-) -> None:
+) -> bool:
     if not LibraryGroupMembership.objects.filter(user=user).exists():
         ensure_user_public_membership(user=user, public_group=public_group)
+        return True
+    return False
 
 
 def add_book_to_group(
@@ -113,7 +124,9 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
         if BookGroupAssignment.objects.filter(book=book, group=group).exists():
             remove_book_from_group_owned_shelves(book=book, group=group)
         deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
-        ensure_book_has_at_least_one_group(book=book, added_by=actor)
+        restored = ensure_book_has_at_least_one_group(book=book, added_by=actor)
+        if deleted and not restored:
+            _invalidate_visible_books_cache_on_commit()
     return bool(deleted)
 
 
@@ -126,11 +139,13 @@ def ensure_book_public_assignment(
 
 def ensure_book_has_at_least_one_group(
     *, book, added_by=None, public_group: LibraryGroup | None = None
-) -> None:
+) -> bool:
     if not BookGroupAssignment.objects.filter(book=book).exists():
         ensure_book_public_assignment(
             book=book, added_by=added_by, public_group=public_group
         )
+        return True
+    return False
 
 
 def bootstrap_public_group_membership_and_assignments() -> None:
@@ -160,12 +175,18 @@ def _restore_books_without_groups(
 
 
 def _create_book_assignment(*, book, group: LibraryGroup, added_by=None) -> BookGroupAssignment:
-    assignment, _created = BookGroupAssignment.objects.get_or_create(
+    assignment, created = BookGroupAssignment.objects.get_or_create(
         book=book,
         group=group,
         defaults={"added_by": added_by},
     )
+    if created:
+        _invalidate_visible_books_cache_on_commit()
     return assignment
+
+
+def _invalidate_visible_books_cache_on_commit() -> None:
+    transaction.on_commit(invalidate_visible_books_cache)
 
 
 def _get_or_create_public_group() -> LibraryGroup:
