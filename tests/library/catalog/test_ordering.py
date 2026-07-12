@@ -5,7 +5,7 @@ from django.test import TestCase
 from tests.library.helpers import LibraryCatalogApiFixtureMixin, response_titles
 
 
-class LibraryReWrite2607CatalogBookOrderingTests(LibraryCatalogApiFixtureMixin, TestCase):
+class LibraryCatalogBookOrderingTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_ordering_supports_allowed_book_axes_in_both_directions(self):
         cases = [
             ("title", ["Multi Group", "Visible One", "Visible Three", "Visible Two"]),

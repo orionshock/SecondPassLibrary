@@ -17,7 +17,7 @@ from shelves.models import Shelf, ShelfItem
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
-class LibraryReWrite2607BookAssignmentServiceTests(LibraryGroupServiceTestCase):
+class LibraryBookAssignmentServiceTests(LibraryGroupServiceTestCase):
     def test_add_book_to_group_is_idempotent_and_stores_added_by_on_create(self):
         group = create_library_group(name="Club")
 
@@ -128,7 +128,7 @@ class LibraryReWrite2607BookAssignmentServiceTests(LibraryGroupServiceTestCase):
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(uuid4()),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
 
         remove_book_from_group(book=self.book, group=group, actor=self.actor)

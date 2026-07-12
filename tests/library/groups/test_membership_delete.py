@@ -8,7 +8,7 @@ from tests.library.groups.membership_helpers import LibraryGroupMembershipApiTes
 from tests.library.helpers import set_user_role
 
 
-class LibraryReWrite2607GroupMembershipDeleteTests(LibraryGroupMembershipApiTestCase):
+class LibraryGroupMembershipDeleteTests(LibraryGroupMembershipApiTestCase):
     def test_delete_removes_membership(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 

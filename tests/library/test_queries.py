@@ -19,7 +19,7 @@ from library.queries import (
 from tests.library.helpers import queryset_titles, set_user_role
 
 
-class LibraryReWrite2607QueryTests(TestCase):
+class LibraryVisibilityQueryTests(TestCase):
     def setUp(self):
         cache.clear()
         User = get_user_model()

@@ -15,7 +15,7 @@ from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 from tests.library.helpers import queryset_titles
 
 
-class LibraryReWrite2607GroupServiceCacheInvalidationTests(LibraryGroupServiceTestCase):
+class LibraryGroupServiceCacheInvalidationTests(LibraryGroupServiceTestCase):
     def test_add_book_to_group_invalidates_cached_visibility(self):
         group = create_library_group(name="Club")
         LibraryGroupMembership.objects.create(user=self.user, group=group)

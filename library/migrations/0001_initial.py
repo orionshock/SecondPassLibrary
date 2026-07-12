@@ -1,4 +1,4 @@
-# Generated for LibraryReWrite2607 model baseline.
+# Generated for the library catalog model baseline.
 
 import django.core.validators
 import django.db.models.deletion

@@ -14,7 +14,7 @@ from library.models import BookGroupAssignment, LibraryGroupMembership
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
-class LibraryReWrite2607GroupDeleteFallbackServiceTests(LibraryGroupServiceTestCase):
+class LibraryGroupDeleteFallbackServiceTests(LibraryGroupServiceTestCase):
     def test_deleting_group_restores_affected_users_and_books_to_public(self):
         group = create_library_group(name="Club")
         add_user_to_group(user=self.user, group=group)
@@ -50,7 +50,7 @@ class LibraryReWrite2607GroupDeleteFallbackServiceTests(LibraryGroupServiceTestC
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(uuid4()),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
 
         delete_library_group(group=group, actor=self.actor)

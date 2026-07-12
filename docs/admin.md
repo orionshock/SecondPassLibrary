@@ -60,7 +60,7 @@ its stored EPUB fields directly:
 - `source_filename`
 - `cover_file`
 
-There is no `BookFile` model in the current LibraryReWrite2607 schema. If a
+There is no `BookFile` model in the current library catalog schema. If a
 legacy/operator mistake leaves a `Book` without `book_file` or with a missing
 physical EPUB, treat it as an operator repair state. The current supported
 operator import path is `python manage.py import_library <path>` for EPUB/ZIP

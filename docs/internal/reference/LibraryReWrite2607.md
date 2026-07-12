@@ -1,4 +1,9 @@
-# Library Catalog LibraryReWrite2607 Design
+# LibraryReWrite2607 Reference
+
+Historical reference for the LibraryReWrite2607 branch. Current architecture is
+documented in the normal project docs; prefer those for implementation guidance.
+
+## Original Design Note
 
 Internal design note for a future in-place rewrite of the library/catalog
 backend. This is documentation only; it is not an implementation plan for the

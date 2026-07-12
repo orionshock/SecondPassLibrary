@@ -4,7 +4,7 @@ from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCas
 from tests.library.helpers import response_names
 
 
-class LibraryReWrite2607GroupMutationReadRegressionTests(LibraryGroupMutationApiTestCase):
+class LibraryGroupMutationReadRegressionTests(LibraryGroupMutationApiTestCase):
     def test_get_list_and_detail_still_work_after_mutation_support(self):
         self.assertTrue(self.client.login(username="reader", password="pw"))
 

@@ -16,8 +16,8 @@ class AdvancedGroupsPlanStale(Exception):
 
 
 def build_advanced_groups_disable_plan(*args, **kwargs):
-    raise ImproperlyConfigured("LibraryReWrite2607 group consolidation is not rebuilt yet.")
+    raise ImproperlyConfigured("Advanced library group consolidation is not rebuilt yet.")
 
 
 def execute_advanced_groups_disable_plan(*args, **kwargs):
-    raise ImproperlyConfigured("LibraryReWrite2607 group consolidation is not rebuilt yet.")
+    raise ImproperlyConfigured("Advanced library group consolidation is not rebuilt yet.")

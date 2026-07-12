@@ -11,7 +11,7 @@ from library.models import LibraryGroup, LibraryGroupMembership
 from tests.library.helpers import response_names, set_user_role
 
 
-class LibraryReWrite2607GroupReadTests(TestCase):
+class LibraryGroupReadTests(TestCase):
     def setUp(self):
         cache.clear()
         User = get_user_model()
@@ -27,7 +27,7 @@ class LibraryReWrite2607GroupReadTests(TestCase):
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(self.public.id),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
         self.club = LibraryGroup.objects.create(name="Club", description="Dresden readers")
         self.family = LibraryGroup.objects.create(name="Family", description="Household")

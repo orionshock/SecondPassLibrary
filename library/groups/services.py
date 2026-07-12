@@ -16,7 +16,7 @@ from library.queries import invalidate_visible_books_cache
 from shelves.library_hooks import remove_book_from_group_owned_shelves
 
 
-PUBLIC_GROUP_SETTING_DESCRIPTION = "LibraryReWrite2607 Public/Common Room group id."
+PUBLIC_GROUP_SETTING_DESCRIPTION = "Public/Common Room group id."
 
 
 def create_library_group(*, name: str, description: str = "") -> LibraryGroup:

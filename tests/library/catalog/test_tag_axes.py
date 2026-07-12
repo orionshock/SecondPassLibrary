@@ -12,7 +12,7 @@ from tests.library.helpers import (
 )
 
 
-class LibraryReWrite2607TagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
+class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_list_includes_only_tags_with_visible_books(self):
         hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden")
         create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)

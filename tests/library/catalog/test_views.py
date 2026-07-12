@@ -5,7 +5,7 @@ from django.test import TestCase
 from tests.library.helpers import LibraryCatalogApiFixtureMixin, response_titles
 
 
-class LibraryReWrite2607CatalogBookViewTests(LibraryCatalogApiFixtureMixin, TestCase):
+class LibraryCatalogBookViewTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_visible_book_list_excludes_books_outside_user_groups(self):
         response = self.client.get("/api/v1/library/books/")
 

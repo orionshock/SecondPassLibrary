@@ -14,7 +14,7 @@ from library.models import LibraryGroupMembership
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
-class LibraryReWrite2607GroupMembershipServiceTests(LibraryGroupServiceTestCase):
+class LibraryGroupMembershipServiceTests(LibraryGroupServiceTestCase):
     def test_add_user_to_group_is_idempotent(self):
         group = create_library_group(name="Club")
 
@@ -80,7 +80,7 @@ class LibraryReWrite2607GroupMembershipServiceTests(LibraryGroupServiceTestCase)
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(uuid4()),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
 
         remove_user_from_group(user=self.user, group=group)

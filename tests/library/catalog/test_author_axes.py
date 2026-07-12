@@ -12,7 +12,7 @@ from tests.library.helpers import (
 )
 
 
-class LibraryReWrite2607AuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
+class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_list_includes_only_authors_with_visible_books(self):
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
         create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)

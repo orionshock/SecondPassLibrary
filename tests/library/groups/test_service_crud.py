@@ -8,7 +8,7 @@ from library.models import LibraryGroup
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
-class LibraryReWrite2607GroupCrudServiceTests(LibraryGroupServiceTestCase):
+class LibraryGroupCrudServiceTests(LibraryGroupServiceTestCase):
     def test_create_group_creates_normal_non_public_group(self):
         group = create_library_group(name="Club", description="Readers")
 

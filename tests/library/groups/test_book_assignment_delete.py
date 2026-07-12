@@ -4,7 +4,7 @@ from library.models import BookGroupAssignment
 from tests.library.groups.book_assignment_helpers import LibraryGroupBookAssignmentApiTestCase
 
 
-class LibraryReWrite2607GroupBookAssignmentDeleteTests(
+class LibraryGroupBookAssignmentDeleteTests(
     LibraryGroupBookAssignmentApiTestCase
 ):
     def test_reader_cannot_delete_visible_group_book_assignment(self):

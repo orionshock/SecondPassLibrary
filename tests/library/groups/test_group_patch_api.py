@@ -4,7 +4,7 @@ from library.models import LibraryGroup
 from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase, json_body
 
 
-class LibraryReWrite2607GroupPatchApiTests(LibraryGroupMutationApiTestCase):
+class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
     def test_manager_and_owner_can_patch_group_name_and_description(self):
         for username in ["manager", "owner"]:
             with self.subTest(username=username):

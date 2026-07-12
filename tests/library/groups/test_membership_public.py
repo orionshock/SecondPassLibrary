@@ -8,7 +8,7 @@ from tests.library.groups.membership_helpers import (
 )
 
 
-class LibraryReWrite2607PublicMembershipApiTests(LibraryGroupMembershipApiTestCase):
+class LibraryPublicMembershipApiTests(LibraryGroupMembershipApiTestCase):
     def test_public_curator_membership_does_not_grant_curation(self):
         LibraryGroupMembership.objects.create(user=self.target, group=self.public)
         self.assertTrue(self.client.login(username="manager", password="pw"))

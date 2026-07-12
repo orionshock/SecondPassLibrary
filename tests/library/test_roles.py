@@ -13,7 +13,7 @@ from library.roles import is_curator
 from tests.library.helpers import set_user_role
 
 
-class LibraryReWrite2607RolePrimitiveTests(TestCase):
+class LibraryRolePrimitiveTests(TestCase):
     def setUp(self):
         cache.clear()
         User = get_user_model()
@@ -31,7 +31,7 @@ class LibraryReWrite2607RolePrimitiveTests(TestCase):
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(self.public.id),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
         self.club = LibraryGroup.objects.create(name="Club")
         self.other_group = LibraryGroup.objects.create(name="Other")

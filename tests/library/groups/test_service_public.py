@@ -11,7 +11,7 @@ from library.models import LibraryGroup
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
-class LibraryReWrite2607PublicGroupServiceTests(LibraryGroupServiceTestCase):
+class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
     def test_public_identity_is_setting_id_based_and_survives_rename(self):
         self.public.name = "Renamed"
         self.public.save(update_fields=["name", "updated_at"])
@@ -23,7 +23,7 @@ class LibraryReWrite2607PublicGroupServiceTests(LibraryGroupServiceTestCase):
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(uuid4()),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
 
         healed = get_public_group()

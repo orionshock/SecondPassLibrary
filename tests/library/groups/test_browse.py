@@ -22,7 +22,7 @@ from tests.library.helpers import (
 )
 
 
-class LibraryReWrite2607GroupBrowseTests(TestCase):
+class LibraryGroupBrowseTests(TestCase):
     def setUp(self):
         cache.clear()
         User = get_user_model()

@@ -20,7 +20,7 @@ from library.models import (
 )
 
 
-class LibraryReWrite2607ModelShapeTests(TestCase):
+class LibraryModelShapeTests(TestCase):
     def test_book_owns_file_fields_directly(self):
         field_names = {field.name for field in Book._meta.get_fields()}
 
@@ -47,7 +47,7 @@ class LibraryReWrite2607ModelShapeTests(TestCase):
         self.assertIn("normalized_value", {field.name for field in BookIdentifier._meta.fields})
 
 
-class LibraryReWrite2607ConstraintTests(TestCase):
+class LibraryModelConstraintTests(TestCase):
     def test_checksum_is_unique_when_present(self):
         Book.objects.create(title="One", checksum="abc123")
 

@@ -7,7 +7,7 @@ from tests.library.groups.membership_helpers import (
 )
 
 
-class LibraryReWrite2607GroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
+class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
     def test_patch_updates_role_and_is_curator(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 

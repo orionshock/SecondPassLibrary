@@ -48,7 +48,7 @@ def get_public_group():
     set_server_setting(
         key=PUBLIC_GROUP_ID_SETTING,
         value=str(group.id),
-        description="LibraryReWrite2607 Public/Common Room group id.",
+        description="Public/Common Room group id.",
     )
     return group
 

@@ -39,7 +39,7 @@ class LibraryGroupMembershipApiTestCase(TestCase):
         set_server_setting(
             key=PUBLIC_GROUP_ID_SETTING,
             value=str(self.public.id),
-            description="LibraryReWrite2607 Public/Common Room group id.",
+            description="Public/Common Room group id.",
         )
         self.club = LibraryGroup.objects.create(name="Club")
         self.hidden = LibraryGroup.objects.create(name="Hidden")

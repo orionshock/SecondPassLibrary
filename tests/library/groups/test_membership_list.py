@@ -6,7 +6,7 @@ from tests.library.groups.membership_helpers import (
 )
 
 
-class LibraryReWrite2607GroupMembershipListTests(LibraryGroupMembershipApiTestCase):
+class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
     def test_manager_and_owner_can_list_group_memberships(self):
         expected_user_ids = {str(self.reader.profile.id), str(self.target.profile.id)}
 

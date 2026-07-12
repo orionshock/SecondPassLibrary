@@ -7,7 +7,7 @@ from tests.library.groups.book_assignment_helpers import (
 )
 
 
-class LibraryReWrite2607GroupBookAssignmentCreateTests(
+class LibraryGroupBookAssignmentCreateTests(
     LibraryGroupBookAssignmentApiTestCase
 ):
     def test_manager_and_owner_can_add_any_valid_book(self):

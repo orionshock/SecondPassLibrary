@@ -5,7 +5,7 @@ from django.test import TestCase
 from tests.library.helpers import LibraryCatalogApiFixtureMixin, response_titles
 
 
-class LibraryReWrite2607CatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
+class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_q_searches_visible_books_only(self):
         response = self.client.get("/api/v1/library/books/", {"q": "dresden"})
 

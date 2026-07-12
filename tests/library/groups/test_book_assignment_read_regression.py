@@ -3,7 +3,7 @@ from __future__ import annotations
 from tests.library.groups.book_assignment_helpers import LibraryGroupBookAssignmentApiTestCase
 
 
-class LibraryReWrite2607GroupBookAssignmentReadRegressionTests(
+class LibraryGroupBookAssignmentReadRegressionTests(
     LibraryGroupBookAssignmentApiTestCase
 ):
     def test_group_books_get_still_returns_group_scoped_books(self):

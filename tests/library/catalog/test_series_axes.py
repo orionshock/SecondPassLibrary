@@ -12,7 +12,7 @@ from tests.library.helpers import (
 )
 
 
-class LibraryReWrite2607SeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
+class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_list_includes_only_series_with_visible_books(self):
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
         create_catalog_book(

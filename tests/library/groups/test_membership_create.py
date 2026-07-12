@@ -8,7 +8,7 @@ from tests.library.groups.membership_helpers import (
 )
 
 
-class LibraryReWrite2607GroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
+class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
     def test_post_requires_user_id_uuid(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 

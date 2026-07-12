@@ -4,7 +4,7 @@ from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroup
 from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase
 
 
-class LibraryReWrite2607GroupDeleteApiTests(LibraryGroupMutationApiTestCase):
+class LibraryGroupDeleteApiTests(LibraryGroupMutationApiTestCase):
     def test_manager_and_owner_can_delete_normal_group(self):
         for username in ["manager", "owner"]:
             with self.subTest(username=username):
