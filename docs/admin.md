@@ -70,11 +70,22 @@ its stored EPUB fields directly:
 - `cover_file`
 
 There is no `BookFile` model in the current library catalog schema. If a
-legacy/operator mistake leaves a `Book` without `book_file` or with a missing
-physical EPUB, treat it as an operator repair state. The current supported
-operator import path is `python manage.py import_library <path>` for EPUB/ZIP
-imports. Do not delete and re-import an existing Book merely to restore a file
-when preserving reading data matters.
+legacy/operator mistake leaves a `Book` without `book_file`, with a missing
+physical EPUB, or with a file that must be deliberately replaced, open the Book
+in Django admin and use **Repair stored EPUB**. This route is restricted to
+superusers. The generic Book form keeps `book_file`, `file_format`, `checksum`,
+and `file_size` read-only.
+
+The repair page validates a replacement EPUB, reports the current stored-file
+state, and requires explicit confirmation before replacing an existing physical
+file. A different checksum requires a separate confirmation warning that EPUB
+CFI anchors may no longer match. Successful repair returns to the same Book
+change page.
+
+Repair preserves the Book UUID, metadata, authors, series, identifiers, Catalog
+Tags, cover, groups, shelves, reading sessions, progress, and annotations. It
+does not store or display source-file provenance. Do not delete and re-import an
+existing Book merely to restore its file when preserving reading data matters.
 
 Checksum mismatch is intentionally guarded because replacing an EPUB with a
 different file can invalidate EPUB CFI anchors used by annotations and reading
