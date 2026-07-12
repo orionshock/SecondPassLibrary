@@ -13,7 +13,11 @@ from library.groups.membership_serializers import (
     MembershipCreateSerializer,
     MembershipPatchSerializer,
 )
-from library.groups.services import add_user_to_group, remove_user_from_group
+from library.groups.services import (
+    add_user_to_group,
+    remove_user_from_group,
+    set_group_membership_curator,
+)
 from library.models import LibraryGroupMembership
 from library.queries import visible_groups_for_user
 
@@ -105,12 +109,11 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
         serializer = MembershipPatchSerializer(data=request.data or {}, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        update_fields = []
         if "is_curator" in serializer.validated_data:
-            membership.is_curator = serializer.validated_data["is_curator"]
-            update_fields.append("is_curator")
-        if update_fields:
-            membership.save(update_fields=[*update_fields, "updated_at"])
+            set_group_membership_curator(
+                membership=membership,
+                is_curator=serializer.validated_data["is_curator"],
+            )
         if "role" in serializer.validated_data:
             _update_user_role(membership.user.profile, serializer.validated_data["role"])
         membership.refresh_from_db()

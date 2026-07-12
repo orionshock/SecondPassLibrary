@@ -23,6 +23,14 @@ class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
         self.target.profile.refresh_from_db()
         self.assertEqual(self.target.profile.role, UserProfile.ROLE_LIBRARIAN)
 
+        demote = self.client.patch(
+            self.membership_detail_url(),
+            json_body({"is_curator": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(demote.status_code, 200)
+        self.assertFalse(demote.json()["is_curator"])
+
     def test_patch_rejects_unknown_and_invalid_role(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
         url = self.membership_detail_url()

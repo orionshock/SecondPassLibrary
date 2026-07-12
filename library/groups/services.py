@@ -82,6 +82,14 @@ def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) ->
         return membership
 
 
+def set_group_membership_curator(
+    *, membership: LibraryGroupMembership, is_curator: bool
+) -> LibraryGroupMembership:
+    membership.is_curator = bool(is_curator)
+    membership.save(update_fields=["is_curator", "updated_at"])
+    return membership
+
+
 def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
     with transaction.atomic():
         deleted, _ = LibraryGroupMembership.objects.filter(user=user, group=group).delete()
