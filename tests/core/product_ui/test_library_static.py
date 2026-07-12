@@ -1,4 +1,5 @@
 """Tests for library book detail and edit pages."""
+from pathlib import Path
 from uuid import uuid4
 
 from core import server_settings
@@ -98,9 +99,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'id="book-edit-form"')
         self.assertContains(response, 'id="book-edit-authors-selected"')
         self.assertContains(response, 'id="book-edit-author-add-select"')
-        self.assertContains(response, 'id="book-edit-author-new-name"')
         self.assertContains(response, 'id="book-edit-series-select"')
-        self.assertContains(response, 'id="book-edit-series-new-name"')
         self.assertContains(response, 'id="book-edit-series-index"')
         self.assertContains(response, 'step="0.1"')
         self.assertContains(response, 'id="book-edit-identifiers"')
@@ -137,6 +136,34 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'id="tab-groups"')
         self.assertContains(response, 'id="book-edit-groups"')
         self.assertContains(response, 'id="book-edit-groups-add"')
+
+    def test_book_edit_uses_current_metadata_file_and_identifier_contracts(self):
+        template = Path("web/templates/web/library/book_edit.html").read_text(encoding="utf-8")
+        main_js = Path("web/static/web/js/book_edit/main.js").read_text(encoding="utf-8")
+        metadata_js = Path("web/static/web/js/book_edit/metadata.js").read_text(encoding="utf-8")
+        identifiers_js = Path("web/static/web/js/book_edit/identifiers_actions.js").read_text(
+            encoding="utf-8"
+        )
+        file_js = Path("web/static/web/js/book_edit/identifiers_file.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('id="book-edit-description"', template)
+        self.assertNotIn('id="book-edit-summary"', template)
+        self.assertNotIn('id="book-edit-subjects"', template)
+        self.assertNotIn('id="book-edit-isbn"', template)
+        self.assertNotIn("Book.isbn", template)
+        self.assertIn("book.description", metadata_js)
+        self.assertIn("description: normalizeOptionalString", metadata_js)
+        self.assertIn('precision === "month"', metadata_js)
+        self.assertIn("book.series.series_index", metadata_js)
+        self.assertIn("book.series.series_index", file_js)
+        self.assertIn('addRow("Checksum", file.checksum', file_js)
+        self.assertIn('addRow("Source filename", file.source_filename', file_js)
+        self.assertIn("rootEl.dataset.bookId", main_js)
+        self.assertIn("encodeURIComponent(String(bookId))", identifiers_js)
+        self.assertIn("Failed to load identifiers. Reload the page and try again.", identifiers_js)
+        self.assertNotIn("extractApiErrorMessage", identifiers_js)
 
     def test_authenticated_book_edit_malformed_id_returns_404(self):
         self.client.force_login(self.user)

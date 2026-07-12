@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 from django.db.models import Prefetch
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework import serializers, status
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.response import Response
 
+from accounts.roles import is_librarian
+from library.catalog.edit_services import update_book_metadata
 from library.catalog.filters import apply_book_filters
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
-from library.catalog.serializers import BookDetailSerializer, BookListSerializer
+from library.catalog.serializers import BookDetailSerializer, BookListSerializer, BookUpdateSerializer
 from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user
 
 
 def book_browse_queryset(queryset):
     return queryset.select_related("book_series__series").prefetch_related(
+        "identifiers",
         Prefetch(
             "book_authors",
             queryset=BookAuthor.objects.select_related("author").order_by("position", "id"),
@@ -37,10 +44,42 @@ class BookListView(ListAPIView):
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
 
 
-class BookDetailView(RetrieveAPIView):
+class BookDetailView(RetrieveUpdateAPIView):
     serializer_class = BookDetailSerializer
     lookup_url_kwarg = "book_id"
 
     def get_queryset(self):
         queryset = visible_books_for_user(self.request.user, cached=False)
         return book_browse_queryset(queryset)
+
+    def partial_update(self, request, *args, **kwargs):
+        if not is_librarian(request.user):
+            raise PermissionDenied("Not allowed.")
+        book = self.get_object()
+        serializer = BookUpdateSerializer(data=request.data or {}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        authors = data.pop("authors", None)
+        series_supplied = "series" in data
+        series = data.pop("series", None)
+        series_index_supplied = "series_index" in data
+        series_index = data.pop("series_index", None)
+        try:
+            update_book_metadata(
+                book=book,
+                scalar_fields=data,
+                authors=authors,
+                series=series,
+                series_supplied=series_supplied,
+                series_index=series_index,
+                series_index_supplied=series_index_supplied,
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            ) from exc
+        refreshed = self.get_queryset().get(pk=book.pk)
+        return Response(BookDetailSerializer(refreshed, context={"request": request}).data, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)

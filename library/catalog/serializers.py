@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from pathlib import PurePosixPath
+
 from rest_framework import serializers
 
-from library.models import Author, Book, CatalogTag, Series
+from library.models import Author, Book, BookIdentifier, CatalogTag, Series
 
 
 def book_cover_url(obj: Book, request=None) -> str | None:
@@ -71,6 +73,29 @@ class BookSeriesSummarySerializer(serializers.Serializer):
     series_index = serializers.DecimalField(max_digits=8, decimal_places=2, allow_null=True)
 
 
+class BookIdentifierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookIdentifier
+        fields = ["id", "scheme", "value"]
+        read_only_fields = fields
+
+
+class BookIdentifierWriteSerializer(serializers.Serializer):
+    scheme = serializers.ChoiceField(choices=BookIdentifier.SCHEME_CHOICES)
+    value = serializers.CharField(max_length=512)
+
+
+class BookFileSerializer(serializers.Serializer):
+    format = serializers.CharField(source="file_format")
+    file_size = serializers.IntegerField(allow_null=True)
+    checksum = serializers.CharField(allow_blank=True, allow_null=True)
+    source_filename = serializers.SerializerMethodField()
+
+    def get_source_filename(self, obj: Book) -> str:
+        value = (obj.source_filename or "").replace("\\", "/")
+        return PurePosixPath(value).name
+
+
 class BookPreviewSerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField(read_only=True)
 
@@ -129,6 +154,37 @@ class BookListSerializer(serializers.ModelSerializer):
 
 
 class BookDetailSerializer(BookListSerializer):
+    identifiers = BookIdentifierSerializer(many=True, read_only=True)
+    file = serializers.SerializerMethodField(read_only=True)
+
+    def get_file(self, obj: Book) -> dict | None:
+        if not obj.book_file:
+            return None
+        return BookFileSerializer(obj).data
+
     class Meta(BookListSerializer.Meta):
-        fields = [*BookListSerializer.Meta.fields, "description"]
+        fields = [*BookListSerializer.Meta.fields, "description", "identifiers", "file"]
         read_only_fields = fields
+
+
+class BookUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=512, required=False)
+    subtitle = serializers.CharField(max_length=512, required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    publisher = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    language = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    published_year = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=9999)
+    published_month = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=12)
+    published_day = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=31)
+    published_date_precision = serializers.ChoiceField(
+        choices=["", *[choice[0] for choice in Book.DATE_PRECISION_CHOICES]],
+        required=False,
+    )
+    authors = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), many=True, required=False)
+    series = serializers.PrimaryKeyRelatedField(queryset=Series.objects.all(), required=False, allow_null=True)
+    series_index = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )

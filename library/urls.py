@@ -9,6 +9,7 @@ from library.catalog.axis_views import (
     SeriesListView,
 )
 from library.catalog.views import BookDetailView, BookListView
+from library.catalog.identifier_views import BookIdentifierDetailView, BookIdentifierListCreateView
 from library.groups.book_assignment_views import (
     GroupBookAssignmentDetailView,
     GroupBookAssignmentListView,
@@ -33,6 +34,16 @@ urlpatterns = [
     path("authors/<uuid:axis_id>/", AuthorDetailView.as_view(), name="author-detail"),
     path("books/", BookListView.as_view(), name="book-list"),
     path("books/<uuid:book_id>/", BookDetailView.as_view(), name="book-detail"),
+    path(
+        "books/<uuid:book_id>/identifiers/",
+        BookIdentifierListCreateView.as_view(),
+        name="book-identifier-list",
+    ),
+    path(
+        "books/<uuid:book_id>/identifiers/<uuid:identifier_id>/",
+        BookIdentifierDetailView.as_view(),
+        name="book-identifier-detail",
+    ),
     path("groups/", LibraryGroupListView.as_view(), name="group-list"),
     path("groups/<uuid:group_id>/", LibraryGroupDetailView.as_view(), name="group-detail"),
     path("groups/<uuid:group_id>/authors/", GroupAuthorListView.as_view(), name="group-author-list"),

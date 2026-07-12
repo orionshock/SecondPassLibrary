@@ -1,5 +1,4 @@
 import {
-  extractApiErrorMessage,
   fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
@@ -10,7 +9,6 @@ import {
   $,
   advancedLibraryGroupsEnabled,
   loadMeAndInitShell,
-  setGlobalErrorFromError,
   setText,
   visible,
 } from "../layout.js";
@@ -31,6 +29,14 @@ import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 
 function bookDisplayTitle(book) {
   return book && book.title ? String(book.title) : "Untitled book";
+}
+
+function safeBookEditError(error, fallback) {
+  const body = error && error.body && typeof error.body === "object" ? error.body : null;
+  const fields = summarizeFieldErrors(body);
+  if (fields) return `${fallback} (${fields})`;
+  if (body && body.detail) return String(body.detail).slice(0, 240);
+  return fallback;
 }
 
 function syncBookEditBreadcrumbs({ bookId, title }) {
@@ -63,24 +69,18 @@ export async function initBookEdit() {
 
   const titleEl = $("#book-edit-title");
   const subtitleEl = $("#book-edit-subtitle");
-  const summaryEl = $("#book-edit-summary");
+  const descriptionEl = $("#book-edit-description");
   const publisherEl = $("#book-edit-publisher");
   const languageEl = $("#book-edit-language");
   const publishedDateEl = $("#book-edit-published-date");
-  const isbnEl = $("#book-edit-isbn");
-  const subjectsEl = $("#book-edit-subjects");
 
   const authorsSelectedEl = $("#book-edit-authors-selected");
   const authorsStatusEl = $("#book-edit-authors-status");
   const authorAddSelectEl = $("#book-edit-author-add-select");
   const authorAddBtnEl = $("#book-edit-author-add-btn");
-  const authorNewNameEl = $("#book-edit-author-new-name");
-  const authorNewBtnEl = $("#book-edit-author-new-btn");
 
   const seriesSelectEl = $("#book-edit-series-select");
   const seriesStatusEl = $("#book-edit-series-status");
-  const seriesNewNameEl = $("#book-edit-series-new-name");
-  const seriesNewBtnEl = $("#book-edit-series-new-btn");
   const seriesIndexEl = $("#book-edit-series-index");
 
   const groupsStatusEl = $("#book-edit-groups-status");
@@ -121,22 +121,16 @@ export async function initBookEdit() {
     !saveBtn ||
     !titleEl ||
     !subtitleEl ||
-    !summaryEl ||
+    !descriptionEl ||
     !publisherEl ||
     !languageEl ||
     !publishedDateEl ||
-    !isbnEl ||
-    !subjectsEl ||
     !authorsSelectedEl ||
     !authorsStatusEl ||
     !authorAddSelectEl ||
     !authorAddBtnEl ||
-    !authorNewNameEl ||
-    !authorNewBtnEl ||
     !seriesSelectEl ||
     !seriesStatusEl ||
-    !seriesNewNameEl ||
-    !seriesNewBtnEl ||
     !seriesIndexEl ||
     !shelvesStatusEl ||
     !shelvesEl ||
@@ -179,12 +173,10 @@ export async function initBookEdit() {
   const dom = {
     titleEl,
     subtitleEl,
-    summaryEl,
+    descriptionEl,
     publisherEl,
     languageEl,
     publishedDateEl,
-    isbnEl,
-    subjectsEl,
     seriesIndexEl,
     seriesSelectEl,
   };
@@ -254,7 +246,7 @@ export async function initBookEdit() {
     if (e && e.status === 404) setStatus(statusEl, "Book not found or not accessible.", true);
     else {
       setStatus(statusEl, "Error loading book.", true);
-      setGlobalErrorFromError(e, "Failed to load book:");
+      setError(safeBookEditError(e, "Failed to load book."));
     }
     return;
   }
@@ -301,21 +293,14 @@ export async function initBookEdit() {
   bindAuthorSeriesActions({
     state,
     authorsSelectedEl,
-    authorsStatusEl,
     authorAddSelectEl,
     authorAddBtnEl,
-    authorNewNameEl,
-    authorNewBtnEl,
     seriesSelectEl,
-    seriesStatusEl,
-    seriesNewNameEl,
-    seriesNewBtnEl,
     seriesIndexEl,
     headerTitleEl,
     headerAuthorsEl,
     headerSeriesEl,
     headerFileEl,
-    setError,
   });
   if (groupsFeatureEnabled) {
     bindGroupActions({
@@ -361,11 +346,7 @@ export async function initBookEdit() {
       await refreshBook();
       await refreshIdentifiers();
     } catch (e) {
-      console.error("Failed to save book", { bookId, e });
-      const msg = extractApiErrorMessage(e);
-      const body = e && e.body ? e.body : null;
-      const fields = summarizeFieldErrors(body);
-      setError(fields ? `${msg} (${fields})` : msg);
+      setError(safeBookEditError(e, "Failed to save book."));
     } finally {
       setSaving(false);
     }
@@ -374,8 +355,7 @@ export async function initBookEdit() {
   formEl.addEventListener("submit", (ev) => {
     ev.preventDefault();
     saveBook().catch((e) => {
-      console.error("saveBook failed", e);
-      setError(extractApiErrorMessage(e));
+      setError(safeBookEditError(e, "Failed to save book."));
     });
   });
 }

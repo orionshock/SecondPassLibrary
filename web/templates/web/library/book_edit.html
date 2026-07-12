@@ -55,8 +55,8 @@
           <div class="kv__k"><label for="book-edit-subtitle">Subtitle</label></div>
           <div class="kv__v"><input id="book-edit-subtitle" type="text" autocomplete="off" style="width: 100%;" /></div>
 
-          <div class="kv__k"><label for="book-edit-summary">Summary</label></div>
-          <div class="kv__v"><textarea id="book-edit-summary" rows="6" style="width: 100%;"></textarea></div>
+          <div class="kv__k"><label for="book-edit-description">Description</label></div>
+          <div class="kv__v"><textarea id="book-edit-description" rows="6" style="width: 100%;"></textarea></div>
 
           <div class="kv__k"><label for="book-edit-publisher">Publisher</label></div>
           <div class="kv__v"><input id="book-edit-publisher" type="text" autocomplete="off" style="width: 100%;" /></div>
@@ -65,16 +65,8 @@
           <div class="kv__v"><input id="book-edit-language" type="text" autocomplete="off" style="width: 100%;" /></div>
 
           <div class="kv__k"><label for="book-edit-published-date">Published date</label></div>
-          <div class="kv__v"><input id="book-edit-published-date" type="date" style="width: 100%;" /></div>
+          <div class="kv__v"><input id="book-edit-published-date" type="text" inputmode="numeric" placeholder="YYYY, YYYY-MM, or YYYY-MM-DD" style="width: 100%;" /></div>
 
-          <div class="kv__k"><label for="book-edit-isbn">ISBN</label></div>
-          <div class="kv__v"><input id="book-edit-isbn" type="text" autocomplete="off" style="width: 100%;" /></div>
-
-          <div class="kv__k"><label for="book-edit-subjects">Subjects</label></div>
-          <div class="kv__v">
-            <textarea id="book-edit-subjects" rows="4" placeholder="One per line, or comma-separated." style="width: 100%;"></textarea>
-            <div class="muted" style="margin-top: 6px;">Stored as a list; this input accepts newline or commas.</div>
-          </div>
         </div>
 
       </form>
@@ -95,11 +87,6 @@
             <span id="book-edit-authors-status" class="muted"></span>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <label for="book-edit-author-new-name" class="muted">Create new</label>
-            <input id="book-edit-author-new-name" type="text" autocomplete="off" placeholder="Author name" style="min-width: 240px; flex: 1;" />
-            <button id="book-edit-author-new-btn" class="button" type="button">Create</button>
-          </div>
         </div>
 
         <div class="kv__k">Series</div>
@@ -109,11 +96,6 @@
             <span id="book-edit-series-status" class="muted"></span>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <label for="book-edit-series-new-name" class="muted">Create new</label>
-            <input id="book-edit-series-new-name" type="text" autocomplete="off" placeholder="Series name" style="min-width: 240px; flex: 1;" />
-            <button id="book-edit-series-new-btn" class="button" type="button">Create</button>
-          </div>
         </div>
 
         <div class="kv__k"><label for="book-edit-series-index">Series index</label></div>
@@ -159,7 +141,6 @@
 
       <div id="book-edit-file-info" class="muted" style="margin-top: 14px;"></div>
       <div class="muted" style="margin-top: 10px;">The stored EPUB file is not edited here. Import another file as a separate book.</div>
-      <div class="muted" style="margin-top: 10px;">Book.isbn is a convenience field and is not automatically updated by identifier edits.</div>
     </div>
   </section>
 {% endblock %}

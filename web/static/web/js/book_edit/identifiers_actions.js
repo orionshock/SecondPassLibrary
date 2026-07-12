@@ -1,5 +1,4 @@
 import {
-  extractApiErrorMessage,
   fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
@@ -22,9 +21,8 @@ export async function refreshIdentifiersContext({
     setStatus(identifiersStatusEl, "", false);
     renderIdentifiersTable({ identifiers: state.identifiers, identifiersEl });
   } catch (e) {
-    console.error("Failed to load identifiers", e);
     setStatus(identifiersStatusEl, "Failed to load.", true);
-    setError(`Failed to load identifiers: ${extractApiErrorMessage(e)}`);
+    setError("Failed to load identifiers. Reload the page and try again.");
     state.identifiers = [];
     renderIdentifiersTable({ identifiers: state.identifiers, identifiersEl });
   }
@@ -33,14 +31,18 @@ export async function refreshIdentifiersContext({
 function identifierPayload(row, selectorPrefix) {
   const schemeEl = row.querySelector(`[${selectorPrefix}="scheme"]`);
   const valueEl = row.querySelector(`[${selectorPrefix}="value"]`);
-  const sourceEl = row.querySelector(`[${selectorPrefix}="source"]`);
-  const primaryEl = row.querySelector(`[${selectorPrefix}="is_primary"]`);
   return {
     scheme: schemeEl && schemeEl.value != null ? String(schemeEl.value).trim() : "",
     value: valueEl && valueEl.value != null ? String(valueEl.value).trim() : "",
-    source: sourceEl && sourceEl.value != null ? String(sourceEl.value).trim() : "",
-    is_primary: !!(primaryEl && primaryEl.checked),
   };
+}
+
+function safeIdentifierError(error, fallback) {
+  const body = error && error.body && typeof error.body === "object" ? error.body : null;
+  const fields = summarizeFieldErrors(body);
+  if (fields) return `${fallback} (${fields})`;
+  if (body && body.detail) return String(body.detail).slice(0, 240);
+  return fallback;
 }
 
 export function bindIdentifierActions({ bookId, identifiersEl, refreshIdentifiers, setError }) {
@@ -73,12 +75,8 @@ export function bindIdentifierActions({ bookId, identifiersEl, refreshIdentifier
         setRowStatus("Added.", false);
         await refreshIdentifiers();
       } catch (e) {
-        console.error("Add identifier failed", e);
         setRowStatus("Add failed.", true);
-        const msg = extractApiErrorMessage(e);
-        const body = e && e.body ? e.body : null;
-        const fields = summarizeFieldErrors(body);
-        setError(fields ? `${msg} (${fields})` : msg);
+        setError(safeIdentifierError(e, "Failed to add identifier."));
       }
       return;
     }
@@ -96,9 +94,8 @@ export function bindIdentifierActions({ bookId, identifiersEl, refreshIdentifier
         setRowStatus("Deleted.", false);
         await refreshIdentifiers();
       } catch (e) {
-        console.error("Delete identifier failed", e);
         setRowStatus("Delete failed.", true);
-        setError(`Failed to delete identifier: ${extractApiErrorMessage(e)}`);
+        setError(safeIdentifierError(e, "Failed to delete identifier."));
       }
       return;
     }
@@ -118,12 +115,8 @@ export function bindIdentifierActions({ bookId, identifiersEl, refreshIdentifier
         setRowStatus("Saved.", false);
         await refreshIdentifiers();
       } catch (e) {
-        console.error("Save identifier failed", e);
         setRowStatus("Save failed.", true);
-        const msg = extractApiErrorMessage(e);
-        const body = e && e.body ? e.body : null;
-        const fields = summarizeFieldErrors(body);
-        setError(fields ? `${msg} (${fields})` : msg);
+        setError(safeIdentifierError(e, "Failed to save identifier."));
       }
     }
   });

@@ -2,20 +2,28 @@ import {
   normalizeDateISO,
   normalizeOptionalString,
   normalizeSeriesIndex,
-  normalizeSubjects,
-  subjectsToTextareaValue,
 } from "./shared.js";
 
 export function applyBookToMetadataForm({ book, dom, selectedAuthors }) {
   dom.titleEl.value = book.title || "";
   dom.subtitleEl.value = book.subtitle != null ? String(book.subtitle) : "";
-  dom.summaryEl.value = book.summary || "";
+  dom.descriptionEl.value = book.description || "";
   dom.publisherEl.value = book.publisher || "";
   dom.languageEl.value = book.language || "";
-  dom.publishedDateEl.value = book.published_date || "";
-  dom.isbnEl.value = book.isbn || "";
-  dom.subjectsEl.value = subjectsToTextareaValue(book.subjects);
-  dom.seriesIndexEl.value = book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
+  const year = book.published_year != null ? String(book.published_year).padStart(4, "0") : "";
+  const month = book.published_month != null ? String(book.published_month).padStart(2, "0") : "";
+  const day = book.published_day != null ? String(book.published_day).padStart(2, "0") : "";
+  const precision = book.published_date_precision || "";
+  dom.publishedDateEl.value =
+    precision === "day" && year && month && day
+      ? `${year}-${month}-${day}`
+      : precision === "month" && year && month
+        ? `${year}-${month}`
+        : precision === "year" && year
+          ? year
+          : "";
+  const seriesIndex = book.series && book.series.series_index != null ? book.series.series_index : "";
+  dom.seriesIndexEl.value = seriesIndex !== "" ? String(seriesIndex) : "";
   // selectedAuthors is tracked separately, but callers typically refresh it from book.authors before calling this.
 }
 
@@ -33,20 +41,25 @@ export function buildBookPatchPayload({ dom, selectedAuthors }) {
     return { error: seriesIndex.error };
   }
 
+  const dateParts = publishedDate
+    ? publishedDate.split("-").map((part) => Number(part))
+    : [];
+
   return {
     payload: {
       title,
       subtitle: (dom.subtitleEl.value || "").trim(),
-      summary: normalizeOptionalString(dom.summaryEl.value),
-      publisher: normalizeOptionalString(dom.publisherEl.value),
-      language: normalizeOptionalString(dom.languageEl.value),
-      published_date: publishedDate,
-      isbn: normalizeOptionalString(dom.isbnEl.value),
-      subjects: normalizeSubjects(dom.subjectsEl.value),
+      description: normalizeOptionalString(dom.descriptionEl.value) || "",
+      publisher: normalizeOptionalString(dom.publisherEl.value) || "",
+      language: normalizeOptionalString(dom.languageEl.value) || "",
+      published_year: dateParts.length ? dateParts[0] : null,
+      published_month: dateParts.length >= 2 ? dateParts[1] : null,
+      published_day: dateParts.length >= 3 ? dateParts[2] : null,
+      published_date_precision:
+        dateParts.length === 3 ? "day" : dateParts.length === 2 ? "month" : dateParts.length === 1 ? "year" : "",
       authors: selectedAuthors.map((a) => String(a.id)).filter(Boolean),
       series: dom.seriesSelectEl.value ? String(dom.seriesSelectEl.value) : null,
       series_index: seriesIndex,
     },
   };
 }
-

@@ -24,7 +24,8 @@ class E2EInstall:
 def e2e_fixture_files() -> dict[str, Path]:
     root = Path(__file__).resolve().parents[2] / "TestFiles"
     return {
-        "calibre_library": root / "CalibreLibrary.zip",
+        "calibre_library_full": root / "FullCalibreLibrary.zip",
+        "calibre_library_small": root / "SmallCalibreLibrary.zip",
         "marginalia_verified": root / "SPL-Marginalia-Verified-Good.json",
         "marginalia_mixed": root / "SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json",
         "marginalia_unmatched": root / "second-pass-unmatched-marginalia.json",

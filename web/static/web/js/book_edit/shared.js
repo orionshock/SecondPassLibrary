@@ -21,8 +21,8 @@ export function normalizeOptionalString(value) {
 export function normalizeDateISO(value) {
   const s = normalizeOptionalString(value);
   if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  return { error: "Published date must be YYYY-MM-DD." };
+  if (/^\d{4}(-\d{2}){0,2}$/.test(s)) return s;
+  return { error: "Published date must be YYYY, YYYY-MM, or YYYY-MM-DD." };
 }
 
 export function normalizeSeriesIndex(value) {

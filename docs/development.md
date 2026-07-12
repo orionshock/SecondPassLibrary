@@ -84,15 +84,16 @@ persistent developer database.
 The `e2e_fixture_files` fixture also exposes these optional local inputs for
 focused import and marginalia scenarios:
 
-- `TestFiles/CalibreLibrary.zip`
+- `TestFiles/FullCalibreLibrary.zip`
+- `TestFiles/SmallCalibreLibrary.zip`
 - `TestFiles/SPL-Marginalia-Verified-Good.json`
 - `TestFiles/SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json`
 - `TestFiles/second-pass-unmatched-marginalia.json`
 
 `TestFiles/` remains ignored and is input-only. Tests that use one of these
-files must skip clearly when it is absent. In particular, the large Calibre ZIP
-should be imported only by a test that needs a populated book library, not by
-every E2E test. Browser artifacts still belong only under
+files must skip clearly when it is absent. Prefer the small Calibre archive for
+focused browser scenarios. The full archive should be imported only by a test
+that specifically needs the larger catalog, not by every E2E test. Browser artifacts still belong only under
 `test-artifacts/playwright/`.
 
 ## Related docs

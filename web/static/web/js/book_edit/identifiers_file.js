@@ -8,7 +8,7 @@ export function renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSerie
   headerAuthorsEl.textContent = authorNames.length ? `Authors: ${authorNames.join(", ")}` : "Authors: (none)";
 
   const seriesName = book && book.series && book.series.name ? String(book.series.name) : "";
-  const seriesIdx = book && book.series_index != null && book.series_index !== "" ? String(book.series_index) : "";
+  const seriesIdx = book && book.series && book.series.series_index != null ? String(book.series.series_index) : "";
   headerSeriesEl.textContent = seriesName ? `Series: ${seriesName}${seriesIdx ? ` ${seriesIdx}` : ""}` : "Series: (none)";
 
   clear(headerFileEl);
@@ -46,14 +46,8 @@ export function renderFileInfo({ book, fileInfoEl }) {
   }
   addRow("Format", file.format ? String(file.format).toUpperCase() : "EPUB");
   addRow("Size", file.file_size != null && file.file_size !== "" ? `${String(file.file_size)} bytes` : "");
-  addRow("Checksum", file.checksum_short ? String(file.checksum_short) : "");
-  if (file.download_url) {
-    const a = el("a", "pill", "Download");
-    a.setAttribute("href", String(file.download_url));
-    addRow("Download", a);
-  } else {
-    addRow("Download", "");
-  }
+  addRow("Checksum", file.checksum ? String(file.checksum) : "");
+  addRow("Source filename", file.source_filename ? String(file.source_filename) : "");
   fileInfoEl.appendChild(kv);
 }
 
@@ -63,7 +57,7 @@ export function renderIdentifiersTable({ identifiers, identifiersEl }) {
   const table = el("table", "ident-table");
   const thead = document.createElement("thead");
   const trh = document.createElement("tr");
-  for (const h of ["Scheme", "Value", "Source", "Primary", "Actions"]) trh.appendChild(el("th", "", h));
+  for (const h of ["Scheme", "Value", "Actions"]) trh.appendChild(el("th", "", h));
   thead.appendChild(trh);
   table.appendChild(thead);
 
@@ -92,24 +86,6 @@ export function renderIdentifiersTable({ identifiers, identifiersEl }) {
     valueInput.value = it && it.value != null ? String(it.value) : "";
     tdValue.appendChild(valueInput);
     tr.appendChild(tdValue);
-
-    const tdSource = document.createElement("td");
-    const sourceInput = document.createElement("input");
-    sourceInput.type = "text";
-    sourceInput.style.width = "100%";
-    sourceInput.setAttribute("data-ident-field", "source");
-    sourceInput.value = it && it.source != null ? String(it.source) : "";
-    tdSource.appendChild(sourceInput);
-    tr.appendChild(tdSource);
-
-    const tdPrimary = document.createElement("td");
-    tdPrimary.style.textAlign = "center";
-    const primaryInput = document.createElement("input");
-    primaryInput.type = "checkbox";
-    primaryInput.setAttribute("data-ident-field", "is_primary");
-    primaryInput.checked = !!(it && it.is_primary);
-    tdPrimary.appendChild(primaryInput);
-    tr.appendChild(tdPrimary);
 
     const tdActions = document.createElement("td");
     const saveBtn = el("button", "button", "Save");
@@ -147,23 +123,6 @@ export function renderIdentifiersTable({ identifiers, identifiersEl }) {
   valueInput.setAttribute("data-ident-field", "value");
   tdAValue.appendChild(valueInput);
   trAdd.appendChild(tdAValue);
-
-  const tdASource = document.createElement("td");
-  const sourceInput = document.createElement("input");
-  sourceInput.type = "text";
-  sourceInput.style.width = "100%";
-  sourceInput.setAttribute("data-ident-field", "source");
-  tdASource.appendChild(sourceInput);
-  trAdd.appendChild(tdASource);
-
-  const tdAPrimary = document.createElement("td");
-  tdAPrimary.style.textAlign = "center";
-  const primaryInput = document.createElement("input");
-  primaryInput.type = "checkbox";
-  primaryInput.setAttribute("data-ident-field", "is_primary");
-  primaryInput.checked = false;
-  tdAPrimary.appendChild(primaryInput);
-  trAdd.appendChild(tdAPrimary);
 
   const tdAActions = document.createElement("td");
   const addBtn = el("button", "button", "Add");
