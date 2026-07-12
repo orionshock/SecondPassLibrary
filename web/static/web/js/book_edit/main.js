@@ -51,7 +51,7 @@ function syncBookEditBreadcrumbs({ bookId, title }) {
 
 export async function initBookEdit() {
   const me = await loadMeAndInitShell();
-  initTabs(document, { defaultTab: "metadata" });
+  initTabs(document, { defaultTab: "book-details" });
 
   const headerEl = $("#book-edit-header");
   const headerTitleEl = $("#book-edit-header-title");

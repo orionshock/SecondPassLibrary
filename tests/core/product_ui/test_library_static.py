@@ -89,11 +89,13 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'id="book-edit-header"')
         self.assertContains(response, 'id="book-edit"')
         self.assertContains(response, f'data-book-id="{book_id}"')
-        self.assertContains(response, 'data-tab="metadata"')
+        self.assertContains(response, 'data-tab="book-details"')
+        self.assertContains(response, 'data-tab="catalog"')
         self.assertContains(response, 'data-tab="authors"')
         self.assertContains(response, 'data-tab="shelves"')
         self.assertContains(response, 'data-tab="idents"')
-        self.assertContains(response, 'id="tab-metadata"')
+        self.assertContains(response, 'id="tab-book-details"')
+        self.assertContains(response, 'id="tab-catalog"')
         self.assertContains(response, 'id="tab-authors"')
         self.assertContains(response, 'id="tab-shelves"')
         self.assertContains(response, 'id="tab-idents"')
@@ -132,6 +134,76 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'aria-current="page"')
         self.assertContains(response, "Edit")
         self.assertNotContains(response, "Back to Book")
+
+    def test_book_edit_tabs_group_fields_without_duplication(self):
+        template = Path("web/templates/web/library/book_edit.html").read_text(encoding="utf-8")
+
+        tab_keys = [
+            'data-tab="book-details"',
+            'data-tab="catalog"',
+            'data-tab="authors"',
+            'data-tab="shelves"',
+            'data-tab="idents"',
+        ]
+        positions = [template.index(key) for key in tab_keys]
+        self.assertEqual(positions, sorted(positions))
+
+        details_panel = template.split('id="tab-book-details"', 1)[1].split(
+            'id="tab-catalog"', 1
+        )[0]
+        catalog_panel = template.split('id="tab-catalog"', 1)[1].split(
+            'id="tab-authors"', 1
+        )[0]
+        authors_panel = template.split('id="tab-authors"', 1)[1].split(
+            '{% if advanced_library_groups_enabled %}', 1
+        )[0]
+
+        for field_id in ["book-edit-title", "book-edit-subtitle", "book-edit-description"]:
+            self.assertIn(f'id="{field_id}"', details_panel)
+        for field_id in [
+            "book-edit-publisher",
+            "book-edit-language",
+            "book-edit-published-date",
+            "book-edit-catalog-tags",
+            "book-edit-catalog-tag-input",
+        ]:
+            self.assertIn(f'id="{field_id}"', catalog_panel)
+        for field_id in [
+            "book-edit-authors-selected",
+            "book-edit-author-add-select",
+            "book-edit-series-select",
+            "book-edit-series-index",
+        ]:
+            self.assertIn(f'id="{field_id}"', authors_panel)
+
+        self.assertIn("This is the human-facing book identity.", details_panel)
+        self.assertIn("This is the catalog/facet metadata bucket.", catalog_panel)
+        self.assertIn(
+            "This deserves to stay together because it controls major browse axes and display identity.",
+            authors_panel,
+        )
+        self.assertIn('id="tab-shelves"', template)
+        self.assertIn('id="book-edit-shelves"', template)
+        self.assertIn('id="tab-idents"', template)
+        self.assertIn('id="book-edit-identifiers"', template)
+        self.assertIn('id="book-edit-file-info"', template)
+        self.assertIn('role="tabpanel" aria-labelledby="book-edit-tab-details"', template)
+        self.assertIn('aria-controls="tab-catalog"', template)
+
+        field_ids = [
+            "book-edit-title",
+            "book-edit-subtitle",
+            "book-edit-description",
+            "book-edit-publisher",
+            "book-edit-language",
+            "book-edit-published-date",
+            "book-edit-catalog-tags",
+            "book-edit-authors-selected",
+            "book-edit-series-select",
+            "book-edit-series-index",
+        ]
+        for field_id in field_ids:
+            self.assertEqual(template.count(f'id="{field_id}"'), 1, field_id)
 
     def test_authenticated_book_edit_shows_group_controls_when_enabled(self):
         server_settings.enable_advanced_library_groups()
