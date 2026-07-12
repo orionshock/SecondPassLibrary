@@ -1,18 +1,24 @@
 from __future__ import annotations
 
+import uuid
+
 from core.server_settings import get_server_setting, set_server_setting
 
 
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
 DEFAULT_PUBLIC_GROUP_NAME = "Common Room"
-DEFAULT_PUBLIC_GROUP_DESCRIPTION = "Main Public Library Room for everyone"
+DEFAULT_PUBLIC_GROUP_DESCRIPTION = (
+    "Recreated Public Group. If you are seeing this, something broke and you "
+    "likely have more cleanup to complete in the admin console."
+)
 
 
 def get_public_group_id() -> str | None:
     value = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
-    if value is None:
+    public_id = _normalized_group_id(value)
+    if public_id is None:
         return None
-    return str(value)
+    return public_id
 
 
 def is_public_group_id(group_id) -> bool:
@@ -44,3 +50,12 @@ def get_public_group():
         description="LibraryReWrite2607 Public/Common Room group id.",
     )
     return group
+
+
+def _normalized_group_id(value) -> str | None:
+    if value is None:
+        return None
+    try:
+        return str(uuid.UUID(str(value)))
+    except (AttributeError, TypeError, ValueError):
+        return None

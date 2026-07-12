@@ -44,8 +44,11 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
         user_ids = list(group.memberships.values_list("user_id", flat=True))
         book_ids = list(group.book_assignments.values_list("book_id", flat=True))
         deleted_count, _ = group.delete()
-        _restore_users_without_groups(user_ids)
-        _restore_books_without_groups(book_ids, added_by=actor)
+        public_group = _get_or_create_public_group() if user_ids or book_ids else None
+        _restore_users_without_groups(user_ids, public_group=public_group)
+        _restore_books_without_groups(
+            book_ids, added_by=actor, public_group=public_group
+        )
     return bool(deleted_count)
 
 
@@ -81,15 +84,19 @@ def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
     return bool(deleted)
 
 
-def ensure_user_public_membership(*, user) -> LibraryGroupMembership:
-    group = _get_or_create_public_group()
+def ensure_user_public_membership(
+    *, user, public_group: LibraryGroup | None = None
+) -> LibraryGroupMembership:
+    group = public_group or _get_or_create_public_group()
     membership, _created = LibraryGroupMembership.objects.get_or_create(user=user, group=group)
     return membership
 
 
-def ensure_user_has_at_least_one_group(*, user) -> None:
+def ensure_user_has_at_least_one_group(
+    *, user, public_group: LibraryGroup | None = None
+) -> None:
     if not LibraryGroupMembership.objects.filter(user=user).exists():
-        ensure_user_public_membership(user=user)
+        ensure_user_public_membership(user=user, public_group=public_group)
 
 
 def add_book_to_group(
@@ -110,31 +117,41 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
     return bool(deleted)
 
 
-def ensure_book_public_assignment(*, book, added_by=None) -> BookGroupAssignment:
-    group = _get_or_create_public_group()
+def ensure_book_public_assignment(
+    *, book, added_by=None, public_group: LibraryGroup | None = None
+) -> BookGroupAssignment:
+    group = public_group or _get_or_create_public_group()
     return _create_book_assignment(book=book, group=group, added_by=added_by)
 
 
-def ensure_book_has_at_least_one_group(*, book, added_by=None) -> None:
+def ensure_book_has_at_least_one_group(
+    *, book, added_by=None, public_group: LibraryGroup | None = None
+) -> None:
     if not BookGroupAssignment.objects.filter(book=book).exists():
-        ensure_book_public_assignment(book=book, added_by=added_by)
+        ensure_book_public_assignment(
+            book=book, added_by=added_by, public_group=public_group
+        )
 
 
 def bootstrap_public_group_membership_and_assignments() -> None:
     _get_or_create_public_group()
 
 
-def _restore_users_without_groups(user_ids: list) -> None:
+def _restore_users_without_groups(
+    user_ids: list, *, public_group: LibraryGroup | None = None
+) -> None:
     for user_id in user_ids:
         if not LibraryGroupMembership.objects.filter(user_id=user_id).exists():
-            group = _get_or_create_public_group()
+            group = public_group or _get_or_create_public_group()
             LibraryGroupMembership.objects.get_or_create(user_id=user_id, group=group)
 
 
-def _restore_books_without_groups(book_ids: list, *, added_by=None) -> None:
+def _restore_books_without_groups(
+    book_ids: list, *, added_by=None, public_group: LibraryGroup | None = None
+) -> None:
     for book_id in book_ids:
         if not BookGroupAssignment.objects.filter(book_id=book_id).exists():
-            group = _get_or_create_public_group()
+            group = public_group or _get_or_create_public_group()
             BookGroupAssignment.objects.get_or_create(
                 book_id=book_id,
                 group=group,

@@ -20,6 +20,7 @@ from core.server_settings import (
 )
 from library.models import LibraryGroup
 from library.groups.public_group import (
+    DEFAULT_PUBLIC_GROUP_DESCRIPTION,
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
     get_public_group,
@@ -108,6 +109,7 @@ class ServerSettingsServiceTests(TestCase):
         public = get_public_group()
         self.assertNotEqual(public.id, ordinary.id)
         self.assertEqual(public.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(public.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
 
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         self.assertEqual(setting.value, str(public.id))
@@ -123,6 +125,7 @@ class ServerSettingsServiceTests(TestCase):
 
         public = get_public_group()
         self.assertEqual(public.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(public.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         self.assertEqual(setting.value, str(public.id))
 
@@ -136,6 +139,7 @@ class ServerSettingsServiceTests(TestCase):
         repaired = get_public_group()
         self.assertNotEqual(repaired.id, existing.id)
         self.assertEqual(repaired.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(repaired.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
         self.assertEqual(
             ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value,
             str(repaired.id),
@@ -151,6 +155,7 @@ class ServerSettingsServiceTests(TestCase):
         repaired = get_public_group()
         self.assertNotEqual(repaired.id, existing.id)
         self.assertEqual(repaired.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(repaired.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
         self.assertEqual(
             ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING).value,
             str(repaired.id),
@@ -201,46 +206,53 @@ class ServerSettingsServiceTests(TestCase):
         self.assertTrue(is_public_group(public))
         self.assertFalse(is_public_group(ordinary))
 
-    def test_public_group_setting_save_triggers_repair_invalid_string(self):
+    def test_explicit_public_group_service_repairs_saved_invalid_string_setting(self):
         public = get_public_group()
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         setting.value = "0"
         setting.save(update_fields=["value", "updated_at"])
 
+        repaired = get_public_group()
         setting.refresh_from_db()
-        self.assertNotEqual(setting.value, str(public.id))
-        repaired = LibraryGroup.objects.get(pk=setting.value)
+        self.assertEqual(setting.value, str(repaired.id))
+        self.assertNotEqual(repaired.id, public.id)
         self.assertEqual(repaired.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(repaired.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
 
-    def test_public_group_setting_save_triggers_repair_invalid_type(self):
+    def test_explicit_public_group_service_repairs_saved_invalid_type_setting(self):
         public = get_public_group()
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         setting.value = 0
         setting.save(update_fields=["value", "updated_at"])
 
+        repaired = get_public_group()
         setting.refresh_from_db()
-        self.assertNotEqual(setting.value, str(public.id))
-        repaired = LibraryGroup.objects.get(pk=setting.value)
+        self.assertEqual(setting.value, str(repaired.id))
+        self.assertNotEqual(repaired.id, public.id)
         self.assertEqual(repaired.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(repaired.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
 
-    def test_public_group_setting_delete_triggers_repair(self):
+    def test_explicit_public_group_service_repairs_deleted_setting(self):
         public = get_public_group()
         ServerSetting.objects.filter(key=PUBLIC_GROUP_ID_SETTING).delete()
 
+        repaired_group = get_public_group()
         repaired = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
-        self.assertNotEqual(repaired.value, str(public.id))
-        repaired_group = LibraryGroup.objects.get(pk=repaired.value)
+        self.assertEqual(repaired.value, str(repaired_group.id))
+        self.assertNotEqual(repaired_group.id, public.id)
         self.assertEqual(repaired_group.name, DEFAULT_PUBLIC_GROUP_NAME)
+        self.assertEqual(repaired_group.description, DEFAULT_PUBLIC_GROUP_DESCRIPTION)
 
-    def test_is_public_group_repairs_corrupted_setting(self):
+    def test_explicit_public_group_service_repairs_corrupted_setting_for_public_check(
+        self,
+    ):
         public = get_public_group()
         other = LibraryGroup.objects.create(name="Other")
 
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         setting.value = []
         setting.save(update_fields=["value", "updated_at"])
-        setting.refresh_from_db()
-        repaired = LibraryGroup.objects.get(pk=setting.value)
+        repaired = get_public_group()
 
         self.assertFalse(is_public_group(public))
         self.assertTrue(is_public_group(repaired))
