@@ -310,6 +310,13 @@ Invalid request.
 Failed.
 ```
 
+### Logging
+
+* Use `logging.getLogger(__name__)` only where logs have operational or diagnostic value.
+* Prefer `DEBUG` for expected fallbacks, `INFO` for operator-level summaries, `WARNING` for recoverable/self-healed problems, and `ERROR` for action-blocking failures.
+* Never log secrets, tokens, passwords, raw uploads, unsafe archive paths, or routine request success.
+* For runtime changes, report whether logging was warranted.
+
 ## Testing Rules
 
 Every meaningful change should include or update tests.

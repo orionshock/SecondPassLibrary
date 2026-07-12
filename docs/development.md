@@ -30,6 +30,40 @@ build step.
 - [Metadata and identifiers](metadata.md)
 - [Production startup](deployment.md)
 
+## Application logging
+
+Use the standard Python logging module with a module-level logger:
+`logging.getLogger(__name__)`. Add a log only when it gives an operator or
+developer useful information about runtime behavior. A touched file does not
+need a new log merely because it was changed.
+
+Choose the least severe useful level:
+
+- `DEBUG`: expected ignored edge cases, optional enrichment that was skipped,
+  and fallback paths useful during development. These are normal conditions,
+  not operator alerts.
+- `INFO`: successful operator-level actions and concise management-command,
+  import, or cleanup summaries. Do not use it for routine request success.
+- `WARNING`: recoverable corruption, self-healing, ignored unsafe archive
+  members, or failure of a best-effort feature after the requested primary
+  action succeeded.
+- `ERROR`: an unexpected failure that blocks the requested action. Preserve
+  useful exception context where it helps diagnose the failure, without
+  exposing sensitive input.
+
+Never log secrets, passwords, authentication or client tokens, raw uploaded
+content, or unsafe ZIP member paths. For unsafe archive input, log a safe
+summary or count rather than repeating attacker-controlled path text. Avoid
+high-volume per-request success messages; Django and the serving stack already
+provide request-level diagnostics where configured.
+
+When reviewing a runtime change, explicitly decide whether logging would help
+operate or diagnose it. If not, leave the code quiet and state in the
+implementation report that no useful logging was warranted. Deployment output
+continues to use standard stdout/stderr logging as described in
+[Production startup](deployment.md); application code should not invent its
+own file-log directory.
+
 ## Media serving (dev)
 
 Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/media/`) and stored under `MEDIA_ROOT` (default: `userdata/media`).
