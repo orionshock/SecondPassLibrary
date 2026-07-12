@@ -7,7 +7,8 @@ from core.server_settings import get_server_setting, set_server_setting
 
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
 DEFAULT_PUBLIC_GROUP_NAME = "Common Room"
-DEFAULT_PUBLIC_GROUP_DESCRIPTION = (
+DEFAULT_PUBLIC_GROUP_DESCRIPTION = "Main Public Library Room for everyone"
+RECOVERED_PUBLIC_GROUP_DESCRIPTION = (
     "Recreated Public Group. If you are seeing this, something broke and you "
     "likely have more cleanup to complete in the admin console."
 )
@@ -42,7 +43,7 @@ def get_public_group():
 
     group = LibraryGroup.objects.create(
         name=DEFAULT_PUBLIC_GROUP_NAME,
-        description=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
+        description=RECOVERED_PUBLIC_GROUP_DESCRIPTION,
     )
     set_server_setting(
         key=PUBLIC_GROUP_ID_SETTING,

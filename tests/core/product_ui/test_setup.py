@@ -1,9 +1,11 @@
 """Setup flow tests for first-run product UI."""
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from accounts.models import UserProfile
 from core import server_settings
+from core.server_settings import clear_server_settings_cache
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroupMembership
 
@@ -24,6 +26,10 @@ class FirstRunProductUiTests(TestCase):
         "password1": "Correct-Horse-Battery-47",
         "password2": "Correct-Horse-Battery-47",
     }
+
+    def setUp(self):
+        cache.clear()
+        clear_server_settings_cache()
 
     def test_setup_page_is_available_without_active_owner(self):
         response = self.client.get("/setup/")
