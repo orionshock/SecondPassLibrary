@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from shelves.library_hooks import SHELVES_GROUP_BOOK_REMOVAL_PENDING_MESSAGE
-
 from library.models import BookGroupAssignment
 from tests.library.groups.book_assignment_helpers import LibraryGroupBookAssignmentApiTestCase
 
@@ -31,21 +29,20 @@ class LibraryReWrite2607GroupBookAssignmentDeleteTests(
             BookGroupAssignment.objects.filter(book=self.hidden_book, group=self.hidden).exists()
         )
 
-    def test_existing_assignment_returns_409_while_shelves_hook_is_pending(self):
+    def test_existing_assignment_delete_returns_204(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
         response = self.client.delete(self.group_book_detail_url())
 
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(response.json()["detail"], SHELVES_GROUP_BOOK_REMOVAL_PENDING_MESSAGE)
+        self.assertEqual(response.status_code, 204)
 
-    def test_hook_failure_leaves_assignment_in_place(self):
+    def test_existing_assignment_delete_removes_assignment(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
         response = self.client.delete(self.group_book_detail_url())
 
-        self.assertEqual(response.status_code, 409)
-        self.assertTrue(
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(
             BookGroupAssignment.objects.filter(book=self.club_book, group=self.club).exists()
         )
 

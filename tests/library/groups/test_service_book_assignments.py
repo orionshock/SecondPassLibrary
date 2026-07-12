@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -14,7 +13,7 @@ from library.groups.services import (
     remove_book_from_group,
 )
 from library.models import BookGroupAssignment
-from shelves.library_hooks import SHELVES_GROUP_BOOK_REMOVAL_PENDING_MESSAGE
+from shelves.models import Shelf, ShelfItem
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
@@ -46,20 +45,40 @@ class LibraryReWrite2607BookAssignmentServiceTests(LibraryGroupServiceTestCase):
         add_book_to_group(book=self.book, group=group, actor=self.actor)
         add_book_to_group(book=self.book, group=other, actor=self.actor)
 
-        with patch("library.groups.services.remove_book_from_group_owned_shelves"):
-            removed = remove_book_from_group(book=self.book, group=group, actor=self.actor)
+        removed = remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
         self.assertTrue(removed)
         self.assertFalse(BookGroupAssignment.objects.filter(book=self.book, group=group).exists())
         self.assertTrue(BookGroupAssignment.objects.filter(book=self.book, group=other).exists())
 
-    def test_remove_book_from_group_fails_loudly_until_shelves_reconnect(self):
+    def test_remove_book_from_group_cleans_same_group_shelf_items(self):
+        group = create_library_group(name="Club")
+        add_book_to_group(book=self.book, group=group, actor=self.actor)
+        shelf = Shelf.objects.create(
+            name="Club Shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=group,
+            created_by=self.actor,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf, book=self.book, position=0, added_by=self.actor
+        )
+
+        removed = remove_book_from_group(book=self.book, group=group, actor=self.actor)
+
+        self.assertTrue(removed)
+        self.assertFalse(ShelfItem.objects.filter(shelf=shelf, book=self.book).exists())
+
+    def test_remove_book_from_group_rolls_back_assignment_when_hook_fails(self):
         group = create_library_group(name="Club")
         add_book_to_group(book=self.book, group=group, actor=self.actor)
 
         with self.assertRaisesMessage(
-            ImproperlyConfigured,
-            SHELVES_GROUP_BOOK_REMOVAL_PENDING_MESSAGE,
+            RuntimeError,
+            "hook failed",
+        ), patch(
+            "library.groups.services.remove_book_from_group_owned_shelves",
+            side_effect=RuntimeError("hook failed"),
         ):
             remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
@@ -70,8 +89,7 @@ class LibraryReWrite2607BookAssignmentServiceTests(LibraryGroupServiceTestCase):
         group = create_library_group(name="Club")
         add_book_to_group(book=self.book, group=group, actor=self.actor)
 
-        with patch("library.groups.services.remove_book_from_group_owned_shelves"):
-            remove_book_from_group(book=self.book, group=group, actor=self.actor)
+        remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
         self.assertTrue(BookGroupAssignment.objects.filter(book=self.book, group=self.public).exists())
 
@@ -100,8 +118,7 @@ class LibraryReWrite2607BookAssignmentServiceTests(LibraryGroupServiceTestCase):
         ensure_book_public_assignment(book=self.book, added_by=self.actor)
         add_book_to_group(book=self.book, group=group, actor=self.actor)
 
-        with patch("library.groups.services.remove_book_from_group_owned_shelves"):
-            remove_book_from_group(book=self.book, group=group, actor=self.actor)
+        remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
         self.assertEqual(BookGroupAssignment.objects.filter(book=self.book, group=self.public).count(), 1)
 
@@ -114,8 +131,7 @@ class LibraryReWrite2607BookAssignmentServiceTests(LibraryGroupServiceTestCase):
             description="LibraryReWrite2607 Public/Common Room group id.",
         )
 
-        with patch("library.groups.services.remove_book_from_group_owned_shelves"):
-            remove_book_from_group(book=self.book, group=group, actor=self.actor)
+        remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
         assignment = BookGroupAssignment.objects.get(book=self.book)
         self.assertTrue(is_public_group(assignment.group))
