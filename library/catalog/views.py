@@ -64,6 +64,7 @@ class BookDetailView(RetrieveUpdateAPIView):
         series = data.pop("series", None)
         series_index_supplied = "series_index" in data
         series_index = data.pop("series_index", None)
+        identifiers = data.pop("identifiers", None)
         try:
             update_book_metadata(
                 book=book,
@@ -73,6 +74,7 @@ class BookDetailView(RetrieveUpdateAPIView):
                 series_supplied=series_supplied,
                 series_index=series_index,
                 series_index_supplied=series_index_supplied,
+                identifiers=identifiers,
             )
         except DjangoValidationError as exc:
             raise serializers.ValidationError(

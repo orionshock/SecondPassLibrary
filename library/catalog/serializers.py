@@ -85,6 +85,29 @@ class BookIdentifierWriteSerializer(serializers.Serializer):
     value = serializers.CharField(max_length=512)
 
 
+class SeriesReferenceField(serializers.Field):
+    default_error_messages = {
+        "invalid": "Use an existing series id or an object with a name.",
+        "not_found": "Series not found.",
+    }
+
+    def to_internal_value(self, data):
+        if data is None:
+            return None
+        if isinstance(data, dict):
+            name = str(data.get("name", "")).strip()
+            if not name or len(name) > 255:
+                self.fail("invalid")
+            return {"name": name}
+        try:
+            return Series.objects.get(pk=data)
+        except (Series.DoesNotExist, TypeError, ValueError):
+            self.fail("not_found")
+
+    def to_representation(self, value):
+        raise NotImplementedError
+
+
 class BookFileSerializer(serializers.Serializer):
     format = serializers.CharField(source="file_format")
     file_size = serializers.IntegerField(allow_null=True)
@@ -181,10 +204,11 @@ class BookUpdateSerializer(serializers.Serializer):
         required=False,
     )
     authors = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), many=True, required=False)
-    series = serializers.PrimaryKeyRelatedField(queryset=Series.objects.all(), required=False, allow_null=True)
+    series = SeriesReferenceField(required=False, allow_null=True)
     series_index = serializers.DecimalField(
         max_digits=8,
         decimal_places=2,
         required=False,
         allow_null=True,
     )
+    identifiers = BookIdentifierWriteSerializer(many=True, required=False)

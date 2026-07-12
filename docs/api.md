@@ -417,12 +417,7 @@ Rules:
 
 - Authors: `GET /api/v1/library/authors/` (paginated), `GET /api/v1/library/authors/<id>/`
 - Series: `GET /api/v1/library/series/` (paginated), `GET /api/v1/library/series/<id>/`
-- Books: `GET /api/v1/library/books/` (paginated), `GET /api/v1/library/books/<id>/`
-- Book identifiers (book-scoped):
-  - `GET /api/v1/library/books/<book_id>/identifiers/`
-  - `POST /api/v1/library/books/<book_id>/identifiers/`
-  - `PATCH /api/v1/library/books/<book_id>/identifiers/<identifier_id>/`
-  - `DELETE /api/v1/library/books/<book_id>/identifiers/<identifier_id>/`
+- Books: `GET /api/v1/library/books/` (paginated), `GET/PATCH /api/v1/library/books/<id>/`
 
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 - `GET /api/v1/library/groups/<group_id>/books/`
@@ -541,11 +536,15 @@ Book payload notes:
 - For Readers, including readers with group curator flags, `groups[]` includes only groups the caller can view (Public or direct membership).
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; raw book media such as `/media/books/...` is not public and EPUB/book content should be delivered only through authenticated app/API endpoints.
-- Book write shape: `authors` is a list of Author ids; `series` is a Series id or `null`.
+- Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.
-- `identifiers[]` items include `id` and remain read-only on the Book payload; mutate via the book-scoped identifier endpoints.
-- Identifier editing does not automatically update `Book.isbn` (edit `isbn` directly if desired).
+- `identifiers[]` response items include `id`, `scheme`, and `value`.
+- Book PATCH accepts `identifiers` as a complete replacement list of
+  `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
+  preserves existing rows; `identifiers: []` clears them.
+- Metadata, authors, BookSeries relationship data, and identifiers are updated
+  transactionally through the single Book detail PATCH endpoint.
 
 ## Imports
 

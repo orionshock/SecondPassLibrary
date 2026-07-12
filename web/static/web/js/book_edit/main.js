@@ -80,6 +80,7 @@ export async function initBookEdit() {
   const authorAddBtnEl = $("#book-edit-author-add-btn");
 
   const seriesSelectEl = $("#book-edit-series-select");
+  const seriesNewEl = $("#book-edit-series-new");
   const seriesStatusEl = $("#book-edit-series-status");
   const seriesIndexEl = $("#book-edit-series-index");
 
@@ -130,6 +131,7 @@ export async function initBookEdit() {
     !authorAddSelectEl ||
     !authorAddBtnEl ||
     !seriesSelectEl ||
+    !seriesNewEl ||
     !seriesStatusEl ||
     !seriesIndexEl ||
     !shelvesStatusEl ||
@@ -179,6 +181,7 @@ export async function initBookEdit() {
     publishedDateEl,
     seriesIndexEl,
     seriesSelectEl,
+    seriesNewEl,
   };
 
   const state = {
@@ -201,11 +204,12 @@ export async function initBookEdit() {
   }
 
   const refreshIdentifiers = () =>
-    refreshIdentifiersContext({ bookId, identifiersStatusEl, identifiersEl, state, setError });
+    refreshIdentifiersContext({ identifiersStatusEl, identifiersEl, state });
 
   async function refreshBook() {
     state.book = await fetchJSON(`/api/v1/library/books/${encodeURIComponent(String(bookId))}/`);
     state.selectedAuthors = uniqueById(Array.isArray(state.book.authors) ? state.book.authors : []);
+    state.identifiers = Array.isArray(state.book.identifiers) ? state.book.identifiers.slice() : [];
     state.groups =
       groupsFeatureEnabled && Array.isArray(state.book.groups) ? state.book.groups : [];
 
@@ -287,7 +291,7 @@ export async function initBookEdit() {
     syncGroupsAddOptions({ allGroups: state.allGroups, groups: state.groups, groupsAddSelectEl, groupsAddBtnEl });
   }
 
-  await refreshIdentifiers();
+  refreshIdentifiers();
 
   bindShelfActions({ shelvesEl, shelvesStatusEl, refreshShelves });
   bindAuthorSeriesActions({
@@ -296,6 +300,7 @@ export async function initBookEdit() {
     authorAddSelectEl,
     authorAddBtnEl,
     seriesSelectEl,
+    seriesNewEl,
     seriesIndexEl,
     headerTitleEl,
     headerAuthorsEl,
@@ -314,13 +319,23 @@ export async function initBookEdit() {
       setError,
     });
   }
-  bindIdentifierActions({ bookId, identifiersEl, refreshIdentifiers, setError });
+  bindIdentifierActions({
+    identifiersEl,
+    refreshIdentifiers,
+    state,
+    setError,
+    markDirty: () => setSaved(false),
+  });
 
   async function saveBook() {
     setError("");
     setSaved(false);
 
-    const built = buildBookPatchPayload({ dom: { ...dom, seriesSelectEl }, selectedAuthors: state.selectedAuthors });
+    const built = buildBookPatchPayload({
+      dom: { ...dom, seriesSelectEl, seriesNewEl },
+      selectedAuthors: state.selectedAuthors,
+      identifiers: state.identifiers,
+    });
     if (built && built.error) {
       setError(built.error);
       return;
@@ -341,10 +356,14 @@ export async function initBookEdit() {
         body: JSON.stringify(payload),
       });
       state.book = updated;
+      if (updated.series && updated.series.id) {
+        state.allSeries = uniqueById([...state.allSeries, updated.series]);
+      }
+      seriesNewEl.value = "";
       setSaved(true);
       setText(saveStatusEl, "");
       await refreshBook();
-      await refreshIdentifiers();
+      refreshIdentifiers();
     } catch (e) {
       setError(safeBookEditError(e, "Failed to save book."));
     } finally {

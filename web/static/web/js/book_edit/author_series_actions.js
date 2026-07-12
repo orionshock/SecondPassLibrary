@@ -18,6 +18,7 @@ export function bindAuthorSeriesActions({
   authorAddSelectEl,
   authorAddBtnEl,
   seriesSelectEl,
+  seriesNewEl,
   seriesIndexEl,
   headerTitleEl,
   headerAuthorsEl,
@@ -60,9 +61,18 @@ export function bindAuthorSeriesActions({
   });
 
   seriesSelectEl.addEventListener("change", () => {
+    if (seriesSelectEl.value) seriesNewEl.value = "";
     const sid = seriesSelectEl.value || "";
     if (state.book) {
       state.book.series = sid ? state.allSeries.find((s) => String(s.id) === String(sid)) : null;
+    }
+    rerenderHeader({ state, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
+  });
+  seriesNewEl.addEventListener("input", () => {
+    const name = (seriesNewEl.value || "").trim();
+    if (name) seriesSelectEl.value = "";
+    if (state.book) {
+      state.book.series = name ? { name, series_index: seriesIndexEl.value || null } : null;
     }
     rerenderHeader({ state, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
   });

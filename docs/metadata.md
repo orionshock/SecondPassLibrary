@@ -10,15 +10,16 @@ Notes:
 - `Book.subtitle` may be blank.
 - Series data is represented by `BookSeries`, which links `Book` to `Series`
   and stores `series_index`.
-- `BookIdentifier` is editable bibliographic metadata (scheme/value/source/is_primary) and does not automatically rewrite `Book.isbn`.
+- `BookIdentifier` is Book-owned editable bibliographic metadata with a public
+  `scheme`/`value` shape and an internal normalized value for uniqueness.
 - Fileless Books and missing physical EPUB files are repair states, not normal
   product states.
 
 ## Identifiers
 
-- `Book.isbn` is a convenience/display field (prefer ISBN-13 when available), not the only identifier.
 - `BookIdentifier` stores external/source identifiers (ISBNs and non-ISBN identifiers like ASIN/DOI/OCLC/LCCN/Open Library IDs/Calibre IDs/EPUB unique identifiers/URI/URN/etc).
-- Identifiers imported from EPUB metadata use `source=epub`.
+- Book edits replace identifiers through `PATCH /api/v1/library/books/<book_id>/`.
+  Omitting the field preserves existing identifiers; an empty list clears them.
 
 ## Import/cleanup philosophy
 

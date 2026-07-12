@@ -27,7 +27,7 @@ def test_browser_completes_setup_and_opens_seeded_install(
     expect(page.get_by_role("heading", name="Shared Shelves")).to_be_visible()
 
 
-def test_book_edit_uses_uuid_identifier_route_and_renders_owned_file(
+def test_book_edit_uses_book_patch_state_and_renders_owned_file(
     page: Page,
     e2e_install,
     isolated_runtime_paths,
@@ -48,11 +48,7 @@ def test_book_edit_uses_uuid_identifier_route_and_renders_owned_file(
     expect(page.get_by_role("heading", name="Browser File Contract")).to_be_visible()
     page.get_by_role("button", name="Identifiers & File Info").click()
 
-    expected_url = (
-        f"{e2e_install.base_url}/api/v1/library/books/"
-        f"{file_backed.book.id}/identifiers/"
-    )
     expect(page.get_by_text("browser-file-contract.epub", exact=True)).to_be_visible()
     expect(page.get_by_text("EPUB", exact=True).last).to_be_visible()
     expect(page.locator("#book-edit-error")).not_to_contain_text("<!DOCTYPE html>")
-    assert expected_url in identifier_requests
+    assert identifier_requests == []

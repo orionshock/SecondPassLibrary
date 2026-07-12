@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from library.imports.normalization import normalize_identifier
-from library.models import BookIdentifier
+from library.models import BookIdentifier, BookSeries, Series
 from tests.library.helpers import LibraryCatalogApiFixtureMixin
 
 
@@ -70,29 +70,105 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual([author["id"] for author in payload["authors"]], [str(self.alpha.id)])
         self.assertEqual(payload["series"]["id"], str(self.second_series.id))
         self.assertEqual(payload["series"]["series_index"], "4.50")
+        self.assertEqual(BookIdentifier.objects.filter(book=self.visible_one).count(), 1)
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
 
-    def test_book_scoped_identifier_crud_uses_uuid_routes_and_enforces_editor_role(self):
-        url = f"/api/v1/library/books/{self.visible_one.id}/identifiers/"
-        listed = self.client.get(url)
-        denied = self.client.post(url, {"scheme": "doi", "value": "10.1000/reader"})
-
-        self.assertEqual(listed.status_code, 200)
-        self.assertEqual(listed.json()[0]["id"], str(self.identifier.id))
-        self.assertEqual(denied.status_code, 403)
-
+    def test_librarian_patch_creates_and_assigns_new_series(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
-        created = self.client.post(url, {"scheme": "doi", "value": "https://doi.org/10.1000/edit"})
-        self.assertEqual(created.status_code, 201)
-        identifier_id = created.json()["id"]
 
-        item_url = f"{url}{identifier_id}/"
-        updated = self.client.patch(
-            item_url,
-            data={"scheme": "doi", "value": "10.1000/updated"},
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"series": {"name": "A Newly Entered Series"}, "series_index": "1.00"},
             content_type="application/json",
         )
-        self.assertEqual(updated.status_code, 200)
-        self.assertEqual(updated.json()["value"], "10.1000/updated")
-        self.assertEqual(self.client.delete(item_url).status_code, 204)
-        self.assertFalse(BookIdentifier.objects.filter(pk=identifier_id).exists())
+
+        self.assertEqual(response.status_code, 200)
+        created = Series.objects.get(name="A Newly Entered Series")
+        link = BookSeries.objects.get(book=self.visible_one)
+        self.assertEqual(link.series, created)
+        self.assertEqual(response.json()["series"]["id"], str(created.id))
+
+    def test_patch_replaces_identifiers_when_supplied(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"identifiers": [{"scheme": "doi", "value": "https://doi.org/10.1000/edit"}]},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["identifiers"][0]["scheme"], "doi")
+        self.assertEqual(
+            response.json()["identifiers"][0]["value"],
+            "https://doi.org/10.1000/edit",
+        )
+        self.assertFalse(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
+        self.assertEqual(
+            BookIdentifier.objects.get(book=self.visible_one).normalized_value,
+            "10.1000/edit",
+        )
+
+    def test_patch_empty_identifiers_clears_them(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"identifiers": []},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["identifiers"], [])
+        self.assertFalse(BookIdentifier.objects.filter(book=self.visible_one).exists())
+
+    def test_invalid_identifier_rolls_back_entire_book_edit(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={
+                "description": "Must roll back",
+                "identifiers": [{"scheme": "doi", "value": ""}],
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.description, "dresden case file")
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
+
+    def test_duplicate_identifiers_roll_back_entire_book_edit(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={
+                "description": "Must also roll back",
+                "identifiers": [
+                    {"scheme": "doi", "value": "10.1000/duplicate"},
+                    {"scheme": "doi", "value": "https://doi.org/10.1000/DUPLICATE"},
+                ],
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.description, "dresden case file")
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
+
+    def test_reader_cannot_mutate_identifiers_through_book_patch(self):
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"identifiers": []},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
