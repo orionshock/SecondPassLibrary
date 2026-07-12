@@ -45,6 +45,7 @@ def book_file_upload_path(instance: "Book", filename: str) -> str:
 class Author(TimeStampedModel):
     name = models.CharField(max_length=255)
     sort_name = models.CharField(max_length=255, blank=True)
+    biography = models.TextField(blank=True)
 
     class Meta:
         ordering = ["sort_name", "name", "id"]
@@ -56,6 +57,7 @@ class Author(TimeStampedModel):
 class Series(TimeStampedModel):
     name = models.CharField(max_length=255)
     sort_name = models.CharField(max_length=255, blank=True)
+    summary = models.TextField(blank=True)
 
     class Meta:
         verbose_name_plural = "series"

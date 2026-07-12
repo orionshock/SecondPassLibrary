@@ -44,7 +44,7 @@ class AuthorAxisSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Author
-        fields = ["id", "name", "sort_name", "book_count"]
+        fields = ["id", "name", "sort_name", "biography", "book_count"]
         read_only_fields = fields
 
 
@@ -53,8 +53,16 @@ class SeriesAxisSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Series
-        fields = ["id", "name", "sort_name", "book_count"]
+        fields = ["id", "name", "sort_name", "summary", "book_count"]
         read_only_fields = fields
+
+
+class AuthorAxisUpdateSerializer(serializers.Serializer):
+    biography = serializers.CharField(required=False, allow_blank=True)
+
+
+class SeriesAxisUpdateSerializer(serializers.Serializer):
+    summary = serializers.CharField(required=False, allow_blank=True)
 
 
 class CatalogTagAxisSerializer(serializers.ModelSerializer):

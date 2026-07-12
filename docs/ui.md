@@ -244,7 +244,7 @@ Primary endpoint:
 Content:
 
 - Metadata: title/subtitle/summary/publisher/language/published_date/subjects
-- Authors and series
+- Authors and series, including author biography and series summary where provided
 - Identifiers (scheme/value/source)
 - File: show the stored EPUB metadata from the Book-owned file fields when present.
 

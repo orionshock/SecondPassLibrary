@@ -28,10 +28,14 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_names(response), ["First Series", "Second Series"])
 
     def test_book_count_counts_visible_books_only(self):
+        self.first_series.summary = "Summary in list payload."
+        self.first_series.save(update_fields=["summary", "updated_at"])
         response = self.client.get("/api/v1/library/series/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_book_counts(response), {"First Series": 2, "Second Series": 1})
+        first = next(item for item in response.json()["results"] if item["name"] == "First Series")
+        self.assertEqual(first["summary"], "Summary in list payload.")
 
     def test_q_searches_name_and_sort_name(self):
         self.second_series.sort_name = "Storm Sequence"
@@ -58,11 +62,40 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response_names(response), expected)
 
     def test_detail_visible_succeeds(self):
+        self.first_series.summary = "An established catalog summary."
+        self.first_series.save(update_fields=["summary", "updated_at"])
         response = self.client.get(f"/api/v1/library/series/{self.first_series.id}/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["name"], "First Series")
         self.assertEqual(response.json()["book_count"], 2)
+        self.assertEqual(response.json()["summary"], "An established catalog summary.")
+
+    def test_librarian_can_patch_summary(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"summary": "Updated series summary."},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.summary, "Updated series summary.")
+        self.assertEqual(response.json()["summary"], "Updated series summary.")
+
+    def test_reader_cannot_patch_summary(self):
+        response = self.client.patch(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"summary": "Forbidden summary."},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.summary, "")
 
     def test_detail_ignores_list_only_params(self):
         assert_axis_detail_ignores_list_params(

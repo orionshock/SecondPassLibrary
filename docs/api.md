@@ -415,8 +415,8 @@ Rules:
 
 ## Library
 
-- Authors: `GET /api/v1/library/authors/` (paginated), `GET /api/v1/library/authors/<id>/`
-- Series: `GET /api/v1/library/series/` (paginated), `GET /api/v1/library/series/<id>/`
+- Authors: `GET /api/v1/library/authors/` (paginated), `GET/PATCH /api/v1/library/authors/<id>/`
+- Series: `GET /api/v1/library/series/` (paginated), `GET/PATCH /api/v1/library/series/<id>/`
 - Books: `GET /api/v1/library/books/` (paginated), `GET/PATCH /api/v1/library/books/<id>/`
 
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
@@ -440,6 +440,7 @@ All Library mutation endpoints (including imports, identifier CRUD, group member
 
 Author/Series payload notes:
 
+- Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH those fields on the respective detail endpoint; readers remain read-only.
 - Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
 - Author and Series list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
 - Author list ordering:

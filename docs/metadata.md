@@ -8,6 +8,7 @@
 
 Notes:
 - `Book.subtitle` may be blank.
+- `Author.biography` and `Series.summary` are optional catalog description fields.
 - Series data is represented by `BookSeries`, which links `Book` to `Series`
   and stores `series_index`.
 - `BookIdentifier` is Book-owned editable bibliographic metadata with a public

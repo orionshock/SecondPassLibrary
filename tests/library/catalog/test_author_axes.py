@@ -23,6 +23,8 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_names(response), ["Alpha Author", "Beta Author", "Zeta Author"])
 
     def test_book_count_counts_visible_books_only(self):
+        self.alpha.biography = "Biography in list payload."
+        self.alpha.save(update_fields=["biography", "updated_at"])
         response = self.client.get("/api/v1/library/authors/")
 
         self.assertEqual(response.status_code, 200)
@@ -30,6 +32,8 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             response_book_counts(response),
             {"Alpha Author": 2, "Beta Author": 1, "Zeta Author": 1},
         )
+        alpha = next(item for item in response.json()["results"] if item["name"] == "Alpha Author")
+        self.assertEqual(alpha["biography"], "Biography in list payload.")
 
     def test_q_searches_name_and_sort_name(self):
         self.beta.sort_name = "Storm Writer"
@@ -56,11 +60,40 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response_names(response), expected)
 
     def test_detail_visible_succeeds(self):
+        self.alpha.biography = "An established catalog biography."
+        self.alpha.save(update_fields=["biography", "updated_at"])
         response = self.client.get(f"/api/v1/library/authors/{self.alpha.id}/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["name"], "Alpha Author")
         self.assertEqual(response.json()["book_count"], 2)
+        self.assertEqual(response.json()["biography"], "An established catalog biography.")
+
+    def test_librarian_can_patch_biography(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"biography": "Updated biography."},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.biography, "Updated biography.")
+        self.assertEqual(response.json()["biography"], "Updated biography.")
+
+    def test_reader_cannot_patch_biography(self):
+        response = self.client.patch(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"biography": "Forbidden biography."},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.biography, "")
 
     def test_detail_ignores_list_only_params(self):
         assert_axis_detail_ignores_list_params(

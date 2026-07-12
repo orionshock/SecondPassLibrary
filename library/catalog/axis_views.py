@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.response import Response
+
+from accounts.roles import is_librarian
 
 from library.catalog.axes import (
     apply_axis_ordering,
@@ -12,9 +16,12 @@ from library.catalog.axes import (
 )
 from library.catalog.serializers import (
     AuthorAxisSerializer,
+    AuthorAxisUpdateSerializer,
     CatalogTagAxisSerializer,
     SeriesAxisSerializer,
+    SeriesAxisUpdateSerializer,
 )
+from library.catalog.axis_services import update_author_biography, update_series_summary
 from library.queries import visible_books_for_user
 
 
@@ -48,6 +55,16 @@ class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
     def get_queryset(self):
         return self.axis_queryset()
 
+    def patch(self, request, *args, **kwargs):
+        if not is_librarian(request.user):
+            raise PermissionDenied("Not allowed.")
+        instance = self.get_object()
+        serializer = self.update_serializer_class(data=request.data or {}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.update_axis(instance, serializer.validated_data)
+        refreshed = self.get_queryset().get(pk=instance.pk)
+        return Response(self.get_serializer(refreshed).data)
+
 
 class AuthorAxisMixin(_BaseAxisMixin):
     serializer_class = AuthorAxisSerializer
@@ -61,7 +78,10 @@ class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
 
 
 class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):
-    pass
+    update_serializer_class = AuthorAxisUpdateSerializer
+
+    def update_axis(self, instance, data):
+        update_author_biography(author=instance, biography=data.get("biography"))
 
 
 class SeriesAxisMixin(_BaseAxisMixin):
@@ -76,7 +96,10 @@ class SeriesListView(SeriesAxisMixin, _BaseAxisListView):
 
 
 class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
-    pass
+    update_serializer_class = SeriesAxisUpdateSerializer
+
+    def update_axis(self, instance, data):
+        update_series_summary(series=instance, summary=data.get("summary"))
 
 
 class CatalogTagAxisMixin(_BaseAxisMixin):
