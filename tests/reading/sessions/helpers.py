@@ -4,12 +4,15 @@ from django.contrib.auth import get_user_model
 
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from accounts.client_api import generate_bearer_token, hash_client_secret
+from accounts.models import UserProfile
 from accounts.models import UserClientSession
 from library.groups.services import add_book_to_group
-from library.models import LibraryGroup, LibraryGroupMembership
+from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.queries import visible_books_for_user
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from tests.utils.books import create_file_backed_book
 from tests.utils.library_visibility import ensure_public_membership
+from tests.utils.users import set_user_role
 
 
 User = get_user_model()
@@ -98,3 +101,43 @@ class SessionBearerFixtureMixin(IsolatedMediaRootMixin):
 
         self.book = create_file_backed_book(title="Visible").book
         self.session = ReadingSession.objects.create(user=self.user, book=self.book)
+
+
+class LostBookAccessSessionMixin:
+    def _make_user_with_lost_book_access(
+        self,
+        *,
+        username: str,
+        title: str,
+        active: bool = True,
+    ):
+        user = User.objects.create_user(
+            username=username, password="pass", email=f"{username}@example.com"
+        )
+        set_user_role(user, UserProfile.ROLE_READER)
+        ensure_public_membership(user)
+
+        group = LibraryGroup.objects.create(name=f"{title} Group")
+        LibraryGroupMembership.objects.create(user=user, group=group, is_curator=False)
+
+        restricted = create_file_backed_book(title=title, assign_public=False).book
+        BookGroupAssignment.objects.create(book=restricted, group=group)
+
+        session = ReadingSession.objects.create(
+            user=user,
+            book=restricted,
+            is_active=active,
+            status=(
+                ReadingSession.STATUS_ACTIVE
+                if active
+                else ReadingSession.STATUS_COMPLETED
+            ),
+        )
+
+        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
+        self.assertFalse(
+            visible_books_for_user(user, cached=False)
+            .filter(pk=restricted.pk)
+            .exists()
+        )
+        return user, restricted, session
