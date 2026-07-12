@@ -45,6 +45,27 @@ LIBRARY_ADMIN_MODEL_ORDER = {
 }
 
 
+def _install_view_only_related_widget_controls():
+    if hasattr(RelatedFieldWidgetWrapper, "_secondpass_original_get_context"):
+        return
+
+    RelatedFieldWidgetWrapper._secondpass_original_get_context = (
+        RelatedFieldWidgetWrapper.get_context
+    )
+
+    def get_context(self, name, value, attrs):
+        context = self._secondpass_original_get_context(name, value, attrs)
+        context["can_add_related"] = False
+        context["can_change_related"] = False
+        context["can_delete_related"] = False
+        return context
+
+    RelatedFieldWidgetWrapper.get_context = get_context
+
+
+_install_view_only_related_widget_controls()
+
+
 def _sort_library_admin_models(app):
     for model in app["models"]:
         configuration = LIBRARY_ADMIN_MODEL_ORDER.get(model["object_name"])

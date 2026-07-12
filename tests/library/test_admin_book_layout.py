@@ -157,6 +157,32 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
         self.assertNotContains(response, "is_primary")
         self.assertNotContains(response, "identifier-source")
 
+    def test_related_selectors_render_only_view_shortcuts(self):
+        Author.objects.create(name="Selectable Author")
+        Series.objects.create(name="Selectable Series")
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.get(
+            reverse("admin:library_book_change", args=[self.book.pk])
+        )
+
+        self.assertContains(response, "related-widget-wrapper-link view-related")
+        self.assertNotContains(response, "related-widget-wrapper-link add-related")
+        self.assertNotContains(response, "related-widget-wrapper-link change-related")
+        self.assertNotContains(response, "related-widget-wrapper-link delete-related")
+
+    def test_top_level_related_model_admin_pages_remain_available(self):
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        for route_name in (
+            "admin:library_author_changelist",
+            "admin:library_series_changelist",
+            "admin:library_librarygroup_changelist",
+        ):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+
     def test_stored_epub_and_timestamps_are_read_only(self):
         readonly = set(self.model_admin.get_readonly_fields(self.request, self.book))
 
