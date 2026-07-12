@@ -82,7 +82,7 @@ class MarginaliaImportFixtureMixin(IsolatedMediaRootMixin):
         authors: list[str] | None = None,
         session_status: str = "completed",
     ) -> dict[str, Any]:
-        checksum = file_hash or self.visible.file.checksum
+        checksum = file_hash or self.visible.checksum
         authors = ["Author One"] if authors is None else authors
         return {
             "type": "SecondPassMarginaliaExport",
@@ -134,7 +134,7 @@ class MarginaliaImportFixtureMixin(IsolatedMediaRootMixin):
         title: str = "Visible Match",
         status_value: str = "completed",
     ) -> dict[str, Any]:
-        checksum = checksum or self.visible.file.checksum
+        checksum = checksum or self.visible.checksum
         return {
             "type": "SecondPassMarginaliaExport",
             "schema_version": "0.1.0",

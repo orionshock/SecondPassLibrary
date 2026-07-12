@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from library.models import BookIdentifier
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.reading.imports.helpers import MarginaliaImportFixtureMixin
@@ -98,7 +99,7 @@ class MarginaliaImportPreviewApiTests(
         r = assert_response(
             self.post_preview_payload(
                 self.preview_marginalia_payload(
-                    file_hash=self.hidden.file.checksum, title="Hidden Match"
+                    file_hash=self.hidden.checksum, title="Hidden Match"
                 )
             ),
         )
@@ -206,8 +207,12 @@ class MarginaliaImportPreviewApiTests(
         self.assertEqual(r.data["unmatched_books"], 1)
 
     def test_bad_file_hash_does_not_match_by_isbn(self):
-        self.visible.isbn = "9780345816023"
-        self.visible.save(update_fields=["isbn", "updated_at"])
+        BookIdentifier.objects.create(
+            book=self.visible,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780345816023",
+            normalized_value="9780345816023",
+        )
         self.client.force_login(self.user)
         payload = self.preview_marginalia_payload(
             file_hash="1" * 64, title="Different Title", authors=["Other"]
