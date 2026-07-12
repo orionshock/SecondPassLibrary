@@ -151,6 +151,15 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertNotIn("Enter a book UUID", books_js)
         self.assertNotIn("addBookForm", books_js)
 
+    def test_group_edit_delete_is_visible_only_to_manager_or_owner_for_non_public_group(self):
+        edit_js = Path("web/static/web/js/groups/edit.js").read_text(encoding="utf-8")
+
+        self.assertIn("isManagerOrOwner", edit_js)
+        self.assertIn("const canDeleteGroup = isManagerOrOwner(me) && !isPublicGroup", edit_js)
+        self.assertIn("visible(deleteRoot, true)", edit_js)
+        self.assertIn('method: "DELETE"', edit_js)
+        self.assertIn('window.location.href = "/groups/"', edit_js)
+
     def test_authenticated_group_edit_malformed_id_returns_404(self):
         self.client.force_login(self.user)
 

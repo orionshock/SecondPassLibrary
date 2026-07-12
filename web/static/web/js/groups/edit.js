@@ -9,6 +9,7 @@ import {
   canEditGroupDescription,
   canEditGroupPage,
   canManageGroupBooks,
+  isManagerOrOwner,
 } from "./shared.js";
 import { setStatus } from "../ui/status.js";
 import { initGroupBooksTab } from "./books.js";
@@ -171,8 +172,16 @@ export async function initGroupEdit() {
   visible(editForm, allowDescriptionEdit);
 
   // Delete (Owner/Manager only; never for Public)
-  if (deleteRoot && deleteForm && deleteConfirm && deleteBtn && deleteStatus) {
-    visible(deleteRoot, false);
+  const canDeleteGroup = isManagerOrOwner(me) && !isPublicGroup;
+  if (
+    canDeleteGroup &&
+    deleteRoot &&
+    deleteForm &&
+    deleteConfirm &&
+    deleteBtn &&
+    deleteStatus
+  ) {
+    visible(deleteRoot, true);
     deleteConfirm.value = "";
     deleteBtn.disabled = true;
     setStatus(deleteStatus, "", false);
