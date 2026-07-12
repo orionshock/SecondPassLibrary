@@ -1,20 +1,14 @@
+from __future__ import annotations
+
 from datetime import timedelta
-from typing import Any
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
 
-from accounts.models import UserProfile
-from library.groups.services import ensure_user_public_membership
-from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingSession
-from tests.reading.api_test_base import (
-    ReadingAPITestBase,
-    ReadingClientBearerAPITestBase,
-)
-from tests.utils.books import create_file_backed_book
+from tests.reading.annotations.helpers import bookmark_payload, highlight_payload
+from tests.reading.api_test_base import ReadingAPITestBase
 from tests.utils.responses import (
     assert_response,
     response_data_dict,
@@ -22,75 +16,10 @@ from tests.utils.responses import (
 )
 
 
-User = get_user_model()
-
-
 pytestmark = [pytest.mark.integration]
 
 
-def bookmark_payload(
-    session: ReadingSession, value: str = "epubcfi(/6/2)"
-) -> dict[str, Any]:
-    return {
-        "session": str(session.id),
-        "kind": "bookmark",
-        "selector": {"kind": "epub_cfi", "value": value},
-    }
-
-
-def highlight_payload(
-    session: ReadingSession,
-    *,
-    value: str = "epubcfi(/6/2)",
-    text: str = "hello",
-    comment: str = "",
-    color: str = "",
-    quote: dict[str, str] | None = None,
-) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "session": str(session.id),
-        "kind": "highlight",
-        "selector": {"kind": "epub_cfi", "value": value},
-        "highlight_text": text,
-    }
-    if comment:
-        payload["comment_text"] = comment
-    if color:
-        payload["highlight_color"] = color
-    if quote is not None:
-        payload["quote"] = quote
-    return payload
-
-
-class ReadingAnnotationsAPITest(ReadingAPITestBase):
-    def _make_lost_access_session_with_annotation(self):
-        user = User.objects.create_user(
-            username="lostann", password="pass", email="lostann@example.com"
-        )
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.role = UserProfile.ROLE_READER
-        profile.save(update_fields=["role", "updated_at"])
-        ensure_user_public_membership(user=user)
-        group = LibraryGroup.objects.create(name="Lost Annotation Group")
-        LibraryGroupMembership.objects.create(user=user, group=group)
-        book = create_file_backed_book(
-            title="Lost Annotation", assign_public=False
-        ).book
-        BookGroupAssignment.objects.create(book=book, group=group)
-        session = ReadingSession.objects.create(user=user, book=book)
-        annotation = Annotation.objects.create(
-            session=session,
-            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
-            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
-            book=book,
-            selector_value="epubcfi(/6/2)",
-            highlight_text="owned",
-            highlight_color="yellow",
-            comment_text="old",
-        )
-        LibraryGroupMembership.objects.filter(user=user, group=group).delete()
-        return user, session, annotation
-
+class ReadingAnnotationsSessionCrudTests(ReadingAPITestBase):
     def test_annotation_create_bookmark_returns_spl_native_shape(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -285,49 +214,6 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         self.assertEqual(ann.highlight_text, "hello")
         self.assertEqual(ann.anchor_kind, Annotation.ANCHOR_KIND_HIGHLIGHT)
 
-    def test_annotations_list_includes_owned_annotations_after_book_access_lost(self):
-        _user, session, annotation = self._make_lost_access_session_with_annotation()
-        self.client.login(username="lostann", password="pass")
-
-        resp = assert_response(
-            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}")
-        )
-
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        ids = {row["id"] for row in response_data_list(resp)}
-        self.assertIn(str(annotation.id), ids)
-
-    def test_annotation_create_requires_current_book_access(self):
-        _user, session, _annotation = self._make_lost_access_session_with_annotation()
-        self.client.login(username="lostann", password="pass")
-
-        resp = assert_response(
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data=bookmark_payload(session, "epubcfi(/6/4)"),
-                format="json",
-            ),
-        )
-
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(Annotation.objects.filter(session=session).count(), 1)
-
-    def test_annotation_patch_requires_current_book_access(self):
-        _user, _session, annotation = self._make_lost_access_session_with_annotation()
-        self.client.login(username="lostann", password="pass")
-
-        resp = assert_response(
-            self.client.patch(
-                f"/api/v1/reading/annotations/{annotation.id}/",
-                data={"comment_text": "new"},
-                format="json",
-            ),
-        )
-
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
-        annotation.refresh_from_db()
-        self.assertEqual(annotation.comment_text, "old")
-
     def test_patch_bookmark_rejects_comment_and_color_without_server_error(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -352,149 +238,6 @@ class ReadingAnnotationsAPITest(ReadingAPITestBase):
         annotation.refresh_from_db()
         self.assertEqual(annotation.comment_text, "")
         self.assertEqual(annotation.highlight_color, "")
-
-    def test_annotation_delete_requires_current_book_access_and_open_session(self):
-        _user, session, annotation = self._make_lost_access_session_with_annotation()
-        self.client.login(username="lostann", password="pass")
-
-        no_access = assert_response(
-            self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/")
-        )
-        self.assertEqual(no_access.status_code, status.HTTP_403_FORBIDDEN)
-        annotation.refresh_from_db()
-        self.assertFalse(annotation.is_deleted)
-
-        session.status = ReadingSession.STATUS_COMPLETED
-        session.is_active = False
-        session.save(update_fields=["status", "is_active", "updated_at"])
-
-        closed = assert_response(
-            self.client.delete(f"/api/v1/reading/annotations/{annotation.id}/")
-        )
-        self.assertEqual(closed.status_code, status.HTTP_400_BAD_REQUEST)
-        annotation.refresh_from_db()
-        self.assertFalse(annotation.is_deleted)
-
-    def test_batch_create_multiple_annotations(self):
-        self.client.login(username="u1", password="pass1")
-        session = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        resp = assert_response(
-            self.client.post(
-                "/api/v1/reading/annotations/batch/",
-                data={
-                    "session": str(session.id),
-                    "annotations": [
-                        {
-                            "client_id": "a",
-                            "kind": "bookmark",
-                            "selector": {"kind": "epub_cfi", "value": "/6/2"},
-                        },
-                        {
-                            "client_id": "b",
-                            "kind": "highlight",
-                            "selector": {"kind": "epub_cfi", "value": "/6/4"},
-                            "highlight_text": "hello",
-                        },
-                    ],
-                },
-                format="json",
-            ),
-        )
-
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        data = response_data_dict(resp)
-        self.assertEqual([row["client_id"] for row in data["annotations"]], ["a", "b"])
-        self.assertEqual(Annotation.objects.filter(session=session).count(), 2)
-
-    def test_batch_create_is_all_or_nothing(self):
-        self.client.login(username="u1", password="pass1")
-        session = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        resp = assert_response(
-            self.client.post(
-                "/api/v1/reading/annotations/batch/",
-                data={
-                    "session": str(session.id),
-                    "annotations": [
-                        {
-                            "kind": "bookmark",
-                            "selector": {"kind": "epub_cfi", "value": "/6/2"},
-                        },
-                        {
-                            "kind": "highlight",
-                            "selector": {"kind": "epub_cfi", "value": "/6/4"},
-                        },
-                    ],
-                },
-                format="json",
-            ),
-        )
-
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Annotation.objects.filter(session=session).count(), 0)
-
-
-class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
-    def test_soft_deleted_annotations_hidden_by_default_and_opt_in_include_deleted(
-        self,
-    ):
-        self.client.login(username="u1", password="pass1")
-        session = ReadingSession.objects.create(user=self.user1, book=self.book)
-        a1 = Annotation.objects.create(
-            session=session,
-            motivation=Annotation.MOTIVATION_COMMENTING,
-            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
-            book=self.book,
-            selector_value="epubcfi(/6/2)",
-            highlight_text="keep",
-            comment_text="keep",
-        )
-        a2 = Annotation.objects.create(
-            session=session,
-            motivation=Annotation.MOTIVATION_COMMENTING,
-            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
-            book=self.book,
-            selector_value="epubcfi(/6/4)",
-            highlight_text="delete",
-            comment_text="delete",
-        )
-
-        deleted = assert_response(
-            self.client.delete(f"/api/v1/reading/annotations/{a2.id}/")
-        )
-        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
-        a2.refresh_from_db()
-        self.assertTrue(a2.is_deleted)
-
-        listing = assert_response(
-            self.client.get(f"/api/v1/reading/annotations/?session_id={session.id}")
-        )
-        self.assertEqual(listing.status_code, status.HTTP_200_OK)
-        ids = {row["id"] for row in response_data_list(listing)}
-        self.assertIn(str(a1.id), ids)
-        self.assertNotIn(str(a2.id), ids)
-
-        listing2 = assert_response(
-            self.client.get(
-                f"/api/v1/reading/annotations/?session_id={session.id}&include_deleted=true"
-            ),
-        )
-        self.assertEqual(listing2.status_code, status.HTTP_200_OK)
-        ids2 = {row["id"] for row in response_data_list(listing2)}
-        self.assertIn(str(a1.id), ids2)
-        self.assertIn(str(a2.id), ids2)
-
-        self.assertEqual(
-            self.client.get(f"/api/v1/reading/annotations/{a2.id}/").status_code,
-            status.HTTP_404_NOT_FOUND,
-        )
-        self.assertEqual(
-            self.client.get(
-                f"/api/v1/reading/annotations/{a2.id}/?include_deleted=true"
-            ).status_code,
-            status.HTTP_200_OK,
-        )
 
     def test_annotations_list_filters_by_kind(self):
         self.client.login(username="u1", password="pass1")
@@ -639,56 +382,3 @@ class ReadingAnnotationsBearerAPITest(ReadingClientBearerAPITestBase):
         )
         self.assertEqual(ann.status_code, status.HTTP_400_BAD_REQUEST)
 
-
-class ReadingBearerAuthenticationAPITest(ReadingClientBearerAPITestBase):
-    def test_bearer_annotations_are_user_scoped(self):
-        session1 = ReadingSession.objects.create(user=self.user1, book=self.book)
-
-        create = assert_response(
-            self.client.post(
-                "/api/v1/reading/annotations/",
-                data=highlight_payload(session1),
-                format="json",
-                HTTP_AUTHORIZATION=self._auth_header,
-            ),
-        )
-        self.assertEqual(create.status_code, status.HTTP_201_CREATED)
-        ann_id = response_data_dict(create)["id"]
-
-        list_all = assert_response(
-            self.client.get(
-                "/api/v1/reading/annotations/",
-                HTTP_AUTHORIZATION=self._auth_header,
-            ),
-        )
-        self.assertEqual(list_all.status_code, status.HTTP_200_OK)
-        ids = {a["id"] for a in response_data_list(list_all)}
-        self.assertIn(ann_id, ids)
-        self.assertNotIn(str(self.annotation2.id), ids)
-
-        other_get = self.client.get(
-            f"/api/v1/reading/annotations/{self.annotation2.id}/",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(other_get.status_code, status.HTTP_404_NOT_FOUND)
-        other_del = self.client.delete(
-            f"/api/v1/reading/annotations/{self.annotation2.id}/",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(other_del.status_code, status.HTTP_404_NOT_FOUND)
-
-        bad_create = self.client.post(
-            "/api/v1/reading/annotations/",
-            data=highlight_payload(self.session2),
-            format="json",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(bad_create.status_code, status.HTTP_400_BAD_REQUEST)
-
-        bad_device_field = self.client.post(
-            "/api/v1/reading/annotations/",
-            data={**bookmark_payload(session1), "device": "nope"},
-            format="json",
-            HTTP_AUTHORIZATION=self._auth_header,
-        )
-        self.assertEqual(bad_device_field.status_code, status.HTTP_400_BAD_REQUEST)
