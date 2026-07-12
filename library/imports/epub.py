@@ -92,7 +92,7 @@ def _import_epub_file(
         raise UnsupportedImportSourceError("Source filename must have .epub extension.")
 
     data, checksum, file_size = read_file_with_sha256(file_obj)
-    _validate_with_ebooklib(data)
+    validate_epub_bytes(data)
     metadata = _read_import_metadata(data, sidecar_opf_bytes=sidecar_opf_bytes)
 
     persistence_result = persist_imported_book(
@@ -166,7 +166,7 @@ def read_file_with_sha256(file_obj, *, chunk_size: int = READ_CHUNK_BYTES) -> tu
     return output.getvalue(), digest.hexdigest(), total_size
 
 
-def _validate_with_ebooklib(data: bytes) -> None:
+def validate_epub_bytes(data: bytes) -> None:
     try:
         epub.read_epub(BytesIO(data), options={"ignore_ncx": True})
     except Exception as exc:
