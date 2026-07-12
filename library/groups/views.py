@@ -7,6 +7,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
 from accounts.roles import is_manager
+from library.catalog.preview_books import PREVIEW_BOOK_LIMIT, include_preview_books
 from library.groups.public_group import is_public_group
 from library.groups.querysets import (
     apply_group_ordering,
@@ -23,16 +24,43 @@ from library.groups.services import (
     delete_library_group,
     update_library_group,
 )
-from library.queries import visible_groups_for_user
+from library.queries import visible_books_for_group, visible_groups_for_user
 
 
-class LibraryGroupListView(ListAPIView):
+def _attach_group_preview_books(*, groups, user) -> None:
+    for group in groups:
+        group._preview_books = list(
+            visible_books_for_group(user, group, cached=True).order_by(
+                "sort_title", "title", "id"
+            )[:PREVIEW_BOOK_LIMIT]
+        )
+
+
+class GroupPreviewBooksMixin:
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = include_preview_books(self.request)
+        return context
+
+
+class LibraryGroupListView(GroupPreviewBooksMixin, ListAPIView):
     serializer_class = LibraryGroupSerializer
 
     def get_queryset(self):
         queryset = visible_groups_for_user(self.request.user)
         queryset = apply_group_search(queryset, self.request.query_params)
         return apply_group_ordering(queryset, parse_group_ordering(self.request))
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        groups = list(page) if page is not None else list(queryset)
+        if include_preview_books(request):
+            _attach_group_preview_books(groups=groups, user=request.user)
+        serializer = self.get_serializer(groups, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
         if not is_manager(request.user):
@@ -45,12 +73,18 @@ class LibraryGroupListView(ListAPIView):
         return Response(out.data, status=status.HTTP_201_CREATED)
 
 
-class LibraryGroupDetailView(RetrieveAPIView):
+class LibraryGroupDetailView(GroupPreviewBooksMixin, RetrieveAPIView):
     serializer_class = LibraryGroupSerializer
     lookup_url_kwarg = "group_id"
 
     def get_queryset(self):
         return visible_groups_for_user(self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        group = self.get_object()
+        if include_preview_books(request):
+            _attach_group_preview_books(groups=[group], user=request.user)
+        return Response(self.get_serializer(group).data)
 
     def patch(self, request, *args, **kwargs):
         group = self.get_object()
