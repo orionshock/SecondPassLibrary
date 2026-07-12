@@ -189,7 +189,7 @@ def reading_session_marginalia(
 def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpResponse:
     book_uuid = _uuid_or_404(book_id)
     book = (
-        Book.objects.select_related("series")
+        Book.objects.select_related("book_series", "book_series__series")
         .prefetch_related("authors")
         .filter(id=book_uuid)
         .first()
@@ -201,11 +201,25 @@ def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpR
 
     sessions = list_sessions_for_book(user=request.user, book=book)
     recent_session_id = sessions[0]["id"] if sessions else ""
+    try:
+        series_link = book.book_series
+    except Book.book_series.RelatedObjectDoesNotExist:
+        series = None
+        series_index = None
+    else:
+        series = series_link.series
+        series_index = series_link.series_index
 
     return render(
         request,
         "web/reading/book_sessions.html",
-        {"book": book, "sessions": sessions, "recent_session_id": recent_session_id},
+        {
+            "book": book,
+            "series": series,
+            "series_index": series_index,
+            "sessions": sessions,
+            "recent_session_id": recent_session_id,
+        },
     )
 
 @product_login_required

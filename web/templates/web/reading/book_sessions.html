@@ -54,14 +54,14 @@
               {% endwith %}
             </div>
           {% endif %}
-          {% if book.series %}
+          {% if series %}
             <div class="library-context-row">
-              <div class="muted">{{ book.series.name|escape }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</div>
+              <div class="muted">{{ series.name|escape }}{% if series_index %} #{{ series_index|floatformat:"-1" }}{% endif %}</div>
               <a
                 class="library-context-action"
-                href="/library/?view=series&amp;series={{ book.series.id|urlencode }}"
-                aria-label="View {{ book.series.name|escape }} in Library"
-                title="View {{ book.series.name|escape }} in Library"
+                href="/library/?view=series&amp;series={{ series.id|urlencode }}"
+                aria-label="View {{ series.name|escape }} in Library"
+                title="View {{ series.name|escape }} in Library"
               >View series in Library</a>
             </div>
           {% endif %}

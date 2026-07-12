@@ -5,7 +5,7 @@ from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from library.models import Author, Series
+from library.models import Author, BookSeries, Series
 from reading.models import ReadingSession
 from django.test import TestCase
 from tests.core.product_ui.helpers import ProductUiTestCase
@@ -41,8 +41,7 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         author = Author.objects.create(name="Author One")
         series = Series.objects.create(name="Series One")
         book.authors.add(author)
-        book.series = series
-        book.save(update_fields=["series", "updated_at"])
+        BookSeries.objects.create(book=book, series=series)
         other_book = create_file_backed_book(title="B2").book
 
         mine = ReadingSession.objects.create(
