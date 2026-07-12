@@ -16,6 +16,7 @@ from library.models import (
     LibraryGroupMembership,
     Series,
 )
+from tests.utils.users import set_user_role
 
 
 def queryset_titles(queryset) -> list[str]:
@@ -42,11 +43,6 @@ def assert_axis_detail_ignores_list_params(testcase, *, url: str, expected_name:
     testcase.assertEqual(q_response.json()["name"], expected_name)
     testcase.assertEqual(invalid_ordering_response.status_code, 200)
     testcase.assertEqual(invalid_ordering_response.json()["name"], expected_name)
-
-
-def set_user_role(user, role: str) -> None:
-    user.profile.role = role
-    user.profile.save(update_fields=["role", "updated_at"])
 
 
 def create_catalog_book(

@@ -3,13 +3,13 @@ from rest_framework.test import APITestCase
 
 from accounts.client_api import hash_client_secret
 from accounts.models import UserClientSession
-from library.groups.services import (
-    ensure_book_public_assignment,
-    ensure_user_public_membership,
-)
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
+from tests.utils.library_visibility import (
+    ensure_public_book_assignment,
+    ensure_public_membership,
+)
 
 
 User = get_user_model()
@@ -23,10 +23,10 @@ class ReadingAPITestBase(IsolatedUserdataMixin, APITestCase):
         self.user2 = User.objects.create_user(
             username="u2", password="pass2", email="u2@example.com"
         )
-        ensure_user_public_membership(user=self.user1)
-        ensure_user_public_membership(user=self.user2)
+        ensure_public_membership(self.user1)
+        ensure_public_membership(self.user2)
         self.book = create_file_backed_book(title="Book 1").book
-        ensure_book_public_assignment(book=self.book, added_by=None)
+        ensure_public_book_assignment(self.book)
 
         self.session2 = ReadingSession.objects.create(user=self.user2, book=self.book)
         self.annotation2 = Annotation.objects.create(
@@ -48,11 +48,11 @@ class ReadingClientBearerAPITestBase(IsolatedUserdataMixin, APITestCase):
         self.user2 = User.objects.create_user(
             username="u2", password="pass2", email="u2@example.com"
         )
-        ensure_user_public_membership(user=self.user1)
-        ensure_user_public_membership(user=self.user2)
+        ensure_public_membership(self.user1)
+        ensure_public_membership(self.user2)
 
         self.book = create_file_backed_book(title="Book 1").book
-        ensure_book_public_assignment(book=self.book, added_by=None)
+        ensure_public_book_assignment(self.book)
 
         # Cross-user fixtures
         self.session2 = ReadingSession.objects.create(user=self.user2, book=self.book)

@@ -5,15 +5,14 @@ from dataclasses import dataclass
 from django.contrib.auth import get_user_model
 
 from accounts.models import UserProfile
+from tests.utils.users import create_role_users, set_user_role
 
 
 User = get_user_model()
 
 
 def set_role(user, role: str) -> None:
-    profile = user.profile
-    profile.role = role
-    profile.save(update_fields=["role", "updated_at"])
+    set_user_role(user, role)
 
 
 @dataclass(frozen=True)
@@ -26,40 +25,19 @@ class AccountRoleUsers:
 
 
 def create_account_role_users() -> AccountRoleUsers:
-    owner = User.objects.create_superuser(
-        username="owner",
-        password="pw",
-        email="owner@example.com",
-    )
-    manager = User.objects.create_user(
-        username="manager",
-        password="pw",
-        email="manager@example.com",
-    )
+    role_users = create_role_users()
     manager2 = User.objects.create_user(
         username="manager2",
         password="pw",
         email="manager2@example.com",
     )
-    librarian = User.objects.create_user(
-        username="librarian",
-        password="pw",
-        email="librarian@example.com",
-    )
-    reader = User.objects.create_user(
-        username="reader",
-        password="pw",
-    )
 
-    set_role(manager, UserProfile.ROLE_MANAGER)
     set_role(manager2, UserProfile.ROLE_MANAGER)
-    set_role(librarian, UserProfile.ROLE_LIBRARIAN)
-    set_role(reader, UserProfile.ROLE_READER)
 
     return AccountRoleUsers(
-        owner=owner,
-        manager=manager,
+        owner=role_users.owner,
+        manager=role_users.manager,
         manager2=manager2,
-        librarian=librarian,
-        reader=reader,
+        librarian=role_users.librarian,
+        reader=role_users.reader,
     )

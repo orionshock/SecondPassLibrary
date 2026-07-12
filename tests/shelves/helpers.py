@@ -12,12 +12,15 @@ from tests.testenv.filesystem import IsolatedMediaRootMixin
 from accounts.models import UserProfile
 from library.groups.services import (
     add_book_to_group,
-    ensure_book_public_assignment,
-    ensure_user_public_membership,
 )
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.books import create_file_backed_book
+from tests.utils.library_visibility import (
+    ensure_public_book_assignment,
+    ensure_public_membership,
+)
+from tests.utils.users import set_user_role
 
 
 User = get_user_model()
@@ -34,7 +37,7 @@ class BaseShelvesAPITest(IsolatedMediaRootMixin, APITestCase):
             first_name="Olivia",
             last_name="Owner",
         )
-        ensure_user_public_membership(user=self.owner)
+        ensure_public_membership(self.owner)
 
         self.reader = User.objects.create_user(
             username="reader",
@@ -43,20 +46,18 @@ class BaseShelvesAPITest(IsolatedMediaRootMixin, APITestCase):
             first_name="Riley",
             last_name="Reader",
         )
-        ensure_user_public_membership(user=self.reader)
-        profile, _ = UserProfile.objects.get_or_create(user=self.reader)
-        profile.role = UserProfile.ROLE_READER
-        profile.save(update_fields=["role", "updated_at"])
+        ensure_public_membership(self.reader)
+        set_user_role(self.reader, UserProfile.ROLE_READER)
 
         self.other = User.objects.create_user(
             username="other", password="pw", first_name="Owen", last_name="Other"
         )
-        ensure_user_public_membership(user=self.other)
+        ensure_public_membership(self.other)
 
         self.group = LibraryGroup.objects.create(name="G")
         LibraryGroupMembership.objects.create(user=self.reader, group=self.group)
         self.curator = User.objects.create_user(username="curator", password="pw")
-        ensure_user_public_membership(user=self.curator)
+        ensure_public_membership(self.curator)
         LibraryGroupMembership.objects.create(
             user=self.curator,
             group=self.group,
@@ -64,18 +65,14 @@ class BaseShelvesAPITest(IsolatedMediaRootMixin, APITestCase):
         )
 
         self.librarian = User.objects.create_user(username="librarian", password="pw")
-        ensure_user_public_membership(user=self.librarian)
-        profile, _ = UserProfile.objects.get_or_create(user=self.librarian)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
+        ensure_public_membership(self.librarian)
+        set_user_role(self.librarian, UserProfile.ROLE_LIBRARIAN)
 
         self.manager = User.objects.create_user(
             username="manager", password="pw", is_staff=True
         )
-        ensure_user_public_membership(user=self.manager)
-        profile, _ = UserProfile.objects.get_or_create(user=self.manager)
-        profile.role = UserProfile.ROLE_MANAGER
-        profile.save(update_fields=["role", "updated_at"])
+        ensure_public_membership(self.manager)
+        set_user_role(self.manager, UserProfile.ROLE_MANAGER)
 
         self.book_in_group = create_file_backed_book(
             title="B1", assign_public=False
@@ -83,7 +80,7 @@ class BaseShelvesAPITest(IsolatedMediaRootMixin, APITestCase):
         add_book_to_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
         self.book_public = create_file_backed_book(title="PB", assign_public=False).book
-        ensure_book_public_assignment(book=self.book_public, added_by=None)
+        ensure_public_book_assignment(self.book_public)
 
         self.hidden_group = LibraryGroup.objects.create(name="Hidden")
         self.book_hidden = create_file_backed_book(title="HB", assign_public=False).book

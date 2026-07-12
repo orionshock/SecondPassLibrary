@@ -5,10 +5,11 @@ from django.contrib.auth import get_user_model
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
-from library.groups.services import add_book_to_group, ensure_user_public_membership
+from library.groups.services import add_book_to_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from tests.utils.books import create_file_backed_book
+from tests.utils.library_visibility import ensure_public_membership
 
 
 User = get_user_model()
@@ -19,12 +20,12 @@ class SessionVisibilityFixtureMixin(IsolatedMediaRootMixin):
         self.owner = User.objects.create_superuser(
             username="owner", password="pw", email="o@example.com"
         )
-        ensure_user_public_membership(user=self.owner)
+        ensure_public_membership(self.owner)
 
         self.user = User.objects.create_user(
             username="u", password="pw", email="u@example.com"
         )
-        ensure_user_public_membership(user=self.user)
+        ensure_public_membership(self.user)
         self.client.login(username="u", password="pw")
 
         self.book = create_file_backed_book(title="Visible").book
@@ -33,7 +34,7 @@ class SessionVisibilityFixtureMixin(IsolatedMediaRootMixin):
         other = User.objects.create_user(
             username="other", password="pw", email="o@example.com"
         )
-        ensure_user_public_membership(user=other)
+        ensure_public_membership(other)
         LibraryGroupMembership.objects.create(
             user=other, group=self.hidden_group, is_curator=False
         )
@@ -84,7 +85,7 @@ class SessionBearerFixtureMixin(IsolatedMediaRootMixin):
         self.user = User.objects.create_user(
             username="u", password="pw", email="u@example.com"
         )
-        ensure_user_public_membership(user=self.user)
+        ensure_public_membership(self.user)
 
         token = generate_bearer_token()
         UserClientSession.objects.create(

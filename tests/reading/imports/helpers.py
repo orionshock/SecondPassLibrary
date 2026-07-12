@@ -7,9 +7,9 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
-from library.groups.services import ensure_user_public_membership
 from reading.imports.staging import stage_marginalia_import
 from tests.utils.books import create_file_backed_book
+from tests.utils.library_visibility import ensure_public_membership
 
 
 User = get_user_model()
@@ -18,7 +18,7 @@ User = get_user_model()
 class MarginaliaImportFixtureMixin(IsolatedMediaRootMixin):
     def set_up_import_books(self) -> None:
         self.user = User.objects.create_user(username="reader", password="pw")
-        ensure_user_public_membership(user=self.user)
+        ensure_public_membership(self.user)
         self.visible = create_file_backed_book(
             title="Visible Match",
             epub_bytes=b"visible-match",

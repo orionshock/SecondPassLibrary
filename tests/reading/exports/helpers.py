@@ -5,11 +5,11 @@ from django.utils import timezone
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 from accounts.models import UserProfile
-from accounts.services import get_or_create_profile
 from library.models import BookSeries, Series
 from reading.models import ReadingProgress, ReadingSession
 from reading.services import create_annotation
 from tests.utils.books import create_file_backed_book
+from tests.utils.users import set_user_role
 
 
 User = get_user_model()
@@ -30,9 +30,7 @@ def selected_export_payload(*books):
 class ExportUserMixin(IsolatedMediaRootMixin):
     def create_librarian_user(self, *, username, password="pw"):
         user = User.objects.create_user(username=username, password=password)
-        profile = get_or_create_profile(user=user)
-        profile.role = UserProfile.ROLE_LIBRARIAN
-        profile.save(update_fields=["role", "updated_at"])
+        set_user_role(user, UserProfile.ROLE_LIBRARIAN)
         return user
 
 
