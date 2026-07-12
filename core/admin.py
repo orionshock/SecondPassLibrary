@@ -14,7 +14,7 @@ from library.groups.public_group import (
 )
 from library.models import LibraryGroup
 from library.models import BookGroupAssignment
-from library.groups.services import create_fresh_public_group, set_public_group_identity
+from library.groups.services import repair_public_group_identity, set_public_group_identity
 from library.groups.consolidation import (
     AdvancedGroupsConsolidationError,
     AdvancedGroupsConsolidationNotNeeded,
@@ -157,6 +157,17 @@ class AdvancedGroupsDisableAdminForm(forms.Form):
         if value != "DISABLE ADVANCED GROUPS":
             raise forms.ValidationError("Confirmation text does not match.")
         return value
+
+
+class PublicGroupRepairAdminForm(forms.Form):
+    create_new_common_room = forms.BooleanField(
+        required=False,
+        label="Create a new Common Room",
+        help_text=(
+            "When selected, create a fresh protected Common Room and make it the "
+            "Public identity. Otherwise repair using the currently configured group."
+        ),
+    )
 
 
 @admin.register(ServerSetting)
@@ -393,19 +404,32 @@ class ServerSettingAdmin(admin.ModelAdmin):
         if not request.user.is_superuser:
             raise PermissionDenied
         if request.method == "POST":
-            group = create_fresh_public_group()
-            messages.success(
-                request,
-                f"Created a fresh Public/Common Room identity as {group.name}.",
-            )
-            return HttpResponseRedirect(
-                reverse("admin:core_serversetting_changelist")
-            )
+            form = PublicGroupRepairAdminForm(request.POST)
+            if form.is_valid():
+                result = repair_public_group_identity(
+                    create_new_common_room=form.cleaned_data[
+                        "create_new_common_room"
+                    ],
+                    actor=request.user,
+                )
+                action = "Created" if result.created_new_group else "Verified"
+                messages.success(
+                    request,
+                    f"{action} Public/Common Room identity as {result.group.name}. "
+                    f"Restored {result.users_restored} user(s) and "
+                    f"{result.books_restored} book(s) that had no group.",
+                )
+                return HttpResponseRedirect(
+                    reverse("admin:core_serversetting_changelist")
+                )
+        else:
+            form = PublicGroupRepairAdminForm()
         context = {
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
             "title": "Repair Public/Common Room identity",
             "configured_group": _configured_public_group(),
+            "form": form,
         }
         return TemplateResponse(
             request,

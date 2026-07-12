@@ -300,16 +300,66 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self._login_owner()
         previous_id = self.public.pk
         repair_url = reverse("admin:core_serversetting_public_group_repair")
+        orphan_user = get_user_model().objects.create_user(username="orphan")
+        orphan_book = create_file_backed_book(
+            title="Orphan Book",
+            assign_public=False,
+        ).book
 
         get_response = self.client.get(repair_url)
-        self.assertContains(get_response, "Create fresh Public/Common Room group")
-        response = self.client.post(repair_url, follow=True)
+        self.assertContains(get_response, "Create a new Common Room")
+        response = self.client.post(
+            repair_url,
+            {"create_new_common_room": "on"},
+            follow=True,
+        )
 
         self.assertEqual(response.status_code, 200)
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
         self.assertNotEqual(setting.value, str(previous_id))
         self.assertTrue(LibraryGroup.objects.filter(pk=previous_id).exists())
-        self.assertContains(response, "Created a fresh Public/Common Room identity")
+        new_public = LibraryGroup.objects.get(pk=setting.value)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=orphan_user,
+                group=new_public,
+                is_curator=False,
+            ).exists()
+        )
+        self.assertTrue(
+            orphan_book.group_assignments.filter(group=new_public).exists()
+        )
+        self.assertContains(response, "Created Public/Common Room identity")
+        self.assertContains(response, "Restored 1 user(s) and 1 book(s)")
+
+    def test_public_group_repair_uses_current_identity_when_new_not_selected(self):
+        self._login_owner()
+        orphan_user = get_user_model().objects.create_user(username="orphan")
+        orphan_book = create_file_backed_book(
+            title="Orphan Book",
+            assign_public=False,
+        ).book
+
+        response = self.client.post(
+            reverse("admin:core_serversetting_public_group_repair"),
+            {},
+            follow=True,
+        )
+
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        self.assertEqual(setting.value, str(self.public.pk))
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=orphan_user,
+                group=self.public,
+                is_curator=False,
+            ).exists()
+        )
+        self.assertTrue(
+            orphan_book.group_assignments.filter(group=self.public).exists()
+        )
+        self.assertContains(response, "Verified Public/Common Room identity")
+        self.assertContains(response, "Restored 1 user(s) and 1 book(s)")
 
     def test_disabled_setting_shows_status_without_recovery_action(self):
         self._login_owner()

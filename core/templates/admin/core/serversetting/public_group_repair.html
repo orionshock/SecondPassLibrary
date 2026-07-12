@@ -3,9 +3,10 @@
 {% block content %}
   <div id="content-main">
     <p>
-      This creates a fresh protected Public/Common Room LibraryGroup through the
-      recovery service. The currently configured group is not deleted; it becomes
-      an ordinary group after the new identity is created.
+      This repairs the protected Public/Common Room identity and ensures every
+      user and Book belongs to at least one LibraryGroup. Existing group
+      assignments are preserved; only users and Books with no group are restored
+      to the current or newly created Public group.
     </p>
     <p>
       Current identity:
@@ -15,8 +16,9 @@
     </p>
     <form method="post">
       {% csrf_token %}
+      {{ form.as_p }}
       <div class="submit-row">
-        <input type="submit" value="Create fresh Public/Common Room group" class="default">
+        <input type="submit" value="Repair Public/Common Room identity" class="default">
         <a href="{% url 'admin:core_serversetting_changelist' %}">Cancel</a>
       </div>
     </form>

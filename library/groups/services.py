@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+import logging
+
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -10,14 +14,24 @@ from library.groups.public_group import (
     PUBLIC_GROUP_ID_SETTING,
     RECOVERED_PUBLIC_GROUP_DESCRIPTION,
     get_public_group,
+    get_public_group_id,
     is_public_group,
 )
-from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.queries import invalidate_visible_books_cache
 from shelves.library_hooks import remove_book_from_group_owned_shelves
 
 
 PUBLIC_GROUP_SETTING_DESCRIPTION = "Public/Common Room group id."
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PublicGroupRepairResult:
+    group: LibraryGroup
+    created_new_group: bool
+    users_restored: int
+    books_restored: int
 
 
 def create_library_group(*, name: str, description: str = "") -> LibraryGroup:
@@ -85,6 +99,53 @@ def create_fresh_public_group() -> LibraryGroup:
         )
         _store_public_group_id(group)
         return group
+
+
+def repair_public_group_identity(
+    *, create_new_common_room: bool, actor=None
+) -> PublicGroupRepairResult:
+    with transaction.atomic():
+        configured_id = get_public_group_id()
+        configured_exists = bool(
+            configured_id
+            and LibraryGroup.objects.filter(pk=configured_id).exists()
+        )
+        if create_new_common_room:
+            group = create_fresh_public_group()
+        else:
+            group = get_public_group()
+
+        users_restored = 0
+        for user in get_user_model().objects.order_by("pk").iterator():
+            users_restored += ensure_user_has_at_least_one_group(
+                user=user,
+                public_group=group,
+            )
+
+        books_restored = 0
+        for book in Book.objects.order_by("pk").iterator():
+            books_restored += ensure_book_has_at_least_one_group(
+                book=book,
+                added_by=actor,
+                public_group=group,
+            )
+
+        result = PublicGroupRepairResult(
+            group=group,
+            created_new_group=create_new_common_room or not configured_exists,
+            users_restored=users_restored,
+            books_restored=books_restored,
+        )
+
+    logger.info(
+        "Public/Common Room identity repaired: group=%s created_new=%s "
+        "users_restored=%d books_restored=%d",
+        result.group.pk,
+        result.created_new_group,
+        result.users_restored,
+        result.books_restored,
+    )
+    return result
 
 
 def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) -> LibraryGroupMembership:

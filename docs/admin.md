@@ -61,7 +61,10 @@ recovery action rather than a raw boolean. Public/Common Room Group uses an
 explicit LibraryGroup selector and reassignment confirmation; groups with
 curator memberships must be corrected before selection. Its separate recovery
 action creates a fresh protected group without deleting the previously
-configured group.
+configured group when **Create a new Common Room** is selected. Without that
+selection, recovery uses the currently configured Public group. Both paths scan
+all users and Books and restore only those with no group assignment to the
+resulting Public group.
 
 Books, stored EPUB fields/assets, users, reading sessions, progress,
 annotations, Public/Common Room identity, shelves, and shelf items are
