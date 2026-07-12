@@ -2,8 +2,10 @@ from types import MethodType
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import FilteredSelectMultiple, RelatedFieldWidgetWrapper
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
+from django.utils.html import format_html
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
@@ -15,15 +17,22 @@ from library.file_repair import (
     StoredEpubRepairError,
     repair_stored_epub,
 )
+from library.cover_services import set_book_cover_from_bytes
 from library.groups import services as group_services
 from library.groups.public_group import is_public_group
 
 from .models import (
+    Author,
     Book,
+    BookAuthor,
+    BookCatalogTag,
     BookGroupAssignment,
+    BookIdentifier,
+    BookSeries,
     CatalogTag,
     LibraryGroup,
     LibraryGroupMembership,
+    Series,
 )
 
 
@@ -121,11 +130,252 @@ class AdvancedGroupsAssignmentAdminMixin:
         )
 
 
+class BookAdminForm(forms.ModelForm):
+    cover_upload = forms.FileField(
+        required=False,
+        label="Upload or replace cover",
+        help_text="Upload a cover image.",
+    )
+    clear_cover = forms.BooleanField(
+        required=False,
+        label="Clear cover",
+    )
+    selected_authors = forms.ModelMultipleChoiceField(
+        queryset=Author.objects.all(),
+        required=False,
+        label="Authors",
+        widget=FilteredSelectMultiple("authors", is_stacked=False),
+    )
+    selected_catalog_tags = forms.ModelMultipleChoiceField(
+        queryset=CatalogTag.objects.all(),
+        required=False,
+        label="Catalog tags",
+        widget=FilteredSelectMultiple("catalog tags", is_stacked=False),
+    )
+
+    class Meta:
+        model = Book
+        exclude = ["authors", "catalog_tags", "cover_file"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields["selected_authors"].initial = self.instance.authors.all()
+            self.fields["selected_catalog_tags"].initial = (
+                self.instance.catalog_tags.all()
+            )
+
+        admin_site = getattr(self, "admin_site", None)
+        if admin_site is not None:
+            for field_name, model_field_name in (
+                ("selected_authors", "authors"),
+                ("selected_catalog_tags", "catalog_tags"),
+            ):
+                relation = Book._meta.get_field(model_field_name).remote_field
+                self.fields[field_name].widget = RelatedFieldWidgetWrapper(
+                    self.fields[field_name].widget,
+                    relation,
+                    admin_site,
+                    can_add_related=True,
+                    can_change_related=True,
+                    can_view_related=True,
+                )
+
+    def _save_m2m(self):
+        # Explicit through models require their own synchronization below.
+        self.sync_catalog_relationships()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("cover_upload") and cleaned_data.get("clear_cover"):
+            raise forms.ValidationError("Choose either a replacement cover or clear cover.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        book = super().save(commit=commit)
+        if commit:
+            self.apply_cover_change()
+        return book
+
+    def apply_cover_change(self):
+        if getattr(self, "_cover_change_applied", False):
+            return
+        book = self.instance
+        old_cover_name = str(book.cover_file.name or "")
+        upload = self.cleaned_data.get("cover_upload")
+        if upload:
+            set_book_cover_from_bytes(book=book, data=upload.read())
+        elif self.cleaned_data.get("clear_cover"):
+            book.cover_file = ""
+            book.save(update_fields=["cover_file", "updated_at"])
+        new_cover_name = str(book.cover_file.name or "")
+        if old_cover_name and old_cover_name != new_cover_name:
+            storage = Book._meta.get_field("cover_file").storage
+            if not Book.objects.filter(cover_file=old_cover_name).exists():
+                storage.delete(old_cover_name)
+        self._cover_change_applied = True
+
+    def sync_catalog_relationships(self):
+        if not self.instance.pk:
+            return
+        selected_authors = list(self.cleaned_data.get("selected_authors", ()))
+        selected_author_ids = {author.pk for author in selected_authors}
+        existing_authors = list(
+            self.instance.book_authors.select_related("author").order_by("position", "id")
+        )
+        self.instance.book_authors.exclude(author_id__in=selected_author_ids).delete()
+        existing_ids = {row.author_id for row in existing_authors}
+        next_position = max((row.position for row in existing_authors), default=-1) + 1
+        for author in selected_authors:
+            if author.pk not in existing_ids:
+                BookAuthor.objects.create(
+                    book=self.instance,
+                    author=author,
+                    position=next_position,
+                )
+                next_position += 1
+
+        selected_tag_ids = {
+            tag.pk for tag in self.cleaned_data.get("selected_catalog_tags", ())
+        }
+        self.instance.book_catalog_tags.exclude(
+            catalog_tag_id__in=selected_tag_ids
+        ).delete()
+        existing_tag_ids = set(
+            self.instance.book_catalog_tags.values_list("catalog_tag_id", flat=True)
+        )
+        BookCatalogTag.objects.bulk_create(
+            [
+                BookCatalogTag(book=self.instance, catalog_tag_id=tag_id)
+                for tag_id in selected_tag_ids - existing_tag_ids
+            ]
+        )
+
+
+class BookSeriesInline(admin.StackedInline):
+    model = BookSeries
+    fields = ["series", "series_index"]
+    extra = 1
+    max_num = 1
+    verbose_name = "Series"
+    verbose_name_plural = "Series"
+
+
+class BookIdentifierInline(admin.TabularInline):
+    model = BookIdentifier
+    fields = ["scheme", "value", "normalized_value"]
+    extra = 1
+    verbose_name_plural = "Book Identifiers"
+
+
+class BookGroupAssignmentInline(admin.TabularInline):
+    model = BookGroupAssignment
+    fields = ["group", "added_by", "created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at"]
+    extra = 1
+    verbose_name_plural = "Book Group Assignments"
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
+    form = BookAdminForm
     search_fields = ["title", "sort_title", "checksum"]
-    readonly_fields = ["book_file", "file_format", "checksum", "file_size"]
+    readonly_fields = [
+        "cover_preview",
+        "cover_metadata",
+        "book_file",
+        "file_format",
+        "checksum",
+        "file_size",
+        "stored_epub_repair",
+        "created_at",
+        "updated_at",
+    ]
+    fieldsets = [
+        ("Book identity", {"fields": ["title", "subtitle", "description"]}),
+        ("Authors", {"fields": ["selected_authors"]}),
+        (
+            "Cover",
+            {
+                "fields": [
+                    "cover_preview",
+                    "cover_upload",
+                    "clear_cover",
+                    "cover_metadata",
+                ]
+            },
+        ),
+        (
+            "Bibliographic",
+            {
+                "fields": [
+                    "publisher",
+                    "language",
+                    "published_year",
+                    "published_month",
+                    "published_day",
+                    "published_date_precision",
+                    "selected_catalog_tags",
+                ]
+            },
+        ),
+        (
+            "Stored EPUB",
+            {
+                "fields": [
+                    "book_file",
+                    "file_format",
+                    "checksum",
+                    "file_size",
+                    "stored_epub_repair",
+                ]
+            },
+        ),
+        ("Timestamps", {"fields": ["created_at", "updated_at"]}),
+    ]
+    inlines = [BookSeriesInline, BookIdentifierInline, BookGroupAssignmentInline]
     change_form_template = "admin/library/book/change_form.html"
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form_class = super().get_form(request, obj, change=change, **kwargs)
+        form_class.admin_site = self.admin_site
+        return form_class
+
+    def get_inlines(self, request, obj):
+        inlines = [BookSeriesInline, BookIdentifierInline]
+        if server_settings.advanced_library_groups_enabled():
+            inlines.append(BookGroupAssignmentInline)
+        return inlines
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        form.apply_cover_change()
+
+    @admin.display(description="Current cover")
+    def cover_preview(self, obj):
+        if not obj or not obj.cover_file:
+            return "No cover stored."
+        return format_html(
+            '<img src="{}" alt="Current cover" style="max-height: 320px; max-width: 240px;">',
+            obj.cover_file.url,
+        )
+
+    @admin.display(description="Cover metadata")
+    def cover_metadata(self, obj):
+        if not obj or not obj.cover_file:
+            return "No cover stored."
+        try:
+            size = obj.cover_file.size
+        except OSError:
+            return "Stored cover reference exists, but the file is missing."
+        return f"Stored cover present ({size:,} bytes)."
+
+    @admin.display(description="Repair stored EPUB")
+    def stored_epub_repair(self, obj):
+        if not obj or not obj.pk:
+            return "Save the Book before repairing its stored EPUB."
+        url = reverse("admin:library_book_repair_stored_epub", args=[obj.pk])
+        return format_html('<a class="button" href="{}">Repair stored EPUB</a>', url)
 
     def get_urls(self):
         return [
@@ -243,6 +493,16 @@ def _bounded_file_repair_error(exc):
 @admin.register(LibraryGroup)
 class LibraryGroupAdmin(admin.ModelAdmin):
     search_fields = ["name"]
+
+
+@admin.register(Author)
+class AuthorAdmin(admin.ModelAdmin):
+    search_fields = ["name", "sort_name"]
+
+
+@admin.register(Series)
+class SeriesAdmin(admin.ModelAdmin):
+    search_fields = ["name", "sort_name"]
 
 
 @admin.register(CatalogTag)
