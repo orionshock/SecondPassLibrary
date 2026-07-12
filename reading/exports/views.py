@@ -64,7 +64,9 @@ def _parse_selection(*, data, user) -> list[dict]:
         seen_books.add(book_id)
 
         book = get_object_or_404(
-            Book.objects.select_related("series").prefetch_related("authors", "identifiers"),
+            Book.objects.select_related(
+                "book_series", "book_series__series"
+            ).prefetch_related("authors", "identifiers"),
             id=book_id,
         )
 

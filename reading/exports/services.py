@@ -37,12 +37,49 @@ def _epub_unique_identifier(book: Book) -> str:
     identifiers = getattr(book, "identifiers", None)
     if identifiers is None:
         return ""
-    row = identifiers.filter(scheme=BookIdentifier.SCHEME_EPUB_UID).order_by("-is_primary", "value").first()
+    row = (
+        identifiers.filter(scheme=BookIdentifier.SCHEME_EPUB_UID)
+        .order_by("normalized_value", "value")
+        .first()
+    )
     return row.value if row is not None else ""
 
 
+def _isbn(book: Book) -> str:
+    identifiers = getattr(book, "identifiers", None)
+    if identifiers is None:
+        return ""
+    row = (
+        identifiers.filter(
+            scheme__in=[BookIdentifier.SCHEME_ISBN_13, BookIdentifier.SCHEME_ISBN_10]
+        )
+        .order_by("scheme", "normalized_value", "value")
+        .first()
+    )
+    return row.value if row is not None else ""
+
+
+def _book_series_link(book: Book):
+    try:
+        return book.book_series
+    except Book.book_series.RelatedObjectDoesNotExist:
+        return None
+
+
+def _format_series_index(value) -> str | None:
+    if value is None:
+        return None
+    formatted = format(value, "f")
+    if "." in formatted:
+        formatted = formatted.rstrip("0")
+        if formatted.endswith("."):
+            formatted += "0"
+    return formatted
+
+
 def _book_payload(book: Book) -> dict[str, Any]:
-    series = getattr(book, "series", None)
+    series_link = _book_series_link(book)
+    series = series_link.series if series_link is not None else None
     source = _book_source(book)
     file_hash = _file_hash(book)
     payload: dict[str, Any] = {
@@ -50,9 +87,13 @@ def _book_payload(book: Book) -> dict[str, Any]:
         "subtitle": book.subtitle or "",
         "authors": [a.name for a in book.authors.all()],
         "series": getattr(series, "name", "") or "",
-        "series_index": str(book.series_index) if book.series_index is not None else None,
+        "series_index": (
+            _format_series_index(series_link.series_index)
+            if series_link is not None
+            else None
+        ),
         "language": book.language or "",
-        "isbn": book.isbn or "",
+        "isbn": _isbn(book),
         "epub_unique_identifier": _epub_unique_identifier(book),
     }
     if source:
@@ -110,7 +151,9 @@ def _base_export(scope: dict[str, Any]) -> dict[str, Any]:
 
 def _sessions_queryset(*, user, book: Book):
     return (
-        ReadingSession.objects.select_related("book", "book__series", "progress")
+        ReadingSession.objects.select_related(
+            "book", "book__book_series", "book__book_series__series", "progress"
+        )
         .prefetch_related("book__authors", "book__identifiers", "annotations")
         .filter(user=user, book=book)
         .order_by("started_at", "created_at", "id")
@@ -176,7 +219,9 @@ def export_book_marginalia(
 def export_all_marginalia(*, user) -> dict[str, Any]:
     payload = _base_export({"type": "all"})
     sessions = (
-        ReadingSession.objects.select_related("book", "book__series", "progress")
+        ReadingSession.objects.select_related(
+            "book", "book__book_series", "book__book_series__series", "progress"
+        )
         .prefetch_related(
             "book__authors",
             "book__identifiers",
@@ -212,7 +257,9 @@ def export_session_marginalia(*, user, book: Book, session: ReadingSession) -> d
         raise LookupError("Session does not belong to book.")
 
     session = (
-        ReadingSession.objects.select_related("book", "book__series", "progress")
+        ReadingSession.objects.select_related(
+            "book", "book__book_series", "book__book_series__series", "progress"
+        )
         .prefetch_related("book__authors", "book__identifiers", "annotations")
         .get(pk=session.pk)
     )

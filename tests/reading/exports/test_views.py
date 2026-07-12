@@ -81,8 +81,10 @@ class ReadingExportApiTests(
 
         book = data["books"][0]
         self.assertEqual(book["title"], "Export Book")
-        self.assertTrue(book["source"].startswith("book:sha256:"))
-        self.assertTrue(book["file_hash"].startswith("sha256:"))
+        self.assertEqual(book["series"], "Export Series")
+        self.assertEqual(book["series_index"], "2.5")
+        self.assertEqual(book["source"], f"book:sha256:{self.book.checksum}")
+        self.assertEqual(book["file_hash"], f"sha256:{self.book.checksum}")
         self.assertLess(
             list(book.keys()).index("source"), list(book.keys()).index("sessions")
         )
