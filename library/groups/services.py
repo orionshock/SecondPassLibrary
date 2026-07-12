@@ -8,6 +8,7 @@ from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_DESCRIPTION,
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
+    RECOVERED_PUBLIC_GROUP_DESCRIPTION,
     get_public_group,
     is_public_group,
 )
@@ -61,6 +62,27 @@ def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
         group.name = name or DEFAULT_PUBLIC_GROUP_NAME
         group.description = description or DEFAULT_PUBLIC_GROUP_DESCRIPTION
         group.save(update_fields=["name", "description", "updated_at"])
+        _store_public_group_id(group)
+        return group
+
+
+def set_public_group_identity(*, group: LibraryGroup) -> LibraryGroup:
+    with transaction.atomic():
+        selected = LibraryGroup.objects.select_for_update().get(pk=group.pk)
+        if selected.memberships.filter(is_curator=True).exists():
+            raise ValidationError(
+                "Remove curator memberships before selecting this group as Public."
+            )
+        _store_public_group_id(selected)
+        return selected
+
+
+def create_fresh_public_group() -> LibraryGroup:
+    with transaction.atomic():
+        group = LibraryGroup.objects.create(
+            name=DEFAULT_PUBLIC_GROUP_NAME,
+            description=RECOVERED_PUBLIC_GROUP_DESCRIPTION,
+        )
         _store_public_group_id(group)
         return group
 

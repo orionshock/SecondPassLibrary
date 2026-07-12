@@ -52,7 +52,16 @@ setting is presented as a safe no-op. An enabled installation with no custom
 groups can complete the setting transition without deleting Public.
 
 `ServerSetting.key` is visible and read-only. The admin does not allow adding
-arbitrary `ServerSetting` rows.
+arbitrary `ServerSetting` rows or bulk deletion. Managed structural rows cannot
+be deleted.
+
+Server Name, Server Description, and Server Banner Message use semantic labels
+and operator-facing help text. Advanced Library Groups exposes status and its
+recovery action rather than a raw boolean. Public/Common Room Group uses an
+explicit LibraryGroup selector and reassignment confirmation; groups with
+curator memberships must be corrected before selection. Its separate recovery
+action creates a fresh protected group without deleting the previously
+configured group.
 
 Books, stored EPUB fields/assets, users, reading sessions, progress,
 annotations, Public/Common Room identity, shelves, and shelf items are

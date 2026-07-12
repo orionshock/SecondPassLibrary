@@ -1,14 +1,20 @@
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.widgets import AutocompleteSelect
+from django.core.exceptions import ValidationError
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
-from library.models import BookGroupAssignment, LibraryGroup
+from library.groups.public_group import (
+    PUBLIC_GROUP_ID_SETTING,
+    get_public_group_id,
+)
+from library.models import LibraryGroup
+from library.models import BookGroupAssignment
+from library.groups.services import create_fresh_public_group, set_public_group_identity
 from library.groups.consolidation import (
     AdvancedGroupsConsolidationError,
     AdvancedGroupsConsolidationNotNeeded,
@@ -22,6 +28,14 @@ from .models import ServerSetting
 
 class ServerSettingAdminForm(forms.ModelForm):
     admin_site = None
+    confirm_public_reassignment = forms.BooleanField(
+        required=False,
+        label="Confirm Public/Common Room reassignment",
+        help_text=(
+            "The selected LibraryGroup becomes the protected Public/Common Room "
+            "identity. The former Public group remains an ordinary group."
+        ),
+    )
 
     class Meta:
         model = ServerSetting
@@ -34,10 +48,13 @@ class ServerSettingAdminForm(forms.ModelForm):
     def _configure_value_field(self):
         value = self.instance.value if self.instance and self.instance.pk else None
         key = self.instance.key if self.instance and self.instance.pk else ""
+        if key != PUBLIC_GROUP_ID_SETTING:
+            self.fields.pop("confirm_public_reassignment", None)
 
         if key == server_settings.SERVER_NAME_SETTING:
             self.fields["value"] = forms.CharField(
-                label="Value",
+                label="Server Name",
+                help_text="Display name used in Product UI and discovery.",
                 max_length=server_settings.SERVER_NAME_MAX_LEN,
                 widget=forms.TextInput,
                 initial=value,
@@ -46,7 +63,8 @@ class ServerSettingAdminForm(forms.ModelForm):
 
         if key == server_settings.SERVER_DESCRIPTION_SETTING:
             self.fields["value"] = forms.CharField(
-                label="Value",
+                label="Server Description",
+                help_text="Description used in discovery and server identity.",
                 required=False,
                 max_length=server_settings.SERVER_DESCRIPTION_MAX_LEN,
                 widget=forms.Textarea,
@@ -56,7 +74,8 @@ class ServerSettingAdminForm(forms.ModelForm):
 
         if key == server_settings.SERVER_BANNER_MESSAGE_SETTING:
             self.fields["value"] = forms.CharField(
-                label="Value",
+                label="Server Banner Message",
+                help_text="Banner message shown in Product UI.",
                 required=False,
                 max_length=server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
                 widget=forms.Textarea,
@@ -66,18 +85,41 @@ class ServerSettingAdminForm(forms.ModelForm):
 
         if key == PUBLIC_GROUP_ID_SETTING:
             group_field = BookGroupAssignment._meta.get_field("group")
-            widget = AutocompleteSelect(group_field, self.admin_site)
             self.fields["value"] = forms.ModelChoiceField(
-                label="Value",
+                label="Public/Common Room Group",
+                help_text="Select the LibraryGroup that should hold the protected Public identity.",
                 queryset=LibraryGroup.objects.order_by("name"),
                 required=True,
-                widget=widget,
+                widget=AutocompleteSelect(group_field, self.admin_site),
                 initial=value,
             )
+            return
+
+        self.fields.pop("confirm_public_reassignment", None)
 
     def clean(self):
         cleaned = super().clean()
         if not self.instance.pk:
+            return cleaned
+        if self.instance.key == PUBLIC_GROUP_ID_SETTING:
+            selected_id = str(cleaned.get("value") or "")
+            selected = LibraryGroup.objects.filter(pk=selected_id).first()
+            if selected is not None and selected.memberships.filter(
+                is_curator=True
+            ).exists():
+                self.add_error(
+                    "value",
+                    "Remove curator memberships before selecting this group as Public.",
+                )
+            if (
+                selected_id
+                and selected_id != str(self.instance.value)
+                and not cleaned.get("confirm_public_reassignment")
+            ):
+                self.add_error(
+                    "confirm_public_reassignment",
+                    "Confirm the Public/Common Room reassignment.",
+                )
             return cleaned
         if self.instance.key != server_settings.ADVANCED_LIBRARY_GROUPS_SETTING:
             return cleaned
@@ -95,7 +137,6 @@ class ServerSettingAdminForm(forms.ModelForm):
         if self.instance.key == PUBLIC_GROUP_ID_SETTING:
             return str(value.pk)
         return value
-
 
 class AdvancedGroupsDisableAdminForm(forms.Form):
     fingerprint = forms.CharField(widget=forms.HiddenInput)
@@ -121,9 +162,10 @@ class AdvancedGroupsDisableAdminForm(forms.Form):
 @admin.register(ServerSetting)
 class ServerSettingAdmin(admin.ModelAdmin):
     form = ServerSettingAdminForm
-    list_display = ["display_key", "value", "description", "updated_at"]
+    list_display = ["display_key", "operator_value", "operator_purpose", "updated_at"]
     search_fields = ["key", "description"]
     readonly_fields = ["key", "description", "created_at", "updated_at"]
+    actions = None
 
     def has_add_permission(self, request):
         return False
@@ -134,9 +176,36 @@ class ServerSettingAdmin(admin.ModelAdmin):
             and obj.key == server_settings.ADVANCED_LIBRARY_GROUPS_SETTING
         )
 
+    @staticmethod
+    def _is_public_group_setting(obj) -> bool:
+        return obj is not None and obj.key == PUBLIC_GROUP_ID_SETTING
+
+    @staticmethod
+    def _is_structural_setting(obj) -> bool:
+        return bool(
+            obj is not None
+            and (
+                obj.key in server_settings.EDITABLE_SERVER_SETTING_DEFAULTS
+                or obj.key == PUBLIC_GROUP_ID_SETTING
+            )
+        )
+
     @admin.display(description="Key", ordering="key")
     def display_key(self, obj):
         return obj.display_key
+
+    @admin.display(description="Configured value or status")
+    def operator_value(self, obj):
+        if self._is_advanced_groups_setting(obj):
+            return "Enabled" if obj.value is True else "Disabled"
+        if self._is_public_group_setting(obj):
+            group = _configured_public_group()
+            return group.name if group is not None else "Identity needs repair"
+        return obj.value
+
+    @admin.display(description="Operator purpose")
+    def operator_purpose(self, obj):
+        return _setting_operator_copy(obj.key)
 
     def get_queryset(self, request):
         server_settings.ensure_editable_server_settings()
@@ -149,6 +218,11 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 "advanced-groups-disable/",
                 self.admin_site.admin_view(self.advanced_groups_disable_view),
                 name="core_serversetting_advanced_groups_disable",
+            ),
+            path(
+                "public-group-repair/",
+                self.admin_site.admin_view(self.public_group_repair_view),
+                name="core_serversetting_public_group_repair",
             ),
         ]
         return custom_urls + urls
@@ -176,13 +250,33 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     },
                 ),
             )
+        if self._is_public_group_setting(obj):
+            return (
+                (
+                    "Public/Common Room Group",
+                    {
+                        "fields": (
+                            "value",
+                            "confirm_public_reassignment",
+                            "public_group_guidance",
+                            "public_group_recovery_link",
+                        )
+                    },
+                ),
+                (
+                    "Database metadata",
+                    {
+                        "classes": ("collapse",),
+                        "fields": ("key", "created_at", "updated_at"),
+                    },
+                ),
+            )
         return (
             (
                 None,
                 {
                     "fields": (
                         "key",
-                        "description",
                         "value",
                         "created_at",
                         "updated_at",
@@ -203,6 +297,14 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     "advanced_groups_recovery_link",
                 ]
             )
+        if self._is_public_group_setting(obj):
+            fields.extend(
+                [
+                    "description",
+                    "public_group_guidance",
+                    "public_group_recovery_link",
+                ]
+            )
         return list(dict.fromkeys(fields))
 
     def get_form(self, request, obj=None, change=False, **kwargs):
@@ -211,7 +313,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
         return form
 
     def has_delete_permission(self, request, obj=None):
-        if self._is_advanced_groups_setting(obj):
+        if self._is_structural_setting(obj):
             return False
         return super().has_delete_permission(request, obj=obj)
 
@@ -235,6 +337,17 @@ class ServerSettingAdmin(admin.ModelAdmin):
             form_url=form_url,
             obj=obj,
         )
+
+    def save_model(self, request, obj, form, change):
+        if self._is_public_group_setting(obj):
+            try:
+                group = LibraryGroup.objects.get(pk=obj.value)
+                selected = set_public_group_identity(group=group)
+            except (LibraryGroup.DoesNotExist, ValidationError) as exc:
+                raise forms.ValidationError(str(exc)) from exc
+            obj.value = str(selected.pk)
+            return
+        super().save_model(request, obj, form, change)
 
     @admin.display(description="Current status")
     def advanced_groups_status(self, obj):
@@ -261,6 +374,43 @@ class ServerSettingAdmin(admin.ModelAdmin):
         url = reverse("admin:core_serversetting_advanced_groups_disable")
         return format_html(
             '<a href="{}">Disable and consolidate into Public/Common Room</a>', url
+        )
+
+    @admin.display(description="Identity guidance")
+    def public_group_guidance(self, obj):
+        return (
+            "This is the configured protected Public/Common Room identity. "
+            "It remains a normal LibraryGroup for access control. Reassignment "
+            "requires explicit confirmation and a group without curators."
+        )
+
+    @admin.display(description="Recovery action")
+    def public_group_recovery_link(self, obj):
+        url = reverse("admin:core_serversetting_public_group_repair")
+        return format_html('<a href="{}">Repair Public/Common Room identity</a>', url)
+
+    def public_group_repair_view(self, request):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        if request.method == "POST":
+            group = create_fresh_public_group()
+            messages.success(
+                request,
+                f"Created a fresh Public/Common Room identity as {group.name}.",
+            )
+            return HttpResponseRedirect(
+                reverse("admin:core_serversetting_changelist")
+            )
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": "Repair Public/Common Room identity",
+            "configured_group": _configured_public_group(),
+        }
+        return TemplateResponse(
+            request,
+            "admin/core/serversetting/public_group_repair.html",
+            context,
         )
 
     def advanced_groups_disable_view(self, request):
@@ -340,3 +490,30 @@ class ServerSettingAdmin(admin.ModelAdmin):
             "admin/core/serversetting/advanced_groups_disable_complete.html",
             context,
         )
+
+
+def _configured_public_group():
+    group_id = get_public_group_id()
+    if group_id is None:
+        return None
+    return LibraryGroup.objects.filter(pk=group_id).first()
+
+
+def _setting_operator_copy(key):
+    return {
+        server_settings.SERVER_NAME_SETTING: (
+            "Display name used in Product UI and discovery."
+        ),
+        server_settings.SERVER_DESCRIPTION_SETTING: (
+            "Description used in discovery and server identity."
+        ),
+        server_settings.SERVER_BANNER_MESSAGE_SETTING: (
+            "Banner message shown in Product UI."
+        ),
+        PUBLIC_GROUP_ID_SETTING: (
+            "Configured protected Public/Common Room identity."
+        ),
+        server_settings.ADVANCED_LIBRARY_GROUPS_SETTING: (
+            "Enabled/disabled status with explicit recovery guidance."
+        ),
+    }.get(key, "Managed server setting.")

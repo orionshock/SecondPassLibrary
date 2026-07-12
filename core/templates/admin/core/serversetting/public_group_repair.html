@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <p>
+      This creates a fresh protected Public/Common Room LibraryGroup through the
+      recovery service. The currently configured group is not deleted; it becomes
+      an ordinary group after the new identity is created.
+    </p>
+    <p>
+      Current identity:
+      <strong>
+        {% if configured_group %}{{ configured_group.name }}{% else %}Needs repair{% endif %}
+      </strong>
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="submit-row">
+        <input type="submit" value="Create fresh Public/Common Room group" class="default">
+        <a href="{% url 'admin:core_serversetting_changelist' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

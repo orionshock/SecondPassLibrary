@@ -1,16 +1,16 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import include, path, resolve, reverse
 
 from core import server_settings
-from core.admin import ServerSettingAdmin
+from core.admin import ServerSettingAdmin, ServerSettingAdminForm
 from core.models import ServerSetting
 from core.server_settings import set_server_setting
 from library.groups.consolidation import build_advanced_groups_disable_plan
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.groups.services import add_book_to_group, add_user_to_group
-from library.models import LibraryGroup
+from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
@@ -184,6 +184,132 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
             resolve(self.url).url_name,
             "core_serversetting_advanced_groups_disable",
         )
+
+    def test_semantic_labels_and_copy_replace_generic_value_presentation(self):
+        server_settings.ensure_editable_server_settings()
+        expected = {
+            server_settings.SERVER_NAME_SETTING: (
+                "Server Name",
+                "Display name used in Product UI and discovery.",
+            ),
+            server_settings.SERVER_DESCRIPTION_SETTING: (
+                "Server Description",
+                "Description used in discovery and server identity.",
+            ),
+            server_settings.SERVER_BANNER_MESSAGE_SETTING: (
+                "Server Banner Message",
+                "Banner message shown in Product UI.",
+            ),
+        }
+
+        for key, (label, help_text) in expected.items():
+            with self.subTest(key=key):
+                form = ServerSettingAdminForm(
+                    instance=ServerSetting.objects.get(key=key)
+                )
+                self.assertEqual(form.fields["value"].label, label)
+                self.assertEqual(form.fields["value"].help_text, help_text)
+
+    def test_structural_settings_cannot_be_deleted_or_bulk_deleted(self):
+        model_admin = ServerSettingAdmin(ServerSetting, admin.site)
+        request = RequestFactory().get("/admin/core/serversetting/")
+        request.user = self.owner
+        advanced = ServerSetting.objects.get(
+            key=server_settings.ADVANCED_LIBRARY_GROUPS_SETTING
+        )
+        public = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+
+        self.assertFalse(model_admin.has_delete_permission(request, advanced))
+        self.assertFalse(model_admin.has_delete_permission(request, public))
+        self.assertIsNone(model_admin.actions)
+
+    def test_public_group_page_uses_semantic_selector_and_current_copy(self):
+        self._login_owner()
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+
+        response = self.client.get(
+            reverse("admin:core_serversetting_change", args=[setting.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Public/Common Room Group")
+        self.assertContains(response, "configured protected Public/Common Room identity")
+        self.assertContains(response, "Confirm Public/Common Room reassignment")
+        self.assertContains(response, "Repair Public/Common Room identity")
+        self.assertContains(response, "public_group_id")
+        self.assertNotContains(response, "rewrite")
+        self.assertNotContains(response, "branch")
+
+    def test_public_group_reassignment_requires_confirmation(self):
+        self._login_owner()
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        other = LibraryGroup.objects.create(name="Other Room")
+        change_url = reverse("admin:core_serversetting_change", args=[setting.pk])
+
+        response = self.client.post(change_url, {"value": str(other.pk), "_save": "Save"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm the Public/Common Room reassignment")
+        setting.refresh_from_db()
+        self.assertEqual(setting.value, str(self.public.pk))
+
+    def test_safe_public_group_reassignment_uses_selected_library_group(self):
+        self._login_owner()
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        other = LibraryGroup.objects.create(name="Other Room")
+
+        response = self.client.post(
+            reverse("admin:core_serversetting_change", args=[setting.pk]),
+            {
+                "value": str(other.pk),
+                "confirm_public_reassignment": "on",
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        setting.refresh_from_db()
+        self.assertEqual(setting.value, str(other.pk))
+        self.assertTrue(LibraryGroup.objects.filter(pk=self.public.pk).exists())
+
+    def test_unsafe_public_group_reassignment_with_curator_is_blocked(self):
+        self._login_owner()
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        other = LibraryGroup.objects.create(name="Curated Room")
+        LibraryGroupMembership.objects.create(
+            user=self.staff,
+            group=other,
+            is_curator=True,
+        )
+
+        response = self.client.post(
+            reverse("admin:core_serversetting_change", args=[setting.pk]),
+            {
+                "value": str(other.pk),
+                "confirm_public_reassignment": "on",
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Remove curator memberships")
+        setting.refresh_from_db()
+        self.assertEqual(setting.value, str(self.public.pk))
+
+    def test_public_group_repair_action_creates_fresh_identity(self):
+        self._login_owner()
+        previous_id = self.public.pk
+        repair_url = reverse("admin:core_serversetting_public_group_repair")
+
+        get_response = self.client.get(repair_url)
+        self.assertContains(get_response, "Create fresh Public/Common Room group")
+        response = self.client.post(repair_url, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
+        self.assertNotEqual(setting.value, str(previous_id))
+        self.assertTrue(LibraryGroup.objects.filter(pk=previous_id).exists())
+        self.assertContains(response, "Created a fresh Public/Common Room identity")
 
     def test_disabled_setting_shows_status_without_recovery_action(self):
         self._login_owner()
