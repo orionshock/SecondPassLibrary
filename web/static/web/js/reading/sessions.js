@@ -250,6 +250,9 @@ function renderBookGroup(sessions) {
   const authors = authorNames(book);
   const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
   const bookSessionsHref = `/reading/sessions/books/${encodeURIComponent(bookId)}/`;
+  const sessionCount = Number.isFinite(Number(first && first.filtered_book_session_count))
+    ? Number(first.filtered_book_session_count)
+    : sessions.length;
 
   const group = el("section", "card sessions-book-group");
   if (canOpen) group.dataset.bookSessionsUrl = bookSessionsHref;
@@ -278,7 +281,7 @@ function renderBookGroup(sessions) {
     el(
       "div",
       "muted sessions-book-group__count",
-      `${sessions.length} session${sessions.length === 1 ? "" : "s"}`
+      `${sessionCount} session${sessionCount === 1 ? "" : "s"}`
     )
   );
   header.appendChild(identity);

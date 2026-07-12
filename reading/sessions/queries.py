@@ -128,6 +128,18 @@ def apply_session_filters(
     return queryset.distinct().order_by("-started_at")
 
 
+def filtered_session_counts_by_book(queryset: QuerySet[ReadingSession]) -> dict[str, int]:
+    rows = (
+        queryset.order_by()
+        .values("book_id")
+        .annotate(filtered_session_count=Count("id", distinct=True))
+    )
+    return {
+        str(row["book_id"]): int(row["filtered_session_count"])
+        for row in rows
+    }
+
+
 def build_session_list_context(*, book: Book | None, request=None) -> dict[str, Any]:
     if book is None:
         return {}

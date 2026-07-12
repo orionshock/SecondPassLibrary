@@ -143,6 +143,7 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
     book_id = serializers.UUIDField(read_only=True)
     progression = serializers.FloatField(read_only=True, allow_null=True)
     annotation_count = serializers.IntegerField(read_only=True)
+    filtered_book_session_count = serializers.IntegerField(read_only=True)
     book = serializers.SerializerMethodField(read_only=True)
     can_open = serializers.SerializerMethodField(read_only=True)
 
@@ -203,6 +204,7 @@ class ReadingSessionSummarySerializer(serializers.ModelSerializer):
             "notes",
             "progression",
             "annotation_count",
+            "filtered_book_session_count",
             "book",
             "can_open",
         ]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -59,6 +60,42 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
             str(self.session_visible.id),
             {s["id"] for s in response_data_list(r_active)},
         )
+
+    def test_filtered_book_session_count_uses_full_current_user_filtered_set(self):
+        self.session_visible.status = ReadingSession.STATUS_ACTIVE
+        self.session_visible.is_active = True
+        self.session_visible.save(update_fields=["status", "is_active", "updated_at"])
+        closed = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+        other_user = get_user_model().objects.create_user(username="count-other")
+        ReadingSession.objects.create(user=other_user, book=self.book, is_active=False)
+
+        all_response = assert_response(
+            self.client.get(f"/api/v1/reading/sessions/?book={self.book.id}&page_size=1")
+        )
+        active_response = assert_response(
+            self.client.get(
+                f"/api/v1/reading/sessions/?book={self.book.id}&is_active=true&page_size=1"
+            )
+        )
+        closed_response = assert_response(
+            self.client.get(
+                f"/api/v1/reading/sessions/?book={self.book.id}&is_active=false&page_size=1"
+            )
+        )
+
+        all_row = next(
+            row for row in response_data_list(all_response) if row["book_id"] == str(self.book.id)
+        )
+        self.assertEqual(all_row["filtered_book_session_count"], 2)
+        self.assertEqual(response_data_list(active_response)[0]["filtered_book_session_count"], 1)
+        closed_rows = response_data_list(closed_response)
+        closed_row = next(row for row in closed_rows if row["id"] == str(closed.id))
+        self.assertEqual(closed_row["filtered_book_session_count"], 1)
 
     def test_closed_session_progress_get_does_not_reorder_book_sessions(self):
         target = ReadingSession.objects.create(
@@ -256,6 +293,7 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
         self.assertEqual(book["title"], "")
         self.assertEqual(book["authors"], [])
         self.assertIsNone(book["series"])
+        self.assertEqual(hidden["filtered_book_session_count"], 1)
 
     def test_book_filter_includes_context_for_visible_book(self):
         author = Author.objects.create(name="Jim Butcher")

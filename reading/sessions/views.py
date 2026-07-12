@@ -21,6 +21,7 @@ from .queries import (
     build_activity_summary,
     build_session_list_context,
     get_user_session_queryset,
+    filtered_session_counts_by_book,
     parse_activity_summary_book_ids,
     parse_recent_sessions_limit,
     recent_sessions_for_user,
@@ -44,6 +45,11 @@ from ..services import (
 
 def _can_view_book(*, user, book: Book) -> bool:
     return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
+
+
+def _attach_filtered_session_counts(sessions, counts: dict[str, int]) -> None:
+    for session in sessions:
+        session.filtered_book_session_count = counts.get(str(session.book_id), 0)
 
 
 def _build_open_response_payload(*, request: Request, session: ReadingSession, view) -> dict[str, Any]:
@@ -108,9 +114,11 @@ class ReadingSessionViewSet(
     def list(self, request, *args, **kwargs):
         book_filter = self._book_filter_from_request()
         queryset = self.filter_queryset(self.get_queryset())
+        session_counts = filtered_session_counts_by_book(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
+            _attach_filtered_session_counts(page, session_counts)
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
             if book_filter is not None:
@@ -121,7 +129,9 @@ class ReadingSessionViewSet(
                 response.data["results"] = results
             return response
 
-        serializer = self.get_serializer(queryset, many=True)
+        sessions = list(queryset)
+        _attach_filtered_session_counts(sessions, session_counts)
+        serializer = self.get_serializer(sessions, many=True)
         payload: dict[str, Any] = {"results": serializer.data}
         if book_filter is not None:
             payload["context"] = build_session_list_context(book=book_filter, request=request)
