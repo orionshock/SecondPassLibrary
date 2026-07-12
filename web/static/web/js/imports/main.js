@@ -4,41 +4,42 @@ import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../l
 import { setStatus } from "../ui/status.js";
 
 function itemRefs(item) {
-  return [
-    item.book ? `book=${item.book}` : "",
-    item.book_file ? `book_file=${item.book_file}` : "",
-  ].filter(Boolean);
+  return {
+    bookId: item.book_id || "",
+  };
 }
 
 function renderImportItem(item) {
   const status = item.status || "";
-  const source = item.source_name || "(Unknown item)";
-  const message = item.message || "";
-  const refs = itemRefs(item)
-    .map((ref) => `<code>${escapeHtml(ref)}</code>`)
-    .join(" ");
+  const source = item.source_label || "Item unavailable";
+  const message = item.safe_message || "";
+  const refs = itemRefs(item);
+  const sourceHtml = refs.bookId
+    ? `<a href="/library/books/${encodeURIComponent(String(refs.bookId))}/">${escapeHtml(source)}</a>`
+    : escapeHtml(source);
 
   return `<li class="import-result__item">
     <span class="pill">${escapeHtml(status)}</span>
-    <span class="import-result__item-source">${escapeHtml(source)}</span>
+    <span class="import-result__item-source">${sourceHtml}</span>
     ${message ? `<span class="muted import-result__item-message">- ${escapeHtml(message)}</span>` : ""}
-    ${refs ? `<span class="import-result__refs">${refs}</span>` : ""}
   </li>`;
 }
 
 function resultCounts(result) {
+  const counts = result.counts || {};
   return [
-    ["found", result.total_found],
-    ["imported", result.imported_count],
-    ["duplicates", result.duplicate_count],
-    ["failed", result.failed_count],
+    ["imported", counts.imported],
+    ["duplicate", counts.duplicate],
+    ["conflict", counts.conflict],
+    ["failed", counts.failed],
+    ["skipped", counts.skipped],
   ].filter(([_key, value]) => value !== null && value !== undefined && value !== "");
 }
 
 function renderImportResult(result) {
   if (!result) return "";
-  const source = result.source_filename || "(Unknown source)";
-  const status = result.status || "";
+  const source = result.source_label || "Source unavailable";
+  const sourceType = result.source_type || "";
   const counts = resultCounts(result)
     .map(([key, value]) => `<span class="pill">${escapeHtml(key)}: ${escapeHtml(value)}</span>`)
     .join(" ");
@@ -49,13 +50,13 @@ function renderImportResult(result) {
   return `<section class="book import-result" aria-label="Latest import result">
     <div class="import-result__summary">
       <span class="import-result__source">${escapeHtml(source)}</span>
-      <span class="pill">${escapeHtml(status)}</span>
+      ${sourceType ? `<span class="pill">source type: ${escapeHtml(sourceType)}</span>` : ""}
       ${counts ? `<span class="import-result__counts">${counts}</span>` : ""}
     </div>
     <div class="book__meta import-result__details">
-      <div>Run: <code>${escapeHtml(result.run_id || "")}</code></div>
-      <div>Source type: ${escapeHtml(result.source_type || "")}</div>
-      ${result.message ? `<div class="muted">${escapeHtml(result.message)}</div>` : ""}
+      <div>Import complete.</div>
+      <div>Source: ${escapeHtml(source)}</div>
+      ${sourceType ? `<div>Source type: ${escapeHtml(sourceType)}</div>` : ""}
       ${itemRows ? `<div class="import-result__items"><h4 class="card__title">Items</h4>${extra}<ul>${itemRows}</ul></div>` : ""}
     </div>
   </section>`;

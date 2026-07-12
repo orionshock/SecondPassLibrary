@@ -4,6 +4,7 @@ $PythonExecutable = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 $env:DJANGO_DEBUG = "1"
+$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
 $env:SECOND_PASS_ENABLE_WHITENOISE = "0"
 $env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,[::1]"
 
