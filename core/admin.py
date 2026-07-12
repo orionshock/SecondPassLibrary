@@ -123,7 +123,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
     form = ServerSettingAdminForm
     list_display = ["display_key", "value", "description", "updated_at"]
     search_fields = ["key", "description"]
-    readonly_fields = ["description", "created_at", "updated_at"]
+    readonly_fields = ["key", "description", "created_at", "updated_at"]
+
+    def has_add_permission(self, request):
+        return False
 
     def _is_advanced_groups_setting(self, obj) -> bool:
         return (
@@ -176,6 +179,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 None,
                 {
                     "fields": (
+                        "key",
                         "description",
                         "value",
                         "created_at",
@@ -240,7 +244,8 @@ class ServerSettingAdmin(admin.ModelAdmin):
             "<strong>{}</strong> "
             "Product UI can enable advanced groups, but disabling after use must "
             "run the recovery flow so custom group shelves, books, users, and "
-            "containers are consolidated safely into Public Library.",
+            "containers are consolidated safely into the configured Public/Common "
+            "Room group. That group still uses normal group access control.",
             "Do not edit this database setting directly.",
         )
 
@@ -250,7 +255,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
             return ""
         url = reverse("admin:core_serversetting_advanced_groups_disable")
         return format_html(
-            '<a href="{}">Disable and consolidate into Public Library</a>', url
+            '<a href="{}">Disable and consolidate into Public/Common Room</a>', url
         )
 
     def advanced_groups_disable_view(self, request):
@@ -277,8 +282,12 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     return HttpResponseRedirect(
                         reverse("admin:core_serversetting_changelist")
                     )
-                except AdvancedGroupsConsolidationError as exc:
-                    messages.error(request, f"Recovery failed: {exc}")
+                except AdvancedGroupsConsolidationError:
+                    messages.error(
+                        request,
+                        "Recovery failed and no changes were committed. "
+                        "Review the current state and try again.",
+                    )
                     plan = build_advanced_groups_disable_plan(display_limit=100)
                     form = AdvancedGroupsDisableAdminForm(
                         initial={"fingerprint": plan.fingerprint}
@@ -286,7 +295,8 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 else:
                     messages.success(
                         request,
-                        "Advanced library groups disabled and consolidated into Public Library.",
+                        "Advanced library groups disabled and consolidated into "
+                        "the configured Public/Common Room group.",
                     )
                     return self._advanced_groups_completion_response(request, result)
         else:
@@ -297,7 +307,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
         context = {
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
-            "title": "Disable advanced library groups and consolidate into Public Library",
+            "title": (
+                "Disable advanced library groups and consolidate into "
+                "Public/Common Room"
+            ),
             "plan": plan,
             "form": form,
             "display_limit": 100,

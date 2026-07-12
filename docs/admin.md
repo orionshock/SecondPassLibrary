@@ -28,9 +28,11 @@ and use the recovery action:
 ```
 
 Do not manually flip `core.ServerSetting(advanced_library_groups_enabled)` to
-false. Normal admin editing blocks that change. The recovery flow previews the
-planned changes, requires explicit confirmation, then runs inside one database
-transaction.
+false. The structural setting page shows status and its recovery action instead
+of an editable raw value. The superuser-only recovery flow renders a
+fingerprinted plan and full counts, requires both a confirmation checkbox and
+the typed phrase `DISABLE ADVANCED GROUPS`, rejects stale plans for review, and
+runs the confirmed operation inside one database transaction.
 
 The recovery flow:
 
@@ -43,6 +45,14 @@ The recovery flow:
   group services so orphaned users naturally fall back to Public
 - deletes the now-empty custom group containers
 - disables advanced library groups only after consolidation succeeds
+
+Public/Common Room remains a normal access-controlled `LibraryGroup`; moving
+state there does not make books universally visible. An already-disabled
+setting is presented as a safe no-op. An enabled installation with no custom
+groups can complete the setting transition without deleting Public.
+
+`ServerSetting.key` is visible and read-only. The admin does not allow adding
+arbitrary `ServerSetting` rows.
 
 Books, stored EPUB fields/assets, users, reading sessions, progress,
 annotations, Public/Common Room identity, shelves, and shelf items are

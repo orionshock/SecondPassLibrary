@@ -6,6 +6,8 @@
       This recovery action disables advanced library groups after consolidating
       custom group state into <strong>{{ plan.public_group_name }}</strong>.
       It is intentionally destructive to custom group containers.
+      Public/Common Room remains a normal access-controlled LibraryGroup; this
+      operation does not make its books universally visible.
     </p>
     <p>
       Preserved: books, EPUB files, reading sessions, progress, annotations,
@@ -65,7 +67,7 @@
       <p>No custom group shelves will be renamed.</p>
     {% endif %}
 
-    <h2>2. Move shelves to Public Library</h2>
+    <h2>2. Move shelves to Public/Common Room</h2>
     <p>
       Every renamed shelf above will remain group-owned and will be reassigned
       to <strong>{{ plan.public_group_name }}</strong>. Shelf items and order are preserved.
@@ -138,14 +140,21 @@
       The setting is changed only after all consolidation phases and assertions succeed.
     </p>
 
-    <form method="post" novalidate
-          onsubmit="return confirm('Disable advanced library groups and consolidate custom groups into Public Library?');">
-      {% csrf_token %}
-      {{ form.as_p }}
+    {% if plan.enabled_before %}
+      <form method="post" novalidate
+            onsubmit="return confirm('Disable advanced library groups and consolidate custom groups into Public/Common Room?');">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="submit-row">
+          <input type="submit" value="Disable and consolidate" class="deletelink">
+          <a href="{% url 'admin:core_serversetting_changelist' %}">Cancel</a>
+        </div>
+      </form>
+    {% else %}
+      <p>Advanced library groups are already disabled. No recovery action is required.</p>
       <div class="submit-row">
-        <input type="submit" value="Disable and consolidate" class="deletelink">
-        <a href="{% url 'admin:core_serversetting_changelist' %}">Cancel</a>
+        <a href="{% url 'admin:core_serversetting_changelist' %}">Return to Server Settings</a>
       </div>
-    </form>
+    {% endif %}
   </div>
 {% endblock %}
