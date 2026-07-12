@@ -44,53 +44,40 @@ The recovery flow:
 - deletes the now-empty custom group containers
 - disables advanced library groups only after consolidation succeeds
 
-Books, BookFile rows/assets, users, reading sessions, progress, annotations,
-Public/Common Room identity, shelves, and shelf items are preserved.
+Books, stored EPUB fields/assets, users, reading sessions, progress,
+annotations, Public/Common Room identity, shelves, and shelf items are
+preserved.
 
-## BookFile Repair
+## Stored Book File Recovery
 
-Normal book creation happens through import. A normal user-facing `Book`
-represents one concrete EPUB artifact and should have exactly one `BookFile`.
-Fileless `Book` rows, or `BookFile` rows whose physical file is missing on
-disk, are repair states.
+Normal book creation happens through import. A normal user-facing `Book` owns
+its stored EPUB fields directly:
 
-The admin repair workflow is available from:
+- `book_file`
+- `file_format`
+- `checksum`
+- `file_size`
+- `source_filename`
+- `cover_file`
 
-```text
-/admin/library/book/
-```
-
-Open a Book and use **Repair stored EPUB** in the Stored EPUB section, or use
-the repair link from the Books changelist.
-
-Repair behavior:
-
-- If the Book has no `BookFile` row, repair creates one for that existing Book.
-- If the Book has a `BookFile` row but the stored file is missing, repair
-  updates that existing row and preserves `BookFile.id`.
-- If the stored file exists, repair is blocked unless the operator checks
-  **Replace existing stored file**.
-- If the existing `BookFile` has a checksum, repair requires the uploaded EPUB
-  checksum to match by default.
-- A different checksum is allowed only when the operator checks
-  **Allow different checksum**.
-- Repair does not update Book title, authors, identifiers, cover, reading
-  sessions, progress, or annotations.
+There is no `BookFile` model in the current LibraryReWrite2607 schema. If a
+legacy/operator mistake leaves a `Book` without `book_file` or with a missing
+physical EPUB, treat it as an operator repair state. The current supported
+operator import path is `python manage.py import_library <path>` for EPUB/ZIP
+imports. Do not delete and re-import an existing Book merely to restore a file
+when preserving reading data matters.
 
 Checksum mismatch is intentionally guarded because replacing an EPUB with a
 different file can invalidate EPUB CFI anchors used by annotations and reading
 progress.
 
-When repairing a missing physical file, preserving `BookFile.id` keeps existing
-`Annotation.book_file` references attached to the same file identity row.
-
 ## Boundaries
 
-The admin repair workflow is intentionally not exposed through the Product UI or
-public API. Product flows should continue to use import for new books and should
-not create fileless Books.
+Stored EPUB recovery is intentionally operator-facing. Product flows should
+continue to use import for new books and should not create fileless Books.
 
 The admin can still make destructive edits. Deleting a Book is outside this
 repair workflow and may cascade to related records according to the current
-schema. Prefer BookFile repair over deleting and re-importing when the goal is
-to restore a missing EPUB file while preserving user marginalia.
+schema. Prefer explicit operator repair/import planning over deleting and
+re-importing when the goal is to restore a missing EPUB file while preserving
+user marginalia.

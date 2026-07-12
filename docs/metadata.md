@@ -2,15 +2,17 @@
 
 ## Core objects
 
-- `Book`: canonical, user-facing bibliographic fields (title/authors/series/publisher/language/published date/ISBN/subjects)
-- `BookFile`: stored content blob (EPUB), stored content-addressed by checksum (one Book has at most one BookFile; product policy treats Books as file-backed, so a normal Book should have exactly one BookFile)
+- `Book`: canonical, user-facing bibliographic fields plus stored EPUB fields.
+  `Book` owns `book_file`, `file_format`, `checksum`, `file_size`,
+  `source_filename`, and optional `cover_file`.
 
 Notes:
 - `Book.subtitle` may be blank.
-- `Book.series_index` supports integers or one decimal place (e.g. `5` or `5.1`).
+- Series data is represented by `BookSeries`, which links `Book` to `Series`
+  and stores `series_index`.
 - `BookIdentifier` is editable bibliographic metadata (scheme/value/source/is_primary) and does not automatically rewrite `Book.isbn`.
 - Fileless Books and missing physical EPUB files are repair states, not normal
-  product states. See `docs/admin.md` for the admin BookFile repair workflow.
+  product states.
 
 ## Identifiers
 
@@ -33,11 +35,14 @@ Notes:
   - EPUB3 manifest item with `properties~="cover-image"`
   - EPUB2 `<meta name="cover" content="...">` + manifest lookup
 - Unsupported/corrupt/oversized covers are ignored; import still succeeds.
-- ZIP imports can also use OPF sidecars (Calibre-style) to bootstrap metadata and cover for new books only.
+- ZIP imports can use OPF sidecars (Calibre-style) to bootstrap metadata for
+  new books only. Sidecar cover/assets are deferred.
 
 ## ZIP OPF sidecars (current)
 
-When importing a `.zip` of EPUBs, the importer can optionally use an OPF sidecar to bootstrap metadata and cover **for new books only** (not a sync/refresh mechanism).
+When importing a `.zip` of EPUBs, the importer can optionally use an OPF sidecar
+to bootstrap metadata **for new books only** (not a sync/refresh mechanism).
+Sidecar cover/assets are deferred.
 
 Sidecar lookup (per EPUB member), in order:
 
@@ -47,7 +52,8 @@ Sidecar lookup (per EPUB member), in order:
 
 Metadata precedence:
 
-- OPF sidecar values win when present; missing fields fall back to EPUB metadata.
+- A valid OPF sidecar is a full metadata replacement for new imports. It must
+  have a real nonblank, non-`Untitled` title before it replaces EPUB metadata.
 - Duplicate EPUB checksum imports are still treated as duplicates and do not refresh metadata or covers.
 
 Media serving note:

@@ -63,14 +63,14 @@ Examples:
 
 ```text
 Good:
-library/imports/epub.py::import_epub()
+library/imports/epub.py::import_epub_file()
 reading/services.py::get_or_create_active_session()
 reading/services.py::start_new_reading_session()
 
 Avoid:
 Putting import logic directly in a management command.
 Putting session rollover logic directly in a view.
-Putting metadata extraction in BookFile.save().
+Putting metadata extraction in Book.save().
 ```
 
 ### Models should describe data, not orchestrate workflows
@@ -141,8 +141,9 @@ Do not create new apps unless there is a clear domain boundary.
 
 ### Books and files
 
-* A `Book` represents the conceptual work.
-* A `BookFile` represents the stored EPUB file (one Book has at most one BookFile).
+* A `Book` represents the conceptual work and owns its stored EPUB fields:
+  `book_file`, `file_format`, `checksum`, `file_size`, `source_filename`, and
+  optional `cover_file`.
 * EPUB files are stored content-addressed by SHA-256.
 * Imported filenames are only fallback/diagnostic context.
 * Human-readable filenames should be generated from metadata when exporting or downloading.
@@ -160,7 +161,7 @@ For now, the library is shared among authenticated users.
 
 This means:
 
-- `Book`, `Author`, `Series`, and `BookFile` APIs may expose shared library records to authenticated users.
+- `Book`, `Author`, and `Series` APIs may expose shared library records to authenticated users.
 - Reading metadata remains user-owned and must be scoped to the authenticated user.
 - Future permissions may restrict book/file access, but existing reading metadata should remain recoverable/exportable by its owner.
 
@@ -293,7 +294,7 @@ Future direction:
   "error": {
     "code": "BOOK_FILE_DUPLICATE",
     "message": "This EPUB has already been imported.",
-    "detail": "A BookFile with the same checksum already exists.",
+    "detail": "A Book with the same checksum already exists.",
     "hint": "Open the existing book entry instead of importing it again."
   }
 }

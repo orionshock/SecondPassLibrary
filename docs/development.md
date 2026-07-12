@@ -15,7 +15,7 @@ Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
 adds local test/type tooling such as Django/DRF typing packages.
 Pillow is included for cover image validation.
 EPUB imports also attempt best-effort embedded cover extraction (JPEG/PNG/WebP only).
-ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) to bootstrap metadata and cover for new books only.
+ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) to bootstrap metadata for new books only. Sidecar cover/assets are deferred.
 
 `npm install` installs the pinned local Pyright dev tool. There is no frontend
 build step.
@@ -306,24 +306,18 @@ Safety:
 
 ## Common commands
 
-Import a single local EPUB (operator-only host/container path):
+Import a single local EPUB, a ZIP archive, or a non-recursive directory
+(operator-only host/container path):
 
 ```powershell
-python manage.py import_epub "path\to\book.epub"
+python manage.py import_library "path\to\book.epub"
+python manage.py import_library "path\to\books.zip"
+python manage.py import_library "path\to\directory"
 ```
 
-The command does not support ZIP files or OPF sidecars. It warns but continues
-when the file exceeds the normal Product/API single-EPUB upload limit.
-
-Import a local ZIP archive of EPUBs (operator-only host/container path):
-
-```powershell
-python manage.py import_books "path\to\books.zip"
-```
-
-The command supports ZIP OPF sidecars, uses the same ZIP limits as Product/API
-imports, and does not create durable import history. `import_epub` remains the
-single-EPUB command.
+The command shares the same import services as Product/API imports, supports ZIP
+OPF sidecars, uses the same ZIP limits, and does not create durable import
+history.
 
 See also:
 - `docs/api.md` (endpoint index)

@@ -13,7 +13,9 @@ Key principles:
 - Session summary/detail payloads may expose `can_open=false` for owned
   sessions whose book is no longer visible. That is a UI hint for open/continue
   capability, not a denial of marginalia ownership.
-- Business rules should be centralized in policy helpers and service modules (avoid scattered per-view logic).
+- Global role authority lives in `accounts.roles`; group-scoped curator authority
+  lives in `library.roles`; book/group visibility lives in `library.queries`.
+  App services and views own action-specific business rules.
 
 In plain language:
 
@@ -92,7 +94,11 @@ Creation rules:
 
 `GET /api/v1/accounts/me/` includes the caller's identity, global `role`, `is_owner` flag, and `groups` memberships to help future UIs decide what to show.
 
-These are **account hints**, not a replacement for policy enforcement. Broad Product UI affordances are derived from `role` and `is_owner`; object-specific affordances come from object payloads such as LibraryGroup `capabilities.can_curate`. Every endpoint still enforces authorization via the relevant domain policy helpers.
+These are **account hints**, not a replacement for authorization. Broad Product
+UI affordances are derived from `role` and `is_owner`; object-specific
+affordances come from object payloads such as LibraryGroup
+`capabilities.can_curate`. Every endpoint still enforces authorization in the
+relevant domain service/view.
 
 Rules:
 
@@ -204,6 +210,8 @@ identity.
 - Renaming the Public display name does not change its identity or protections.
 - Public cannot be deleted.
 - Public cannot have curator assignments (`is_curator=true` is invalid).
+- Public is not universally visible. Access to Public books and shelves follows
+  normal LibraryGroup membership rules.
 
 Default/fallback behavior:
 
@@ -215,6 +223,9 @@ Default/fallback behavior:
 - New/imported books default to Public (book assignment).
 - Users/books must belong to at least one LibraryGroup.
 - Public is fallback only: if a user/book would otherwise have zero groups, it is restored to Public.
+- If `public_group_id` is missing, corrupt, invalid, or points to a deleted
+  group, explicit Public group service access recreates `Common Room` with a
+  warning description for operator cleanup and stores the new id.
 
 `advanced_library_groups_enabled` is off by default. Disabled means the server
 is centered on Common Room/Public Library. Product UI hides advanced group
@@ -271,7 +282,9 @@ Shelves API is implemented under `/api/v1/shelves/`. Shelves have product UI sup
 When exposing groups through the API:
 
 - Prefer returning `404 Not Found` for groups the user cannot view (avoid leaking group existence).
-- Group book listings must still filter each book through `can_view_book(user, book)` (a viewable group must not leak inaccessible books).
+- Group book listings must still filter each book through current book
+  visibility from `library.queries` (a viewable group must not leak
+  inaccessible books).
 - Group curation endpoints should call the safe group curation services above.
 - Group presentation updates should be limited to `description` via `PATCH /api/v1/library/groups/<group_id>/`.
 
@@ -286,28 +299,27 @@ LibraryGroups are access scopes. Shelves are presentation/organization objects.
 
 - A shelf never grants access to a book.
 - Shelf visibility controls whether the shelf/list itself can be seen.
-- Each book on a shelf must still pass `can_view_book(user, book)`.
-- User-owned shelves and group-owned shelves should be modeled separately later.
-- Librarians may manage group-owned shelves across groups later.
-- Curators may manage group-owned shelves only for groups where `is_curator=true`; broad roles may manage group-owned shelves through global authority.
-- Readers may manage their own personal shelves later.
+- Each book on a shelf must still pass current book visibility from
+  `library.queries`.
+- User-owned shelves preserve durable user intent. User-owned shelf items are
+  not deleted merely because access changes, though normal visible APIs hide
+  unavailable items.
+- Group-owned shelves are membership-validating. When a book is removed from a
+  LibraryGroup, it is removed from shelves owned by that same group.
+- Curators may manage group-owned shelves only for groups where
+  `is_curator=true`; broad roles may manage group-owned shelves through global
+  authority.
 
-## Policy helper direction (recommended)
+## Current authority vocabulary
 
-Centralize permission rules in explicit policy helpers. Recommended helpers include:
+- `accounts.roles.effective_role_rank(user)`
+- `accounts.roles.is_owner(user)`
+- `accounts.roles.is_manager(user)`
+- `accounts.roles.is_librarian(user)`
+- `library.roles.is_curator(user, group)`
+- `library.queries.visible_books_for_user(user, cached=...)`
+- `library.queries.visible_books_for_group(user, group, cached=...)`
 
-- `can_create_library_group(user)`
-- `can_manage_group_identity(user, group)`
-- `can_manage_group_membership(user, group)`
-- `can_curate_group(user, group)`
-- `can_assign_global_role(actor, target_user, new_role)`
-- `can_view_book(user, book)`
-- `can_download_book_file(user, book_file)`
-- `can_add_book_to_group(user, book, group)`
-- `can_remove_book_from_group(user, book, group)`
-
-Notes:
-
-- Group mutation should use `library.groups.services.add_book_to_group()` / `remove_book_from_group()`.
-- Future group presentation APIs should enforce the role rules above.
-- Future user-management APIs should enforce Owner-only Manager promotion/demotion.
+Action-specific account, reading, shelf, and library rules live next to the
+service/view performing that action. Do not recreate broad authorization modules or
+generic permission-string frameworks.

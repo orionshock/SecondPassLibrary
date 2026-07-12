@@ -15,7 +15,7 @@ The first minimal product UI shell now exists:
 - `/library/` is an authenticated library browse page
 - `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
 - `/library/books/<book_id>/edit/` is an API-driven book metadata edit page (Manager/Librarian/Owner only)
-- `/imports/` is an API-driven imports page (upload + job list/results)
+- `/imports/` is an API-driven imports page (upload + latest transient result)
 - `/groups/` is an authenticated group list page
 - `/groups/<group_id>/` is an authenticated group view page (Books/Members/Shelves tabs; read-oriented)
 - `/groups/<group_id>/edit/` is an authenticated group management page (Details/Books/Members/Shelves tabs; management-oriented)
@@ -44,9 +44,10 @@ server name and optional description, the Public group's display name and
 description, the advanced-groups setting, and the initial Owner account.
 Defaults are `Second Pass Library`, a blank server description, `Common Room`,
 `Main Public Library Room for everyone`, and advanced groups disabled. Common
-Room remains the internally special Public group and shared public library
-space managed by librarians and managers. Advanced groups present separate
-curator-managed rooms and enable normal non-Public group mutation workflows. Setup is
+Room remains the internally special Public group. Public is not universal access;
+normal Public group membership still controls Public books and shelves.
+Advanced groups present separate curator-managed rooms and enable normal
+non-Public group mutation workflows. Setup is
 available only while no active Django superuser exists. After setup,
 authentication for Product UI pages continues to use the existing login at
 `/api-auth/login/`.
@@ -72,7 +73,7 @@ Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). The only 
 
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers, including readers with group curator flags, to only viewable groups) with links to the group pages.
 
-The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Author and series can be selected from existing records or created by name. Book identifiers can be added/edited/deleted here. LibraryGroup assignments can be added/removed here. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only BookFile info; the stored EPUB is not edited from this page.
+The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Author and series can be selected from existing records or created by name. Book identifiers can be added/edited/deleted here. LibraryGroup assignments can be added/removed here. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only Book-owned file metadata; the stored EPUB is not edited from this page.
 
 The imports page is API-driven using:
 
@@ -85,13 +86,14 @@ It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre sy
 
 ZIP OPF sidecars (current):
 
-- When importing a `.zip`, the importer can optionally use an OPF sidecar to bootstrap metadata and cover **for new books only** (not a sync/refresh mechanism).
+- When importing a `.zip`, the importer can optionally use an OPF sidecar to bootstrap metadata **for new books only** (not a sync/refresh mechanism).
 - Sidecar lookup (per EPUB member), in order:
   - `metadata.opf` in the same directory as the EPUB (Calibre-style)
   - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
   - if there is exactly one `.opf` in the same directory, use it
-- OPF sidecar values take precedence over EPUB embedded metadata when present.
+- A valid OPF sidecar is a full metadata replacement and takes precedence over EPUB embedded metadata.
 - Duplicate EPUB checksum imports are rejected/skipped and do not refresh metadata or covers.
+- Embedded EPUB cover extraction is best-effort; sidecar cover/assets are deferred.
 
 The groups UI is API-driven using:
 
@@ -154,8 +156,7 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
 - The product UI should not expose the service hatch as a normal nav item; it is linked from the Owner-only Server Settings page (`/server/`).
-- Admin-only recovery workflows, including BookFile repair, are documented in
-  `docs/admin.md`.
+- Operator recovery posture is documented in `docs/admin.md`.
 - The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role, owner flag, or object-scoped capabilities.
 - The UI should not hardcode role logic in many places. It should treat `GET /api/v1/accounts/me/` as the bootstrap source of truth for:
   - identity (`username`, `email`)
@@ -230,7 +231,8 @@ UI behaviors:
 - Paginated list with "next/previous" and page size controls.
 - Search box + filter panel.
 - Each row/card should show enough metadata to disambiguate (title, authors, series if present, language, published date if present).
-- If `file` is present on the book payload, show a "Download" action that links to the BookFile download endpoint.
+- If `file` is present on the book payload, show a "Download" action that links
+  to the authenticated book download endpoint.
 - Optional: when the user is browsing in a specific group context, the UI should show that context and use the Groups APIs for the group book list rather than mixing access logic on the client.
 
 ## 5. Book detail screen
@@ -244,8 +246,7 @@ Content:
 - Metadata: title/subtitle/summary/publisher/language/published_date/subjects
 - Authors and series
 - Identifiers (scheme/value/source)
-- File: show the stored EPUB `BookFile` (if present) with a download link:
-  - `GET /api/v1/library/book-files/<book_file_id>/download/`
+- File: show the stored EPUB metadata from the Book-owned file fields when present.
 
 Reading summary (current API surface):
 
@@ -273,11 +274,14 @@ UI behaviors:
 - Upload form supporting `.epub` or `.zip` of `.epub` files.
 - Disable upload controls while the synchronous import request is running.
 - Show that large ZIP files may take a while.
-- Show the returned result immediately (run id, status, counts, items).
+- Show the returned result immediately (source label, counts, items).
+- No stored import history, async/background job, OPF-only upload, or target
+  group selection is implemented.
 
 Non-goals:
 
-- No Calibre imports yet.
+- No Calibre `metadata.db` imports.
+- No sidecar cover/assets.
 
 ## 7. LibraryGroup (Groups) screen
 
@@ -294,7 +298,8 @@ Primary endpoints:
 
 UI behaviors:
 
-- Readers should only see groups they can view (Public or direct membership).
+- Readers should only see groups they can view. Public/Common Room follows
+  normal group membership visibility.
 - Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
 - Presentation edits, grouped book management, and group-owned shelf controls should be shown when the loaded group payload has `capabilities.can_curate=true`.
 - Curation controls (add/remove books) should be gated by `group.capabilities.can_curate`.

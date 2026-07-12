@@ -165,23 +165,28 @@ userdata/
 
 EPUB files are stored content-addressed by checksum (SHA-256). Imported filenames are diagnostic context only; human-readable filenames are derived from metadata when downloading/exporting.
 
-Product policy: Books are import-only and file-backed. While the schema allows a `Book` row to exist without a `BookFile`, normal import flows create them together and the product does not support metadata-only/fileless Books.
+Product policy: Books are import-only and file-backed. `Book` owns the stored
+file fields directly: `book_file`, `file_format`, `checksum`, `file_size`,
+`source_filename`, and optional `cover_file`. There is no `BookFile` model.
 
-If an existing Book loses its `BookFile` row, or a `BookFile` row points to a
-missing physical EPUB on disk, treat that as an operator repair state. Use the
-Django admin BookFile repair workflow in `docs/admin.md`; do not delete and
-re-import the Book merely to restore the EPUB, because Book deletion can destroy
-related user reading data.
+If an existing Book loses its `book_file` or points to a missing physical EPUB
+on disk, treat that as an operator repair state. Do not delete and re-import the
+Book merely to restore the EPUB, because Book deletion can destroy related user
+reading data.
 
 ## Library import services (current)
 
 The library import pipeline follows a focused-module structure:
 
-- `library/imports/upload.py`: synchronous upload staging and ZIP orchestration
-- `library/imports/epub.py`: EPUB parsing and normalized metadata extraction/merge
-- `library/imports/opf.py`: OPF sidecar parsing and merge helpers
-- `library/imports/book_import.py`: persistence/orchestration for new `Book` records (create-only)
-- `library/cover_services.py`: cover validation/storage and embedded cover discovery
+- `library/imports/dto.py`: normalized import metadata DTOs
+- `library/imports/normalization.py`: SPL metadata normalization rules
+- `library/imports/opf.py`: OPF metadata parsing with safe XML parsing
+- `library/imports/services.py`: persistence boundary for normalized metadata
+- `library/imports/epub.py`: safe single-EPUB import wrapper
+- `library/imports/archives.py`: ZIP member planning and safety
+- `library/imports/batches.py`: ZIP batch orchestration
+- `library/imports/covers.py`: best-effort embedded EPUB cover extraction
+- `library/imports/results.py`: transient import result objects
 
 Library browse/catalog and group code also use focused packages:
 

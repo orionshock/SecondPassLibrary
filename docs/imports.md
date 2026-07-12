@@ -25,13 +25,13 @@ Library imports are currently intended for library managers only:
 
 - A single `.epub`
 - A simple `.zip` containing `.epub` files (non-EPUB entries are ignored)
-  - ZIP imports may include OPF sidecars (Calibre-style) to bootstrap metadata and cover for **new books only**.
+  - ZIP imports may include OPF sidecars (Calibre-style) to bootstrap metadata for **new books only**.
   - Sidecar lookup (per EPUB member), in order:
     - `metadata.opf` in the same directory as the EPUB
     - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
     - if there is exactly one `.opf` in the same directory, use it
-  - OPF values take precedence over EPUB metadata when present.
-  - Duplicate EPUB checksum imports are still rejected/skipped and do not refresh metadata or covers.
+  - A valid OPF sidecar is a full metadata replacement and takes precedence over EPUB metadata.
+  - Duplicate EPUB checksum imports are still returned as duplicates and do not refresh metadata or covers.
 
 ### Resource limits
 
@@ -52,43 +52,33 @@ The import response is transient and cannot be retrieved later:
 
 ```json
 {
-  "run_id": "7d97ab47-2e1e-4705-a50a-08e1c9c4e5fb",
-  "status": "completed",
   "source_type": "zip",
-  "source_filename": "bundle.zip",
-  "total_found": 2,
-  "imported_count": 1,
-  "duplicate_count": 0,
-  "failed_count": 1,
-  "message": "Import completed with failures.",
+  "source_label": "bundle.zip",
+  "counts": {
+    "imported": 1,
+    "duplicate": 0,
+    "conflict": 0,
+    "failed": 1,
+    "skipped": 0
+  },
   "items": [
     {
       "status": "imported",
-      "source_name": "book.epub",
-      "book": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
-      "book_file": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
-      "message": "Successfully imported EPUB."
+      "source_label": "book.epub",
+      "book_id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
+      "safe_message": "Imported EPUB."
     },
     {
       "status": "failed",
-      "source_name": "bad.epub",
-      "book": null,
-      "book_file": null,
-      "message": "Invalid or unsupported EPUB file."
+      "source_label": "bad.epub",
+      "safe_message": "Invalid or unsupported EPUB file."
     }
   ]
 }
 ```
 
-`run_id` is only for correlating the immediate response with operator logs or
-support notes. It is not a database id and is not retrievable through a detail
-endpoint.
-
-Synchronous library imports emit minimal diagnostics through standard Python
-logging for container/stdout/stderr capture: start, finish, expected upload or
-per-item failures, and unexpected server-side failures. Logs use safe fields
-such as `run_id`, source type, safe basenames, status, counts, and sanitized
-messages; they do not use a database import log or an app-managed file log.
+The response does not include operator details or local filesystem paths. There
+is no stored import history and no import detail endpoint.
 
 ### Unsupported (non-goals)
 
@@ -168,38 +158,24 @@ Server-side apply follows these rules:
 
 - Temporary import staging lives under `userdata/imports/` during request
   processing and is cleaned after the synchronous import completes.
-- Final stored EPUB files are written to content-addressed storage under `userdata/media/books/<first2>/<next2>/<sha256>.epub`.
-- Product policy: Books are import-only and file-backed. In normal flows a `Book` is created together with its `BookFile` as one logical import operation; fileless metadata-only Books are not a supported state.
-- If a legacy/operator mistake leaves a Book without a `BookFile`, or a
-  `BookFile` row points to a missing physical EPUB, use the Django admin
-  BookFile repair workflow in `docs/admin.md`. Do not use delete and re-import
-  as the normal repair path when preserving reading data matters.
+- Final stored EPUB files are written through `Book.book_file`; `Book` also owns
+  `file_format`, `checksum`, `file_size`, `source_filename`, and optional
+  `cover_file`.
+- Product policy: Books are import-only and file-backed. Fileless metadata-only
+  Books are not a supported normal state.
 
 ## Operator management command
 
-`python manage.py import_epub <file_path>` is an operator-only host-side import
-path for one local `.epub` file.
+`python manage.py import_library <path>` is the operator-only host-side import
+path. It supports:
 
-It intentionally does not support:
+- one local `.epub` file
+- one local `.zip` archive
+- one non-recursive directory containing `.epub` and `.zip` files
 
-- ZIP imports
-- OPF sidecars
-- Product UI upload workflows
+It shares the same service path as the upload API:
 
-OPF sidecar support is ZIP-import behavior only. Use the API upload workflow for
-Product UI/API imports, ZIP batches, sidecar OPF metadata, transient run results,
-and user-facing safe per-item error responses.
-
-The command shares the core single-EPUB checksum, metadata, duplicate detection,
-cover extraction, and persistence path. It warns when the local file exceeds the
-normal Product/API single-EPUB upload limit, but it does not block the import for
-size alone because operators may need to handle large local files deliberately.
-
-`python manage.py import_books <file_path>` is an operator-only host-side import
-path for one local `.zip` archive of EPUB files.
-
-It supports the same ZIP behavior as Product/API imports:
-
+- single EPUB import
 - EPUB member discovery
 - ZIP OPF sidecars for new books
 - duplicate detection by EPUB checksum
@@ -207,5 +183,5 @@ It supports the same ZIP behavior as Product/API imports:
 - the same ZIP archive, entry-count, per-member EPUB, and total EPUB payload limits
 
 The command does not create durable import history or database ImportJob records.
-It prints a summary for the immediate run and emits structured logs for normal
-process/container capture. `import_epub` remains single local `.epub` only.
+It prints per-item results and a summary for the immediate run. Duplicate items
+do not fail the command; failed or conflicting items produce a nonzero exit.

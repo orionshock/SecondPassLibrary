@@ -105,19 +105,22 @@ Public group shelves:
 
 - Public has no curators
 - Public group shelves are editable only by Owner/Manager/Librarian
+- Public group shelves follow normal Public group membership visibility; Public
+  is not a universal shelf visibility bypass.
 
 Client API bearer-token requests are narrower than product UI/session-auth requests:
 
 - bearer tokens may create/edit/delete shelves and manage shelf items only for the token user's own user-owned shelves
 - group-owned shelves and other users' shelves are read-only to bearer clients and return `can_edit: false`
-- the same user may still see `can_edit: true` for a group shelf when using product UI/session auth if normal group/product policy allows it
+- the same user may still see `can_edit: true` for a group shelf when using product UI/session auth if normal group/product authorization allows it
 
 ## Book access constraints (important)
 
 Shelf visibility and book visibility are separate:
 
-1. First check `can_view_shelf(viewer, shelf)`.
-2. Then filter shelf items/books through `can_view_book(viewer, book)`.
+1. First check whether the viewer can see the shelf.
+2. Then filter shelf items/books through current book visibility from
+   `library.queries`.
 
 This applies to:
 
@@ -135,6 +138,10 @@ Important rule:
 
 - when adding/removing shelf items, the API enforces that the editor is allowed to edit the shelf
 - for group-owned shelves, adding is further constrained by group context (the API is authoritative)
+- when a book is removed from a LibraryGroup, the explicit shelves hook removes
+  that book from shelves owned by the same group and canonicalizes positions
+- shelves owned by other groups and user-owned shelves are not modified by that
+  group-removal hook
 
 ## User-owned shelves
 
@@ -143,6 +150,10 @@ User-owned shelves are personal organization with an optional listed mode.
 Write constraint:
 
 - when adding a book to a user-owned shelf, the server enforces that the editor can view the book at write time
+- user-owned shelf items preserve durable user intent; group membership/book
+  assignment changes do not delete user-owned shelf items
+- normal visible APIs still hide unavailable user-owned shelf items from users
+  who cannot currently see the book
 
 ## API endpoints
 
@@ -179,7 +190,10 @@ Notes:
 - Shelf item positions are stored zero-based and canonicalized as contiguous integers.
 - Patching an existing item with `position` uses list move-to semantics: remove the item from its current ordered position, insert it at the requested zero-based target position (clamped to list bounds), then renumber all items contiguously.
 - Product/UI displays may show one-based labels such as `#1`, `#2`, etc.
-- Shelves do not grant book access: `/items/` filters listed books through normal book access policy.
+- Shelves do not grant book access: `/items/` filters listed books through normal book access rules.
+- `?book=<book_id>` never matches through an item whose book is not currently
+  visible to the requester and does not expose `matched_item_id` for hidden
+  items.
 - Client API bearer tokens may read visible shelves, but may create/edit/delete shelves and manage shelf items only for the token user's own personal shelves. Group shelves and other users' shelves remain read-only via bearer tokens and report `can_edit: false`.
 
 ## Product UI
@@ -221,5 +235,6 @@ not the product UI.
 
 ## Future possibilities
 
-- Server-side cleanup hooks when removing a book from a LibraryGroup (e.g. removing from shelves owned by that group).
+- A future `cleanup_shelves` operator command may report/remove unavailable
+  user-owned shelf items with dry-run/apply modes.
 - Bulk reordering APIs.

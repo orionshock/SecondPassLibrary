@@ -149,8 +149,7 @@ Public/Common Room identity remains setting/id based, not name based.
 - `Book` is the readable file plus catalog metadata.
 - `file_format` is simple and product-facing.
 - `book_file`, `checksum`, `file_size`, and `source_filename` are book fields.
-- No separate public `BookFile` domain object unless a concrete internal need
-  reappears.
+- No `BookFile` model in the current rewrite.
 - Repair/import services own file validation and replacement behavior.
 - Normal metadata forms do not edit file fields.
 - File replacement, repair, and import use dedicated service paths.

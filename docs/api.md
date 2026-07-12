@@ -314,7 +314,7 @@ List filters:
 - `GET /api/v1/shelves/?scope=personal` returns visible user-owned shelves owned by the current user.
 - `GET /api/v1/shelves/?scope=shared` returns visible shelves not owned by the current user, including visible group shelves and other users' listed shelves.
 - Omitting `scope` preserves the existing combined visible-shelves list.
-- Scope filtering is applied after normal visibility policy; other users' private shelves are excluded from every normal list scope.
+- Scope filtering is applied after normal visibility rules; other users' private shelves are excluded from every normal list scope.
 - `GET /api/v1/shelves/?owner_group=<group_id>` filters to group-owned shelves for that group (still visibility-scoped to the caller).
 - `GET /api/v1/shelves/?book=<book_id>` filters to shelves containing the given book (still visibility-scoped to the caller).
   - When `?book=<book_id>` is provided, shelf rows include `matched_item_id` (the `ShelfItem.id` for that book on that shelf) to support UI removal without extra item lookups.
@@ -331,7 +331,7 @@ List filters:
 
 Shelf payload notes:
 
-- Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API permissions remain authoritative. Product UI/session-auth requests use normal shelf edit policy, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
+- Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API authorization remains authoritative. Product UI/session-auth requests use normal shelf edit authorization, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
 - User-owned shelves include `owner_user` as a compact user object with `profile_id`, `username`, `first_name`, and `last_name`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
@@ -418,8 +418,6 @@ Rules:
 - Authors: `GET /api/v1/library/authors/` (paginated), `GET /api/v1/library/authors/<id>/`
 - Series: `GET /api/v1/library/series/` (paginated), `GET /api/v1/library/series/<id>/`
 - Books: `GET /api/v1/library/books/` (paginated), `GET /api/v1/library/books/<id>/`
-- Book files: `GET /api/v1/library/book-files/` (paginated), `GET /api/v1/library/book-files/<id>/`
-- Download: `GET /api/v1/library/book-files/<id>/download/`
 - Book identifiers (book-scoped):
   - `GET /api/v1/library/books/<book_id>/identifiers/`
   - `POST /api/v1/library/books/<book_id>/identifiers/`
@@ -428,16 +426,13 @@ Rules:
 
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 - `GET /api/v1/library/groups/<group_id>/books/`
-- `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
+- `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 
 Client API bearer token support (read-only allow-list):
 
 - `GET /api/v1/library/books/`
 - `GET /api/v1/library/books/<id>/`
-- `GET /api/v1/library/book-files/`
-- `GET /api/v1/library/book-files/<id>/`
-- `GET /api/v1/library/book-files/<id>/download/`
 - `GET /api/v1/library/authors/`
 - `GET /api/v1/library/authors/<id>/`
 - `GET /api/v1/library/series/`
@@ -556,22 +551,24 @@ Book payload notes:
 
 - `POST /api/v1/library/imports/`
 
-Library imports are synchronous. `POST` returns a transient import result with
-`run_id`, status, counts, and safe per-item results. Import history is not stored
-and there are no list/detail import-history endpoints.
+Library imports are synchronous and session-authenticated for Librarian+ users.
+`POST` returns a transient import result with source labels, counts, and safe
+per-item results. Import history is not stored and there are no list/detail
+import-history endpoints. Client API bearer tokens are rejected.
 
 See `docs/imports.md` for details.
 
 ## Groups (LibraryGroups)
 
-LibraryGroups are access scopes, not shelves. Group book lists still filter each book through `can_view_book(user, book)`.
+LibraryGroups are access scopes, not shelves. Group book lists still filter each
+book through current visibility from `library.queries`.
 
 - `GET /api/v1/library/groups/` (paginated)
 - `POST /api/v1/library/groups/` (Owner/Manager only; creates a group)
 - `GET /api/v1/library/groups/<group_id>/`
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-- `POST /api/v1/library/groups/<group_id>/books/` body: `{"book": "<book_id>"}`
+- `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 
 Group list ordering:
@@ -587,10 +584,10 @@ Group book ordering:
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
 - Invalid ordering values return `400`.
 - Memberships (Manager/Owner only):
-  - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; readable by group members and by Owner/Manager/Librarian; Public group is readable to any authenticated user)
-  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"profile_id": "<profile_id>", "is_curator": true}`
-  - `PATCH /api/v1/library/groups/<group_id>/memberships/<membership_id>/` body: `{"is_curator": false}`
-  - `DELETE /api/v1/library/groups/<group_id>/memberships/<membership_id>/`
+  - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; readable by group members and by Owner/Manager/Librarian)
+  - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user_id": "<profile_id>", "is_curator": true}`
+  - `PATCH /api/v1/library/groups/<group_id>/memberships/<user_id>/` body: `{"is_curator": false}`
+  - `DELETE /api/v1/library/groups/<group_id>/memberships/<user_id>/`
 
 Membership payloads include compact public user information and do not expose Django auth user database ids:
 
@@ -635,6 +632,8 @@ Public restrictions:
 
 - Public cannot have curator assignments (`is_curator=true` is invalid).
 - Public is default/fallback, not mandatory: membership may be removed when another group remains; removing a user's final membership restores Public.
+- Public is not universal access; Public group visibility follows normal
+  LibraryGroup membership rules.
 - Librarian/Manager/Owner users may still curate/manage Public through global authority.
 
 See `docs/permissions.md` for the visibility/curation rules.
