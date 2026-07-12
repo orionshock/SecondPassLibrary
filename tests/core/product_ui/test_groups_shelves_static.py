@@ -196,6 +196,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-new-form"')
         self.assertContains(response, 'id="shelf-new-owner-type"')
         self.assertContains(response, 'id="shelf-new-owner-group"')
+        self.assertContains(response, 'id="shelf-new-visibility"')
         self.assertNotContains(response, 'id="shelf-new-owner-type-row"')
         self.assertNotContains(response, 'id="shelf-new-owner-group-row"')
 
@@ -232,6 +233,8 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         )
         self.assertIn("owner_type: ownerType", new_js)
         self.assertIn('if (ownerType === "user")', new_js)
+        self.assertIn("body.visibility = visibilityEl.value", new_js)
+        self.assertIn('fetchJSONWithOptions("/api/v1/shelves/"', new_js)
 
     def test_unauthenticated_shelf_detail_redirects_to_login(self):
         shelf_id = uuid4()

@@ -29,15 +29,6 @@
         <div class="kv__k"><label for="shelf-new-description">Description</label></div>
         <div class="kv__v"><textarea id="shelf-new-description" rows="4" style="width: 100%;"></textarea></div>
 
-        {% if advanced_library_groups_enabled %}
-        <div id="shelf-new-owner-type-row" class="kv__k"><label for="shelf-new-owner-type">Owner type</label></div>
-        <div id="shelf-new-owner-type-row-v" class="kv__v">
-          <select id="shelf-new-owner-type">
-            <option value="user">My shelf</option>
-            <option value="group">Group shelf</option>
-          </select>
-        </div>
-
         <div class="kv__k"><label for="shelf-new-visibility">Visibility</label></div>
         <div class="kv__v">
           <select id="shelf-new-visibility">
@@ -45,6 +36,15 @@
             <option value="listed">Listed</option>
           </select>
           <div class="muted" style="margin-top: 6px;">Listed shelves are visible to authenticated users but do not grant book access.</div>
+        </div>
+
+        {% if advanced_library_groups_enabled %}
+        <div id="shelf-new-owner-type-row" class="kv__k"><label for="shelf-new-owner-type">Owner type</label></div>
+        <div id="shelf-new-owner-type-row-v" class="kv__v">
+          <select id="shelf-new-owner-type">
+            <option value="user">My shelf</option>
+            <option value="group">Group shelf</option>
+          </select>
         </div>
 
         <div id="shelf-new-owner-group-row" class="kv__k"><label for="shelf-new-owner-group">Owner group</label></div>
