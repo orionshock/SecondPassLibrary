@@ -38,7 +38,6 @@ def persist_imported_book(
     metadata: ImportMetadata,
     checksum: str | None,
     file_size: int | None = None,
-    source_filename: str = "",
     book_file: File | None = None,
     actor=None,
 ) -> ImportPersistenceResult:
@@ -73,10 +72,9 @@ def persist_imported_book(
             file_format=Book.FILE_FORMAT_EPUB,
             checksum=checksum,
             file_size=file_size,
-            source_filename=source_filename,
         )
         if book_file is not None:
-            _attach_book_file(book=book, book_file=book_file, source_filename=source_filename)
+            _attach_book_file(book=book, book_file=book_file)
         _persist_authors(book=book, metadata=metadata)
         _persist_series(book=book, metadata=metadata)
         _persist_tags(book=book, metadata=metadata)
@@ -86,8 +84,8 @@ def persist_imported_book(
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
 
 
-def _attach_book_file(*, book: Book, book_file, source_filename: str) -> None:
-    filename = source_filename or f"{book.checksum}.{book.file_format}"
+def _attach_book_file(*, book: Book, book_file) -> None:
+    filename = f"{book.checksum}.{book.file_format}"
     book.book_file.save(filename, book_file, save=True)
 
 

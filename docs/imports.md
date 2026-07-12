@@ -159,8 +159,9 @@ Server-side apply follows these rules:
 - Temporary import staging lives under `userdata/imports/` during request
   processing and is cleaned after the synchronous import completes.
 - Final stored EPUB files are written through `Book.book_file`; `Book` also owns
-  `file_format`, `checksum`, `file_size`, `source_filename`, and optional
-  `cover_file`.
+  `file_format`, `checksum`, `file_size`, and optional `cover_file`.
+- Source filenames exist only as transient import diagnostics and are not stored
+  as Book or file provenance.
 - Product policy: Books are import-only and file-backed. Fileless metadata-only
   Books are not a supported normal state.
 

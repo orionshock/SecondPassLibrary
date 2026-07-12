@@ -57,7 +57,6 @@ Fields:
 - `file_format`: `epub` initially; `cbz` later
 - `checksum`
 - `file_size`
-- `source_filename`
 - `created_at`
 - `updated_at`
 
@@ -153,7 +152,7 @@ Public/Common Room identity remains setting/id based, not name based.
 
 - `Book` is the readable file plus catalog metadata.
 - `file_format` is simple and product-facing.
-- `book_file`, `checksum`, `file_size`, and `source_filename` are book fields.
+- `book_file`, `checksum`, and `file_size` are book fields.
 - No `BookFile` model in the current rewrite.
 - Repair/import services own file validation and replacement behavior.
 - Normal metadata forms do not edit file fields.
@@ -292,7 +291,6 @@ Do not expose these as normal browse sort/filter axes:
 - `file_format`
 - checksum/file hash
 - `file_size`
-- `source_filename`
 - `book_file` path
 - cover metadata
 - identifier fields such as ISBN/ASIN/DOI

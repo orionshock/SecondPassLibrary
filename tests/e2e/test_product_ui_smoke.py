@@ -113,7 +113,7 @@ def test_book_edit_persists_aggregate_edits_and_renders_owned_file(
     expect(page.locator("#book-edit-file-info")).not_to_contain_text("No stored file.")
     expect(page.get_by_text("EPUB", exact=True).last).to_be_visible()
     expect(page.get_by_text("Checksum", exact=True)).to_be_visible()
-    expect(page.get_by_text("Source filename", exact=True)).to_be_visible()
+    expect(page.get_by_text("Source filename", exact=True)).to_have_count(0)
 
     edited_identifier_row = page.locator(f'tr[data-ident-id="{edited_row.id}"]')
     edited_identifier_row.locator('[data-ident-field="value"]').fill("10.1000/browser-edited")

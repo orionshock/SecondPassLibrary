@@ -163,11 +163,13 @@ userdata/
 
 ## File storage
 
-EPUB files are stored content-addressed by checksum (SHA-256). Imported filenames are diagnostic context only; human-readable filenames are derived from metadata when downloading/exporting.
+EPUB files are stored content-addressed by checksum (SHA-256). Imported filenames
+are transient import diagnostics only and are not stored as Book provenance;
+human-readable filenames are derived from metadata when downloading/exporting.
 
 Product policy: Books are import-only and file-backed. `Book` owns the stored
 file fields directly: `book_file`, `file_format`, `checksum`, `file_size`,
-`source_filename`, and optional `cover_file`. There is no `BookFile` model.
+and optional `cover_file`. There is no `BookFile` model.
 
 If an existing Book loses its `book_file` or points to a missing physical EPUB
 on disk, treat that as an operator repair state. Do not delete and re-import the

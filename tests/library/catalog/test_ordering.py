@@ -36,7 +36,6 @@ class LibraryCatalogBookOrderingTests(LibraryCatalogApiFixtureMixin, TestCase):
             "file_format",
             "checksum",
             "file_size",
-            "source_filename",
             "book_file",
             "identifiers",
             "created_at",

@@ -13,7 +13,6 @@ class ImportPersistenceBookFieldTests(ImportPersistenceFixtureMixin, TestCase):
             metadata=sample_metadata(),
             checksum="abc123",
             file_size=1234,
-            source_filename="sample.epub",
             actor=self.actor,
         )
 
@@ -28,7 +27,6 @@ class ImportPersistenceBookFieldTests(ImportPersistenceFixtureMixin, TestCase):
         self.assertEqual(book.file_format, Book.FILE_FORMAT_EPUB)
         self.assertEqual(book.checksum, "abc123")
         self.assertEqual(book.file_size, 1234)
-        self.assertEqual(book.source_filename, "sample.epub")
 
     def test_persists_partial_published_date_fields(self):
         result = persist_imported_book(

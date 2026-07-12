@@ -47,7 +47,6 @@ export function renderFileInfo({ book, fileInfoEl }) {
   addRow("Format", file.format ? String(file.format).toUpperCase() : "EPUB");
   addRow("Size", file.file_size != null && file.file_size !== "" ? `${String(file.file_size)} bytes` : "");
   addRow("Checksum", file.checksum ? String(file.checksum) : "");
-  addRow("Source filename", file.source_filename ? String(file.source_filename) : "");
   fileInfoEl.appendChild(kv);
 }
 

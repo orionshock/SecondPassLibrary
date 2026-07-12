@@ -51,7 +51,6 @@ class ImportPersistencePublicFileTests(ImportPersistenceFixtureMixin, TestCase):
         result = persist_imported_book(
             metadata=sample_metadata(),
             checksum=checksum,
-            source_filename="upload.epub",
             book_file=ContentFile(b"epub bytes", name="upload.epub"),
         )
 

@@ -39,7 +39,6 @@ def create_file_backed_book(
     checksum = hashlib.sha256(epub_bytes).hexdigest()
     fields.setdefault("checksum", checksum)
     fields.setdefault("file_size", len(epub_bytes))
-    fields.setdefault("source_filename", source_filename)
     book = Book.objects.create(**fields)
     book.book_file.save(source_filename, ContentFile(epub_bytes), save=True)
     if assign_public:

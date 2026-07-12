@@ -3,8 +3,8 @@
 ## Core objects
 
 - `Book`: canonical, user-facing bibliographic fields plus stored EPUB fields.
-  `Book` owns `book_file`, `file_format`, `checksum`, `file_size`,
-  `source_filename`, and optional `cover_file`.
+  `Book` owns `book_file`, `file_format`, `checksum`, `file_size`, and optional
+  `cover_file`.
 
 Notes:
 - `Book.subtitle` may be blank.

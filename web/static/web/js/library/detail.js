@@ -163,7 +163,6 @@ function renderFile(container, file) {
   const size = formatBytes(file.file_size);
   wrap.appendChild(el("div", "", `${format}${size ? ` (${size})` : ""}`));
   if (file.checksum) wrap.appendChild(el("div", "muted", `Checksum: ${file.checksum}`));
-  if (file.source_filename) wrap.appendChild(el("div", "muted", `Source filename: ${file.source_filename}`));
 
   const downloadUrl = file.download_url ? String(file.download_url) : "";
   if (downloadUrl) {

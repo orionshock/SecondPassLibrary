@@ -131,7 +131,6 @@ class Book(TimeStampedModel):
         help_text="Content checksum used for duplicate detection.",
     )
     file_size = models.PositiveBigIntegerField(blank=True, null=True)
-    source_filename = models.CharField(max_length=255, blank=True)
 
     authors = models.ManyToManyField(
         Author,

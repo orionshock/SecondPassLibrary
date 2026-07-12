@@ -16,8 +16,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         content = b"book edit contract epub"
         self.visible_one.checksum = hashlib.sha256(content).hexdigest()
         self.visible_one.file_size = len(content)
-        self.visible_one.source_filename = "visible-one.epub"
-        self.visible_one.save(update_fields=["checksum", "file_size", "source_filename"])
+        self.visible_one.save(update_fields=["checksum", "file_size"])
         self.visible_one.book_file.save(
             "visible-one.epub",
             ContentFile(content),
@@ -46,7 +45,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(payload["file"]["format"], "epub")
         self.assertEqual(payload["file"]["file_size"], len(b"book edit contract epub"))
         self.assertEqual(payload["file"]["checksum"], self.visible_one.checksum)
-        self.assertEqual(payload["file"]["source_filename"], "visible-one.epub")
+        self.assertNotIn("source_filename", payload["file"])
         self.assertNotIn("book_file", payload["file"])
         self.assertEqual(payload["catalog_tags"][0]["name"], "Fantasy")
         self.assertEqual(payload["catalog_tags"][0]["slug"], "fantasy")

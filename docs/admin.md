@@ -67,7 +67,6 @@ its stored EPUB fields directly:
 - `file_format`
 - `checksum`
 - `file_size`
-- `source_filename`
 - `cover_file`
 
 There is no `BookFile` model in the current library catalog schema. If a

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import PurePosixPath
-
 from rest_framework import serializers
 
 from library.models import Author, Book, BookIdentifier, CatalogTag, Series
@@ -122,11 +120,6 @@ class BookFileSerializer(serializers.Serializer):
     format = serializers.CharField(source="file_format")
     file_size = serializers.IntegerField(allow_null=True)
     checksum = serializers.CharField(allow_blank=True, allow_null=True)
-    source_filename = serializers.SerializerMethodField()
-
-    def get_source_filename(self, obj: Book) -> str:
-        value = (obj.source_filename or "").replace("\\", "/")
-        return PurePosixPath(value).name
 
 
 class BookPreviewSerializer(serializers.ModelSerializer):

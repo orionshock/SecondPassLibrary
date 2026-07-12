@@ -99,7 +99,6 @@ def _import_epub_file(
         metadata=metadata,
         checksum=checksum,
         file_size=file_size,
-        source_filename=source_filename,
         book_file=ContentFile(data, name=source_filename),
         actor=actor,
     )

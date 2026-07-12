@@ -54,14 +54,13 @@ class SingleEpubImportServiceTests(
             ).exists()
         )
 
-    def test_checksum_file_size_source_filename_and_book_file_are_persisted(self):
+    def test_checksum_file_size_and_book_file_are_persisted(self):
         data = minimal_epub_bytes()
 
         result = import_epub_file(BytesIO(data), source_filename="Original Name.epub")
 
         self.assertEqual(result.book.checksum, hashlib.sha256(data).hexdigest())
         self.assertEqual(result.book.file_size, len(data))
-        self.assertEqual(result.book.source_filename, "Original Name.epub")
         self.assertTrue(result.book.book_file.name.endswith(".epub"))
         self.assertTrue(result.book.book_file.name.startswith(f"books/{result.book.checksum[:2]}/"))
 

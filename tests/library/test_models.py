@@ -28,7 +28,7 @@ class LibraryModelShapeTests(TestCase):
         self.assertIn("file_format", field_names)
         self.assertIn("checksum", field_names)
         self.assertIn("file_size", field_names)
-        self.assertIn("source_filename", field_names)
+        self.assertNotIn("source_filename", field_names)
         self.assertNotIn("file", field_names)
 
     def test_file_format_initially_supports_epub_only(self):

@@ -142,10 +142,9 @@ Do not create new apps unless there is a clear domain boundary.
 ### Books and files
 
 * A `Book` represents the conceptual work and owns its stored EPUB fields:
-  `book_file`, `file_format`, `checksum`, `file_size`, `source_filename`, and
-  optional `cover_file`.
+  `book_file`, `file_format`, `checksum`, `file_size`, and optional `cover_file`.
 * EPUB files are stored content-addressed by SHA-256.
-* Imported filenames are only fallback/diagnostic context.
+* Imported filenames are transient diagnostic context and are not stored on `Book`.
 * Human-readable filenames should be generated from metadata when exporting or downloading.
 
 ### Identifier Position
