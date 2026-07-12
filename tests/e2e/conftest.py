@@ -22,13 +22,16 @@ class E2EInstall:
 
 @pytest.fixture
 def e2e_fixture_files() -> dict[str, Path]:
-    root = Path(__file__).resolve().parents[2] / "TestFiles"
+    project_root = Path(__file__).resolve().parents[2]
+    local_root = project_root / "TestFiles"
+    fixture_root = project_root / "tests" / "fixtures" / "library"
     return {
-        "calibre_library_full": root / "FullCalibreLibrary.zip",
-        "calibre_library_small": root / "SmallCalibreLibrary.zip",
-        "marginalia_verified": root / "SPL-Marginalia-Verified-Good.json",
-        "marginalia_mixed": root / "SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json",
-        "marginalia_unmatched": root / "second-pass-unmatched-marginalia.json",
+        "calibre_library_full": local_root / "FullCalibreLibrary.zip",
+        "calibre_library_small": fixture_root / "small_calibre_library.zip",
+        "calibre_library_small_metadata": fixture_root / "small_calibre_library_metadata.md",
+        "marginalia_verified": local_root / "SPL-Marginalia-Verified-Good.json",
+        "marginalia_mixed": local_root / "SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json",
+        "marginalia_unmatched": local_root / "second-pass-unmatched-marginalia.json",
     }
 
 

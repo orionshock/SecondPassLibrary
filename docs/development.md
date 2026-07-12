@@ -81,18 +81,23 @@ Lorem/demo seeder. Browser tests therefore start from a moderately populated
 installation with users, memberships, and shelves rather than an empty or
 persistent developer database.
 
-The `e2e_fixture_files` fixture also exposes these optional local inputs for
-focused import and marginalia scenarios:
+The `e2e_fixture_files` fixture exposes the committed small Calibre fixture for
+focused import scenarios:
+
+- `tests/fixtures/library/small_calibre_library.zip`
+- `tests/fixtures/library/small_calibre_library_metadata.md`
+
+It also exposes these optional local inputs:
 
 - `TestFiles/FullCalibreLibrary.zip`
-- `TestFiles/SmallCalibreLibrary.zip`
 - `TestFiles/SPL-Marginalia-Verified-Good.json`
 - `TestFiles/SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json`
 - `TestFiles/second-pass-unmatched-marginalia.json`
 
-`TestFiles/` remains ignored and is input-only. Tests that use one of these
-files must skip clearly when it is absent. Prefer the small Calibre archive for
-focused browser scenarios. The full archive should be imported only by a test
+`TestFiles/` remains ignored and is input-only. Tests that use one of those
+local files must skip clearly when it is absent. Prefer the committed small
+Calibre archive for focused browser scenarios. Its Markdown inventory records
+the expected parsed metadata. The full archive should be imported only by a test
 that specifically needs the larger catalog, not by every E2E test. Browser artifacts still belong only under
 `test-artifacts/playwright/`.
 
