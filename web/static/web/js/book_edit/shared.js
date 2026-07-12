@@ -28,7 +28,7 @@ export function normalizeDateISO(value) {
 export function normalizeSeriesIndex(value) {
   const s = normalizeOptionalString(value);
   if (!s) return null;
-  if (!/^\d+(\.\d)?$/.test(s)) {
+  if (!/^\d+(?:\.\d0*)?$/.test(s)) {
     return { error: "Series index must be an integer or one decimal place (e.g. 5 or 5.1)." };
   }
   const n = Number.parseFloat(s);
