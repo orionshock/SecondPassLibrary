@@ -19,6 +19,7 @@ from library.models import (
     CatalogTag,
     Series,
 )
+from library.queries import invalidate_visible_books_cache
 
 
 IMPORT_STATUS_IMPORTED = "imported"
@@ -83,6 +84,7 @@ def persist_imported_book(
         _persist_identifiers(book=book, metadata=metadata)
         add_book_to_group(book=book, group=get_public_group(), actor=actor)
 
+    invalidate_visible_books_cache()
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
 
 

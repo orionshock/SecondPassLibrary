@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import library.models as library_models
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from library.groups.public_group import get_public_group
+from library.groups.services import ensure_user_public_membership
 from library.imports.services import persist_imported_book
 from library.models import BookGroupAssignment
+from library.queries import visible_books_for_user
+from tests.library.helpers import queryset_titles
 from tests.library.imports.helpers import ImportPersistenceFixtureMixin, sample_metadata
 
 
@@ -52,6 +57,24 @@ class ImportPersistencePublicFileTests(ImportPersistenceFixtureMixin, TestCase):
 
         self.assertTrue(result.book.book_file.name.startswith("books/aa/aa/"))
         self.assertTrue(result.book.book_file.name.endswith(".epub"))
+
+    def test_successful_import_invalidates_cached_library_visibility(self):
+        cache.clear()
+        User = get_user_model()
+        reader = User.objects.create_user(username="reader")
+        ensure_user_public_membership(user=reader)
+
+        self.assertEqual(queryset_titles(visible_books_for_user(reader, cached=True)), [])
+
+        persist_imported_book(
+            metadata=sample_metadata(title="Fresh Import", sort_title="Fresh Import"),
+            checksum="fresh-cache-import",
+        )
+
+        self.assertEqual(
+            queryset_titles(visible_books_for_user(reader, cached=True)),
+            ["Fresh Import"],
+        )
 
     def test_non_file_book_file_is_rejected(self):
         with self.assertRaises(ValidationError):

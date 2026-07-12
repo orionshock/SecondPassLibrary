@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from uuid import uuid4
 
 from django.core.cache import cache
 from django.db.models import QuerySet
@@ -11,6 +12,7 @@ from .models import Book, LibraryGroup, LibraryGroupMembership
 
 
 VISIBLE_BOOK_IDS_CACHE_SECONDS = 120
+VISIBLE_BOOK_IDS_CACHE_VERSION_KEY = "libraryrewrite2607:visible-book-ids:version"
 
 
 def effective_group_ids_for_user(user) -> QuerySet:
@@ -36,7 +38,12 @@ def visible_groups_for_user(user) -> QuerySet[LibraryGroup]:
 
 
 def _visible_book_ids_cache_key(user) -> str:
-    return f"libraryrewrite2607:visible-book-ids:user:{getattr(user, 'pk', 'anonymous')}"
+    version = cache.get(VISIBLE_BOOK_IDS_CACHE_VERSION_KEY) or "1"
+    return f"libraryrewrite2607:visible-book-ids:{version}:user:{getattr(user, 'pk', 'anonymous')}"
+
+
+def invalidate_visible_books_cache() -> None:
+    cache.set(VISIBLE_BOOK_IDS_CACHE_VERSION_KEY, uuid4().hex, timeout=None)
 
 
 def _book_ids(queryset: QuerySet[Book]) -> list[str]:
