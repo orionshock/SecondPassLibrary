@@ -77,13 +77,15 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         response = self.client.patch(
             f"/api/v1/library/series/{self.first_series.id}/",
-            data={"summary": "Updated series summary."},
+            data={"name": "Updated Series Name", "summary": "Updated series summary."},
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 200)
         self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.name, "Updated Series Name")
         self.assertEqual(self.first_series.summary, "Updated series summary.")
+        self.assertEqual(response.json()["name"], "Updated Series Name")
         self.assertEqual(response.json()["summary"], "Updated series summary.")
 
     def test_reader_cannot_patch_summary(self):

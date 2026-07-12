@@ -245,6 +245,7 @@ Content:
 
 - Metadata: title/subtitle/summary/publisher/language/published_date/subjects
 - Authors and series, including author biography and series summary where provided
+- Librarian+ may edit an author name/biography or series name/summary from its Library browse context; readers see the same context read-only.
 - Identifiers (scheme/value/source)
 - File: show the stored EPUB metadata from the Book-owned file fields when present.
 

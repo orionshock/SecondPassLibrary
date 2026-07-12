@@ -3,17 +3,21 @@ from __future__ import annotations
 from library.models import Author, Series
 
 
-def update_author_biography(*, author: Author, biography: str | None) -> Author:
-    if biography is None:
+def update_author(*, author: Author, fields: dict) -> Author:
+    if not fields:
         return author
-    author.biography = biography
-    author.save(update_fields=["biography", "updated_at"])
+    for field, value in fields.items():
+        setattr(author, field, value)
+    author.full_clean()
+    author.save(update_fields=[*fields, "updated_at"])
     return author
 
 
-def update_series_summary(*, series: Series, summary: str | None) -> Series:
-    if summary is None:
+def update_series(*, series: Series, fields: dict) -> Series:
+    if not fields:
         return series
-    series.summary = summary
-    series.save(update_fields=["summary", "updated_at"])
+    for field, value in fields.items():
+        setattr(series, field, value)
+    series.full_clean()
+    series.save(update_fields=[*fields, "updated_at"])
     return series

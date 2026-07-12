@@ -58,10 +58,12 @@ class SeriesAxisSerializer(serializers.ModelSerializer):
 
 
 class AuthorAxisUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
     biography = serializers.CharField(required=False, allow_blank=True)
 
 
 class SeriesAxisUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
     summary = serializers.CharField(required=False, allow_blank=True)
 
 

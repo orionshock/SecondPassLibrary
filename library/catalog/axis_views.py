@@ -21,7 +21,7 @@ from library.catalog.serializers import (
     SeriesAxisSerializer,
     SeriesAxisUpdateSerializer,
 )
-from library.catalog.axis_services import update_author_biography, update_series_summary
+from library.catalog.axis_services import update_author, update_series
 from library.queries import visible_books_for_user
 
 
@@ -81,7 +81,7 @@ class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):
     update_serializer_class = AuthorAxisUpdateSerializer
 
     def update_axis(self, instance, data):
-        update_author_biography(author=instance, biography=data.get("biography"))
+        update_author(author=instance, fields=data)
 
 
 class SeriesAxisMixin(_BaseAxisMixin):
@@ -99,7 +99,7 @@ class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
     update_serializer_class = SeriesAxisUpdateSerializer
 
     def update_axis(self, instance, data):
-        update_series_summary(series=instance, summary=data.get("summary"))
+        update_series(series=instance, fields=data)
 
 
 class CatalogTagAxisMixin(_BaseAxisMixin):

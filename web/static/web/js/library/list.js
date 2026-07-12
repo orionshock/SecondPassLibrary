@@ -20,6 +20,12 @@ const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
 const VIEWS = new Set(["books", "authors", "series", "author"]);
 const TAB_VIEWS = new Set(["books", "authors", "series"]);
 
+function safeContextSaveError(error) {
+  const body = error && error.body && typeof error.body === "object" ? error.body : null;
+  if (!body) return "Failed to save changes.";
+  return extractApiErrorMessage({ body }).slice(0, 240) || "Failed to save changes.";
+}
+
 function publishedYear(value) {
   const raw = value == null ? "" : String(value).trim();
   if (!raw) return "";
@@ -412,7 +418,7 @@ export async function initLibraryBrowse() {
     } catch (e) {
       state.contextEditing = true;
       state.contextStatus = "";
-      state.contextError = extractApiErrorMessage(e);
+      state.contextError = safeContextSaveError(e);
       syncControls();
     }
   }
