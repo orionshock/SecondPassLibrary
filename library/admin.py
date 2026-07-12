@@ -57,6 +57,41 @@ def _install_library_admin_app_list_ordering():
     admin.site.get_app_list = MethodType(get_app_list, admin.site)
 
 
+class AdvancedGroupsAssignmentAdminMixin:
+    @staticmethod
+    def _advanced_groups_enabled():
+        return server_settings.advanced_library_groups_enabled()
+
+    def get_model_perms(self, request):
+        if not self._advanced_groups_enabled():
+            return {}
+        return super().get_model_perms(request)
+
+    def has_module_permission(self, request):
+        return self._advanced_groups_enabled() and super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._advanced_groups_enabled() and super().has_view_permission(
+            request,
+            obj=obj,
+        )
+
+    def has_add_permission(self, request):
+        return self._advanced_groups_enabled() and super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._advanced_groups_enabled() and super().has_change_permission(
+            request,
+            obj=obj,
+        )
+
+    def has_delete_permission(self, request, obj=None):
+        return self._advanced_groups_enabled() and super().has_delete_permission(
+            request,
+            obj=obj,
+        )
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     search_fields = ["title", "sort_title", "checksum"]
@@ -73,7 +108,10 @@ class CatalogTagAdmin(admin.ModelAdmin):
 
 
 @admin.register(LibraryGroupMembership)
-class LibraryGroupMembershipAdmin(admin.ModelAdmin):
+class LibraryGroupMembershipAdmin(
+    AdvancedGroupsAssignmentAdminMixin,
+    admin.ModelAdmin,
+):
     list_display = ["user", "group", "is_curator", "created_at", "updated_at"]
     list_display_links = ["user"]
     list_filter = ["group", "is_curator"]
@@ -144,7 +182,10 @@ class LibraryGroupMembershipAdmin(admin.ModelAdmin):
         self.message_user(request, f"Removed {removed} user-group assignment(s).")
 
 @admin.register(BookGroupAssignment)
-class BookGroupAssignmentAdmin(admin.ModelAdmin):
+class BookGroupAssignmentAdmin(
+    AdvancedGroupsAssignmentAdminMixin,
+    admin.ModelAdmin,
+):
     list_display = ["book", "group", "added_by", "created_at", "updated_at"]
     list_display_links = ["book"]
     list_filter = ["group"]

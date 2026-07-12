@@ -155,16 +155,18 @@ class ServerSettingAdmin(admin.ModelAdmin):
 
     def get_fieldsets(self, request, obj=None):
         if self._is_advanced_groups_setting(obj):
+            status_fields = ["advanced_groups_status"]
+            if obj.value is True:
+                status_fields.extend(
+                    [
+                        "advanced_groups_recovery_summary",
+                        "advanced_groups_recovery_link",
+                    ]
+                )
             return (
                 (
                     "Advanced library groups",
-                    {
-                        "fields": (
-                            "advanced_groups_status",
-                            "advanced_groups_recovery_summary",
-                            "advanced_groups_recovery_link",
-                        )
-                    },
+                    {"fields": tuple(status_fields)},
                 ),
                 (
                     "Database metadata",
@@ -251,7 +253,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
 
     @admin.display(description="Recovery action")
     def advanced_groups_recovery_link(self, obj):
-        if obj.key != server_settings.ADVANCED_LIBRARY_GROUPS_SETTING:
+        if (
+            obj.key != server_settings.ADVANCED_LIBRARY_GROUPS_SETTING
+            or obj.value is not True
+        ):
             return ""
         url = reverse("admin:core_serversetting_advanced_groups_disable")
         return format_html(

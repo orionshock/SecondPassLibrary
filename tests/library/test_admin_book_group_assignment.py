@@ -271,3 +271,41 @@ class LibraryAdminMenuOrderTests(SimpleTestCase):
                 "Book Group Assignments",
             ],
         )
+
+
+class AdvancedGroupsAssignmentAdminVisibilityTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().get("/admin/library/")
+        self.request.user = Mock()
+        self.request.user.has_perm.return_value = True
+        self.request.user.has_module_perms.return_value = True
+        self.memberships = LibraryGroupMembershipAdmin(
+            LibraryGroupMembership,
+            AdminSite(),
+        )
+        self.books = BookGroupAssignmentAdmin(BookGroupAssignment, AdminSite())
+
+    @patch(
+        "library.admin.server_settings.advanced_library_groups_enabled",
+        return_value=False,
+    )
+    def test_disabled_state_hides_and_denies_assignment_admins(self, enabled):
+        for model_admin in [self.memberships, self.books]:
+            with self.subTest(model=model_admin.model):
+                self.assertEqual(model_admin.get_model_perms(self.request), {})
+                self.assertFalse(model_admin.has_module_permission(self.request))
+                self.assertFalse(model_admin.has_view_permission(self.request))
+                self.assertFalse(model_admin.has_add_permission(self.request))
+                self.assertFalse(model_admin.has_delete_permission(self.request))
+
+    @patch(
+        "library.admin.server_settings.advanced_library_groups_enabled",
+        return_value=True,
+    )
+    def test_enabled_state_restores_assignment_admins(self, enabled):
+        for model_admin in [self.memberships, self.books]:
+            with self.subTest(model=model_admin.model):
+                self.assertTrue(model_admin.has_module_permission(self.request))
+                self.assertTrue(model_admin.has_view_permission(self.request))
+                self.assertTrue(model_admin.has_add_permission(self.request))
+                self.assertTrue(model_admin.has_delete_permission(self.request))
