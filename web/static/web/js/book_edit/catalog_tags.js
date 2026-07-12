@@ -8,9 +8,9 @@ export function renderCatalogTags({ state, selectedEl, optionsEl }) {
   clear(selectedEl);
   if (!state.catalogTags.length) selectedEl.appendChild(el("span", "muted", "No Catalog Tags."));
   for (const tag of state.catalogTags) {
-    const pill = el("span", "pill");
-    pill.appendChild(document.createTextNode(tag.name));
-    const remove = el("button", "linklike", "Remove");
+    const pill = el("span", "pill catalog-tag-pill");
+    pill.appendChild(el("span", "catalog-tag-pill__name", tag.name));
+    const remove = el("button", "catalog-tag-pill__remove", "×");
     remove.type = "button";
     remove.setAttribute("aria-label", `Remove ${tag.name}`);
     remove.setAttribute("data-remove-catalog-tag", tag.name);

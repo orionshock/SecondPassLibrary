@@ -3,6 +3,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from core import server_settings
+from tests.core.product_ui.css import product_ui_css_text
 from tests.core.product_ui.helpers import ProductUiTestCase
 
 
@@ -104,6 +105,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'id="book-edit-series-index"')
         self.assertContains(response, 'id="book-edit-catalog-tags"')
         self.assertContains(response, 'id="book-edit-catalog-tag-input"')
+        self.assertContains(response, 'placeholder="Search or create tag..."')
         self.assertContains(response, 'id="book-edit-catalog-tag-options"')
         self.assertContains(response, 'id="book-edit-catalog-tag-add"')
         self.assertContains(response, 'step="0.1"')
@@ -149,6 +151,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
         catalog_tags_js = Path("web/static/web/js/book_edit/catalog_tags.js").read_text(
             encoding="utf-8"
         )
+        css = product_ui_css_text()
         identifiers_js = Path("web/static/web/js/book_edit/identifiers_actions.js").read_text(
             encoding="utf-8"
         )
@@ -180,6 +183,14 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertIn("bindCatalogTagActions", main_js)
         self.assertNotIn("fetchJSONWithOptions", catalog_tags_js)
         self.assertIn("data-remove-catalog-tag", catalog_tags_js)
+        self.assertIn('remove.type = "button"', catalog_tags_js)
+        self.assertIn('`Remove ${tag.name}`', catalog_tags_js)
+        self.assertIn('"catalog-tag-pill__remove", "×"', catalog_tags_js)
+        self.assertNotIn('"linklike", "Remove"', catalog_tags_js)
+        self.assertIn('target.getAttribute("data-remove-catalog-tag")', catalog_tags_js)
+        self.assertIn(".catalog-tag-pill__remove:hover", css)
+        self.assertIn(".catalog-tag-pill__remove:focus-visible", css)
+        self.assertIn("@media (pointer: coarse)", css)
         self.assertIn('? { name: (dom.seriesNewEl.value || "").trim() }', metadata_js)
 
     def test_book_detail_uses_current_metadata_contract(self):

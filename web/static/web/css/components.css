@@ -173,6 +173,40 @@
   font-size: 12px;
 }
 .pill--owner { color: var(--text); border-color: rgba(125, 211, 252, 0.45); }
+.catalog-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 3px;
+  color: var(--text);
+}
+.catalog-tag-pill__name { line-height: 18px; }
+.catalog-tag-pill__remove {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.catalog-tag-pill__remove:hover,
+.catalog-tag-pill__remove:focus-visible {
+  background: rgb(190, 24, 93);
+  color: white;
+  outline: none;
+}
+@media (pointer: coarse) {
+  .catalog-tag-pill__remove {
+    background: rgba(190, 24, 93, 0.16);
+    color: rgb(251, 113, 133);
+  }
+}
 .user-identity {
   display: inline-flex;
   align-items: center;
