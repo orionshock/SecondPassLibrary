@@ -10,7 +10,7 @@ from core.server_settings import set_server_setting
 from library.groups.consolidation import build_advanced_groups_disable_plan
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.groups.services import add_book_to_group, add_user_to_group
-from library.models import LibraryGroup, LibraryGroupMembership
+from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
@@ -381,7 +381,7 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
             "Disable and consolidate into Public/Common Room",
         )
 
-    def test_disabled_state_hides_and_blocks_assignment_admin_routes(self):
+    def test_disabled_state_hides_assignment_admin_sections_but_keeps_routes_available(self):
         self._login_owner()
         server_settings.set_advanced_library_groups_enabled(False)
         urls = [
@@ -396,7 +396,41 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self.assertNotContains(index, "Book Group Assignments")
         for url in urls:
             with self.subTest(url=url):
-                self.assertEqual(self.client.get(url).status_code, 403)
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_disabled_state_book_delete_allows_related_assignment_cleanup(self):
+        self._login_owner()
+        server_settings.set_advanced_library_groups_enabled(False)
+        book = create_file_backed_book(title="Delete Me", assign_public=False).book
+        assignment = add_book_to_group(book=book, group=self.public)
+
+        confirm = self.client.get(reverse("admin:library_book_delete", args=[book.pk]))
+        self.assertEqual(confirm.status_code, 200)
+        response = self.client.post(
+            reverse("admin:library_book_delete", args=[book.pk]),
+            {"post": "yes"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(type(book).objects.filter(pk=book.pk).exists())
+        self.assertFalse(BookGroupAssignment.objects.filter(pk=assignment.pk).exists())
+
+    def test_disabled_state_user_delete_allows_related_membership_cleanup(self):
+        self._login_owner()
+        server_settings.set_advanced_library_groups_enabled(False)
+        user = get_user_model().objects.create_user(username="delete-me")
+        membership = add_user_to_group(user=user, group=self.public)
+
+        confirm = self.client.get(reverse("admin:auth_user_delete", args=[user.pk]))
+        self.assertEqual(confirm.status_code, 200)
+        response = self.client.post(
+            reverse("admin:auth_user_delete", args=[user.pk]),
+            {"post": "yes"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(get_user_model().objects.filter(pk=user.pk).exists())
+        self.assertFalse(LibraryGroupMembership.objects.filter(pk=membership.pk).exists())
 
     def test_enabled_state_shows_assignment_admin_routes(self):
         self._login_owner()
