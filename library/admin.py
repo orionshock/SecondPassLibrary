@@ -130,27 +130,6 @@ class AdvancedGroupsAssignmentAdminMixin:
     def has_module_permission(self, request):
         return self._advanced_groups_enabled() and super().has_module_permission(request)
 
-    def has_view_permission(self, request, obj=None):
-        return self._advanced_groups_enabled() and super().has_view_permission(
-            request,
-            obj=obj,
-        )
-
-    def has_add_permission(self, request):
-        return self._advanced_groups_enabled() and super().has_add_permission(request)
-
-    def has_change_permission(self, request, obj=None):
-        return self._advanced_groups_enabled() and super().has_change_permission(
-            request,
-            obj=obj,
-        )
-
-    def has_delete_permission(self, request, obj=None):
-        return self._advanced_groups_enabled() and super().has_delete_permission(
-            request,
-            obj=obj,
-        )
-
 
 class BookAdminForm(forms.ModelForm):
     cover_upload = forms.FileField(

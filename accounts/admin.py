@@ -49,7 +49,6 @@ class SecondPassUserAdmin(DjangoUserAdmin):
             super().get_fieldsets(request, obj=obj)
         )
 
-
 try:
     admin.site.unregister(Group)
 except NotRegistered:

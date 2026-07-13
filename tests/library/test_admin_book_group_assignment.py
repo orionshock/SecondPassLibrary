@@ -289,14 +289,18 @@ class AdvancedGroupsAssignmentAdminVisibilityTests(SimpleTestCase):
         "library.admin.server_settings.advanced_library_groups_enabled",
         return_value=False,
     )
-    def test_disabled_state_hides_and_denies_assignment_admins(self, enabled):
+    def test_disabled_state_hides_but_does_not_lock_assignment_admins(self, enabled):
         for model_admin in [self.memberships, self.books]:
             with self.subTest(model=model_admin.model):
                 self.assertEqual(model_admin.get_model_perms(self.request), {})
                 self.assertFalse(model_admin.has_module_permission(self.request))
-                self.assertFalse(model_admin.has_view_permission(self.request))
-                self.assertFalse(model_admin.has_add_permission(self.request))
-                self.assertFalse(model_admin.has_delete_permission(self.request))
+                self.assertTrue(model_admin.has_view_permission(self.request))
+                self.assertTrue(model_admin.has_add_permission(self.request))
+                self.assertTrue(model_admin.has_delete_permission(self.request))
+                self.assertEqual(
+                    model_admin.has_change_permission(self.request),
+                    model_admin is self.memberships,
+                )
 
     @patch(
         "library.admin.server_settings.advanced_library_groups_enabled",

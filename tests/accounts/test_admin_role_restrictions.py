@@ -20,6 +20,7 @@ from accounts.models import (
     UserProfile,
     UserWebSession,
 )
+from core import server_settings
 from library.models import LibraryGroupMembership
 
 
@@ -128,6 +129,7 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
             subject="target-subject",
         )
         target_id = self.target.pk
+        server_settings.set_advanced_library_groups_enabled(False)
         with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True):
             _reload_project_urls()
             self.client.force_login(self.owner)
@@ -161,6 +163,20 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         self.assertFalse(
             LibraryGroupMembership.objects.filter(user_id=target_id).exists()
         )
+
+    def test_disabled_group_admin_does_not_block_user_deletion_preview(self):
+        server_settings.set_advanced_library_groups_enabled(False)
+        user_admin = admin.site._registry[User]
+        request = self.factory.get("/admin/auth/user/")
+        request.user = self.owner
+
+        _objects, _counts, perms_needed, protected = user_admin.get_deleted_objects(
+            User.objects.filter(pk=self.target.pk),
+            request,
+        )
+
+        self.assertEqual(perms_needed, set())
+        self.assertEqual(protected, [])
 
     def test_username_is_primary_clickable_sort_column(self):
         self.assertEqual(self.admin.list_display[0], "username")
@@ -258,6 +274,13 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
         self.assertNotIn("groups", user_admin.filter_horizontal)
         self.assertNotIn("user_permissions", user_admin.filter_horizontal)
         self.assertNotIn("groups", user_admin.list_filter)
+
+    def test_user_admin_does_not_special_case_self_delete_permission(self):
+        user_admin = admin.site._registry[User]
+        request = self.factory.get(f"/admin/auth/user/{self.owner.pk}/change/")
+        request.user = self.owner
+
+        self.assertTrue(user_admin.has_delete_permission(request, self.owner))
 
     def test_accounts_models_remain_registered(self):
         self.assertIn(User, admin.site._registry)
