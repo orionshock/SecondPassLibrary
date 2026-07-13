@@ -7,6 +7,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from core.operational_logging import (
+    state_change_logging_suppressed,
+    suppress_state_change_logging,
+    user_uuid,
+)
 from core.server_settings import set_server_setting
 from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_DESCRIPTION,
@@ -35,7 +40,9 @@ class PublicGroupRepairResult:
 
 
 def create_library_group(*, name: str, description: str = "") -> LibraryGroup:
-    return LibraryGroup.objects.create(name=_required_name(name), description=description or "")
+    group = LibraryGroup.objects.create(name=_required_name(name), description=description or "")
+    _log_info("Library group created: group=%s", group.pk)
+    return group
 
 
 def update_library_group(
@@ -43,17 +50,27 @@ def update_library_group(
 ) -> LibraryGroup:
     update_fields: list[str] = []
     if name is not None:
-        group.name = _required_name(name)
-        update_fields.append("name")
+        value = _required_name(name)
+        if group.name != value:
+            group.name = value
+            update_fields.append("name")
     if description is not None:
-        group.description = description
-        update_fields.append("description")
+        value = description or ""
+        if group.description != value:
+            group.description = value
+            update_fields.append("description")
     if update_fields:
         group.save(update_fields=[*update_fields, "updated_at"])
+        _log_info(
+            "Library group presentation changed: group=%s changed_fields=%s",
+            group.pk,
+            ",".join(sorted(update_fields)),
+        )
     return group
 
 
 def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
+    group_id = group.pk
     with transaction.atomic():
         if is_public_group(group):
             raise ValidationError("Public/Common Room group cannot be deleted.")
@@ -61,12 +78,22 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
         book_ids = list(group.book_assignments.values_list("book_id", flat=True))
         deleted_count, _ = group.delete()
         public_group = _get_or_create_public_group() if user_ids or book_ids else None
-        _restore_users_without_groups(user_ids, public_group=public_group)
-        _restore_books_without_groups(
+        users_restored = _restore_users_without_groups(user_ids, public_group=public_group)
+        books_restored = _restore_books_without_groups(
             book_ids, added_by=actor, public_group=public_group
         )
         if deleted_count:
             _invalidate_visible_books_cache_on_commit()
+    if deleted_count:
+        _log_info(
+            "Library group deleted: actor=%s group=%s fallback_to_public=%s "
+            "users_restored=%d books_restored=%d",
+            user_uuid(actor),
+            group_id,
+            bool(users_restored or books_restored),
+            users_restored,
+            books_restored,
+        )
     return bool(deleted_count)
 
 
@@ -87,7 +114,13 @@ def set_public_group_identity(*, group: LibraryGroup) -> LibraryGroup:
             raise ValidationError(
                 "Remove curator memberships before selecting this group as Public."
             )
-        _store_public_group_id(selected)
+        with suppress_state_change_logging():
+            _store_public_group_id(selected)
+        _log_info(
+            "Public/Common Room identity reassigned: group=%s reassigned=%s",
+            selected.pk,
+            True,
+        )
         return selected
 
 
@@ -104,38 +137,39 @@ def create_fresh_public_group() -> LibraryGroup:
 def repair_public_group_identity(
     *, create_new_common_room: bool, actor=None
 ) -> PublicGroupRepairResult:
-    with transaction.atomic():
-        configured_id = get_public_group_id()
-        configured_exists = bool(
-            configured_id
-            and LibraryGroup.objects.filter(pk=configured_id).exists()
-        )
-        if create_new_common_room:
-            group = create_fresh_public_group()
-        else:
-            group = get_public_group()
-
-        users_restored = 0
-        for user in get_user_model().objects.order_by("pk").iterator():
-            users_restored += ensure_user_has_at_least_one_group(
-                user=user,
-                public_group=group,
+    with suppress_state_change_logging():
+        with transaction.atomic():
+            configured_id = get_public_group_id()
+            configured_exists = bool(
+                configured_id
+                and LibraryGroup.objects.filter(pk=configured_id).exists()
             )
+            if create_new_common_room:
+                group = create_fresh_public_group()
+            else:
+                group = get_public_group()
 
-        books_restored = 0
-        for book in Book.objects.order_by("pk").iterator():
-            books_restored += ensure_book_has_at_least_one_group(
-                book=book,
-                added_by=actor,
-                public_group=group,
+            users_restored = 0
+            for user in get_user_model().objects.order_by("pk").iterator():
+                users_restored += ensure_user_has_at_least_one_group(
+                    user=user,
+                    public_group=group,
+                )
+
+            books_restored = 0
+            for book in Book.objects.order_by("pk").iterator():
+                books_restored += ensure_book_has_at_least_one_group(
+                    book=book,
+                    added_by=actor,
+                    public_group=group,
+                )
+
+            result = PublicGroupRepairResult(
+                group=group,
+                created_new_group=create_new_common_room or not configured_exists,
+                users_restored=users_restored,
+                books_restored=books_restored,
             )
-
-        result = PublicGroupRepairResult(
-            group=group,
-            created_new_group=create_new_common_room or not configured_exists,
-            users_restored=users_restored,
-            books_restored=books_restored,
-        )
 
     logger.info(
         "Public/Common Room identity repaired: group=%s created_new=%s "
@@ -160,16 +194,36 @@ def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) ->
         if not created and is_curator and not membership.is_curator:
             membership.is_curator = True
             membership.save(update_fields=["is_curator", "updated_at"])
+            _log_info(
+                "Library group membership curator changed: group=%s user=%s curator=%s",
+                group.pk,
+                user_uuid(user),
+                True,
+            )
         if created:
             _invalidate_visible_books_cache_on_commit()
+            _log_info(
+                "Library group membership added: group=%s user=%s curator=%s",
+                group.pk,
+                user_uuid(user),
+                bool(membership.is_curator),
+            )
         return membership
 
 
 def set_group_membership_curator(
     *, membership: LibraryGroupMembership, is_curator: bool
 ) -> LibraryGroupMembership:
-    membership.is_curator = bool(is_curator)
-    membership.save(update_fields=["is_curator", "updated_at"])
+    value = bool(is_curator)
+    if membership.is_curator != value:
+        membership.is_curator = value
+        membership.save(update_fields=["is_curator", "updated_at"])
+        _log_info(
+            "Library group membership curator changed: group=%s user=%s curator=%s",
+            membership.group_id,
+            user_uuid(membership.user),
+            value,
+        )
     return membership
 
 
@@ -179,6 +233,13 @@ def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
         restored = ensure_user_has_at_least_one_group(user=user)
         if deleted and not restored:
             _invalidate_visible_books_cache_on_commit()
+    if deleted:
+        _log_info(
+            "Library group membership removed: group=%s user=%s fallback_to_public=%s",
+            group.pk,
+            user_uuid(user),
+            bool(restored),
+        )
     return bool(deleted)
 
 
@@ -207,7 +268,19 @@ def add_book_to_group(
     if group is None:
         raise ValidationError("Group is required.")
     creator = added_by if added_by is not None else actor
-    return _create_book_assignment(book=book, group=group, added_by=creator)
+    assignment, created = _create_book_assignment(
+        book=book,
+        group=group,
+        added_by=creator,
+    )
+    if created:
+        _log_info(
+            "Book assigned to library group: actor=%s book=%s group=%s",
+            user_uuid(actor or added_by),
+            book.pk,
+            group.pk,
+        )
+    return assignment
 
 
 def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
@@ -218,6 +291,14 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
         restored = ensure_book_has_at_least_one_group(book=book, added_by=actor)
         if deleted and not restored:
             _invalidate_visible_books_cache_on_commit()
+    if deleted:
+        _log_info(
+            "Book removed from library group: actor=%s book=%s group=%s fallback_to_public=%s",
+            user_uuid(actor),
+            book.pk,
+            group.pk,
+            bool(restored),
+        )
     return bool(deleted)
 
 
@@ -225,7 +306,15 @@ def ensure_book_public_assignment(
     *, book, added_by=None, public_group: LibraryGroup | None = None
 ) -> BookGroupAssignment:
     group = public_group or _get_or_create_public_group()
-    return _create_book_assignment(book=book, group=group, added_by=added_by)
+    assignment, created = _create_book_assignment(book=book, group=group, added_by=added_by)
+    if created:
+        _log_info(
+            "Book assigned to library group: actor=%s book=%s group=%s",
+            user_uuid(added_by),
+            book.pk,
+            group.pk,
+        )
+    return assignment
 
 
 def ensure_book_has_at_least_one_group(
@@ -245,16 +334,20 @@ def bootstrap_public_group_membership_and_assignments() -> None:
 
 def _restore_users_without_groups(
     user_ids: list, *, public_group: LibraryGroup | None = None
-) -> None:
+) -> int:
+    restored = 0
     for user_id in user_ids:
         if not LibraryGroupMembership.objects.filter(user_id=user_id).exists():
             group = public_group or _get_or_create_public_group()
             LibraryGroupMembership.objects.get_or_create(user_id=user_id, group=group)
+            restored += 1
+    return restored
 
 
 def _restore_books_without_groups(
     book_ids: list, *, added_by=None, public_group: LibraryGroup | None = None
-) -> None:
+) -> int:
+    restored = 0
     for book_id in book_ids:
         if not BookGroupAssignment.objects.filter(book_id=book_id).exists():
             group = public_group or _get_or_create_public_group()
@@ -263,9 +356,13 @@ def _restore_books_without_groups(
                 group=group,
                 defaults={"added_by": added_by},
             )
+            restored += 1
+    return restored
 
 
-def _create_book_assignment(*, book, group: LibraryGroup, added_by=None) -> BookGroupAssignment:
+def _create_book_assignment(
+    *, book, group: LibraryGroup, added_by=None
+) -> tuple[BookGroupAssignment, bool]:
     assignment, created = BookGroupAssignment.objects.get_or_create(
         book=book,
         group=group,
@@ -273,7 +370,7 @@ def _create_book_assignment(*, book, group: LibraryGroup, added_by=None) -> Book
     )
     if created:
         _invalidate_visible_books_cache_on_commit()
-    return assignment
+    return assignment, created
 
 
 def _invalidate_visible_books_cache_on_commit() -> None:
@@ -297,3 +394,8 @@ def _required_name(name: str) -> str:
     if not value:
         raise ValidationError("Group name is required.")
     return value
+
+
+def _log_info(message: str, *args) -> None:
+    if not state_change_logging_suppressed():
+        logger.info(message, *args)

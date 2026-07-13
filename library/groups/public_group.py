@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
+from core.operational_logging import state_change_logging_suppressed
 from core.server_settings import get_server_setting, set_server_setting
 
 
+logger = logging.getLogger(__name__)
 PUBLIC_GROUP_ID_SETTING = "public_group_id"
 DEFAULT_PUBLIC_GROUP_NAME = "Common Room"
 DEFAULT_PUBLIC_GROUP_DESCRIPTION = "Main Public Library Room for everyone"
@@ -34,12 +37,16 @@ def is_public_group(group) -> bool:
 def get_public_group():
     from library.models import LibraryGroup
 
+    self_healed = False
     public_id = get_public_group_id()
     if public_id:
         try:
             return LibraryGroup.objects.get(pk=public_id)
         except LibraryGroup.DoesNotExist:
-            pass
+            self_healed = True
+    else:
+        raw_value = get_server_setting(PUBLIC_GROUP_ID_SETTING, default=None)
+        self_healed = raw_value is not None
 
     group = LibraryGroup.objects.create(
         name=DEFAULT_PUBLIC_GROUP_NAME,
@@ -50,6 +57,12 @@ def get_public_group():
         value=str(group.id),
         description="Public/Common Room group id.",
     )
+    if self_healed and not state_change_logging_suppressed():
+        logger.warning(
+            "Public/Common Room identity self-healed: group=%s repaired=%s",
+            group.pk,
+            True,
+        )
     return group
 
 

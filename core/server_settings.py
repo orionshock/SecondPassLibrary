@@ -6,9 +6,12 @@ from typing import Any
 from django.core.cache import cache
 from django.db import DatabaseError, transaction
 
+from core.operational_logging import state_change_logging_suppressed
+
 from .models import ServerSetting
 
 
+logger = logging.getLogger(__name__)
 SERVER_SETTINGS_CACHE_KEY = "core:server_settings:v1"
 APPLICATION_LOG_LEVEL_CACHE_KEY = "core:application_log_level:v1"
 SERVER_NAME_SETTING = "server_name"
@@ -85,10 +88,16 @@ def get_server_setting(key: str, default: Any | None = None) -> Any:
 
 
 def set_server_setting(*, key: str, value: Any, description: str = "") -> ServerSetting:
+    old_value: Any | None = None
+    was_created = False
+    changed_fields: list[str] = []
     with transaction.atomic():
-        obj, _created = ServerSetting.objects.get_or_create(
-            key=key, defaults={"value": value}
+        obj, was_created = ServerSetting.objects.get_or_create(
+            key=key,
+            defaults={"value": value, "description": description or ""},
         )
+        if not was_created:
+            old_value = obj.value
         updates: dict[str, Any] = {}
         if obj.value != value:
             updates["value"] = value
@@ -98,9 +107,18 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
             for k, v in updates.items():
                 setattr(obj, k, v)
             obj.save(update_fields=[*updates.keys(), "updated_at"])
+        changed_fields = sorted(updates.keys())
     clear_server_settings_cache()
     if key == APPLICATION_LOG_LEVEL_SETTING:
         apply_application_log_level(value)
+    if (was_created or changed_fields) and not state_change_logging_suppressed():
+        _log_server_setting_changed(
+            key=key,
+            old_value=old_value,
+            new_value=value,
+            changed_fields=changed_fields or ["value"],
+            created=was_created,
+        )
     return obj
 
 
@@ -206,6 +224,7 @@ def enable_advanced_library_groups() -> None:
 
 
 def set_advanced_library_groups_enabled(value: bool) -> None:
+    old_value = get_advanced_library_groups_enabled()
     set_server_setting(
         key=ADVANCED_LIBRARY_GROUPS_SETTING,
         value=bool(value),
@@ -214,6 +233,17 @@ def set_advanced_library_groups_enabled(value: bool) -> None:
             "first-class Product UI feature."
         ),
     )
+    if (
+        bool(value)
+        and not old_value
+        and not state_change_logging_suppressed()
+    ):
+        logger.info(
+            "Advanced library groups enabled: setting_key=%s old=%s new=%s",
+            ADVANCED_LIBRARY_GROUPS_SETTING,
+            old_value,
+            True,
+        )
 
 
 def _normalized_application_log_level(value: Any) -> str:
@@ -258,4 +288,52 @@ def set_application_log_level(value: str) -> None:
         description=(
             "Controls diagnostic output from Second Pass Library application code."
         ),
+    )
+
+
+def _log_server_setting_changed(
+    *,
+    key: str,
+    old_value: Any,
+    new_value: Any,
+    changed_fields: list[str],
+    created: bool,
+) -> None:
+    if key in {
+        SERVER_NAME_SETTING,
+        SERVER_DESCRIPTION_SETTING,
+        SERVER_BANNER_MESSAGE_SETTING,
+    }:
+        logger.info(
+            "Server setting changed: setting_key=%s changed_fields=%s created=%s",
+            key,
+            ",".join(changed_fields),
+            created,
+        )
+        return
+    if key == APPLICATION_LOG_LEVEL_SETTING:
+        logger.info(
+            "Server setting changed: setting_key=%s changed_fields=%s old=%s new=%s created=%s",
+            key,
+            ",".join(changed_fields),
+            _normalized_application_log_level(old_value),
+            _normalized_application_log_level(new_value),
+            created,
+        )
+        return
+    if key == ADVANCED_LIBRARY_GROUPS_SETTING:
+        logger.info(
+            "Server setting changed: setting_key=%s changed_fields=%s old=%s new=%s created=%s",
+            key,
+            ",".join(changed_fields),
+            old_value is True,
+            new_value is True,
+            created,
+        )
+        return
+    logger.info(
+        "Server setting changed: setting_key=%s changed_fields=%s created=%s",
+        key,
+        ",".join(changed_fields),
+        created,
     )

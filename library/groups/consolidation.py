@@ -11,6 +11,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from core import server_settings
+from core.operational_logging import suppress_state_change_logging
 from library.groups.public_group import get_public_group
 from library.groups.services import (
     delete_library_group,
@@ -150,20 +151,21 @@ def execute_advanced_groups_disable_plan(
                 .exclude(pk=public_group.pk)
                 .order_by("name", "id")
             )
-            for group in custom_groups:
-                _move_group_shelves(
-                    group=group,
-                    public_group=public_group,
-                    shelf_moves=shelf_moves,
-                )
-                _remove_group_book_assignments(group=group, actor=actor)
-                _remove_group_memberships(group=group)
-                _assert_group_empty(group)
-                delete_library_group(group=group, actor=actor)
+            with suppress_state_change_logging():
+                for group in custom_groups:
+                    _move_group_shelves(
+                        group=group,
+                        public_group=public_group,
+                        shelf_moves=shelf_moves,
+                    )
+                    _remove_group_book_assignments(group=group, actor=actor)
+                    _remove_group_memberships(group=group)
+                    _assert_group_empty(group)
+                    delete_library_group(group=group, actor=actor)
 
-            public_curators_cleared = _clear_public_curators(public_group)
-            _assert_postconditions(public_group)
-            server_settings.set_advanced_library_groups_enabled(False)
+                public_curators_cleared = _clear_public_curators(public_group)
+                _assert_postconditions(public_group)
+                server_settings.set_advanced_library_groups_enabled(False)
             transaction.on_commit(invalidate_visible_books_cache)
 
         if plan.summary.shelf_name_collisions:
