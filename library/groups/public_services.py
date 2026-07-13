@@ -63,7 +63,8 @@ def set_public_group_identity(*, group: LibraryGroup) -> LibraryGroup:
             )
         with suppress_state_change_logging():
             _store_public_group_id(selected)
-        _log_info(
+        info_on_commit(
+            logger,
             "Public/Common Room identity reassigned: group=%s reassigned=%s",
             selected.pk,
             True,
@@ -121,10 +122,6 @@ def repair_public_group_identity(
         result.books_restored,
     )
     return result
-
-
-def bootstrap_public_group_membership_and_assignments() -> None:
-    get_public_group()
 
 
 def _restore_orphan_users_to_public(*, public_group: LibraryGroup) -> int:
@@ -206,7 +203,3 @@ def _public_group_description(description: str | None) -> str:
 
 def _invalidate_visible_books_cache_on_commit() -> None:
     transaction.on_commit(invalidate_visible_books_cache)
-
-
-def _log_info(message: str, *args) -> None:
-    info_on_commit(logger, message, *args)

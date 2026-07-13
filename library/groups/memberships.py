@@ -30,7 +30,8 @@ def add_user_to_group(
         if not created and is_curator and not membership.is_curator:
             membership.is_curator = True
             membership.save(update_fields=["is_curator", "updated_at"])
-            _log_info(
+            info_on_commit(
+                logger,
                 "Library group membership curator changed: group=%s user=%s curator=%s",
                 group.pk,
                 user_uuid(user),
@@ -38,7 +39,8 @@ def add_user_to_group(
             )
         if created:
             _invalidate_visible_books_cache_on_commit()
-            _log_info(
+            info_on_commit(
+                logger,
                 "Library group membership added: group=%s user=%s curator=%s",
                 group.pk,
                 user_uuid(user),
@@ -56,7 +58,8 @@ def set_group_membership_curator(
         if membership.is_curator != value:
             membership.is_curator = value
             membership.save(update_fields=["is_curator", "updated_at"])
-            _log_info(
+            info_on_commit(
+                logger,
                 "Library group membership curator changed: group=%s user=%s curator=%s",
                 membership.group_id,
                 user_uuid(membership.user),
@@ -73,7 +76,8 @@ def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
         if deleted and not restored:
             _invalidate_visible_books_cache_on_commit()
     if deleted:
-        _log_info(
+        info_on_commit(
+            logger,
             "Library group membership removed: group=%s user=%s fallback_to_public=%s",
             group.pk,
             user_uuid(user),
@@ -144,7 +148,3 @@ def _lock_user_for_group_mutation(user):
 
 def _invalidate_visible_books_cache_on_commit() -> None:
     transaction.on_commit(invalidate_visible_books_cache)
-
-
-def _log_info(message: str, *args) -> None:
-    info_on_commit(logger, message, *args)

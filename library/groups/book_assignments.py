@@ -29,7 +29,8 @@ def add_book_to_group(
             added_by=creator,
         )
     if created:
-        _log_info(
+        info_on_commit(
+            logger,
             "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
             user_uuid(actor),
             user_uuid(creator),
@@ -49,7 +50,8 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
         if deleted and not restored:
             _invalidate_visible_books_cache_on_commit()
     if deleted:
-        _log_info(
+        info_on_commit(
+            logger,
             "Book removed from library group: actor=%s book=%s group=%s fallback_to_public=%s",
             user_uuid(actor),
             book.pk,
@@ -77,7 +79,8 @@ def _ensure_book_public_assignment_locked(
     group = public_group or get_public_group()
     assignment, created = _create_book_assignment(book=book, group=group, added_by=added_by)
     if created:
-        _log_info(
+        info_on_commit(
+            logger,
             "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
             "none",
             user_uuid(added_by),
@@ -150,7 +153,3 @@ def _lock_book_for_group_assignment(book):
 
 def _invalidate_visible_books_cache_on_commit() -> None:
     transaction.on_commit(invalidate_visible_books_cache)
-
-
-def _log_info(message: str, *args) -> None:
-    info_on_commit(logger, message, *args)

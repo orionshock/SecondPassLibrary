@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def create_library_group(*, name: str, description: str = "") -> LibraryGroup:
     group = LibraryGroup.objects.create(name=_required_name(name), description=description or "")
-    _log_info("Library group created: group=%s", group.pk)
+    info_on_commit(logger, "Library group created: group=%s", group.pk)
     return group
 
 
@@ -44,7 +44,8 @@ def update_library_group(
             update_fields.append("description")
     if update_fields:
         group.save(update_fields=[*update_fields, "updated_at"])
-        _log_info(
+        info_on_commit(
+            logger,
             "Library group presentation changed: group=%s changed_fields=%s",
             group.pk,
             ",".join(sorted(update_fields)),
@@ -68,7 +69,8 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
         if deleted_count:
             _invalidate_visible_books_cache_on_commit()
     if deleted_count:
-        _log_info(
+        info_on_commit(
+            logger,
             "Library group deleted: actor=%s group=%s fallback_to_public=%s "
             "users_restored=%d books_restored=%d",
             user_uuid(actor),
@@ -89,7 +91,3 @@ def _required_name(name: str) -> str:
     if not value:
         raise ValidationError("Group name is required.")
     return value
-
-
-def _log_info(message: str, *args) -> None:
-    info_on_commit(logger, message, *args)
