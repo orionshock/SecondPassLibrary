@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
-from library.groups.services import ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.responses import assert_response, payload_list, response_data_list

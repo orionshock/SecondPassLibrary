@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from library.cover_services import set_book_cover_from_bytes
-from library.groups.services import add_book_to_group, add_user_to_group
+from library.groups.memberships import add_user_to_group
+from library.groups.services import add_book_to_group
 from library.models import LibraryGroup
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book

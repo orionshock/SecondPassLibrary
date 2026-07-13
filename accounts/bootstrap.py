@@ -13,7 +13,8 @@ from core.server_settings import (
     set_server_description,
     set_server_name,
 )
-from library.groups.services import configure_public_group, ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
+from library.groups.services import configure_public_group
 
 from .models import UserProfile
 from .services import get_or_create_profile

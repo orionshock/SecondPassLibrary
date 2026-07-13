@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 
 from accounts.models import UserProfile
-from library.groups.services import ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingProgress, ReadingSession
 from reading.profile.validation import (

@@ -13,7 +13,7 @@ from library.groups.membership_serializers import (
     MembershipCreateSerializer,
     MembershipPatchSerializer,
 )
-from library.groups.services import (
+from library.groups.memberships import (
     add_user_to_group,
     remove_user_from_group,
     set_group_membership_curator,

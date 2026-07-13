@@ -23,6 +23,7 @@ from library.catalog.tag_services import (
     available_catalog_tag_slug,
     normalize_catalog_tag_name,
 )
+from library.groups import memberships as membership_services
 from library.groups import services as group_services
 from library.groups.public_group import is_public_group
 
@@ -667,12 +668,12 @@ class LibraryGroupMembershipAdmin(
     def save_model(self, request, obj, form, change):
         if change:
             if self._can_edit_curator(obj):
-                group_services.set_group_membership_curator(
+                membership_services.set_group_membership_curator(
                     membership=obj,
                     is_curator=obj.is_curator,
                 )
             return
-        membership = group_services.add_user_to_group(
+        membership = membership_services.add_user_to_group(
             user=obj.user,
             group=obj.group,
             is_curator=obj.is_curator,
@@ -683,14 +684,14 @@ class LibraryGroupMembershipAdmin(
         obj.updated_at = membership.updated_at
 
     def delete_model(self, request, obj):
-        group_services.remove_user_from_group(user=obj.user, group=obj.group)
+        membership_services.remove_user_from_group(user=obj.user, group=obj.group)
 
     @admin.action(description="Remove selected user-group assignments")
     def remove_assignments(self, request, queryset):
         removed = 0
         memberships = list(queryset.select_related("user", "group"))
         for membership in memberships:
-            removed += group_services.remove_user_from_group(
+            removed += membership_services.remove_user_from_group(
                 user=membership.user,
                 group=membership.group,
             )

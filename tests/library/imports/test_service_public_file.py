@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from library.groups.public_group import get_public_group
-from library.groups.services import ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
 from library.imports.services import persist_imported_book
 from library.models import BookGroupAssignment
 from library.queries import visible_books_for_user

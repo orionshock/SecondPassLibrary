@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from library.groups.memberships import add_user_to_group, remove_user_from_group
 from library.groups.services import (
     add_book_to_group,
-    add_user_to_group,
     create_library_group,
     remove_book_from_group,
-    remove_user_from_group,
 )
 from library.models import BookGroupAssignment, LibraryGroupMembership
 from library.queries import visible_books_for_user

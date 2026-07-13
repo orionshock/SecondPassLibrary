@@ -4,11 +4,8 @@ from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 
-from library.groups.services import (
-    add_book_to_group,
-    ensure_book_public_assignment,
-    ensure_user_public_membership,
-)
+from library.groups.memberships import ensure_user_public_membership
+from library.groups.services import add_book_to_group, ensure_book_public_assignment
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.books import create_file_backed_book
 

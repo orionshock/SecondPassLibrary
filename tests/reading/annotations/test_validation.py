@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
-from library.groups.services import ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
 from reading.annotations.views import BATCH_CREATE_LIMIT
 from reading.models import Annotation, ReadingSession
 from reading.profile.validation import (

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from library.groups.services import ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
 from reading.models import ReadingSession
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book

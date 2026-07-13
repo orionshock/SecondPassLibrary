@@ -13,7 +13,7 @@ from django.db import IntegrityError, transaction
 from accounts.operational_logging import logger, user_uuid
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
 from core import server_settings
-from library.groups.services import ensure_user_public_membership
+from library.groups.memberships import ensure_user_public_membership
 from library.models import LibraryGroupMembership
 from library.groups.public_group import is_public_group
 

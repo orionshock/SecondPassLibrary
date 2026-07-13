@@ -14,11 +14,8 @@ from accounts.models import UserProfile
 from accounts.bootstrap import has_active_owner
 from accounts.services import get_or_create_profile
 from core import server_settings
-from library.groups.services import (
-    add_book_to_group,
-    add_user_to_group,
-    remove_user_from_group,
-)
+from library.groups.memberships import add_user_to_group, remove_user_from_group
+from library.groups.services import add_book_to_group
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem

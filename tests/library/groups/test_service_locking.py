@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from core.models import ServerSetting
+from library.groups import memberships
 from library.groups import services
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.models import BookGroupAssignment, LibraryGroupMembership
@@ -40,15 +41,15 @@ class LibraryGroupServiceLockingTests(LibraryGroupServiceTestCase):
         group = services.create_library_group(name="Lock Room")
 
         with patch(
-            "library.groups.services._lock_user_for_group_mutation",
-            wraps=services._lock_user_for_group_mutation,
+            "library.groups.memberships._lock_user_for_group_mutation",
+            wraps=memberships._lock_user_for_group_mutation,
         ) as lock_user:
-            membership = services.add_user_to_group(user=self.user, group=group)
-            services.set_group_membership_curator(
+            membership = memberships.add_user_to_group(user=self.user, group=group)
+            memberships.set_group_membership_curator(
                 membership=membership,
                 is_curator=True,
             )
-            services.remove_user_from_group(user=self.user, group=group)
+            memberships.remove_user_from_group(user=self.user, group=group)
 
         self.assertEqual(lock_user.call_count, 3)
         self.assertEqual(
@@ -60,10 +61,10 @@ class LibraryGroupServiceLockingTests(LibraryGroupServiceTestCase):
         group = services.create_library_group(name="Missing Membership Room")
 
         with patch(
-            "library.groups.services._lock_user_for_group_mutation",
-            wraps=services._lock_user_for_group_mutation,
+            "library.groups.memberships._lock_user_for_group_mutation",
+            wraps=memberships._lock_user_for_group_mutation,
         ) as lock_user:
-            removed = services.remove_user_from_group(user=self.user, group=group)
+            removed = memberships.remove_user_from_group(user=self.user, group=group)
 
         self.assertFalse(removed)
         self.assertEqual(lock_user.call_count, 1)

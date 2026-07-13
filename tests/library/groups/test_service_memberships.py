@@ -3,13 +3,13 @@ from __future__ import annotations
 from uuid import uuid4
 
 from core.server_settings import set_server_setting
-from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, is_public_group
-from library.groups.services import (
+from library.groups.memberships import (
     add_user_to_group,
-    create_library_group,
     ensure_user_public_membership,
     remove_user_from_group,
 )
+from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, is_public_group
+from library.groups.services import create_library_group
 from library.models import LibraryGroupMembership
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 

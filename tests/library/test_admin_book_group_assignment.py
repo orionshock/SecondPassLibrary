@@ -137,7 +137,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
 
         self.assertNotIn("is_curator", form_class.base_fields)
 
-    @patch("library.admin.group_services.set_group_membership_curator")
+    @patch("library.admin.membership_services.set_group_membership_curator")
     @patch("library.admin.is_public_group", return_value=True)
     @patch(
         "library.admin.server_settings.advanced_library_groups_enabled",
@@ -163,7 +163,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
 
         self.assertNotIn("is_curator", form_class.base_fields)
 
-    @patch("library.admin.group_services.add_user_to_group")
+    @patch("library.admin.membership_services.add_user_to_group")
     def test_add_uses_membership_service(self, add_user_to_group):
         user = get_user_model()(username="reader")
         group = LibraryGroup(name="Room")
@@ -189,7 +189,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
         )
         self.assertEqual(membership.pk, saved_membership.pk)
 
-    @patch("library.admin.group_services.set_group_membership_curator")
+    @patch("library.admin.membership_services.set_group_membership_curator")
     @patch("library.admin.is_public_group", return_value=False)
     @patch(
         "library.admin.server_settings.advanced_library_groups_enabled",
@@ -214,7 +214,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
             is_curator=False,
         )
 
-    @patch("library.admin.group_services.remove_user_from_group")
+    @patch("library.admin.membership_services.remove_user_from_group")
     def test_delete_uses_orphan_safe_membership_service(self, remove_user_from_group):
         membership = Mock(user=Mock(), group=Mock())
 
@@ -225,7 +225,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
             group=membership.group,
         )
 
-    @patch("library.admin.group_services.remove_user_from_group", return_value=True)
+    @patch("library.admin.membership_services.remove_user_from_group", return_value=True)
     def test_bulk_remove_uses_orphan_safe_membership_service(
         self,
         remove_user_from_group,

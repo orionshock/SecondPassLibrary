@@ -12,16 +12,18 @@ from django.test import TestCase
 from core import server_settings
 from core.server_settings import set_server_setting
 from library.groups import consolidation
+from library.groups.memberships import (
+    add_user_to_group,
+    remove_user_from_group,
+    set_group_membership_curator,
+)
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, get_public_group
 from library.groups.services import (
     add_book_to_group,
-    add_user_to_group,
     create_library_group,
     delete_library_group,
     remove_book_from_group,
-    remove_user_from_group,
     repair_public_group_identity,
-    set_group_membership_curator,
     set_public_group_identity,
     update_library_group,
 )
@@ -66,7 +68,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
     def test_membership_add_remove_and_curator_change_logs_uuid_only(self):
         group = create_library_group(name="Members Only", description="Hidden")
 
-        with self.assertLogs("library.groups.services", level="INFO") as added:
+        with self.assertLogs("library.groups.memberships", level="INFO") as added:
             with self.captureOnCommitCallbacks(execute=True):
                 membership = add_user_to_group(user=self.user, group=group)
 
@@ -77,7 +79,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         self.assertNotIn("reader", added.output[0])
         self.assertNotIn("Members Only", added.output[0])
 
-        with self.assertLogs("library.groups.services", level="INFO") as curator:
+        with self.assertLogs("library.groups.memberships", level="INFO") as curator:
             with self.captureOnCommitCallbacks(execute=True):
                 set_group_membership_curator(membership=membership, is_curator=True)
 
@@ -88,7 +90,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
 
         other_group = create_library_group(name="Backup")
         add_user_to_group(user=self.user, group=other_group)
-        with self.assertLogs("library.groups.services", level="INFO") as removed:
+        with self.assertLogs("library.groups.memberships", level="INFO") as removed:
             with self.captureOnCommitCallbacks(execute=True):
                 self.assertTrue(remove_user_from_group(user=self.user, group=group))
 
@@ -185,7 +187,10 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         add_user_to_group(user=self.user, group=group)
         add_book_to_group(book=self.book, group=group)
 
-        with patch("library.groups.services.logger.error") as error_log:
+        with (
+            patch("library.groups.services.logger.error") as group_error_log,
+            patch("library.groups.memberships.logger.error") as membership_error_log,
+        ):
             with self.assertRaises(ValidationError):
                 delete_library_group(group=self.public, actor=self.actor)
             add_user_to_group(user=self.user, group=group)
@@ -196,12 +201,13 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 description=group.description,
             )
 
-        error_log.assert_not_called()
+        group_error_log.assert_not_called()
+        membership_error_log.assert_not_called()
 
     def test_state_change_info_logs_do_not_fire_when_outer_transaction_rolls_back(self):
         group = create_library_group(name="Rollback Room")
 
-        with patch("library.groups.services.logger.info") as info_log:
+        with patch("library.groups.memberships.logger.info") as info_log:
             with self.assertRaises(RuntimeError):
                 with transaction.atomic():
                     add_user_to_group(user=self.user, group=group)
@@ -252,6 +258,7 @@ class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
 
         with (
             patch("library.groups.services.logger.info") as low_level_info,
+            patch("library.groups.memberships.logger.info") as membership_low_level_info,
             self.assertLogs("library.groups.consolidation", level="INFO") as logs,
         ):
             with self.captureOnCommitCallbacks(execute=True):
@@ -261,5 +268,6 @@ class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
                 )
 
         low_level_info.assert_not_called()
+        membership_low_level_info.assert_not_called()
         self.assertEqual(len(logs.output), 1)
         self.assertIn("Advanced library groups consolidated", logs.output[0])
