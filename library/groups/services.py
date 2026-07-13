@@ -6,6 +6,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 
 from core.operational_logging import (
     info_on_commit,
@@ -157,20 +158,13 @@ def repair_public_group_identity(
             else:
                 group = get_public_group()
 
-            users_restored = 0
-            for user in get_user_model().objects.order_by("pk").iterator():
-                users_restored += ensure_user_has_at_least_one_group(
-                    user=user,
-                    public_group=group,
-                )
-
-            books_restored = 0
-            for book in Book.objects.order_by("pk").iterator():
-                books_restored += ensure_book_has_at_least_one_group(
-                    book=book,
-                    added_by=actor,
-                    public_group=group,
-                )
+            users_restored = _restore_orphan_users_to_public(public_group=group)
+            books_restored = _restore_orphan_books_to_public(
+                public_group=group,
+                added_by=actor,
+            )
+            if users_restored or books_restored:
+                _invalidate_visible_books_cache_on_commit()
 
             result = PublicGroupRepairResult(
                 group=group,
@@ -369,6 +363,55 @@ def _restore_books_without_groups(
             )
             restored += 1
     return restored
+
+
+def _restore_orphan_users_to_public(*, public_group: LibraryGroup) -> int:
+    user_ids = list(
+        get_user_model()
+        .objects.annotate(
+            has_group=Exists(
+                LibraryGroupMembership.objects.filter(user_id=OuterRef("pk"))
+            )
+        )
+        .filter(has_group=False)
+        .order_by("pk")
+        .values_list("pk", flat=True)
+    )
+    if not user_ids:
+        return 0
+    rows = [
+        LibraryGroupMembership(
+            user_id=user_id,
+            group=public_group,
+            is_curator=False,
+        )
+        for user_id in user_ids
+    ]
+    return len(LibraryGroupMembership.objects.bulk_create(rows))
+
+
+def _restore_orphan_books_to_public(*, public_group: LibraryGroup, added_by=None) -> int:
+    book_ids = list(
+        Book.objects.annotate(
+            has_group=Exists(
+                BookGroupAssignment.objects.filter(book_id=OuterRef("pk"))
+            )
+        )
+        .filter(has_group=False)
+        .order_by("pk")
+        .values_list("pk", flat=True)
+    )
+    if not book_ids:
+        return 0
+    rows = [
+        BookGroupAssignment(
+            book_id=book_id,
+            group=public_group,
+            added_by=added_by,
+        )
+        for book_id in book_ids
+    ]
+    return len(BookGroupAssignment.objects.bulk_create(rows))
 
 
 def _create_book_assignment(

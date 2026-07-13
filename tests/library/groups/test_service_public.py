@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from unittest.mock import patch
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from core.models import ServerSetting
 from core.server_settings import set_server_setting
@@ -13,8 +15,13 @@ from library.groups.public_group import (
     get_public_group,
     is_public_group,
 )
-from library.groups.services import configure_public_group, delete_library_group
-from library.models import LibraryGroup
+from library.groups.services import (
+    configure_public_group,
+    create_library_group,
+    delete_library_group,
+    repair_public_group_identity,
+)
+from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
@@ -116,3 +123,92 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
             delete_library_group(group=self.public)
 
         self.assertTrue(LibraryGroup.objects.filter(pk=self.public.pk).exists())
+
+    def test_public_repair_restores_only_true_orphan_users_and_books(self):
+        other_group = create_library_group(name="Other")
+        assigned_book = Book.objects.create(title="Already assigned")
+        LibraryGroupMembership.objects.create(user=self.actor, group=other_group)
+        BookGroupAssignment.objects.create(book=assigned_book, group=other_group)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            result = repair_public_group_identity(
+                create_new_common_room=False,
+                actor=self.actor,
+            )
+
+        self.assertEqual(result.users_restored, 1)
+        self.assertEqual(result.books_restored, 1)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=self.user,
+                group=self.public,
+                is_curator=False,
+            ).exists()
+        )
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(user=self.actor, group=self.public).exists()
+        )
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(
+                book=self.book,
+                group=self.public,
+                added_by=self.actor,
+            ).exists()
+        )
+        self.assertFalse(
+            BookGroupAssignment.objects.filter(book=assigned_book, group=self.public).exists()
+        )
+
+    def test_public_repair_is_idempotent_and_counts_actual_created_rows(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            first = repair_public_group_identity(
+                create_new_common_room=False,
+                actor=self.actor,
+            )
+        with self.captureOnCommitCallbacks(execute=True):
+            second = repair_public_group_identity(
+                create_new_common_room=False,
+                actor=self.actor,
+            )
+
+        self.assertEqual(first.users_restored, 2)
+        self.assertEqual(first.books_restored, 1)
+        self.assertEqual(second.users_restored, 0)
+        self.assertEqual(second.books_restored, 0)
+        self.assertEqual(
+            LibraryGroupMembership.objects.filter(group=self.public).count(),
+            2,
+        )
+        self.assertEqual(
+            BookGroupAssignment.objects.filter(group=self.public).count(),
+            1,
+        )
+
+    def test_public_repair_registers_one_visibility_cache_invalidation(self):
+        with patch("library.groups.services.invalidate_visible_books_cache") as invalidate:
+            with self.captureOnCommitCallbacks(execute=True):
+                repair_public_group_identity(
+                    create_new_common_room=False,
+                    actor=self.actor,
+                )
+
+        invalidate.assert_called_once_with()
+
+    def test_public_repair_rolls_back_relationships_on_failure(self):
+        with (
+            patch(
+                "library.groups.services._restore_orphan_books_to_public",
+                side_effect=RuntimeError("forced failure"),
+            ),
+            self.assertRaises(RuntimeError),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                with transaction.atomic():
+                    repair_public_group_identity(
+                        create_new_common_room=False,
+                        actor=self.actor,
+                    )
+
+        self.assertFalse(LibraryGroupMembership.objects.filter(user=self.actor).exists())
+        self.assertFalse(LibraryGroupMembership.objects.filter(user=self.user).exists())
+        self.assertFalse(BookGroupAssignment.objects.filter(book=self.book).exists())
