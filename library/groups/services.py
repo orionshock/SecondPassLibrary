@@ -9,8 +9,8 @@ from core.operational_logging import (
     info_on_commit,
     user_uuid,
 )
-from library.groups.book_assignments import _restore_books_without_groups
-from library.groups.memberships import _restore_users_without_groups
+from library.groups.book_assignments import restore_selected_books_without_groups
+from library.groups.memberships import restore_selected_users_without_groups
 from library.groups.public_group import (
     get_public_group,
     is_public_group,
@@ -62,8 +62,10 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
         book_ids = list(group.book_assignments.values_list("book_id", flat=True))
         deleted_count, _ = group.delete()
         public_group = get_public_group() if user_ids or book_ids else None
-        users_restored = _restore_users_without_groups(user_ids, public_group=public_group)
-        books_restored = _restore_books_without_groups(
+        users_restored = restore_selected_users_without_groups(
+            user_ids, public_group=public_group
+        )
+        books_restored = restore_selected_books_without_groups(
             book_ids, added_by=actor, public_group=public_group
         )
         if deleted_count:

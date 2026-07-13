@@ -113,7 +113,7 @@ def _ensure_book_has_at_least_one_group_locked(
     return False
 
 
-def _restore_books_without_groups(
+def restore_selected_books_without_groups(
     book_ids: list, *, added_by=None, public_group: LibraryGroup | None = None
 ) -> int:
     restored = 0

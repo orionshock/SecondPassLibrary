@@ -124,7 +124,7 @@ def _ensure_user_has_at_least_one_group_locked(
     return False
 
 
-def _restore_users_without_groups(
+def restore_selected_users_without_groups(
     user_ids: list, *, public_group: LibraryGroup | None = None
 ) -> int:
     restored = 0
