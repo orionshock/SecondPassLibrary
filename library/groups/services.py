@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from core.operational_logging import (
-    state_change_logging_suppressed,
+    info_on_commit,
     suppress_state_change_logging,
     user_uuid,
 )
@@ -171,7 +171,8 @@ def repair_public_group_identity(
                 books_restored=books_restored,
             )
 
-    logger.info(
+    info_on_commit(
+        logger,
         "Public/Common Room identity repaired: group=%s created_new=%s "
         "users_restored=%d books_restored=%d",
         result.group.pk,
@@ -275,8 +276,9 @@ def add_book_to_group(
     )
     if created:
         _log_info(
-            "Book assigned to library group: actor=%s book=%s group=%s",
-            user_uuid(actor or added_by),
+            "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
+            user_uuid(actor),
+            user_uuid(creator),
             book.pk,
             group.pk,
         )
@@ -309,7 +311,8 @@ def ensure_book_public_assignment(
     assignment, created = _create_book_assignment(book=book, group=group, added_by=added_by)
     if created:
         _log_info(
-            "Book assigned to library group: actor=%s book=%s group=%s",
+            "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
+            "none",
             user_uuid(added_by),
             book.pk,
             group.pk,
@@ -397,5 +400,4 @@ def _required_name(name: str) -> str:
 
 
 def _log_info(message: str, *args) -> None:
-    if not state_change_logging_suppressed():
-        logger.info(message, *args)
+    info_on_commit(logger, message, *args)

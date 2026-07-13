@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from core.operational_logging import state_change_logging_suppressed
+from core.operational_logging import state_change_logging_suppressed, warning_on_commit
 from core.server_settings import get_server_setting, set_server_setting
 
 
@@ -58,7 +58,8 @@ def get_public_group():
         description="Public/Common Room group id.",
     )
     if self_healed and not state_change_logging_suppressed():
-        logger.warning(
+        warning_on_commit(
+            logger,
             "Public/Common Room identity self-healed: group=%s repaired=%s",
             group.pk,
             True,

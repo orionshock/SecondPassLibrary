@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.db import transaction
 from django.test import TestCase
 
 from core import server_settings
@@ -24,9 +25,10 @@ class ServerSettingOperationalLoggingTests(TestCase):
         secret_banner = "Private outage message"
 
         with self.assertLogs("core.server_settings", level="INFO") as logs:
-            server_settings.set_server_name(secret_name)
-            server_settings.set_server_description(secret_description)
-            server_settings.set_server_banner_message(secret_banner)
+            with self.captureOnCommitCallbacks(execute=True):
+                server_settings.set_server_name(secret_name)
+                server_settings.set_server_description(secret_description)
+                server_settings.set_server_banner_message(secret_banner)
 
         output = "\n".join(logs.output)
         self.assertIn("setting_key=server_name", output)
@@ -39,7 +41,8 @@ class ServerSettingOperationalLoggingTests(TestCase):
 
     def test_application_log_level_change_logs_safe_enum_values(self):
         with self.assertLogs("core.server_settings", level="INFO") as logs:
-            server_settings.set_application_log_level("DEBUG")
+            with self.captureOnCommitCallbacks(execute=True):
+                server_settings.set_application_log_level("DEBUG")
 
         output = "\n".join(logs.output)
         self.assertIn("setting_key=application_log_level", output)
@@ -48,7 +51,8 @@ class ServerSettingOperationalLoggingTests(TestCase):
 
     def test_advanced_groups_enable_logs_semantic_event(self):
         with self.assertLogs("core.server_settings", level="INFO") as logs:
-            server_settings.enable_advanced_library_groups()
+            with self.captureOnCommitCallbacks(execute=True):
+                server_settings.enable_advanced_library_groups()
 
         output = "\n".join(logs.output)
         self.assertIn("setting_key=advanced_library_groups_enabled", output)
@@ -72,3 +76,12 @@ class ServerSettingOperationalLoggingTests(TestCase):
                 server_settings.set_server_banner_message("x" * 501)
 
         error_log.assert_not_called()
+
+    def test_state_change_info_does_not_fire_when_outer_transaction_rolls_back(self):
+        with patch("core.server_settings.logger.info") as info_log:
+            with self.assertRaises(RuntimeError):
+                with transaction.atomic():
+                    server_settings.set_server_name("Rolled Back")
+                    raise RuntimeError("rollback")
+
+        info_log.assert_not_called()

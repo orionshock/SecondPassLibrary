@@ -6,7 +6,7 @@ from typing import Any
 from django.core.cache import cache
 from django.db import DatabaseError, transaction
 
-from core.operational_logging import state_change_logging_suppressed
+from core.operational_logging import info_on_commit, state_change_logging_suppressed
 
 from .models import ServerSetting
 
@@ -112,12 +112,15 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
     if key == APPLICATION_LOG_LEVEL_SETTING:
         apply_application_log_level(value)
     if (was_created or changed_fields) and not state_change_logging_suppressed():
-        _log_server_setting_changed(
-            key=key,
-            old_value=old_value,
-            new_value=value,
-            changed_fields=changed_fields or ["value"],
-            created=was_created,
+        scheduled_fields = list(changed_fields or ["value"])
+        transaction.on_commit(
+            lambda: _log_server_setting_changed(
+                key=key,
+                old_value=old_value,
+                new_value=value,
+                changed_fields=scheduled_fields,
+                created=was_created,
+            )
         )
     return obj
 
@@ -238,7 +241,8 @@ def set_advanced_library_groups_enabled(value: bool) -> None:
         and not old_value
         and not state_change_logging_suppressed()
     ):
-        logger.info(
+        info_on_commit(
+            logger,
             "Advanced library groups enabled: setting_key=%s old=%s new=%s",
             ADVANCED_LIBRARY_GROUPS_SETTING,
             old_value,
