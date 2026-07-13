@@ -19,6 +19,10 @@ from library.file_repair import (
     repair_stored_epub,
 )
 from library.cover_services import set_book_cover_from_bytes
+from library.catalog.tag_services import (
+    available_catalog_tag_slug,
+    normalize_catalog_tag_name,
+)
 from library.groups import services as group_services
 from library.groups.public_group import is_public_group
 
@@ -577,8 +581,44 @@ class SeriesAdmin(admin.ModelAdmin):
     search_fields = ["name", "sort_name"]
 
 
+class CatalogTagAdminForm(forms.ModelForm):
+    class Meta:
+        model = CatalogTag
+        fields = ["name", "sort_name"]
+
+    def clean_name(self):
+        try:
+            display_name, normalized_name = normalize_catalog_tag_name(
+                self.cleaned_data["name"]
+            )
+        except forms.ValidationError as exc:
+            raise forms.ValidationError("Enter a valid catalog tag name.") from exc
+        conflict = CatalogTag.objects.filter(normalized_name=normalized_name)
+        if self.instance.pk:
+            conflict = conflict.exclude(pk=self.instance.pk)
+        if conflict.exists():
+            raise forms.ValidationError(
+                "A Catalog Tag with this normalized name already exists."
+            )
+        self._normalized_name = normalized_name
+        return display_name
+
+    def save(self, commit=True):
+        tag = super().save(commit=False)
+        tag.normalized_name = self._normalized_name
+        if not tag.slug:
+            tag.slug = available_catalog_tag_slug(tag.normalized_name)
+        if commit:
+            tag.save()
+            self.save_m2m()
+        return tag
+
+
 @admin.register(CatalogTag)
 class CatalogTagAdmin(admin.ModelAdmin):
+    form = CatalogTagAdminForm
+    fields = ["name", "sort_name", "normalized_name", "slug"]
+    readonly_fields = ["normalized_name", "slug"]
     search_fields = ["name", "normalized_name"]
 
 

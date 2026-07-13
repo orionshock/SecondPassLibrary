@@ -28,7 +28,7 @@ def resolve_catalog_tag(name: str) -> CatalogTag:
         name=display_name,
         sort_name=display_name,
         normalized_name=normalized_name,
-        slug=_available_slug(normalized_name),
+        slug=available_catalog_tag_slug(normalized_name),
     )
 
 
@@ -48,7 +48,7 @@ def replace_book_catalog_tags(*, book: Book, names: list[str]) -> None:
     CatalogTag.objects.filter(id__in=old_tag_ids).filter(book_catalog_tags__isnull=True).delete()
 
 
-def _available_slug(normalized_name: str) -> str:
+def available_catalog_tag_slug(normalized_name: str) -> str:
     digest = hashlib.sha256(normalized_name.encode("utf-8")).hexdigest()
     base = slugify(normalized_name, allow_unicode=True)[:255].strip("-")
     if base and not CatalogTag.objects.filter(slug=base).exists():
