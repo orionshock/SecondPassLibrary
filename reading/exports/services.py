@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import UUID
 
 from django.utils import timezone
 
+from core.operational_logging import info_on_commit, user_uuid
 from library.models import Book, BookIdentifier
 
 from ..profile.marginalia import profile_annotation_from_model
@@ -15,6 +17,7 @@ from ..profile.validation import CURRENT_READING_PROFILE_ID
 EXPORT_SCHEMA_VERSION = "0.1.0"
 EXPORT_TYPE = "SecondPassMarginaliaExport"
 EXPORT_GENERATOR = "Second Pass Library"
+logger = logging.getLogger(__name__)
 
 
 def _iso(value) -> str | None:
@@ -199,6 +202,7 @@ def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict
         )
         payload["books"].append(_book_payload_with_sessions(book, resolved_sessions))
 
+    _log_export_completed(user=user, scope_type="selected", payload=payload)
     return payload
 
 
@@ -247,6 +251,7 @@ def export_all_marginalia(*, user) -> dict[str, Any]:
             _session_payload(session, f"session-{session_counts[book_key]}")
         )
 
+    _log_export_completed(user=user, scope_type="all", payload=payload)
     return payload
 
 
@@ -275,3 +280,22 @@ def export_session_marginalia(*, user, book: Book, session: ReadingSession) -> d
     book_payload["sessions"] = [_session_payload(session, "session-1")]
     payload["books"] = [book_payload]
     return payload
+
+
+def _log_export_completed(*, user, scope_type: str, payload: dict[str, Any]) -> None:
+    books = payload.get("books") or []
+    session_count = 0
+    annotation_count = 0
+    for book in books:
+        sessions = book.get("sessions") or []
+        session_count += len(sessions)
+        annotation_count += sum(len(session.get("annotations") or []) for session in sessions)
+    info_on_commit(
+        logger,
+        "Marginalia export completed: user=%s scope=%s books=%d sessions=%d annotations=%d",
+        user_uuid(user),
+        scope_type,
+        len(books),
+        session_count,
+        annotation_count,
+    )

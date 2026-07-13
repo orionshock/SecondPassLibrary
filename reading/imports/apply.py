@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+
+from core.operational_logging import info_on_commit, user_uuid
 
 from .services import plan_marginalia_import
 from .selection import parse_import_selection, plan_book_key
@@ -14,6 +17,9 @@ from ..profile.marginalia import (
 )
 from ..models import Annotation, ReadingSession, SELECTOR_KIND_EPUB_CFI
 from ..profile.validation import CURRENT_READING_PROFILE_VERSION
+
+
+logger = logging.getLogger(__name__)
 
 
 def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: object = None) -> dict[str, Any]:
@@ -83,6 +89,22 @@ def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: obj
                     book_result["annotations_created"] += 1
                     increment_model_annotation_counts(result["summary"], annotation)
 
+    summary = result["summary"]
+    info_on_commit(
+        logger,
+        "Marginalia import applied: user=%s books_matched=%d books_skipped=%d "
+        "sessions_created=%d annotations_created=%d bookmarks_created=%d "
+        "highlights_created=%d commented_highlights_created=%d warnings=%d",
+        user_uuid(user),
+        summary["books_matched"],
+        summary["books_skipped"],
+        summary["sessions_created"],
+        summary["annotations_created"],
+        summary["bookmarks_created"],
+        summary["highlights_created"],
+        summary["commented_highlights_created"],
+        len(result["warnings"]),
+    )
     return result
 
 
