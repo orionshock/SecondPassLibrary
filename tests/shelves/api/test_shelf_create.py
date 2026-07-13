@@ -12,6 +12,66 @@ pytestmark = [pytest.mark.integration]
 
 
 class ShelfCreateEndpointTests(BaseShelvesAPITest):
+    def test_advanced_group_lists_support_shelf_create_role_scoping(self):
+        server_settings.enable_advanced_library_groups()
+
+        for username in ["librarian", "manager", "owner"]:
+            with self.subTest(username=username):
+                self.client.logout()
+                self.client.login(username=username, password="pw")
+                response = assert_response(self.client.get("/api/v1/library/groups/"))
+                rows = response_data_dict(response)["results"]
+                self.assertEqual(
+                    {row["name"] for row in rows},
+                    {"Common Room", "G", "Hidden"},
+                )
+                self.assertTrue(all("capabilities" not in row for row in rows))
+
+        self.client.logout()
+        self.client.login(username="curator", password="pw")
+        curator_rows = response_data_dict(
+            assert_response(self.client.get("/api/v1/library/groups/"))
+        )["results"]
+        self.assertEqual(
+            {row["name"] for row in curator_rows}, {"Common Room", "G"}
+        )
+        self.assertTrue(all("capabilities" not in row for row in curator_rows))
+
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        reader_rows = response_data_dict(
+            assert_response(self.client.get("/api/v1/library/groups/"))
+        )["results"]
+        self.assertEqual({row["name"] for row in reader_rows}, {"Common Room", "G"})
+        self.assertTrue(all("capabilities" not in row for row in reader_rows))
+
+    def test_advanced_group_shelf_create_for_broad_role_and_curator(self):
+        server_settings.enable_advanced_library_groups()
+
+        for username in ["librarian", "manager", "owner", "curator"]:
+            with self.subTest(username=username):
+                self.client.logout()
+                self.client.login(username=username, password="pw")
+                response = assert_response(
+                    self.client.post(
+                        "/api/v1/shelves/",
+                        data={
+                            "name": f"{username} group shelf",
+                            "owner_type": "group",
+                            "owner_group": str(self.group.id),
+                            "visibility": "private",
+                        },
+                        format="json",
+                    )
+                )
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                payload = response_data_dict(response)
+                self.assertEqual(payload["owner_type"], "group")
+                self.assertEqual(
+                    payload_dict(payload, "owner_group")["id"], self.group.id
+                )
+                self.assertEqual(payload["visibility"], "private")
+
     def test_public_group_shelf_create_authorization_when_advanced_groups_disabled(self):
         server_settings.set_advanced_library_groups_enabled(False)
 

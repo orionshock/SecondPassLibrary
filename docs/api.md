@@ -233,7 +233,10 @@ Refreshable server context:
 - `banner_text` (string): the current server banner text, or an empty string
   when unset.
 
-Broad Product UI affordances should be derived from `role` and `is_owner`. Object-specific affordances should come from object payloads, such as LibraryGroup `capabilities.can_curate` and shelf `can_edit`.
+Broad Product UI affordances should be derived from `role` and `is_owner`.
+Group-scoped curator affordances should use the matching `groups[]` membership
+and its `is_curator` flag. Shelf payloads expose the object-specific `can_edit`
+hint.
 
 Example response:
 
@@ -614,22 +617,22 @@ PATCH/DELETE routes use the user's `profile_id` as `user_id`.
 
 Group book assignment mutation responses preserve `added_by` as a compact public user object, not an integer user id.
 
-Group list/detail payloads include request-context UI hints:
+Group list/detail payloads contain group data and Public identity, without
+request-specific capability fields:
 
 ```json
 {
   "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",
   "name": "Fantasy Club",
   "description": "Epic quests, folklore, and imagined worlds.",
-  "is_public_group": false,
-  "is_curator": true,
-  "capabilities": {
-    "can_curate": true
-  }
+  "is_public_group": false
 }
 ```
 
-`capabilities.can_curate` means the requester can curate that group: edit presentation/description, manage grouped books, and create/manage group-owned shelves. It does not include member management, group deletion, global user management, or server settings.
+Product UI group-shelf eligibility comes from `/api/v1/accounts/me/`: Owner,
+Manager, and Librarian may manage shelves for any group returned by the group
+list; Readers may manage shelves only for matching non-Public memberships with
+`is_curator=true`. Endpoint authorization remains authoritative.
 
 Group list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
 

@@ -158,13 +158,13 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 - Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
 - The product UI should not expose the service hatch as a normal nav item; it is linked from the Owner-only Server Settings page (`/server/`).
 - Operator recovery posture is documented in `docs/admin.md`.
-- The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role, owner flag, or object-scoped capabilities.
+- The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role, owner flag, or group membership.
 - The UI should not hardcode role logic in many places. It should treat `GET /api/v1/accounts/me/` as the bootstrap source of truth for:
   - identity (`username`, `email`)
   - global role (`role`) and `is_owner`
   - direct group memberships (`groups`)
   - exact membership stewardship (`groups[].is_curator`)
-- Object payload capabilities are UI hints, not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
+- Shelf `can_edit` payload hints are not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
 - Do not "fix" established anti-leak 404 responses to 403 without an explicit product/security decision.
 - Decorative UI punctuation and separators should not be written as HTML character entities in live templates or JavaScript-generated markup. Use semantic inline elements with CSS-generated separators, or real text only when the character is meaningful content. ARIA labels should use plain readable punctuation or words.
 
@@ -303,8 +303,9 @@ UI behaviors:
 - Readers should only see groups they can view. Public/Common Room follows
   normal group membership visibility.
 - Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
-- Presentation edits, grouped book management, and group-owned shelf controls should be shown when the loaded group payload has `capabilities.can_curate=true`.
-- Curation controls (add/remove books) should be gated by `group.capabilities.can_curate`.
+- Broad-role controls should use `/api/v1/accounts/me/` role and owner state.
+- Reader group-scoped controls should use the matching non-Public
+  `groups[]` membership with `is_curator=true`.
 
 Current implemented UI:
 

@@ -25,17 +25,72 @@ export function manageableShelfGroups(me, groups) {
   const availableGroups = Array.isArray(groups) ? groups : [];
   if (!me) return [];
 
+  const broadAccess = canManageLibrary(me);
+  const curatedGroupIds = new Set(
+    (Array.isArray(me.groups) ? me.groups : [])
+      .filter((group) => group && !group.is_public_group && group.is_curator === true)
+      .map((group) => String(group.id))
+  );
+
   return availableGroups.filter(
     (group) =>
       group &&
-      group.capabilities &&
-      group.capabilities.can_curate === true
+      group.id &&
+      (broadAccess ||
+        (!group.is_public_group && curatedGroupIds.has(String(group.id))))
   );
 }
 
 export function publicShelfGroup(me) {
   const groups = Array.isArray(me && me.groups) ? me.groups : [];
   return groups.find((group) => group && group.is_public_group === true) || null;
+}
+
+export async function loadAllShelfGroups() {
+  const groups = [];
+  let url = "/api/v1/library/groups/";
+  for (let page = 0; page < 20 && url; page += 1) {
+    const payload = await fetchJSON(url);
+    if (!payload || !Array.isArray(payload.results)) {
+      throw new Error("Invalid group list response.");
+    }
+    groups.push(...payload.results);
+    url = payload.next ? String(payload.next) : null;
+  }
+  return groups;
+}
+
+export function requestedShelfGroup(search, groups) {
+  const params = new URLSearchParams(search || "");
+  const requestedId = params.get("owner_group") || "";
+  if (!requestedId) return null;
+  return (
+    (Array.isArray(groups) ? groups : []).find(
+      (group) => group && String(group.id) === String(requestedId)
+    ) || null
+  );
+}
+
+export function shelfCreatePayload({ name, description, ownerType, ownerGroup, visibility }) {
+  const body = {
+    name: name || "",
+    description: description || "",
+    owner_type: ownerType === "group" ? "group" : "user",
+  };
+  if (body.owner_type === "group") {
+    body.owner_group = ownerGroup || "";
+    body.visibility = "private";
+  } else {
+    body.visibility = visibility;
+  }
+  return body;
+}
+
+export function groupLoadErrorMessage(error) {
+  const status = error && error.status ? Number(error.status) : null;
+  return status
+    ? `Unable to load owner groups (HTTP ${status}). Personal shelf creation is still available.`
+    : "Unable to load owner groups. Personal shelf creation is still available.";
 }
 
 export async function initShelfNew() {
@@ -104,15 +159,28 @@ export async function initShelfNew() {
   visible(ownerGroupRowValue, canCreateAdvancedGroupShelf);
 
   let results = [];
+  let groupShelfAvailable = canCreateGroupShelf;
+  let groupLoadFailed = false;
   if (canCreateAdvancedGroupShelf) {
-    const groups = await fetchJSON("/api/v1/library/groups/");
-    const availableGroups = Array.isArray(groups && groups.results)
-      ? groups.results
-      : [];
-    results = manageableShelfGroups(me, availableGroups);
+    try {
+      results = manageableShelfGroups(me, await loadAllShelfGroups());
+    } catch (error) {
+      console.error("Failed to load shelf owner groups", error);
+      const message = groupLoadErrorMessage(error);
+      setErr(message);
+      setGlobalError(message);
+      groupShelfAvailable = false;
+      groupLoadFailed = true;
+    }
   } else if (canCreateSimplePublicShelf) {
     results = [publicGroup];
   }
+
+  if (canCreateAdvancedGroupShelf && !groupLoadFailed && results.length === 0) {
+    setErr("No manageable owner groups are available. Personal shelf creation is still available.");
+    groupShelfAvailable = false;
+  }
+  if (groupOwnerOption) groupOwnerOption.disabled = !groupShelfAvailable;
 
   ownerGroupEl.textContent = "";
   for (const g of results) {
@@ -125,15 +193,18 @@ export async function initShelfNew() {
   const qs = new URLSearchParams(window.location.search || "");
   const preOwnerType = qs.get("owner_type");
   const preOwnerGroup = qs.get("owner_group");
-  if (canCreateGroupShelf) {
-    if (preOwnerType === "group") ownerTypeEl.value = "group";
-    else if (preOwnerGroup) ownerTypeEl.value = "group";
-    if (preOwnerGroup) ownerGroupEl.value = preOwnerGroup;
+  const requestedGroup = requestedShelfGroup(window.location.search, results);
+  if (groupShelfAvailable) {
+    if (preOwnerType === "group" || requestedGroup) ownerTypeEl.value = "group";
+    if (requestedGroup) ownerGroupEl.value = String(requestedGroup.id);
+  }
+  if (preOwnerGroup && !requestedGroup && !groupLoadFailed) {
+    setErr("The requested owner group is not available for this account.");
   }
 
   function syncOwnerUI() {
     const isGroup =
-      canCreateGroupShelf && ownerTypeEl.value === "group";
+      groupShelfAvailable && ownerTypeEl.value === "group";
     visibilityEl.disabled = isGroup;
     ownerGroupEl.disabled = !isGroup;
     if (isGroup) visibilityEl.value = "private";
@@ -152,19 +223,21 @@ export async function initShelfNew() {
     setStatus(submitStatusEl, "Creating...", false);
 
     const ownerType =
-      canCreateGroupShelf && ownerTypeEl.value === "group"
+      groupShelfAvailable && ownerTypeEl.value === "group"
         ? "group"
         : "user";
-    const body = {
-      name: nameEl.value || "",
-      description: descEl.value || "",
-      owner_type: ownerType,
-    };
-    if (ownerType === "user") body.visibility = visibilityEl.value;
-    if (ownerType === "group") {
-      body.owner_group = ownerGroupEl.value;
-      body.visibility = "private";
+    if (ownerType === "group" && !ownerGroupEl.value) {
+      setErr("Select an owner group.");
+      setStatus(submitStatusEl, "", true);
+      return;
     }
+    const body = shelfCreatePayload({
+      name: nameEl.value,
+      description: descEl.value,
+      ownerType,
+      ownerGroup: ownerGroupEl.value,
+      visibility: visibilityEl.value,
+    });
 
     try {
       const csrf = getCsrfToken();

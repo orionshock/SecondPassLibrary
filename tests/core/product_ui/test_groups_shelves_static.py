@@ -227,7 +227,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertIn("export function canCreateGroupShelves(me)", new_js)
         self.assertIn("canManageLibrary(me)", new_js)
         self.assertIn("group.is_curator === true", new_js)
-        self.assertIn("group.capabilities.can_curate === true", new_js)
+        self.assertNotIn("group.capabilities", new_js)
         self.assertIn("!group.is_public_group", new_js)
         self.assertNotIn("curated_group_ids", new_js)
         self.assertNotIn("membership_role", new_js)
@@ -242,13 +242,13 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertIn("results = [publicGroup]", new_js)
         self.assertIn('ownerTypeEl.value = "user"', new_js)
         self.assertIn(
-            'canCreateGroupShelf && ownerTypeEl.value === "group"',
+            'groupShelfAvailable && ownerTypeEl.value === "group"',
             new_js,
         )
         self.assertIn("owner_type: ownerType", new_js)
-        self.assertIn('if (ownerType === "user")', new_js)
-        self.assertIn("body.visibility = visibilityEl.value", new_js)
-        self.assertIn("body.owner_group = ownerGroupEl.value", new_js)
+        self.assertIn('if (body.owner_type === "group")', new_js)
+        self.assertIn("body.visibility = visibility", new_js)
+        self.assertIn("body.owner_group = ownerGroup ||", new_js)
         self.assertIn('body.visibility = "private"', new_js)
         self.assertIn('fetchJSONWithOptions("/api/v1/shelves/"', new_js)
 
