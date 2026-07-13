@@ -5,6 +5,7 @@ from unittest.mock import patch
 from core.models import ServerSetting
 from library.groups import book_assignments
 from library.groups import memberships
+from library.groups import public_services
 from library.groups import services
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.models import BookGroupAssignment, LibraryGroupMembership
@@ -118,10 +119,10 @@ class LibraryGroupServiceLockingTests(LibraryGroupServiceTestCase):
         group = services.create_library_group(name="Next Public")
 
         with patch(
-            "library.groups.services._lock_public_group_setting",
-            wraps=services._lock_public_group_setting,
+            "library.groups.public_services._lock_public_group_setting",
+            wraps=public_services._lock_public_group_setting,
         ) as lock_setting:
-            services.set_public_group_identity(group=group)
+            public_services.set_public_group_identity(group=group)
 
         lock_setting.assert_called_once_with()
         setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)

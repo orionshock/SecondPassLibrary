@@ -15,12 +15,11 @@ from library.groups.public_group import (
     get_public_group,
     is_public_group,
 )
-from library.groups.services import (
+from library.groups.public_services import (
     configure_public_group,
-    create_library_group,
-    delete_library_group,
     repair_public_group_identity,
 )
+from library.groups.services import create_library_group, delete_library_group
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
@@ -185,7 +184,7 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
         )
 
     def test_public_repair_registers_one_visibility_cache_invalidation(self):
-        with patch("library.groups.services.invalidate_visible_books_cache") as invalidate:
+        with patch("library.groups.public_services.invalidate_visible_books_cache") as invalidate:
             with self.captureOnCommitCallbacks(execute=True):
                 repair_public_group_identity(
                     create_new_common_room=False,
@@ -197,7 +196,7 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
     def test_public_repair_rolls_back_relationships_on_failure(self):
         with (
             patch(
-                "library.groups.services._restore_orphan_books_to_public",
+                "library.groups.public_services._restore_orphan_books_to_public",
                 side_effect=RuntimeError("forced failure"),
             ),
             self.assertRaises(RuntimeError),

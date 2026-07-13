@@ -11,7 +11,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.roles import is_owner
 from core import server_settings
-from library.groups.services import configure_public_group
+from library.groups.public_services import configure_public_group
 from library.groups.public_group import get_public_group
 
 

@@ -18,12 +18,14 @@ from library.groups.memberships import (
     remove_user_from_group,
     set_group_membership_curator,
 )
+from library.groups.public_services import (
+    repair_public_group_identity,
+    set_public_group_identity,
+)
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, get_public_group
 from library.groups.services import (
     create_library_group,
     delete_library_group,
-    repair_public_group_identity,
-    set_public_group_identity,
     update_library_group,
 )
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
@@ -126,7 +128,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
     def test_public_identity_reassignment_logs_one_safe_summary(self):
         group = create_library_group(name="Candidate Common Room")
 
-        with self.assertLogs("library.groups.services", level="INFO") as logs:
+        with self.assertLogs("library.groups.public_services", level="INFO") as logs:
             with self.captureOnCommitCallbacks(execute=True):
                 set_public_group_identity(group=group)
 
@@ -142,7 +144,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         )
         orphan_book = Book.objects.create(title="Hidden orphan book")
 
-        with self.assertLogs("library.groups.services", level="INFO") as logs:
+        with self.assertLogs("library.groups.public_services", level="INFO") as logs:
             with self.captureOnCommitCallbacks(execute=True):
                 result = repair_public_group_identity(
                     create_new_common_room=True,

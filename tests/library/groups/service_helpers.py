@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
 
-from library.groups.services import configure_public_group
+from library.groups.public_services import configure_public_group
 from library.models import Book
 
 

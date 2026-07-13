@@ -14,7 +14,7 @@ from library.groups.public_group import (
 )
 from library.models import LibraryGroup
 from library.models import BookGroupAssignment
-from library.groups.services import repair_public_group_identity, set_public_group_identity
+from library.groups.public_services import repair_public_group_identity, set_public_group_identity
 from library.groups.consolidation import (
     AdvancedGroupsConsolidationError,
     AdvancedGroupsConsolidationNotNeeded,
