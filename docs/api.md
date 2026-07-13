@@ -572,6 +572,12 @@ See `docs/imports.md` for details.
 LibraryGroups are access scopes, not shelves. Group book lists still filter each
 book through current visibility from `library.queries`.
 
+When advanced LibraryGroups are disabled, the group API exposes only the
+configured Public/Common Room group. Public list/detail, description, browse,
+preview, book-assignment, and membership operations retain their normal role
+checks. Custom group IDs return `404`, and group creation is unavailable. The
+feature-state change does not delete or rewrite existing custom-group data.
+
 - `GET /api/v1/library/groups/` (paginated)
 - `POST /api/v1/library/groups/` (Owner/Manager only; creates a group)
 - `GET /api/v1/library/groups/<group_id>/`

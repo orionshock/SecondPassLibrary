@@ -8,6 +8,10 @@ from rest_framework.response import Response
 
 from accounts.roles import is_manager
 from library.catalog.preview_books import PREVIEW_BOOK_LIMIT, include_preview_books
+from library.groups.api_access import (
+    groups_available_via_api,
+    require_group_creation_available,
+)
 from library.groups.public_group import is_public_group
 from library.groups.querysets import (
     apply_group_ordering,
@@ -48,7 +52,7 @@ class LibraryGroupListView(GroupPreviewBooksMixin, ListAPIView):
     serializer_class = LibraryGroupSerializer
 
     def get_queryset(self):
-        queryset = visible_groups_for_user(self.request.user)
+        queryset = groups_available_via_api(visible_groups_for_user(self.request.user))
         queryset = apply_group_search(queryset, self.request.query_params)
         return apply_group_ordering(queryset, parse_group_ordering(self.request))
 
@@ -64,6 +68,7 @@ class LibraryGroupListView(GroupPreviewBooksMixin, ListAPIView):
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
+        require_group_creation_available()
         if not is_manager(request.user):
             raise PermissionDenied("Not allowed to create library groups.")
 
@@ -79,7 +84,7 @@ class LibraryGroupDetailView(GroupPreviewBooksMixin, RetrieveAPIView):
     lookup_url_kwarg = "group_id"
 
     def get_queryset(self):
-        return visible_groups_for_user(self.request.user)
+        return groups_available_via_api(visible_groups_for_user(self.request.user))
 
     def retrieve(self, request, *args, **kwargs):
         group = self.get_object()

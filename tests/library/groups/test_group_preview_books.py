@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from core.server_settings import set_advanced_library_groups_enabled
 from library.cover_services import set_book_cover_from_bytes
 from library.groups.memberships import add_user_to_group
 from library.groups.book_assignments import add_book_to_group
@@ -11,6 +12,7 @@ from tests.utils.books import create_file_backed_book
 
 class LibraryGroupPreviewBooksTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
+        set_advanced_library_groups_enabled(True)
         self.reader = get_user_model().objects.create_user(
             username="reader",
             password="pw",

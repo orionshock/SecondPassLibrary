@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from accounts.models import UserProfile
 from accounts.roles import is_librarian, is_manager
+from library.groups.api_access import groups_available_via_api
 from library.groups.membership_serializers import (
     LibraryGroupMembershipSerializer,
     MembershipCreateSerializer,
@@ -27,9 +28,11 @@ class LibraryGroupMembershipListView(GenericAPIView):
     group_url_kwarg = "group_id"
 
     def get_group(self):
-        group = visible_groups_for_user(self.request.user).filter(
-            pk=self.kwargs[self.group_url_kwarg]
-        ).first()
+        group = (
+            groups_available_via_api(visible_groups_for_user(self.request.user))
+            .filter(pk=self.kwargs[self.group_url_kwarg])
+            .first()
+        )
         if group is None:
             raise Http404
         return group
@@ -80,9 +83,11 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
     user_url_kwarg = "user_id"
 
     def get_group(self):
-        group = visible_groups_for_user(self.request.user).filter(
-            pk=self.kwargs[self.group_url_kwarg]
-        ).first()
+        group = (
+            groups_available_via_api(visible_groups_for_user(self.request.user))
+            .filter(pk=self.kwargs[self.group_url_kwarg])
+            .first()
+        )
         if group is None:
             raise Http404
         return group

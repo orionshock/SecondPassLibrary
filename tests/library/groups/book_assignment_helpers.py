@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.models import UserProfile
+from core.server_settings import set_advanced_library_groups_enabled
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from tests.library.helpers import set_user_role
 
@@ -18,6 +19,7 @@ def json_body(data: dict) -> str:
 class LibraryGroupBookAssignmentApiTestCase(TestCase):
     def setUp(self):
         cache.clear()
+        set_advanced_library_groups_enabled(True)
         User = get_user_model()
         self.reader = User.objects.create_user(username="reader", password="pw")
         self.curator = User.objects.create_user(username="curator", password="pw")

@@ -16,8 +16,16 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
 
     def test_authenticated_groups_returns_404_when_advanced_groups_disabled(self):
         self.client.force_login(self.user)
-        response = self.client.get("/groups/")
-        self.assertEqual(response.status_code, 404)
+        group_id = uuid4()
+        for path in (
+            "/groups/",
+            "/groups/new/",
+            f"/groups/{group_id}/",
+            f"/groups/{group_id}/edit/",
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 404)
 
     def test_authenticated_groups_returns_200_and_has_containers_when_enabled(self):
         server_settings.enable_advanced_library_groups()

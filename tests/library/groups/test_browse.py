@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.models import UserProfile
+from core.server_settings import set_advanced_library_groups_enabled
 from library.models import (
     Author,
     BookGroupAssignment,
@@ -25,6 +26,7 @@ from tests.library.helpers import (
 class LibraryGroupBrowseTests(TestCase):
     def setUp(self):
         cache.clear()
+        set_advanced_library_groups_enabled(True)
         User = get_user_model()
         self.reader = User.objects.create_user(username="reader", password="pw")
         self.other = User.objects.create_user(username="other", password="pw")
