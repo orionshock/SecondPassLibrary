@@ -9,6 +9,7 @@ import {
   canEditGroupDescription,
   canEditGroupPage,
   canManageGroupBooks,
+  currentUserGroupMembership,
   isManagerOrOwner,
 } from "./shared.js";
 import { setStatus } from "../ui/status.js";
@@ -151,7 +152,8 @@ export async function initGroupEdit() {
     b.textContent = "Public";
     badgesNode.appendChild(b);
   }
-  if (group.is_curator) {
+  const currentMembership = currentUserGroupMembership({ me, group });
+  if (currentMembership && currentMembership.is_curator === true) {
     if (badgesNode.childNodes.length) badgesNode.appendChild(document.createTextNode(" "));
     const b2 = document.createElement("span");
     b2.className = "pill";
@@ -277,9 +279,7 @@ export async function initGroupEdit() {
     membersPrev,
   });
 
-  const groupCaps = group.capabilities || {};
-  const allowShelfManage =
-    groupCaps.can_curate != null ? !!groupCaps.can_curate : canManageGroupBooks({ me, group });
+  const allowShelfManage = canManageGroupBooks({ me, group });
   await initGroupShelvesTab({
     groupId,
     shelvesStatus,

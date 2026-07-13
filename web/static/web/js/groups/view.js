@@ -9,7 +9,13 @@ import {
   setGroupViewUrl,
   syncGroupBreadcrumb,
 } from "./navigation.js";
-import { canEditGroupPage, renderBooksCompact, renderGroupShelvesCompact, renderMembersReadOnly } from "./shared.js";
+import {
+  canEditGroupPage,
+  currentUserGroupMembership,
+  renderBooksCompact,
+  renderGroupShelvesCompact,
+  renderMembersReadOnly,
+} from "./shared.js";
 
 export async function initGroupView() {
   const me = await loadMeAndInitShell();
@@ -116,7 +122,8 @@ export async function initGroupView() {
     b.textContent = "Public";
     badgesNode.appendChild(b);
   }
-  if (group.is_curator) {
+  const currentMembership = currentUserGroupMembership({ me, group });
+  if (currentMembership && currentMembership.is_curator === true) {
     if (badgesNode.childNodes.length) badgesNode.appendChild(document.createTextNode(" "));
     const b2 = document.createElement("span");
     b2.className = "pill";

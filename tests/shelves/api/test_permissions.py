@@ -176,6 +176,24 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
             ),
         )
         self.assertEqual(allowed.status_code, status.HTTP_201_CREATED)
+        allowed_id = response_data_dict(allowed)["id"]
+
+        updated = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{allowed_id}/",
+                data={"description": "Curator updated"},
+                format="json",
+            ),
+        )
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response_data_dict(updated)["description"], "Curator updated"
+        )
+
+        deleted = assert_response(
+            self.client.delete(f"/api/v1/shelves/{allowed_id}/")
+        )
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
 
         unrelated = assert_response(
             self.client.post(

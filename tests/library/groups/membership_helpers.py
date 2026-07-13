@@ -29,10 +29,12 @@ class LibraryGroupMembershipApiTestCase(TestCase):
             last_name="User",
         )
         self.other = User.objects.create_user(username="other", password="pw")
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
         self.manager = User.objects.create_user(username="manager", password="pw")
         self.owner = User.objects.create_superuser(username="owner", password="pw")
         for user in [self.reader, self.target, self.other]:
             set_user_role(user, UserProfile.ROLE_READER)
+        set_user_role(self.librarian, UserProfile.ROLE_LIBRARIAN)
         set_user_role(self.manager, UserProfile.ROLE_MANAGER)
 
         self.public = LibraryGroup.objects.create(name="Common Room")

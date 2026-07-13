@@ -1,7 +1,7 @@
 import { fetchJSON } from "../api.js";
 import {
+  canManageLibrary,
   canManageGroupMemberships as accountCanManageGroupMemberships,
-  isLibrarian,
   isManager,
   isOwner,
 } from "../auth.js";
@@ -17,27 +17,35 @@ export function isManagerOrOwner(me) {
   return isOwner(me) || isManager(me);
 }
 
-export { isLibrarian };
+export function currentUserGroupMembership({ me, group }) {
+  if (!me || !group || group.id == null) return null;
+  const memberships = Array.isArray(me.groups) ? me.groups : [];
+  return (
+    memberships.find(
+      (membership) =>
+        membership && membership.id != null && String(membership.id) === String(group.id)
+    ) || null
+  );
+}
+
+export function canCurateGroup({ me, group }) {
+  if (!me || !group) return false;
+  if (canManageLibrary(me)) return true;
+  if (group.is_public_group === true) return false;
+  const membership = currentUserGroupMembership({ me, group });
+  return !!(membership && membership.is_curator === true);
+}
 
 export function canEditGroupPage({ me, group }) {
-  if (!me || !group) return false;
-  const caps = group.capabilities || {};
-  if (caps.can_curate != null) return !!caps.can_curate;
-  return isManagerOrOwner(me) || isLibrarian(me);
+  return canCurateGroup({ me, group });
 }
 
 export function canEditGroupDescription({ me, group }) {
-  if (!me || !group) return false;
-  const caps = group.capabilities || {};
-  if (caps.can_curate != null) return !!caps.can_curate;
-  return isManagerOrOwner(me) || isLibrarian(me);
+  return canCurateGroup({ me, group });
 }
 
 export function canManageGroupBooks({ me, group }) {
-  if (!me || !group) return false;
-  const caps = group.capabilities || {};
-  if (caps.can_curate != null) return !!caps.can_curate;
-  return isManagerOrOwner(me) || isLibrarian(me);
+  return canCurateGroup({ me, group });
 }
 
 export function canManageGroupMemberships(me) {

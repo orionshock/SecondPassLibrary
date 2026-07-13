@@ -10,8 +10,9 @@ from tests.library.groups.book_assignment_helpers import (
 class LibraryGroupBookAssignmentCreateTests(
     LibraryGroupBookAssignmentApiTestCase
 ):
-    def test_manager_and_owner_can_add_any_valid_book(self):
+    def test_librarian_manager_and_owner_can_add_any_valid_book(self):
         for username, book in [
+            ("librarian", self.hidden_book),
             ("manager", self.hidden_book),
             ("owner", self.extra_hidden_book),
         ]:

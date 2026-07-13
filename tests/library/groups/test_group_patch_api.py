@@ -1,10 +1,62 @@
 from __future__ import annotations
 
-from library.models import LibraryGroup
+from library.models import LibraryGroup, LibraryGroupMembership
 from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase, json_body
 
 
 class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
+    def test_librarian_can_patch_group_description_but_not_name(self):
+        self.assertTrue(self.client.login(username="librarian", password="pw"))
+
+        description = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json_body({"description": "Curated"}),
+            content_type="application/json",
+        )
+        rename = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json_body({"name": "Denied"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(description.status_code, 200)
+        self.assertEqual(description.json()["description"], "Curated")
+        self.assertEqual(rename.status_code, 403)
+
+    def test_reader_curator_can_patch_exact_group_description_only(self):
+        LibraryGroupMembership.objects.filter(
+            user=self.reader, group=self.club
+        ).update(is_curator=True)
+        LibraryGroupMembership.objects.create(user=self.reader, group=self.hidden)
+        self.assertTrue(self.client.login(username="reader", password="pw"))
+
+        exact = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json_body({"description": "Reader curated"}),
+            content_type="application/json",
+        )
+        other = self.client.patch(
+            f"/api/v1/library/groups/{self.hidden.id}/",
+            json_body({"description": "Denied"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(exact.status_code, 200)
+        self.assertEqual(exact.json()["description"], "Reader curated")
+        self.assertEqual(other.status_code, 403)
+
+    def test_librarian_can_patch_public_description(self):
+        self.assertTrue(self.client.login(username="librarian", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.public.id}/",
+            json_body({"description": "Shared by everyone"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["description"], "Shared by everyone")
+
     def test_manager_and_owner_can_patch_group_name_and_description(self):
         for username in ["manager", "owner"]:
             with self.subTest(username=username):

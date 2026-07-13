@@ -25,6 +25,7 @@ from library.groups.services import (
     update_library_group,
 )
 from library.queries import visible_books_for_group, visible_groups_for_user
+from library.roles import is_curator
 
 
 def _attach_group_preview_books(*, groups, user) -> None:
@@ -88,11 +89,14 @@ class LibraryGroupDetailView(GroupPreviewBooksMixin, RetrieveAPIView):
 
     def patch(self, request, *args, **kwargs):
         group = self.get_object()
-        if not is_manager(request.user):
-            raise PermissionDenied("Not allowed to update this library group.")
-
         serializer = LibraryGroupPatchSerializer(data=request.data or {}, partial=True)
         serializer.is_valid(raise_exception=True)
+        if "name" in serializer.validated_data and not is_manager(request.user):
+            raise PermissionDenied("Not allowed to rename this library group.")
+        if "description" in serializer.validated_data and not is_curator(
+            request.user, group
+        ):
+            raise PermissionDenied("Not allowed to update this library group description.")
         try:
             group = update_library_group(group=group, **serializer.validated_data)
         except DjangoValidationError as exc:

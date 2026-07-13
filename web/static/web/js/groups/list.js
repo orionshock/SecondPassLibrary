@@ -2,9 +2,9 @@ import { $, escapeHtml, loadMeAndInitShell, setGlobalError, visible } from "../l
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { createPagedListController } from "../ui/paged_list.js";
-import { truthy } from "./shared.js";
+import { currentUserGroupMembership, truthy } from "./shared.js";
 
-function renderGroupsList(payload) {
+function renderGroupsList(payload, { me }) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
@@ -16,8 +16,9 @@ function renderGroupsList(payload) {
       const descriptionSnippet =
         description && description.length > 160 ? `${description.slice(0, 160)}...` : description;
 
+      const membership = currentUserGroupMembership({ me, group: g });
       const badgeBits = [
-        g.is_curator ? '<span class="pill">Curator</span>' : "",
+        membership && membership.is_curator === true ? '<span class="pill">Curator</span>' : "",
       ].filter(truthy);
 
       const badges = badgeBits.length ? `<span class="badge-row">${badgeBits.join(" ")}</span>` : "";
@@ -85,6 +86,6 @@ export async function initGroupsList() {
     prevBtn,
     initialUrl: "/api/v1/library/groups/?include_preview_books=true",
     emptyText: "No groups.",
-    render: renderGroupsList,
+    render: (payload) => renderGroupsList(payload, { me }),
   });
 }

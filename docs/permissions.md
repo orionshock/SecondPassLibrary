@@ -95,9 +95,10 @@ Creation rules:
 `GET /api/v1/accounts/me/` includes the caller's identity, global `role`, `is_owner` flag, and `groups` memberships to help future UIs decide what to show.
 
 These are **account hints**, not a replacement for authorization. Broad Product
-UI affordances are derived from `role` and `is_owner`; object-specific
-affordances come from object payloads such as LibraryGroup
-`capabilities.can_curate`. Every endpoint still enforces authorization in the
+UI affordances are derived from `role` and `is_owner`; reader-curator
+affordances are derived by matching the LibraryGroup id against the caller's
+`groups[]` entry and reading its `is_curator` flag. LibraryGroup payloads do not
+carry capability fields. Every endpoint still enforces authorization in the
 relevant domain service/view.
 
 Rules:

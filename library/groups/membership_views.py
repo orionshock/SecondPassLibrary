@@ -7,7 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from accounts.models import UserProfile
-from accounts.roles import is_manager
+from accounts.roles import is_librarian, is_manager
 from library.groups.membership_serializers import (
     LibraryGroupMembershipSerializer,
     MembershipCreateSerializer,
@@ -43,8 +43,10 @@ class LibraryGroupMembershipListView(GenericAPIView):
         )
 
     def get(self, request, *args, **kwargs):
-        self.get_group()
-        if not is_manager(request.user):
+        group = self.get_group()
+        if not is_librarian(request.user) and not group.memberships.filter(
+            user=request.user
+        ).exists():
             raise PermissionDenied("Not allowed to view group memberships.")
         page = self.paginate_queryset(self.get_queryset())
         serializer = self.get_serializer(page, many=True)

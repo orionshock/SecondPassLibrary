@@ -22,8 +22,8 @@ class ProductUiShelfCreateJsContractsTests(ProductUiTestCase):
 
     def test_reader_curator_options_are_membership_scoped_and_non_public(self):
         self.assertIn("const curatedGroupIds = new Set", self.source)
-        self.assertIn("group.is_curator === true", self.source)
-        self.assertIn("!group.is_public_group", self.source)
+        self.assertIn("membership.is_curator === true", self.source)
+        self.assertIn("!membership.is_public_group", self.source)
         self.assertIn("curatedGroupIds.has(String(group.id))", self.source)
 
     def test_public_option_rules_preserve_advanced_and_simple_modes(self):

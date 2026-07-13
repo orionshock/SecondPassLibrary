@@ -21,10 +21,12 @@ class LibraryGroupBookAssignmentApiTestCase(TestCase):
         User = get_user_model()
         self.reader = User.objects.create_user(username="reader", password="pw")
         self.curator = User.objects.create_user(username="curator", password="pw")
+        self.librarian = User.objects.create_user(username="librarian", password="pw")
         self.manager = User.objects.create_user(username="manager", password="pw")
         self.owner = User.objects.create_superuser(username="owner", password="pw")
         for user in [self.reader, self.curator]:
             set_user_role(user, UserProfile.ROLE_READER)
+        set_user_role(self.librarian, UserProfile.ROLE_LIBRARIAN)
         set_user_role(self.manager, UserProfile.ROLE_MANAGER)
 
         self.club = LibraryGroup.objects.create(name="Club")

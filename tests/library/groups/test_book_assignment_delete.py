@@ -7,6 +7,22 @@ from tests.library.groups.book_assignment_helpers import LibraryGroupBookAssignm
 class LibraryGroupBookAssignmentDeleteTests(
     LibraryGroupBookAssignmentApiTestCase
 ):
+    def test_librarian_and_exact_curator_can_remove_group_books(self):
+        for username in ["librarian", "curator"]:
+            with self.subTest(username=username):
+                self.client.logout()
+                self.assertTrue(self.client.login(username=username, password="pw"))
+                response = self.client.delete(self.group_book_detail_url())
+                self.assertEqual(response.status_code, 204)
+                self.assertFalse(
+                    BookGroupAssignment.objects.filter(
+                        book=self.club_book, group=self.club
+                    ).exists()
+                )
+                BookGroupAssignment.objects.create(
+                    book=self.club_book, group=self.club, added_by=self.owner
+                )
+
     def test_reader_cannot_delete_visible_group_book_assignment(self):
         self.assertTrue(self.client.login(username="reader", password="pw"))
 

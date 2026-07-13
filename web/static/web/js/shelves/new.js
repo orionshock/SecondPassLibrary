@@ -14,10 +14,10 @@ export function canCreateGroupShelves(me) {
 
   const groups = Array.isArray(me.groups) ? me.groups : [];
   return groups.some(
-    (group) =>
-      group &&
-      !group.is_public_group &&
-      group.is_curator === true
+    (membership) =>
+      membership &&
+      !membership.is_public_group &&
+      membership.is_curator === true
   );
 }
 
@@ -28,8 +28,11 @@ export function manageableShelfGroups(me, groups) {
   const broadAccess = canManageLibrary(me);
   const curatedGroupIds = new Set(
     (Array.isArray(me.groups) ? me.groups : [])
-      .filter((group) => group && !group.is_public_group && group.is_curator === true)
-      .map((group) => String(group.id))
+      .filter(
+        (membership) =>
+          membership && !membership.is_public_group && membership.is_curator === true
+      )
+      .map((membership) => String(membership.id))
   );
 
   return availableGroups.filter(

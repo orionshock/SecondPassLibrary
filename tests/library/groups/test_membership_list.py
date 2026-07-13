@@ -7,10 +7,10 @@ from tests.library.groups.membership_helpers import (
 
 
 class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
-    def test_manager_and_owner_can_list_group_memberships(self):
+    def test_group_members_and_librarian_manager_owner_can_list_memberships(self):
         expected_user_ids = {str(self.reader.profile.id), str(self.target.profile.id)}
 
-        for username in ["manager", "owner"]:
+        for username in ["reader", "target", "librarian", "manager", "owner"]:
             with self.subTest(username=username):
                 self.client.logout()
                 self.assertTrue(self.client.login(username=username, password="pw"))
@@ -32,26 +32,52 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
                 )
                 self.assertNotIn("id", payload["results"][0])
 
-    def test_unauthorized_users_cannot_list_or_manage_memberships(self):
-        self.assertTrue(self.client.login(username="reader", password="pw"))
+    def test_nonmember_reader_cannot_list_memberships(self):
+        self.assertTrue(self.client.login(username="other", password="pw"))
 
-        list_response = self.client.get(self.membership_list_url())
-        post_response = self.client.post(
+        response = self.client.get(self.membership_list_url())
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_reader_and_librarian_cannot_mutate_memberships(self):
+        for username in ["reader", "librarian"]:
+            with self.subTest(username=username):
+                self.client.logout()
+                self.assertTrue(self.client.login(username=username, password="pw"))
+                post_response = self.client.post(
+                    self.membership_list_url(),
+                    json_body({"user_id": str(self.other.profile.id)}),
+                    content_type="application/json",
+                )
+                patch_response = self.client.patch(
+                    self.membership_detail_url(),
+                    json_body({"is_curator": True}),
+                    content_type="application/json",
+                )
+                delete_response = self.client.delete(self.membership_detail_url())
+
+                self.assertEqual(post_response.status_code, 403)
+                self.assertEqual(patch_response.status_code, 403)
+                self.assertEqual(delete_response.status_code, 403)
+
+    def test_owner_can_add_update_and_remove_memberships(self):
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        created = self.client.post(
             self.membership_list_url(),
             json_body({"user_id": str(self.other.profile.id)}),
             content_type="application/json",
         )
-        patch_response = self.client.patch(
-            self.membership_detail_url(),
+        updated = self.client.patch(
+            self.membership_detail_url(user=self.other),
             json_body({"is_curator": True}),
             content_type="application/json",
         )
-        delete_response = self.client.delete(self.membership_detail_url())
+        deleted = self.client.delete(self.membership_detail_url(user=self.other))
 
-        self.assertEqual(list_response.status_code, 403)
-        self.assertEqual(post_response.status_code, 403)
-        self.assertEqual(patch_response.status_code, 403)
-        self.assertEqual(delete_response.status_code, 403)
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(deleted.status_code, 204)
 
     def test_hidden_group_returns_404_before_payload_validation(self):
         self.assertTrue(self.client.login(username="reader", password="pw"))
