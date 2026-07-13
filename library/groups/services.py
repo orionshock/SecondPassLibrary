@@ -14,7 +14,6 @@ from core.operational_logging import (
 )
 from core.server_settings import set_server_setting
 from library.groups.public_group import (
-    DEFAULT_PUBLIC_GROUP_DESCRIPTION,
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
     RECOVERED_PUBLIC_GROUP_DESCRIPTION,
@@ -100,10 +99,19 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
 def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
     with transaction.atomic():
         group = _get_or_create_public_group()
-        group.name = name or DEFAULT_PUBLIC_GROUP_NAME
-        group.description = description or DEFAULT_PUBLIC_GROUP_DESCRIPTION
-        group.save(update_fields=["name", "description", "updated_at"])
-        _store_public_group_id(group)
+        normalized_name = _public_group_name(name)
+        normalized_description = _public_group_description(description)
+        update_fields: list[str] = []
+        if group.name != normalized_name:
+            group.name = normalized_name
+            update_fields.append("name")
+        if group.description != normalized_description:
+            group.description = normalized_description
+            update_fields.append("description")
+        if update_fields:
+            group.save(update_fields=[*update_fields, "updated_at"])
+        if str(get_public_group_id()) != str(group.id):
+            _store_public_group_id(group)
         return group
 
 
@@ -397,6 +405,15 @@ def _required_name(name: str) -> str:
     if not value:
         raise ValidationError("Group name is required.")
     return value
+
+
+def _public_group_name(name: str | None) -> str:
+    value = str(name or "").strip()
+    return value or DEFAULT_PUBLIC_GROUP_NAME
+
+
+def _public_group_description(description: str | None) -> str:
+    return str(description or "").strip()
 
 
 def _log_info(message: str, *args) -> None:
