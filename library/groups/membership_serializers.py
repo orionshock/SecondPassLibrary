@@ -8,24 +8,20 @@ from library.models import LibraryGroupMembership
 
 
 class LibraryGroupMembershipSerializer(serializers.ModelSerializer):
-    user_id = serializers.SerializerMethodField(read_only=True)
-    user_display = serializers.SerializerMethodField(read_only=True)
-    role = serializers.SerializerMethodField(read_only=True)
-    group_id = serializers.UUIDField(source="group.id", read_only=True)
+    user = serializers.SerializerMethodField(read_only=True)
 
-    def get_user_id(self, obj: LibraryGroupMembership):
-        return obj.user.profile.id
-
-    def get_user_display(self, obj: LibraryGroupMembership) -> str:
-        display = obj.user.get_full_name().strip()
-        return display or obj.user.get_username()
-
-    def get_role(self, obj: LibraryGroupMembership) -> str:
-        return obj.user.profile.role
+    def get_user(self, obj: LibraryGroupMembership):
+        return {
+            "profile_id": obj.user.profile.id,
+            "username": obj.user.get_username(),
+            "email": obj.user.email or "",
+            "first_name": obj.user.first_name or "",
+            "last_name": obj.user.last_name or "",
+        }
 
     class Meta:
         model = LibraryGroupMembership
-        fields = ["id", "user_id", "user_display", "role", "is_curator", "group_id"]
+        fields = ["user", "is_curator", "created_at", "updated_at"]
         read_only_fields = fields
 
 

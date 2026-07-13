@@ -19,7 +19,6 @@ def managed_user_group_payloads(user) -> list[dict[str, Any]]:
         group = membership.group
         groups.append(
             {
-                "membership_id": membership.id,
                 "id": group.id,
                 "name": group.name,
                 "is_public_group": is_public_group(group),

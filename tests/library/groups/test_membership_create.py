@@ -45,11 +45,15 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertEqual(payload["user_id"], str(self.other.profile.id))
-        self.assertEqual(payload["user_display"], self.other.get_username())
-        self.assertEqual(payload["role"], UserProfile.ROLE_LIBRARIAN)
+        self.assertEqual(payload["user"]["profile_id"], str(self.other.profile.id))
+        self.assertEqual(payload["user"]["username"], self.other.get_username())
+        self.assertEqual(payload["user"]["email"], self.other.email)
+        self.assertNotIn("id", payload)
         self.assertTrue(payload["is_curator"])
-        self.assertEqual(payload["group_id"], str(self.club.id))
+        self.assertIn("created_at", payload)
+        self.assertIn("updated_at", payload)
+        self.other.profile.refresh_from_db()
+        self.assertEqual(self.other.profile.role, UserProfile.ROLE_LIBRARIAN)
 
     def test_post_is_idempotent_and_returns_existing_membership(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
@@ -60,7 +64,15 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
 
         self.assertEqual(first.status_code, 201)
         self.assertEqual(second.status_code, 201)
-        self.assertEqual(first.json()["id"], second.json()["id"])
+        self.assertEqual(
+            first.json()["user"]["profile_id"], second.json()["user"]["profile_id"]
+        )
+        self.assertEqual(
+            LibraryGroupMembership.objects.filter(
+                user=self.target, group=self.club
+            ).count(),
+            1,
+        )
         self.assertEqual(
             LibraryGroupMembership.objects.filter(user=self.target, group=self.club).count(),
             1,

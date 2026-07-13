@@ -1,4 +1,9 @@
-import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
+import {
+  extractApiErrorMessage,
+  fetchJSONWithOptions,
+  getCsrfToken,
+  summarizeFieldErrors,
+} from "../api.js";
 import { setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import {
@@ -100,15 +105,17 @@ export async function initGroupMembershipsTab({
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ profile_id: String(profileId), is_curator: isCurator }),
+        body: JSON.stringify({ user_id: String(profileId), is_curator: isCurator }),
       });
 
       setAddMemberStatus("Added.", false);
       await membersCtl.reloadFirstPage();
     } catch (e2) {
       console.error("Failed to add member", { groupId, e2 });
-      setAddMemberStatus(extractApiErrorMessage(e2), true);
-      setGlobalError(extractApiErrorMessage(e2));
+      const msg = extractApiErrorMessage(e2);
+      const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
+      setAddMemberStatus(fieldMsg || msg, true);
+      setGlobalError(fieldMsg || msg);
     }
   });
 
@@ -118,8 +125,8 @@ export async function initGroupMembershipsTab({
     const target = source.closest("[data-action]");
     if (!target || !membersResults.contains(target)) return;
     const action = target.getAttribute("data-action");
-    const membershipId = target.getAttribute("data-membership-id");
-    if (!action || !membershipId) return;
+    const userId = target.getAttribute("data-user-id");
+    if (!action || !userId) return;
 
     if (action === "member-remove") {
       const row = target.closest(".membership-row");
@@ -141,14 +148,14 @@ export async function initGroupMembershipsTab({
 
         await fetchJSONWithOptions(
           `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(
-            String(membershipId)
+            String(userId)
           )}/`,
           { method: "DELETE", headers }
         );
         setRowStatus("Removed.", false);
         await membersCtl.reloadFirstPage();
       } catch (e2) {
-        console.error("Failed to remove member", { groupId, membershipId, e2 });
+        console.error("Failed to remove member", { groupId, userId, e2 });
         const msg = extractApiErrorMessage(e2);
         setRowStatus(msg, true);
         setStatus(membersStatus, msg, true);
@@ -163,7 +170,7 @@ export async function initGroupMembershipsTab({
     const target = source.closest('input[data-action="member-curator"]');
     if (!target || !membersResults.contains(target)) return;
 
-    const membershipId = target.getAttribute("data-membership-id") || "";
+    const userId = target.getAttribute("data-user-id") || "";
     const row = target.closest(".membership-row");
     const rowStatus = row ? row.querySelector(".membership-row__status") : null;
     const desired = !!target.checked;
@@ -173,8 +180,8 @@ export async function initGroupMembershipsTab({
       rowStatus.classList.toggle("error", !!isError);
     }
 
-    if (!membershipId) {
-      setRowStatus("Missing membership identifier.", true);
+    if (!userId) {
+      setRowStatus("Missing user identifier.", true);
       target.checked = !desired;
       return;
     }
@@ -190,7 +197,7 @@ export async function initGroupMembershipsTab({
 
       await fetchJSONWithOptions(
         `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(
-          String(membershipId)
+          String(userId)
         )}/`,
         { method: "PATCH", headers, body: JSON.stringify({ is_curator: desired }) }
       );
@@ -198,11 +205,12 @@ export async function initGroupMembershipsTab({
       clearLiveStatusLater(rowStatus);
     } catch (e2) {
       target.checked = !desired;
-      console.error("Failed to update member curator status", { groupId, membershipId, e2 });
+      console.error("Failed to update member curator status", { groupId, userId, e2 });
       const msg = extractApiErrorMessage(e2);
-      setRowStatus(msg, true);
-      setStatus(membersStatus, msg, true);
-      setGlobalError(msg);
+      const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
+      setRowStatus(fieldMsg || msg, true);
+      setStatus(membersStatus, fieldMsg || msg, true);
+      setGlobalError(fieldMsg || msg);
     } finally {
       target.disabled = false;
     }

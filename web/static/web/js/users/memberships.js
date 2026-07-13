@@ -30,7 +30,7 @@ function descriptionForGroup(group, groupDetailsById) {
   return detail && detail.description ? String(detail.description).trim() : "";
 }
 
-export function renderMembershipControls(groups, allGroups = []) {
+export function renderMembershipControls(groups, allGroups = [], profileId = "") {
   const list = Array.isArray(groups) ? groups : [];
   if (!list.length) return '<div class="muted">No group memberships.</div>';
   const groupDetailsById = new Map(
@@ -42,7 +42,6 @@ export function renderMembershipControls(groups, allGroups = []) {
   return list
     .map((g) => {
       const groupId = g.id ? String(g.id) : "";
-      const membershipId = g.membership_id ? String(g.membership_id) : "";
       const isCurator = !!g.is_curator;
       const isPublic = !!g.is_public_group;
 
@@ -56,7 +55,7 @@ export function renderMembershipControls(groups, allGroups = []) {
         ? ""
         : `
               <label class="membership-row__curator">
-                <input type="checkbox" data-action="membership-curator" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" ${isCurator ? "checked" : ""} />
+                <input type="checkbox" data-action="membership-curator" data-group-id="${escapeHtml(groupId)}" data-user-id="${escapeHtml(profileId)}" ${isCurator ? "checked" : ""} />
                 <span>Curator</span>
               </label>
             `.trim();
@@ -64,7 +63,7 @@ export function renderMembershipControls(groups, allGroups = []) {
       return `
           <article class="membership-row">
             <div class="membership-row__actions">
-              <button class="icon-button icon-button--danger" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-membership-id="${escapeHtml(membershipId)}" aria-label="Remove membership" title="Remove membership"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
+              <button class="icon-button icon-button--danger" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-user-id="${escapeHtml(profileId)}" aria-label="Remove membership" title="Remove membership"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
             </div>
             <div class="membership-row__group"${titleAttr}>${groupBadge}</div>
             <div class="membership-row__controls">
@@ -163,7 +162,7 @@ export function initUserMembershipsManager({
     if (action !== "membership-remove") return;
 
     const groupId = target.getAttribute("data-group-id") || "";
-    const membershipId = target.getAttribute("data-membership-id") || "";
+    const userId = target.getAttribute("data-user-id") || "";
     const row = target.closest(".membership-row");
     const rowStatus = row ? row.querySelector(".membership-row__status") : null;
     function setRowStatus(text, isError) {
@@ -172,7 +171,7 @@ export function initUserMembershipsManager({
       rowStatus.classList.toggle("error", !!isError);
     }
 
-    if (!groupId || !membershipId) {
+    if (!groupId || !userId) {
       setRowStatus("Missing membership identifiers.", true);
       return;
     }
@@ -187,14 +186,14 @@ export function initUserMembershipsManager({
       if (csrf) headers["X-CSRFToken"] = csrf;
 
       await fetchJSONWithOptions(
-        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
+        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(userId))}/`,
         { method: "DELETE", headers }
       );
 
       setRowStatus("Removed.", false);
       await refreshUserAndMemberships();
     } catch (e2) {
-      console.error("Membership action failed", { action, groupId, membershipId, e2 });
+      console.error("Membership action failed", { action, groupId, userId, e2 });
       const msg = extractApiErrorMessage(e2);
       setRowStatus(msg, true);
       setGlobalError(msg);
@@ -208,7 +207,7 @@ export function initUserMembershipsManager({
     if (!target || !membershipsResults.contains(target)) return;
 
     const groupId = target.getAttribute("data-group-id") || "";
-    const membershipId = target.getAttribute("data-membership-id") || "";
+    const userId = target.getAttribute("data-user-id") || "";
     const row = target.closest(".membership-row");
     const rowStatus = row ? row.querySelector(".membership-row__status") : null;
     const desired = !!target.checked;
@@ -218,7 +217,7 @@ export function initUserMembershipsManager({
       rowStatus.classList.toggle("error", !!isError);
     }
 
-    if (!groupId || !membershipId) {
+    if (!groupId || !userId) {
       setRowStatus("Missing membership identifiers.", true);
       target.checked = !desired;
       return;
@@ -234,7 +233,7 @@ export function initUserMembershipsManager({
       if (csrf) headers["X-CSRFToken"] = csrf;
 
       await fetchJSONWithOptions(
-        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(membershipId))}/`,
+        `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/${encodeURIComponent(String(userId))}/`,
         {
           method: "PATCH",
           headers,
@@ -246,10 +245,11 @@ export function initUserMembershipsManager({
       clearLiveStatusLater(rowStatus);
     } catch (e2) {
       target.checked = !desired;
-      console.error("Curator update failed", { groupId, membershipId, e2 });
+      console.error("Curator update failed", { groupId, userId, e2 });
       const msg = extractApiErrorMessage(e2);
-      setRowStatus(msg, true);
-      setGlobalError(msg);
+      const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
+      setRowStatus(fieldMsg || msg, true);
+      setGlobalError(fieldMsg || msg);
     } finally {
       target.disabled = false;
     }
@@ -277,7 +277,7 @@ export function initUserMembershipsManager({
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ profile_id: String(profileId), is_curator: isCurator }),
+        body: JSON.stringify({ user_id: String(profileId), is_curator: isCurator }),
       });
 
       await refreshUserAndMemberships();
@@ -286,8 +286,8 @@ export function initUserMembershipsManager({
       console.error("Failed to add membership", { profileId, e2 });
       const msg = extractApiErrorMessage(e2);
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
-      setStatus(addStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
-      setGlobalError(msg);
+      setStatus(addStatus, fieldMsg || msg, true);
+      setGlobalError(fieldMsg || msg);
     } finally {
       setAddFormEnabled(true);
     }

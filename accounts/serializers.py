@@ -61,7 +61,6 @@ class CurrentUserPatchSerializer(serializers.Serializer):
 
 class ManagedUserSerializer(serializers.Serializer):
     class ManagedUserGroupSummarySerializer(serializers.Serializer):
-        membership_id = serializers.UUIDField()
         id = serializers.UUIDField()
         name = serializers.CharField()
         is_public_group = serializers.BooleanField()

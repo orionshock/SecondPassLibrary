@@ -185,7 +185,7 @@ export async function initUserEdit() {
 
     if (canManageMemberships) {
       allGroups = await loadAllGroups();
-      membershipsResults.innerHTML = renderMembershipControls(payload.groups, allGroups);
+      membershipsResults.innerHTML = renderMembershipControls(payload.groups, allGroups, profileId);
       refreshAddGroupOptions({ allGroups, userGroups: payload.groups, addGroupSelect, addSubmitBtn });
       setStatus(addStatus, "", false);
     }
@@ -203,7 +203,7 @@ export async function initUserEdit() {
 
     if (canManageMemberships) {
       if (!allGroups) allGroups = await loadAllGroups();
-      membershipsResults.innerHTML = renderMembershipControls(payload.groups, allGroups);
+      membershipsResults.innerHTML = renderMembershipControls(payload.groups, allGroups, profileId);
       refreshAddGroupOptions({ allGroups, userGroups: payload.groups, addGroupSelect, addSubmitBtn });
     }
     return payload;

@@ -151,7 +151,7 @@ Login request / authorization:
 User-management payload notes:
 
 - Managed users expose `profile_id` as the public user identifier. They do not expose Django auth user database ids.
-- Managed users now include a read-only `groups[]` membership summary for that user (`membership_id`, group id/name, `is_public_group`, `is_curator`).
+- Managed users include a read-only `groups[]` membership summary for that user (group id/name, `is_public_group`, `is_curator`). Membership record ids are not exposed.
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 - User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
 - Email is optional contact/management metadata. It is not required for local
@@ -596,7 +596,6 @@ Membership payloads include compact public user information and do not expose Dj
 
 ```json
 {
-  "id": "membership-uuid",
   "user": {
     "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
     "username": "reader",
@@ -609,6 +608,9 @@ Membership payloads include compact public user information and do not expose Dj
   "updated_at": "2026-01-01T00:00:00Z"
 }
 ```
+
+Membership record ids are intentionally not public identifiers. Create bodies and
+PATCH/DELETE routes use the user's `profile_id` as `user_id`.
 
 Group book assignment mutation responses preserve `added_by` as a compact public user object, not an integer user id.
 

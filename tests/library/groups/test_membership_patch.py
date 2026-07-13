@@ -18,7 +18,10 @@ class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["role"], UserProfile.ROLE_LIBRARIAN)
+        self.assertEqual(
+            response.json()["user"]["profile_id"], str(self.target.profile.id)
+        )
+        self.assertNotIn("id", response.json())
         self.assertTrue(response.json()["is_curator"])
         self.target.profile.refresh_from_db()
         self.assertEqual(self.target.profile.role, UserProfile.ROLE_LIBRARIAN)

@@ -19,8 +19,18 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
 
                 self.assertEqual(response.status_code, 200)
                 payload = response.json()
-                self.assertEqual({row["user_id"] for row in payload}, expected_user_ids)
-                self.assertEqual({row["group_id"] for row in payload}, {str(self.club.id)})
+                self.assertEqual(payload["count"], 2)
+                self.assertIsNone(payload["next"])
+                self.assertIsNone(payload["previous"])
+                self.assertEqual(
+                    {row["user"]["profile_id"] for row in payload["results"]},
+                    expected_user_ids,
+                )
+                self.assertEqual(
+                    set(payload["results"][0]["user"]),
+                    {"profile_id", "username", "email", "first_name", "last_name"},
+                )
+                self.assertNotIn("id", payload["results"][0])
 
     def test_unauthorized_users_cannot_list_or_manage_memberships(self):
         self.assertTrue(self.client.login(username="reader", password="pw"))
@@ -60,4 +70,10 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
         response = self.client.get(self.membership_list_url())
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn(str(self.other.profile.id), {row["user_id"] for row in response.json()})
+        self.assertNotIn(
+            str(self.other.profile.id),
+            {
+                row["user"]["profile_id"]
+                for row in response.json()["results"]
+            },
+        )

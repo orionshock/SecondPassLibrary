@@ -128,9 +128,10 @@ export function renderMembersReadOnly(payload) {
     .map((m) => {
       const user = m && m.user ? m.user : m;
       const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
+      const curator = m && m.is_curator ? ' <span class="muted">(Curator)</span>' : "";
       return `
         <article class="membership-row membership-row--readonly">
-          <div class="membership-row__group membership-row__identity">${identity}</div>
+          <div class="membership-row__group membership-row__identity">${identity}${curator}</div>
         </article>
       `.trim();
     })
@@ -144,6 +145,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
   return results
     .map((m) => {
       const user = m && m.user ? m.user : m;
+      const userId = user && user.profile_id ? String(user.profile_id) : "";
       const isCurator = !!m.is_curator;
       const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
       const note = isPublicGroup
@@ -153,7 +155,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
         ? ""
         : `
               <label class="membership-row__curator">
-                <input type="checkbox" data-action="member-curator" data-membership-id="${escapeHtml(m.id)}" ${isCurator ? "checked" : ""} />
+                <input type="checkbox" data-action="member-curator" data-user-id="${escapeHtml(userId)}" ${isCurator ? "checked" : ""} />
                 <span>Curator</span>
               </label>
             `.trim();
@@ -161,7 +163,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
       return `
         <article class="membership-row">
           <div class="membership-row__actions">
-            <button class="icon-button icon-button--danger" type="button" data-action="member-remove" data-membership-id="${escapeHtml(m.id)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
+            <button class="icon-button icon-button--danger" type="button" data-action="member-remove" data-user-id="${escapeHtml(userId)}" aria-label="Remove member" title="Remove member"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
           </div>
           <div class="membership-row__group membership-row__identity">${identity}</div>
           <div class="membership-row__controls">
