@@ -13,6 +13,7 @@ from core.operational_logging import (
     suppress_state_change_logging,
     user_uuid,
 )
+from core.models import ServerSetting
 from core.server_settings import set_server_setting
 from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
@@ -118,6 +119,7 @@ def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
 
 def set_public_group_identity(*, group: LibraryGroup) -> LibraryGroup:
     with transaction.atomic():
+        _lock_public_group_setting()
         selected = LibraryGroup.objects.select_for_update().get(pk=group.pk)
         if selected.memberships.filter(is_curator=True).exists():
             raise ValidationError(
@@ -189,6 +191,7 @@ def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) ->
     if group is None:
         raise ValidationError("Group is required.")
     with transaction.atomic():
+        user = _lock_user_for_group_mutation(user)
         membership, created = LibraryGroupMembership.objects.get_or_create(
             user=user,
             group=group,
@@ -217,23 +220,26 @@ def add_user_to_group(*, user, group: LibraryGroup, is_curator: bool = False) ->
 def set_group_membership_curator(
     *, membership: LibraryGroupMembership, is_curator: bool
 ) -> LibraryGroupMembership:
-    value = bool(is_curator)
-    if membership.is_curator != value:
-        membership.is_curator = value
-        membership.save(update_fields=["is_curator", "updated_at"])
-        _log_info(
-            "Library group membership curator changed: group=%s user=%s curator=%s",
-            membership.group_id,
-            user_uuid(membership.user),
-            value,
-        )
-    return membership
+    with transaction.atomic():
+        _lock_user_for_group_mutation(membership.user)
+        value = bool(is_curator)
+        if membership.is_curator != value:
+            membership.is_curator = value
+            membership.save(update_fields=["is_curator", "updated_at"])
+            _log_info(
+                "Library group membership curator changed: group=%s user=%s curator=%s",
+                membership.group_id,
+                user_uuid(membership.user),
+                value,
+            )
+        return membership
 
 
 def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
     with transaction.atomic():
+        user = _lock_user_for_group_mutation(user)
         deleted, _ = LibraryGroupMembership.objects.filter(user=user, group=group).delete()
-        restored = ensure_user_has_at_least_one_group(user=user)
+        restored = _ensure_user_has_at_least_one_group_locked(user=user)
         if deleted and not restored:
             _invalidate_visible_books_cache_on_commit()
     if deleted:
@@ -249,6 +255,25 @@ def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
 def ensure_user_public_membership(
     *, user, public_group: LibraryGroup | None = None
 ) -> LibraryGroupMembership:
+    with transaction.atomic():
+        user = _lock_user_for_group_mutation(user)
+        return _ensure_user_public_membership_locked(user=user, public_group=public_group)
+
+
+def ensure_user_has_at_least_one_group(
+    *, user, public_group: LibraryGroup | None = None
+) -> bool:
+    with transaction.atomic():
+        user = _lock_user_for_group_mutation(user)
+        return _ensure_user_has_at_least_one_group_locked(
+            user=user,
+            public_group=public_group,
+        )
+
+
+def _ensure_user_public_membership_locked(
+    *, user, public_group: LibraryGroup | None = None
+) -> LibraryGroupMembership:
     group = public_group or _get_or_create_public_group()
     membership, created = LibraryGroupMembership.objects.get_or_create(user=user, group=group)
     if created:
@@ -256,11 +281,11 @@ def ensure_user_public_membership(
     return membership
 
 
-def ensure_user_has_at_least_one_group(
+def _ensure_user_has_at_least_one_group_locked(
     *, user, public_group: LibraryGroup | None = None
 ) -> bool:
     if not LibraryGroupMembership.objects.filter(user=user).exists():
-        ensure_user_public_membership(user=user, public_group=public_group)
+        _ensure_user_public_membership_locked(user=user, public_group=public_group)
         return True
     return False
 
@@ -271,11 +296,13 @@ def add_book_to_group(
     if group is None:
         raise ValidationError("Group is required.")
     creator = added_by if added_by is not None else actor
-    assignment, created = _create_book_assignment(
-        book=book,
-        group=group,
-        added_by=creator,
-    )
+    with transaction.atomic():
+        book = _lock_book_for_group_assignment(book)
+        assignment, created = _create_book_assignment(
+            book=book,
+            group=group,
+            added_by=creator,
+        )
     if created:
         _log_info(
             "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
@@ -289,10 +316,11 @@ def add_book_to_group(
 
 def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
     with transaction.atomic():
+        book = _lock_book_for_group_assignment(book)
         if BookGroupAssignment.objects.filter(book=book, group=group).exists():
             remove_book_from_group_owned_shelves(book=book, group=group)
         deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
-        restored = ensure_book_has_at_least_one_group(book=book, added_by=actor)
+        restored = _ensure_book_has_at_least_one_group_locked(book=book, added_by=actor)
         if deleted and not restored:
             _invalidate_visible_books_cache_on_commit()
     if deleted:
@@ -307,6 +335,18 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
 
 
 def ensure_book_public_assignment(
+    *, book, added_by=None, public_group: LibraryGroup | None = None
+) -> BookGroupAssignment:
+    with transaction.atomic():
+        book = _lock_book_for_group_assignment(book)
+        return _ensure_book_public_assignment_locked(
+            book=book,
+            added_by=added_by,
+            public_group=public_group,
+        )
+
+
+def _ensure_book_public_assignment_locked(
     *, book, added_by=None, public_group: LibraryGroup | None = None
 ) -> BookGroupAssignment:
     group = public_group or _get_or_create_public_group()
@@ -325,8 +365,20 @@ def ensure_book_public_assignment(
 def ensure_book_has_at_least_one_group(
     *, book, added_by=None, public_group: LibraryGroup | None = None
 ) -> bool:
+    with transaction.atomic():
+        book = _lock_book_for_group_assignment(book)
+        return _ensure_book_has_at_least_one_group_locked(
+            book=book,
+            added_by=added_by,
+            public_group=public_group,
+        )
+
+
+def _ensure_book_has_at_least_one_group_locked(
+    *, book, added_by=None, public_group: LibraryGroup | None = None
+) -> bool:
     if not BookGroupAssignment.objects.filter(book=book).exists():
-        ensure_book_public_assignment(
+        _ensure_book_public_assignment_locked(
             book=book, added_by=added_by, public_group=public_group
         )
         return True
@@ -341,7 +393,13 @@ def _restore_users_without_groups(
     user_ids: list, *, public_group: LibraryGroup | None = None
 ) -> int:
     restored = 0
-    for user_id in user_ids:
+    locked_user_ids = list(
+        get_user_model()
+        .objects.select_for_update()
+        .filter(pk__in=user_ids)
+        .values_list("pk", flat=True)
+    )
+    for user_id in locked_user_ids:
         if not LibraryGroupMembership.objects.filter(user_id=user_id).exists():
             group = public_group or _get_or_create_public_group()
             LibraryGroupMembership.objects.get_or_create(user_id=user_id, group=group)
@@ -353,7 +411,12 @@ def _restore_books_without_groups(
     book_ids: list, *, added_by=None, public_group: LibraryGroup | None = None
 ) -> int:
     restored = 0
-    for book_id in book_ids:
+    locked_book_ids = list(
+        Book.objects.select_for_update()
+        .filter(pk__in=book_ids)
+        .values_list("pk", flat=True)
+    )
+    for book_id in locked_book_ids:
         if not BookGroupAssignment.objects.filter(book_id=book_id).exists():
             group = public_group or _get_or_create_public_group()
             BookGroupAssignment.objects.get_or_create(
@@ -425,6 +488,25 @@ def _create_book_assignment(
     if created:
         _invalidate_visible_books_cache_on_commit()
     return assignment, created
+
+
+def _lock_user_for_group_mutation(user):
+    return get_user_model().objects.select_for_update().get(pk=user.pk)
+
+
+def _lock_book_for_group_assignment(book):
+    return Book.objects.select_for_update().get(pk=book.pk)
+
+
+def _lock_public_group_setting() -> ServerSetting:
+    setting, _created = ServerSetting.objects.get_or_create(
+        key=PUBLIC_GROUP_ID_SETTING,
+        defaults={
+            "value": str(get_public_group_id() or ""),
+            "description": PUBLIC_GROUP_SETTING_DESCRIPTION,
+        },
+    )
+    return ServerSetting.objects.select_for_update().get(pk=setting.pk)
 
 
 def _invalidate_visible_books_cache_on_commit() -> None:
