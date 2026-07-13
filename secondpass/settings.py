@@ -239,23 +239,23 @@ LOGGING = {
         "null": {
             "class": "logging.NullHandler",
         },
+        "application_console": {
+            "class": "logging.StreamHandler",
+            "filters": ["application_log_level"],
+        },
+    },
+    "filters": {
+        "application_log_level": {
+            "()": "core.logging_filters.ApplicationLogLevelFilter",
+        },
     },
     "loggers": {
-        "library.imports.upload": {
-            "handlers": ["null"] if RUNNING_TESTS else ["console"],
+        logger_name: {
+            "handlers": ["null"] if RUNNING_TESTS else ["application_console"],
             "level": "INFO",
             "propagate": False,
-        },
-        "library.management.commands.import_epub": {
-            "handlers": ["null"] if RUNNING_TESTS else ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "library.management.commands.import_books": {
-            "handlers": ["null"] if RUNNING_TESTS else ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
+        }
+        for logger_name in ("accounts", "core", "library", "reading", "shelves", "web")
     },
 }
 

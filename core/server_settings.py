@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.core.cache import cache
-from django.db import transaction
+from django.db import DatabaseError, transaction
 
 from .models import ServerSetting
 
 
 SERVER_SETTINGS_CACHE_KEY = "core:server_settings:v1"
+APPLICATION_LOG_LEVEL_CACHE_KEY = "core:application_log_level:v1"
 SERVER_NAME_SETTING = "server_name"
 SERVER_DESCRIPTION_SETTING = "server_description"
 SERVER_BANNER_MESSAGE_SETTING = "server_banner_message"
@@ -17,6 +19,17 @@ SERVER_DESCRIPTION_MAX_LEN = 1000
 SERVER_BANNER_MESSAGE_MAX_LEN = 500
 DEFAULT_SERVER_NAME = "Second Pass Library"
 ADVANCED_LIBRARY_GROUPS_SETTING = "advanced_library_groups_enabled"
+APPLICATION_LOG_LEVEL_SETTING = "application_log_level"
+APPLICATION_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+DEFAULT_APPLICATION_LOG_LEVEL = "INFO"
+APPLICATION_LOGGER_NAMES = (
+    "accounts",
+    "core",
+    "library",
+    "reading",
+    "shelves",
+    "web",
+)
 
 EDITABLE_SERVER_SETTING_DEFAULTS = {
     SERVER_NAME_SETTING: {
@@ -38,11 +51,18 @@ EDITABLE_SERVER_SETTING_DEFAULTS = {
             "first-class Product UI feature."
         ),
     },
+    APPLICATION_LOG_LEVEL_SETTING: {
+        "value": DEFAULT_APPLICATION_LOG_LEVEL,
+        "description": (
+            "Controls diagnostic output from Second Pass Library application code."
+        ),
+    },
 }
 
 
 def clear_server_settings_cache() -> None:
     cache.delete(SERVER_SETTINGS_CACHE_KEY)
+    cache.delete(APPLICATION_LOG_LEVEL_CACHE_KEY)
 
 
 def get_server_settings_map() -> dict[str, Any]:
@@ -79,6 +99,8 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
                 setattr(obj, k, v)
             obj.save(update_fields=[*updates.keys(), "updated_at"])
     clear_server_settings_cache()
+    if key == APPLICATION_LOG_LEVEL_SETTING:
+        apply_application_log_level(value)
     return obj
 
 
@@ -190,5 +212,50 @@ def set_advanced_library_groups_enabled(value: bool) -> None:
         description=(
             "Whether advanced multi-group management should be presented as a "
             "first-class Product UI feature."
+        ),
+    )
+
+
+def _normalized_application_log_level(value: Any) -> str:
+    if isinstance(value, str):
+        normalized = value.strip()
+        if normalized in APPLICATION_LOG_LEVELS:
+            return normalized
+    return DEFAULT_APPLICATION_LOG_LEVEL
+
+
+def apply_application_log_level(value: Any) -> str:
+    level_name = _normalized_application_log_level(value)
+    level = getattr(logging, level_name)
+    for logger_name in APPLICATION_LOGGER_NAMES:
+        logging.getLogger(logger_name).setLevel(level)
+    return level_name
+
+
+def get_application_log_level() -> str:
+    cached = cache.get(APPLICATION_LOG_LEVEL_CACHE_KEY)
+    if cached in APPLICATION_LOG_LEVELS:
+        return apply_application_log_level(cached)
+    try:
+        value = get_server_setting(
+            APPLICATION_LOG_LEVEL_SETTING,
+            default=DEFAULT_APPLICATION_LOG_LEVEL,
+        )
+    except DatabaseError:
+        return apply_application_log_level(DEFAULT_APPLICATION_LOG_LEVEL)
+    level_name = _normalized_application_log_level(value)
+    cache.set(APPLICATION_LOG_LEVEL_CACHE_KEY, level_name, timeout=None)
+    return apply_application_log_level(level_name)
+
+
+def set_application_log_level(value: str) -> None:
+    normalized = str(value or "").strip()
+    if normalized not in APPLICATION_LOG_LEVELS:
+        raise ValueError("Application log level must be DEBUG, INFO, WARNING, or ERROR.")
+    set_server_setting(
+        key=APPLICATION_LOG_LEVEL_SETTING,
+        value=normalized,
+        description=(
+            "Controls diagnostic output from Second Pass Library application code."
         ),
     )

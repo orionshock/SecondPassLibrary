@@ -83,6 +83,19 @@ class ServerSettingAdminForm(forms.ModelForm):
             )
             return
 
+        if key == server_settings.APPLICATION_LOG_LEVEL_SETTING:
+            self.fields["value"] = forms.ChoiceField(
+                label="Application Log Level",
+                help_text=(
+                    "Controls diagnostic output from Second Pass Library application "
+                    "code. INFO is recommended for normal operation; use DEBUG "
+                    "temporarily when diagnosing a problem."
+                ),
+                choices=[(level, level) for level in server_settings.APPLICATION_LOG_LEVELS],
+                initial=value,
+            )
+            return
+
         if key == PUBLIC_GROUP_ID_SETTING:
             group_field = BookGroupAssignment._meta.get_field("group")
             self.fields["value"] = forms.ModelChoiceField(
@@ -358,6 +371,9 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 raise forms.ValidationError(str(exc)) from exc
             obj.value = str(selected.pk)
             return
+        if obj.key == server_settings.APPLICATION_LOG_LEVEL_SETTING:
+            server_settings.set_application_log_level(obj.value)
+            return
         super().save_model(request, obj, form, change)
 
     @admin.display(description="Current status")
@@ -533,6 +549,10 @@ def _setting_operator_copy(key):
         ),
         server_settings.SERVER_BANNER_MESSAGE_SETTING: (
             "Banner message shown in Product UI."
+        ),
+        server_settings.APPLICATION_LOG_LEVEL_SETTING: (
+            "Controls Second Pass Library application diagnostics. INFO is recommended "
+            "for normal operation."
         ),
         PUBLIC_GROUP_ID_SETTING: (
             "Configured protected Public/Common Room identity."

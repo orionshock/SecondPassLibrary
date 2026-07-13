@@ -66,6 +66,12 @@ selection, recovery uses the currently configured Public group. Both paths scan
 all users and Books and restore only those with no group assignment to the
 resulting Public group.
 
+Application Log Level is a semantic choice with four values: `DEBUG`, `INFO`,
+`WARNING`, and `ERROR`. It controls Second Pass Library application namespaces
+without reducing Django security/error logging. `INFO` is the normal default;
+use `DEBUG` temporarily for diagnosis. Saving the setting updates the running
+process immediately and preserves the read-only setting key.
+
 Books, stored EPUB fields/assets, users, reading sessions, progress,
 annotations, Public/Common Room identity, shelves, and shelf items are
 preserved.

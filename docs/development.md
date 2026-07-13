@@ -145,6 +145,13 @@ continues to use standard stdout/stderr logging as described in
 [Production startup](deployment.md); application code should not invent its
 own file-log directory.
 
+The Django admin **Application Log Level** setting controls application logger
+namespaces with `DEBUG`, `INFO`, `WARNING`, or `ERROR`. It defaults and safely
+falls back to `INFO`, including before the settings table is available. This
+setting does not lower Django security/error logger thresholds and does not
+alter request/access logging. Prefer `INFO` normally and return temporary
+diagnostic `DEBUG` settings to `INFO` after investigation.
+
 ## Media serving (dev)
 
 Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/media/`) and stored under `MEDIA_ROOT` (default: `userdata/media`).
