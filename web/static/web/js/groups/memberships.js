@@ -76,7 +76,11 @@ export async function initGroupMembershipsTab({
     for (const u of users) {
       const opt = document.createElement("option");
       opt.value = String(u.profile_id || "");
-      opt.textContent = `${u.username} (${u.email || ""})`;
+      const name = [u.first_name, u.last_name]
+        .map((part) => String(part || "").trim())
+        .filter(Boolean)
+        .join(" ");
+      opt.textContent = name ? `${u.username} (${name})` : String(u.username || "");
       addMemberUser.appendChild(opt);
     }
   } catch (e) {

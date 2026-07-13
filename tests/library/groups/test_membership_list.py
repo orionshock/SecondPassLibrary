@@ -28,8 +28,9 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
                 )
                 self.assertEqual(
                     set(payload["results"][0]["user"]),
-                    {"profile_id", "username", "email", "first_name", "last_name"},
+                    {"profile_id", "username", "first_name", "last_name"},
                 )
+                self.assertNotIn("email", payload["results"][0]["user"])
                 self.assertNotIn("id", payload["results"][0])
 
     def test_nonmember_reader_cannot_list_memberships(self):

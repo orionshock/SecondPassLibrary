@@ -135,7 +135,7 @@ export function renderMembersReadOnly(payload) {
   return results
     .map((m) => {
       const user = m && m.user ? m.user : m;
-      const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
+      const identity = renderUserIdentity(user).outerHTML;
       const curator = m && m.is_curator ? ' <span class="muted">(Curator)</span>' : "";
       return `
         <article class="membership-row membership-row--readonly">
@@ -155,7 +155,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
       const user = m && m.user ? m.user : m;
       const userId = user && user.profile_id ? String(user.profile_id) : "";
       const isCurator = !!m.is_curator;
-      const identity = renderUserIdentity(user, { includeEmail: true }).outerHTML;
+      const identity = renderUserIdentity(user).outerHTML;
       const note = isPublicGroup
         ? '<div class="membership-row__note muted">Public fallback group; curator unavailable.</div>'
         : "";

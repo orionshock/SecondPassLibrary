@@ -76,7 +76,9 @@ class ClientApiAuthenticationTests(ClientApiTestCase):
             ),
         )
         self.assertEqual(me.status_code, 200)
-        self.assertEqual(response_data_dict(me).get("username"), "u")
+        me_data = response_data_dict(me)
+        self.assertEqual(me_data.get("username"), "u")
+        self.assertEqual(me_data.get("email"), user.email)
 
         me_patch = assert_response(
             api.patch(
@@ -90,7 +92,7 @@ class ClientApiAuthenticationTests(ClientApiTestCase):
 
         # Management endpoint should not accept bearer in Phase 1.
         users = assert_response(
-            self.client.get(
+            api.get(
                 "/api/v1/accounts/users/",
                 HTTP_AUTHORIZATION=f"Bearer {token}",
             ),

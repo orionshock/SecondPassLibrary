@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.models import UserProfile
+from accounts.user_payloads import compact_user_payload
 from library.models import LibraryGroupMembership
 
 
@@ -11,13 +12,7 @@ class LibraryGroupMembershipSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField(read_only=True)
 
     def get_user(self, obj: LibraryGroupMembership):
-        return {
-            "profile_id": obj.user.profile.id,
-            "username": obj.user.get_username(),
-            "email": obj.user.email or "",
-            "first_name": obj.user.first_name or "",
-            "last_name": obj.user.last_name or "",
-        }
+        return compact_user_payload(obj.user)
 
     class Meta:
         model = LibraryGroupMembership

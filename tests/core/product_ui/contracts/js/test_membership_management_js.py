@@ -35,7 +35,12 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn("payload && payload.results", self.group_shared_js)
         self.assertIn("m && m.user ? m.user : m", self.group_shared_js)
         self.assertIn("user.profile_id", self.group_shared_js)
-        self.assertIn('includeEmail: true', self.group_shared_js)
+        self.assertNotIn("includeEmail: true", self.group_shared_js)
+
+    def test_add_member_picker_uses_username_and_name_without_email(self):
+        self.assertIn("[u.first_name, u.last_name]", self.group_memberships_js)
+        self.assertIn("`${u.username} (${name})`", self.group_memberships_js)
+        self.assertNotIn("u.email", self.group_memberships_js)
 
     def test_group_and_user_mutations_route_by_profile_uuid(self):
         self.assertIn('data-user-id="${escapeHtml(userId)}"', self.group_shared_js)

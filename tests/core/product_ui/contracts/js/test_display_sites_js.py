@@ -64,7 +64,7 @@ class ProductUiDisplaySitesJsContractsTests(ProductUiTestCase):
             self.assertIn("renderGroupBadge", module_js)
 
         self.assertIn("includeEmail: true", user_identity_modules["web/static/web/js/users/list.js"])
-        self.assertIn("includeEmail: true", groups_shared_js)
+        self.assertNotIn("includeEmail: true", groups_shared_js)
         self.assertNotIn("includeEmail: true", layout_js)
         self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/profile/main.js"])
         self.assertNotIn("includeEmail: true", user_identity_modules["web/static/web/js/users/edit.js"])
@@ -82,7 +82,7 @@ class ProductUiDisplaySitesJsContractsTests(ProductUiTestCase):
         self.assertNotIn('pill pill--owner", "Public"', library_detail_js)
         self.assertNotIn('pill pill--owner", "Public"', book_edit_groups_js)
         self.assertNotIn("pill--owner\">Public", groups_list_js)
-        self.assertIn("renderUserIdentity(user, { includeEmail: true })", groups_shared_js)
+        self.assertIn("renderUserIdentity(user)", groups_shared_js)
         self.assertNotIn("Role: <code>", groups_shared_js)
         self.assertIn('class="membership-row"', groups_shared_js)
         self.assertIn('class="membership-row__group membership-row__identity"', groups_shared_js)

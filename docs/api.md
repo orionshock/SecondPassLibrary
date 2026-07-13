@@ -155,9 +155,10 @@ User-management payload notes:
 - Membership editing remains on the LibraryGroup membership endpoints, not on `/accounts/users/`.
 - User creation does **not** accept password fields; the system generates a temporary password and returns it only in the create response.
 - Email is optional contact/management metadata. It is not required for local
-  login and is not an account identity key. Shelf compact user payloads exclude
-  email; group membership management payloads include it because that UI already
-  displays member email addresses.
+  login and is not an account identity key. Email is exposed only by the
+  authenticated user's self-profile payload and Manager/Owner user-management
+  payloads. Generic compact user identities, including group memberships and
+  shelves, are email-free.
 
 ### `POST /api/v1/accounts/users/`
 
@@ -595,14 +596,14 @@ Group book ordering:
   - `PATCH /api/v1/library/groups/<group_id>/memberships/<user_id>/` body: `{"is_curator": false}`
   - `DELETE /api/v1/library/groups/<group_id>/memberships/<user_id>/`
 
-Membership payloads include compact public user information and do not expose Django auth user database ids:
+Membership payloads use the generic email-free compact user identity and do not
+expose Django auth user database ids:
 
 ```json
 {
   "user": {
     "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
     "username": "reader",
-    "email": "reader@example.test",
     "first_name": "Read",
     "last_name": "Er"
   },

@@ -47,7 +47,7 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
         payload = response.json()
         self.assertEqual(payload["user"]["profile_id"], str(self.other.profile.id))
         self.assertEqual(payload["user"]["username"], self.other.get_username())
-        self.assertEqual(payload["user"]["email"], self.other.email)
+        self.assertNotIn("email", payload["user"])
         self.assertNotIn("id", payload)
         self.assertTrue(payload["is_curator"])
         self.assertIn("created_at", payload)
