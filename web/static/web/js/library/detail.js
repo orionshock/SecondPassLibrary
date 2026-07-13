@@ -275,7 +275,7 @@ function renderMetadataDetails(container, book) {
   const grid = el("div", "kv");
   for (const [label, value] of rows) {
     grid.appendChild(el("div", "kv__k", label));
-    grid.appendChild(el("div", "kv__v", value || "—"));
+    grid.appendChild(el("div", "kv__v", value || "-"));
   }
   container.appendChild(grid);
 }

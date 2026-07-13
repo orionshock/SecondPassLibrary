@@ -31,7 +31,7 @@ class ProductUiNavigationContractsTests(ProductUiTestCase):
 
         self.assertIn('from "../ui/tabs.js"', book_edit_main_js)
         self.assertIn('from "../ui/breadcrumbs.js"', book_edit_main_js)
-        self.assertIn('defaultTab: "metadata"', book_edit_main_js)
+        self.assertIn('defaultTab: "book-details"', book_edit_main_js)
         self.assertNotIn('from "./tabs.js"', book_edit_main_js)
         self.assertIn("function syncBookEditBreadcrumbs", book_edit_main_js)
         self.assertIn('{ label: "Library", href: "/library/" }', book_edit_main_js)

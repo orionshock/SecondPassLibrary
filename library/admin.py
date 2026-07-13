@@ -126,6 +126,9 @@ class AdvancedGroupsAssignmentAdminMixin:
     def _advanced_groups_enabled():
         return server_settings.advanced_library_groups_enabled()
 
+    def _has_advanced_groups_permission(self, request, obj=None):
+        return self._advanced_groups_enabled()
+
     def get_model_perms(self, request):
         if not self._advanced_groups_enabled():
             return {}
@@ -133,6 +136,27 @@ class AdvancedGroupsAssignmentAdminMixin:
 
     def has_module_permission(self, request):
         return self._advanced_groups_enabled() and super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._has_advanced_groups_permission(request, obj) and super().has_view_permission(
+            request,
+            obj=obj,
+        )
+
+    def has_add_permission(self, request):
+        return self._has_advanced_groups_permission(request) and super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._has_advanced_groups_permission(
+            request,
+            obj,
+        ) and super().has_change_permission(request, obj=obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return self._has_advanced_groups_permission(
+            request,
+            obj,
+        ) and super().has_delete_permission(request, obj=obj)
 
 
 class BookAdminForm(forms.ModelForm):
