@@ -9,7 +9,11 @@ from django.db import transaction
 from django.db.models import Exists, OuterRef
 
 from core.models import ServerSetting
-from core.operational_logging import info_on_commit, suppress_state_change_logging
+from core.operational_logging import (
+    info_on_commit,
+    safe_log_label,
+    suppress_state_change_logging,
+)
 from core.server_settings import set_server_setting
 from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
@@ -63,10 +67,13 @@ def set_public_group_identity(*, group: LibraryGroup) -> LibraryGroup:
             )
         with suppress_state_change_logging():
             _store_public_group_id(selected)
+        group_id = str(selected.pk)
+        group_name = safe_log_label(selected.name, fallback=group_id)
         info_on_commit(
             logger,
-            "Public/Common Room identity reassigned: group=%s reassigned=%s",
-            selected.pk,
+            "Public/Common Room identity reassigned: group_name=%s group=%s reassigned=%s",
+            group_name,
+            group_id,
             True,
         )
         return selected
@@ -112,14 +119,20 @@ def repair_public_group_identity(
                 books_restored=books_restored,
             )
 
+    group_id = str(result.group.pk)
+    group_name = safe_log_label(result.group.name, fallback=group_id)
+    created_new = bool(result.created_new_group)
+    users_restored = int(result.users_restored)
+    books_restored = int(result.books_restored)
     info_on_commit(
         logger,
-        "Public/Common Room identity repaired: group=%s created_new=%s "
+        "Public/Common Room identity repaired: group_name=%s group=%s created_new=%s "
         "users_restored=%d books_restored=%d",
-        result.group.pk,
-        result.created_new_group,
-        result.users_restored,
-        result.books_restored,
+        group_name,
+        group_id,
+        created_new,
+        users_restored,
+        books_restored,
     )
     return result
 

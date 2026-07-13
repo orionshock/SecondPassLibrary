@@ -69,6 +69,7 @@ class LibraryGroupMembershipListView(GenericAPIView):
             user=profile.user,
             group=group,
             is_curator=serializer.validated_data.get("is_curator", False),
+            actor=request.user,
         )
         if "role" in serializer.validated_data:
             _update_user_role(profile, serializer.validated_data["role"])
@@ -121,6 +122,7 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
             set_group_membership_curator(
                 membership=membership,
                 is_curator=serializer.validated_data["is_curator"],
+                actor=request.user,
             )
         if "role" in serializer.validated_data:
             _update_user_role(membership.user.profile, serializer.validated_data["role"])
@@ -138,7 +140,7 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
             )
         except UserProfile.DoesNotExist as exc:
             raise Http404 from exc
-        remove_user_from_group(user=profile.user, group=group)
+        remove_user_from_group(user=profile.user, group=group, actor=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

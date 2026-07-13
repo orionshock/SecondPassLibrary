@@ -5,7 +5,7 @@ import logging
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from core.operational_logging import info_on_commit, user_uuid
+from core.operational_logging import info_on_commit, safe_log_label, user_log_label
 from library.groups.public_group import get_public_group
 from library.models import Book, BookGroupAssignment, LibraryGroup
 from library.queries import invalidate_visible_books_cache_on_commit
@@ -29,20 +29,46 @@ def add_book_to_group(
             added_by=creator,
         )
     if created:
-        info_on_commit(
-            logger,
-            "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
-            user_uuid(actor),
-            user_uuid(creator),
-            book.pk,
-            group.pk,
+        book_id, book_title, group_id, group_name = _assignment_log_values(
+            book=book,
+            group=group,
         )
+        actor_name = user_log_label(actor)
+        creator_name = user_log_label(creator)
+        if creator is not None and creator != actor:
+            info_on_commit(
+                logger,
+                "Book assigned to library group: book_title=%s book=%s group_name=%s "
+                "group=%s actor=%s added_by=%s",
+                book_title,
+                book_id,
+                group_name,
+                group_id,
+                actor_name,
+                creator_name,
+            )
+        else:
+            info_on_commit(
+                logger,
+                "Book assigned to library group: book_title=%s book=%s group_name=%s "
+                "group=%s actor=%s",
+                book_title,
+                book_id,
+                group_name,
+                group_id,
+                actor_name,
+            )
     return assignment
 
 
 def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
     with transaction.atomic():
         book = _lock_book_for_group_assignment(book)
+        book_id, book_title, group_id, group_name = _assignment_log_values(
+            book=book,
+            group=group,
+        )
+        actor_name = user_log_label(actor)
         if BookGroupAssignment.objects.filter(book=book, group=group).exists():
             remove_book_from_group_owned_shelves(book=book, group=group)
         deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
@@ -52,10 +78,13 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
     if deleted:
         info_on_commit(
             logger,
-            "Book removed from library group: actor=%s book=%s group=%s fallback_to_public=%s",
-            user_uuid(actor),
-            book.pk,
-            group.pk,
+            "Book removed from library group: book_title=%s book=%s group_name=%s "
+            "group=%s actor=%s fallback_to_public=%s",
+            book_title,
+            book_id,
+            group_name,
+            group_id,
+            actor_name,
             bool(restored),
         )
     return bool(deleted)
@@ -79,14 +108,32 @@ def _ensure_book_public_assignment_locked(
     group = public_group or get_public_group()
     assignment, created = _create_book_assignment(book=book, group=group, added_by=added_by)
     if created:
-        info_on_commit(
-            logger,
-            "Book assigned to library group: actor=%s added_by=%s book=%s group=%s",
-            "none",
-            user_uuid(added_by),
-            book.pk,
-            group.pk,
+        book_id, book_title, group_id, group_name = _assignment_log_values(
+            book=book,
+            group=group,
         )
+        if added_by is not None:
+            added_by_name = user_log_label(added_by)
+            info_on_commit(
+                logger,
+                "Book assigned to library group: book_title=%s book=%s group_name=%s "
+                "group=%s actor=none added_by=%s",
+                book_title,
+                book_id,
+                group_name,
+                group_id,
+                added_by_name,
+            )
+        else:
+            info_on_commit(
+                logger,
+                "Book assigned to library group: book_title=%s book=%s group_name=%s "
+                "group=%s actor=none",
+                book_title,
+                book_id,
+                group_name,
+                group_id,
+            )
     return assignment
 
 
@@ -149,3 +196,14 @@ def _create_book_assignment(
 
 def _lock_book_for_group_assignment(book):
     return Book.objects.select_for_update().get(pk=book.pk)
+
+
+def _assignment_log_values(*, book, group) -> tuple[str, str, str, str]:
+    book_id = str(book.pk)
+    group_id = str(group.pk)
+    return (
+        book_id,
+        safe_log_label(book.title, fallback=book_id),
+        group_id,
+        safe_log_label(group.name, fallback=group_id),
+    )

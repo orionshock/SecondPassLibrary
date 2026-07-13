@@ -74,7 +74,7 @@ class LibraryGroupListView(GroupPreviewBooksMixin, ListAPIView):
 
         serializer = LibraryGroupCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
-        group = create_library_group(**serializer.validated_data)
+        group = create_library_group(actor=request.user, **serializer.validated_data)
         out = self.get_serializer(group)
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -103,7 +103,11 @@ class LibraryGroupDetailView(GroupPreviewBooksMixin, RetrieveAPIView):
         ):
             raise PermissionDenied("Not allowed to update this library group description.")
         try:
-            group = update_library_group(group=group, **serializer.validated_data)
+            group = update_library_group(
+                group=group,
+                actor=request.user,
+                **serializer.validated_data,
+            )
         except DjangoValidationError as exc:
             raise _drf_validation_error(exc) from exc
         out = self.get_serializer(group)

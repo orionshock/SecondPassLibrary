@@ -11,7 +11,12 @@ from django.db.models import Count
 from django.utils import timezone
 
 from core import server_settings
-from core.operational_logging import info_on_commit, suppress_state_change_logging
+from core.operational_logging import (
+    info_on_commit,
+    safe_log_label,
+    suppress_state_change_logging,
+    user_log_label,
+)
 from library.groups.book_assignments import remove_book_from_group
 from library.groups.memberships import remove_user_from_group
 from library.groups.public_group import get_public_group
@@ -176,10 +181,20 @@ def execute_advanced_groups_disable_plan(
                 "Cleared %d invalid curator membership(s) from the Public group.",
                 public_curators_cleared,
             )
+        public_group_id = str(plan.public_group_id)
+        public_group_name = safe_log_label(
+            plan.public_group_name,
+            fallback=public_group_id,
+        )
+        actor_name = user_log_label(actor)
         info_on_commit(
             logger,
-            "Advanced library groups consolidated: groups=%d shelves=%d "
+            "Advanced library groups consolidated: public_group_name=%s public_group=%s "
+            "actor=%s groups=%d shelves=%d "
             "book_assignments=%d memberships=%d public_curators_cleared=%d",
+            public_group_name,
+            public_group_id,
+            actor_name,
             plan.summary.custom_groups,
             plan.summary.shelves_moved,
             plan.summary.book_assignments_removed,

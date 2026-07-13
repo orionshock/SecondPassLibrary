@@ -186,6 +186,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
             user=user,
             group=group,
             is_curator=True,
+            actor=self.request.user,
         )
         self.assertEqual(membership.pk, saved_membership.pk)
 
@@ -212,6 +213,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
         set_group_membership_curator.assert_called_once_with(
             membership=membership,
             is_curator=False,
+            actor=self.request.user,
         )
 
     @patch("library.admin.membership_services.remove_user_from_group")
@@ -223,6 +225,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
         remove_user_from_group.assert_called_once_with(
             user=membership.user,
             group=membership.group,
+            actor=self.request.user,
         )
 
     @patch("library.admin.membership_services.remove_user_from_group", return_value=True)
@@ -240,6 +243,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
         remove_user_from_group.assert_called_once_with(
             user=membership.user,
             group=membership.group,
+            actor=self.request.user,
         )
         self.model_admin.message_user.assert_called_once_with(
             self.request,

@@ -51,9 +51,10 @@ class AccountOperationalLoggingTests(APITestCase):
         self.assertEqual(len(logs.output), 1)
         message = logs.output[0]
         self.assertIn("Managed user created", message)
-        self.assertIn(str(self.manager.profile.id), message)
+        self.assertIn("actor=manager", message)
+        self.assertIn("target=new-reader", message)
         self.assertIn("role=reader", message)
-        self.assertNotIn("new-reader", message)
+        self.assertNotIn("New Reader", message)
         self.assertNotIn("example.test", message)
         self.assertNotIn("temporary_password", message)
 
@@ -77,6 +78,8 @@ class AccountOperationalLoggingTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         message = self._one_message_containing(logs.output, "Managed user updated")
+        self.assertIn("actor=manager", message)
+        self.assertIn("target=reader", message)
         self.assertIn("changed_fields=last_name,role", message)
         self.assertNotIn("first_name", message)
         self.assertIn("role_old=reader", message)
@@ -100,6 +103,7 @@ class AccountOperationalLoggingTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         joined = "\n".join(logs.output)
         self.assertIn("Managed user disabled", joined)
+        self.assertIn("actor=manager target=reader", joined)
         self.assertIn("revoked_web_sessions=2", joined)
         self.assertIn("revoked_client_sessions=1", joined)
         self.assertIn("Managed user updated", joined)

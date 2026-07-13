@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
-from accounts.operational_logging import logger, user_uuid
+from accounts.operational_logging import logger, user_log_label, user_uuid
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
 from core import server_settings
 from library.groups.memberships import ensure_user_public_membership
@@ -191,8 +191,8 @@ def create_managed_user(
 
     logger.info(
         "Managed user created: actor=%s target=%s role=%s active=%s",
-        user_uuid(actor),
-        user_uuid(user),
+        user_log_label(actor),
+        user_log_label(user),
         role,
         bool(user.is_active),
     )
@@ -302,8 +302,8 @@ def update_user_via_management_api(
         logger.info(
             "Managed user disabled: actor=%s target=%s revoked_web_sessions=%d "
             "revoked_client_sessions=%d",
-            user_uuid(actor),
-            user_uuid(target_user),
+            user_log_label(actor),
+            user_log_label(target_user),
             counts.web_sessions,
             counts.client_sessions,
         )
@@ -312,8 +312,8 @@ def update_user_via_management_api(
     logger.info(
         "Managed user updated: actor=%s target=%s changed_fields=%s role_old=%s "
         "role_new=%s active_old=%s active_new=%s",
-        user_uuid(actor),
-        user_uuid(target_user),
+        user_log_label(actor),
+        user_log_label(target_user),
         ",".join(changed_fields),
         old_role,
         profile.role,
@@ -440,8 +440,8 @@ def reset_managed_user_password(
 
     logger.info(
         "Managed password reset completed: actor=%s target=%s",
-        user_uuid(actor),
-        user_uuid(target_user),
+        user_log_label(actor),
+        user_log_label(target_user),
     )
     return ManagedPasswordResetResult(
         username=target_user.get_username(),

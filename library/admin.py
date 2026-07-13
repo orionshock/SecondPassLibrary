@@ -671,12 +671,14 @@ class LibraryGroupMembershipAdmin(
                 membership_services.set_group_membership_curator(
                     membership=obj,
                     is_curator=obj.is_curator,
+                    actor=request.user,
                 )
             return
         membership = membership_services.add_user_to_group(
             user=obj.user,
             group=obj.group,
             is_curator=obj.is_curator,
+            actor=request.user,
         )
         obj.pk = membership.pk
         obj.is_curator = membership.is_curator
@@ -684,7 +686,11 @@ class LibraryGroupMembershipAdmin(
         obj.updated_at = membership.updated_at
 
     def delete_model(self, request, obj):
-        membership_services.remove_user_from_group(user=obj.user, group=obj.group)
+        membership_services.remove_user_from_group(
+            user=obj.user,
+            group=obj.group,
+            actor=request.user,
+        )
 
     @admin.action(description="Remove selected user-group assignments")
     def remove_assignments(self, request, queryset):
@@ -694,6 +700,7 @@ class LibraryGroupMembershipAdmin(
             removed += membership_services.remove_user_from_group(
                 user=membership.user,
                 group=membership.group,
+                actor=request.user,
             )
         self.message_user(request, f"Removed {removed} user-group assignment(s).")
 

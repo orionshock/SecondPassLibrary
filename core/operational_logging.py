@@ -45,3 +45,18 @@ def user_uuid(user) -> str:
         return str(user.profile.pk)
     except (AttributeError, ObjectDoesNotExist):
         return "none"
+
+
+def safe_log_label(value, *, fallback: str, max_length: int = 200) -> str:
+    """Return a bounded, single-line label suitable for operational logs."""
+    label = " ".join(str(value or "").split())
+    if not label:
+        label = " ".join(str(fallback or "").split()) or "unknown"
+    return label[:max_length]
+
+
+def user_log_label(user) -> str:
+    if user is None or getattr(user, "is_anonymous", False):
+        return "none"
+    username = user.get_username() if hasattr(user, "get_username") else ""
+    return safe_log_label(username, fallback=user_uuid(user))

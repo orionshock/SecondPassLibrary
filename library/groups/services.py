@@ -7,7 +7,8 @@ from django.db import transaction
 
 from core.operational_logging import (
     info_on_commit,
-    user_uuid,
+    safe_log_label,
+    user_log_label,
 )
 from library.groups.book_assignments import restore_selected_books_without_groups
 from library.groups.memberships import restore_selected_users_without_groups
@@ -22,14 +23,27 @@ from library.queries import invalidate_visible_books_cache_on_commit
 logger = logging.getLogger(__name__)
 
 
-def create_library_group(*, name: str, description: str = "") -> LibraryGroup:
+def create_library_group(*, name: str, description: str = "", actor=None) -> LibraryGroup:
     group = LibraryGroup.objects.create(name=_required_name(name), description=description or "")
-    info_on_commit(logger, "Library group created: group=%s", group.pk)
+    group_id = str(group.pk)
+    group_name = safe_log_label(group.name, fallback=group_id)
+    actor_name = user_log_label(actor)
+    info_on_commit(
+        logger,
+        "Library group created: group_name=%s group=%s actor=%s",
+        group_name,
+        group_id,
+        actor_name,
+    )
     return group
 
 
 def update_library_group(
-    *, group: LibraryGroup, name: str | None = None, description: str | None = None
+    *,
+    group: LibraryGroup,
+    name: str | None = None,
+    description: str | None = None,
+    actor=None,
 ) -> LibraryGroup:
     update_fields: list[str] = []
     if name is not None:
@@ -44,17 +58,26 @@ def update_library_group(
             update_fields.append("description")
     if update_fields:
         group.save(update_fields=[*update_fields, "updated_at"])
+        group_id = str(group.pk)
+        group_name = safe_log_label(group.name, fallback=group_id)
+        actor_name = user_log_label(actor)
+        changed_fields = ",".join(sorted(update_fields))
         info_on_commit(
             logger,
-            "Library group presentation changed: group=%s changed_fields=%s",
-            group.pk,
-            ",".join(sorted(update_fields)),
+            "Library group presentation changed: group_name=%s group=%s actor=%s "
+            "changed_fields=%s",
+            group_name,
+            group_id,
+            actor_name,
+            changed_fields,
         )
     return group
 
 
 def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
-    group_id = group.pk
+    group_id = str(group.pk)
+    group_name = safe_log_label(group.name, fallback=group_id)
+    actor_name = user_log_label(actor)
     with transaction.atomic():
         if is_public_group(group):
             raise ValidationError("Public/Common Room group cannot be deleted.")
@@ -73,10 +96,11 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
     if deleted_count:
         info_on_commit(
             logger,
-            "Library group deleted: actor=%s group=%s fallback_to_public=%s "
+            "Library group deleted: group_name=%s group=%s actor=%s fallback_to_public=%s "
             "users_restored=%d books_restored=%d",
-            user_uuid(actor),
+            group_name,
             group_id,
+            actor_name,
             bool(users_restored or books_restored),
             users_restored,
             books_restored,
