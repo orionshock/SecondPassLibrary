@@ -184,7 +184,7 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
         )
 
     def test_public_repair_registers_one_visibility_cache_invalidation(self):
-        with patch("library.groups.public_services.invalidate_visible_books_cache") as invalidate:
+        with patch("library.queries.invalidate_visible_books_cache") as invalidate:
             with self.captureOnCommitCallbacks(execute=True):
                 repair_public_group_identity(
                     create_new_common_room=False,

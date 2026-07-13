@@ -19,7 +19,7 @@ from library.groups.public_group import (
     get_public_group_id,
 )
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
-from library.queries import invalidate_visible_books_cache
+from library.queries import invalidate_visible_books_cache_on_commit
 
 
 PUBLIC_GROUP_SETTING_DESCRIPTION = "Public/Common Room group id."
@@ -103,7 +103,7 @@ def repair_public_group_identity(
                 added_by=actor,
             )
             if users_restored or books_restored:
-                _invalidate_visible_books_cache_on_commit()
+                invalidate_visible_books_cache_on_commit()
 
             result = PublicGroupRepairResult(
                 group=group,
@@ -199,7 +199,3 @@ def _public_group_name(name: str | None) -> str:
 
 def _public_group_description(description: str | None) -> str:
     return str(description or "").strip()
-
-
-def _invalidate_visible_books_cache_on_commit() -> None:
-    transaction.on_commit(invalidate_visible_books_cache)

@@ -9,7 +9,7 @@ from django.db import transaction
 from core.operational_logging import info_on_commit, user_uuid
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
-from library.queries import invalidate_visible_books_cache
+from library.queries import invalidate_visible_books_cache_on_commit
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def add_user_to_group(
                 True,
             )
         if created:
-            _invalidate_visible_books_cache_on_commit()
+            invalidate_visible_books_cache_on_commit()
             info_on_commit(
                 logger,
                 "Library group membership added: group=%s user=%s curator=%s",
@@ -74,7 +74,7 @@ def remove_user_from_group(*, user, group: LibraryGroup) -> bool:
         deleted, _ = LibraryGroupMembership.objects.filter(user=user, group=group).delete()
         restored = _ensure_user_has_at_least_one_group_locked(user=user)
         if deleted and not restored:
-            _invalidate_visible_books_cache_on_commit()
+            invalidate_visible_books_cache_on_commit()
     if deleted:
         info_on_commit(
             logger,
@@ -111,7 +111,7 @@ def _ensure_user_public_membership_locked(
     group = public_group or get_public_group()
     membership, created = LibraryGroupMembership.objects.get_or_create(user=user, group=group)
     if created:
-        _invalidate_visible_books_cache_on_commit()
+        invalidate_visible_books_cache_on_commit()
     return membership
 
 
@@ -144,7 +144,3 @@ def restore_selected_users_without_groups(
 
 def _lock_user_for_group_mutation(user):
     return get_user_model().objects.select_for_update().get(pk=user.pk)
-
-
-def _invalidate_visible_books_cache_on_commit() -> None:
-    transaction.on_commit(invalidate_visible_books_cache)

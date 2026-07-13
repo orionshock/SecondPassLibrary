@@ -16,7 +16,7 @@ from library.groups.public_group import (
     is_public_group,
 )
 from library.models import LibraryGroup
-from library.queries import invalidate_visible_books_cache
+from library.queries import invalidate_visible_books_cache_on_commit
 
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
             book_ids, added_by=actor, public_group=public_group
         )
         if deleted_count:
-            _invalidate_visible_books_cache_on_commit()
+            invalidate_visible_books_cache_on_commit()
     if deleted_count:
         info_on_commit(
             logger,
@@ -82,11 +82,6 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
             books_restored,
         )
     return bool(deleted_count)
-
-
-def _invalidate_visible_books_cache_on_commit() -> None:
-    transaction.on_commit(invalidate_visible_books_cache)
-
 
 def _required_name(name: str) -> str:
     value = str(name or "").strip()

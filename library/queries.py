@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from uuid import uuid4
 
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import QuerySet
 
 from accounts.roles import is_librarian
@@ -57,6 +58,10 @@ def invalidate_visible_books_cache() -> None:
         _VISIBLE_BOOK_IDS_CACHE_DEFER_DIRTY.set(True)
         return
     _write_visible_books_cache_version()
+
+
+def invalidate_visible_books_cache_on_commit() -> None:
+    transaction.on_commit(invalidate_visible_books_cache)
 
 
 @contextmanager

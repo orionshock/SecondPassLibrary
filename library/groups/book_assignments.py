@@ -8,7 +8,7 @@ from django.db import transaction
 from core.operational_logging import info_on_commit, user_uuid
 from library.groups.public_group import get_public_group
 from library.models import Book, BookGroupAssignment, LibraryGroup
-from library.queries import invalidate_visible_books_cache
+from library.queries import invalidate_visible_books_cache_on_commit
 from shelves.library_hooks import remove_book_from_group_owned_shelves
 
 
@@ -48,7 +48,7 @@ def remove_book_from_group(*, book, group: LibraryGroup, actor=None) -> bool:
         deleted, _ = BookGroupAssignment.objects.filter(book=book, group=group).delete()
         restored = _ensure_book_has_at_least_one_group_locked(book=book, added_by=actor)
         if deleted and not restored:
-            _invalidate_visible_books_cache_on_commit()
+            invalidate_visible_books_cache_on_commit()
     if deleted:
         info_on_commit(
             logger,
@@ -143,13 +143,9 @@ def _create_book_assignment(
         defaults={"added_by": added_by},
     )
     if created:
-        _invalidate_visible_books_cache_on_commit()
+        invalidate_visible_books_cache_on_commit()
     return assignment, created
 
 
 def _lock_book_for_group_assignment(book):
     return Book.objects.select_for_update().get(pk=book.pk)
-
-
-def _invalidate_visible_books_cache_on_commit() -> None:
-    transaction.on_commit(invalidate_visible_books_cache)

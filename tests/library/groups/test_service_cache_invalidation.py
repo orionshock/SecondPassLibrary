@@ -72,7 +72,7 @@ class LibraryGroupServiceCacheInvalidationTests(LibraryGroupServiceTestCase):
         BookGroupAssignment.objects.create(book=self.book, group=group)
 
         with patch(
-            "library.groups.book_assignments.invalidate_visible_books_cache"
+            "library.queries.invalidate_visible_books_cache"
         ) as invalidate, patch(
             "library.groups.book_assignments.remove_book_from_group_owned_shelves",
             side_effect=RuntimeError("hook failed"),
