@@ -20,6 +20,17 @@ ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) t
 `npm install` installs the pinned local Pyright dev tool. There is no frontend
 build step.
 
+## Pre-release migration reset
+
+The first-party migration history was flattened before release. Existing
+development databases created from the old migration history are intentionally
+unsupported. Recreate the database and run the new initial migrations; do not
+fake the new initial migrations onto an old database.
+
+Existing files under `userdata/media/` may be retained, but their old database
+rows are not reusable. Books must be re-imported into the fresh database before
+the retained media can be treated as library content again.
+
 ## Optional browser diagnostics and E2E tests
 
 The development requirements include the Python `pytest-playwright` plugin for

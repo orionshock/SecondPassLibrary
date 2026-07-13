@@ -28,7 +28,7 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
         self.assertEqual(invalid.status_code, 400)
         self.assertIn("user_id", invalid.json())
 
-    def test_post_creates_membership_and_returns_uuid_payload(self):
+    def test_post_creates_membership_without_exposing_internal_primary_key(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
         response = self.client.post(

@@ -326,6 +326,7 @@ class LibraryGroup(TimeStampedModel):
 
 
 class LibraryGroupMembership(TimeStampedModel):
+    id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

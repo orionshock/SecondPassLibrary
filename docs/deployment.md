@@ -4,6 +4,19 @@ Second Pass Library's first-run setup works in development and production. The
 database schema must exist before the web process accepts requests; the setup
 wizard does not create tables from request handling.
 
+## Pre-release migration reset
+
+This version replaces the complete first-party migration history with new
+initial migrations. Databases created by an earlier development or deployment
+build are intentionally unsupported and must be recreated. Do not use
+`--fake-initial` or otherwise mark the new initial migrations as applied on an
+old database.
+
+Durable files under `userdata/media/` may be preserved while recreating the
+database, but books must be re-imported into the fresh database. Old database
+rows and relationships cannot be recovered merely by retaining the media
+directory.
+
 ## Single-instance startup
 
 ### Docker Compose

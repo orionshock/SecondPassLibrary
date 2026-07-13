@@ -168,7 +168,7 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
         user = get_user_model()(username="reader")
         group = LibraryGroup(name="Room")
         saved_membership = Mock(
-            pk="membership-id",
+            pk=42,
             is_curator=True,
             created_at=Mock(),
             updated_at=Mock(),

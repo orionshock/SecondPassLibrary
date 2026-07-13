@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import BigAutoField
 from django.test import TestCase
 
 from library.models import (
@@ -21,6 +22,9 @@ from library.models import (
 
 
 class LibraryModelShapeTests(TestCase):
+    def test_group_membership_uses_internal_big_auto_primary_key(self):
+        self.assertIsInstance(LibraryGroupMembership._meta.pk, BigAutoField)
+
     def test_book_owns_file_fields_directly(self):
         field_names = {field.name for field in Book._meta.get_fields()}
 
@@ -116,7 +120,9 @@ class LibraryModelConstraintTests(TestCase):
         User = get_user_model()
         user = User.objects.create_user(username="reader")
         group = LibraryGroup.objects.create(name="Common Room")
-        LibraryGroupMembership.objects.create(user=user, group=group)
+        membership = LibraryGroupMembership.objects.create(user=user, group=group)
+
+        self.assertIsInstance(membership.pk, int)
 
         with self.assertRaises(IntegrityError), transaction.atomic():
             LibraryGroupMembership.objects.create(user=user, group=group)
