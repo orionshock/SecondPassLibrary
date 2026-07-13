@@ -225,6 +225,23 @@ Django admin is the service hatch and can inspect/edit shelf internals for
 recovery/debugging when exposed with `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`. It is
 not the product UI.
 
+### Optional unavailable-item cleanup
+
+User-owned shelf items intentionally survive later access changes, while normal
+APIs continue hiding books the viewer cannot access. Operators may optionally
+report or remove those unavailable rows with `cleanup_shelves`:
+
+```powershell
+python manage.py cleanup_shelves
+python manage.py cleanup_shelves --apply
+```
+
+The default is a dry run. It reports affected user-owned shelves and unavailable
+item counts without changing data. `--apply` transactionally removes only items
+the shelf owner can no longer access and canonicalizes the remaining positions.
+Group-owned shelves are never included. This command is optional maintenance;
+it does not add live cleanup or change group/membership propagation behavior.
+
 ## Non-goals
 
 - Shelves are not access control.
@@ -235,6 +252,4 @@ not the product UI.
 
 ## Future possibilities
 
-- A future `cleanup_shelves` operator command may report/remove unavailable
-  user-owned shelf items with dry-run/apply modes.
 - Bulk reordering APIs.

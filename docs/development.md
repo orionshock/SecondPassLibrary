@@ -422,6 +422,20 @@ Safety:
 
 ## Common commands
 
+Optionally inspect unavailable items retained on user-owned shelves after access
+changes. Dry-run is the default; add `--apply` to remove those rows and repair
+remaining positions:
+
+```powershell
+python manage.py cleanup_shelves
+python manage.py cleanup_shelves --apply
+docker compose exec -T web python manage.py cleanup_shelves
+docker compose exec -T web python manage.py cleanup_shelves --apply
+```
+
+This is operator-invoked cleanup, not live propagation. It does not touch
+group-owned shelves, and normal shelf APIs continue hiding unavailable books.
+
 Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):
 
