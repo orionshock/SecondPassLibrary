@@ -86,4 +86,4 @@ class AccountManagementServiceTests(TestCase):
 
         self.reader.refresh_from_db()
         self.assertFalse(self.reader.is_active)
-        disable_user.assert_called_once_with(self.reader)
+        disable_user.assert_called_once_with(self.reader, actor=self.manager)

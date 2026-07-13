@@ -254,7 +254,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
     def get_fieldsets(self, request, obj=None):
         if self._is_advanced_groups_setting(obj):
             status_fields = ["advanced_groups_status"]
-            if obj.value is True:
+            if obj is not None and obj.value is True:
                 status_fields.extend(
                     [
                         "advanced_groups_recovery_summary",
