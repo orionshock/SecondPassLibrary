@@ -31,11 +31,10 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertIn('{ method: "DELETE", headers }', self.source)
 
     def test_mutation_errors_prefer_bounded_fields_and_hide_raw_bodies(self):
-        self.assertIn("export function groupBookMutationError", self.source)
-        self.assertIn("summarizeFieldErrors", self.source)
-        self.assertIn('typeof error.body === "object"', self.source)
+        self.assertIn("groupMutationErrorMessage", self.source)
         self.assertIn("Failed to add book to group.", self.source)
         self.assertIn("Failed to remove book from group.", self.source)
+        self.assertNotIn("groupBookMutationError", self.source)
         self.assertNotIn("setBookSearchStatus(extractApiErrorMessage(e2)", self.source)
         self.assertNotIn("setStatus(booksStatus, extractApiErrorMessage(e2)", self.source)
 

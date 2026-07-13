@@ -17,7 +17,6 @@ def _run_node(script: str) -> dict:
     completed = subprocess.run(
         [
             "node",
-            "--experimental-default-type=module",
             "--input-type=module",
             "--eval",
             script,
@@ -30,7 +29,7 @@ def _run_node(script: str) -> dict:
     return json.loads(completed.stdout)
 
 
-class TestLoadAllPaginationJavaScript:
+class LoadAllPaginationJavaScriptTests:
     def test_shared_helper_follows_more_than_twenty_pages_and_normal_flows(self):
         result = _run_node(
             """

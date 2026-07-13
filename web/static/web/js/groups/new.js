@@ -1,7 +1,7 @@
-import { extractApiErrorMessage, fetchJSONWithOptions, getCsrfToken } from "../api.js";
+import { fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
-import { isManagerOrOwner } from "./shared.js";
+import { groupMutationErrorMessage, isManagerOrOwner } from "./shared.js";
 
 export async function initGroupNew() {
   const me = await loadMeAndInitShell();
@@ -54,7 +54,7 @@ export async function initGroupNew() {
       window.location.href = `/groups/${encodeURIComponent(id)}/edit/`;
     } catch (err) {
       console.error("Failed to create group", err);
-      const msg = extractApiErrorMessage(err) || "Failed to create group.";
+      const msg = groupMutationErrorMessage(err, "Failed to create group.");
       setStatus(statusEl, msg, true);
       setGlobalError(msg);
     }

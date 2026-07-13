@@ -4,23 +4,16 @@ import {
   fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
-  summarizeFieldErrors,
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
-import { renderBooksCompact, truthy } from "./shared.js";
+import {
+  groupMutationErrorMessage,
+  renderBooksCompact,
+  truthy,
+} from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
-
-export function groupBookMutationError(error, fallback) {
-  const fieldMessage = summarizeFieldErrors(error && error.body ? error.body : null);
-  if (fieldMessage) return fieldMessage;
-  if (error && error.body && typeof error.body === "object") {
-    return extractApiErrorMessage(error);
-  }
-  const status = error && error.status ? Number(error.status) : null;
-  return status ? `${fallback} (HTTP ${status}).` : fallback;
-}
 
 export async function initGroupBooksTab({
   me,
@@ -242,7 +235,7 @@ export async function initGroupBooksTab({
       if (lastSearchUrl) await loadBookSearch(lastSearchUrl);
     } catch (e2) {
       console.error("Failed to add book to group", { groupId, bookId, e2 });
-      const message = groupBookMutationError(e2, "Failed to add book to group.");
+      const message = groupMutationErrorMessage(e2, "Failed to add book to group.");
       setBookSearchStatus(message, true);
       setGlobalError(message);
     }
@@ -269,7 +262,7 @@ export async function initGroupBooksTab({
       await booksCtl.reloadFirstPage();
     } catch (e2) {
       console.error("Failed to remove book from group", { groupId, bookId, e2 });
-      const message = groupBookMutationError(e2, "Failed to remove book from group.");
+      const message = groupMutationErrorMessage(e2, "Failed to remove book from group.");
       setStatus(booksStatus, message, true);
       setGlobalError(message);
     }

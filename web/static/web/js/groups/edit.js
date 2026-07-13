@@ -10,6 +10,7 @@ import {
   canEditGroupPage,
   canManageGroupBooks,
   currentUserGroupMembership,
+  groupMutationErrorMessage,
   isManagerOrOwner,
 } from "./shared.js";
 import { setStatus } from "../ui/status.js";
@@ -216,7 +217,7 @@ export async function initGroupEdit() {
         window.location.href = "/groups/";
       } catch (e2) {
         console.error("Failed to delete group", { groupId, e2 });
-        const msg = extractApiErrorMessage(e2) || "Failed to delete group.";
+        const msg = groupMutationErrorMessage(e2, "Failed to delete group.");
         setStatus(deleteStatus, msg, true);
         setGlobalError(msg);
       }
@@ -244,8 +245,12 @@ export async function initGroupEdit() {
         setStatus(saveStatus, "Saved.", false);
       } catch (e2) {
         console.error("Failed to save group description", { groupId, e2 });
-        setStatus(saveStatus, extractApiErrorMessage(e2), true);
-        setGlobalError(extractApiErrorMessage(e2));
+        const message = groupMutationErrorMessage(
+          e2,
+          "Failed to save group description."
+        );
+        setStatus(saveStatus, message, true);
+        setGlobalError(message);
       }
     });
   }

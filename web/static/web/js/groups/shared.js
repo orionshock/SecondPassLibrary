@@ -4,12 +4,52 @@ import {
   isManager,
   isOwner,
 } from "../auth.js";
+import { extractApiErrorMessage, summarizeFieldErrors } from "../api.js";
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { renderUserIdentity } from "../ui/identity.js";
 
 export function truthy(v) {
   return !!v;
+}
+
+const GROUP_MUTATION_ERROR_MAX_LENGTH = 240;
+
+function boundedGroupErrorText(value) {
+  const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (/<!doctype\b/i.test(text) || /<\s*\/?\s*[a-z][^>]*>/i.test(text)) return "";
+  if (/\bTraceback \(most recent call last\):/i.test(text)) return "";
+  if (/\bFile "[^"]+", line \d+/i.test(text)) return "";
+  if (text.length <= GROUP_MUTATION_ERROR_MAX_LENGTH) return text;
+  return `${text.slice(0, GROUP_MUTATION_ERROR_MAX_LENGTH - 3)}...`;
+}
+
+export function groupMutationErrorMessage(error, fallback) {
+  const safeFallback = boundedGroupErrorText(fallback) || "Group operation failed.";
+  const body = error && error.body && typeof error.body === "object" && !Array.isArray(error.body)
+    ? error.body
+    : null;
+
+  if (body) {
+    const fieldMessage = boundedGroupErrorText(summarizeFieldErrors(body));
+    if (fieldMessage) return fieldMessage;
+
+    const hasStructuredMessage =
+      (body.error && typeof body.error === "object") ||
+      Object.prototype.hasOwnProperty.call(body, "detail");
+    if (hasStructuredMessage) {
+      const structuredMessage = boundedGroupErrorText(extractApiErrorMessage(error));
+      if (structuredMessage) return structuredMessage;
+    }
+  }
+
+  const status = error && Number.isFinite(Number(error.status))
+    ? Number(error.status)
+    : null;
+  return boundedGroupErrorText(
+    status ? `${safeFallback} (HTTP ${status}).` : safeFallback
+  );
 }
 
 export function isManagerOrOwner(me) {
