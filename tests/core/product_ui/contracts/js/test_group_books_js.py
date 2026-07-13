@@ -38,3 +38,13 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertIn("Failed to remove book from group.", self.source)
         self.assertNotIn("setBookSearchStatus(extractApiErrorMessage(e2)", self.source)
         self.assertNotIn("setStatus(booksStatus, extractApiErrorMessage(e2)", self.source)
+
+    def test_existing_book_preload_uses_uncapped_safe_pagination(self):
+        self.assertIn("fetchAllPaginatedResults(", self.source)
+        self.assertIn("Group book pagination continuation repeated.", self.source)
+        self.assertIn(
+            "Unable to load existing group books. Book search is unavailable.",
+            self.source,
+        )
+        self.assertNotIn("i < 20", self.source)
+        self.assertNotIn("page_size=200", self.source)

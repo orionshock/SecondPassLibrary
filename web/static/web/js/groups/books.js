@@ -1,5 +1,6 @@
 import {
   extractApiErrorMessage,
+  fetchAllPaginatedResults,
   fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
@@ -60,21 +61,31 @@ export async function initGroupBooksTab({
 
   async function loadGroupBookIds() {
     groupBookIds.clear();
-    let url = `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/?page_size=200`;
-    for (let i = 0; i < 20 && url; i++) {
-      const payload = await fetchJSON(url);
-      const results = Array.isArray(payload && payload.results) ? payload.results : [];
-      for (const b of results) {
-        if (b && b.id) groupBookIds.add(String(b.id));
+    const results = await fetchAllPaginatedResults(
+      `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/`,
+      {
+        invalidResponseMessage: "Invalid group book list response.",
+        invalidContinuationMessage: "Invalid group book pagination continuation.",
+        repeatedContinuationMessage: "Group book pagination continuation repeated.",
       }
-      url = payload.next || null;
+    );
+    for (const book of results) {
+      if (book && book.id) groupBookIds.add(String(book.id));
     }
   }
 
+  let groupBookPreloadReady = true;
   try {
     await loadGroupBookIds();
   } catch (e) {
     console.error("Failed to pre-load group book ids", { groupId, e });
+    groupBookPreloadReady = false;
+    bookSearchInput.disabled = true;
+    const submitButton = bookSearchForm.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+    const message = "Unable to load existing group books. Book search is unavailable.";
+    setBookSearchStatus(message, true);
+    setGlobalError(message);
   }
 
   function renderBookSearchResults(payload) {
@@ -176,6 +187,10 @@ export async function initGroupBooksTab({
 
   bookSearchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!groupBookPreloadReady) {
+      setBookSearchStatus("Unable to load existing group books. Book search is unavailable.", true);
+      return;
+    }
     const term = (bookSearchInput.value || "").trim();
     if (!term) {
       setBookSearchStatus("Enter a search term.", true);

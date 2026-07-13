@@ -1,6 +1,6 @@
 import {
   extractApiErrorMessage,
-  fetchJSON,
+  fetchAllPaginatedResults,
   fetchJSONWithOptions,
   getCsrfToken,
 } from "../api.js";
@@ -50,17 +50,11 @@ export function publicShelfGroup(me) {
 }
 
 export async function loadAllShelfGroups() {
-  const groups = [];
-  let url = "/api/v1/library/groups/";
-  for (let page = 0; page < 20 && url; page += 1) {
-    const payload = await fetchJSON(url);
-    if (!payload || !Array.isArray(payload.results)) {
-      throw new Error("Invalid group list response.");
-    }
-    groups.push(...payload.results);
-    url = payload.next ? String(payload.next) : null;
-  }
-  return groups;
+  return fetchAllPaginatedResults("/api/v1/library/groups/", {
+    invalidResponseMessage: "Invalid group list response.",
+    invalidContinuationMessage: "Invalid group pagination continuation.",
+    repeatedContinuationMessage: "Group pagination continuation repeated.",
+  });
 }
 
 export function requestedShelfGroup(search, groups) {

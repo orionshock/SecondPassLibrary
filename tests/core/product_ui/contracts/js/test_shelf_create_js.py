@@ -34,9 +34,10 @@ class ProductUiShelfCreateJsContractsTests(ProductUiTestCase):
 
     def test_group_options_load_every_paginated_api_page(self):
         self.assertIn("export async function loadAllShelfGroups()", self.source)
-        self.assertIn('let url = "/api/v1/library/groups/"', self.source)
-        self.assertIn("groups.push(...payload.results)", self.source)
-        self.assertIn("url = payload.next ? String(payload.next) : null", self.source)
+        self.assertIn('fetchAllPaginatedResults("/api/v1/library/groups/"', self.source)
+        self.assertIn("Group pagination continuation repeated.", self.source)
+        self.assertNotIn("page < 20", self.source)
+        self.assertNotIn("page_size=200", self.source)
 
     def test_allowed_owner_group_deep_link_is_preselected(self):
         self.assertIn("export function requestedShelfGroup(search, groups)", self.source)

@@ -68,6 +68,43 @@ export async function fetchJSON(url) {
   return bodyJson;
 }
 
+export async function fetchAllPaginatedResults(
+  initialUrl,
+  {
+    invalidResponseMessage = "Invalid paginated response.",
+    invalidContinuationMessage = "Invalid pagination continuation.",
+    repeatedContinuationMessage = "Pagination continuation repeated.",
+  } = {}
+) {
+  if (typeof initialUrl !== "string" || !initialUrl.trim()) {
+    throw new Error(invalidContinuationMessage);
+  }
+
+  const results = [];
+  const visitedUrls = new Set();
+  let url = initialUrl;
+  while (url) {
+    if (visitedUrls.has(url)) throw new Error(repeatedContinuationMessage);
+    visitedUrls.add(url);
+
+    const payload = await fetchJSON(url);
+    if (!payload || !Array.isArray(payload.results)) {
+      throw new Error(invalidResponseMessage);
+    }
+    results.push(...payload.results);
+
+    if (payload.next == null) {
+      url = null;
+      continue;
+    }
+    if (typeof payload.next !== "string" || !payload.next.trim()) {
+      throw new Error(invalidContinuationMessage);
+    }
+    url = payload.next;
+  }
+  return results;
+}
+
 export async function fetchJSONWithOptions(url, options) {
   const response = await fetch(url, {
     credentials: "same-origin",

@@ -1,6 +1,6 @@
 import {
   extractApiErrorMessage,
-  fetchJSON,
+  fetchAllPaginatedResults,
   fetchJSONWithOptions,
   getCsrfToken,
   summarizeFieldErrors,
@@ -78,15 +78,11 @@ export function renderMembershipControls(groups, allGroups = [], profileId = "")
 }
 
 export async function loadAllGroups() {
-  const groups = [];
-  let url = "/api/v1/library/groups/";
-  for (let i = 0; i < 10 && url; i++) {
-    const payload = await fetchJSON(url);
-    const results = Array.isArray(payload && payload.results) ? payload.results : [];
-    for (const g of results) groups.push(g);
-    url = payload.next || null;
-  }
-  return groups;
+  return fetchAllPaginatedResults("/api/v1/library/groups/", {
+    invalidResponseMessage: "Invalid group list response.",
+    invalidContinuationMessage: "Invalid group pagination continuation.",
+    repeatedContinuationMessage: "Group pagination continuation repeated.",
+  });
 }
 
 export function refreshAddGroupOptions({ allGroups, userGroups, addGroupSelect, addSubmitBtn }) {

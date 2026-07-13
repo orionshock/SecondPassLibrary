@@ -1,5 +1,6 @@
 import {
   extractApiErrorMessage,
+  fetchAllPaginatedResults,
   fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
@@ -92,17 +93,17 @@ export async function initShelfItemsEditor({
 
   async function refreshAllShelfBookIds() {
     const ids = new Set();
-    let url = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/?page_size=200`;
-    let guard = 0;
-    while (url && guard < 20) {
-      guard += 1;
-      const payload = await fetchJSON(url);
-      const results = Array.isArray(payload && payload.results) ? payload.results : [];
-      for (const it of results) {
-        const b = it && it.book ? it.book : null;
-        if (b && b.id != null) ids.add(String(b.id));
+    const results = await fetchAllPaginatedResults(
+      `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/`,
+      {
+        invalidResponseMessage: "Invalid shelf item list response.",
+        invalidContinuationMessage: "Invalid shelf item pagination continuation.",
+        repeatedContinuationMessage: "Shelf item pagination continuation repeated.",
       }
-      url = payload && payload.next ? String(payload.next) : "";
+    );
+    for (const item of results) {
+      const book = item && item.book ? item.book : null;
+      if (book && book.id != null) ids.add(String(book.id));
     }
     currentShelfBookIds = ids;
   }

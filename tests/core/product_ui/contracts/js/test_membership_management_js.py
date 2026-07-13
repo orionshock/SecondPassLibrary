@@ -60,6 +60,7 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn('class="member-choice-picker__menu is-hidden"', self.group_edit_template)
         self.assertIn('button.className = "member-choice-picker__option"', self.group_memberships_js)
         self.assertNotIn('<select id="group-edit-member-user"', self.group_edit_template)
+        self.assertNotIn("loadAllManageableUsers", self.group_memberships_js)
 
     def test_add_member_autocomplete_submits_and_clears_selected_profile(self):
         self.assertIn('addMemberUser.value = profileId', self.group_memberships_js)
