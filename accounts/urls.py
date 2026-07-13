@@ -9,6 +9,7 @@ from .views import (
     CurrentUserView,
     ManagedUserResetPasswordView,
     ManagedUserViewSet,
+    UserChoiceListView,
     UserProfileViewSet,
 )
 
@@ -20,6 +21,7 @@ router.register(r"users", ManagedUserViewSet, basename="manageduser")
 
 urlpatterns = [
     path("me/", CurrentUserView.as_view(), name="accounts_me"),
+    path("user-choices/", UserChoiceListView.as_view(), name="user_choices"),
     path(
         "me/change-password/",
         CurrentUserChangePasswordView.as_view(),

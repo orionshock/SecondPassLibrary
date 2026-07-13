@@ -20,6 +20,12 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.user_memberships_js = Path(
             "web/static/web/js/users/memberships.js"
         ).read_text(encoding="utf-8")
+        self.users_list_js = Path("web/static/web/js/users/list.js").read_text(
+            encoding="utf-8"
+        )
+        self.group_edit_template = Path("web/templates/web/groups/edit.html").read_text(
+            encoding="utf-8"
+        )
 
     def test_group_and_user_add_membership_send_profile_uuid_as_user_id(self):
         self.assertIn(
@@ -40,10 +46,35 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertNotIn("user.last_name", self.group_shared_js)
         self.assertNotIn("includeEmail: true", self.group_shared_js)
 
-    def test_add_member_picker_uses_username_and_name_without_email(self):
-        self.assertIn("[u.first_name, u.last_name]", self.group_memberships_js)
-        self.assertIn("`${u.username} (${name})`", self.group_memberships_js)
-        self.assertNotIn("u.email", self.group_memberships_js)
+    def test_add_member_picker_uses_narrow_username_choices(self):
+        self.assertIn("/api/v1/accounts/user-choices/?", self.group_memberships_js)
+        self.assertIn("exclude_group: String(groupId)", self.group_memberships_js)
+        self.assertNotIn("/api/v1/accounts/users/", self.group_memberships_js)
+        self.assertNotIn("/api/v1/accounts/users/", self.group_shared_js)
+        self.assertIn("button.textContent = username", self.group_memberships_js)
+        self.assertNotIn("first_name", self.group_memberships_js)
+        self.assertNotIn("last_name", self.group_memberships_js)
+        self.assertNotIn("choice.email", self.group_memberships_js)
+        self.assertIn('type="search"', self.group_edit_template)
+        self.assertIn('class="member-choice-picker"', self.group_edit_template)
+        self.assertIn('class="member-choice-picker__menu is-hidden"', self.group_edit_template)
+        self.assertIn('button.className = "member-choice-picker__option"', self.group_memberships_js)
+        self.assertNotIn('<select id="group-edit-member-user"', self.group_edit_template)
+
+    def test_add_member_autocomplete_submits_and_clears_selected_profile(self):
+        self.assertIn('addMemberUser.value = profileId', self.group_memberships_js)
+        self.assertIn(
+            "JSON.stringify({ user_id: String(profileId), is_curator: isCurator })",
+            self.group_memberships_js,
+        )
+        self.assertIn('addMemberUser.value = ""', self.group_memberships_js)
+        self.assertIn('addMemberSearch.value = ""', self.group_memberships_js)
+        self.assertIn('setAddMemberStatus("Searching...", false)', self.group_memberships_js)
+        self.assertIn('setAddMemberStatus("No matching users.", false)', self.group_memberships_js)
+        self.assertIn('setAddMemberStatus("Could not search users.", true)', self.group_memberships_js)
+
+    def test_managed_users_ui_keeps_full_management_endpoint(self):
+        self.assertIn('let currentUrl = "/api/v1/accounts/users/"', self.users_list_js)
 
     def test_group_and_user_mutations_route_by_profile_uuid(self):
         self.assertIn('data-user-id="${escapeHtml(userId)}"', self.group_shared_js)

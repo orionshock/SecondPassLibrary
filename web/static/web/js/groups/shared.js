@@ -1,4 +1,3 @@
-import { fetchJSON } from "../api.js";
 import {
   canManageLibrary,
   canManageGroupMemberships as accountCanManageGroupMemberships,
@@ -183,16 +182,4 @@ export function renderMembersManage(payload, { isPublicGroup }) {
         `.trim();
     })
     .join("");
-}
-
-export async function loadAllManageableUsers() {
-  const users = [];
-  let url = "/api/v1/accounts/users/";
-  for (let i = 0; i < 10 && url; i++) {
-    const payload = await fetchJSON(url);
-    const results = Array.isArray(payload && payload.results) ? payload.results : [];
-    for (const u of results) users.push(u);
-    url = payload.next || null;
-  }
-  return users;
 }

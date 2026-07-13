@@ -147,6 +147,6 @@ class ProductUiDisplaySitesJsContractsTests(ProductUiTestCase):
         self.assertNotIn("curatedGroupsFromUser", users_shared_js)
         self.assertNotIn("escapeHtml(username)", groups_shared_js)
 
-        # Select controls remain plain text because badges cannot be children of option.
-        self.assertIn("opt.textContent", group_memberships_js)
+        # Choice controls remain plain text; user search results contain usernames only.
+        self.assertIn("button.textContent = username", group_memberships_js)
         self.assertIn("opt.textContent", user_memberships_js)

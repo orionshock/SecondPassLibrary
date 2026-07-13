@@ -113,12 +113,18 @@
         group-scoped management access to readers.
       </p>
 
-      <form id="group-edit-add-member" class="search is-hidden" autocomplete="off" style="margin-top: 10px;">
-        <label class="search__label" for="group-edit-member-user">Add member</label>
-        <select id="group-edit-member-user"></select>
-        <label><input id="group-edit-member-role" type="checkbox" /> Curator</label>
-        <button class="button" type="submit">Add</button>
-        <span id="group-edit-add-member-status" class="muted"></span>
+      <form id="group-edit-add-member" class="form is-hidden" autocomplete="off">
+        <label class="search__label" for="group-edit-member-search">Add member by username</label>
+        <div class="form-actions">
+          <div class="member-choice-picker">
+            <input id="group-edit-member-search" class="search__input" type="search" placeholder="Search usernames..." aria-controls="group-edit-member-choices" aria-expanded="false" />
+            <div id="group-edit-member-choices" class="member-choice-picker__menu is-hidden" role="listbox"></div>
+          </div>
+          <input id="group-edit-member-user" type="hidden" />
+          <label><input id="group-edit-member-role" type="checkbox" /> Curator</label>
+          <button class="button" type="submit">Add</button>
+          <span id="group-edit-add-member-status" class="muted" aria-live="polite"></span>
+        </div>
       </form>
 
       <div id="group-edit-members-status" class="muted" style="margin-top: 10px;">Loading...</div>

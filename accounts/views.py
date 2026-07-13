@@ -3,7 +3,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from typing import Any, cast
-from rest_framework import mixins, viewsets
+from rest_framework import generics, mixins, viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +21,8 @@ from .serializers import (
     ManagedUserPatchSerializer,
     ManagedUserCreateSerializer,
     ManagedUserSerializer,
+    UserChoiceQuerySerializer,
+    UserChoiceSerializer,
     UserProfileSerializer,
 )
 from .services import (
@@ -254,6 +256,36 @@ class ManagedUserViewSet(
         payload = managed_user_payload(target)
         serializer = ManagedUserSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UserChoiceListView(generics.ListAPIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserChoiceSerializer
+
+    def get_queryset(self):
+        if not is_manager(self.request.user):
+            raise PermissionDenied("Not allowed.")
+
+        query = UserChoiceQuerySerializer(data=self.request.query_params)
+        query.is_valid(raise_exception=True)
+        data = cast(dict[str, Any], query.validated_data)
+
+        users = User.objects.select_related("profile").filter(is_active=True)
+        if not is_owner(self.request.user):
+            users = users.filter(is_superuser=False)
+
+        search = str(data.get("q") or "").strip()
+        if search:
+            users = users.filter(username__icontains=search)
+
+        exclude_group = data.get("exclude_group")
+        if exclude_group:
+            users = users.exclude(
+                library_group_memberships__group_id=exclude_group
+            )
+
+        return users.order_by("username", "id")
 
 
 class ManagedUserResetPasswordView(APIView):

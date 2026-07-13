@@ -80,6 +80,16 @@ class ManagedUserSerializer(serializers.Serializer):
     groups = ManagedUserGroupSummarySerializer(many=True)
 
 
+class UserChoiceSerializer(serializers.Serializer):
+    profile_id = serializers.UUIDField(source="profile.id", read_only=True)
+    username = serializers.CharField(read_only=True)
+
+
+class UserChoiceQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    exclude_group = serializers.UUIDField(required=False)
+
+
 class ManagedUserPatchSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True)
     first_name = serializers.CharField(required=False, allow_blank=True)

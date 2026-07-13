@@ -50,7 +50,9 @@ export async function initGroupEdit() {
 
   const membersNote = $("#group-edit-members-note");
   const addMemberForm = $("#group-edit-add-member");
+  const addMemberSearch = $("#group-edit-member-search");
   const addMemberUser = $("#group-edit-member-user");
+  const addMemberChoices = $("#group-edit-member-choices");
   const addMemberRole = $("#group-edit-member-role");
   const addMemberStatus = $("#group-edit-add-member-status");
   const membersStatus = $("#group-edit-members-status");
@@ -97,7 +99,9 @@ export async function initGroupEdit() {
     !booksPrev ||
     !membersNote ||
     !addMemberForm ||
+    !addMemberSearch ||
     !addMemberUser ||
+    !addMemberChoices ||
     !addMemberRole ||
     !addMemberStatus ||
     !membersStatus ||
@@ -270,7 +274,9 @@ export async function initGroupEdit() {
     isPublicGroup,
     membersNote,
     addMemberForm,
+    addMemberSearch,
     addMemberUser,
+    addMemberChoices,
     addMemberRole,
     addMemberStatus,
     membersStatus,

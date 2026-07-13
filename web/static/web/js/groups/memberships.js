@@ -1,5 +1,6 @@
 import {
   extractApiErrorMessage,
+  fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
   summarizeFieldErrors,
@@ -8,7 +9,6 @@ import { setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import {
   canManageGroupMemberships,
-  loadAllManageableUsers,
   renderMembersManage,
   renderMembersReadOnly,
 } from "./shared.js";
@@ -20,7 +20,9 @@ export async function initGroupMembershipsTab({
   isPublicGroup,
   membersNote,
   addMemberForm,
+  addMemberSearch,
   addMemberUser,
+  addMemberChoices,
   addMemberRole,
   addMemberStatus,
   membersStatus,
@@ -44,6 +46,12 @@ export async function initGroupMembershipsTab({
 
   function setAddMemberStatus(text, isError) {
     setStatus(addMemberStatus, text, isError);
+  }
+
+  function clearMemberChoices() {
+    addMemberChoices.textContent = "";
+    visible(addMemberChoices, false);
+    addMemberSearch.setAttribute("aria-expanded", "false");
   }
 
   const membersCtl = await createPagedListController({
@@ -70,24 +78,89 @@ export async function initGroupMembershipsTab({
     }, 5000);
   }
 
-  try {
-    const users = await loadAllManageableUsers();
-    addMemberUser.textContent = "";
-    for (const u of users) {
-      const opt = document.createElement("option");
-      opt.value = String(u.profile_id || "");
-      const name = [u.first_name, u.last_name]
-        .map((part) => String(part || "").trim())
-        .filter(Boolean)
-        .join(" ");
-      opt.textContent = name ? `${u.username} (${name})` : String(u.username || "");
-      addMemberUser.appendChild(opt);
+  const minimumQueryLength = 2;
+  const searchDelayMs = 250;
+  let searchTimer = null;
+  let searchSequence = 0;
+
+  async function loadMemberChoices(query, sequence) {
+    setAddMemberStatus("Searching...", false);
+    const params = new URLSearchParams({ q: query, exclude_group: String(groupId) });
+    try {
+      const payload = await fetchJSON(`/api/v1/accounts/user-choices/?${params.toString()}`);
+      if (sequence !== searchSequence) return;
+
+      clearMemberChoices();
+      const choices = Array.isArray(payload && payload.results) ? payload.results : [];
+      if (!choices.length) {
+        setAddMemberStatus("No matching users.", false);
+        return;
+      }
+
+      for (const choice of choices) {
+        const profileId = choice && choice.profile_id ? String(choice.profile_id) : "";
+        const username = choice && choice.username ? String(choice.username) : "";
+        if (!profileId || !username) continue;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "member-choice-picker__option";
+        button.setAttribute("role", "option");
+        button.setAttribute("data-profile-id", profileId);
+        button.setAttribute("data-username", username);
+        button.textContent = username;
+        addMemberChoices.appendChild(button);
+      }
+
+      if (!addMemberChoices.children.length) {
+        setAddMemberStatus("No matching users.", false);
+        return;
+      }
+      visible(addMemberChoices, true);
+      addMemberSearch.setAttribute("aria-expanded", "true");
+      setAddMemberStatus(payload.next ? "Keep typing to narrow the results." : "Choose a username.", false);
+    } catch (error) {
+      if (sequence !== searchSequence) return;
+      console.error("Failed to search user choices", { groupId, error });
+      clearMemberChoices();
+      setAddMemberStatus("Could not search users.", true);
     }
-  } catch (e) {
-    console.error("Failed to load manageable users", e);
-    addMemberUser.textContent = "";
-    setAddMemberStatus("Error loading user list.", true);
   }
+
+  addMemberSearch.addEventListener("input", () => {
+    addMemberUser.value = "";
+    clearMemberChoices();
+    searchSequence += 1;
+    const sequence = searchSequence;
+    if (searchTimer) window.clearTimeout(searchTimer);
+
+    const query = String(addMemberSearch.value || "").trim();
+    if (!query) {
+      setAddMemberStatus("", false);
+      return;
+    }
+    if (query.length < minimumQueryLength) {
+      setAddMemberStatus(`Type at least ${minimumQueryLength} characters.`, false);
+      return;
+    }
+
+    searchTimer = window.setTimeout(() => {
+      loadMemberChoices(query, sequence);
+    }, searchDelayMs);
+  });
+
+  addMemberChoices.addEventListener("click", (event) => {
+    const source = event.target;
+    if (!source || source.nodeType !== 1) return;
+    const choice = source.closest("button[data-profile-id]");
+    if (!choice || !addMemberChoices.contains(choice)) return;
+    const profileId = choice.getAttribute("data-profile-id") || "";
+    const username = choice.getAttribute("data-username") || "";
+    if (!profileId || !username) return;
+    addMemberUser.value = profileId;
+    addMemberSearch.value = username;
+    clearMemberChoices();
+    setAddMemberStatus(`Selected ${username}.`, false);
+  });
 
   addMemberForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -113,6 +186,9 @@ export async function initGroupMembershipsTab({
       });
 
       setAddMemberStatus("Added.", false);
+      addMemberUser.value = "";
+      addMemberSearch.value = "";
+      clearMemberChoices();
       await membersCtl.reloadFirstPage();
     } catch (e2) {
       console.error("Failed to add member", { groupId, e2 });

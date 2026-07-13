@@ -160,6 +160,12 @@ User-management payload notes:
   payloads. Generic compact user identities, including group memberships and
   shelves, contain only `profile_id` and `username`.
 
+`GET /api/v1/accounts/user-choices/?q=<text>&exclude_group=<group_uuid>` is a
+Manager/Owner-only username selector endpoint. It returns normally paginated
+active users as `{profile_id, username}` objects, searches usernames, and may
+exclude users who already belong to one LibraryGroup. It does not replace the
+full `/api/v1/accounts/users/` management API.
+
 ### `POST /api/v1/accounts/users/`
 
 Create a local Django user (Manager/Owner only) and return a temporary password **once**.
