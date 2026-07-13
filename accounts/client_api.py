@@ -9,6 +9,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.operational_logging import logger, user_uuid
+
 from .models import ClientLoginRequest, UserClientSession
 
 
@@ -145,6 +147,13 @@ def approve_login_request(*, login_request: ClientLoginRequest, user) -> ClientL
     login_request.approved_by = user
     login_request.approved_at = now
     login_request.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+    logger.info(
+        "Client pairing approved: actor=%s target=%s pairing_request=%s client_type=%s",
+        user_uuid(user),
+        user_uuid(user),
+        login_request.pk,
+        login_request.client_type,
+    )
     return login_request
 
 
@@ -161,6 +170,13 @@ def deny_login_request(*, login_request: ClientLoginRequest, user) -> ClientLogi
     login_request.approved_by = user
     login_request.approved_at = now
     login_request.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+    logger.info(
+        "Client pairing denied: actor=%s target=%s pairing_request=%s client_type=%s",
+        user_uuid(user),
+        user_uuid(user),
+        login_request.pk,
+        login_request.client_type,
+    )
     return login_request
 
 
@@ -217,6 +233,15 @@ def consume_login_request(*, login_request: ClientLoginRequest) -> ConsumeResult
     locked.consumed_at = now
     locked.save(update_fields=["status", "consumed_at", "updated_at"])
 
+    logger.info(
+        "Client session created from pairing: actor=%s target=%s pairing_request=%s "
+        "client_session=%s client_type=%s",
+        user_uuid(user),
+        user_uuid(user),
+        locked.pk,
+        session.pk,
+        session.client_type,
+    )
     return ConsumeResult(session=session, access_token=token)
 
 

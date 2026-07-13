@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
+from accounts.operational_logging import logger, user_uuid
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
 from core import server_settings
 from library.groups.services import ensure_user_public_membership
@@ -188,6 +189,13 @@ def create_managed_user(
         # Ensure Public group membership via existing service (idempotent).
         ensure_user_public_membership(user=user)
 
+    logger.info(
+        "Managed user created: actor=%s target=%s role=%s active=%s",
+        user_uuid(actor),
+        user_uuid(user),
+        role,
+        bool(user.is_active),
+    )
     return ManagedUserCreateResult(user=user, temporary_password=temporary_password)
 
 
@@ -212,6 +220,7 @@ def update_user_via_management_api(
 
     profile = get_or_create_profile(user=target_user)
     was_active = bool(getattr(target_user, "is_active", True))
+    old_role = profile.role
 
     user_updates: dict[str, Any] = {}
     profile_updates: dict[str, Any] = {}
@@ -219,24 +228,31 @@ def update_user_via_management_api(
     if email is not None:
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["email"] = email.strip()
+        value = email.strip()
+        if target_user.email != value:
+            user_updates["email"] = value
 
     if first_name is not None:
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["first_name"] = first_name.strip()
+        value = first_name.strip()
+        if target_user.first_name != value:
+            user_updates["first_name"] = value
 
     if last_name is not None:
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["last_name"] = last_name.strip()
+        value = last_name.strip()
+        if target_user.last_name != value:
+            user_updates["last_name"] = value
 
     if is_active is not None:
         if getattr(actor, "id", None) == getattr(target_user, "id", None):
             raise PermissionDenied("Cannot change your own active status.")
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        user_updates["is_active"] = is_active
+        if bool(target_user.is_active) != bool(is_active):
+            user_updates["is_active"] = bool(is_active)
 
     if role is not None:
         if not _valid_managed_role(role):
@@ -245,14 +261,16 @@ def update_user_via_management_api(
             raise PermissionDenied("Managers cannot change their own role.")
         if not _can_assign_global_role(actor=actor, target_user=target_user, new_role=role):
             raise PermissionDenied("Not allowed.")
-        profile_updates["role"] = role
+        if profile.role != role:
+            profile_updates["role"] = role
 
     if must_change_password is not None:
         if getattr(actor, "id", None) == getattr(target_user, "id", None):
             raise PermissionDenied("Cannot change your own must-change-password flag.")
         if not _can_manage_user(actor=actor, target_user=target_user):
             raise PermissionDenied("Not allowed.")
-        profile_updates["must_change_password"] = bool(must_change_password)
+        if bool(profile.must_change_password) != bool(must_change_password):
+            profile_updates["must_change_password"] = bool(must_change_password)
 
     if not user_updates and not profile_updates:
         return UserUpdateResult(user=target_user, profile=profile)
@@ -280,7 +298,28 @@ def update_user_via_management_api(
     if disable_after_save:
         from accounts import session_control
 
-        session_control.disable_user(target_user)
+        counts = session_control.disable_user(target_user, actor=actor)
+        logger.info(
+            "Managed user disabled: actor=%s target=%s revoked_web_sessions=%d "
+            "revoked_client_sessions=%d",
+            user_uuid(actor),
+            user_uuid(target_user),
+            counts.web_sessions,
+            counts.client_sessions,
+        )
+
+    changed_fields = sorted([*user_updates.keys(), *profile_updates.keys()])
+    logger.info(
+        "Managed user updated: actor=%s target=%s changed_fields=%s role_old=%s "
+        "role_new=%s active_old=%s active_new=%s",
+        user_uuid(actor),
+        user_uuid(target_user),
+        ",".join(changed_fields),
+        old_role,
+        profile.role,
+        was_active,
+        bool(target_user.is_active),
+    )
 
     return UserUpdateResult(user=target_user, profile=profile)
 
@@ -365,6 +404,11 @@ def change_current_user_password(
     if profile.must_change_password:
         profile.must_change_password = False
         profile.save(update_fields=["must_change_password", "updated_at"])
+    logger.info(
+        "Self password changed: actor=%s target=%s",
+        user_uuid(user),
+        user_uuid(user),
+    )
 
 
 def reset_managed_user_password(
@@ -394,6 +438,11 @@ def reset_managed_user_password(
             profile.full_clean()
             profile.save(update_fields=["must_change_password", "updated_at"])
 
+    logger.info(
+        "Managed password reset completed: actor=%s target=%s",
+        user_uuid(actor),
+        user_uuid(target_user),
+    )
     return ManagedPasswordResetResult(
         username=target_user.get_username(),
         temporary_password=temporary_password,

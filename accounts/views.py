@@ -11,7 +11,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 
 from .models import UserProfile
 from .serializers import (
@@ -118,7 +117,12 @@ class CurrentUserLogoutOtherWebSessionsView(APIView):
 
     def post(self, request):
         current_session_key = getattr(getattr(request, "session", None), "session_key", None)
-        session_control.revoke_other_web_sessions(request.user, current_session_key)
+        session_control.revoke_other_web_sessions(
+            request.user,
+            current_session_key,
+            actor=request.user,
+            reason="manual_revoke",
+        )
         return Response({"message": "Other web sessions logged out."}, status=status.HTTP_200_OK)
 
 
@@ -149,8 +153,7 @@ class CurrentUserClientSessionRevokeView(APIView):
         obj = get_object_or_404(
             UserClientSession, pk=session_id, user=request.user, revoked_at__isnull=True
         )
-        now = timezone.now()
-        UserClientSession.objects.filter(pk=obj.pk).update(revoked_at=now, updated_at=now)
+        session_control.revoke_client_session(obj, actor=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -272,7 +275,7 @@ class ManagedUserResetPasswordView(APIView):
         except DjangoValidationError as exc:
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
             raise DRFValidationError(detail=detail) from exc
-        session_control.admin_reset_user_password(target_user)
+        session_control.admin_reset_user_password(target_user, actor=request.user)
         return Response(
             {
                 "username": result.username,
