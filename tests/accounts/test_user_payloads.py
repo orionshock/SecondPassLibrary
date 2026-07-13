@@ -5,7 +5,7 @@ from accounts.user_payloads import compact_user_payload
 
 
 class CompactUserPayloadTests(TestCase):
-    def test_compact_user_payload_is_email_free(self):
+    def test_compact_user_payload_is_username_only(self):
         user = get_user_model().objects.create_user(
             username="reader",
             email="private@example.test",
@@ -18,6 +18,5 @@ class CompactUserPayloadTests(TestCase):
 
         self.assertEqual(
             set(payload),
-            {"profile_id", "username", "first_name", "last_name"},
+            {"profile_id", "username"},
         )
-        self.assertNotIn("email", payload)

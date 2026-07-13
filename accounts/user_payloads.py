@@ -33,8 +33,6 @@ def compact_user_payload(user) -> dict[str, Any]:
     return {
         "profile_id": profile.id,
         "username": user.get_username(),
-        "first_name": user.first_name or "",
-        "last_name": user.last_name or "",
     }
 
 

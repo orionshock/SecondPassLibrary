@@ -93,12 +93,9 @@ class BaseShelvesAPITest(IsolatedMediaRootMixin, APITestCase):
         user,
     ) -> None:
         profile, _created = UserProfile.objects.get_or_create(user=user)
+        self.assertEqual(set(payload), {"profile_id", "username"})
         self.assertEqual(payload["profile_id"], profile.id)
         self.assertEqual(payload["username"], user.get_username())
-        self.assertEqual(payload["first_name"], user.first_name or "")
-        self.assertEqual(payload["last_name"], user.last_name or "")
-        self.assertNotIn("id", payload)
-        self.assertNotIn("email", payload)
 
     def _png_bytes(self, *, size=(12, 16)) -> bytes:
         img = Image.new("RGB", size, color=(1, 2, 3))

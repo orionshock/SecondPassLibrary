@@ -50,6 +50,8 @@ class ManagedUsersMutationsAPITest(ManagedUsersApiTestMixin):
         )
         self.assertNotIn("id", user_payload)
         self.assertEqual(user_payload["username"], "newmanager")
+        self.assertEqual(user_payload["first_name"], "New")
+        self.assertEqual(user_payload["last_name"], "Manager")
         self.assertEqual(user_payload["role"], UserProfile.ROLE_MANAGER)
         self.assertNotIn("temporary_password", user_payload)
         self.assertNotIn("password", user_payload)

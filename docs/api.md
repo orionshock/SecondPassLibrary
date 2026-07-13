@@ -158,7 +158,7 @@ User-management payload notes:
   login and is not an account identity key. Email is exposed only by the
   authenticated user's self-profile payload and Manager/Owner user-management
   payloads. Generic compact user identities, including group memberships and
-  shelves, are email-free.
+  shelves, contain only `profile_id` and `username`.
 
 ### `POST /api/v1/accounts/users/`
 
@@ -337,7 +337,7 @@ Shelf payload notes:
 
 - Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API authorization remains authoritative. Product UI/session-auth requests use normal shelf edit authorization, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
 - Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
-- User-owned shelves include `owner_user` as a compact user object with `profile_id`, `username`, `first_name`, and `last_name`; group-owned shelves have `owner_user: null`.
+- User-owned shelves include `owner_user` as a compact user object with `profile_id` and `username`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
 - Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
@@ -363,16 +363,12 @@ Example user-owned shelf payload excerpt:
   "owner_type": "user",
   "owner_user": {
     "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
-    "username": "manager",
-    "first_name": "Mara",
-    "last_name": "Manager"
+    "username": "manager"
   },
   "owner_group": null,
   "created_by": {
     "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
-    "username": "manager",
-    "first_name": "Mara",
-    "last_name": "Manager"
+    "username": "manager"
   }
 }
 ```
@@ -596,16 +592,14 @@ Group book ordering:
   - `PATCH /api/v1/library/groups/<group_id>/memberships/<user_id>/` body: `{"is_curator": false}`
   - `DELETE /api/v1/library/groups/<group_id>/memberships/<user_id>/`
 
-Membership payloads use the generic email-free compact user identity and do not
-expose Django auth user database ids:
+Membership payloads use the generic username-only compact user identity and do
+not expose Django auth user database ids:
 
 ```json
 {
   "user": {
     "profile_id": "8f8cc870-5f5a-41e7-8cf4-62bc56f0db15",
-    "username": "reader",
-    "first_name": "Read",
-    "last_name": "Er"
+    "username": "reader"
   },
   "is_curator": true,
   "created_at": "2026-01-01T00:00:00Z",

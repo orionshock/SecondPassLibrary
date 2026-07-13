@@ -44,6 +44,8 @@ class ManagedUsersVisibilityAPITest(ManagedUsersApiTestMixin):
         for row in data:
             self.assertIn("profile_id", row)
             self.assertIn("email", row)
+            self.assertIn("first_name", row)
+            self.assertIn("last_name", row)
             self.assertNotIn("id", row)
         usernames = {u["username"] for u in data}
         self.assertIn("manager", usernames)
@@ -79,6 +81,8 @@ class ManagedUsersVisibilityAPITest(ManagedUsersApiTestMixin):
             data["profile_id"], str(UserProfile.objects.get(user=self.reader).id)
         )
         self.assertEqual(data["email"], self.reader.email)
+        self.assertIn("first_name", data)
+        self.assertIn("last_name", data)
         self.assertNotIn("id", data)
         self.assertNotIn("password", data)
         self.assertNotIn("user_permissions", data)

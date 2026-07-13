@@ -65,6 +65,8 @@ class CurrentUserMePatchAPITest(APITestCase):
 
         self.assertEqual(data["username"], "reader")
         self.assertEqual(data["email"], "new@example.test")
+        self.assertEqual(data["first_name"], "R")
+        self.assertEqual(data["last_name"], "Eader")
         self.assertEqual(data["profile_id"], str(cast(Any, self.user).profile.id))
         self.assertNotIn("id", data)
 

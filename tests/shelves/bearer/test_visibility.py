@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from tests.shelves.bearer.helpers import ShelvesBearerApiTestCase
-from tests.utils.responses import assert_response, payload_list, response_data_dict
+from tests.utils.responses import (
+    assert_response,
+    payload_dict,
+    payload_list,
+    response_data_dict,
+)
 
 
 class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
@@ -28,6 +33,12 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         self.assertIn(shelf_id, ids)
         row = next(r for r in results if str(r["id"]) == shelf_id)
         self.assertFalse(row["can_edit"])
+        self.assertEqual(
+            set(payload_dict(row, "owner_user")), {"profile_id", "username"}
+        )
+        self.assertEqual(
+            set(payload_dict(row, "created_by")), {"profile_id", "username"}
+        )
 
         detail = assert_response(
             self.client.get(
@@ -35,7 +46,16 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
             )
         )
         self.assertEqual(detail.status_code, 200)
-        self.assertFalse(response_data_dict(detail)["can_edit"])
+        detail_data = response_data_dict(detail)
+        self.assertFalse(detail_data["can_edit"])
+        self.assertEqual(
+            set(payload_dict(detail_data, "owner_user")),
+            {"profile_id", "username"},
+        )
+        self.assertEqual(
+            set(payload_dict(detail_data, "created_by")),
+            {"profile_id", "username"},
+        )
 
     def test_bearer_scope_filters_preserve_visibility_and_edit_contracts(self):
         personal_shelf_id = self._create_personal_shelf_as_owner()
@@ -131,6 +151,10 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         results = payload_list(list_data, "results")
         row = next(r for r in results if str(r["id"]) == shelf_id)
         self.assertFalse(row["can_edit"])
+        self.assertIsNone(row["owner_user"])
+        self.assertEqual(
+            set(payload_dict(row, "created_by")), {"profile_id", "username"}
+        )
 
         detail = assert_response(
             self.client.get(
@@ -138,7 +162,13 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
             )
         )
         self.assertEqual(detail.status_code, 200)
-        self.assertFalse(response_data_dict(detail)["can_edit"])
+        detail_data = response_data_dict(detail)
+        self.assertFalse(detail_data["can_edit"])
+        self.assertIsNone(detail_data["owner_user"])
+        self.assertEqual(
+            set(payload_dict(detail_data, "created_by")),
+            {"profile_id", "username"},
+        )
 
         patch = assert_response(
             self.client.patch(
