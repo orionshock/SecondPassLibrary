@@ -270,6 +270,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertIn('id="book-metadata-body"', template)
         self.assertIn('id="book-catalog-tags-body"', template)
         self.assertIn("book.description", detail_js)
+        self.assertNotIn('["Description", book && book.description]', detail_js)
         self.assertIn("book.publisher", detail_js)
         self.assertIn("book.language", detail_js)
         self.assertIn("book.published_date_precision", detail_js)

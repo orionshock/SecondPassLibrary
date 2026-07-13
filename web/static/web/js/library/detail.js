@@ -267,7 +267,6 @@ function formatPublishedDate(book) {
 function renderMetadataDetails(container, book) {
   clear(container);
   const rows = [
-    ["Description", book && book.description],
     ["Publisher", book && book.publisher],
     ["Language", book && book.language],
     ["Published date", formatPublishedDate(book)],
