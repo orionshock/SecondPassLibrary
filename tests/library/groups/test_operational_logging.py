@@ -43,8 +43,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 )
 
         self.assertIn("Library group created", created.output[0])
-        self.assertIn("group_name=Readable Group", created.output[0])
-        self.assertIn(str(group.pk), created.output[0])
+        self.assertIn("group=Readable Group", created.output[0])
+        self.assertNotIn(str(group.pk), created.output[0])
         self.assertIn("actor=actor", created.output[0])
         self.assertNotIn("Private room", created.output[0])
 
@@ -58,8 +58,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 )
 
         self.assertIn("Library group presentation changed", updated.output[0])
-        self.assertIn(str(group.pk), updated.output[0])
-        self.assertIn("group_name=Renamed Group", updated.output[0])
+        self.assertIn("group=Renamed Group", updated.output[0])
+        self.assertNotIn(str(group.pk), updated.output[0])
         self.assertIn("actor=actor", updated.output[0])
         self.assertIn("changed_fields=description,name", updated.output[0])
         self.assertNotIn("New private room", updated.output[0])
@@ -70,8 +70,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 self.assertTrue(delete_library_group(group=group, actor=self.actor))
 
         self.assertIn("Library group deleted", deleted.output[0])
-        self.assertIn("group_name=Renamed Group", deleted.output[0])
-        self.assertIn(group_id, deleted.output[0])
+        self.assertIn("group=Renamed Group", deleted.output[0])
+        self.assertNotIn(group_id, deleted.output[0])
         self.assertIn("actor=actor", deleted.output[0])
 
     def test_membership_add_remove_and_curator_change_logs_readable_state(self):
@@ -88,8 +88,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 )
 
         self.assertIn("Library group membership added", added.output[0])
-        self.assertIn(str(group.pk), added.output[0])
-        self.assertIn("group_name=Members Only", added.output[0])
+        self.assertIn("group=Members Only", added.output[0])
+        self.assertNotIn(str(group.pk), added.output[0])
         self.assertIn("target=reader", added.output[0])
         self.assertIn("actor=actor", added.output[0])
         self.assertIn("curator=False", added.output[0])
@@ -104,7 +104,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 )
 
         self.assertIn("Library group membership curator changed", curator.output[0])
-        self.assertIn(str(group.pk), curator.output[0])
+        self.assertNotIn(str(group.pk), curator.output[0])
         self.assertIn("target=reader", curator.output[0])
         self.assertIn("actor=actor", curator.output[0])
         self.assertIn("curator=True", curator.output[0])
@@ -122,7 +122,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 )
 
         self.assertIn("Library group membership removed", removed.output[0])
-        self.assertIn(str(group.pk), removed.output[0])
+        self.assertNotIn(str(group.pk), removed.output[0])
         self.assertIn("target=reader", removed.output[0])
         self.assertIn("actor=actor", removed.output[0])
         self.assertIn("curator=True", removed.output[0])
@@ -137,10 +137,10 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 add_book_to_group(book=self.book, group=group, actor=self.actor)
 
         self.assertIn("Book assigned to library group", added.output[0])
-        self.assertIn(str(self.book.pk), added.output[0])
-        self.assertIn(str(group.pk), added.output[0])
-        self.assertIn("book_title=Service Book", added.output[0])
-        self.assertIn("group_name=Book Room", added.output[0])
+        self.assertNotIn(str(self.book.pk), added.output[0])
+        self.assertNotIn(str(group.pk), added.output[0])
+        self.assertIn("book=Service Book", added.output[0])
+        self.assertIn("group=Book Room", added.output[0])
         self.assertIn("actor=actor", added.output[0])
 
         add_book_to_group(book=self.book, group=other_group, actor=self.actor)
@@ -149,10 +149,10 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 self.assertTrue(remove_book_from_group(book=self.book, group=group, actor=self.actor))
 
         self.assertIn("Book removed from library group", removed.output[0])
-        self.assertIn(str(self.book.pk), removed.output[0])
-        self.assertIn(str(group.pk), removed.output[0])
-        self.assertIn("book_title=Service Book", removed.output[0])
-        self.assertIn("group_name=Book Room", removed.output[0])
+        self.assertNotIn(str(self.book.pk), removed.output[0])
+        self.assertNotIn(str(group.pk), removed.output[0])
+        self.assertIn("book=Service Book", removed.output[0])
+        self.assertIn("group=Book Room", removed.output[0])
         self.assertIn("fallback_to_public=False", removed.output[0])
 
     def test_public_identity_reassignment_logs_one_safe_summary(self):
@@ -164,8 +164,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
 
         self.assertEqual(len(logs.output), 1)
         self.assertIn("Public/Common Room identity reassigned", logs.output[0])
-        self.assertIn("group_name=Candidate Common Room", logs.output[0])
-        self.assertIn(str(group.pk), logs.output[0])
+        self.assertIn("group=Candidate Common Room", logs.output[0])
+        self.assertNotIn(str(group.pk), logs.output[0])
 
     def test_public_repair_logs_one_aggregate_summary_without_low_level_rows(self):
         orphan_user = get_user_model().objects.create_user(
@@ -183,8 +183,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
 
         self.assertEqual(len(logs.output), 1)
         self.assertIn("Public/Common Room identity repaired", logs.output[0])
-        self.assertIn(f"group_name={result.group.name}", logs.output[0])
-        self.assertIn(str(result.group.pk), logs.output[0])
+        self.assertIn(f"group={result.group.name}", logs.output[0])
+        self.assertNotIn(str(result.group.pk), logs.output[0])
         self.assertIn(f"users_restored={result.users_restored}", logs.output[0])
         self.assertIn(f"books_restored={result.books_restored}", logs.output[0])
         self.assertNotIn("orphan-user", logs.output[0])
@@ -211,8 +211,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 repaired = get_public_group()
 
         self.assertIn("Public/Common Room identity self-healed", logs.output[0])
-        self.assertIn(f"group_name={repaired.name}", logs.output[0])
-        self.assertIn(str(repaired.pk), logs.output[0])
+        self.assertIn(f"group={repaired.name}", logs.output[0])
+        self.assertNotIn(str(repaired.pk), logs.output[0])
         self.assertNotIn(str(missing_id), logs.output[0])
 
     def test_expected_validation_and_noop_paths_do_not_emit_errors(self):
@@ -277,11 +277,11 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 add_book_to_group(book=untitled, group=group, actor=self.actor)
 
         message = logs.output[0]
-        self.assertIn("group_name=Two Line Room", message)
-        self.assertIn(f"book_title={untitled.pk}", message)
+        self.assertIn("group=Two Line Room", message)
+        self.assertIn(f"book={untitled.pk}", message)
         self.assertNotIn("Two\nLine Room", message)
 
-    def test_book_assignment_log_separates_actor_and_added_by(self):
+    def test_book_assignment_log_uses_added_by_as_actor_when_actor_is_missing(self):
         group = create_library_group(name="Assignment Room")
 
         with self.assertLogs("library.groups.book_assignments", level="INFO") as logs:
@@ -293,8 +293,8 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                     added_by=self.actor,
                 )
 
-        self.assertIn("actor=none", logs.output[0])
-        self.assertIn("added_by=actor", logs.output[0])
+        self.assertIn("actor=actor", logs.output[0])
+        self.assertNotIn("added_by=", logs.output[0])
 
 
 class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
@@ -339,5 +339,6 @@ class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
         assignment_low_level_info.assert_not_called()
         self.assertEqual(len(logs.output), 1)
         self.assertIn("Advanced library groups consolidated", logs.output[0])
-        self.assertIn("public_group_name=Configured Common Room", logs.output[0])
+        self.assertIn("public_group=Configured Common Room", logs.output[0])
+        self.assertNotIn(str(self.public.pk), logs.output[0])
         self.assertIn("actor=owner", logs.output[0])

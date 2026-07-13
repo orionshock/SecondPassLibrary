@@ -30,9 +30,8 @@ def create_library_group(*, name: str, description: str = "", actor=None) -> Lib
     actor_name = user_log_label(actor)
     info_on_commit(
         logger,
-        "Library group created: group_name=%s group=%s actor=%s",
+        "Library group created: group=%s actor=%s",
         group_name,
-        group_id,
         actor_name,
     )
     return group
@@ -64,10 +63,8 @@ def update_library_group(
         changed_fields = ",".join(sorted(update_fields))
         info_on_commit(
             logger,
-            "Library group presentation changed: group_name=%s group=%s actor=%s "
-            "changed_fields=%s",
+            "Library group presentation changed: group=%s actor=%s changed_fields=%s",
             group_name,
-            group_id,
             actor_name,
             changed_fields,
         )
@@ -96,10 +93,9 @@ def delete_library_group(*, group: LibraryGroup, actor=None) -> bool:
     if deleted_count:
         info_on_commit(
             logger,
-            "Library group deleted: group_name=%s group=%s actor=%s fallback_to_public=%s "
+            "Library group deleted: group=%s actor=%s fallback_to_public=%s "
             "users_restored=%d books_restored=%d",
             group_name,
-            group_id,
             actor_name,
             bool(users_restored or books_restored),
             users_restored,

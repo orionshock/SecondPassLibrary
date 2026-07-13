@@ -189,11 +189,10 @@ def execute_advanced_groups_disable_plan(
         actor_name = user_log_label(actor)
         info_on_commit(
             logger,
-            "Advanced library groups consolidated: public_group_name=%s public_group=%s "
-            "actor=%s groups=%d shelves=%d "
+            "Advanced library groups consolidated: public_group=%s actor=%s "
+            "groups=%d shelves=%d "
             "book_assignments=%d memberships=%d public_curators_cleared=%d",
             public_group_name,
-            public_group_id,
             actor_name,
             plan.summary.custom_groups,
             plan.summary.shelves_moved,

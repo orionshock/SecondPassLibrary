@@ -71,9 +71,8 @@ def set_public_group_identity(*, group: LibraryGroup) -> LibraryGroup:
         group_name = safe_log_label(selected.name, fallback=group_id)
         info_on_commit(
             logger,
-            "Public/Common Room identity reassigned: group_name=%s group=%s reassigned=%s",
+            "Public/Common Room identity reassigned: group=%s reassigned=%s",
             group_name,
-            group_id,
             True,
         )
         return selected
@@ -126,10 +125,9 @@ def repair_public_group_identity(
     books_restored = int(result.books_restored)
     info_on_commit(
         logger,
-        "Public/Common Room identity repaired: group_name=%s group=%s created_new=%s "
+        "Public/Common Room identity repaired: group=%s created_new=%s "
         "users_restored=%d books_restored=%d",
         group_name,
-        group_id,
         created_new,
         users_restored,
         books_restored,

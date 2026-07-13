@@ -27,37 +27,28 @@ def add_user_to_group(
             group=group,
             defaults={"is_curator": bool(is_curator)},
         )
+        group_name = safe_log_label(group.name, fallback=str(group.pk))
+        target_name = user_log_label(user)
+        actor_name = user_log_label(actor)
         if not created and is_curator and not membership.is_curator:
             membership.is_curator = True
             membership.save(update_fields=["is_curator", "updated_at"])
-            group_id, group_name, target_name, actor_name = _membership_log_values(
-                group=group,
-                user=user,
-                actor=actor,
-            )
             info_on_commit(
                 logger,
-                "Library group membership curator changed: group_name=%s group=%s "
-                "target=%s actor=%s curator=%s",
+                "Library group membership curator changed: group=%s target=%s "
+                "actor=%s curator=%s",
                 group_name,
-                group_id,
                 target_name,
                 actor_name,
                 True,
             )
         if created:
             invalidate_visible_books_cache_on_commit()
-            group_id, group_name, target_name, actor_name = _membership_log_values(
-                group=group,
-                user=user,
-                actor=actor,
-            )
             info_on_commit(
                 logger,
-                "Library group membership added: group_name=%s group=%s target=%s "
+                "Library group membership added: group=%s target=%s "
                 "actor=%s curator=%s",
                 group_name,
-                group_id,
                 target_name,
                 actor_name,
                 bool(membership.is_curator),
@@ -74,17 +65,17 @@ def set_group_membership_curator(
         if membership.is_curator != value:
             membership.is_curator = value
             membership.save(update_fields=["is_curator", "updated_at"])
-            group_id, group_name, target_name, actor_name = _membership_log_values(
-                group=membership.group,
-                user=membership.user,
-                actor=actor,
+            group_name = safe_log_label(
+                membership.group.name,
+                fallback=str(membership.group_id),
             )
+            target_name = user_log_label(membership.user)
+            actor_name = user_log_label(actor)
             info_on_commit(
                 logger,
-                "Library group membership curator changed: group_name=%s group=%s "
-                "target=%s actor=%s curator=%s",
+                "Library group membership curator changed: group=%s target=%s "
+                "actor=%s curator=%s",
                 group_name,
-                group_id,
                 target_name,
                 actor_name,
                 value,
@@ -95,11 +86,9 @@ def set_group_membership_curator(
 def remove_user_from_group(*, user, group: LibraryGroup, actor=None) -> bool:
     with transaction.atomic():
         user = _lock_user_for_group_mutation(user)
-        group_id, group_name, target_name, actor_name = _membership_log_values(
-            group=group,
-            user=user,
-            actor=actor,
-        )
+        group_name = safe_log_label(group.name, fallback=str(group.pk))
+        target_name = user_log_label(user)
+        actor_name = user_log_label(actor)
         was_curator = bool(
             LibraryGroupMembership.objects.filter(user=user, group=group)
             .values_list("is_curator", flat=True)
@@ -112,10 +101,9 @@ def remove_user_from_group(*, user, group: LibraryGroup, actor=None) -> bool:
     if deleted:
         info_on_commit(
             logger,
-            "Library group membership removed: group_name=%s group=%s target=%s "
+            "Library group membership removed: group=%s target=%s "
             "actor=%s curator=%s fallback_to_public=%s",
             group_name,
-            group_id,
             target_name,
             actor_name,
             was_curator,
@@ -182,13 +170,3 @@ def restore_selected_users_without_groups(
 
 def _lock_user_for_group_mutation(user):
     return get_user_model().objects.select_for_update().get(pk=user.pk)
-
-
-def _membership_log_values(*, group, user, actor) -> tuple[str, str, str, str]:
-    group_id = str(group.pk)
-    return (
-        group_id,
-        safe_log_label(group.name, fallback=group_id),
-        user_log_label(user),
-        user_log_label(actor),
-    )
