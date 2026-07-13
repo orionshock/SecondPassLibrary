@@ -94,6 +94,7 @@ class ZipImportPlan:
     discovered_count: int = 0
     collisions: dict[str, int] = field(default_factory=dict)
     unsafe_member_count: int = 0
+    members_index: dict[str, ZipMember] = field(default_factory=dict, repr=False)
 
 
 def format_mib(byte_count: int) -> str:
@@ -179,6 +180,25 @@ def zip_sidecar_opf_for_epub(
     return None
 
 
+def resolve_zip_member_reference(
+    *,
+    base_member: str,
+    href: str,
+    members_index: dict[str, ZipMember],
+) -> ZipMember | None:
+    safe_base = safe_zip_member_name(base_member)
+    safe_href = safe_zip_member_name(href)
+    if safe_base is None or safe_href is None:
+        return None
+
+    directory = posixpath.dirname(safe_base)
+    candidate = posixpath.join(directory, safe_href) if directory else safe_href
+    safe_candidate = safe_zip_member_name(candidate)
+    if safe_candidate is None:
+        return None
+    return members_index.get(safe_candidate)
+
+
 def plan_zip_import(
     zip_file,
     *,
@@ -216,6 +236,7 @@ def plan_zip_import(
     plan = ZipImportPlan(
         collisions=dict(index.collisions),
         unsafe_member_count=index.unsafe_member_count,
+        members_index=dict(index.members_index),
     )
     collision_count = sum(index.collisions.values())
     if index.unsafe_member_count or collision_count:

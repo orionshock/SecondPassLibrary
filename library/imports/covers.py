@@ -60,6 +60,15 @@ def attach_cover_to_book(*, book: Book, cover: ExtractedCover | None) -> None:
     book.cover_file.save(f"{digest}{cover.extension}", ContentFile(cover.data), save=True)
 
 
+def validate_cover_bytes(data: bytes) -> ExtractedCover | None:
+    if len(data) > MAX_COVER_IMAGE_BYTES:
+        return None
+    extension = _validated_image_extension(data)
+    if extension is None:
+        return None
+    return ExtractedCover(data=data, extension=extension)
+
+
 def _find_package_path(archive: zipfile.ZipFile) -> str:
     container_xml = _read_zip_member_bytes(
         archive=archive,
@@ -183,10 +192,7 @@ def _read_and_validate_cover(
         member=cover_member,
         max_bytes=MAX_COVER_IMAGE_BYTES,
     )
-    extension = _validated_image_extension(data)
-    if extension is None:
-        return None
-    return ExtractedCover(data=data, extension=extension)
+    return validate_cover_bytes(data)
 
 
 def _validated_image_extension(data: bytes) -> str | None:
@@ -197,7 +203,13 @@ def _validated_image_extension(data: bytes) -> str | None:
             if image.width * image.height > MAX_COVER_IMAGE_PIXELS:
                 return None
             image.verify()
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombWarning):
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+        Image.DecompressionBombWarning,
+        Image.DecompressionBombError,
+    ):
         return None
     return _SUPPORTED_IMAGE_FORMATS.get((image.format or "").upper())
 

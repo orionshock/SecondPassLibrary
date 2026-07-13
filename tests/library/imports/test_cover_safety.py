@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from library.imports.covers import extract_epub_cover
+from library.imports.covers import extract_epub_cover, validate_cover_bytes
 from library.imports.epub import import_epub_file
 from library.imports.results import IMPORT_STATUS_IMPORTED
 from tests.library.imports.helpers import epub_with_cover_bytes, image_bytes
@@ -13,6 +13,18 @@ from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
 class EpubCoverSafetyTests(IsolatedMediaRootMixin, TestCase):
+    def test_shared_cover_byte_validator_accepts_supported_formats(self):
+        expected = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+
+        for image_format, extension in expected.items():
+            with self.subTest(image_format=image_format):
+                cover = validate_cover_bytes(image_bytes(image_format))
+                self.assertIsNotNone(cover)
+                self.assertEqual(cover.extension, extension)
+
+    def test_shared_cover_byte_validator_rejects_unsupported_image_format(self):
+        self.assertIsNone(validate_cover_bytes(image_bytes("GIF")))
+
     def test_svg_cover_is_ignored_and_import_still_succeeds(self):
         result = import_epub_file(
             BytesIO(

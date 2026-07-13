@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from defusedxml.common import EntitiesForbidden
 
-from library.imports.opf import parse_opf_metadata
+from library.imports.opf import parse_opf_metadata, parse_sidecar_opf
 
 
 def opf_metadata(body: str) -> str:
@@ -21,6 +21,34 @@ def opf_metadata(body: str) -> str:
 
 
 class OpfImportMetadataTests(TestCase):
+    def test_sidecar_parser_returns_opf2_guide_cover_href_separately(self):
+        parsed = parse_sidecar_opf(
+            opf_metadata("<dc:title>Book</dc:title>").replace(
+                "</package>",
+                '<guide><reference type="cover" href="cover.jpg"/></guide></package>',
+            )
+        )
+
+        self.assertEqual(parsed.metadata.title, "Book")
+        self.assertEqual(parsed.cover_href, "cover.jpg")
+        self.assertNotIn("cover_href", parsed.metadata.__dict__)
+
+    def test_sidecar_parser_ignores_non_cover_and_blank_guide_references(self):
+        parsed = parse_sidecar_opf(
+            opf_metadata("<dc:title>Book</dc:title>").replace(
+                "</package>",
+                """
+                <guide>
+                  <reference type="toc" href="contents.html"/>
+                  <reference type="cover" href="   "/>
+                </guide>
+                </package>
+                """,
+            )
+        )
+
+        self.assertEqual(parsed.cover_href, "")
+
     def test_title_and_title_sort(self):
         metadata = parse_opf_metadata(
             opf_metadata(

@@ -18,8 +18,12 @@ from library.imports.errors import (
     operator_import_detail,
     safe_import_message,
 )
-from library.imports.covers import attach_cover_to_book, extract_epub_cover
-from library.imports.opf import parse_opf_metadata
+from library.imports.covers import (
+    attach_cover_to_book,
+    extract_epub_cover,
+    validate_cover_bytes,
+)
+from library.imports.opf import ParsedSidecarOpf, parse_opf_metadata
 from library.imports.results import (
     IMPORT_STATUS_CONFLICT,
     IMPORT_STATUS_DUPLICATE,
@@ -42,7 +46,8 @@ def import_epub_file(
     *,
     source_filename: str,
     actor=None,
-    sidecar_opf_bytes: bytes | None = None,
+    sidecar_opf: ParsedSidecarOpf | None = None,
+    sidecar_cover_bytes: bytes | None = None,
 ) -> ImportItemResult:
     """
     Safe item-level import wrapper.
@@ -58,7 +63,8 @@ def import_epub_file(
             source_filename=source_filename,
             source_label=source_label,
             actor=actor,
-            sidecar_opf_bytes=sidecar_opf_bytes,
+            sidecar_opf=sidecar_opf,
+            sidecar_cover_bytes=sidecar_cover_bytes,
         )
     except (InvalidEpubImportError, UnsupportedImportSourceError) as exc:
         return ImportItemResult(
@@ -91,7 +97,8 @@ def _import_epub_file(
     source_filename: str,
     source_label: str,
     actor=None,
-    sidecar_opf_bytes: bytes | None = None,
+    sidecar_opf: ParsedSidecarOpf | None = None,
+    sidecar_cover_bytes: bytes | None = None,
 ) -> ImportItemResult:
     source_filename = (source_filename or "").strip()
     if not source_filename.lower().endswith(".epub"):
@@ -99,7 +106,7 @@ def _import_epub_file(
 
     data, checksum, file_size = read_file_with_sha256(file_obj)
     validate_epub_bytes(data)
-    metadata = _read_import_metadata(data, sidecar_opf_bytes=sidecar_opf_bytes)
+    metadata = _read_import_metadata(data, sidecar_opf=sidecar_opf)
 
     persistence_result = persist_imported_book(
         metadata=metadata,
@@ -109,7 +116,11 @@ def _import_epub_file(
         actor=actor,
     )
     if persistence_result.status == IMPORT_STATUS_IMPORTED:
-        _attach_import_cover_if_available(book=persistence_result.book, data=data)
+        _attach_import_cover_if_available(
+            book=persistence_result.book,
+            data=data,
+            sidecar_cover_bytes=sidecar_cover_bytes,
+        )
     return _item_result_from_persistence_result(
         source_label=source_label,
         status=persistence_result.status,
@@ -118,11 +129,22 @@ def _import_epub_file(
     )
 
 
-def _attach_import_cover_if_available(*, book, data: bytes) -> None:
-    cover = extract_epub_cover(data)
-    if cover is None:
-        return
+def _attach_import_cover_if_available(
+    *,
+    book,
+    data: bytes,
+    sidecar_cover_bytes: bytes | None = None,
+) -> None:
     try:
+        cover = (
+            validate_cover_bytes(sidecar_cover_bytes)
+            if sidecar_cover_bytes is not None
+            else None
+        )
+        if cover is None:
+            cover = extract_epub_cover(data)
+        if cover is None:
+            return
         attach_cover_to_book(book=book, cover=cover)
     except Exception as exc:
         logger.warning(
@@ -187,26 +209,22 @@ def validate_epub_bytes(data: bytes) -> None:
         raise InvalidEpubImportError() from exc
 
 
-def _read_import_metadata(data: bytes, *, sidecar_opf_bytes: bytes | None = None):
+def _read_import_metadata(data: bytes, *, sidecar_opf: ParsedSidecarOpf | None = None):
     try:
         epub_metadata = parse_opf_metadata(_read_package_opf_xml(data))
     except InvalidEpubImportError:
         raise
     except Exception as exc:
         raise InvalidEpubImportError() from exc
-    if not sidecar_opf_bytes:
+    if sidecar_opf is None:
         return epub_metadata
     return _read_sidecar_metadata_or_fallback(
-        sidecar_opf_bytes=sidecar_opf_bytes,
+        sidecar_metadata=sidecar_opf.metadata,
         fallback_metadata=epub_metadata,
     )
 
 
-def _read_sidecar_metadata_or_fallback(*, sidecar_opf_bytes: bytes, fallback_metadata):
-    try:
-        sidecar_metadata = parse_opf_metadata(sidecar_opf_bytes)
-    except Exception:
-        return fallback_metadata
+def _read_sidecar_metadata_or_fallback(*, sidecar_metadata, fallback_metadata):
     if not _sidecar_has_real_title(sidecar_metadata):
         return fallback_metadata
     return sidecar_metadata

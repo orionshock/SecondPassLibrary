@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from defusedxml import ElementTree
 
@@ -15,8 +16,26 @@ from library.imports.normalization import (
 from library.imports.dto import ImportAuthor, ImportIdentifier, ImportMetadata, ImportSeries
 
 
+@dataclass(frozen=True)
+class ParsedSidecarOpf:
+    metadata: ImportMetadata
+    cover_href: str = ""
+
+
 def parse_opf_metadata(opf_xml: str | bytes) -> ImportMetadata:
     root = ElementTree.fromstring(opf_xml)
+    return _parse_metadata(root)
+
+
+def parse_sidecar_opf(opf_xml: str | bytes) -> ParsedSidecarOpf:
+    root = ElementTree.fromstring(opf_xml)
+    return ParsedSidecarOpf(
+        metadata=_parse_metadata(root),
+        cover_href=_guide_cover_href(root),
+    )
+
+
+def _parse_metadata(root: ElementTree.Element) -> ImportMetadata:
     metadata = _first_child(root, "metadata")
     if metadata is None:
         metadata = root
@@ -44,6 +63,19 @@ def parse_opf_metadata(opf_xml: str | bytes) -> ImportMetadata:
         tags=build_import_tags(_texts(metadata, "subject") + _calibre_tags(metadata)),
         identifiers=_parse_identifiers(metadata),
     )
+
+
+def _guide_cover_href(root: ElementTree.Element) -> str:
+    guide = _first_child(root, "guide")
+    if guide is None:
+        return ""
+    for item in _children(guide, "reference"):
+        if (item.attrib.get("type") or "").strip().casefold() != "cover":
+            continue
+        href = (item.attrib.get("href") or "").strip()
+        if href:
+            return href
+    return ""
 
 
 def _parse_authors(metadata: ElementTree.Element) -> list[ImportAuthor]:

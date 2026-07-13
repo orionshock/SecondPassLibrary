@@ -31,6 +31,11 @@ Library imports are currently intended for library managers only:
     - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
     - if there is exactly one `.opf` in the same directory, use it
   - A valid OPF sidecar is a full metadata replacement and takes precedence over EPUB metadata.
+  - OPF 2 guide cover references are resolved relative to the sidecar. A valid
+    sidecar JPEG, PNG, or WebP cover takes precedence over the embedded EPUB
+    cover; missing or invalid sidecar covers fall back to the embedded cover.
+    Cover extraction is best-effort and never invalidates an otherwise valid
+    book import.
   - Duplicate EPUB checksum imports are still returned as duplicates and do not refresh metadata or covers.
 
 ### Resource limits

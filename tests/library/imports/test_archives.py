@@ -7,6 +7,7 @@ from unittest import TestCase
 from library.imports.archives import (
     build_zip_index,
     plan_zip_import,
+    resolve_zip_member_reference,
     safe_zip_member_name,
     zip_sidecar_opf_for_epub,
 )
@@ -148,6 +149,68 @@ class ZipSidecarPlanningTests(TestCase):
         )
 
         self.assertIsNone(plan.candidates[0].sidecar_opf_name)
+
+
+class ZipMemberReferenceTests(TestCase):
+    def test_resolves_safe_asset_relative_to_opf_directory(self):
+        index = build_zip_index(
+            _zip_infos(
+                ("author/book/metadata.opf", b"opf"),
+                ("author/book/images/cover.jpg", b"cover"),
+            )
+        )
+
+        member = resolve_zip_member_reference(
+            base_member="author/book/metadata.opf",
+            href="images/cover.jpg",
+            members_index=index.members_index,
+        )
+
+        self.assertIsNotNone(member)
+        self.assertEqual(member.safe_name, "author/book/images/cover.jpg")
+
+    def test_rejects_unsafe_asset_references(self):
+        index = build_zip_index(
+            _zip_infos(
+                ("author/book/metadata.opf", b"opf"),
+                ("author/book/cover.jpg", b"cover"),
+            )
+        )
+        unsafe_hrefs = [
+            "../cover.jpg",
+            "/cover.jpg",
+            "C:/cover.jpg",
+            "https://example.test/cover.jpg",
+            "data:image/png,cover",
+            r"..\cover.jpg",
+        ]
+
+        for href in unsafe_hrefs:
+            with self.subTest(href=href):
+                self.assertIsNone(
+                    resolve_zip_member_reference(
+                        base_member="author/book/metadata.opf",
+                        href=href,
+                        members_index=index.members_index,
+                    )
+                )
+
+    def test_rejects_member_removed_by_normalized_collision_filter(self):
+        index = build_zip_index(
+            _zip_infos(
+                ("author/book/metadata.opf", b"opf"),
+                ("author/book/cover.jpg", b"first"),
+                ("author/book/./cover.jpg", b"second"),
+            )
+        )
+
+        self.assertIsNone(
+            resolve_zip_member_reference(
+                base_member="author/book/metadata.opf",
+                href="cover.jpg",
+                members_index=index.members_index,
+            )
+        )
 
 
 class ZipPlannerLimitTests(TestCase):
