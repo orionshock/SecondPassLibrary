@@ -13,7 +13,7 @@ from library.groups.book_assignment_serializers import (
     BookGroupAssignmentSerializer,
 )
 from library.groups.browse_views import GroupBookListView, GroupBrowseMixin
-from library.groups.services import add_book_to_group, remove_book_from_group
+from library.groups.book_assignments import add_book_to_group, remove_book_from_group
 from library.models import Book
 from library.queries import visible_books_for_user
 from library.roles import is_curator

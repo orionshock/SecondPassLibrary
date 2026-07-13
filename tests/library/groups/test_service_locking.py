@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from core.models import ServerSetting
+from library.groups import book_assignments
 from library.groups import memberships
 from library.groups import services
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
@@ -79,11 +80,11 @@ class LibraryGroupServiceLockingTests(LibraryGroupServiceTestCase):
         group = services.create_library_group(name="Book Lock Room")
 
         with patch(
-            "library.groups.services._lock_book_for_group_assignment",
-            wraps=services._lock_book_for_group_assignment,
+            "library.groups.book_assignments._lock_book_for_group_assignment",
+            wraps=book_assignments._lock_book_for_group_assignment,
         ) as lock_book:
-            services.add_book_to_group(book=self.book, group=group, actor=self.actor)
-            services.remove_book_from_group(book=self.book, group=group, actor=self.actor)
+            book_assignments.add_book_to_group(book=self.book, group=group, actor=self.actor)
+            book_assignments.remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
         self.assertEqual(lock_book.call_count, 2)
         self.assertEqual(
@@ -95,10 +96,10 @@ class LibraryGroupServiceLockingTests(LibraryGroupServiceTestCase):
         group = services.create_library_group(name="Missing Assignment Room")
 
         with patch(
-            "library.groups.services._lock_book_for_group_assignment",
-            wraps=services._lock_book_for_group_assignment,
+            "library.groups.book_assignments._lock_book_for_group_assignment",
+            wraps=book_assignments._lock_book_for_group_assignment,
         ) as lock_book:
-            removed = services.remove_book_from_group(
+            removed = book_assignments.remove_book_from_group(
                 book=self.book,
                 group=group,
                 actor=self.actor,

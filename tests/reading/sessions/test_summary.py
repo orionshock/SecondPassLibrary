@@ -5,9 +5,7 @@ from uuid import uuid4
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from library.groups.services import (
-    ensure_book_public_assignment,
-)
+from library.groups.book_assignments import ensure_book_public_assignment
 from reading.models import ReadingSession
 from tests.reading.sessions.helpers import (
     SessionBearerFixtureMixin,

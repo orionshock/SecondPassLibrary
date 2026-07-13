@@ -5,7 +5,7 @@ from accounts.services import get_or_create_profile
 from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from library.groups.memberships import ensure_user_public_membership
-from library.groups.services import add_book_to_group
+from library.groups.book_assignments import add_book_to_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from reading.models import ReadingSession
 from tests.core.product_ui.helpers import ProductUiTestCase

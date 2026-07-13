@@ -5,13 +5,13 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from core.server_settings import set_server_setting
-from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, is_public_group
-from library.groups.services import (
+from library.groups.book_assignments import (
     add_book_to_group,
-    create_library_group,
     ensure_book_public_assignment,
     remove_book_from_group,
 )
+from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, is_public_group
+from library.groups.services import create_library_group
 from library.models import BookGroupAssignment
 from shelves.models import Shelf, ShelfItem
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
@@ -77,7 +77,7 @@ class LibraryBookAssignmentServiceTests(LibraryGroupServiceTestCase):
             RuntimeError,
             "hook failed",
         ), patch(
-            "library.groups.services.remove_book_from_group_owned_shelves",
+            "library.groups.book_assignments.remove_book_from_group_owned_shelves",
             side_effect=RuntimeError("hook failed"),
         ):
             remove_book_from_group(book=self.book, group=group, actor=self.actor)

@@ -7,7 +7,7 @@ from typing import Any
 
 from django.core.files.base import ContentFile
 
-from library.groups.services import ensure_book_public_assignment
+from library.groups.book_assignments import ensure_book_public_assignment
 from library.models import Book
 
 

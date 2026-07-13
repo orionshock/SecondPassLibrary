@@ -24,7 +24,7 @@ from library.catalog.tag_services import (
     normalize_catalog_tag_name,
 )
 from library.groups import memberships as membership_services
-from library.groups import services as group_services
+from library.groups import book_assignments as book_assignment_services
 from library.groups.public_group import is_public_group
 
 from .models import (
@@ -720,7 +720,7 @@ class BookGroupAssignmentAdmin(
     def save_model(self, request, obj, form, change):
         if change:
             return
-        assignment = group_services.add_book_to_group(
+        assignment = book_assignment_services.add_book_to_group(
             book=obj.book,
             group=obj.group,
             actor=request.user,
@@ -731,7 +731,7 @@ class BookGroupAssignmentAdmin(
         obj.updated_at = assignment.updated_at
 
     def delete_model(self, request, obj):
-        group_services.remove_book_from_group(
+        book_assignment_services.remove_book_from_group(
             book=obj.book,
             group=obj.group,
             actor=request.user,
@@ -742,7 +742,7 @@ class BookGroupAssignmentAdmin(
         removed = 0
         assignments = list(queryset.select_related("book", "group"))
         for assignment in assignments:
-            removed += group_services.remove_book_from_group(
+            removed += book_assignment_services.remove_book_from_group(
                 book=assignment.book,
                 group=assignment.group,
                 actor=request.user,

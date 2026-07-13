@@ -10,9 +10,7 @@ from rest_framework.test import APITestCase
 
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from accounts.models import UserProfile
-from library.groups.services import (
-    add_book_to_group,
-)
+from library.groups.book_assignments import add_book_to_group
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.books import create_file_backed_book

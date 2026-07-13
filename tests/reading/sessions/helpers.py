@@ -6,7 +6,7 @@ from tests.testenv.filesystem import IsolatedMediaRootMixin
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserProfile
 from accounts.models import UserClientSession
-from library.groups.services import add_book_to_group
+from library.groups.book_assignments import add_book_to_group
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.queries import visible_books_for_user
 from reading.models import Annotation, ReadingProgress, ReadingSession

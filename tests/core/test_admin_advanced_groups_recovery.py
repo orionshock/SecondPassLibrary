@@ -10,7 +10,7 @@ from core.server_settings import set_server_setting
 from library.groups.consolidation import build_advanced_groups_disable_plan
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.groups.memberships import add_user_to_group
-from library.groups.services import add_book_to_group
+from library.groups.book_assignments import add_book_to_group
 from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf
 from tests.testenv.filesystem import IsolatedMediaRootMixin

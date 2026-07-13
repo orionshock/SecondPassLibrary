@@ -12,6 +12,7 @@ from django.test import TestCase
 from core import server_settings
 from core.server_settings import set_server_setting
 from library.groups import consolidation
+from library.groups.book_assignments import add_book_to_group, remove_book_from_group
 from library.groups.memberships import (
     add_user_to_group,
     remove_user_from_group,
@@ -19,10 +20,8 @@ from library.groups.memberships import (
 )
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, get_public_group
 from library.groups.services import (
-    add_book_to_group,
     create_library_group,
     delete_library_group,
-    remove_book_from_group,
     repair_public_group_identity,
     set_public_group_identity,
     update_library_group,
@@ -103,7 +102,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         group = create_library_group(name="Book Room")
         other_group = create_library_group(name="Other Room")
 
-        with self.assertLogs("library.groups.services", level="INFO") as added:
+        with self.assertLogs("library.groups.book_assignments", level="INFO") as added:
             with self.captureOnCommitCallbacks(execute=True):
                 add_book_to_group(book=self.book, group=group, actor=self.actor)
 
@@ -115,7 +114,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         self.assertNotIn("Book Room", added.output[0])
 
         add_book_to_group(book=self.book, group=other_group, actor=self.actor)
-        with self.assertLogs("library.groups.services", level="INFO") as removed:
+        with self.assertLogs("library.groups.book_assignments", level="INFO") as removed:
             with self.captureOnCommitCallbacks(execute=True):
                 self.assertTrue(remove_book_from_group(book=self.book, group=group, actor=self.actor))
 
@@ -190,6 +189,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         with (
             patch("library.groups.services.logger.error") as group_error_log,
             patch("library.groups.memberships.logger.error") as membership_error_log,
+            patch("library.groups.book_assignments.logger.error") as assignment_error_log,
         ):
             with self.assertRaises(ValidationError):
                 delete_library_group(group=self.public, actor=self.actor)
@@ -203,6 +203,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
 
         group_error_log.assert_not_called()
         membership_error_log.assert_not_called()
+        assignment_error_log.assert_not_called()
 
     def test_state_change_info_logs_do_not_fire_when_outer_transaction_rolls_back(self):
         group = create_library_group(name="Rollback Room")
@@ -218,7 +219,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
     def test_book_assignment_log_separates_actor_and_added_by(self):
         group = create_library_group(name="Assignment Room")
 
-        with self.assertLogs("library.groups.services", level="INFO") as logs:
+        with self.assertLogs("library.groups.book_assignments", level="INFO") as logs:
             with self.captureOnCommitCallbacks(execute=True):
                 add_book_to_group(
                     book=self.book,
@@ -259,6 +260,7 @@ class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
         with (
             patch("library.groups.services.logger.info") as low_level_info,
             patch("library.groups.memberships.logger.info") as membership_low_level_info,
+            patch("library.groups.book_assignments.logger.info") as assignment_low_level_info,
             self.assertLogs("library.groups.consolidation", level="INFO") as logs,
         ):
             with self.captureOnCommitCallbacks(execute=True):
@@ -269,5 +271,6 @@ class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
 
         low_level_info.assert_not_called()
         membership_low_level_info.assert_not_called()
+        assignment_low_level_info.assert_not_called()
         self.assertEqual(len(logs.output), 1)
         self.assertIn("Advanced library groups consolidated", logs.output[0])

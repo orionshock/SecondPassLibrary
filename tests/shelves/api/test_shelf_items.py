@@ -103,7 +103,7 @@ class ShelfItemTests(BaseShelvesAPITest):
         shelf_id = response_data_dict(create)["id"]
 
         book_z = create_file_backed_book(title="Zulu", assign_public=False).book
-        from library.groups.services import ensure_book_public_assignment
+        from library.groups.book_assignments import ensure_book_public_assignment
 
         ensure_book_public_assignment(book=book_z, added_by=None)
         book_a = create_file_backed_book(title="Alpha", assign_public=False).book
@@ -155,7 +155,7 @@ class ShelfItemTests(BaseShelvesAPITest):
         )
         shelf_id = response_data_dict(create)["id"]
 
-        from library.groups.services import ensure_book_public_assignment
+        from library.groups.book_assignments import ensure_book_public_assignment
 
         for title in ["Zulu", "Alpha"]:
             book = create_file_backed_book(title=title, assign_public=False).book
@@ -202,7 +202,7 @@ class ShelfItemTests(BaseShelvesAPITest):
         )
         shelf = Shelf.objects.get(pk=response_data_dict(create)["id"])
 
-        from library.groups.services import ensure_book_public_assignment
+        from library.groups.book_assignments import ensure_book_public_assignment
 
         zulu = create_file_backed_book(title="Zulu", assign_public=False).book
         alpha = create_file_backed_book(title="Alpha", assign_public=False).book
@@ -236,7 +236,7 @@ class ShelfItemTests(BaseShelvesAPITest):
 
         author_a = Author.objects.create(name="Ada Author")
         author_z = Author.objects.create(name="Zed Author")
-        from library.groups.services import ensure_book_public_assignment
+        from library.groups.book_assignments import ensure_book_public_assignment
 
         zulu = create_file_backed_book(title="Zulu", assign_public=False).book
         zulu.authors.add(author_z)
@@ -277,7 +277,7 @@ class ShelfItemTests(BaseShelvesAPITest):
         shelf_id = response_data_dict(create)["id"]
 
         item_ids: dict[str, str] = {}
-        from library.groups.services import ensure_book_public_assignment
+        from library.groups.book_assignments import ensure_book_public_assignment
 
         for title in ["A", "B", "C", "D"]:
             book = create_file_backed_book(title=title, assign_public=False).book
@@ -325,7 +325,7 @@ class ShelfItemTests(BaseShelvesAPITest):
             create_file_backed_book(title=title, assign_public=False).book
             for title in ["Gamma", "Zulu", "Alpha", "Omega"]
         ]
-        from library.groups.services import ensure_book_public_assignment
+        from library.groups.book_assignments import ensure_book_public_assignment
 
         for book in books:
             ensure_book_public_assignment(book=book, added_by=None)

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from library.groups.services import add_book_to_group, remove_book_from_group
+from library.groups.book_assignments import add_book_to_group, remove_book_from_group
 from library.models import BookGroupAssignment, LibraryGroup
 from shelves.models import Shelf, ShelfItem
 from shelves.services import add_book_to_shelf, create_shelf, visible_shelf_items_for_user
@@ -157,7 +157,7 @@ class ShelfGroupRemovalHookTests(ShelfServiceFixtureMixin, TestCase):
         add_book_to_shelf(self.owner, shelf=shelf, book=self.book_in_group)
 
         with patch(
-            "library.groups.services.remove_book_from_group_owned_shelves",
+            "library.groups.book_assignments.remove_book_from_group_owned_shelves",
             side_effect=RuntimeError("boom"),
         ):
             with self.assertRaises(RuntimeError):

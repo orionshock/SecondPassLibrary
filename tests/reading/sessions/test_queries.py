@@ -6,9 +6,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from library.groups.services import (
-    ensure_book_public_assignment,
-)
+from library.groups.book_assignments import ensure_book_public_assignment
 from library.models import Author, BookSeries, Series
 from reading.models import ReadingProgress, ReadingSession
 from reading.sessions.queries import list_sessions_for_book

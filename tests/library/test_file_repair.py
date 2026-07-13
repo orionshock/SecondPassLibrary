@@ -24,7 +24,7 @@ from library.models import (
     LibraryGroup,
     Series,
 )
-from library.groups.services import add_book_to_group
+from library.groups.book_assignments import add_book_to_group
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.library.imports.helpers import minimal_epub_bytes

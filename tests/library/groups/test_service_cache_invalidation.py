@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from library.groups.book_assignments import add_book_to_group, remove_book_from_group
 from library.groups.memberships import add_user_to_group, remove_user_from_group
-from library.groups.services import (
-    add_book_to_group,
-    create_library_group,
-    remove_book_from_group,
-)
+from library.groups.services import create_library_group
 from library.models import BookGroupAssignment, LibraryGroupMembership
 from library.queries import visible_books_for_user
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
@@ -75,9 +72,9 @@ class LibraryGroupServiceCacheInvalidationTests(LibraryGroupServiceTestCase):
         BookGroupAssignment.objects.create(book=self.book, group=group)
 
         with patch(
-            "library.groups.services.invalidate_visible_books_cache"
+            "library.groups.book_assignments.invalidate_visible_books_cache"
         ) as invalidate, patch(
-            "library.groups.services.remove_book_from_group_owned_shelves",
+            "library.groups.book_assignments.remove_book_from_group_owned_shelves",
             side_effect=RuntimeError("hook failed"),
         ):
             with self.captureOnCommitCallbacks(execute=True) as callbacks:

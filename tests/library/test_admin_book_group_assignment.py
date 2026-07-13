@@ -35,7 +35,7 @@ class BookGroupAssignmentAdminTests(SimpleTestCase):
             ["id", "book", "group", "added_by", "created_at", "updated_at"],
         )
 
-    @patch("library.admin.group_services.add_book_to_group")
+    @patch("library.admin.book_assignment_services.add_book_to_group")
     def test_add_uses_group_assignment_service(self, add_book_to_group):
         book = Book(title="Test book")
         group = LibraryGroup(name="Test group")
@@ -57,7 +57,7 @@ class BookGroupAssignmentAdminTests(SimpleTestCase):
         )
         self.assertEqual(assignment.pk, saved_assignment.pk)
 
-    @patch("library.admin.group_services.remove_book_from_group")
+    @patch("library.admin.book_assignment_services.remove_book_from_group")
     def test_delete_uses_group_assignment_service(self, remove_book_from_group):
         assignment = Mock(book=Mock(), group=Mock())
 

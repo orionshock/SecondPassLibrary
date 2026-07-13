@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from library.cover_services import set_book_cover_from_bytes
-from library.groups.services import ensure_book_public_assignment
+from library.groups.book_assignments import ensure_book_public_assignment
 from reading.models import Annotation, ReadingProgress, ReadingSession
 from tests.reading.api_test_base import ReadingAPITestBase
 from tests.utils.books import create_file_backed_book

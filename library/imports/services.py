@@ -6,10 +6,10 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import File
 from django.db import transaction
 
-from library.groups.public_group import get_public_group
-from library.groups.services import add_book_to_group
 from library.imports.dto import ImportMetadata
 from library.catalog.tag_services import resolve_catalog_tag
+from library.groups.book_assignments import add_book_to_group
+from library.groups.public_group import get_public_group
 from library.models import (
     Author,
     Book,

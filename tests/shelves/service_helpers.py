@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 
 from accounts.models import UserProfile
 from library.groups.public_group import get_public_group
-from library.groups.services import add_book_to_group
+from library.groups.book_assignments import add_book_to_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book

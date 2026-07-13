@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 
 from core.models import IdempotencyRecord
-from library.groups.services import ensure_book_public_assignment
+from library.groups.book_assignments import ensure_book_public_assignment
 from reading.models import Annotation, ReadingSession
 from tests.reading.api_test_base import (
     ReadingAPITestBase,

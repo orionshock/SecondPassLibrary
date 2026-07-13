@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.groups.memberships import ensure_user_public_membership
-from library.groups.services import add_book_to_group, ensure_book_public_assignment
+from library.groups.book_assignments import add_book_to_group, ensure_book_public_assignment
 from library.models import LibraryGroup
 from shelves.models import Shelf, ShelfItem
 from tests.testenv.filesystem import IsolatedMediaRootMixin

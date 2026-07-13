@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from library.groups.memberships import ensure_user_public_membership
-from library.groups.services import ensure_book_public_assignment
+from library.groups.book_assignments import ensure_book_public_assignment
 from reading.models import Annotation, ReadingSession
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book

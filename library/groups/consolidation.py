@@ -12,12 +12,10 @@ from django.utils import timezone
 
 from core import server_settings
 from core.operational_logging import info_on_commit, suppress_state_change_logging
+from library.groups.book_assignments import remove_book_from_group
 from library.groups.memberships import remove_user_from_group
 from library.groups.public_group import get_public_group
-from library.groups.services import (
-    delete_library_group,
-    remove_book_from_group,
-)
+from library.groups.services import delete_library_group
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.queries import invalidate_visible_books_cache
 from shelves.models import Shelf, ShelfItem

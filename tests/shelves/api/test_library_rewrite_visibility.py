@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from rest_framework import status
 
-from library.groups.services import add_book_to_group
+from library.groups.book_assignments import add_book_to_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
@@ -148,7 +148,7 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
         ShelfItem.objects.create(
             shelf=shelf, book=self.book_in_group, position=0, added_by=self.curator
         )
-        from library.groups.services import remove_book_from_group
+        from library.groups.book_assignments import remove_book_from_group
 
         remove_book_from_group(actor=self.owner, book=self.book_in_group, group=self.group)
 
