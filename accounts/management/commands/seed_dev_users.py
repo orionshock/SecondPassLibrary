@@ -22,7 +22,7 @@ from library.groups.services import (
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem
-from shelves.services import add_book_to_shelf, create_shelf
+from shelves.services import add_book_to_shelf, create_shelf, update_shelf
 
 
 User = get_user_model()
@@ -148,6 +148,7 @@ def _get_or_create_shelf(
     owner_type: str,
     owner_user: Any | None = None,
     owner_group: LibraryGroup | None = None,
+    visibility: str = Shelf.VISIBILITY_PRIVATE,
 ) -> tuple[Shelf, bool]:
     existing = (
         Shelf.objects.filter(
@@ -169,6 +170,7 @@ def _get_or_create_shelf(
             owner_type=owner_type,
             owner_user=owner_user,
             owner_group=owner_group,
+            visibility=visibility,
         ),
         True,
     )
@@ -527,7 +529,14 @@ class Command(BaseCommand):
     ) -> list[Shelf]:
         shelves: list[Shelf] = []
         for user in users.values():
+            profile = get_or_create_profile(user=user)
             for shelf_index, name in enumerate(PERSONAL_SHELF_NAMES):
+                visibility = (
+                    Shelf.VISIBILITY_LISTED
+                    if name == "Favorites"
+                    and profile.role == UserProfile.ROLE_LIBRARIAN
+                    else Shelf.VISIBILITY_PRIVATE
+                )
                 shelf, created = _get_or_create_shelf(
                     actor=user,
                     name=name,
@@ -538,7 +547,17 @@ class Command(BaseCommand):
                     ),
                     owner_type=Shelf.OWNER_TYPE_USER,
                     owner_user=user,
+                    visibility=visibility,
                 )
+                if (
+                    visibility == Shelf.VISIBILITY_LISTED
+                    and shelf.visibility != Shelf.VISIBILITY_LISTED
+                ):
+                    shelf = update_shelf(
+                        user,
+                        shelf,
+                        visibility=Shelf.VISIBILITY_LISTED,
+                    )
                 self._record_shelf(shelf, created, shelves, counts)
 
         for group in groups:

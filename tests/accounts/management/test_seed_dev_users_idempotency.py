@@ -60,6 +60,31 @@ class SeedDevUsersIdempotencyTests(SeedDevUsersCommandTestCase):
         self.assertEqual(shelf.description, "Existing shelf description.")
 
     @override_settings(DEBUG=True)
+    def test_existing_librarian_favorites_becomes_listed_on_rerun(self):
+        self.create_setup_owner()
+        librarian = User.objects.create_user(username="elit", password="private-password")
+        profile = UserProfile.objects.get(user=librarian)
+        profile.role = UserProfile.ROLE_LIBRARIAN
+        profile.save(update_fields=["role", "updated_at"])
+        favorites = Shelf.objects.create(
+            name="Favorites",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=librarian,
+            created_by=librarian,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+        )
+
+        call_command(
+            "seed_dev_users",
+            users=8,
+            groups=1,
+            verbosity=0,
+        )
+
+        favorites.refresh_from_db()
+        self.assertEqual(favorites.visibility, Shelf.VISIBILITY_LISTED)
+
+    @override_settings(DEBUG=True)
     def test_advanced_mode_creates_custom_groups_memberships_shelves_and_assignments(
         self,
     ):

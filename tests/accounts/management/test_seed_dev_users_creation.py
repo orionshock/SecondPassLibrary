@@ -156,6 +156,36 @@ class SeedDevUsersCreationTests(SeedDevUsersCommandTestCase):
         )
 
     @override_settings(DEBUG=True)
+    def test_librarian_favorites_are_listed_and_other_personal_shelves_are_private(self):
+        self.create_setup_owner()
+
+        call_command(
+            "seed_dev_users",
+            users=10,
+            groups=1,
+            verbosity=0,
+        )
+
+        librarian_favorites = Shelf.objects.filter(
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user__profile__role=UserProfile.ROLE_LIBRARIAN,
+            name="Favorites",
+        )
+        self.assertEqual(librarian_favorites.count(), 3)
+        self.assertFalse(
+            librarian_favorites.exclude(visibility=Shelf.VISIBILITY_LISTED).exists()
+        )
+        self.assertFalse(
+            Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_USER)
+            .exclude(
+                owner_user__profile__role=UserProfile.ROLE_LIBRARIAN,
+                name="Favorites",
+            )
+            .exclude(visibility=Shelf.VISIBILITY_PRIVATE)
+            .exists()
+        )
+
+    @override_settings(DEBUG=True)
     def test_simple_mode_populates_public_and_user_shelves_without_custom_groups(self):
         self.create_setup_owner()
         for index in range(12):
