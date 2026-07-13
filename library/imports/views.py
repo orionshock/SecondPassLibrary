@@ -11,6 +11,7 @@ from accounts.roles import is_librarian
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
 from library.imports.results import ImportBatchResult
+from library.imports.operational_logging import log_import_batch_completed
 from library.imports.serializers import import_batch_payload
 
 
@@ -47,6 +48,11 @@ class ImportUploadView(APIView):
         else:
             raise ValidationError({"file": ["Only .epub and .zip uploads are supported."]})
 
+        log_import_batch_completed(
+            result=result,
+            actor=request.user,
+            processed_bytes=getattr(upload, "size", None),
+        )
         return Response(import_batch_payload(result), status=status.HTTP_200_OK)
 
 

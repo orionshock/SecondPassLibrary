@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from pathlib import PurePath
 from urllib.parse import urlparse
 import posixpath
@@ -21,6 +22,7 @@ MAX_ZIP_MEMBERS = 5000
 MAX_ZIP_EPUB_MEMBER_BYTES = 200 * 1024 * 1024
 MAX_ZIP_TOTAL_EPUB_BYTES = 2 * 1024 * 1024 * 1024
 MAX_OPF_SIDECAR_XML_BYTES = 1024 * 1024
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,7 @@ class ZipIndex:
     epub_members: list[ZipMember] = field(default_factory=list)
     opfs_by_dir: dict[str, list[str]] = field(default_factory=dict)
     collisions: dict[str, int] = field(default_factory=dict)
+    unsafe_member_count: int = 0
 
     def without_collisions(self) -> ZipIndex:
         if not self.collisions:
@@ -68,6 +71,7 @@ class ZipIndex:
             epub_members=epub_members,
             opfs_by_dir=opfs_by_dir,
             collisions=dict(self.collisions),
+            unsafe_member_count=self.unsafe_member_count,
         )
 
 
@@ -89,6 +93,7 @@ class ZipImportPlan:
     item_results: list[ImportItemResult] = field(default_factory=list)
     discovered_count: int = 0
     collisions: dict[str, int] = field(default_factory=dict)
+    unsafe_member_count: int = 0
 
 
 def format_mib(byte_count: int) -> str:
@@ -127,6 +132,7 @@ def build_zip_index(infos: list[zipfile.ZipInfo]) -> ZipIndex:
             continue
         safe_name = safe_zip_member_name(info.filename)
         if safe_name is None:
+            index.unsafe_member_count += 1
             continue
         if safe_name in index.members_index:
             index.collisions[safe_name] = index.collisions.get(safe_name, 1) + 1
@@ -207,7 +213,17 @@ def plan_zip_import(
         )
 
     index = build_zip_index(infos)
-    plan = ZipImportPlan(collisions=dict(index.collisions))
+    plan = ZipImportPlan(
+        collisions=dict(index.collisions),
+        unsafe_member_count=index.unsafe_member_count,
+    )
+    collision_count = sum(index.collisions.values())
+    if index.unsafe_member_count or collision_count:
+        logger.warning(
+            "ZIP members skipped: unsafe=%d collisions=%d",
+            index.unsafe_member_count,
+            collision_count,
+        )
     for collision in sorted(index.collisions):
         plan.item_results.append(
             ImportItemResult(

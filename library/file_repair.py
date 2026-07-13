@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from pathlib import PurePosixPath
 from uuid import uuid4
 
 from django.core.files.base import ContentFile
@@ -50,8 +49,8 @@ def repair_stored_epub(
     allow_checksum_change: bool,
     actor=None,
 ) -> StoredEpubRepairResult:
-    source_label = _safe_source_label(getattr(uploaded_epub, "name", ""))
-    if not source_label.casefold().endswith(".epub"):
+    upload_name = str(getattr(uploaded_epub, "name", "") or "")
+    if not upload_name.casefold().endswith(".epub"):
         raise StoredEpubRepairError("The uploaded file must use the .epub extension.")
 
     data, new_checksum, file_size = read_file_with_sha256(uploaded_epub)
@@ -129,12 +128,11 @@ def repair_stored_epub(
         )
     logger.info(
         "Stored EPUB repaired for Book %s: checksum_changed=%s outcome=%s "
-        "size=%d source=%s",
+        "size=%d",
         book.pk,
         checksum_changed,
         "replaced" if current_file_exists else "restored",
         file_size,
-        source_label,
     )
     return StoredEpubRepairResult(
         previous_checksum=previous_checksum,
@@ -144,11 +142,6 @@ def repair_stored_epub(
         replaced_existing_file=current_file_exists,
         restored_missing_file=not current_file_exists,
     )
-
-
-def _safe_source_label(value: str) -> str:
-    normalized = str(value or "").replace("\\", "/")
-    return PurePosixPath(normalized).name or "upload.epub"
 
 
 def _reject_checksum_collision(*, book: Book, checksum: str) -> None:

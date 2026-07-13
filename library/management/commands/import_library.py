@@ -11,6 +11,7 @@ from library.imports.results import (
     ImportBatchResult,
     ImportItemResult,
 )
+from library.imports.operational_logging import log_import_batch_completed
 from library.queries import defer_visible_books_cache_invalidation
 
 
@@ -31,6 +32,7 @@ class Command(BaseCommand):
             raise CommandError(f"Import path is not a file or directory: {source}")
 
         result = _import_path(source)
+        log_import_batch_completed(result=result)
         _write_batch_result(self, result)
         if result.failed_count or result.conflict_count:
             raise CommandError("Import completed with failed or conflicting items.")

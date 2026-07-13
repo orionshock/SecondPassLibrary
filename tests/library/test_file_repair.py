@@ -258,7 +258,7 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             original_bytes,
         )
 
-    def test_logged_source_label_is_sanitized_and_not_returned(self):
+    def test_info_log_does_not_include_upload_basename(self):
         upload = self._upload(self.original_data, r"C:\private\secret\book.epub")
 
         with self.assertLogs("library.file_repair", level="INFO") as logs:
@@ -270,6 +270,6 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
                 actor=self.operator,
             )
 
-        self.assertIn("source=book.epub", logs.output[-1])
+        self.assertNotIn("book.epub", logs.output[-1])
         self.assertNotIn("private", logs.output[-1])
         self.assertFalse(hasattr(result, "source_filename"))

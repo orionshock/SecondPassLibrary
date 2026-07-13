@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import logging
 import zipfile
 
 from library.imports.archives import (
@@ -16,6 +17,9 @@ from library.imports.results import (
     ImportItemResult,
 )
 from library.queries import defer_visible_books_cache_invalidation
+
+
+logger = logging.getLogger(__name__)
 
 
 def import_zip_file(
@@ -42,6 +46,11 @@ def import_zip_file(
             for candidate in plan.candidates:
                 batch.items.append(_import_zip_candidate(archive, candidate, actor=actor))
     except Exception as exc:
+        logger.error(
+            "Unexpected ZIP batch failure: source_type=zip "
+            "completion_state=partial exception=%s",
+            type(exc).__name__,
+        )
         batch.items.append(
             ImportItemResult(
                 status=IMPORT_STATUS_FAILED,

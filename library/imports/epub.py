@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 import hashlib
+import logging
 from pathlib import PurePosixPath
 from urllib.parse import urlparse
 import zipfile
@@ -33,6 +34,7 @@ EPUB_IMPORT_ERROR_MESSAGE = INVALID_EPUB_MESSAGE
 READ_CHUNK_BYTES = 1024 * 1024
 MAX_CONTAINER_XML_BYTES = 128 * 1024
 MAX_PACKAGE_OPF_BYTES = 1024 * 1024
+logger = logging.getLogger(__name__)
 
 
 def import_epub_file(
@@ -66,6 +68,10 @@ def import_epub_file(
             operator_detail=operator_import_detail(exc),
         )
     except Exception as exc:
+        logger.error(
+            "Unexpected EPUB import failure: source_type=epub exception=%s",
+            type(exc).__name__,
+        )
         return ImportItemResult(
             status=IMPORT_STATUS_FAILED,
             source_label=source_label,
@@ -113,10 +119,18 @@ def _import_epub_file(
 
 
 def _attach_import_cover_if_available(*, book, data: bytes) -> None:
-    try:
-        attach_cover_to_book(book=book, cover=extract_epub_cover(data))
-    except Exception:
+    cover = extract_epub_cover(data)
+    if cover is None:
         return
+    try:
+        attach_cover_to_book(book=book, cover=cover)
+    except Exception as exc:
+        logger.warning(
+            "Optional cover storage failed after successful import: "
+            "book=%s exception=%s",
+            book.pk,
+            type(exc).__name__,
+        )
 
 
 def _item_result_from_persistence_result(
