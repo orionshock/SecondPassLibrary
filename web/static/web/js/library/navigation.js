@@ -53,8 +53,19 @@ export function librarySearchPlaceholder(view, seriesId = "") {
   return "Title, author, series, identifier...";
 }
 
+export function libraryParamsForTagSelection(preservedParams, slug) {
+  const params = { ...(preservedParams || {}) };
+  const cleanSlug = String(slug || "").trim();
+  if (cleanSlug) params.tag = cleanSlug;
+  else delete params.tag;
+  return params;
+}
+
 export function canonicalLibraryParams(state, { defaultPageSize }) {
-  const params = { ...(state.preservedParams || {}) };
+  const preserved = { ...(state.preservedParams || {}) };
+  const tag = String(preserved.tag || "").trim();
+  delete preserved.tag;
+  const params = {};
   if (state.view === "authors") {
     params.view = "authors";
   } else if (state.view === "author" && state.authorId) {
@@ -69,7 +80,9 @@ export function canonicalLibraryParams(state, { defaultPageSize }) {
     params.view = "books";
   }
 
+  if (tag) params.tag = tag;
   if (state.q) params.q = state.q;
+  Object.assign(params, preserved);
   if (state.page && state.page !== 1) params.page = state.page;
   if (state.pageSize && state.pageSize !== defaultPageSize) {
     params.page_size = state.pageSize;

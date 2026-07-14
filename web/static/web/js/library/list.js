@@ -12,10 +12,12 @@ import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
+import { initCatalogTagFilter } from "./catalog_tags.js";
 import {
   canonicalLibraryParams,
   libraryBookDetailHref,
   libraryContextHref,
+  libraryParamsForTagSelection,
   librarySearchPlaceholder,
   preservedLibraryParams,
 } from "./navigation.js";
@@ -235,9 +237,10 @@ export async function initLibraryBrowse() {
   const form = $("#library-search");
   const qInput = $("#q");
   const pageSizeSelect = $("#library-page-size");
+  const tagFilterEl = $("#library-tag-filter-options");
   const viewTabs = Array.from(document.querySelectorAll("[data-view]"));
 
-  if (!statusEl || !filterSummaryEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect) return;
+  if (!statusEl || !filterSummaryEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect || !tagFilterEl) return;
 
   const state = {
     view: "books",
@@ -262,6 +265,7 @@ export async function initLibraryBrowse() {
     hasNext: false,
     hasPrevious: false,
   };
+  let tagFilter = null;
 
   function activeFilter() {
     if (state.view === "author" && state.authorId) {
@@ -436,6 +440,7 @@ export async function initLibraryBrowse() {
     rangeEl.textContent = rangeText(state);
     prevBtn.disabled = !state.hasPrevious;
     nextBtn.disabled = !state.hasNext;
+    if (tagFilter) tagFilter.sync();
 
     const activeTabView = activeFilter() ? "books" : state.view;
     for (const tab of viewTabs) {
@@ -620,6 +625,15 @@ export async function initLibraryBrowse() {
 
   syncStateFromLocation();
   await loadCurrentPage({ replace: true });
+  tagFilter = await initCatalogTagFilter({
+    container: tagFilterEl,
+    getActiveSlug: () => state.preservedParams.tag || "",
+    onSelect: async (slug) => {
+      state.preservedParams = libraryParamsForTagSelection(state.preservedParams, slug);
+      state.page = 1;
+      await loadCurrentPage({ push: true });
+    },
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
