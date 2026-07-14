@@ -55,6 +55,9 @@ Notes:
 - `Book.cover_file` stores the current cover image (optional).
 - `cover_url` is exposed in Book API payloads and recent reading payloads; it is `null` when no cover exists.
 - Covers are validated with Pillow and stored as the original validated bytes (no re-encoding/thumbnails yet).
+- Librarian+ Product UI cover replacement uses the same JPEG/PNG/WebP byte and
+  pixel validation and content-addressed storage. Old unreferenced cover files
+  are removed only after the database change commits; shared files are retained.
 - EPUB embedded cover extraction is implemented during import (best-effort).
 - Cover discovery uses the EPUB package OPF:
   - EPUB3 manifest item with `properties~="cover-image"`

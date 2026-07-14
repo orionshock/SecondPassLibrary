@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import BytesIO
-import hashlib
 from pathlib import PurePosixPath
 import posixpath
 from urllib.parse import urlparse
@@ -10,11 +9,9 @@ import warnings
 import zipfile
 
 from defusedxml import ElementTree
-from django.core.files.base import ContentFile
 from PIL import Image, UnidentifiedImageError
 
 from library.imports.errors import InvalidEpubImportError
-from library.models import Book
 
 
 MAX_COVER_IMAGE_BYTES = 10 * 1024 * 1024
@@ -51,13 +48,6 @@ def extract_epub_cover(data: bytes) -> ExtractedCover | None:
             return _read_and_validate_cover(archive=archive, cover_member=cover_member)
     except Exception:
         return None
-
-
-def attach_cover_to_book(*, book: Book, cover: ExtractedCover | None) -> None:
-    if cover is None:
-        return
-    digest = hashlib.sha256(cover.data).hexdigest()
-    book.cover_file.save(f"{digest}{cover.extension}", ContentFile(cover.data), save=True)
 
 
 def validate_cover_bytes(data: bytes) -> ExtractedCover | None:

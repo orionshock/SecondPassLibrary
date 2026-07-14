@@ -602,6 +602,21 @@ Book payload notes:
 - Metadata, authors, BookSeries relationship data, identifiers, and Catalog Tags are updated
   transactionally through the single Book detail PATCH endpoint.
 
+Book cover mutation is deliberately separate from metadata PATCH:
+
+- `POST /api/v1/library/books/<book_id>/cover/` accepts multipart field
+  `cover` and returns the updated Book detail payload.
+- `DELETE /api/v1/library/books/<book_id>/cover/` clears the cover and returns
+  the updated Book detail payload. Clearing an empty cover is an idempotent
+  success.
+- Both operations are session-authenticated and Librarian+ only. Client bearer
+  authentication is not accepted.
+- Upload content must decode as JPEG, PNG, or WebP and remain within the 10 MiB
+  and 20-million-pixel limits. Filenames and supplied MIME types are ignored
+  for validation.
+- Cover mutation does not change EPUB files, checksums, bibliographic metadata,
+  identifiers, groups, shelves, or reading data.
+
 ## Imports
 
 - `POST /api/v1/library/imports/`

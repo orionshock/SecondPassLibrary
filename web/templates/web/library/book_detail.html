@@ -26,6 +26,9 @@
 
       <div class="book-hero__main">
         <div class="book-hero__actions">
+          {% if can_manage_library %}
+          <button id="book-cover-edit" class="button is-hidden" type="button">Edit cover</button>
+          {% endif %}
           <a id="book-download-link" class="button is-hidden" href="#">Download</a>
         </div>
 
@@ -77,4 +80,27 @@
       </div>
     </div>
   </section>
+
+  {% if can_manage_library %}
+  <div id="book-cover-modal" class="modal" hidden>
+    <div class="modal__panel book-cover-editor" role="dialog" aria-modal="true" aria-labelledby="book-cover-modal-title">
+      <h2 id="book-cover-modal-title" class="card__title">Edit cover</h2>
+      <form id="book-cover-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="book-cover-file">JPEG, PNG, or WebP image</label>
+        <input id="book-cover-file" name="cover" type="file" accept="image/jpeg,image/png,image/webp" />
+        <div id="book-cover-selection" class="muted">No image selected.</div>
+        <div id="book-cover-preview-wrap" class="book-cover-editor__preview is-hidden">
+          <img id="book-cover-preview" alt="Selected cover preview" />
+        </div>
+        <div id="book-cover-editor-status" class="muted" role="status" aria-live="polite"></div>
+        <div class="book-cover-editor__actions">
+          <button id="book-cover-submit" class="button" type="submit">Replace cover</button>
+          <button id="book-cover-clear" class="button button--danger" type="button">Clear cover</button>
+          <button id="book-cover-cancel" class="button" type="button">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
 {% endblock %}

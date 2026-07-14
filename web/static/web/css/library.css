@@ -3,6 +3,35 @@
    ===================== */
 
 /* Library list */
+.book-cover-editor {
+  display: grid;
+  gap: 12px;
+  max-width: 460px;
+}
+.book-cover-editor form {
+  display: grid;
+  gap: 10px;
+}
+.book-cover-editor__preview {
+  width: 96px;
+  height: 132px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.book-cover-editor__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.book-cover-editor__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .library-tabs {
   display: flex;
   gap: 8px;

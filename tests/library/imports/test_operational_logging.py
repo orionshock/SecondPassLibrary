@@ -136,7 +136,7 @@ class ImportOperationalLoggingTests(
 
         with (
             patch(
-                "library.imports.epub.attach_cover_to_book",
+                "library.imports.epub.replace_book_cover",
                 side_effect=OSError(r"C:\private\cover.png"),
             ),
             self.assertLogs("library.imports.epub", level="WARNING") as logs,

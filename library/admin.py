@@ -18,7 +18,12 @@ from library.file_repair import (
     StoredEpubRepairError,
     repair_stored_epub,
 )
-from library.cover_services import set_book_cover_from_bytes
+from library.cover_services import (
+    InvalidBookCover,
+    clear_book_cover,
+    replace_book_cover,
+    validate_book_cover_upload,
+)
 from library.catalog.tag_services import (
     available_catalog_tag_slug,
     normalize_catalog_tag_name,
@@ -197,6 +202,16 @@ class BookAdminForm(forms.ModelForm):
             raise forms.ValidationError("Choose either a replacement cover or clear cover.")
         return cleaned_data
 
+    def clean_cover_upload(self):
+        upload = self.cleaned_data.get("cover_upload")
+        if not upload:
+            return upload
+        try:
+            self._validated_cover_upload = validate_book_cover_upload(upload)
+        except InvalidBookCover as exc:
+            raise forms.ValidationError(str(exc)) from exc
+        return upload
+
     def save(self, commit=True):
         book = super().save(commit=commit)
         if commit:
@@ -207,18 +222,15 @@ class BookAdminForm(forms.ModelForm):
         if getattr(self, "_cover_change_applied", False):
             return
         book = self.instance
-        old_cover_name = str(book.cover_file.name or "")
         upload = self.cleaned_data.get("cover_upload")
         if upload:
-            set_book_cover_from_bytes(book=book, data=upload.read())
+            replace_book_cover(
+                book=book,
+                cover=self._validated_cover_upload,
+                actor=getattr(self, "_cover_actor", None),
+            )
         elif self.cleaned_data.get("clear_cover"):
-            book.cover_file = ""
-            book.save(update_fields=["cover_file", "updated_at"])
-        new_cover_name = str(book.cover_file.name or "")
-        if old_cover_name and old_cover_name != new_cover_name:
-            storage = Book._meta.get_field("cover_file").storage
-            if not Book.objects.filter(cover_file=old_cover_name).exists():
-                storage.delete(old_cover_name)
+            clear_book_cover(book=book, actor=getattr(self, "_cover_actor", None))
         self._cover_change_applied = True
 
     def sync_catalog_relationships(self):
@@ -426,6 +438,7 @@ class BookAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
+        form._cover_actor = request.user
         form.apply_cover_change()
 
     @admin.display(description="Current cover")

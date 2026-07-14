@@ -21,6 +21,7 @@ from library.models import (
     CatalogTag,
     Series,
 )
+from tests.library.imports.helpers import image_bytes
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 
@@ -92,13 +93,19 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
                 "selected_authors": [],
                 "selected_catalog_tags": [],
             },
-            files={"cover_upload": SimpleUploadedFile("cover.jpg", b"cover")},
+            files={
+                "cover_upload": SimpleUploadedFile(
+                    "cover.jpg",
+                    image_bytes("JPEG"),
+                    content_type="image/jpeg",
+                )
+            },
             instance=self.book,
         )
         self.assertTrue(upload_form.is_valid(), upload_form.errors)
         upload_form.save()
         self.book.refresh_from_db()
-        self.assertTrue(self.book.cover_file.name.endswith(".png"))
+        self.assertTrue(self.book.cover_file.name.endswith(".jpg"))
 
         clear_form = form_class(
             data={

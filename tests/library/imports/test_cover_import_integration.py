@@ -25,7 +25,7 @@ from tests.testenv.filesystem import IsolatedMediaRootMixin
 
 class EpubCoverImportIntegrationTests(IsolatedMediaRootMixin, TestCase):
     def test_cover_storage_failure_is_swallowed_after_successful_import(self):
-        with patch("library.imports.epub.attach_cover_to_book", side_effect=RuntimeError("storage failed")):
+        with patch("library.imports.epub.replace_book_cover", side_effect=RuntimeError("storage failed")):
             result = import_epub_file(
                 BytesIO(epub_with_cover_bytes(cover_bytes=image_bytes("PNG"))),
                 source_filename="cover.epub",

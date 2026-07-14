@@ -145,7 +145,7 @@ class ZipSidecarCoverImportTests(IsolatedMediaRootMixin, TestCase):
     def test_sidecar_cover_storage_failure_is_non_fatal(self):
         with (
             patch(
-                "library.imports.epub.attach_cover_to_book",
+                "library.imports.epub.replace_book_cover",
                 side_effect=RuntimeError("storage failed"),
             ),
             self.assertLogs("library.imports.epub", level="WARNING") as logs,

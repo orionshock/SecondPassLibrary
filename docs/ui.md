@@ -63,6 +63,10 @@ The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` 
 - Top panel shows cover art (or placeholder), title/series/authors, and a primary Download action when a file is available.
 - Tabs (default: Shelves) show Shelves, Groups, and Metadata. Metadata uses the
   canonical description/date fields and includes Catalog Tags, identifiers, and Book-owned file details.
+- Librarian, Manager, and Owner users receive an Edit cover action beside the
+  Book detail actions. It supports a local preview, validated replacement,
+  idempotent clearing, and cancellation without mixing cover bytes into the
+  metadata editor. Readers do not receive the action.
 
 Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box. Recent reading cards link to the session Marginalia page and include an `[All Sessions]` link for the book.
 

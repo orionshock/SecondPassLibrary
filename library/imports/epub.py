@@ -11,6 +11,7 @@ from defusedxml import ElementTree
 from django.core.files.base import ContentFile
 from ebooklib import epub
 
+from library.cover_services import replace_book_cover
 from library.imports.errors import (
     INVALID_EPUB_MESSAGE,
     InvalidEpubImportError,
@@ -18,11 +19,7 @@ from library.imports.errors import (
     operator_import_detail,
     safe_import_message,
 )
-from library.imports.covers import (
-    attach_cover_to_book,
-    extract_epub_cover,
-    validate_cover_bytes,
-)
+from library.imports.covers import extract_epub_cover, validate_cover_bytes
 from library.imports.opf import ParsedSidecarOpf, parse_opf_metadata
 from library.imports.results import (
     IMPORT_STATUS_CONFLICT,
@@ -145,7 +142,7 @@ def _attach_import_cover_if_available(
             cover = extract_epub_cover(data)
         if cover is None:
             return
-        attach_cover_to_book(book=book, cover=cover)
+        replace_book_cover(book=book, cover=cover, log_success=False)
     except Exception as exc:
         logger.warning(
             "Optional cover storage failed after successful import: "
