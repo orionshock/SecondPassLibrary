@@ -355,7 +355,7 @@ Examples:
 - `/api/v1/library/books/?q=dresden&author=<id>&ordering=-title`
 - `/api/v1/library/books/?series=<id>&ordering=series_index`
 - `/api/v1/library/books/?publisher=Orbit&ordering=publisher`
-- `/api/v1/library/groups/<id>/books/?tag=<id>&ordering=author`
+- `/api/v1/library/groups/<id>/books/?tag=<slug>&ordering=author`
 - `/api/v1/library/authors/?q=butcher&ordering=name`
 - `/api/v1/library/tags/?ordering=-book_count`
 

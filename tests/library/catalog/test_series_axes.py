@@ -47,6 +47,23 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_names(by_name), ["First Series"])
         self.assertEqual(response_names(by_sort_name), ["Second Series"])
 
+    def test_tag_slug_filters_series_and_counts_tagged_visible_books(self):
+        response = self.client.get(
+            "/api/v1/library/series/", {"tag": self.fantasy.slug}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_names(response), ["First Series", "Second Series"])
+        self.assertEqual(
+            response_book_counts(response), {"First Series": 1, "Second Series": 1}
+        )
+
+    def test_unknown_tag_slug_returns_no_series(self):
+        response = self.client.get("/api/v1/library/series/", {"tag": "missing"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_names(response), [])
+
     def test_ordering_name_and_book_count(self):
         cases = [
             ("name", ["First Series", "Second Series"]),

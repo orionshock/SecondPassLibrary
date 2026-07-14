@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
+from accounts.authentication import ClientBearerAuthentication
 from accounts.roles import is_librarian
 
 from library.catalog.axes import (
@@ -22,6 +24,7 @@ from library.catalog.serializers import (
     SeriesAxisUpdateSerializer,
 )
 from library.catalog.axis_services import update_author, update_series
+from library.catalog.filters import apply_catalog_tag_filter
 from library.queries import visible_books_for_user
 
 
@@ -70,7 +73,8 @@ class AuthorAxisMixin(_BaseAxisMixin):
     serializer_class = AuthorAxisSerializer
 
     def axis_queryset(self):
-        return visible_authors_from_books(self.visible_books())
+        visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
+        return visible_authors_from_books(visible_books)
 
 
 class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
@@ -88,7 +92,8 @@ class SeriesAxisMixin(_BaseAxisMixin):
     serializer_class = SeriesAxisSerializer
 
     def axis_queryset(self):
-        return visible_series_from_books(self.visible_books())
+        visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
+        return visible_series_from_books(visible_books)
 
 
 class SeriesListView(SeriesAxisMixin, _BaseAxisListView):
@@ -103,6 +108,7 @@ class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
 
 
 class CatalogTagAxisMixin(_BaseAxisMixin):
+    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
     serializer_class = CatalogTagAxisSerializer
     search_normalized_name = True
 

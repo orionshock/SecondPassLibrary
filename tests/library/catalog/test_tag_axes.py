@@ -82,7 +82,13 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.fantasy.refresh_from_db()
         self.assertEqual(self.fantasy.name, "Fantasy")
 
-    def test_bearer_access_is_denied(self):
+    def test_bearer_list_and_detail_use_visible_book_scope(self):
+        hidden_only = CatalogTag.objects.create(
+            name="Hidden Tag", normalized_name="hidden", slug="hidden"
+        )
+        create_catalog_book(
+            "Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden
+        )
         token = "spl_catalog_tag_test"
         UserClientSession.objects.create(
             user=self.reader,
@@ -96,13 +102,30 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             "/api/v1/library/tags/",
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
-        detail_response = bearer_client.get(
+        visible_detail = bearer_client.get(
             f"/api/v1/library/tags/{self.fantasy.id}/",
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
+        hidden_detail = bearer_client.get(
+            f"/api/v1/library/tags/{hidden_only.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        mutation = bearer_client.patch(
+            f"/api/v1/library/tags/{self.fantasy.id}/",
+            {"name": "Not allowed"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
 
-        self.assertIn(list_response.status_code, (401, 403))
-        self.assertIn(detail_response.status_code, (401, 403))
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(response_names(list_response), ["Fantasy", "Mystery"])
+        self.assertEqual(
+            response_book_counts(list_response), {"Fantasy": 2, "Mystery": 1}
+        )
+        self.assertEqual(visible_detail.status_code, 200)
+        self.assertEqual(visible_detail.json()["book_count"], 2)
+        self.assertEqual(hidden_detail.status_code, 404)
+        self.assertEqual(mutation.status_code, 405)
 
     def test_detail_ignores_list_only_params(self):
         assert_axis_detail_ignores_list_params(

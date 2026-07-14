@@ -5,8 +5,10 @@ import json
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
+from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.client_api import hash_client_secret
+from accounts.models import UserClientSession, UserProfile
 from core.server_settings import (
     set_advanced_library_groups_enabled,
     set_server_setting,
@@ -14,7 +16,9 @@ from core.server_settings import (
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
 from library.models import (
     Book,
+    BookCatalogTag,
     BookGroupAssignment,
+    CatalogTag,
     LibraryGroup,
     LibraryGroupMembership,
 )
@@ -180,6 +184,40 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(patched.status_code, 200)
         self.assertEqual(self.client.delete(member_url).status_code, 204)
         self.assertEqual(self.client.delete(public_url).status_code, 400)
+
+    def test_disabled_mode_bearer_reads_public_tags_but_custom_group_is_404(self):
+        public_tag = CatalogTag.objects.create(
+            name="Public Tag", normalized_name="public tag", slug="public-tag"
+        )
+        custom_tag = CatalogTag.objects.create(
+            name="Custom Tag", normalized_name="custom tag", slug="custom-tag"
+        )
+        BookCatalogTag.objects.create(book=self.public_book, catalog_tag=public_tag)
+        BookCatalogTag.objects.create(book=self.custom_book, catalog_tag=custom_tag)
+        token = "spl_disabled_group_tag_test"
+        UserClientSession.objects.create(
+            user=self.reader,
+            name="Reader client",
+            client_type="reader",
+            token_hash=hash_client_secret(token),
+        )
+        bearer_client = APIClient()
+
+        public_response = bearer_client.get(
+            f"/api/v1/library/groups/{self.public.id}/tags/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        custom_response = bearer_client.get(
+            f"/api/v1/library/groups/{self.custom.id}/tags/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertEqual(public_response.status_code, 200)
+        self.assertEqual(
+            [row["slug"] for row in public_response.json()["results"]],
+            ["public-tag"],
+        )
+        self.assertEqual(custom_response.status_code, 404)
 
     def test_enabled_mode_keeps_custom_group_api_behavior(self):
         set_advanced_library_groups_enabled(True)

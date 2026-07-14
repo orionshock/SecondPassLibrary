@@ -112,6 +112,12 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
 - `GET /api/v1/accounts/me/` (read-only; bearer tokens do not allow `PATCH`)
 - selected library read/download endpoints
   - supported browse endpoints may opt into `preview_books` with `include_preview_books=true`; preview items are visibility-scoped context hints with `id`, `title`, and `cover_url` only, never file/download URLs
+  - Catalog Tag list/detail and visible-group tag lists are read-only bearer
+    surfaces; tags and counts are restricted to books visible to the token owner
+  - tag detail returns `404` for tags attached only to inaccessible books;
+    group-tag routes also enforce group visibility and simple-mode Public-only gating
+  - Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
+    filters are not part of the client contract
 - shelves endpoints:
   - bearer tokens may read any shelf the user can view
   - visible shelf list/detail payloads may opt into `preview_books` with `include_preview_books=true`; shelves still do not grant book access

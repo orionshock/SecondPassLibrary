@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db.models import Q, QuerySet
 from rest_framework.exceptions import ValidationError
 
-from library.models import Author, Book, CatalogTag, Series
+from library.models import Author, Book, Series
 
 
 def apply_book_filters(queryset: QuerySet[Book], query_params) -> QuerySet[Book]:
@@ -17,15 +17,20 @@ def apply_book_filters(queryset: QuerySet[Book], query_params) -> QuerySet[Book]
     if series_id:
         queryset = queryset.filter(book_series__series_id=series_id)
 
-    tag_id = _pk_param(query_params, "tag", CatalogTag)
-    if tag_id:
-        queryset = queryset.filter(book_catalog_tags__catalog_tag_id=tag_id)
+    queryset = apply_catalog_tag_filter(queryset, query_params)
 
     publisher = (query_params.get("publisher") or "").strip()
     if publisher:
         queryset = queryset.filter(publisher__iexact=publisher)
 
     return queryset.distinct()
+
+
+def apply_catalog_tag_filter(queryset: QuerySet[Book], query_params) -> QuerySet[Book]:
+    slug = (query_params.get("tag") or "").strip()
+    if not slug:
+        return queryset
+    return queryset.filter(book_catalog_tags__catalog_tag__slug=slug).distinct()
 
 
 def _apply_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:

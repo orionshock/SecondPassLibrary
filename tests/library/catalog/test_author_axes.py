@@ -45,6 +45,23 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_names(by_name), ["Alpha Author"])
         self.assertEqual(response_names(by_sort_name), ["Beta Author"])
 
+    def test_tag_slug_filters_authors_and_counts_tagged_visible_books(self):
+        response = self.client.get(
+            "/api/v1/library/authors/", {"tag": self.fantasy.slug}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_names(response), ["Beta Author", "Zeta Author"])
+        self.assertEqual(
+            response_book_counts(response), {"Beta Author": 1, "Zeta Author": 1}
+        )
+
+    def test_unknown_tag_slug_returns_no_authors(self):
+        response = self.client.get("/api/v1/library/authors/", {"tag": "missing"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_names(response), [])
+
     def test_ordering_name_and_book_count(self):
         cases = [
             ("name", ["Alpha Author", "Beta Author", "Zeta Author"]),

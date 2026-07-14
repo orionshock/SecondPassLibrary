@@ -3,8 +3,10 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
+from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.client_api import hash_client_secret
+from accounts.models import UserClientSession, UserProfile
 from core.server_settings import set_advanced_library_groups_enabled
 from library.models import (
     Author,
@@ -132,7 +134,7 @@ class LibraryGroupBrowseTests(TestCase):
             f"/api/v1/library/groups/{self.club.id}/books/",
             {
                 "q": "club",
-                "tag": self.fantasy.id,
+                "tag": self.fantasy.slug,
                 "ordering": "-publisher",
                 "page_size": 1,
             },
@@ -164,6 +166,43 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response_book_counts(response), {"Fantasy": 2, "Mystery": 1})
         for tag in response.json()["results"]:
             self.assertEqual(set(tag), {"id", "name", "slug", "book_count"})
+
+    def test_bearer_group_tags_follow_exact_group_visibility(self):
+        token = "spl_group_catalog_tag_test"
+        UserClientSession.objects.create(
+            user=self.reader,
+            name="Reader client",
+            client_type="reader",
+            token_hash=hash_client_secret(token),
+        )
+        bearer_client = APIClient()
+
+        visible = bearer_client.get(
+            f"/api/v1/library/groups/{self.club.id}/tags/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        hidden = bearer_client.get(
+            f"/api/v1/library/groups/{self.hidden.id}/tags/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertEqual(visible.status_code, 200)
+        self.assertEqual(response_names(visible), ["Fantasy", "Mystery"])
+        self.assertEqual(hidden.status_code, 404)
+
+    def test_group_author_and_series_tag_filters_use_slug_without_duplicates(self):
+        authors = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/authors/",
+            {"tag": self.fantasy.slug},
+        )
+        series = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/series/",
+            {"tag": self.fantasy.slug},
+        )
+
+        self.assertEqual(response_names(authors), ["Alpha Author"])
+        self.assertEqual(response_book_counts(authors), {"Alpha Author": 2})
+        self.assertEqual(response_names(series), ["First Series", "Second Series"])
 
     def test_invalid_ordering_returns_400_for_visible_group_axis_endpoints(self):
         endpoints = ["books", "authors", "series", "tags"]

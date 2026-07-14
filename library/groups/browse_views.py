@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 
+from accounts.authentication import ClientBearerAuthentication
 from library.catalog.axes import (
     apply_axis_ordering,
     apply_axis_search,
@@ -12,7 +14,7 @@ from library.catalog.axes import (
     visible_series_from_books,
     visible_tags_from_books,
 )
-from library.catalog.filters import apply_book_filters
+from library.catalog.filters import apply_book_filters, apply_catalog_tag_filter
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
 from library.catalog.serializers import (
     AuthorAxisSerializer,
@@ -71,17 +73,24 @@ class GroupAuthorListView(GroupAxisListMixin):
     serializer_class = AuthorAxisSerializer
 
     def axis_queryset(self):
-        return visible_authors_from_books(self.visible_group_books())
+        visible_books = apply_catalog_tag_filter(
+            self.visible_group_books(), self.request.query_params
+        )
+        return visible_authors_from_books(visible_books)
 
 
 class GroupSeriesListView(GroupAxisListMixin):
     serializer_class = SeriesAxisSerializer
 
     def axis_queryset(self):
-        return visible_series_from_books(self.visible_group_books())
+        visible_books = apply_catalog_tag_filter(
+            self.visible_group_books(), self.request.query_params
+        )
+        return visible_series_from_books(visible_books)
 
 
 class GroupCatalogTagListView(GroupAxisListMixin):
+    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
     serializer_class = CatalogTagAxisSerializer
     search_normalized_name = True
 

@@ -439,9 +439,12 @@ Client API bearer token support (read-only allow-list):
 - `GET /api/v1/library/authors/<id>/`
 - `GET /api/v1/library/series/`
 - `GET /api/v1/library/series/<id>/`
+- `GET /api/v1/library/tags/`
+- `GET /api/v1/library/tags/<id>/`
 - `GET /api/v1/library/groups/`
 - `GET /api/v1/library/groups/<group_id>/`
 - `GET /api/v1/library/groups/<group_id>/books/`
+- `GET /api/v1/library/groups/<group_id>/tags/`
 
 All Library mutation endpoints (including imports, identifier CRUD, group memberships, and group book add/remove) reject Client API bearer tokens.
 
@@ -481,10 +484,21 @@ defaults to `name`. Responses use normal pagination and each tag has exactly:
 
 Global tag results and `book_count` include only books visible to the caller.
 Group tag results and counts are additionally scoped to books assigned to that
-exact visible group. Tag endpoints require Django session authentication and
-are not available to Client API bearer tokens. Tag detail is GET-only; there is
-no standalone tag create, update, or delete API. Catalog Tag relationships are
-mutated only through Book PATCH `catalog_tags`.
+exact visible group. In simple mode, Public/Common Room group tags remain
+readable while custom-group tag routes return `404`. Tag endpoints accept
+Django session authentication and Client API bearer authentication. Tag detail
+is GET-only; there is no standalone tag create, update, or delete API, and
+bearer authentication grants no tag mutation capability. Catalog Tag
+relationships are mutated only through Book PATCH `catalog_tags`.
+
+Book, Author, and Series list endpoints accept `tag=<tag-slug>`. Books are
+filtered to books directly carrying that tag. Authors and Series are filtered
+to records with at least one caller-visible tagged book, and their `book_count`
+reflects that filtered visible-book context. Group-scoped Book, Author, and
+Series lists apply the same filter within the exact visible group. Unknown or
+inaccessible slugs return an empty paginated result without revealing whether
+the tag exists. UUID values are not accepted as tag filters; clients should use
+the stable `slug` returned by tag payloads.
 
 Book list ordering:
 

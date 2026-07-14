@@ -36,9 +36,13 @@ Notes:
   `slug`, and the caller-visible `book_count`. Internal `sort_name` and
   `normalized_name` fields are not public API fields.
 - `GET /api/v1/library/tags/`, `GET /api/v1/library/tags/<id>/`, and
-  `GET /api/v1/library/groups/<group_id>/tags/` are session-authenticated read
-  surfaces. Tag detail is GET-only; Book PATCH `catalog_tags` is the only API
-  mutation surface.
+  `GET /api/v1/library/groups/<group_id>/tags/` accept session or Client API
+  bearer authentication as read-only surfaces. Visibility and group feature
+  gates apply before tags and counts are calculated. Tag detail is GET-only;
+  Book PATCH `catalog_tags` is the only API mutation surface.
+- Book, Author, and Series browse lists accept `tag=<slug>`. Unknown,
+  inaccessible, and UUID tag values produce empty results; the filter never
+  expands the caller's visible-book universe.
 - Duplicate-checksum imports return the existing Book without refreshing tags.
 
 ## Import/cleanup philosophy
