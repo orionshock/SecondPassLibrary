@@ -223,7 +223,7 @@ Primary endpoint:
 
 Recommended query params (current implementation):
 
-- Search: `q=<text>` (title/subtitle/author/series/isbn/identifier value)
+- Search: `q=<text>` (Book title and internal title-sort value only)
 - Filters: `author=<author_id>`, `series=<series_id>`, `language=<code>`, `has_files=true|false`
 - Ordering: `ordering=title|created_at|updated_at|published_date` (prefix with `-` for descending)
 

@@ -502,6 +502,10 @@ the stable `slug` returned by tag payloads.
 
 Book list ordering:
 
+- Book `q` search matches only `title` and the internal `sort_title` value.
+  Authors, Series, identifiers, tags, publisher, subtitle, and description do
+  not participate in Book-axis text search; use their dedicated axes or filters.
+
 - `GET /api/v1/library/books/?ordering=title` orders by title A-Z and is the default for general book browsing and author-filtered book browsing.
 - `GET /api/v1/library/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
 - `GET /api/v1/library/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.

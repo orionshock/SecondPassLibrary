@@ -86,10 +86,10 @@ class LibrarySearchJavaScriptTests:
         )
 
         assert result == {
-            "books": "Title, author, series, identifier...",
+            "books": "Book title...",
             "authors": "Author name...",
             "series": "Series name...",
-            "seriesBooks": "Title, author, series, identifier...",
+            "seriesBooks": "Book title...",
         }
 
     def test_submit_and_history_restore_keep_the_active_axis(self):
@@ -124,7 +124,7 @@ class LibrarySearchJavaScriptTests:
         css = (ROOT / "web/static/web/css/library.css").read_text(encoding="utf-8")
 
         assert 'class="search library-search"' in template
-        assert 'placeholder="Title, author, series, identifier..."' in template
+        assert 'placeholder="Book title..."' in template
         assert ".library-search {" in css
         assert ".library-search .search__input {" in css
         assert "flex: 1 1 360px" in css

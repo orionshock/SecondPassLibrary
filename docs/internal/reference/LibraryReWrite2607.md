@@ -300,12 +300,7 @@ Do not expose these as normal browse sort/filter axes:
 
 Book `q` search may match:
 
-- title and subtitle
-- author
-- series
-- CatalogTag/tag
-- publisher
-- description, as long as the query remains bounded to the visible book context
+- title and internal title-sort value only
 
 Ordering uses DRF-style values. Supported book ordering values:
 

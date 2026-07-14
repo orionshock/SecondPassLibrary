@@ -12,46 +12,33 @@ from tests.library.helpers import (
 
 class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_q_searches_visible_books_only(self):
-        response = self.client.get("/api/v1/library/books/", {"q": "dresden"})
+        visible = self.client.get("/api/v1/library/books/", {"q": "visible one"})
+        hidden = self.client.get("/api/v1/library/books/", {"q": "hidden dresden"})
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_titles(response), ["Visible One"])
+        self.assertEqual(visible.status_code, 200)
+        self.assertEqual(response_titles(visible), ["Visible One"])
+        self.assertEqual(response_titles(hidden), [])
 
-    def test_q_search_matches_subtitle(self):
-        response = self.client.get("/api/v1/library/books/", {"q": "storm"})
+    def test_q_search_matches_sort_title(self):
+        self.visible_three.sort_title = "Catalog Alias"
+        self.visible_three.save(update_fields=["sort_title", "updated_at"])
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_titles(response), ["Visible One"])
+        response = self.client.get("/api/v1/library/books/", {"q": "catalog alias"})
 
-    def test_q_search_matches_description(self):
-        response = self.client.get("/api/v1/library/books/", {"q": "case file"})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_titles(response), ["Visible One"])
-
-    def test_q_search_matches_publisher(self):
-        response = self.client.get("/api/v1/library/books/", {"q": "zeta house"})
-
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Visible Three"])
 
-    def test_q_search_matches_catalog_tag(self):
-        response = self.client.get("/api/v1/library/books/", {"q": "mystery"})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_titles(response), ["Visible Two"])
-
-    def test_q_search_matches_identifier(self):
+    def test_q_search_does_not_match_non_title_metadata(self):
         BookIdentifier.objects.create(
             book=self.visible_three,
             scheme=BookIdentifier.SCHEME_ASIN,
             value="B0CATALOG123",
         )
 
-        response = self.client.get("/api/v1/library/books/", {"q": "catalog123"})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_titles(response), ["Visible Three"])
+        for term in ("storm", "case file", "zeta house", "mystery", "catalog123"):
+            with self.subTest(term=term):
+                response = self.client.get("/api/v1/library/books/", {"q": term})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response_titles(response), [])
 
     def test_author_filter(self):
         response = self.client.get("/api/v1/library/books/", {"author": self.alpha.id})

@@ -39,13 +39,6 @@ def _apply_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
     return queryset.filter(
         Q(title__icontains=term)
         | Q(sort_title__icontains=term)
-        | Q(subtitle__icontains=term)
-        | Q(description__icontains=term)
-        | Q(publisher__icontains=term)
-        | Q(book_authors__author__name__icontains=term)
-        | Q(book_series__series__name__icontains=term)
-        | Q(book_catalog_tags__catalog_tag__name__icontains=term)
-        | Q(identifiers__value__icontains=term)
     )
 
 

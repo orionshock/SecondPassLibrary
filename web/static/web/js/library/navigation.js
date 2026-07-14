@@ -50,7 +50,7 @@ export function preservedLibraryParams(searchParams) {
 export function librarySearchPlaceholder(view, seriesId = "") {
   if (view === "authors") return "Author name...";
   if (view === "series" && !seriesId) return "Series name...";
-  return "Title, author, series, identifier...";
+  return "Book title...";
 }
 
 export function libraryParamsForTagSelection(preservedParams, slug) {
