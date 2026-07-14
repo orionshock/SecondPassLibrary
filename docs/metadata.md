@@ -32,6 +32,13 @@ Notes:
   Omitting it preserves relationships; `[]` clears them.
 - Display names preserve the first-created spelling and casing. Matching uses
   Unicode normalization, collapsed whitespace, and casefolding.
+- Tag list, detail, and group-tag browse payloads expose only `id`, `name`,
+  `slug`, and the caller-visible `book_count`. Internal `sort_name` and
+  `normalized_name` fields are not public API fields.
+- `GET /api/v1/library/tags/`, `GET /api/v1/library/tags/<id>/`, and
+  `GET /api/v1/library/groups/<group_id>/tags/` are session-authenticated read
+  surfaces. Tag detail is GET-only; Book PATCH `catalog_tags` is the only API
+  mutation surface.
 - Duplicate-checksum imports return the existing Book without refreshing tags.
 
 ## Import/cleanup philosophy

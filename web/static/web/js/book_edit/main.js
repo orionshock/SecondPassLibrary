@@ -1,4 +1,5 @@
 import {
+  fetchAllPaginatedResults,
   fetchJSON,
   fetchJSONWithOptions,
   getCsrfToken,
@@ -13,7 +14,7 @@ import {
   visible,
 } from "../layout.js";
 import { setStatus } from "../ui/status.js";
-import { fetchAllPages, uniqueById } from "./shared.js";
+import { uniqueById } from "./shared.js";
 import { initTabs } from "../ui/tabs.js";
 import { applyBookToMetadataForm, buildBookPatchPayload } from "./metadata.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";
@@ -75,6 +76,7 @@ export async function initBookEdit() {
   const languageEl = $("#book-edit-language");
   const publishedDateEl = $("#book-edit-published-date");
   const catalogTagsEl = $("#book-edit-catalog-tags");
+  const catalogTagsStatusEl = $("#book-edit-catalog-tags-status");
   const catalogTagInputEl = $("#book-edit-catalog-tag-input");
   const catalogTagOptionsEl = $("#book-edit-catalog-tag-options");
   const catalogTagAddEl = $("#book-edit-catalog-tag-add");
@@ -132,6 +134,7 @@ export async function initBookEdit() {
     !languageEl ||
     !publishedDateEl ||
     !catalogTagsEl ||
+    !catalogTagsStatusEl ||
     !catalogTagInputEl ||
     !catalogTagOptionsEl ||
     !catalogTagAddEl ||
@@ -271,7 +274,7 @@ export async function initBookEdit() {
   // Load option lists.
   setStatus(authorsStatusEl, "Loading...", false);
   try {
-    state.allAuthors = uniqueById(await fetchAllPages("/api/v1/library/authors/"));
+    state.allAuthors = uniqueById(await fetchAllPaginatedResults("/api/v1/library/authors/"));
     setStatus(authorsStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load authors", e);
@@ -282,7 +285,7 @@ export async function initBookEdit() {
 
   setStatus(seriesStatusEl, "Loading...", false);
   try {
-    state.allSeries = uniqueById(await fetchAllPages("/api/v1/library/series/"));
+    state.allSeries = uniqueById(await fetchAllPaginatedResults("/api/v1/library/series/"));
     setStatus(seriesStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load series", e);
@@ -291,17 +294,21 @@ export async function initBookEdit() {
   }
   syncSeriesSelectOptions({ allSeries: state.allSeries, seriesSelectEl, selectedId: state.book && state.book.series && state.book.series.id ? String(state.book.series.id) : "" });
 
+  setStatus(catalogTagsStatusEl, "Loading...", false);
   try {
-    state.allCatalogTags = uniqueById(await fetchAllPages("/api/v1/library/tags/"));
+    state.allCatalogTags = uniqueById(await fetchAllPaginatedResults("/api/v1/library/tags/"));
+    setStatus(catalogTagsStatusEl, "", false);
   } catch (e) {
+    console.error("Failed to load Catalog Tags", e);
     state.allCatalogTags = [];
+    setStatus(catalogTagsStatusEl, "Failed to load Catalog Tags.", true);
   }
   renderCatalogTags({ state, selectedEl: catalogTagsEl, optionsEl: catalogTagOptionsEl });
 
   if (groupsFeatureEnabled) {
     setStatus(groupsStatusEl, "Loading...", false);
     try {
-      state.allGroups = uniqueById(await fetchAllPages("/api/v1/library/groups/"));
+      state.allGroups = uniqueById(await fetchAllPaginatedResults("/api/v1/library/groups/"));
       setStatus(groupsStatusEl, "", false);
     } catch (e) {
       console.error("Failed to load groups", e);

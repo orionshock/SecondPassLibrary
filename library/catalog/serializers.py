@@ -70,7 +70,7 @@ class CatalogTagAxisSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CatalogTag
-        fields = ["id", "name", "sort_name", "normalized_name", "book_count"]
+        fields = ["id", "name", "slug", "book_count"]
         read_only_fields = fields
 
 

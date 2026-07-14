@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from django.test import TestCase
+from rest_framework.test import APIClient
 
+from accounts.client_api import hash_client_secret
+from accounts.models import UserClientSession
 from library.models import CatalogTag
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
@@ -21,6 +24,8 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_names(response), ["Fantasy", "Mystery"])
+        for tag in response.json()["results"]:
+            self.assertEqual(set(tag), {"id", "name", "slug", "book_count"})
 
     def test_book_count_counts_visible_books_only(self):
         response = self.client.get("/api/v1/library/tags/")
@@ -58,9 +63,46 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         response = self.client.get(f"/api/v1/library/tags/{self.fantasy.id}/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.json()), {"id", "name", "slug", "book_count"})
         self.assertEqual(response.json()["name"], "Fantasy")
-        self.assertEqual(response.json()["normalized_name"], "fantasy")
+        self.assertEqual(response.json()["slug"], "fantasy")
         self.assertEqual(response.json()["book_count"], 2)
+
+    def test_detail_rejects_patch_for_librarian_plus(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/tags/{self.fantasy.id}/",
+            data={"name": "Renamed"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.fantasy.refresh_from_db()
+        self.assertEqual(self.fantasy.name, "Fantasy")
+
+    def test_bearer_access_is_denied(self):
+        token = "spl_catalog_tag_test"
+        UserClientSession.objects.create(
+            user=self.reader,
+            name="Reader client",
+            client_type="reader",
+            token_hash=hash_client_secret(token),
+        )
+        bearer_client = APIClient()
+
+        list_response = bearer_client.get(
+            "/api/v1/library/tags/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        detail_response = bearer_client.get(
+            f"/api/v1/library/tags/{self.fantasy.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertIn(list_response.status_code, (401, 403))
+        self.assertIn(detail_response.status_code, (401, 403))
 
     def test_detail_ignores_list_only_params(self):
         assert_axis_detail_ignores_list_params(

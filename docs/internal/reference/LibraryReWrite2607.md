@@ -342,8 +342,7 @@ Tag endpoint fields:
 
 - `id`
 - `name`
-- `sort_name`
-- `normalized_name`
+- `slug`
 - `book_count`
 
 Axis detail endpoints return `404` when the requested author, series, or tag

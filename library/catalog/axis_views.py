@@ -115,4 +115,4 @@ class CatalogTagListView(CatalogTagAxisMixin, _BaseAxisListView):
 
 
 class CatalogTagDetailView(CatalogTagAxisMixin, _BaseAxisDetailView):
-    pass
+    http_method_names = ["get", "head", "options"]

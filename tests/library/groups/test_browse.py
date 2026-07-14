@@ -162,6 +162,8 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_names(response), ["Fantasy", "Mystery"])
         self.assertEqual(response_book_counts(response), {"Fantasy": 2, "Mystery": 1})
+        for tag in response.json()["results"]:
+            self.assertEqual(set(tag), {"id", "name", "slug", "book_count"})
 
     def test_invalid_ordering_returns_400_for_visible_group_axis_endpoints(self):
         endpoints = ["books", "authors", "series", "tags"]

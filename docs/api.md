@@ -423,6 +423,7 @@ Rules:
 
 - Authors: `GET /api/v1/library/authors/` (paginated), `GET/PATCH /api/v1/library/authors/<id>/`
 - Series: `GET /api/v1/library/series/` (paginated), `GET/PATCH /api/v1/library/series/<id>/`
+- Catalog Tags: `GET /api/v1/library/tags/` (paginated), `GET /api/v1/library/tags/<id>/`
 - Books: `GET /api/v1/library/books/` (paginated), `GET/PATCH /api/v1/library/books/<id>/`
 
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
@@ -457,6 +458,33 @@ Author/Series payload notes:
   - `GET /api/v1/library/series/?ordering=name` orders by series name A-Z and is the default.
   - `GET /api/v1/library/series/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
   - Invalid ordering values return `400`.
+
+Catalog Tag browse endpoints:
+
+- `GET /api/v1/library/tags/`
+- `GET /api/v1/library/tags/<tag_id>/`
+- `GET /api/v1/library/groups/<group_id>/tags/`
+
+Tag list endpoints accept `q`, `ordering`, `page`, and `page_size`. `q`
+matches the tag's catalog name, including its internal normalized and sort forms.
+`ordering` accepts `name`, `-name`, `book_count`, and `-book_count`, and
+defaults to `name`. Responses use normal pagination and each tag has exactly:
+
+```json
+{
+  "id": "tag UUID",
+  "name": "Science Fiction",
+  "slug": "science-fiction",
+  "book_count": 12
+}
+```
+
+Global tag results and `book_count` include only books visible to the caller.
+Group tag results and counts are additionally scoped to books assigned to that
+exact visible group. Tag endpoints require Django session authentication and
+are not available to Client API bearer tokens. Tag detail is GET-only; there is
+no standalone tag create, update, or delete API. Catalog Tag relationships are
+mutated only through Book PATCH `catalog_tags`.
 
 Book list ordering:
 

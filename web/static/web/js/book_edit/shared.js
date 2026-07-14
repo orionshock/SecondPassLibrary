@@ -1,5 +1,3 @@
-import { fetchJSON } from "../api.js";
-
 export function clear(node) {
   if (!node) return;
   while (node.firstChild) node.removeChild(node.firstChild);
@@ -64,19 +62,6 @@ export function subjectsToTextareaValue(subjects) {
   }
   if (typeof subjects === "string") return subjects.trim();
   return "";
-}
-
-export async function fetchAllPages(url) {
-  const out = [];
-  let next = url;
-  let safety = 0;
-  while (next && safety < 50) {
-    const payload = await fetchJSON(next);
-    if (payload && Array.isArray(payload.results)) out.push(...payload.results);
-    next = payload && payload.next ? payload.next : null;
-    safety += 1;
-  }
-  return out;
 }
 
 export function uniqueById(items) {

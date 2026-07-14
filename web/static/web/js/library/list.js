@@ -46,12 +46,10 @@ function compactSubtitle(title, subtitle) {
   return cleanTitle.includes(cleanSubtitle.toLowerCase()) ? "" : cleanSubtitle;
 }
 
-function renderTags(subjects) {
-  const values = Array.isArray(subjects)
-    ? subjects.map((s) => String(s).trim()).filter(Boolean)
-    : typeof subjects === "string"
-      ? [subjects.trim()].filter(Boolean)
-      : [];
+function renderTags(tags) {
+  const values = Array.isArray(tags)
+    ? tags.map((tag) => (tag && tag.name ? String(tag.name).trim() : "")).filter(Boolean)
+    : [];
   if (!values.length) return "";
 
   const visible = values.slice(0, 6);
@@ -116,7 +114,7 @@ function renderBooks(payload, context = null) {
       if (authors.length) metaLines.push(`<span>${escapeHtml(authors.join(", "))}</span>`);
       if (seriesLine) metaLines.push(`<span>${escapeHtml(seriesLine)}</span>`);
       if (publisherLine) metaLines.push(`<span>${escapeHtml(publisherLine)}</span>`);
-      const tags = renderTags(b.subjects);
+      const tags = renderTags(b.tags);
       const groups = renderGroups(b.groups);
 
       return `
