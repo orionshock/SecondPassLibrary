@@ -4,6 +4,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { $, setText, visible } from "../layout.js";
+import { mountCovers } from "../ui/covers.js";
 import { setStatus } from "../ui/status.js";
 
 const MAX_ERROR_LENGTH = 240;
@@ -30,20 +31,20 @@ function boundedSafeMessage(message, fallback) {
 }
 
 export function initBookCoverEditor({ bookId, onCoverChanged }) {
-  const openButton = $("#book-cover-edit");
-  const modal = $("#book-cover-modal");
-  const form = $("#book-cover-form");
-  const fileInput = $("#book-cover-file");
-  const selection = $("#book-cover-selection");
-  const previewWrap = $("#book-cover-preview-wrap");
-  const preview = $("#book-cover-preview");
-  const statusEl = $("#book-cover-editor-status");
-  const submitButton = $("#book-cover-submit");
-  const clearButton = $("#book-cover-clear");
-  const cancelButton = $("#book-cover-cancel");
+  const root = $("#book-edit-cover-editor");
+  const currentCover = $("#book-edit-cover-current");
+  const form = $("#book-edit-cover-form");
+  const fileInput = $("#book-edit-cover-file");
+  const selection = $("#book-edit-cover-selection");
+  const previewWrap = $("#book-edit-cover-preview-wrap");
+  const preview = $("#book-edit-cover-preview");
+  const statusEl = $("#book-edit-cover-status");
+  const submitButton = $("#book-edit-cover-submit");
+  const clearButton = $("#book-edit-cover-clear");
+  const resetButton = $("#book-edit-cover-reset");
   if (
-    !openButton ||
-    !modal ||
+    !root ||
+    !currentCover ||
     !form ||
     !fileInput ||
     !selection ||
@@ -52,12 +53,21 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
     !statusEl ||
     !submitButton ||
     !clearButton ||
-    !cancelButton
+    !resetButton
   )
     return null;
 
   let currentCoverUrl = "";
+  let currentTitle = "";
   let previewUrl = "";
+
+  function renderCurrentCover() {
+    currentCover.dataset.coverUrl = currentCoverUrl;
+    currentCover.dataset.coverTitle = currentTitle;
+    currentCover.dataset.coverMounted = "0";
+    mountCovers(currentCover.parentNode);
+    visible(clearButton, !!currentCoverUrl);
+  }
 
   function discardPreview() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -66,35 +76,23 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
     visible(previewWrap, false);
   }
 
-  function resetSelection() {
+  function resetSelection({ clearStatus = true } = {}) {
     discardPreview();
     fileInput.value = "";
     setText(selection, "No image selected.");
+    if (clearStatus) setStatus(statusEl, "", false);
   }
 
   function setBusy(busy) {
     fileInput.disabled = busy;
     submitButton.disabled = busy;
-    clearButton.disabled = busy || !currentCoverUrl;
-    cancelButton.disabled = busy;
+    clearButton.disabled = busy;
+    resetButton.disabled = busy;
   }
-
-  function close() {
-    resetSelection();
-    setStatus(statusEl, "", false);
-    modal.hidden = true;
-  }
-
-  openButton.addEventListener("click", () => {
-    resetSelection();
-    setStatus(statusEl, "", false);
-    setBusy(false);
-    modal.hidden = false;
-    fileInput.focus();
-  });
 
   fileInput.addEventListener("change", () => {
     discardPreview();
+    setStatus(statusEl, "", false);
     const file = fileInput.files && fileInput.files[0];
     setText(selection, file ? file.name : "No image selected.");
     if (!file) return;
@@ -126,8 +124,10 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
         }
       );
       currentCoverUrl = cacheBustedCoverUrl(book && book.cover_url);
-      onCoverChanged(currentCoverUrl);
-      resetSelection();
+      currentTitle = book && book.title ? String(book.title) : currentTitle;
+      renderCurrentCover();
+      onCoverChanged(currentCoverUrl, book);
+      resetSelection({ clearStatus: false });
       setStatus(statusEl, "Cover updated.", false);
     } catch (error) {
       console.error("Failed to replace book cover", { bookId, error });
@@ -143,7 +143,7 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
     setBusy(true);
     setStatus(statusEl, "Clearing...", false);
     try {
-      await fetchJSONWithOptions(
+      const book = await fetchJSONWithOptions(
         `/api/v1/library/books/${encodeURIComponent(String(bookId))}/cover/`,
         {
           method: "DELETE",
@@ -151,8 +151,9 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
         }
       );
       currentCoverUrl = "";
-      onCoverChanged("");
-      resetSelection();
+      renderCurrentCover();
+      onCoverChanged("", book);
+      resetSelection({ clearStatus: false });
       setStatus(statusEl, "Cover cleared.", false);
     } catch (error) {
       console.error("Failed to clear book cover", { bookId, error });
@@ -162,18 +163,13 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
     }
   });
 
-  cancelButton.addEventListener("click", close);
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) close();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !modal.hidden) close();
-  });
+  resetButton.addEventListener("click", () => resetSelection());
 
   return {
-    setCurrentCoverUrl(url) {
+    setCurrentCover({ url, title }) {
       currentCoverUrl = String(url || "");
-      clearButton.disabled = !currentCoverUrl;
+      currentTitle = String(title || "");
+      renderCurrentCover();
     },
   };
 }

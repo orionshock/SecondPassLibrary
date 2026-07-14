@@ -230,20 +230,20 @@ def library_browse(request: HttpRequest) -> HttpResponse:
 @product_login_required
 def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
     book_uuid = _uuid_or_404(book_id)
-    return render(
-        request,
-        "web/library/book_detail.html",
-        {
-            "book_id": str(book_uuid),
-            "can_manage_library": is_librarian(request.user),
-        },
-    )
+    return render(request, "web/library/book_detail.html", {"book_id": str(book_uuid)})
 
 
 @product_login_required
 def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
     book_uuid = _uuid_or_404(book_id)
-    return render(request, "web/library/book_edit.html", {"book_id": str(book_uuid)})
+    return render(
+        request,
+        "web/library/book_edit.html",
+        {
+            "book_id": str(book_uuid),
+            "can_manage_library": is_librarian(request.user),
+        },
+    )
 
 
 @product_login_required

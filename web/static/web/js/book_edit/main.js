@@ -28,6 +28,7 @@ import { bindShelfActions } from "./shelf_actions.js";
 import { mountCovers } from "../ui/covers.js";
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { bindCatalogTagActions, renderCatalogTags } from "./catalog_tags.js";
+import { initBookCoverEditor } from "../library/cover_editor.js";
 
 function bookDisplayTitle(book) {
   return book && book.title ? String(book.title) : "Untitled book";
@@ -208,6 +209,21 @@ export async function initBookEdit() {
     groups: [],
   };
 
+  function renderHeaderCover(url, title) {
+    headerCoverEl.dataset.coverUrl = String(url || "");
+    headerCoverEl.dataset.coverTitle = String(title || "");
+    headerCoverEl.dataset.coverMounted = "0";
+    mountCovers(headerEl);
+  }
+
+  const coverEditor = initBookCoverEditor({
+    bookId,
+    onCoverChanged(url, book) {
+      state.book = { ...(state.book || {}), ...(book || {}), cover_url: url };
+      renderHeaderCover(url, bookDisplayTitle(state.book));
+    },
+  });
+
   async function refreshShelves() {
     await refreshShelvesContext({
       bookId,
@@ -235,9 +251,8 @@ export async function initBookEdit() {
 
     const titleText = state.book && state.book.title ? String(state.book.title) : "";
     const coverUrl = state.book && state.book.cover_url ? String(state.book.cover_url) : "";
-    headerCoverEl.dataset.coverUrl = coverUrl;
-    headerCoverEl.dataset.coverTitle = titleText;
-    mountCovers(headerEl);
+    renderHeaderCover(coverUrl, titleText);
+    if (coverEditor) coverEditor.setCurrentCover({ url: coverUrl, title: titleText });
     renderFileInfo({ book: state.book, fileInfoEl });
     renderSelectedAuthors({ selectedAuthors: state.selectedAuthors, authorsSelectedEl });
     renderCatalogTags({ state, selectedEl: catalogTagsEl, optionsEl: catalogTagOptionsEl });

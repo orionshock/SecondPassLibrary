@@ -13,16 +13,22 @@ class BookCoverProductUiRouteTests(ProductUiTestCase):
         super().setUp()
         self.book = Book.objects.create(title="Cover UI")
 
-    def test_reader_does_not_receive_cover_editor(self):
+    def test_book_detail_is_read_only_and_reader_does_not_receive_edit_controls(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(f"/library/books/{self.book.id}/")
+        detail = self.client.get(f"/library/books/{self.book.id}/")
+        edit = self.client.get(f"/library/books/{self.book.id}/edit/")
+        self.client.force_login(self.bootstrap_owner)
+        owner_detail = self.client.get(f"/library/books/{self.book.id}/")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'id="book-cover-edit"')
-        self.assertNotContains(response, 'id="book-cover-modal"')
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(edit.status_code, 200)
+        self.assertNotContains(detail, 'id="book-cover-edit"')
+        self.assertNotContains(owner_detail, 'id="book-cover-edit"')
+        self.assertNotContains(owner_detail, 'id="book-cover-modal"')
+        self.assertNotContains(edit, 'id="book-edit-cover-editor"')
 
-    def test_librarian_manager_and_owner_receive_cover_editor(self):
+    def test_librarian_manager_and_owner_receive_editor_on_book_edit(self):
         User = get_user_model()
         librarian = User.objects.create_user(username="cover-librarian", password="pw")
         manager = User.objects.create_user(username="cover-manager", password="pw")
@@ -32,7 +38,7 @@ class BookCoverProductUiRouteTests(ProductUiTestCase):
         for user in (librarian, manager, self.bootstrap_owner):
             with self.subTest(username=user.username):
                 self.client.force_login(user)
-                response = self.client.get(f"/library/books/{self.book.id}/")
+                response = self.client.get(f"/library/books/{self.book.id}/edit/")
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, 'id="book-cover-edit"')
-                self.assertContains(response, 'id="book-cover-modal"')
+                self.assertContains(response, 'id="book-edit-cover-editor"')
+                self.assertContains(response, 'id="book-edit-cover-current"')

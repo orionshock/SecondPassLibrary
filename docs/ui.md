@@ -63,10 +63,6 @@ The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` 
 - Top panel shows cover art (or placeholder), title/series/authors, and a primary Download action when a file is available.
 - Tabs (default: Shelves) show Shelves, Groups, and Metadata. Metadata uses the
   canonical description/date fields and includes Catalog Tags, identifiers, and Book-owned file details.
-- Librarian, Manager, and Owner users receive an Edit cover action beside the
-  Book detail actions. It supports a local preview, validated replacement,
-  idempotent clearing, and cancellation without mixing cover bytes into the
-  metadata editor. Readers do not receive the action.
 
 Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box. Recent reading cards link to the session Marginalia page and include an `[All Sessions]` link for the book.
 
@@ -78,7 +74,7 @@ Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). The only 
 
 The book detail page also shows the book's assigned LibraryGroups (filtered for Readers, including readers with group curator flags, to only viewable groups) with links to the group pages.
 
-The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Authors are selected from existing records; a series may be selected or created and assigned with the same atomic Book save. Catalog Tags are searchable removable pills loaded from the paginated read-only tag API; load failures remain visible without blocking manual tag entry. Tag names are submitted only through the same Book PATCH. Identifier add/edit/remove controls likewise update local page state and are saved with the Book PATCH. LibraryGroup assignments remain on their group relationship endpoints. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only Book-owned file metadata; the stored EPUB is not edited from this page.
+The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Authors are selected from existing records; a series may be selected or created and assigned with the same atomic Book save. Catalog Tags are searchable removable pills loaded from the paginated read-only tag API; load failures remain visible without blocking manual tag entry. Tag names are submitted only through the same Book PATCH. Identifier add/edit/remove controls likewise update local page state and are saved with the Book PATCH. LibraryGroup assignments remain on their group relationship endpoints. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only Book-owned file metadata and a separate Librarian+ cover editor with current/replacement previews, reset, replace, and confirmed clear actions. Cover operations use the dedicated cover endpoint and do not participate in metadata Save. The stored EPUB is not edited from this page.
 
 The imports page is API-driven using:
 

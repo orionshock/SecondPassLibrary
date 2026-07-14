@@ -15,7 +15,6 @@ import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 import { bookDetailContextFromSearch, libraryContextHref } from "./navigation.js";
-import { initBookCoverEditor } from "./cover_editor.js";
 
 function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
   if (!summaryWrapEl || !summaryEl || !toggleEl) return;
@@ -290,7 +289,6 @@ export async function initBookDetail() {
   const coverEl = $("#book-cover");
   const editWrapEl = $("#book-edit-link-wrap");
   const editLinkEl = $("#book-edit-link");
-  const coverEditEl = $("#book-cover-edit");
   const idBody = $("#book-identifiers-body");
   const filesBody = $("#book-files-body");
   const metadataBody = $("#book-metadata-body");
@@ -336,20 +334,9 @@ export async function initBookDetail() {
 
   const canManage = canManageLibrary(me);
   visible(editWrapEl, canManage);
-  visible(coverEditEl, canManage);
   if (canManage) {
     editLinkEl.setAttribute("href", `/library/books/${encodeURIComponent(String(bookId))}/edit/`);
   }
-  const coverEditor = canManage
-    ? initBookCoverEditor({
-        bookId,
-        onCoverChanged(url) {
-          coverEl.dataset.coverUrl = url;
-          coverEl.dataset.coverMounted = "0";
-          mountCovers(coverEl.parentNode);
-        },
-      })
-    : null;
 
   setStatus(statusEl, "Loading...", false);
   // Initialize tab state immediately so only Shelves is visible on first paint.
@@ -368,7 +355,6 @@ export async function initBookDetail() {
 
     const titleText = book && book.title ? String(book.title) : "";
     const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
-    if (coverEditor) coverEditor.setCurrentCoverUrl(coverUrl);
     coverEl.dataset.coverUrl = coverUrl;
     coverEl.dataset.coverTitle = titleText;
     mountCovers(coverEl.parentNode);

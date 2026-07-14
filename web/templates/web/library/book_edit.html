@@ -166,6 +166,36 @@
 
       <div id="book-edit-file-info" class="muted" style="margin-top: 14px;"></div>
       <div class="muted" style="margin-top: 10px;">The stored EPUB file is not edited here. Import another file as a separate book.</div>
+
+      {% if can_manage_library %}
+      <section id="book-edit-cover-editor" class="book-cover-editor" aria-labelledby="book-edit-cover-title">
+        <h3 id="book-edit-cover-title" class="card__title">Cover</h3>
+        <div class="book-cover-editor__previews">
+          <div>
+            <div class="muted">Current cover</div>
+            <div id="book-edit-cover-current" class="edit-header__cover" aria-hidden="true">Cover</div>
+          </div>
+          <div id="book-edit-cover-preview-wrap" class="is-hidden">
+            <div class="muted">Selected replacement</div>
+            <div class="book-cover-editor__preview">
+              <img id="book-edit-cover-preview" alt="Selected cover preview" />
+            </div>
+          </div>
+        </div>
+        <form id="book-edit-cover-form" enctype="multipart/form-data">
+          {% csrf_token %}
+          <label for="book-edit-cover-file">Replace cover with a JPEG, PNG, or WebP image</label>
+          <input id="book-edit-cover-file" name="cover" type="file" accept="image/jpeg,image/png,image/webp" />
+          <div id="book-edit-cover-selection" class="muted">No image selected.</div>
+          <div id="book-edit-cover-status" class="muted" role="status" aria-live="polite"></div>
+          <div class="book-cover-editor__actions">
+            <button id="book-edit-cover-submit" class="button" type="submit">Replace cover</button>
+            <button id="book-edit-cover-clear" class="button button--danger is-hidden" type="button">Clear cover</button>
+            <button id="book-edit-cover-reset" class="button" type="button">Reset selection</button>
+          </div>
+        </form>
+      </section>
+      {% endif %}
     </div>
   </section>
 {% endblock %}
