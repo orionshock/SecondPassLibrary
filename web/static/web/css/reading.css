@@ -296,36 +296,10 @@
   margin-bottom: 12px;
 }
 .book-hero__main { min-width: 0; }
-.book-hero__actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 
 .book-meta { display: grid; gap: 6px; margin-top: 2px; }
 .book-meta__line { font-weight: 650; }
 .book-meta__subjects { margin-top: 4px; }
-
-.book-hero__summary {
-  margin-top: 10px;
-  color: var(--text);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.book-hero__summary--clamped {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.book-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.book-meta-grid__item {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
-}
 
 @media (max-width: 720px) {
   .dashboard-actions { grid-template-columns: 1fr; }
@@ -349,7 +323,6 @@
     grid-column: 1 / -1;
   }
   .book-hero { grid-template-columns: 92px 1fr; }
-  .book-meta-grid { grid-template-columns: 1fr; }
 }
 .reading-sessions-actions {
   display: flex;

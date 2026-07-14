@@ -167,8 +167,7 @@
       <div id="book-edit-file-info" class="muted" style="margin-top: 14px;"></div>
       <div class="muted" style="margin-top: 10px;">The stored EPUB file is not edited here. Import another file as a separate book.</div>
 
-      {% if can_manage_library %}
-      <section id="book-edit-cover-editor" class="book-cover-editor" aria-labelledby="book-edit-cover-title">
+      <section id="book-edit-cover-editor" class="book-cover-editor is-hidden" aria-labelledby="book-edit-cover-title">
         <h3 id="book-edit-cover-title" class="card__title">Cover</h3>
         <div class="book-cover-editor__previews">
           <div>
@@ -195,7 +194,6 @@
           </div>
         </form>
       </section>
-      {% endif %}
     </div>
   </section>
 {% endblock %}

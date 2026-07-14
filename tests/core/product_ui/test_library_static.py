@@ -35,9 +35,12 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, "/static/web/js/main.js")
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="book-detail"')
+        self.assertContains(response, 'class="book-detail__identity"')
+        self.assertContains(response, 'class="book-detail__sections"')
+        self.assertContains(response, 'class="book-detail__cover"')
         self.assertContains(response, f'data-book-id="{book_id}"')
         self.assertContains(response, 'id="book-shelves"')
-        self.assertContains(response, 'id="book-edit-link-wrap"')
+        self.assertContains(response, 'id="book-edit-link-wrap" class="is-hidden"')
         self.assertContains(response, 'id="book-download-link"')
         self.assertContains(response, 'id="book-summary-toggle"')
         self.assertContains(response, 'data-tab="shelves"')
@@ -58,9 +61,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'aria-current="page"')
         self.assertContains(response, "Book")
         self.assertNotContains(response, "Back to Library")
-        self.assertContains(
-            response, f'href="/library/books/{book_id}/edit/"'
-        )
+        self.assertContains(response, f'href="/library/books/{book_id}/edit/"')
 
     def test_authenticated_book_detail_shows_group_panel_when_enabled(self):
         server_settings.enable_advanced_library_groups()

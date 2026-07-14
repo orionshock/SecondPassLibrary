@@ -20,7 +20,7 @@ from accounts.bootstrap import (
     has_active_owner,
 )
 from accounts.forms import FirstOwnerSetupForm
-from accounts.roles import is_librarian, is_owner
+from accounts.roles import is_owner
 from core import server_settings as server_settings_service
 from library.models import Book
 from library.queries import visible_books_for_user
@@ -236,14 +236,7 @@ def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
 @product_login_required
 def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
     book_uuid = _uuid_or_404(book_id)
-    return render(
-        request,
-        "web/library/book_edit.html",
-        {
-            "book_id": str(book_uuid),
-            "can_manage_library": is_librarian(request.user),
-        },
-    )
+    return render(request, "web/library/book_edit.html", {"book_id": str(book_uuid)})
 
 
 @product_login_required

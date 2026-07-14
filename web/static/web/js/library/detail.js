@@ -23,7 +23,7 @@ function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
   if (!text) return;
 
   summaryEl.textContent = text;
-  summaryEl.classList.add("book-hero__summary--clamped");
+  summaryEl.classList.add("book-detail__summary--clamped");
   toggleEl.textContent = "Show more";
   visible(toggleEl, false);
 
@@ -34,7 +34,7 @@ function setupSummary({ summaryWrapEl, summaryEl, toggleEl, summaryText }) {
   });
 
   toggleEl.addEventListener("click", () => {
-    const clamped = summaryEl.classList.toggle("book-hero__summary--clamped");
+    const clamped = summaryEl.classList.toggle("book-detail__summary--clamped");
     toggleEl.textContent = clamped ? "Show more" : "Show less";
   });
 }
@@ -226,27 +226,49 @@ function renderBookShelves(container, shelves) {
 function renderBookMeta(container, book) {
   clear(container);
   const subtitle = book && book.subtitle ? String(book.subtitle) : "";
-  const authors = Array.isArray(book && book.authors) ? book.authors.map((a) => a && a.name).filter(Boolean) : [];
-  const series = book && book.series && book.series.name ? String(book.series.name) : "";
+  const authors = Array.isArray(book && book.authors) ? book.authors.filter((a) => a && a.name) : [];
+  const series = book && book.series && book.series.name ? book.series : null;
   const seriesIndex = book && book.series && book.series.series_index != null ? String(book.series.series_index) : "";
-  const seriesLine = series ? `${series}${seriesIndex ? ` #${seriesIndex}` : ""}` : "";
 
-  const wrap = el("div", "book-meta");
+  const wrap = el("div", "book-detail-meta");
 
-  if (subtitle) wrap.appendChild(el("div", "muted", subtitle));
-  if (seriesLine) wrap.appendChild(el("div", "book-meta__line", seriesLine));
-  if (authors.length) wrap.appendChild(el("div", "book-meta__line", authors.join(", ")));
+  if (subtitle) wrap.appendChild(el("div", "book-detail-meta__subtitle", subtitle));
+  if (series) {
+    const seriesLine = el("div", "book-detail-meta__series");
+    const seriesLink = el("a", "", String(series.name));
+    seriesLink.setAttribute(
+      "href",
+      `/library/?view=series&series=${encodeURIComponent(String(series.id || ""))}`
+    );
+    seriesLine.appendChild(seriesLink);
+    if (seriesIndex) seriesLine.appendChild(document.createTextNode(` #${seriesIndex}`));
+    wrap.appendChild(seriesLine);
+  }
+  if (authors.length) {
+    const authorLine = el("div", "book-detail-meta__authors");
+    authorLine.appendChild(document.createTextNode("By "));
+    authors.forEach((author, index) => {
+      if (index) authorLine.appendChild(document.createTextNode(", "));
+      const authorLink = el("a", "", String(author.name));
+      authorLink.setAttribute(
+        "href",
+        `/library/?view=author&author=${encodeURIComponent(String(author.id || ""))}`
+      );
+      authorLine.appendChild(authorLink);
+    });
+    wrap.appendChild(authorLine);
+  }
 
-  const metaBits = [];
+  const facts = el("div", "book-detail-meta__facts");
   const publishedDate = formatPublishedDate(book);
-  if (publishedDate) metaBits.push(publishedDate);
-  if (book && book.publisher) metaBits.push(String(book.publisher));
-  if (book && book.language) metaBits.push(String(book.language));
-  if (metaBits.length) wrap.appendChild(el("div", "muted", metaBits.join(" - ")));
+  if (publishedDate) facts.appendChild(el("span", "", `Published ${publishedDate}`));
+  if (book && book.publisher) facts.appendChild(el("span", "", `Publisher: ${book.publisher}`));
+  if (book && book.language) facts.appendChild(el("span", "", `Language: ${book.language}`));
+  if (facts.childNodes.length) wrap.appendChild(facts);
 
   if (book && Array.isArray(book.catalog_tags) && book.catalog_tags.length) {
     const pills = document.createElement("div");
-    pills.className = "book-meta__tags";
+    pills.className = "book-detail-meta__tags";
     renderCatalogTagPills(pills, book.catalog_tags);
     if (pills.textContent && pills.textContent.trim()) wrap.appendChild(pills);
   }
@@ -309,8 +331,6 @@ export async function initBookDetail() {
     !detailEl ||
     !metaEl ||
     !coverEl ||
-    !editWrapEl ||
-    !editLinkEl ||
     !idBody ||
     !filesBody ||
     !metadataBody ||
@@ -333,8 +353,8 @@ export async function initBookDetail() {
   syncBookBreadcrumbs({ title: "Book", context: breadcrumbContext });
 
   const canManage = canManageLibrary(me);
-  visible(editWrapEl, canManage);
-  if (canManage) {
+  if (canManage && editWrapEl && editLinkEl) {
+    visible(editWrapEl, true);
     editLinkEl.setAttribute("href", `/library/books/${encodeURIComponent(String(bookId))}/edit/`);
   }
 

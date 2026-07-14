@@ -38,9 +38,12 @@ class BookCoverProductUiContractTests:
         assert "cover_editor" not in detail
         assert 'id="book-cover-edit"' not in detail_template
         assert 'id="book-cover-modal"' not in detail_template
-        assert "can_manage_library" in edit_template
+        assert "can_manage_library" not in edit_template
         assert 'id="book-edit-cover-editor"' in edit_template
+        assert 'class="book-cover-editor is-hidden"' in edit_template
         assert 'from "../library/cover_editor.js"' in edit_main
+        assert "const canManage = canManageLibrary(me)" in edit_main
+        assert "visible(root, true)" in editor
         assert "new FormData()" in editor
         assert 'data.append("cover", file)' in editor
         assert 'method: "POST"' in editor

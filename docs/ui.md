@@ -60,7 +60,12 @@ The library browse screen is API-driven using vanilla JS fetch calls to `GET /ap
 
 The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and is cover-forward:
 
-- Top panel shows cover art (or placeholder), title/series/authors, and a primary Download action when a file is available.
+- The identity area uses a large display-only cover (or scaled placeholder)
+  beside title, series, authors, publication facts, Catalog Tags, and
+  description. It stacks the cover above the identity on narrow screens.
+- Download remains in the identity actions when a file is available.
+  Librarian, Manager, and Owner users also receive one quiet `Edit book` link
+  there; Readers receive no edit action.
 - Tabs (default: Shelves) show Shelves, Groups, and Metadata. Metadata uses the
   canonical description/date fields and includes Catalog Tags, identifiers, and Book-owned file details.
 

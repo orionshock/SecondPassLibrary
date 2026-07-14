@@ -57,6 +57,8 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
   )
     return null;
 
+  visible(root, true);
+
   let currentCoverUrl = "";
   let currentTitle = "";
   let previewUrl = "";
