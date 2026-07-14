@@ -37,8 +37,24 @@ export function libraryBookDetailHref(bookId, context = null) {
   return pathWithParams(base, { view: "books" });
 }
 
+const LIBRARY_STATE_PARAMS = new Set(["view", "q", "page", "page_size", "author", "series"]);
+
+export function preservedLibraryParams(searchParams) {
+  const preserved = {};
+  for (const [key, value] of searchParams.entries()) {
+    if (!LIBRARY_STATE_PARAMS.has(key)) preserved[key] = value;
+  }
+  return preserved;
+}
+
+export function librarySearchPlaceholder(view, seriesId = "") {
+  if (view === "authors") return "Author name...";
+  if (view === "series" && !seriesId) return "Series name...";
+  return "Title, author, series, identifier...";
+}
+
 export function canonicalLibraryParams(state, { defaultPageSize }) {
-  const params = {};
+  const params = { ...(state.preservedParams || {}) };
   if (state.view === "authors") {
     params.view = "authors";
   } else if (state.view === "author" && state.authorId) {
@@ -51,9 +67,9 @@ export function canonicalLibraryParams(state, { defaultPageSize }) {
     params.view = "series";
   } else {
     params.view = "books";
-    if (state.q) params.q = state.q;
   }
 
+  if (state.q) params.q = state.q;
   if (state.page && state.page !== 1) params.page = state.page;
   if (state.pageSize && state.pageSize !== defaultPageSize) {
     params.page_size = state.pageSize;

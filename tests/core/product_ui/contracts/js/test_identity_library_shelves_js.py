@@ -198,7 +198,10 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         self.assertIn('page_size: state.pageSize', library_list_js)
         self.assertIn("author: state.authorId", library_list_js)
         self.assertIn("series: state.seriesId", library_list_js)
-        self.assertIn('ordering: state.seriesId ? "series_index" : ""', library_list_js)
+        self.assertIn(
+            'ordering: state.preservedParams.ordering || (state.seriesId ? "series_index" : "")',
+            library_list_js,
+        )
         self.assertIn("function locationParamsForState", library_list_js)
         self.assertIn("function activeFilter", library_list_js)
         self.assertIn("function syncBreadcrumbs", library_list_js)

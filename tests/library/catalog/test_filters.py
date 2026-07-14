@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.test import TestCase
 
+from library.models import BookIdentifier
 from tests.library.helpers import LibraryCatalogApiFixtureMixin, response_titles
 
 
@@ -35,6 +36,18 @@ class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Visible Two"])
+
+    def test_q_search_matches_identifier(self):
+        BookIdentifier.objects.create(
+            book=self.visible_three,
+            scheme=BookIdentifier.SCHEME_ASIN,
+            value="B0CATALOG123",
+        )
+
+        response = self.client.get("/api/v1/library/books/", {"q": "catalog123"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Visible Three"])
 
     def test_author_filter(self):
         response = self.client.get("/api/v1/library/books/", {"author": self.alpha.id})

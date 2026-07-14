@@ -12,7 +12,13 @@ import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
-import { canonicalLibraryParams, libraryBookDetailHref, libraryContextHref } from "./navigation.js";
+import {
+  canonicalLibraryParams,
+  libraryBookDetailHref,
+  libraryContextHref,
+  librarySearchPlaceholder,
+  preservedLibraryParams,
+} from "./navigation.js";
 import { renderLibraryContext, toggleProseBlock } from "./prose.js";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -240,6 +246,7 @@ export async function initLibraryBrowse() {
     q: "",
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
+    preservedParams: {},
     authorId: "",
     authorName: "",
     authorBiography: "",
@@ -426,6 +433,7 @@ export async function initLibraryBrowse() {
   function syncControls() {
     syncBreadcrumbs();
     qInput.value = state.q;
+    qInput.placeholder = librarySearchPlaceholder(state.view, state.seriesId);
     pageSizeSelect.value = String(state.pageSize);
     rangeEl.textContent = rangeText(state);
     prevBtn.disabled = !state.hasPrevious;
@@ -481,29 +489,32 @@ export async function initLibraryBrowse() {
   }
 
   function apiUrlForState() {
+    const commonParams = {
+      ...state.preservedParams,
+      q: state.q,
+      page: state.page,
+      page_size: state.pageSize,
+    };
+
     if (state.view === "authors") {
       return urlWithParams("/api/v1/library/authors/", {
+        ...commonParams,
         include_preview_books: "true",
-        page: state.page,
-        page_size: state.pageSize,
       });
     }
 
     if (state.view === "series" && !state.seriesId) {
       return urlWithParams("/api/v1/library/series/", {
+        ...commonParams,
         include_preview_books: "true",
-        page: state.page,
-        page_size: state.pageSize,
       });
     }
 
     return urlWithParams("/api/v1/library/books/", {
-      q: state.view === "books" ? state.q : "",
-      page: state.page,
-      page_size: state.pageSize,
+      ...commonParams,
       author: state.authorId,
       series: state.seriesId,
-      ordering: state.seriesId ? "series_index" : "",
+      ordering: state.preservedParams.ordering || (state.seriesId ? "series_index" : ""),
     });
   }
 
@@ -578,9 +589,10 @@ export async function initLibraryBrowse() {
     const params = new URLSearchParams(window.location.search);
     const view = (params.get("view") || "books").trim();
     state.view = VIEWS.has(view) ? view : "books";
-    state.q = state.view === "books" ? (params.get("q") || "").trim() : "";
+    state.q = (params.get("q") || "").trim();
     state.page = parsePositiveInt(params.get("page"), 1);
     state.pageSize = pageSizeFromValue(params.get("page_size"));
+    state.preservedParams = preservedLibraryParams(params);
     state.authorId = state.view === "author" ? (params.get("author") || "").trim() : "";
     if (state.view === "author" && !state.authorId) state.view = "books";
     state.authorName = "";
@@ -613,15 +625,7 @@ export async function initLibraryBrowse() {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    state.view = "books";
     state.q = (qInput.value || "").trim();
-    state.authorId = "";
-    state.authorName = "";
-    state.authorBiography = "";
-    state.seriesId = "";
-    state.seriesName = "";
-    state.seriesSummary = "";
-    clearContextUiState();
     state.page = 1;
     await loadCurrentPage({ push: true });
   });
@@ -649,7 +653,6 @@ export async function initLibraryBrowse() {
       if (!TAB_VIEWS.has(nextView)) return;
       state.view = nextView;
       state.page = 1;
-      if (nextView !== "books") state.q = "";
       state.authorId = "";
       state.authorName = "";
       state.authorBiography = "";

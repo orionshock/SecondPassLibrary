@@ -40,6 +40,7 @@ def _apply_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
         | Q(book_authors__author__name__icontains=term)
         | Q(book_series__series__name__icontains=term)
         | Q(book_catalog_tags__catalog_tag__name__icontains=term)
+        | Q(identifiers__value__icontains=term)
     )
 
 
