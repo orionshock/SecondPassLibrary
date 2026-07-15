@@ -106,6 +106,43 @@ served only through authorized app endpoints.
 
 Backups should include `userdata/` and the deployment secret values in `.env`.
 
+### Periodic unavailable shelf-item cleanup
+
+Personal shelf items are retained when later group or role changes make their
+books unavailable. Normal shelf APIs hide those books. If visibility returns
+before cleanup runs, the existing shelf item becomes readable again in its
+stored position.
+
+Inspect retained unavailable items without changing the database:
+
+```bash
+docker compose exec -T secondpasslibrary python manage.py cleanup_shelves
+```
+
+Remove them permanently and compact the remaining shelf positions:
+
+```bash
+docker compose exec -T secondpasslibrary python manage.py cleanup_shelves --apply
+```
+
+For the Docker Compose deployment documented above, a conservative nightly
+host cron entry is:
+
+```cron
+0 3 * * * root cd /srv/second-pass-library && /usr/bin/docker compose exec -T secondpasslibrary python manage.py cleanup_shelves --apply
+```
+
+Replace `/srv/second-pass-library` with the directory containing the deployed
+`compose.yml`. Cron must run as a host account allowed to use Docker. The
+command is idempotent for the current database state, but `--apply` is
+destructive: unavailable personal-shelf items are permanently removed. Run the
+dry-run command first when reviewing a deployment manually.
+
+The command writes its summary to stdout and emits one aggregate completion log
+through normal application logging. Routine no-op runs are expected. A future
+Celery deployment may replace host cron, but Celery is not a current dependency
+or scheduling requirement.
+
 ### Windows local production-mode helper
 
 Install the runtime dependencies, configure the environment, and run the

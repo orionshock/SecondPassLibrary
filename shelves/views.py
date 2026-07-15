@@ -306,6 +306,13 @@ class ShelfViewSet(
     def _item_patch(self, request, shelf: Shelf, item: ShelfItem) -> Response:
         if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
             raise PermissionDenied(self._write_denied_message(request=request, items=True))
+        if (
+            shelf.owner_type == Shelf.OWNER_TYPE_USER
+            and not visible_shelf_items_for_user(request.user, shelf)
+            .filter(pk=item.pk)
+            .exists()
+        ):
+            raise Http404()
 
         serializer = cast(Any, ShelfItemPatchSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)

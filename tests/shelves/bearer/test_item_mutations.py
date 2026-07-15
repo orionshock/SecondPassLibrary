@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from library.models import LibraryGroupMembership
+from shelves.models import ShelfItem
 from tests.shelves.bearer.helpers import ShelvesBearerApiTestCase
 from tests.utils.responses import assert_response, response_data_dict
 
@@ -100,3 +102,48 @@ class ShelvesBearerItemMutationTests(ShelvesBearerApiTestCase):
         )
         self.assertEqual(patch.status_code, 200)
         self.assertEqual(response_data_dict(patch)["position"], 0)
+
+    def test_bearer_hidden_personal_item_patch_is_not_found_but_delete_is_allowed(self):
+        shelf_id = self._create_personal_shelf_as_owner()
+        added = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        item_id = str(response_data_dict(added)["id"])
+        LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
+
+        listed = assert_response(
+            self.client.get(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        self.assertEqual(response_data_dict(listed)["results"], [])
+        self.assertTrue(ShelfItem.objects.filter(pk=item_id).exists())
+
+        patch = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                data={"move": "up"},
+                format="json",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        self.assertEqual(patch.status_code, 404)
+        self.assertEqual(response_data_dict(patch), {"detail": "Not found."})
+        self.assertNotIn(str(self.book_in_group.id), patch.content.decode("utf-8"))
+        self.assertTrue(ShelfItem.objects.filter(pk=item_id).exists())
+
+        removed = assert_response(
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/items/{item_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        self.assertEqual(removed.status_code, 204)
+        self.assertEqual(removed.content, b"")
+        self.assertFalse(ShelfItem.objects.filter(pk=item_id).exists())

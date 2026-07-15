@@ -4,7 +4,15 @@ import pytest
 from rest_framework import status
 
 from library.groups.book_assignments import add_book_to_group
-from library.models import LibraryGroup, LibraryGroupMembership
+from library.models import (
+    Author,
+    BookAuthor,
+    BookIdentifier,
+    BookSeries,
+    LibraryGroup,
+    LibraryGroupMembership,
+    Series,
+)
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.books import create_file_backed_book
@@ -91,6 +99,128 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
             [row["book"]["title"] for row in response_data_list(response)],
             [self.book_in_group.title],
         )
+
+    def test_owner_patch_of_retained_unavailable_item_returns_not_found_without_book_data(self):
+        self.client.login(username="reader", password="pw")
+        shelf = self._create_user_shelf()
+        author = Author.objects.create(name="Private Author")
+        series = Series.objects.create(name="Private Series")
+        BookAuthor.objects.create(book=self.book_in_group, author=author, position=0)
+        BookSeries.objects.create(
+            book=self.book_in_group,
+            series=series,
+            series_index="4.00",
+        )
+        identifier = BookIdentifier.objects.create(
+            book=self.book_in_group,
+            scheme=BookIdentifier.SCHEME_ASIN,
+            value="PRIVATE-IDENTIFIER",
+        )
+        self.book_in_group.cover_file = "covers/private-cover.jpg"
+        self.book_in_group.save(update_fields=["cover_file", "updated_at"])
+        item = ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.book_in_group,
+            position=0,
+            added_by=self.reader,
+        )
+        LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).delete()
+
+        response = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{shelf.id}/items/{item.id}/",
+                data={"position": 0},
+                format="json",
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response_data_dict(response), {"detail": "Not found."})
+        response_text = response.content.decode("utf-8")
+        for private_value in (
+            str(self.book_in_group.id),
+            self.book_in_group.title,
+            author.name,
+            series.name,
+            self.book_in_group.cover_file.name,
+            identifier.value,
+        ):
+            self.assertNotIn(private_value, response_text)
+        self.assertTrue(ShelfItem.objects.filter(pk=item.pk).exists())
+
+    def test_owner_delete_of_retained_unavailable_item_succeeds_without_disclosure(self):
+        self.client.login(username="reader", password="pw")
+        shelf = self._create_user_shelf()
+        item = ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.book_in_group,
+            position=0,
+            added_by=self.reader,
+        )
+        LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).delete()
+
+        response = assert_response(
+            self.client.delete(f"/api/v1/shelves/{shelf.id}/items/{item.id}/")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b"")
+        self.assertFalse(ShelfItem.objects.filter(pk=item.pk).exists())
+
+    def test_non_owner_cannot_mutate_retained_unavailable_item(self):
+        shelf = Shelf.objects.create(
+            name="Listed owner shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.reader,
+        )
+        item = ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.book_in_group,
+            position=0,
+            added_by=self.reader,
+        )
+        LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).delete()
+        self.client.login(username="other", password="pw")
+
+        patch_response = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{shelf.id}/items/{item.id}/",
+                data={"position": 0},
+                format="json",
+            )
+        )
+        delete_response = assert_response(
+            self.client.delete(f"/api/v1/shelves/{shelf.id}/items/{item.id}/")
+        )
+
+        self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(ShelfItem.objects.filter(pk=item.pk).exists())
+
+    def test_retained_item_reappears_when_owner_visibility_returns_before_cleanup(self):
+        self.client.login(username="reader", password="pw")
+        shelf = self._create_user_shelf()
+        item = ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.book_in_group,
+            position=0,
+            added_by=self.reader,
+        )
+        LibraryGroupMembership.objects.filter(user=self.reader, group=self.group).delete()
+
+        hidden = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/items/"))
+        self.assertEqual(response_data_list(hidden), [])
+        self.assertTrue(ShelfItem.objects.filter(pk=item.pk).exists())
+
+        LibraryGroupMembership.objects.create(user=self.reader, group=self.group)
+        restored = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/items/"))
+
+        rows = response_data_list(restored)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], str(item.id))
+        self.assertEqual(rows[0]["book"]["id"], str(self.book_in_group.id))
 
     def test_group_shelf_items_are_scoped_to_owner_group(self):
         other_group = LibraryGroup.objects.create(name="Other visible group")

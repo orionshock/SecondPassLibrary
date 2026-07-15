@@ -447,12 +447,21 @@ remaining positions:
 ```powershell
 python manage.py cleanup_shelves
 python manage.py cleanup_shelves --apply
-docker compose exec -T web python manage.py cleanup_shelves
-docker compose exec -T web python manage.py cleanup_shelves --apply
+docker compose exec -T secondpasslibrary python manage.py cleanup_shelves
+docker compose exec -T secondpasslibrary python manage.py cleanup_shelves --apply
 ```
 
 This is operator-invoked cleanup, not live propagation. It does not touch
 group-owned shelves, and normal shelf APIs continue hiding unavailable books.
+The dry run does not mutate data. `--apply` permanently removes unavailable
+personal-shelf items and compacts remaining positions. Repeating it is
+idempotent for the current database state. Retained rows become readable again
+if visibility returns before an apply run removes them.
+
+Docker deployments may schedule the apply command nightly from host cron. Use
+the exact Compose service name shown above; see `docs/deployment.md` for the
+sample cron entry and operational logging expectations. A future Celery-based
+scheduler is optional architecture, not a current dependency.
 
 Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):
