@@ -82,7 +82,7 @@
 
       <form id="group-edit-book-search-form" class="search is-hidden" autocomplete="off">
         <label class="search__label" for="group-edit-book-search">Find a book to add</label>
-        <input id="group-edit-book-search" class="search__input" placeholder="Search title, author, series..." />
+        <input id="group-edit-book-search" class="search__input" placeholder="Search book titles..." />
         <button id="group-edit-book-search-btn" class="button" type="submit">Search</button>
         <span id="group-edit-book-search-status" class="muted"></span>
       </form>
@@ -95,10 +95,10 @@
         </div>
       </div>
 
-      <div id="group-edit-books-status" class="muted" style="margin-top: 10px;">Loading...</div>
+      <div id="group-edit-books-status" class="muted" style="margin-top: 10px;" aria-live="polite">Loading...</div>
       <div id="group-edit-books-results" class="books"></div>
 
-      <div class="pager">
+      <div class="pager" aria-label="Assigned group books pagination">
         <button id="group-edit-books-prev" class="button" type="button" disabled>Previous</button>
         <button id="group-edit-books-next" class="button" type="button" disabled>Next</button>
       </div>

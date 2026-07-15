@@ -108,7 +108,9 @@ The groups UI is API-driven using:
 - `GET /api/v1/library/groups/<group_id>/` (detail)
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-- `GET /api/v1/library/books/?q=<search>` (book search for the Groups UI picker)
+- `GET /api/v1/library/books/?q=<search>&exclude_group=<group_id>` (title search
+  for the Groups UI picker; all existing assignments are excluded before
+  pagination)
 - `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
 - Memberships:
@@ -298,7 +300,7 @@ Primary endpoints:
 - Detail: `GET /api/v1/library/groups/<group_id>/`
 - Group books:
   - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-  - `POST /api/v1/library/groups/<group_id>/books/` body `{"book": "<book_id>"}`
+  - `POST /api/v1/library/groups/<group_id>/books/` body `{"book_id": "<book_id>"}`
   - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 - Presentation-only updates:
   - `PATCH /api/v1/library/groups/<group_id>/` (only `description`)
@@ -308,6 +310,10 @@ UI behaviors:
 - Readers should only see groups they can view. Public/Common Room follows
   normal group membership visibility.
 - Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
+- Group View and Group Edit use the endpoint's normal pagination envelope and
+  preserve the current page and supported filters in the Product UI URL.
+- The add-book picker relies on server-side `exclude_group`; it never builds an
+  exclusion set from only the currently displayed assigned-book page.
 - Broad-role controls should use `/api/v1/accounts/me/` role and owner state.
 - Reader group-scoped controls should use the matching non-Public
   `groups[]` membership with `is_curator=true`.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from library.models import BookGroupAssignment
+from library.models import Book, BookGroupAssignment
 from tests.library.groups.book_assignment_helpers import (
     LibraryGroupBookAssignmentApiTestCase,
     json_body,
@@ -10,6 +10,22 @@ from tests.library.groups.book_assignment_helpers import (
 class LibraryGroupBookAssignmentCreateTests(
     LibraryGroupBookAssignmentApiTestCase
 ):
+    def test_book_picker_filter_excludes_all_existing_group_assignments(self):
+        self.assertTrue(self.client.login(username="curator", password="pw"))
+        for index in range(3):
+            assigned = Book.objects.create(title=f"Assigned {index}")
+            BookGroupAssignment.objects.create(book=assigned, group=self.club)
+
+        response = self.client.get(
+            "/api/v1/library/books/",
+            {"exclude_group": str(self.club.id), "page_size": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["results"][0]["id"], str(self.source_book.id))
+        self.assertNotEqual(response.json()["results"][0]["id"], str(self.club_book.id))
+
     def test_librarian_manager_and_owner_can_add_any_valid_book(self):
         for username, book in [
             ("librarian", self.hidden_book),

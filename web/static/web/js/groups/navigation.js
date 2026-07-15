@@ -27,15 +27,24 @@ export function groupEditHref(groupId, tab = "details") {
 }
 
 export function setGroupViewUrl(groupId, tab, { replace = false } = {}) {
-  const href = groupViewHref(groupId, tab);
+  const href = groupTabHref(groupViewHref(groupId, tab), tab, "books");
   if (replace) window.history.replaceState({}, "", href);
   else window.history.pushState({}, "", href);
 }
 
 export function setGroupEditUrl(groupId, tab, { replace = false } = {}) {
-  const href = groupEditHref(groupId, tab);
+  const href = groupTabHref(groupEditHref(groupId, tab), tab, "details");
   if (replace) window.history.replaceState({}, "", href);
   else window.history.pushState({}, "", href);
+}
+
+function groupTabHref(fallbackHref, tab, defaultTab) {
+  const current = new URL(window.location.href);
+  const fallback = new URL(fallbackHref, current.origin);
+  current.pathname = fallback.pathname;
+  if (tab && tab !== defaultTab) current.searchParams.set("view", String(tab));
+  else current.searchParams.delete("view");
+  return `${current.pathname}${current.search}`;
 }
 
 export function selectGroupViewTab(root, tab) {

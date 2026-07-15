@@ -38,12 +38,15 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertNotIn("setBookSearchStatus(extractApiErrorMessage(e2)", self.source)
         self.assertNotIn("setStatus(booksStatus, extractApiErrorMessage(e2)", self.source)
 
-    def test_existing_book_preload_uses_uncapped_safe_pagination(self):
-        self.assertIn("fetchAllPaginatedResults(", self.source)
-        self.assertIn("Group book pagination continuation repeated.", self.source)
-        self.assertIn(
-            "Unable to load existing group books. Book search is unavailable.",
-            self.source,
-        )
-        self.assertNotIn("i < 20", self.source)
-        self.assertNotIn("page_size=200", self.source)
+    def test_add_picker_uses_server_side_complete_group_exclusion(self):
+        self.assertIn("exclude_group: String(groupId)", self.source)
+        self.assertNotIn("fetchAllPaginatedResults", self.source)
+        self.assertNotIn("groupBookIds", self.source)
+        self.assertNotIn("page_size=", self.source)
+
+    def test_assigned_books_keep_page_and_step_back_after_last_removal(self):
+        self.assertIn("initialUrl: groupBooksApiUrl(groupId)", self.source)
+        self.assertIn("state.resultCount === 1 && state.previousUrl", self.source)
+        self.assertIn('booksCtl.loadPrevious("remove-back")', self.source)
+        self.assertIn("await booksCtl.reload()", self.source)
+        self.assertIn('window.addEventListener("popstate"', self.source)

@@ -144,6 +144,19 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response_titles(response), ["Club Alpha"])
         self.assertIsNone(response.json()["next"])
 
+    def test_group_books_first_and_subsequent_pages_use_normal_envelope(self):
+        url = f"/api/v1/library/groups/{self.club.id}/books/"
+
+        first = self.client.get(url, {"page_size": 2})
+        second = self.client.get(url, {"page_size": 2, "page": 2})
+
+        self.assertEqual(response_titles(first), ["Club Alpha", "Club Beta"])
+        self.assertIsNotNone(first.json()["next"])
+        self.assertIsNone(first.json()["previous"])
+        self.assertEqual(response_titles(second), ["Shared Book"])
+        self.assertIsNone(second.json()["next"])
+        self.assertIsNotNone(second.json()["previous"])
+
     def test_group_authors_include_only_group_authors_and_count_group_books(self):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/authors/")
 

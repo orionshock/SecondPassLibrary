@@ -426,6 +426,11 @@ Rules:
 - Catalog Tags: `GET /api/v1/library/tags/` (paginated), `GET /api/v1/library/tags/<id>/`
 - Books: `GET /api/v1/library/books/` (paginated), `GET/PATCH /api/v1/library/books/<id>/`
 
+The Groups add-book picker uses
+`GET /api/v1/library/books/?q=<title>&exclude_group=<group_id>`. The optional
+`exclude_group` UUID removes every book already assigned to that visible group
+before pagination; it is not limited to the group's currently displayed page.
+
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 - `GET /api/v1/library/groups/<group_id>/books/`
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
@@ -654,6 +659,10 @@ Group list ordering:
 - Public/Common Room is not forced to the top by this endpoint.
 
 Group book ordering:
+
+Group book list responses use the normal `{count, next, previous, results}`
+pagination envelope. Product UI Group View and Group Edit URLs retain the
+current `page` and supported book filters while paging.
 
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=title` orders by title A-Z and is the default.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.

@@ -1,6 +1,11 @@
 import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
+import {
+  groupBookPageStatus,
+  groupBooksApiUrl,
+  syncGroupBookPage,
+} from "./book_pagination.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
 import {
@@ -137,14 +142,26 @@ export async function initGroupView() {
   visible(root, true);
   setStatus(statusEl, "", false);
 
-  await createPagedListController({
+  const booksCtl = await createPagedListController({
     statusEl: booksStatus,
     resultsEl: booksResults,
     nextBtn: booksNext,
     prevBtn: booksPrev,
-    initialUrl: `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/books/`,
+    initialUrl: groupBooksApiUrl(groupId),
     emptyText: "No books in this group.",
     render: (payload) => renderBooksCompact(payload, { groupId, canRemove: false }),
+    formatStatus: (payload, results, context) =>
+      groupBookPageStatus(payload, results, context.url),
+    onLoaded: (_payload, _results, context) => {
+      if (context.reason === "next" || context.reason === "previous") {
+        syncGroupBookPage(context.url);
+      }
+    },
+    loadErrorText: "Unable to load group books.",
+  });
+
+  window.addEventListener("popstate", async () => {
+    await booksCtl.load(groupBooksApiUrl(groupId), { reason: "history" });
   });
 
   membersNote.textContent = "";

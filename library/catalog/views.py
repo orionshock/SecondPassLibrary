@@ -12,6 +12,7 @@ from library.catalog.edit_services import update_book_metadata
 from library.catalog.filters import apply_book_filters
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
 from library.catalog.serializers import BookDetailSerializer, BookListSerializer, BookUpdateSerializer
+from library.groups.book_filters import exclude_books_assigned_to_group
 from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user
 
@@ -39,6 +40,11 @@ class BookListView(ListAPIView):
 
     def get_queryset(self):
         queryset = visible_books_for_user(self.request.user, cached=True)
+        queryset = exclude_books_assigned_to_group(
+            queryset,
+            user=self.request.user,
+            raw_group_id=self.request.query_params.get("exclude_group", ""),
+        )
         queryset = book_browse_queryset(queryset)
         queryset = apply_book_filters(queryset, self.request.query_params)
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
