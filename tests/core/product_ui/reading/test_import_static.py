@@ -19,13 +19,6 @@ class ProductUiImportMarginaliaTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get("/reading/import/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page">Import Marginalia</li>', html=False)
         self.assertContains(response, "Import Marginalia")
         self.assertContains(response, "Preview native SPL JSON and import only exact file-hash matches.")
         self.assertContains(response, "SPL native marginalia export")

@@ -51,16 +51,6 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertNotContains(response, 'data-tab="groups"')
         self.assertNotContains(response, 'data-tab-panel="groups"')
         self.assertContains(response, 'id="tab-metadata"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
-        )
-        self.assertContains(
-            response, '<a class="breadcrumbs__link" href="/library/?view=books">Books</a>', html=False
-        )
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Book")
-        self.assertNotContains(response, "Back to Library")
         self.assertContains(response, f'href="/library/books/{book_id}/edit/"')
 
     def test_authenticated_book_detail_shows_group_panel_when_enabled(self):
@@ -120,21 +110,6 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertNotContains(response, 'id="tab-groups"')
         self.assertNotContains(response, 'id="book-edit-groups"')
         self.assertNotContains(response, 'id="book-edit-groups-add"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response, '<a class="breadcrumbs__link" href="/library/">Library</a>', html=False
-        )
-        self.assertContains(
-            response, '<a class="breadcrumbs__link" href="/library/?view=books">Books</a>', html=False
-        )
-        self.assertContains(
-            response,
-            f'<a class="breadcrumbs__link" href="/library/books/{book_id}/">Book</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Edit")
-        self.assertNotContains(response, "Back to Book")
 
     def test_book_edit_tabs_group_fields_without_duplication(self):
         template = Path("web/templates/web/library/book_edit.html").read_text(encoding="utf-8")

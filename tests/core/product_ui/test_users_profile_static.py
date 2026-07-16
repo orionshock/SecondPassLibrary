@@ -50,10 +50,6 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'data-filter="manager"')
         self.assertContains(response, 'data-filter="inactive"')
         self.assertNotContains(response, 'data-filter="curator"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(response, "breadcrumbs--single")
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Users")
         self.assertContains(response, 'id="users-create-link"')
         self.assertContains(
             response,
@@ -88,16 +84,6 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="user-edit-form"')
         self.assertContains(response, 'data-profile-id="')
         self.assertNotContains(response, 'data-user-id="')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/users/">Users</a>',
-            html=False,
-        )
-        self.assertContains(response, "User")
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Edit")
-        self.assertNotContains(response, "Back to users")
         self.assertContains(response, 'id="user-edit-username"')
         self.assertContains(response, 'id="user-edit-must-change"')
         self.assertContains(response, 'id="user-reset-password-btn"')

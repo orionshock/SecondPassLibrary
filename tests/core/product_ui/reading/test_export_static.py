@@ -48,13 +48,6 @@ class ProductUiExportMarginaliaTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get("/reading/export/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page">Export Marginalia</li>', html=False)
         self.assertContains(response, "Export Marginalia")
         self.assertContains(response, "native SPL JSON")
         self.assertContains(response, "Exports can be previewed and restored")

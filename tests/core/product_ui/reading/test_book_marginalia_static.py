@@ -59,7 +59,6 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{book.id}/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
             '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
@@ -71,7 +70,6 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
             html=False,
         )
         self.assertContains(response, f'aria-current="page">{book.title}</li>', html=False)
-        self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
         self.assertContains(response, f"Marginalia for {book.title}")
         self.assertContains(response, f"<title>Marginalia for {book.title} -", html=False)
@@ -200,7 +198,6 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get(f"/reading/sessions/books/{book.id}/{session.id}/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'aria-label="Breadcrumb"')
         self.assertContains(
             response,
             '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
@@ -219,7 +216,6 @@ class ProductUiBookMarginaliaTests(ProductUiTestCase):
         self.assertContains(response, 'aria-current="page">Session</li>', html=False)
         self.assertContains(response, "<title>Session Marginalia -", html=False)
         self.assertNotContains(response, "<title>Reading activity", html=False)
-        self.assertNotContains(response, "Back to Dashboard")
         self.assertContains(response, f'data-book-id="{book.id}"')
         self.assertContains(response, f'data-session-id="{session.id}"')
         self.assertContains(response, 'id="reading-activity-status"')

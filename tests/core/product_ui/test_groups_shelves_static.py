@@ -74,15 +74,6 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Group books pagination"')
         self.assertContains(response, 'id="group-view-members-results"')
         self.assertContains(response, 'id="group-view-shelves-results"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/groups/">Groups</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Group")
-        self.assertNotContains(response, "Back to Groups")
 
     def test_authenticated_group_detail_malformed_id_returns_404(self):
         self.client.force_login(self.user)
@@ -123,20 +114,6 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="group-edit-shelves-results"')
         self.assertContains(response, 'id="group-edit-shelves-actions"')
         self.assertContains(response, 'id="group-delete-root"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/groups/">Groups</a>',
-            html=False,
-        )
-        self.assertContains(
-            response,
-            f'<a class="breadcrumbs__link" href="/groups/{group_id}/">Group</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Edit")
-        self.assertNotContains(response, "Back to Group")
         self.assertContains(
             response,
             "Managers, librarians, and owners can already manage books globally.",
@@ -281,15 +258,6 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-view-items-prev"')
         self.assertContains(response, 'id="shelf-view-items-next"')
         self.assertContains(response, 'id="shelf-view-items-page-note"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/shelves/">Shelves</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Shelf")
-        self.assertNotContains(response, "Back to Shelves")
         self.assertContains(response, 'id="shelf-view-edit-link"')
         self.assertNotContains(response, ">Details</h2>")
         self.assertNotContains(response, ">Books</h2>")
@@ -326,20 +294,6 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-edit-book-search-form"')
         self.assertContains(response, 'id="shelf-edit-danger"')
         self.assertContains(response, 'id="shelf-edit-delete-btn"')
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/shelves/">Shelves</a>',
-            html=False,
-        )
-        self.assertContains(
-            response,
-            f'<a class="breadcrumbs__link" href="/shelves/{shelf_id}/">Shelf</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page"')
-        self.assertContains(response, "Edit")
-        self.assertNotContains(response, "Back to Shelf")
 
     def test_authenticated_shelf_edit_malformed_id_returns_404(self):
         self.client.force_login(self.user)

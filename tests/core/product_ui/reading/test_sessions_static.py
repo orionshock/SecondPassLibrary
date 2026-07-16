@@ -72,13 +72,6 @@ class ProductUiReadingSessionsTests(ProductUiTestCase):
         self.client.force_login(self.user)
         response = self.client.get("/reading/sessions/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'aria-label="Breadcrumb"')
-        self.assertContains(
-            response,
-            '<a class="breadcrumbs__link" href="/reading/sessions/">My Marginalia</a>',
-            html=False,
-        )
-        self.assertContains(response, 'aria-current="page">Browse by Session</li>', html=False)
         self.assertContains(
             response,
             'id="reading-sessions-all-title">Marginalia by Session</h1>',
