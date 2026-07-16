@@ -21,9 +21,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         users_list_js = Path("web/static/web/js/users/list.js").read_text(
             encoding="utf-8"
         )
-        user_memberships_js = Path(
-            "web/static/web/js/users/memberships.js"
-        ).read_text(encoding="utf-8")
         list_js = Path("web/static/web/js/shelves/list.js").read_text(encoding="utf-8")
         view_js = Path("web/static/web/js/shelves/view.js").read_text(encoding="utf-8")
         edit_js = Path("web/static/web/js/shelves/edit.js").read_text(encoding="utf-8")
@@ -295,36 +292,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         self.assertNotIn("series_name", library_navigation_js)
         self.assertNotIn('from: "author"', library_navigation_js)
         self.assertNotIn('from: "series"', library_navigation_js)
-
-        self.assertIn('from "../ui/groups.js"', user_memberships_js)
-        self.assertIn("renderGroupBadge(g", user_memberships_js)
-        self.assertIn('class="membership-row"', user_memberships_js)
-        self.assertIn('class="membership-row__group"', user_memberships_js)
-        self.assertIn('class="membership-row__controls"', user_memberships_js)
-        self.assertIn('class="membership-row__actions"', user_memberships_js)
-        self.assertIn('class="membership-row__status muted"', user_memberships_js)
-        self.assertIn('data-action="membership-curator"', user_memberships_js)
-        self.assertIn("Public fallback group; curator unavailable.", user_memberships_js)
-        self.assertIn("descriptionForGroup", user_memberships_js)
-        self.assertIn("titleAttr", user_memberships_js)
-        self.assertIn('input[data-action="membership-curator"]', user_memberships_js)
-        self.assertIn('method: "PATCH"', user_memberships_js)
-        self.assertIn("clearLiveStatusLater", user_memberships_js)
-        self.assertIn("5000", user_memberships_js)
-        self.assertIn('window.confirm("Remove this user from the group?")', user_memberships_js)
-        self.assertIn("icon-button--danger", user_memberships_js)
-        self.assertNotIn('data-action="membership-save"', user_memberships_js)
-        self.assertNotIn('<span class="pill">Member</span>', user_memberships_js)
-        self.assertNotIn('<span class="pill">Curator</span>', user_memberships_js)
-        self.assertNotIn('disabled" : ""} />', user_memberships_js)
-        self.assertNotIn("Public is the default/fallback group", user_memberships_js)
-        self.assertNotIn("membership_role", user_memberships_js)
-        self.assertNotIn("curated_group_ids", user_memberships_js)
-        self.assertNotIn("me.capabilities", user_memberships_js)
-        self.assertNotIn(
-            "${escapeHtml(g.name || String(g.id || \"\"))}",
-            user_memberships_js,
-        )
 
         self.assertIn("shelfMetadataLine", list_js)
         self.assertIn('from "../ui/cover_previews.js"', list_js)

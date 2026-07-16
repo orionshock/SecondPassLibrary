@@ -83,6 +83,39 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn('data-user-id="${escapeHtml(profileId)}"', self.user_memberships_js)
         self.assertIn('getAttribute("data-user-id")', self.user_memberships_js)
 
+    def test_user_edit_membership_rows_use_group_badges_and_public_curator_copy(self):
+        self.assertIn('from "../ui/groups.js"', self.user_memberships_js)
+        self.assertIn("renderGroupBadge(g", self.user_memberships_js)
+        self.assertIn('class="membership-row"', self.user_memberships_js)
+        self.assertIn('class="membership-row__group"', self.user_memberships_js)
+        self.assertIn('class="membership-row__controls"', self.user_memberships_js)
+        self.assertIn('class="membership-row__actions"', self.user_memberships_js)
+        self.assertIn('class="membership-row__status muted"', self.user_memberships_js)
+        self.assertIn("Public fallback group; curator unavailable.", self.user_memberships_js)
+        self.assertIn("descriptionForGroup", self.user_memberships_js)
+        self.assertIn("titleAttr", self.user_memberships_js)
+        self.assertNotIn('<span class="pill">Member</span>', self.user_memberships_js)
+        self.assertNotIn('<span class="pill">Curator</span>', self.user_memberships_js)
+        self.assertNotIn("Public is the default/fallback group", self.user_memberships_js)
+
+    def test_user_edit_membership_mutation_controls_stay_profile_scoped(self):
+        self.assertIn('data-action="membership-curator"', self.user_memberships_js)
+        self.assertIn('input[data-action="membership-curator"]', self.user_memberships_js)
+        self.assertIn('method: "PATCH"', self.user_memberships_js)
+        self.assertIn("clearLiveStatusLater", self.user_memberships_js)
+        self.assertIn("5000", self.user_memberships_js)
+        self.assertIn('window.confirm("Remove this user from the group?")', self.user_memberships_js)
+        self.assertIn("icon-button--danger", self.user_memberships_js)
+        self.assertNotIn('data-action="membership-save"', self.user_memberships_js)
+        self.assertNotIn('disabled" : ""} />', self.user_memberships_js)
+        self.assertNotIn("membership_role", self.user_memberships_js)
+        self.assertNotIn("curated_group_ids", self.user_memberships_js)
+        self.assertNotIn("me.capabilities", self.user_memberships_js)
+        self.assertNotIn(
+            "${escapeHtml(g.name || String(g.id || \"\"))}",
+            self.user_memberships_js,
+        )
+
     def test_curator_create_update_and_rendering_use_boolean_contract(self):
         for source in (self.group_memberships_js, self.user_memberships_js):
             self.assertIn("is_curator: isCurator", source)
