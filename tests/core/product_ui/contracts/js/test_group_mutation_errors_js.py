@@ -1,37 +1,17 @@
 from __future__ import annotations
 
-import json
-import subprocess
-from pathlib import Path
-
 import pytest
+
+from tests.core.product_ui.js import REPOSITORY_ROOT as ROOT
+from tests.core.product_ui.js import run_node_json
 
 
 pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 
-ROOT = Path(__file__).resolve().parents[5]
-
-
-def _run_node(script: str):
-    completed = subprocess.run(
-        [
-            "node",
-            "--input-type=module",
-            "--eval",
-            script,
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return json.loads(completed.stdout)
-
-
 class GroupMutationErrorsJavaScriptTests:
     def test_formatter_preserves_safe_structured_errors_and_bounds_fields(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import { groupMutationErrorMessage } from "./web/static/web/js/groups/shared.js";
 
@@ -66,7 +46,7 @@ class GroupMutationErrorsJavaScriptTests:
         assert result["detailMessage"] == "Permission denied."
 
     def test_formatter_never_displays_raw_html_or_non_json_bodies(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import { groupMutationErrorMessage } from "./web/static/web/js/groups/shared.js";
 
@@ -131,4 +111,4 @@ class GroupMutationErrorsJavaScriptTests:
         assert 'setStatus(saveStatus, "Saved.", false)' in edit_js
         assert "JSON.stringify({ book_id: bookId })" in books_js
         assert 'setBookSearchStatus("Added.", false)' in books_js
-        assert "await booksCtl.reloadFirstPage()" in books_js
+        assert "await booksCtl.reload()" in books_js

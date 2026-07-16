@@ -1,26 +1,15 @@
-import json
-import subprocess
-from pathlib import Path
-
 import pytest
+
+from tests.core.product_ui.js import REPOSITORY_ROOT as ROOT
+from tests.core.product_ui.js import run_node_json
 
 
 pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 
-def _run_node(script: str) -> dict:
-    completed = subprocess.run(
-        ["node", "--input-type=module", "--eval", script],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return json.loads(completed.stdout)
-
-
 def test_group_book_page_url_preserves_filters_and_syncs_history():
-    module_uri = Path("web/static/web/js/groups/book_pagination.js").resolve().as_uri()
-    result = _run_node(
+    module_uri = (ROOT / "web/static/web/js/groups/book_pagination.js").as_uri()
+    result = run_node_json(
         f"""
         globalThis.window = {{
           location: {{
@@ -51,8 +40,8 @@ def test_group_book_page_url_preserves_filters_and_syncs_history():
 
 
 def test_group_book_page_status_handles_subsequent_and_empty_pages():
-    module_uri = Path("web/static/web/js/groups/book_pagination.js").resolve().as_uri()
-    result = _run_node(
+    module_uri = (ROOT / "web/static/web/js/groups/book_pagination.js").as_uri()
+    result = run_node_json(
         f"""
         globalThis.window = {{ location: {{ origin: "http://example.test" }} }};
         const mod = await import("{module_uri}");
@@ -70,9 +59,11 @@ def test_group_book_page_status_handles_subsequent_and_empty_pages():
 
 
 def test_group_book_controllers_use_safe_shared_pagination_without_new_axes():
-    helper = Path("web/static/web/js/ui/paged_list.js").read_text(encoding="utf-8")
-    view = Path("web/static/web/js/groups/view.js").read_text(encoding="utf-8")
-    navigation = Path("web/static/web/js/groups/navigation.js").read_text(encoding="utf-8")
+    helper = (ROOT / "web/static/web/js/ui/paged_list.js").read_text(encoding="utf-8")
+    view = (ROOT / "web/static/web/js/groups/view.js").read_text(encoding="utf-8")
+    navigation = (ROOT / "web/static/web/js/groups/navigation.js").read_text(
+        encoding="utf-8"
+    )
 
     assert "Invalid paginated response." in helper
     assert "pagination continuation repeated." in helper
@@ -85,8 +76,8 @@ def test_group_book_controllers_use_safe_shared_pagination_without_new_axes():
 
 
 def test_shared_pager_rejects_malformed_repeating_and_cross_origin_links():
-    module_uri = Path("web/static/web/js/ui/paged_list.js").resolve().as_uri()
-    result = _run_node(
+    module_uri = (ROOT / "web/static/web/js/ui/paged_list.js").as_uri()
+    result = run_node_json(
         f"""
         globalThis.window = {{ location: {{ origin: "http://example.test" }} }};
         const mod = await import("{module_uri}");

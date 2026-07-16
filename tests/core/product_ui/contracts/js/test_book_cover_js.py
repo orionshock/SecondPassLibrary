@@ -1,26 +1,12 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-import subprocess
-
 import pytest
+
+from tests.core.product_ui.js import REPOSITORY_ROOT as ROOT
+from tests.core.product_ui.js import run_node_json
 
 
 pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
-
-ROOT = Path(__file__).resolve().parents[5]
-
-
-def _run_node(script: str):
-    completed = subprocess.run(
-        ["node", "--input-type=module", "--eval", script],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return json.loads(completed.stdout)
 
 
 class BookCoverProductUiContractTests:
@@ -69,7 +55,7 @@ class BookCoverProductUiContractTests:
         assert 'console.error("Failed to replace book cover"' in editor
         assert 'console.error("Failed to clear book cover"' in editor
 
-        messages = _run_node(
+        messages = run_node_json(
             """
             import { coverMutationError } from "./web/static/web/js/library/cover_editor.js";
             const long = "x".repeat(400);
@@ -105,7 +91,7 @@ class BookCoverProductUiContractTests:
         assert "buildBookPatchPayload" not in editor
 
     def test_successful_cover_urls_are_cache_busted(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import { cacheBustedCoverUrl } from "./web/static/web/js/library/cover_editor.js";
             Date.now = () => 1234;

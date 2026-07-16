@@ -1,32 +1,17 @@
 from __future__ import annotations
 
-import json
-import subprocess
-from pathlib import Path
-
 import pytest
+
+from tests.core.product_ui.js import REPOSITORY_ROOT as ROOT
+from tests.core.product_ui.js import run_node_json
 
 
 pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 
-ROOT = Path(__file__).resolve().parents[5]
-
-
-def _run_node(script: str) -> dict:
-    completed = subprocess.run(
-        ["node", "--input-type=module", "--eval", script],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return json.loads(completed.stdout)
-
-
 class LibrarySearchJavaScriptTests:
     def test_axis_urls_preserve_query_and_non_pagination_filters(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import {
               canonicalLibraryParams,
@@ -73,7 +58,7 @@ class LibrarySearchJavaScriptTests:
         assert result["cleared"]["view"] == "authors"
 
     def test_axis_placeholders(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import { librarySearchPlaceholder } from "./web/static/web/js/library/navigation.js";
             console.log(JSON.stringify({
