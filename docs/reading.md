@@ -18,6 +18,23 @@ Design direction:
 - `docs/specs/reading-session-annotation-profile/`
 - Current REST examples: `docs/reading-rest-examples.md`
 
+## EPUB file access
+
+Reader clients download a currently visible Book through:
+
+`GET /api/v1/library/books/<book_id>/download/`
+
+Session and client bearer authentication are accepted. Current Book visibility
+is checked independently of marginalia ownership; inaccessible and unknown
+Books return the same `404` contract. The response streams the complete
+canonical EPUB as an `application/epub+zip` attachment. Its bounded filename is
+generated from the Book title rather than the content-addressed storage key.
+The endpoint does not currently implement byte Range responses.
+
+Fileless, unsupported, missing, or unreadable Book files return bounded API
+errors without revealing storage details. Raw `/media/books/` URLs remain
+inaccessible.
+
 ## Sessions
 
 - "Open book for reading" uses lazy active-session creation.

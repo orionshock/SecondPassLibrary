@@ -440,6 +440,7 @@ Client API bearer token support (read-only allow-list):
 
 - `GET /api/v1/library/books/`
 - `GET /api/v1/library/books/<id>/`
+- `GET /api/v1/library/books/<id>/download/`
 - `GET /api/v1/library/authors/`
 - `GET /api/v1/library/authors/<id>/`
 - `GET /api/v1/library/series/`
@@ -466,10 +467,19 @@ pagination are calculated after visibility scoping. Group routes require exact
 group visibility. When advanced groups are disabled, Public/Common Room remains
 available and custom group routes return `404`.
 
-Book detail `file` data contains only format, size, and checksum. There is no
-EPUB download endpoint under `/api/v1/library/` yet, and stored `/media/books/`
-paths are never exposed. `cover_url` continues to use the public display-only
-`/media/covers/` namespace; cover mutation remains session-only.
+Book detail `file` data contains format, size, checksum, and the authenticated
+`download_url`. `GET /api/v1/library/books/<book_id>/download/` streams the
+caller's visible canonical EPUB as an `application/epub+zip` attachment for
+session or bearer authentication. The attachment filename is generated from
+the sanitized, bounded Book title; it never uses the content-addressed storage
+name. Fileless or unsupported-format Books return bounded `409
+BOOK_FILE_UNAVAILABLE`; missing or unreadable storage returns the same bounded
+code with `503` and no storage detail.
+
+The download endpoint currently returns the complete file with `200`; byte
+Range requests are not implemented. Raw `/media/books/` paths remain
+inaccessible and are never exposed. `cover_url` continues to use the public
+display-only `/media/covers/` namespace; cover mutation remains session-only.
 
 Author/Series payload notes:
 

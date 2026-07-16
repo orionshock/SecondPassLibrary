@@ -73,7 +73,7 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
         self.assertEqual(authors.json()["count"], 2)
         self.assertTrue(all(row["book_count"] > 0 for row in authors.json()["results"]))
 
-    def test_book_file_metadata_exposes_no_download_or_storage_path(self):
+    def test_book_file_metadata_exposes_download_route_without_storage_path(self):
         self.visible_one.book_file.name = "books/aa/private.epub"
         self.visible_one.checksum = "a" * 64
         self.visible_one.file_size = 123
@@ -86,7 +86,13 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json()["file"],
-            {"format": "epub", "file_size": 123, "checksum": "a" * 64},
+            {
+                "format": "epub",
+                "file_size": 123,
+                "checksum": "a" * 64,
+                "download_url": (
+                    f"http://testserver/api/v1/library/books/{self.visible_one.id}/download/"
+                ),
+            },
         )
-        self.assertNotIn("download_url", response.json()["file"])
         self.assertNotIn("book_file", response.json()["file"])

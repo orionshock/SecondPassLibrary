@@ -241,6 +241,9 @@ UI behaviors:
 - Each row/card should show enough metadata to disambiguate (title, authors, series if present, language, published date if present).
 - If `file` is present on the book payload, show a "Download" action that links
   to the authenticated book download endpoint.
+- The current endpoint is
+  `GET /api/v1/library/books/<book_id>/download/`; it accepts session and bearer
+  reads and returns the complete EPUB attachment without Range support.
 - Optional: when the user is browsing in a specific group context, the UI should show that context and use the Groups APIs for the group book list rather than mixing access logic on the client.
 
 ## 5. Book detail screen

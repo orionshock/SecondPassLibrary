@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.urls import reverse
 from rest_framework import serializers
 
 from library.models import Author, Book, BookIdentifier, CatalogTag, Series
@@ -120,6 +121,12 @@ class BookFileSerializer(serializers.Serializer):
     format = serializers.CharField(source="file_format")
     file_size = serializers.IntegerField(allow_null=True)
     checksum = serializers.CharField(allow_blank=True, allow_null=True)
+    download_url = serializers.SerializerMethodField(read_only=True)
+
+    def get_download_url(self, obj: Book) -> str:
+        path = reverse("library:book-download", kwargs={"book_id": obj.pk})
+        request = self.context.get("request")
+        return request.build_absolute_uri(path) if request is not None else path
 
 
 class BookPreviewSerializer(serializers.ModelSerializer):
@@ -187,7 +194,7 @@ class BookDetailSerializer(BookListSerializer):
     def get_file(self, obj: Book) -> dict | None:
         if not obj.book_file:
             return None
-        return BookFileSerializer(obj).data
+        return BookFileSerializer(obj, context=self.context).data
 
     def get_catalog_tags(self, obj: Book) -> list[dict]:
         tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]

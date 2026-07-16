@@ -14,6 +14,7 @@ class LibraryBearerRouteInventoryTests(SimpleTestCase):
             "author-detail",
             "book-list",
             "book-detail",
+            "book-download",
             "group-list",
             "group-detail",
             "group-author-list",
