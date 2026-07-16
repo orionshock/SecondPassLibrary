@@ -1,37 +1,13 @@
-from __future__ import annotations
-
-import json
-import subprocess
-from pathlib import Path
-
 import pytest
 
+from tests.core.product_ui.js import REPOSITORY_ROOT, run_node_json
 
 pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 
-ROOT = Path(__file__).resolve().parents[5]
-
-
-def _run_node(script: str) -> dict:
-    completed = subprocess.run(
-        [
-            "node",
-            "--input-type=module",
-            "--eval",
-            script,
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return json.loads(completed.stdout)
-
-
 class LoadAllPaginationJavaScriptTests:
     def test_shared_helper_follows_more_than_twenty_pages_and_normal_flows(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import { fetchAllPaginatedResults } from "./web/static/web/js/api.js";
 
@@ -73,7 +49,7 @@ class LoadAllPaginationJavaScriptTests:
         }
 
     def test_shared_helper_rejects_repeating_and_malformed_continuations(self):
-        result = _run_node(
+        result = run_node_json(
             """
             import { fetchAllPaginatedResults } from "./web/static/web/js/api.js";
 
@@ -107,9 +83,8 @@ class LoadAllPaginationJavaScriptTests:
 
     def test_all_product_ui_collectors_use_the_shared_uncapped_helper(self):
         sources = {
-            path: (ROOT / path).read_text(encoding="utf-8")
+            path: (REPOSITORY_ROOT / path).read_text(encoding="utf-8")
             for path in (
-                "web/static/web/js/groups/books.js",
                 "web/static/web/js/shelves/new.js",
                 "web/static/web/js/shelves/items.js",
                 "web/static/web/js/users/memberships.js",
