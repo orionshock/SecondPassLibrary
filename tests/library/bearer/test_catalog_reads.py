@@ -63,6 +63,7 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
             "/api/v1/library/authors/",
             {"tag": self.fantasy.slug, "page_size": 1},
         )
+        tags = self.bearer_get("/api/v1/library/tags/")
 
         self.assertEqual(books.status_code, 200)
         self.assertEqual(books.json()["count"], 2)
@@ -72,6 +73,11 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
         self.assertEqual(authors.status_code, 200)
         self.assertEqual(authors.json()["count"], 2)
         self.assertTrue(all(row["book_count"] > 0 for row in authors.json()["results"]))
+        self.assertEqual(tags.status_code, 200)
+        self.assertEqual(
+            {row["name"]: row["book_count"] for row in tags.json()["results"]},
+            {"Fantasy": 2, "Mystery": 1},
+        )
 
     def test_book_file_metadata_exposes_download_route_without_storage_path(self):
         self.visible_one.book_file.name = "books/aa/private.epub"

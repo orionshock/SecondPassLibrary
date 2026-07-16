@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from library.models import BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from tests.library.bearer.helpers import LibraryBearerApiTestCase
 
 
@@ -25,6 +26,19 @@ class LibraryBearerGroupReadTests(LibraryBearerApiTestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertGreater(response.json()["count"], 0)
                 self.assertEqual(len(response.json()["results"]), 1)
+
+        custom = LibraryGroup.objects.create(name="Reader Club")
+        LibraryGroupMembership.objects.create(user=self.reader, group=custom)
+        BookGroupAssignment.objects.create(book=self.visible_one, group=custom)
+        BookGroupAssignment.objects.create(book=self.visible_two, group=custom)
+
+        tags = self.bearer_get(f"/api/v1/library/groups/{custom.id}/tags/")
+
+        self.assertEqual(tags.status_code, 200)
+        self.assertEqual(
+            {row["name"]: row["book_count"] for row in tags.json()["results"]},
+            {"Fantasy": 1, "Mystery": 1},
+        )
 
     def test_inaccessible_group_axes_are_404(self):
         base = f"/api/v1/library/groups/{self.hidden.id}/"

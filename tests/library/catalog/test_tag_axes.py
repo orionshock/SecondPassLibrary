@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 from django.test import TestCase
-from rest_framework.test import APIClient
 
-from accounts.client_api import hash_client_secret
-from accounts.models import UserClientSession
 from library.models import CatalogTag
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
@@ -81,51 +78,6 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 405)
         self.fantasy.refresh_from_db()
         self.assertEqual(self.fantasy.name, "Fantasy")
-
-    def test_bearer_list_and_detail_use_visible_book_scope(self):
-        hidden_only = CatalogTag.objects.create(
-            name="Hidden Tag", normalized_name="hidden", slug="hidden"
-        )
-        create_catalog_book(
-            "Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden
-        )
-        token = "spl_catalog_tag_test"
-        UserClientSession.objects.create(
-            user=self.reader,
-            name="Reader client",
-            client_type="reader",
-            token_hash=hash_client_secret(token),
-        )
-        bearer_client = APIClient()
-
-        list_response = bearer_client.get(
-            "/api/v1/library/tags/",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
-        )
-        visible_detail = bearer_client.get(
-            f"/api/v1/library/tags/{self.fantasy.id}/",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
-        )
-        hidden_detail = bearer_client.get(
-            f"/api/v1/library/tags/{hidden_only.id}/",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
-        )
-        mutation = bearer_client.patch(
-            f"/api/v1/library/tags/{self.fantasy.id}/",
-            {"name": "Not allowed"},
-            format="json",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
-        )
-
-        self.assertEqual(list_response.status_code, 200)
-        self.assertEqual(response_names(list_response), ["Fantasy", "Mystery"])
-        self.assertEqual(
-            response_book_counts(list_response), {"Fantasy": 2, "Mystery": 1}
-        )
-        self.assertEqual(visible_detail.status_code, 200)
-        self.assertEqual(visible_detail.json()["book_count"], 2)
-        self.assertEqual(hidden_detail.status_code, 404)
-        self.assertEqual(mutation.status_code, 405)
 
     def test_detail_ignores_list_only_params(self):
         assert_axis_detail_ignores_list_params(
