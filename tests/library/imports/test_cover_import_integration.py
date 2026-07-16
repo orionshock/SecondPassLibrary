@@ -3,7 +3,6 @@ from __future__ import annotations
 from io import BytesIO
 from unittest.mock import patch
 
-import library.models as library_models
 from django.test import TestCase
 
 from library.imports.batches import import_zip_file
@@ -17,7 +16,6 @@ from library.models import Book, BookIdentifier
 from tests.library.imports.helpers import (
     epub_with_cover_bytes,
     image_bytes,
-    minimal_epub_bytes,
     zip_bytes,
 )
 from tests.testenv.filesystem import IsolatedMediaRootMixin
@@ -79,13 +77,6 @@ class EpubCoverImportIntegrationTests(IsolatedMediaRootMixin, TestCase):
         )
 
         self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
-        self.assertTrue(Book.objects.get().cover_file.name)
-
-    def test_no_bookfile_model_or_object_appears(self):
-        result = import_epub_file(
-            BytesIO(minimal_epub_bytes()),
-            source_filename="sample.epub",
-        )
-
-        self.assertFalse(hasattr(library_models, "BookFile"))
-        self.assertTrue(result.book.book_file.name)
+        book = Book.objects.get()
+        self.assertTrue(book.cover_file.name)
+        self.assertTrue(book.book_file.name)

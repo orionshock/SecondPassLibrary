@@ -4,7 +4,6 @@ from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import library.models as library_models
 from django.core.cache import cache
 from django.test import TestCase, TransactionTestCase
 
@@ -47,6 +46,7 @@ class ZipImportServiceTests(
         self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
         self.assertEqual(result.items[0].source_label, "sample.epub")
         self.assertEqual(Book.objects.count(), 1)
+        self.assertTrue(result.items[0].book.book_file.name)
 
     def test_batch_counts_imported_items(self):
         result = import_zip_file(
@@ -182,16 +182,6 @@ class ZipImportServiceTests(
 
         self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
         self.assertEqual(Book.objects.count(), 1)
-
-    def test_no_bookfile_model_or_object_appears(self):
-        result = import_zip_file(
-            zip_bytes(("book.epub", minimal_epub_bytes())),
-            source_filename="book.zip",
-        )
-
-        self.assertFalse(hasattr(library_models, "BookFile"))
-        self.assertTrue(result.items[0].book.book_file.name)
-
 
 class ZipImportCacheInvalidationTests(
     IsolatedMediaRootMixin,

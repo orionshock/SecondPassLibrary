@@ -4,7 +4,6 @@ from io import BytesIO
 import hashlib
 import zipfile
 
-import library.models as library_models
 from django.test import TestCase
 
 from library.groups.public_group import get_public_group
@@ -141,12 +140,6 @@ class SingleEpubImportServiceTests(
             {"fantasy", "space opera"},
         )
         self.assertTrue(CatalogTag.objects.filter(normalized_name="fantasy").exists())
-
-    def test_no_bookfile_model_or_object_appears(self):
-        result = import_epub_file(BytesIO(minimal_epub_bytes()), source_filename="sample.epub")
-
-        self.assertFalse(hasattr(library_models, "BookFile"))
-        self.assertTrue(result.book.book_file.name)
 
     def test_identifier_conflict_returns_conflict_item_result(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing-book")

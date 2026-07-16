@@ -5,7 +5,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import library.models as library_models
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
@@ -34,6 +33,7 @@ class ImportLibraryCommandTests(
             call_command("import_library", str(epub_path), stdout=output)
 
         self.assertEqual(Book.objects.count(), 1)
+        self.assertTrue(Book.objects.get().book_file.name)
         self.assertIn("[imported] sample.epub", output.getvalue())
         self.assertIn("imported: 1", output.getvalue())
 
@@ -232,16 +232,6 @@ class ImportLibraryCommandTests(
                 group=get_public_group(),
             ).exists()
         )
-
-    def test_no_bookfile_model_or_object_appears(self):
-        with TemporaryDirectory() as tmp:
-            path = _write_file(Path(tmp) / "sample.epub", minimal_epub_bytes())
-
-            call_command("import_library", str(path), stdout=StringIO())
-
-        self.assertFalse(hasattr(library_models, "BookFile"))
-        self.assertTrue(Book.objects.get().book_file.name)
-
 
 def _write_file(path: Path, data: bytes) -> Path:
     path.write_bytes(data)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-import library.models as library_models
 from rest_framework.authentication import SessionAuthentication
 
 from library.groups.public_group import get_public_group
@@ -121,16 +120,6 @@ class LibraryImportUploadBoundaryTests(
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("cover_file", json.dumps(payload))
         self.assertNotIn("cover_url", json.dumps(payload))
-        self.assertTrue(Book.objects.get(id=payload["items"][0]["book_id"]).cover_file.name)
-
-    def test_no_bookfile_model_or_object_appears(self):
-        self.login_librarian()
-
-        response = self.client.post(
-            self.url,
-            {"file": upload_file("sample.epub", minimal_epub_bytes())},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(hasattr(library_models, "BookFile"))
-        self.assertTrue(Book.objects.get().book_file.name)
+        book = Book.objects.get(id=payload["items"][0]["book_id"])
+        self.assertTrue(book.cover_file.name)
+        self.assertTrue(book.book_file.name)

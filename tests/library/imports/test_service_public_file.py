@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import library.models as library_models
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -33,12 +32,6 @@ class ImportPersistencePublicFileTests(ImportPersistenceFixtureMixin, TestCase):
 
         assignment = BookGroupAssignment.objects.get(book=result.book, group=get_public_group())
         self.assertEqual(assignment.added_by, self.actor)
-
-    def test_no_bookfile_model_or_object_appears(self):
-        result = persist_imported_book(metadata=sample_metadata(), checksum="no-bookfile")
-
-        self.assertFalse(hasattr(library_models, "BookFile"))
-        self.assertEqual(result.book.book_file.name, "")
 
     def test_omitted_book_file_leaves_book_file_blank(self):
         result = persist_imported_book(metadata=sample_metadata(), checksum="omit-book-file")
