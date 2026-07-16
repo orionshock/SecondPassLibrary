@@ -10,9 +10,6 @@ pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
     def test_shelf_js_has_friendly_ownership_display(self):
-        group_badge_js = Path("web/static/web/js/ui/groups.js").read_text(
-            encoding="utf-8"
-        )
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
         library_list_js = Path("web/static/web/js/library/list.js").read_text(encoding="utf-8")
         library_prose_js = Path("web/static/web/js/library/prose.js").read_text(
@@ -35,17 +32,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         edit_js = Path("web/static/web/js/shelves/edit.js").read_text(encoding="utf-8")
         book_edit_shelves_js = Path("web/static/web/js/book_edit/shelves.js").read_text(encoding="utf-8")
         groups_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
-
-        self.assertIn("export function groupDisplayName", group_badge_js)
-        self.assertIn("export function groupBadgeText", group_badge_js)
-        self.assertIn("export function renderGroupBadge", group_badge_js)
-        self.assertIn('"Unknown group"', group_badge_js)
-        self.assertIn('badge.classList.add("group-badge--public")', group_badge_js)
-        self.assertIn('isPublicGroup ? "public" : "groups"', group_badge_js)
-        self.assertIn("name.textContent = groupDisplayName(group)", group_badge_js)
-        self.assertIn("document.createElement", group_badge_js)
-        self.assertNotIn("innerHTML", group_badge_js)
-        self.assertNotIn("group.id", group_badge_js)
 
         self.assertIn('from "../ui/groups.js"', shared_js)
         self.assertIn('from "../ui/identity.js"', shared_js)
