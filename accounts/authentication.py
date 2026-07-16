@@ -16,7 +16,7 @@ class ClientBearerAuthentication(BaseAuthentication):
     Current intended bearer-token surfaces include:
 
     - `/api/v1/accounts/me/` (read-only for bearer tokens)
-    - selected library read/download endpoints (explicit allow-list)
+    - read-only Library catalog and visible-group endpoints
     - reading user-data endpoints (sessions/progress/annotations; user-owned data)
 
     Management/product UI/admin endpoints should not enable bearer auth unless

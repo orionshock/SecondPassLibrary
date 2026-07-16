@@ -185,7 +185,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(self.client.delete(member_url).status_code, 204)
         self.assertEqual(self.client.delete(public_url).status_code, 400)
 
-    def test_disabled_mode_bearer_reads_public_tags_but_custom_group_is_404(self):
+    def test_disabled_mode_bearer_reads_public_group_catalog_but_custom_group_is_404(self):
         public_tag = CatalogTag.objects.create(
             name="Public Tag", normalized_name="public tag", slug="public-tag"
         )
@@ -203,21 +203,37 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         )
         bearer_client = APIClient()
 
-        public_response = bearer_client.get(
-            f"/api/v1/library/groups/{self.public.id}/tags/",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
+        headers = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+        listed = bearer_client.get("/api/v1/library/groups/", **headers)
+        public_detail = bearer_client.get(
+            f"/api/v1/library/groups/{self.public.id}/", **headers
         )
-        custom_response = bearer_client.get(
-            f"/api/v1/library/groups/{self.custom.id}/tags/",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
+        custom_detail = bearer_client.get(
+            f"/api/v1/library/groups/{self.custom.id}/", **headers
         )
 
-        self.assertEqual(public_response.status_code, 200)
         self.assertEqual(
-            [row["slug"] for row in public_response.json()["results"]],
-            ["public-tag"],
+            [row["id"] for row in listed.json()["results"]], [str(self.public.id)]
         )
-        self.assertEqual(custom_response.status_code, 404)
+        self.assertEqual(public_detail.status_code, 200)
+        self.assertEqual(custom_detail.status_code, 404)
+        for axis in ["books", "authors", "series", "tags"]:
+            with self.subTest(axis=axis):
+                public_response = bearer_client.get(
+                    f"/api/v1/library/groups/{self.public.id}/{axis}/", **headers
+                )
+                custom_response = bearer_client.get(
+                    f"/api/v1/library/groups/{self.custom.id}/{axis}/", **headers
+                )
+                self.assertEqual(public_response.status_code, 200)
+                self.assertEqual(custom_response.status_code, 404)
+
+        public_tags = bearer_client.get(
+            f"/api/v1/library/groups/{self.public.id}/tags/", **headers
+        )
+        self.assertEqual(
+            [row["slug"] for row in public_tags.json()["results"]], ["public-tag"]
+        )
 
     def test_enabled_mode_keeps_custom_group_api_behavior(self):
         set_advanced_library_groups_enabled(True)

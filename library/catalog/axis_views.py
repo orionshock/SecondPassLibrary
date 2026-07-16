@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
-from accounts.authentication import ClientBearerAuthentication
 from accounts.roles import is_librarian
 
+from library.api_access import LibraryBearerReadMixin
 from library.catalog.axes import (
     apply_axis_ordering,
     apply_axis_search,
@@ -28,7 +27,7 @@ from library.catalog.filters import apply_catalog_tag_filter
 from library.queries import visible_books_for_user
 
 
-class _BaseAxisMixin:
+class _BaseAxisMixin(LibraryBearerReadMixin):
     lookup_url_kwarg = "axis_id"
     search_normalized_name = False
 
@@ -108,7 +107,6 @@ class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
 
 
 class CatalogTagAxisMixin(_BaseAxisMixin):
-    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
     serializer_class = CatalogTagAxisSerializer
     search_normalized_name = True
 

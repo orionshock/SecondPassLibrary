@@ -1,0 +1,92 @@
+from __future__ import annotations
+
+from library.models import Author, CatalogTag, Series
+from tests.library.bearer.helpers import LibraryBearerApiTestCase
+from tests.library.helpers import create_catalog_book
+
+
+class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
+    def test_lists_and_retrieves_visible_catalog_records(self):
+        cases = [
+            ("books", self.visible_one.id, "title", "Visible One"),
+            ("authors", self.alpha.id, "name", "Alpha Author"),
+            ("series", self.first_series.id, "name", "First Series"),
+            ("tags", self.fantasy.id, "name", "Fantasy"),
+        ]
+
+        for axis, object_id, field, expected in cases:
+            with self.subTest(axis=axis):
+                listed = self.bearer_get(f"/api/v1/library/{axis}/")
+                detail = self.bearer_get(f"/api/v1/library/{axis}/{object_id}/")
+                self.assertEqual(listed.status_code, 200)
+                self.assertEqual(detail.status_code, 200)
+                self.assertEqual(detail.json()[field], expected)
+
+    def test_hidden_only_catalog_details_are_404(self):
+        hidden_author = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
+        hidden_series = Series.objects.create(name="Hidden Only", sort_name="Hidden Only")
+        hidden_tag = CatalogTag.objects.create(
+            name="Hidden Only", normalized_name="hidden only", slug="hidden-only"
+        )
+        hidden_book = create_catalog_book(
+            "Bearer Hidden Only",
+            author=hidden_author,
+            series=hidden_series,
+            tag=hidden_tag,
+            group=self.hidden,
+        )
+
+        for axis, object_id in [
+            ("books", hidden_book.id),
+            ("authors", hidden_author.id),
+            ("series", hidden_series.id),
+            ("tags", hidden_tag.id),
+        ]:
+            with self.subTest(axis=axis):
+                response = self.bearer_get(f"/api/v1/library/{axis}/{object_id}/")
+                self.assertEqual(response.status_code, 404)
+
+    def test_privileged_account_bearer_keeps_its_real_broad_read_role(self):
+        self.use_manager_bearer()
+
+        response = self.bearer_get(f"/api/v1/library/books/{self.hidden_book.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["title"], "Hidden Dresden")
+
+    def test_filters_counts_and_pagination_remain_visibility_scoped(self):
+        books = self.bearer_get(
+            "/api/v1/library/books/",
+            {"tag": self.fantasy.slug, "page_size": 1},
+        )
+        authors = self.bearer_get(
+            "/api/v1/library/authors/",
+            {"tag": self.fantasy.slug, "page_size": 1},
+        )
+
+        self.assertEqual(books.status_code, 200)
+        self.assertEqual(books.json()["count"], 2)
+        self.assertEqual(len(books.json()["results"]), 1)
+        self.assertIsNotNone(books.json()["next"])
+        self.assertNotIn("Hidden Dresden", [row["title"] for row in books.json()["results"]])
+        self.assertEqual(authors.status_code, 200)
+        self.assertEqual(authors.json()["count"], 2)
+        self.assertTrue(all(row["book_count"] > 0 for row in authors.json()["results"]))
+
+    def test_book_file_metadata_exposes_no_download_or_storage_path(self):
+        self.visible_one.book_file.name = "books/aa/private.epub"
+        self.visible_one.checksum = "a" * 64
+        self.visible_one.file_size = 123
+        self.visible_one.save(
+            update_fields=["book_file", "checksum", "file_size", "updated_at"]
+        )
+
+        response = self.bearer_get(f"/api/v1/library/books/{self.visible_one.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["file"],
+            {"format": "epub", "file_size": 123, "checksum": "a" * 64},
+        )
+        self.assertNotIn("download_url", response.json()["file"])
+        self.assertNotIn("book_file", response.json()["file"])

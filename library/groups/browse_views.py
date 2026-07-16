@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 
-from accounts.authentication import ClientBearerAuthentication
+from library.api_access import LibraryBearerReadMixin
 from library.catalog.axes import (
     apply_axis_ordering,
     apply_axis_search,
@@ -28,7 +27,7 @@ from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
 
 
-class GroupBrowseMixin:
+class GroupBrowseMixin(LibraryBearerReadMixin):
     group_url_kwarg = "group_id"
 
     def get_group(self) -> LibraryGroup:
@@ -90,7 +89,6 @@ class GroupSeriesListView(GroupAxisListMixin):
 
 
 class GroupCatalogTagListView(GroupAxisListMixin):
-    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
     serializer_class = CatalogTagAxisSerializer
     search_normalized_name = True
 

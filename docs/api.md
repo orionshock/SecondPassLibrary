@@ -449,9 +449,27 @@ Client API bearer token support (read-only allow-list):
 - `GET /api/v1/library/groups/`
 - `GET /api/v1/library/groups/<group_id>/`
 - `GET /api/v1/library/groups/<group_id>/books/`
+- `GET /api/v1/library/groups/<group_id>/authors/`
+- `GET /api/v1/library/groups/<group_id>/series/`
 - `GET /api/v1/library/groups/<group_id>/tags/`
 
-All Library mutation endpoints (including imports, identifier CRUD, group memberships, and group book add/remove) reject Client API bearer tokens.
+Bearer credentials are read-only under `/api/v1/library/` regardless of the
+account's role. Unsafe methods on mixed read/write views require Django session
+authentication before the existing role and object authorization checks run.
+This includes Book metadata and tag updates, cover replacement/clear, group
+create/update/delete, group assignment mutation, membership mutation, and
+imports. Membership reads are also session-only management data.
+
+All bearer catalog and group queries retain the authenticated account's normal
+visibility. Hidden-only details return `404`; counts, filters, previews, and
+pagination are calculated after visibility scoping. Group routes require exact
+group visibility. When advanced groups are disabled, Public/Common Room remains
+available and custom group routes return `404`.
+
+Book detail `file` data contains only format, size, and checksum. There is no
+EPUB download endpoint under `/api/v1/library/` yet, and stored `/media/books/`
+paths are never exposed. `cover_url` continues to use the public display-only
+`/media/covers/` namespace; cover mutation remains session-only.
 
 Author/Series payload notes:
 

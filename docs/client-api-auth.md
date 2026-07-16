@@ -110,7 +110,10 @@ Client API bearer tokens are **reader/client tokens**, not admin/management toke
 Allowed surface is an explicit allow-list. In current behavior, bearer tokens are enabled for:
 
 - `GET /api/v1/accounts/me/` (read-only; bearer tokens do not allow `PATCH`)
-- selected library read/download endpoints
+- read-only Library catalog endpoints
+  - Books, Authors, Series, and Catalog Tags list/detail
+  - visible LibraryGroup list/detail
+  - visible group-scoped Books, Authors, Series, and Tags lists
   - supported browse endpoints may opt into `preview_books` with `include_preview_books=true`; preview items are visibility-scoped context hints with `id`, `title`, and `cover_url` only, never file/download URLs
   - Catalog Tag list/detail and visible-group tag lists are read-only bearer
     surfaces; tags and counts are restricted to books visible to the token owner
@@ -118,6 +121,15 @@ Allowed surface is an explicit allow-list. In current behavior, bearer tokens ar
     group-tag routes also enforce group visibility and simple-mode Public-only gating
   - Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
     filters are not part of the client contract
+  - all results, counts, filters, and pagination are scoped to books visible to
+    the token owner; inaccessible details and groups return `404`
+  - simple mode exposes Public/Common Room group reads only; custom groups are
+    unavailable until advanced groups are enabled
+  - bearer credentials are read-only under `/api/v1/library/` regardless of
+    account role; mixed endpoint writes still require Django session auth
+  - Book detail exposes file format, size, and checksum only. No EPUB download
+    endpoint exists yet, `/media/books/` is not public, and cover URLs remain
+    public display assets under `/media/covers/`
 - shelves endpoints:
   - bearer tokens may read any shelf the user can view
   - visible shelf list/detail payloads may opt into `preview_books` with `include_preview_books=true`; shelves still do not grant book access

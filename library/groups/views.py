@@ -7,6 +7,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
 from accounts.roles import is_manager
+from library.api_access import LibraryBearerReadMixin
 from library.catalog.preview_books import PREVIEW_BOOK_LIMIT, include_preview_books
 from library.groups.api_access import (
     groups_available_via_api,
@@ -48,7 +49,7 @@ class GroupPreviewBooksMixin:
         return context
 
 
-class LibraryGroupListView(GroupPreviewBooksMixin, ListAPIView):
+class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListAPIView):
     serializer_class = LibraryGroupSerializer
 
     def get_queryset(self):
@@ -79,7 +80,7 @@ class LibraryGroupListView(GroupPreviewBooksMixin, ListAPIView):
         return Response(out.data, status=status.HTTP_201_CREATED)
 
 
-class LibraryGroupDetailView(GroupPreviewBooksMixin, RetrieveAPIView):
+class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, RetrieveAPIView):
     serializer_class = LibraryGroupSerializer
     lookup_url_kwarg = "group_id"
 

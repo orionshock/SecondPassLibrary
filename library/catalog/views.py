@@ -8,6 +8,7 @@ from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 
 from accounts.roles import is_librarian
+from library.api_access import LibraryBearerReadMixin
 from library.catalog.edit_services import update_book_metadata
 from library.catalog.filters import apply_book_filters
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
@@ -35,7 +36,7 @@ def book_browse_queryset(queryset):
     )
 
 
-class BookListView(ListAPIView):
+class BookListView(LibraryBearerReadMixin, ListAPIView):
     serializer_class = BookListSerializer
 
     def get_queryset(self):
@@ -50,7 +51,7 @@ class BookListView(ListAPIView):
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
 
 
-class BookDetailView(RetrieveUpdateAPIView):
+class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
     serializer_class = BookDetailSerializer
     lookup_url_kwarg = "book_id"
 
