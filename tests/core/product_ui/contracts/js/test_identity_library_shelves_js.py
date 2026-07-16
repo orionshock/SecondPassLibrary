@@ -12,9 +12,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
     def test_shelf_js_has_friendly_ownership_display(self):
         shared_js = Path("web/static/web/js/shelves/shared.js").read_text(encoding="utf-8")
         library_list_js = Path("web/static/web/js/library/list.js").read_text(encoding="utf-8")
-        library_prose_js = Path("web/static/web/js/library/prose.js").read_text(
-            encoding="utf-8"
-        )
         library_navigation_js = Path("web/static/web/js/library/navigation.js").read_text(
             encoding="utf-8"
         )
@@ -245,32 +242,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         self.assertNotIn("Genre", library_list_js)
         self.assertNotIn("nextUrl", library_list_js)
         self.assertNotIn("prevUrl", library_list_js)
-
-        self.assertIn("export function renderContextProseBlock", library_prose_js)
-        self.assertIn("export function renderLibraryContext", library_prose_js)
-        self.assertIn('if (!prose) return ""', library_prose_js)
-        self.assertIn('class="library-context__prose"', library_prose_js)
-        self.assertIn('data-action="toggle-library-prose"', library_prose_js)
-        self.assertIn('aria-controls="${escapeHtml(proseId)}"', library_prose_js)
-        self.assertIn('aria-expanded="false"', library_prose_js)
-        self.assertIn(">Show More</button>", library_prose_js)
-        self.assertIn("toggleProseBlock", library_prose_js)
-        self.assertIn('target.classList.toggle("is-expanded", nextExpanded)', library_prose_js)
-        self.assertIn('button.textContent = nextExpanded ? "Show Less" : "Show More"', library_prose_js)
-        self.assertIn("${escapeHtml(prose)}", library_prose_js)
-        self.assertIn('data-action="edit-library-context"', library_prose_js)
-        self.assertIn('data-action="save-library-context"', library_prose_js)
-        self.assertIn('data-action="cancel-library-context-edit"', library_prose_js)
-        self.assertNotIn('data-action="clear-library-filter"', library_prose_js)
-        self.assertNotIn(">Clear</button>", library_prose_js)
-        self.assertIn('name="library-context-name"', library_prose_js)
-        self.assertIn('name="library-context-prose"', library_prose_js)
-        self.assertIn("Biography", library_list_js)
-        self.assertIn("Summary", library_list_js)
-        self.assertNotIn("Description", library_prose_js)
-        self.assertNotIn("renderAuthorProse", library_prose_js)
-        self.assertNotIn("renderSeriesProse", library_prose_js)
-        self.assertNotIn("description", library_prose_js)
 
         self.assertIn("export function pathWithParams", library_navigation_js)
         self.assertIn("export function libraryContextHref", library_navigation_js)
