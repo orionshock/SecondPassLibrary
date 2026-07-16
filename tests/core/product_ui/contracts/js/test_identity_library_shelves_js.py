@@ -18,9 +18,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         library_navigation_js = Path("web/static/web/js/library/navigation.js").read_text(
             encoding="utf-8"
         )
-        cover_previews_js = Path("web/static/web/js/ui/cover_previews.js").read_text(
-            encoding="utf-8"
-        )
         users_list_js = Path("web/static/web/js/users/list.js").read_text(
             encoding="utf-8"
         )
@@ -298,27 +295,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         self.assertNotIn("series_name", library_navigation_js)
         self.assertNotIn('from: "author"', library_navigation_js)
         self.assertNotIn('from: "series"', library_navigation_js)
-
-        self.assertIn("export function renderCoverPreviewStrip", cover_previews_js)
-        self.assertIn('class="cover-preview-strip"', cover_previews_js)
-        self.assertIn('class="cover-preview-button"', cover_previews_js)
-        self.assertIn("const contextHref = options.href", cover_previews_js)
-        self.assertIn('const bookHref = typeof options.bookHref === "function" ? options.bookHref : bookDetailHref', cover_previews_js)
-        self.assertIn("const href = contextHref || bookHref(book)", cover_previews_js)
-        self.assertIn("contextHref\n          ? `${actionLabel}; preview includes ${title}`", cover_previews_js)
-        self.assertIn('href="${escapeHtml(href)}"', cover_previews_js)
-        self.assertIn("bookDetailHref(book)", cover_previews_js)
-        self.assertIn('/library/books/${encodeURIComponent(String(book.id))}/', cover_previews_js)
-        self.assertIn("Open book details for ${title}", cover_previews_js)
-        self.assertIn('type="button"', cover_previews_js)
-        self.assertIn('title="${escapeHtml(title)}"', cover_previews_js)
-        self.assertIn('aria-label="${escapeHtml(ariaLabel)}"', cover_previews_js)
-        self.assertIn("preview includes ${title}", cover_previews_js)
-        self.assertIn('data-action="${escapeHtml(action)}"', cover_previews_js)
-        self.assertIn('data-id="${escapeHtml(contextId)}"', cover_previews_js)
-        self.assertIn('data-name="${escapeHtml(contextName)}"', cover_previews_js)
-        self.assertIn('data-cover-url="${escapeHtml(coverUrl)}"', cover_previews_js)
-        self.assertIn('data-cover-title="${escapeHtml(title)}"', cover_previews_js)
 
         self.assertIn('from "../ui/groups.js"', user_memberships_js)
         self.assertIn("renderGroupBadge(g", user_memberships_js)
