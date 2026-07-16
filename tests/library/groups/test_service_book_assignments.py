@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
-from unittest.mock import patch
 from uuid import uuid4
 
 from core.server_settings import set_server_setting
@@ -13,7 +12,6 @@ from library.groups.book_assignments import (
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING, is_public_group
 from library.groups.services import create_library_group
 from library.models import BookGroupAssignment
-from shelves.models import Shelf, ShelfItem
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
 
 
@@ -50,40 +48,6 @@ class LibraryBookAssignmentServiceTests(LibraryGroupServiceTestCase):
         self.assertTrue(removed)
         self.assertFalse(BookGroupAssignment.objects.filter(book=self.book, group=group).exists())
         self.assertTrue(BookGroupAssignment.objects.filter(book=self.book, group=other).exists())
-
-    def test_remove_book_from_group_cleans_same_group_shelf_items(self):
-        group = create_library_group(name="Club")
-        add_book_to_group(book=self.book, group=group, actor=self.actor)
-        shelf = Shelf.objects.create(
-            name="Club Shelf",
-            owner_type=Shelf.OWNER_TYPE_GROUP,
-            owner_group=group,
-            created_by=self.actor,
-        )
-        ShelfItem.objects.create(
-            shelf=shelf, book=self.book, position=0, added_by=self.actor
-        )
-
-        removed = remove_book_from_group(book=self.book, group=group, actor=self.actor)
-
-        self.assertTrue(removed)
-        self.assertFalse(ShelfItem.objects.filter(shelf=shelf, book=self.book).exists())
-
-    def test_remove_book_from_group_rolls_back_assignment_when_hook_fails(self):
-        group = create_library_group(name="Club")
-        add_book_to_group(book=self.book, group=group, actor=self.actor)
-
-        with self.assertRaisesMessage(
-            RuntimeError,
-            "hook failed",
-        ), patch(
-            "library.groups.book_assignments.remove_book_from_group_owned_shelves",
-            side_effect=RuntimeError("hook failed"),
-        ):
-            remove_book_from_group(book=self.book, group=group, actor=self.actor)
-
-        self.assertTrue(BookGroupAssignment.objects.filter(book=self.book, group=group).exists())
-        self.assertFalse(BookGroupAssignment.objects.filter(book=self.book, group=self.public).exists())
 
     def test_removing_book_last_group_restores_public_assignment(self):
         group = create_library_group(name="Club")

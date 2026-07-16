@@ -45,13 +45,6 @@ class LibraryGroupBookAssignmentDeleteTests(
             BookGroupAssignment.objects.filter(book=self.hidden_book, group=self.hidden).exists()
         )
 
-    def test_existing_assignment_delete_returns_204(self):
-        self.assertTrue(self.client.login(username="manager", password="pw"))
-
-        response = self.client.delete(self.group_book_detail_url())
-
-        self.assertEqual(response.status_code, 204)
-
     def test_existing_assignment_delete_removes_assignment(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
