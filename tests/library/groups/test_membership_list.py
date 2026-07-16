@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from tests.library.groups.membership_helpers import (
     LibraryGroupMembershipApiTestCase,
-    json_body,
 )
 
 
@@ -46,12 +47,12 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
                 self.assertTrue(self.client.login(username=username, password="pw"))
                 post_response = self.client.post(
                     self.membership_list_url(),
-                    json_body({"user_id": str(self.other.profile.id)}),
+                    json.dumps({"user_id": str(self.other.profile.id)}),
                     content_type="application/json",
                 )
                 patch_response = self.client.patch(
                     self.membership_detail_url(),
-                    json_body({"is_curator": True}),
+                    json.dumps({"is_curator": True}),
                     content_type="application/json",
                 )
                 delete_response = self.client.delete(self.membership_detail_url())
@@ -65,12 +66,12 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
 
         created = self.client.post(
             self.membership_list_url(),
-            json_body({"user_id": str(self.other.profile.id)}),
+            json.dumps({"user_id": str(self.other.profile.id)}),
             content_type="application/json",
         )
         updated = self.client.patch(
             self.membership_detail_url(user=self.other),
-            json_body({"is_curator": True}),
+            json.dumps({"is_curator": True}),
             content_type="application/json",
         )
         deleted = self.client.delete(self.membership_detail_url(user=self.other))
@@ -84,7 +85,7 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
 
         response = self.client.post(
             self.membership_list_url(self.hidden),
-            json_body({"user_id": "not-a-uuid", "unknown": "field"}),
+            json.dumps({"user_id": "not-a-uuid", "unknown": "field"}),
             content_type="application/json",
         )
 

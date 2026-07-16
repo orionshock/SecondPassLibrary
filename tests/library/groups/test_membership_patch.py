@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
+
 from accounts.models import UserProfile
 from tests.library.groups.membership_helpers import (
     LibraryGroupMembershipApiTestCase,
-    json_body,
 )
 
 
@@ -13,7 +14,7 @@ class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
 
         response = self.client.patch(
             self.membership_detail_url(),
-            json_body({"role": UserProfile.ROLE_LIBRARIAN, "is_curator": True}),
+            json.dumps({"role": UserProfile.ROLE_LIBRARIAN, "is_curator": True}),
             content_type="application/json",
         )
 
@@ -31,7 +32,7 @@ class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
 
         demote = self.client.patch(
             self.membership_detail_url(),
-            json_body({"is_curator": False}),
+            json.dumps({"is_curator": False}),
             content_type="application/json",
         )
         self.assertEqual(demote.status_code, 200)
@@ -44,12 +45,12 @@ class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
 
         unknown = self.client.patch(
             url,
-            json_body({"unknown": "field"}),
+            json.dumps({"unknown": "field"}),
             content_type="application/json",
         )
         invalid_role = self.client.patch(
             url,
-            json_body({"role": ""}),
+            json.dumps({"role": ""}),
             content_type="application/json",
         )
 
@@ -63,7 +64,7 @@ class LibraryGroupMembershipPatchTests(LibraryGroupMembershipApiTestCase):
 
         response = self.client.patch(
             self.membership_detail_url(user=self.other),
-            json_body({"is_curator": True}),
+            json.dumps({"is_curator": True}),
             content_type="application/json",
         )
 

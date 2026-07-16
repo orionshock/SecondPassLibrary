@@ -63,9 +63,6 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         BookGroupAssignment.objects.create(book=self.custom_book, group=self.custom)
         BookGroupAssignment.objects.create(book=self.candidate_book, group=self.public)
 
-    def _json(self, data):
-        return json.dumps(data)
-
     def test_disabled_mode_hides_custom_group_api_surfaces_without_rewriting_data(self):
         self.client.login(username="manager", password="pw")
         group_url = f"/api/v1/library/groups/{self.custom.id}/"
@@ -87,26 +84,26 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
             self.client.get(f"{group_url}?include_preview_books=true"),
             self.client.patch(
                 group_url,
-                self._json({"description": "No"}),
+                json.dumps({"description": "No"}),
                 content_type="application/json",
             ),
             self.client.delete(group_url),
             self.client.get(books_url),
             self.client.post(
                 books_url,
-                self._json({"book_id": str(self.candidate_book.id)}),
+                json.dumps({"book_id": str(self.candidate_book.id)}),
                 content_type="application/json",
             ),
             self.client.delete(f"{books_url}{self.custom_book.id}/"),
             self.client.get(memberships_url),
             self.client.post(
                 memberships_url,
-                self._json({"user_id": str(self.candidate.profile.id)}),
+                json.dumps({"user_id": str(self.candidate.profile.id)}),
                 content_type="application/json",
             ),
             self.client.patch(
                 f"{memberships_url}{self.target.profile.id}/",
-                self._json({"is_curator": True}),
+                json.dumps({"is_curator": True}),
                 content_type="application/json",
             ),
             self.client.delete(f"{memberships_url}{self.target.profile.id}/"),
@@ -120,7 +117,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
 
         create = self.client.post(
             "/api/v1/library/groups/",
-            self._json({"name": "Blocked"}),
+            json.dumps({"name": "Blocked"}),
             content_type="application/json",
         )
         self.assertEqual(create.status_code, 404)
@@ -149,7 +146,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertIn("preview_books", detail.json())
         patch = self.client.patch(
             public_url,
-            self._json({"description": "Updated simple mode"}),
+            json.dumps({"description": "Updated simple mode"}),
             content_type="application/json",
         )
         self.assertEqual(patch.status_code, 200)
@@ -159,7 +156,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(self.client.get(books_url).status_code, 200)
         added = self.client.post(
             books_url,
-            self._json({"book_id": str(self.custom_book.id)}),
+            json.dumps({"book_id": str(self.custom_book.id)}),
             content_type="application/json",
         )
         self.assertEqual(added.status_code, 201)
@@ -171,14 +168,14 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(self.client.get(memberships_url).status_code, 200)
         created = self.client.post(
             memberships_url,
-            self._json({"user_id": str(self.target.profile.id)}),
+            json.dumps({"user_id": str(self.target.profile.id)}),
             content_type="application/json",
         )
         self.assertEqual(created.status_code, 201)
         member_url = f"{memberships_url}{self.target.profile.id}/"
         patched = self.client.patch(
             member_url,
-            self._json({"is_curator": False}),
+            json.dumps({"is_curator": False}),
             content_type="application/json",
         )
         self.assertEqual(patched.status_code, 200)
@@ -254,7 +251,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         )
         patched = self.client.patch(
             group_url,
-            self._json({"description": "Enabled"}),
+            json.dumps({"description": "Enabled"}),
             content_type="application/json",
         )
         self.assertEqual(patched.status_code, 200)
@@ -265,7 +262,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(
             self.client.post(
                 books_url,
-                self._json({"book_id": str(self.candidate_book.id)}),
+                json.dumps({"book_id": str(self.candidate_book.id)}),
                 content_type="application/json",
             ).status_code,
             201,
@@ -279,7 +276,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(
             self.client.post(
                 memberships_url,
-                self._json({"user_id": str(self.candidate.profile.id)}),
+                json.dumps({"user_id": str(self.candidate.profile.id)}),
                 content_type="application/json",
             ).status_code,
             201,
@@ -288,7 +285,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(
             self.client.patch(
                 candidate_membership_url,
-                self._json({"is_curator": True}),
+                json.dumps({"is_curator": True}),
                 content_type="application/json",
             ).status_code,
             200,
@@ -297,7 +294,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
 
         created = self.client.post(
             "/api/v1/library/groups/",
-            self._json({"name": "Created while enabled"}),
+            json.dumps({"name": "Created while enabled"}),
             content_type="application/json",
         )
         self.assertEqual(created.status_code, 201)

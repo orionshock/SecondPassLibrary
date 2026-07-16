@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from library.models import LibraryGroup, LibraryGroupMembership
-from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase, json_body
+from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase
 
 
 class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
@@ -10,12 +12,12 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         description = self.client.patch(
             f"/api/v1/library/groups/{self.club.id}/",
-            json_body({"description": "Curated"}),
+            json.dumps({"description": "Curated"}),
             content_type="application/json",
         )
         rename = self.client.patch(
             f"/api/v1/library/groups/{self.club.id}/",
-            json_body({"name": "Denied"}),
+            json.dumps({"name": "Denied"}),
             content_type="application/json",
         )
 
@@ -32,12 +34,12 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         exact = self.client.patch(
             f"/api/v1/library/groups/{self.club.id}/",
-            json_body({"description": "Reader curated"}),
+            json.dumps({"description": "Reader curated"}),
             content_type="application/json",
         )
         other = self.client.patch(
             f"/api/v1/library/groups/{self.hidden.id}/",
-            json_body({"description": "Denied"}),
+            json.dumps({"description": "Denied"}),
             content_type="application/json",
         )
 
@@ -50,7 +52,7 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         response = self.client.patch(
             f"/api/v1/library/groups/{self.public.id}/",
-            json_body({"description": "Shared by everyone"}),
+            json.dumps({"description": "Shared by everyone"}),
             content_type="application/json",
         )
 
@@ -66,7 +68,7 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
                 response = self.client.patch(
                     f"/api/v1/library/groups/{group.id}/",
-                    json_body({"name": f"{username} new", "description": "After"}),
+                    json.dumps({"name": f"{username} new", "description": "After"}),
                     content_type="application/json",
                 )
 
@@ -79,7 +81,7 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         response = self.client.patch(
             f"/api/v1/library/groups/{self.club.id}/",
-            json_body({"name": "Denied"}),
+            json.dumps({"name": "Denied"}),
             content_type="application/json",
         )
 
@@ -90,7 +92,7 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         response = self.client.patch(
             f"/api/v1/library/groups/{self.hidden.id}/",
-            json_body({"name": "   ", "unknown": "field"}),
+            json.dumps({"name": "   ", "unknown": "field"}),
             content_type="application/json",
         )
 
@@ -101,7 +103,7 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         response = self.client.patch(
             f"/api/v1/library/groups/{self.public.id}/",
-            json_body({"name": "Library Lobby", "description": "Still public"}),
+            json.dumps({"name": "Library Lobby", "description": "Still public"}),
             content_type="application/json",
         )
 
@@ -114,7 +116,7 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         response = self.client.patch(
             f"/api/v1/library/groups/{self.club.id}/?q=no-match&ordering=created_at",
-            json_body({"name": "   "}),
+            json.dumps({"name": "   "}),
             content_type="application/json",
         )
 

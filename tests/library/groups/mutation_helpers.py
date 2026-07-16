@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
@@ -40,7 +38,3 @@ class LibraryGroupMutationApiTestCase(TestCase):
         self.hidden = LibraryGroup.objects.create(name="Hidden", description="Private")
         LibraryGroupMembership.objects.create(user=self.reader, group=self.public)
         LibraryGroupMembership.objects.create(user=self.reader, group=self.club)
-
-
-def json_body(data: dict) -> str:
-    return json.dumps(data)

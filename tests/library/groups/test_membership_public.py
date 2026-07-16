@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
+
 from library.models import LibraryGroupMembership
 from library.roles import is_curator
 from tests.library.groups.membership_helpers import (
     LibraryGroupMembershipApiTestCase,
-    json_body,
 )
 
 
@@ -15,7 +16,7 @@ class LibraryPublicMembershipApiTests(LibraryGroupMembershipApiTestCase):
 
         response = self.client.patch(
             self.membership_detail_url(group=self.public),
-            json_body({"is_curator": True}),
+            json.dumps({"is_curator": True}),
             content_type="application/json",
         )
 

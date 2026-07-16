@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
+
 from library.models import Book, BookGroupAssignment
 from tests.library.groups.book_assignment_helpers import (
     LibraryGroupBookAssignmentApiTestCase,
-    json_body,
 )
 
 
@@ -37,7 +38,7 @@ class LibraryGroupBookAssignmentCreateTests(
 
                 response = self.client.post(
                     self.group_books_url(),
-                    json_body({"book_id": str(book.id)}),
+                    json.dumps({"book_id": str(book.id)}),
                     content_type="application/json",
                 )
 
@@ -55,12 +56,12 @@ class LibraryGroupBookAssignmentCreateTests(
 
         visible = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": str(self.source_book.id)}),
+            json.dumps({"book_id": str(self.source_book.id)}),
             content_type="application/json",
         )
         hidden = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": str(self.hidden_book.id)}),
+            json.dumps({"book_id": str(self.hidden_book.id)}),
             content_type="application/json",
         )
 
@@ -75,7 +76,7 @@ class LibraryGroupBookAssignmentCreateTests(
 
         response = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": str(self.club_book.id)}),
+            json.dumps({"book_id": str(self.club_book.id)}),
             content_type="application/json",
         )
 
@@ -86,7 +87,7 @@ class LibraryGroupBookAssignmentCreateTests(
 
         response = self.client.post(
             self.group_books_url(self.hidden),
-            json_body({"book_id": "not-a-uuid", "unknown": "field"}),
+            json.dumps({"book_id": "not-a-uuid", "unknown": "field"}),
             content_type="application/json",
         )
 
@@ -97,17 +98,17 @@ class LibraryGroupBookAssignmentCreateTests(
 
         missing = self.client.post(
             self.group_books_url(),
-            json_body({}),
+            json.dumps({}),
             content_type="application/json",
         )
         invalid = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": "not-a-uuid"}),
+            json.dumps({"book_id": "not-a-uuid"}),
             content_type="application/json",
         )
         unknown = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": str(self.hidden_book.id), "title": "nope"}),
+            json.dumps({"book_id": str(self.hidden_book.id), "title": "nope"}),
             content_type="application/json",
         )
 
@@ -123,7 +124,7 @@ class LibraryGroupBookAssignmentCreateTests(
 
         response = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": "00000000-0000-0000-0000-000000000001"}),
+            json.dumps({"book_id": "00000000-0000-0000-0000-000000000001"}),
             content_type="application/json",
         )
 
@@ -134,14 +135,14 @@ class LibraryGroupBookAssignmentCreateTests(
 
         created = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": str(self.hidden_book.id)}),
+            json.dumps({"book_id": str(self.hidden_book.id)}),
             content_type="application/json",
         )
         self.client.logout()
         self.assertTrue(self.client.login(username="owner", password="pw"))
         existing = self.client.post(
             self.group_books_url(),
-            json_body({"book_id": str(self.hidden_book.id)}),
+            json.dumps({"book_id": str(self.hidden_book.id)}),
             content_type="application/json",
         )
 

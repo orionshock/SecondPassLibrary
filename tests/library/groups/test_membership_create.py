@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
+
 from accounts.models import UserProfile
 from library.models import LibraryGroupMembership
 from tests.library.groups.membership_helpers import (
     LibraryGroupMembershipApiTestCase,
-    json_body,
 )
 
 
@@ -14,12 +15,12 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
 
         missing = self.client.post(
             self.membership_list_url(),
-            json_body({}),
+            json.dumps({}),
             content_type="application/json",
         )
         invalid = self.client.post(
             self.membership_list_url(),
-            json_body({"user_id": "not-a-uuid"}),
+            json.dumps({"user_id": "not-a-uuid"}),
             content_type="application/json",
         )
 
@@ -33,7 +34,7 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
 
         response = self.client.post(
             self.membership_list_url(),
-            json_body(
+            json.dumps(
                 {
                     "user_id": str(self.other.profile.id),
                     "role": UserProfile.ROLE_LIBRARIAN,
@@ -57,7 +58,7 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
 
     def test_post_is_idempotent_and_returns_existing_membership(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
-        body = json_body({"user_id": str(self.target.profile.id), "is_curator": True})
+        body = json.dumps({"user_id": str(self.target.profile.id), "is_curator": True})
 
         first = self.client.post(self.membership_list_url(), body, content_type="application/json")
         second = self.client.post(self.membership_list_url(), body, content_type="application/json")

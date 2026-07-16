@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase, json_body
+import json
+
+from tests.library.groups.mutation_helpers import LibraryGroupMutationApiTestCase
 
 
 class LibraryGroupCreateApiTests(LibraryGroupMutationApiTestCase):
@@ -12,7 +14,7 @@ class LibraryGroupCreateApiTests(LibraryGroupMutationApiTestCase):
 
                 response = self.client.post(
                     "/api/v1/library/groups/",
-                    json_body({"name": f"{username} group", "description": "Created"}),
+                    json.dumps({"name": f"{username} group", "description": "Created"}),
                     content_type="application/json",
                 )
 
@@ -30,7 +32,7 @@ class LibraryGroupCreateApiTests(LibraryGroupMutationApiTestCase):
 
                 response = self.client.post(
                     "/api/v1/library/groups/",
-                    json_body({"name": "Denied"}),
+                    json.dumps({"name": "Denied"}),
                     content_type="application/json",
                 )
 
@@ -41,17 +43,17 @@ class LibraryGroupCreateApiTests(LibraryGroupMutationApiTestCase):
 
         missing = self.client.post(
             "/api/v1/library/groups/",
-            json_body({}),
+            json.dumps({}),
             content_type="application/json",
         )
         blank = self.client.post(
             "/api/v1/library/groups/",
-            json_body({"name": "   "}),
+            json.dumps({"name": "   "}),
             content_type="application/json",
         )
         unknown = self.client.post(
             "/api/v1/library/groups/",
-            json_body({"name": "Clubhouse", "slug": "clubhouse"}),
+            json.dumps({"name": "Clubhouse", "slug": "clubhouse"}),
             content_type="application/json",
         )
 
