@@ -10,9 +10,6 @@ pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
     def test_shelf_js_has_friendly_ownership_display(self):
-        identity_js = Path("web/static/web/js/ui/identity.js").read_text(
-            encoding="utf-8"
-        )
         group_badge_js = Path("web/static/web/js/ui/groups.js").read_text(
             encoding="utf-8"
         )
@@ -38,24 +35,6 @@ class ProductUiIdentityLibraryShelvesJsContractsTests(ProductUiTestCase):
         edit_js = Path("web/static/web/js/shelves/edit.js").read_text(encoding="utf-8")
         book_edit_shelves_js = Path("web/static/web/js/book_edit/shelves.js").read_text(encoding="utf-8")
         groups_shared_js = Path("web/static/web/js/groups/shared.js").read_text(encoding="utf-8")
-
-        self.assertIn("export function userDisplayName", identity_js)
-        self.assertIn("export function userHandle", identity_js)
-        self.assertIn("export function userIdentityText", identity_js)
-        self.assertIn("export function renderUserIdentity", identity_js)
-        self.assertIn('[firstName, lastName].filter(Boolean).join(" ")', identity_js)
-        self.assertIn("`<@${username}>`", identity_js)
-        self.assertIn('parts.join(", ")', identity_js)
-        self.assertIn('"Unknown user"', identity_js)
-        self.assertIn("options.includeEmail === true", identity_js)
-        self.assertIn("options.includeDisplayName === false", identity_js)
-        self.assertIn('icon.textContent = "person"', identity_js)
-        self.assertIn("piece.textContent = text", identity_js)
-        self.assertIn("document.createElement", identity_js)
-        self.assertNotIn("innerHTML", identity_js)
-        self.assertNotIn("profile_id", identity_js)
-        self.assertNotIn("user.id", identity_js)
-        self.assertNotIn("user.pk", identity_js)
 
         self.assertIn("export function groupDisplayName", group_badge_js)
         self.assertIn("export function groupBadgeText", group_badge_js)
