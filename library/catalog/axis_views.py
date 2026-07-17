@@ -24,6 +24,11 @@ from library.catalog.serializers import (
 )
 from library.catalog.axis_services import update_author, update_series
 from library.catalog.filters import apply_catalog_tag_filter
+from library.catalog.preview_books import (
+    attach_author_preview_books,
+    attach_series_preview_books,
+    include_preview_books,
+)
 from library.queries import visible_books_for_user
 
 
@@ -36,6 +41,17 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
 
     def axis_queryset(self):
         raise NotImplementedError
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = include_preview_books(self.request)
+        return context
+
+    def preview_books_queryset(self):
+        return apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
+
+    def attach_preview_books(self, parents):
+        return None
 
 
 class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
@@ -50,12 +66,34 @@ class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
         )
         return apply_axis_ordering(queryset, parse_axis_ordering(self.request))
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            if include_preview_books(request):
+                self.attach_preview_books(page)
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        rows = list(queryset)
+        if include_preview_books(request):
+            self.attach_preview_books(rows)
+        serializer = self.get_serializer(rows, many=True)
+        return Response(serializer.data)
+
 
 class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
     use_cached_visibility = False
 
     def get_queryset(self):
         return self.axis_queryset()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if include_preview_books(request):
+            self.attach_preview_books([instance])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def patch(self, request, *args, **kwargs):
         if not is_librarian(request.user):
@@ -75,6 +113,12 @@ class AuthorAxisMixin(_BaseAxisMixin):
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_authors_from_books(visible_books)
 
+    def attach_preview_books(self, parents):
+        attach_author_preview_books(
+            authors=parents,
+            visible_books=self.preview_books_queryset(),
+        )
+
 
 class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
     pass
@@ -93,6 +137,12 @@ class SeriesAxisMixin(_BaseAxisMixin):
     def axis_queryset(self):
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_series_from_books(visible_books)
+
+    def attach_preview_books(self, parents):
+        attach_series_preview_books(
+            series=parents,
+            visible_books=self.preview_books_queryset(),
+        )
 
 
 class SeriesListView(SeriesAxisMixin, _BaseAxisListView):

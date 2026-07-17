@@ -40,6 +40,35 @@ class LibraryBearerGroupReadTests(LibraryBearerApiTestCase):
             {"Fantasy": 1, "Mystery": 1},
         )
 
+    def test_group_author_and_series_previews_are_bearer_group_scoped(self):
+        base = f"/api/v1/library/groups/{self.public.id}/"
+        authors = self.bearer_get(
+            f"{base}authors/",
+            {"include_preview_books": "true"},
+        )
+        series = self.bearer_get(
+            f"{base}series/",
+            {"include_preview_books": "true"},
+        )
+
+        self.assertEqual(authors.status_code, 200)
+        alpha = next(row for row in authors.json()["results"] if row["name"] == "Alpha Author")
+        self.assertNotIn(
+            "Hidden Dresden",
+            [book["title"] for book in alpha["preview_books"]],
+        )
+        self.assertEqual(
+            {set(book) == {"id", "title", "cover_url"} for book in alpha["preview_books"]},
+            {True},
+        )
+
+        self.assertEqual(series.status_code, 200)
+        first = next(row for row in series.json()["results"] if row["name"] == "First Series")
+        self.assertEqual(
+            [book["title"] for book in first["preview_books"]],
+            ["Visible Two", "Visible One"],
+        )
+
     def test_inaccessible_group_axes_are_404(self):
         base = f"/api/v1/library/groups/{self.hidden.id}/"
         for axis in ["books", "authors", "series", "tags"]:

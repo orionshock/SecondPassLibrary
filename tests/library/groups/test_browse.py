@@ -23,6 +23,10 @@ from tests.library.helpers import (
 )
 
 
+def preview_titles(row):
+    return [book["title"] for book in row["preview_books"]]
+
+
 class LibraryGroupBrowseTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -168,6 +172,35 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_names(response), ["First Series", "Second Series"])
         self.assertEqual(response_book_counts(response), {"First Series": 2, "Second Series": 1})
+
+    def test_group_author_and_series_preview_books_are_exact_group_scoped(self):
+        authors = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/authors/",
+            {"include_preview_books": "true"},
+        )
+        series = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/series/",
+            {"include_preview_books": "true"},
+        )
+        tags = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/tags/",
+            {"include_preview_books": "true"},
+        )
+
+        self.assertEqual(authors.status_code, 200)
+        alpha = next(row for row in authors.json()["results"] if row["name"] == "Alpha Author")
+        self.assertEqual(preview_titles(alpha), ["Club Alpha", "Shared Book"])
+        self.assertNotIn("Family Gamma", preview_titles(alpha))
+        for preview in alpha["preview_books"]:
+            self.assertEqual(set(preview), {"id", "title", "cover_url"})
+
+        self.assertEqual(series.status_code, 200)
+        second = next(row for row in series.json()["results"] if row["name"] == "Second Series")
+        self.assertEqual(preview_titles(second), ["Shared Book"])
+        self.assertNotIn("Family Gamma", preview_titles(second))
+
+        self.assertEqual(tags.status_code, 200)
+        self.assertNotIn("preview_books", tags.json()["results"][0])
 
     def test_group_tags_include_only_group_tags_and_count_group_books(self):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/tags/")

@@ -38,21 +38,35 @@ class CatalogTagSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AuthorAxisSerializer(serializers.ModelSerializer):
+class PreviewBooksAxisMixin:
+    def get_preview_books(self, obj) -> list[dict]:
+        books = getattr(obj, "_preview_books", [])
+        return BookPreviewSerializer(books, many=True, context=self.context).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get("include_preview_books", False):
+            data.pop("preview_books", None)
+        return data
+
+
+class AuthorAxisSerializer(PreviewBooksAxisMixin, serializers.ModelSerializer):
     book_count = serializers.IntegerField(read_only=True)
+    preview_books = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Author
-        fields = ["id", "name", "sort_name", "biography", "book_count"]
+        fields = ["id", "name", "sort_name", "biography", "book_count", "preview_books"]
         read_only_fields = fields
 
 
-class SeriesAxisSerializer(serializers.ModelSerializer):
+class SeriesAxisSerializer(PreviewBooksAxisMixin, serializers.ModelSerializer):
     book_count = serializers.IntegerField(read_only=True)
+    preview_books = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Series
-        fields = ["id", "name", "sort_name", "summary", "book_count"]
+        fields = ["id", "name", "sort_name", "summary", "book_count", "preview_books"]
         read_only_fields = fields
 
 

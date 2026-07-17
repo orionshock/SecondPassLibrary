@@ -12,6 +12,10 @@ from tests.library.helpers import (
 )
 
 
+def preview_titles(row):
+    return [book["title"] for book in row["preview_books"]]
+
+
 class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_list_includes_only_series_with_visible_books(self):
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
@@ -36,6 +40,43 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_book_counts(response), {"First Series": 2, "Second Series": 1})
         first = next(item for item in response.json()["results"] if item["name"] == "First Series")
         self.assertEqual(first["summary"], "Summary in list payload.")
+
+    def test_preview_books_are_opt_in_limited_and_visibility_scoped(self):
+        for index in range(7):
+            create_catalog_book(
+                f"Series Preview {index:02d}",
+                author=self.alpha,
+                series=self.first_series,
+                series_index=f"{index + 10}.00",
+                group=self.public,
+            )
+
+        default_response = self.client.get("/api/v1/library/series/")
+        preview_response = self.client.get(
+            "/api/v1/library/series/",
+            {"include_preview_books": "true"},
+        )
+        detail_response = self.client.get(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            {"include_preview_books": "true"},
+        )
+
+        self.assertEqual(default_response.status_code, 200)
+        self.assertNotIn("preview_books", default_response.json()["results"][0])
+        self.assertEqual(preview_response.status_code, 200)
+        first = next(
+            row for row in preview_response.json()["results"] if row["name"] == "First Series"
+        )
+        self.assertEqual(
+            preview_titles(first),
+            ["Visible Two", "Visible One", *[f"Series Preview {index:02d}" for index in range(4)]],
+        )
+        self.assertNotIn("Hidden Dresden", preview_titles(first))
+        for preview in first["preview_books"]:
+            self.assertEqual(set(preview), {"id", "title", "cover_url"})
+
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(preview_titles(detail_response.json()), preview_titles(first))
 
     def test_q_searches_name_and_sort_name(self):
         self.second_series.sort_name = "Storm Sequence"

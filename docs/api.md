@@ -487,7 +487,10 @@ Author/Series payload notes:
 
 - Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH `name` and the respective prose field on the detail endpoint; readers remain read-only.
 - Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
-- Author and Series list/detail payloads do not currently attach preview books.
+- Author and Series list/detail payloads may opt into `preview_books` with
+  `include_preview_books=true`; preview items are visibility-scoped and use
+  the reusable preview shape described below. Tags do not currently attach
+  preview books.
 - Author list ordering:
   - `GET /api/v1/library/authors/?ordering=name` orders by author name A-Z and is the default.
   - `GET /api/v1/library/authors/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
@@ -555,12 +558,17 @@ Several browse/context endpoints support optional bounded book-cover previews:
 
 - `GET /api/v1/shelves/?include_preview_books=true`
 - `GET /api/v1/shelves/<id>/?include_preview_books=true`
+- `GET /api/v1/library/authors/?include_preview_books=true`
+- `GET /api/v1/library/authors/<author_id>/?include_preview_books=true`
+- `GET /api/v1/library/series/?include_preview_books=true`
+- `GET /api/v1/library/series/<series_id>/?include_preview_books=true`
 - `GET /api/v1/library/groups/?include_preview_books=true`
 - `GET /api/v1/library/groups/<group_id>/?include_preview_books=true`
+- `GET /api/v1/library/groups/<group_id>/authors/?include_preview_books=true`
+- `GET /api/v1/library/groups/<group_id>/series/?include_preview_books=true`
 
-Author and Series endpoints do not currently attach `preview_books`; use their
-normal list/detail payloads plus Book lists filtered by `author` or `series`
-when a client needs concrete books.
+Book and Catalog Tag endpoints do not currently attach `preview_books`; Book
+payloads already represent concrete books, and Tag payloads remain count-only.
 
 Request behavior:
 
@@ -573,7 +581,7 @@ Response shape when opted in:
 
 ```json
 {
-  "id": "shelf-or-group-id",
+  "id": "parent-id",
   "name": "Parent name",
   "preview_books": [
     {
@@ -599,6 +607,8 @@ Visibility and auth:
 - Readers and Client API bearer tokens only receive preview books visible to their user.
 - Shelves do not grant book access; inaccessible shelf items are omitted from previews.
 - Group previews use books assigned to that exact group and do not leak hidden assigned books.
+- Author and Series previews use books in the matching visible axis. Group-scoped
+  Author and Series previews are additionally limited to the exact visible group.
 - Public/Common Room previews do not leak hidden books.
 - Session auth and bearer auth use the same `request.user` book visibility behavior for preview selection.
 - Inaccessible parent resources remain inaccessible as before.
@@ -606,6 +616,8 @@ Visibility and auth:
 Ordering:
 
 - Group previews are sample-like/random visible books assigned to that exact group. Contents and order may change between requests; clients must not rely on stable order or stable membership.
+- Author previews are deterministic by book sort title, title, and id.
+- Series previews are deterministic by series index, book sort title, title, and id.
 - Shelf previews are stable by shelf item order: `position`, then deterministic fallback.
 
 Client guidance:

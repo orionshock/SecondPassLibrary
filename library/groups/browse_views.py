@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
+from rest_framework.response import Response
 
 from library.api_access import LibraryBearerReadMixin
 from library.catalog.axes import (
@@ -15,6 +16,11 @@ from library.catalog.axes import (
 )
 from library.catalog.filters import apply_book_filters, apply_catalog_tag_filter
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
+from library.catalog.preview_books import (
+    attach_author_preview_books,
+    attach_series_preview_books,
+    include_preview_books,
+)
 from library.catalog.serializers import (
     AuthorAxisSerializer,
     BookListSerializer,
@@ -58,6 +64,14 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
     def axis_queryset(self):
         raise NotImplementedError
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["include_preview_books"] = include_preview_books(self.request)
+        return context
+
+    def attach_preview_books(self, parents):
+        return None
+
     def get_queryset(self):
         queryset = self.axis_queryset()
         queryset = apply_axis_search(
@@ -66,6 +80,21 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
             include_normalized=self.search_normalized_name,
         )
         return apply_axis_ordering(queryset, parse_axis_ordering(self.request))
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            if include_preview_books(request):
+                self.attach_preview_books(page)
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        rows = list(queryset)
+        if include_preview_books(request):
+            self.attach_preview_books(rows)
+        serializer = self.get_serializer(rows, many=True)
+        return Response(serializer.data)
 
 
 class GroupAuthorListView(GroupAxisListMixin):
@@ -77,6 +106,14 @@ class GroupAuthorListView(GroupAxisListMixin):
         )
         return visible_authors_from_books(visible_books)
 
+    def attach_preview_books(self, parents):
+        attach_author_preview_books(
+            authors=parents,
+            visible_books=apply_catalog_tag_filter(
+                self.visible_group_books(), self.request.query_params
+            ),
+        )
+
 
 class GroupSeriesListView(GroupAxisListMixin):
     serializer_class = SeriesAxisSerializer
@@ -86,6 +123,14 @@ class GroupSeriesListView(GroupAxisListMixin):
             self.visible_group_books(), self.request.query_params
         )
         return visible_series_from_books(visible_books)
+
+    def attach_preview_books(self, parents):
+        attach_series_preview_books(
+            series=parents,
+            visible_books=apply_catalog_tag_filter(
+                self.visible_group_books(), self.request.query_params
+            ),
+        )
 
 
 class GroupCatalogTagListView(GroupAxisListMixin):

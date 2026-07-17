@@ -79,6 +79,34 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
             {"Fantasy": 2, "Mystery": 1},
         )
 
+    def test_author_and_series_preview_books_are_bearer_visibility_scoped(self):
+        authors = self.bearer_get(
+            "/api/v1/library/authors/",
+            {"include_preview_books": "true"},
+        )
+        series = self.bearer_get(
+            "/api/v1/library/series/",
+            {"include_preview_books": "true"},
+        )
+
+        self.assertEqual(authors.status_code, 200)
+        alpha = next(row for row in authors.json()["results"] if row["name"] == "Alpha Author")
+        self.assertIn("preview_books", alpha)
+        self.assertNotIn(
+            "Hidden Dresden",
+            [book["title"] for book in alpha["preview_books"]],
+        )
+        for preview in alpha["preview_books"]:
+            self.assertEqual(set(preview), {"id", "title", "cover_url"})
+
+        self.assertEqual(series.status_code, 200)
+        second = next(row for row in series.json()["results"] if row["name"] == "Second Series")
+        self.assertIn("Visible Three", [book["title"] for book in second["preview_books"]])
+        self.assertNotIn(
+            "Hidden Dresden",
+            [book["title"] for book in second["preview_books"]],
+        )
+
     def test_book_file_metadata_exposes_download_route_without_storage_path(self):
         self.visible_one.book_file.name = "books/aa/private.epub"
         self.visible_one.checksum = "a" * 64

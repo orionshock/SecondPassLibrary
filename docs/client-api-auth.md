@@ -128,10 +128,11 @@ Library details:
   filters are not part of the client contract.
 - All results, counts, filters, and pagination are scoped to books visible to
   the token owner; inaccessible details and groups return `404`.
-- Group and shelf list/detail payloads may opt into `preview_books` with
-  `include_preview_books=true`; preview items contain only `id`, `title`, and
-  `cover_url`, never file/download URLs. Author and Series endpoints do not
-  currently attach preview books.
+- Author, Series, Group, and Shelf list/detail payloads may opt into
+  `preview_books` with `include_preview_books=true`; preview items contain only
+  `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author
+  and Series lists also support the same opt-in. Tag endpoints do not currently
+  attach preview books.
 - `/media/books/` is not public. Reader clients must use Book detail
   `file.download_url` and the authenticated download endpoint for EPUB bytes.
   Storage names and paths are never returned. Cover URLs remain public display

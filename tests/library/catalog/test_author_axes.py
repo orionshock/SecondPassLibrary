@@ -12,6 +12,10 @@ from tests.library.helpers import (
 )
 
 
+def preview_titles(row):
+    return [book["title"] for book in row["preview_books"]]
+
+
 class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_list_includes_only_authors_with_visible_books(self):
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
@@ -34,6 +38,44 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
         alpha = next(item for item in response.json()["results"] if item["name"] == "Alpha Author")
         self.assertEqual(alpha["biography"], "Biography in list payload.")
+
+    def test_preview_books_are_opt_in_limited_and_visibility_scoped(self):
+        for index in range(7):
+            create_catalog_book(
+                f"Alpha Preview {index:02d}",
+                author=self.alpha,
+                group=self.public,
+            )
+
+        default_response = self.client.get("/api/v1/library/authors/")
+        preview_response = self.client.get(
+            "/api/v1/library/authors/",
+            {"include_preview_books": "true"},
+        )
+        detail_response = self.client.get(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            {"include_preview_books": "true"},
+        )
+
+        self.assertEqual(default_response.status_code, 200)
+        self.assertNotIn("preview_books", default_response.json()["results"][0])
+        self.assertEqual(preview_response.status_code, 200)
+        alpha = next(
+            row for row in preview_response.json()["results"] if row["name"] == "Alpha Author"
+        )
+        self.assertEqual(
+            preview_titles(alpha),
+            [f"Alpha Preview {index:02d}" for index in range(6)],
+        )
+        self.assertNotIn("Hidden Dresden", preview_titles(alpha))
+        for preview in alpha["preview_books"]:
+            self.assertEqual(set(preview), {"id", "title", "cover_url"})
+
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(
+            preview_titles(detail_response.json()),
+            [f"Alpha Preview {index:02d}" for index in range(6)],
+        )
 
     def test_q_searches_name_and_sort_name(self):
         self.beta.sort_name = "Storm Writer"
