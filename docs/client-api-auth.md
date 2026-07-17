@@ -107,46 +107,75 @@ Product UI (Django templates):
 
 Client API bearer tokens are **reader/client tokens**, not admin/management tokens.
 
-Allowed surface is an explicit allow-list. In current behavior, bearer tokens are enabled for:
+Allowed surface is an explicit allow-list.
 
-- `GET /api/v1/accounts/me/` (read-only; bearer tokens do not allow `PATCH`)
-- read-only Library catalog endpoints
-  - Books, Authors, Series, and Catalog Tags list/detail
-  - visible Book EPUB downloads through
-    `GET /api/v1/library/books/<book_id>/download/`
-  - visible LibraryGroup list/detail
-  - visible group-scoped Books, Authors, Series, and Tags lists
-  - supported browse endpoints may opt into `preview_books` with `include_preview_books=true`; preview items are visibility-scoped context hints with `id`, `title`, and `cover_url` only, never file/download URLs
-  - Catalog Tag list/detail and visible-group tag lists are read-only bearer
-    surfaces; tags and counts are restricted to books visible to the token owner
-  - tag detail returns `404` for tags attached only to inaccessible books;
-    group-tag routes also enforce group visibility and simple-mode Public-only gating
-  - Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
-    filters are not part of the client contract
-  - all results, counts, filters, and pagination are scoped to books visible to
-    the token owner; inaccessible details and groups return `404`
-  - simple mode exposes Public/Common Room group reads only; custom groups are
-    unavailable until advanced groups are enabled
-  - bearer credentials are read-only under `/api/v1/library/` regardless of
-    account role; mixed endpoint writes still require Django session auth
-  - Book detail exposes file format, size, checksum, and an authenticated
-    `download_url`. Downloads stream the complete canonical EPUB as an
-    `application/epub+zip` attachment with a sanitized title-based filename.
-    Byte Range responses are not currently supported.
-  - `/media/books/` is not public; storage names and paths are never returned.
-    Cover URLs remain public display assets under `/media/covers/`.
-- shelves endpoints:
-  - bearer tokens may read any shelf the user can view
-  - visible shelf list/detail payloads may opt into `preview_books` with `include_preview_books=true`; shelves still do not grant book access
-  - bearer tokens may create/edit/delete **only** the user's own personal shelves
-  - bearer tokens may add/remove/reorder items only in the user's own personal shelves
-  - group-owned shelves are read-only via bearer tokens and report `can_edit: false`
-  - other users' shelves are read-only when visible (listed) and report `can_edit: false`
-  - `can_edit` is request-context-sensitive; product UI/session auth may allow group shelf edits according to normal group authorization, but bearer auth never allows group shelf writes
-  - shelf item book lists still filter each book through normal book access; shelves do not grant book access
-- reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
-  - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) for safe retries
-  - for "continue reading" UIs: `GET /api/v1/reading/sessions/recent/?limit=10`
+| Domain | Bearer access | Notes |
+| --- | --- | --- |
+| `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, banner text, and advanced-groups state. Bearer `PATCH` is rejected. |
+| `/api/v1/library/` Books, Authors, Series, Tags | read-only | List/detail endpoints are visibility-scoped. Book detail exposes `file.download_url` for visible EPUB downloads. |
+| `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |
+| `/api/v1/library/groups/` and group-scoped Books/Auth/Series/Tags | read-only | Group reads require group visibility. Simple mode exposes Public/Common Room only. |
+| `/api/v1/reading/` sessions/progress/annotations | read/write for owned reading state | Bearer mutations are limited to the token owner's sessions, progress, and annotations. Writes that open/read/write a book require current book visibility. |
+| `/api/v1/shelves/` | read visible shelves; mutate own personal shelves only | Bearer may create/edit/delete the token user's personal shelves and add/move/remove items there. Group shelves and other users' shelves are read-only when visible. |
+
+Library details:
+
+- Bearer credentials are read-only under `/api/v1/library/` regardless of
+  account role; mixed endpoint writes still require Django session auth.
+- Books, Authors, Series, Catalog Tags, visible LibraryGroups, and visible
+  group-scoped Books/Auth/Series/Tags are bearer-readable.
+- Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
+  filters are not part of the client contract.
+- All results, counts, filters, and pagination are scoped to books visible to
+  the token owner; inaccessible details and groups return `404`.
+- Group and shelf list/detail payloads may opt into `preview_books` with
+  `include_preview_books=true`; preview items contain only `id`, `title`, and
+  `cover_url`, never file/download URLs. Author and Series endpoints do not
+  currently attach preview books.
+- `/media/books/` is not public. Reader clients must use Book detail
+  `file.download_url` and the authenticated download endpoint for EPUB bytes.
+  Storage names and paths are never returned. Cover URLs remain public display
+  assets under `/media/covers/`.
+
+Reading details:
+
+- Bearer clients should use normal Reading API endpoints for sync:
+  sessions, progress, annotations, `open`, `start-over`, `close`,
+  `recent`, and activity summary.
+- `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key`
+  (recommended) for safe retries.
+- For "continue reading" UIs, use
+  `GET /api/v1/reading/sessions/recent/?limit=10`.
+- Marginalia import/export endpoints are **session-only** and reject Client API
+  bearer tokens:
+  - `GET/POST /api/v1/reading/export/`
+  - `POST /api/v1/reading/import/preview/`
+  - `POST /api/v1/reading/import/apply/`
+  - `GET /api/v1/reading/import/unmatched/?import_token=<token>`
+
+Shelves details:
+
+- Bearer tokens may read any shelf the user can view.
+- Visible shelf list/detail payloads may opt into `preview_books` with
+  `include_preview_books=true`; shelves still do not grant book access.
+- Bearer tokens may create/edit/delete **only** the user's own personal shelves.
+- Bearer tokens may add/remove/reorder items only in the user's own personal
+  shelves.
+- Group-owned shelves are read-only via bearer tokens and report
+  `can_edit: false`.
+- Other users' shelves are read-only when visible/listed and report
+  `can_edit: false`.
+- Shelf item book lists still filter each book through normal book access;
+  shelves do not grant book access.
+
+Explicitly session-only or bearer-denied surfaces:
+
+- Library mutations: Book metadata/tag PATCH, Author/Series PATCH, cover
+  upload/clear, Library import upload, group create/update/delete, group book
+  assignment mutation, and group membership list/mutation.
+- Account/user management: managed users, user choices, password changes, web
+  session management, and Product UI/admin endpoints.
+- Reading marginalia import/export listed above.
 
 Management endpoints reject Client API tokens unless explicitly allowed.
 

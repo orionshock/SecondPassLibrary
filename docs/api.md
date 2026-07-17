@@ -121,7 +121,9 @@ The Client API provides a pairing flow (human code + browser approval) and beare
 - Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
-They are also not enabled for marginalia export endpoints; exports are product UI/session-authenticated only in the current slice.
+They are also not enabled for marginalia import/export endpoints; reading
+import/export remains product UI/session-authenticated only in the current
+slice.
 
 Discovery:
 
@@ -485,7 +487,7 @@ Author/Series payload notes:
 
 - Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH `name` and the respective prose field on the detail endpoint; readers remain read-only.
 - Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
-- Author and Series list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
+- Author and Series list/detail payloads do not currently attach preview books.
 - Author list ordering:
   - `GET /api/v1/library/authors/?ordering=name` orders by author name A-Z and is the default.
   - `GET /api/v1/library/authors/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
@@ -551,14 +553,14 @@ Book list ordering:
 
 Several browse/context endpoints support optional bounded book-cover previews:
 
-- `GET /api/v1/library/authors/?include_preview_books=true`
-- `GET /api/v1/library/authors/<id>/?include_preview_books=true`
-- `GET /api/v1/library/series/?include_preview_books=true`
-- `GET /api/v1/library/series/<id>/?include_preview_books=true`
 - `GET /api/v1/shelves/?include_preview_books=true`
 - `GET /api/v1/shelves/<id>/?include_preview_books=true`
 - `GET /api/v1/library/groups/?include_preview_books=true`
 - `GET /api/v1/library/groups/<group_id>/?include_preview_books=true`
+
+Author and Series endpoints do not currently attach `preview_books`; use their
+normal list/detail payloads plus Book lists filtered by `author` or `series`
+when a client needs concrete books.
 
 Request behavior:
 
@@ -571,7 +573,7 @@ Response shape when opted in:
 
 ```json
 {
-  "id": "author-or-series-shelf-or-group-id",
+  "id": "shelf-or-group-id",
   "name": "Parent name",
   "preview_books": [
     {
@@ -603,9 +605,7 @@ Visibility and auth:
 
 Ordering:
 
-- Author previews are sample-like/random visible books. Contents and order may change between requests; clients must not rely on stable order or stable membership.
 - Group previews are sample-like/random visible books assigned to that exact group. Contents and order may change between requests; clients must not rely on stable order or stable membership.
-- Series previews are stable by natural series sequence: `series_index`, then deterministic fallback.
 - Shelf previews are stable by shelf item order: `position`, then deterministic fallback.
 
 Client guidance:
@@ -617,9 +617,10 @@ Client guidance:
 
 Book payload notes:
 
-- Books now include a read-only `groups[]` summary (assigned LibraryGroups).
-- For Manager/Librarian/Owner, `groups[]` includes all assigned groups.
-- For Readers, including readers with group curator flags, `groups[]` includes only groups the caller can view (Public or direct membership).
+- Book list/detail payloads do not currently include assigned LibraryGroup
+  summaries. Group context is available through
+  `GET /api/v1/library/groups/` and the group-scoped catalog listings such as
+  `GET /api/v1/library/groups/<group_id>/books/`.
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; raw book media such as `/media/books/...` is not public and EPUB/book content should be delivered only through authenticated app/API endpoints.
 - Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
