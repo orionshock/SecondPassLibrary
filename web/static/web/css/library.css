@@ -150,6 +150,10 @@
   margin-top: 2px;
   color: var(--muted);
 }
+.library-browse-row .cover-preview-strip {
+  justify-self: end;
+  justify-content: flex-end;
+}
 .library-context {
   display: grid;
   gap: 8px;
@@ -335,6 +339,10 @@
   }
   .library-browse-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .library-browse-row .cover-preview-strip {
+    justify-self: start;
+    justify-content: flex-start;
   }
   .library-browse-row .button {
     justify-self: start;

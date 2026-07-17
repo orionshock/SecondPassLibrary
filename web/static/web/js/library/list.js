@@ -139,7 +139,7 @@ function renderBooks(payload, context = null) {
     .join("");
 }
 
-function renderAuthors(payload) {
+export function renderAuthors(payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
@@ -177,7 +177,7 @@ function renderAuthors(payload) {
     .join("");
 }
 
-function renderSeries(payload) {
+export function renderSeries(payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
