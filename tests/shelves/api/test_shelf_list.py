@@ -53,6 +53,12 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
             visibility=Shelf.VISIBILITY_PRIVATE,
             created_by=self.owner,
         )
+        ShelfItem.objects.create(
+            shelf=other_listed,
+            book=self.book_public,
+            position=0,
+            added_by=self.other,
+        )
 
         self.client.login(username="reader", password="pw")
 
@@ -98,6 +104,8 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
             payload_dict(group_shelf_row, "owner_group")["name"],
             "G",
         )
+        self.assertEqual(other_listed_row["item_count"], 1)
+        self.assertEqual(group_shelf_row["item_count"], 0)
 
         for username in ("manager", "owner"):
             self.client.logout()
@@ -112,6 +120,52 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
                     ids,
                     f"{username} should not see another user's private shelf in {scope} scope",
                 )
+
+    def test_list_hides_empty_or_hidden_only_listed_shelves_owned_by_others(self):
+        empty = Shelf.objects.create(
+            name="Empty Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        hidden_only = Shelf.objects.create(
+            name="Hidden Only Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        ShelfItem.objects.create(
+            shelf=hidden_only,
+            book=self.book_hidden,
+            position=0,
+            added_by=self.other,
+        )
+
+        self.client.login(username="reader", password="pw")
+        response = assert_response(
+            self.client.get("/api/v1/shelves/?scope=shared&include_preview_books=true")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rows = response_data_list(response)
+        ids = {row["id"] for row in rows}
+        self.assertNotIn(str(empty.id), ids)
+        self.assertNotIn(str(hidden_only.id), ids)
+
+        self.client.logout()
+        self.client.login(username="other", password="pw")
+        owner_response = assert_response(
+            self.client.get("/api/v1/shelves/?scope=personal&include_preview_books=true")
+        )
+        owner_rows = {
+            row["id"]: row for row in response_data_list(owner_response)
+        }
+        self.assertEqual(owner_rows[str(empty.id)]["item_count"], 0)
+        self.assertEqual(owner_rows[str(empty.id)]["preview_books"], [])
+        self.assertEqual(owner_rows[str(hidden_only.id)]["item_count"], 0)
+        self.assertEqual(owner_rows[str(hidden_only.id)]["preview_books"], [])
 
     def test_list_filter_owner_group(self):
         self.client.login(username="owner", password="pw")

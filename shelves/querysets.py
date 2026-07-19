@@ -133,6 +133,15 @@ def build_visible_shelf_list_queryset(
             )
         )
 
+    # Listed shelves owned by somebody else are useful only when they contain
+    # at least one book visible to this viewer. Personal and group shelf rows
+    # remain visible even when their scoped item count is zero.
+    visible_qs = visible_qs.filter(
+        Q(owner_type=Shelf.OWNER_TYPE_GROUP)
+        | Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
+        | Q(item_count__gt=0)
+    )
+
     return visible_qs
 
 

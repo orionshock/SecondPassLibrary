@@ -111,6 +111,12 @@ Public group shelves:
   modes. Simple mode hides advanced group relationship/management UI; it does
   not disable user-owned shelves or Public group-owned shelves.
 
+Shelf list responses apply one additional anti-leakage rule: a listed
+user-owned shelf belonging to somebody else is omitted when its viewer-scoped
+`item_count` is zero. Owners still see their own empty shelves, and visible
+group-owned shelves remain listed when empty. Direct shelf item filtering and
+private shelf visibility are unchanged.
+
 Client API bearer-token requests are narrower than product UI/session-auth requests:
 
 - bearer tokens may create/edit/delete shelves and manage shelf items only for the token user's own user-owned shelves

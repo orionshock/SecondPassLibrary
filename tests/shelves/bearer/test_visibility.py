@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from shelves.models import Shelf, ShelfItem
 from tests.shelves.bearer.helpers import ShelvesBearerApiTestCase
 from tests.utils.responses import (
     assert_response,
@@ -21,6 +22,12 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
             )
         )
         shelf_id = str(response_data_dict(created)["id"])
+        ShelfItem.objects.create(
+            shelf_id=shelf_id,
+            book=self.book_in_group,
+            position=0,
+            added_by=self.other,
+        )
         self.client.logout()
 
         list_resp = assert_response(
@@ -74,6 +81,12 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
             ),
         )
         listed_shelf_id = str(response_data_dict(listed)["id"])
+        ShelfItem.objects.create(
+            shelf_id=listed_shelf_id,
+            book=self.book_in_group,
+            position=0,
+            added_by=self.other,
+        )
         private = assert_response(
             self.client.post(
                 "/api/v1/shelves/",
@@ -111,6 +124,64 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         self.assertNotIn(private_shelf_id, shared_by_id)
         self.assertFalse(shared_by_id[listed_shelf_id]["can_edit"])
         self.assertFalse(shared_by_id[group_shelf_id]["can_edit"])
+
+    def test_bearer_hides_empty_other_listed_shelf_but_keeps_empty_owned_and_group_shelves(self):
+        personal_shelf_id = self._create_personal_shelf_as_owner()
+        empty_listed = Shelf.objects.create(
+            name="Empty Other Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        hidden_only = Shelf.objects.create(
+            name="Hidden Only Other Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        ShelfItem.objects.create(
+            shelf=hidden_only,
+            book=self.book_hidden,
+            position=0,
+            added_by=self.other,
+        )
+        group_shelf = Shelf.objects.create(
+            name="Empty Group Shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.group,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.user,
+        )
+
+        personal_response = assert_response(
+            self.client.get(
+                "/api/v1/shelves/?scope=personal&include_preview_books=true",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        personal_by_id = {
+            str(row["id"]): row
+            for row in payload_list(response_data_dict(personal_response), "results")
+        }
+        self.assertEqual(personal_by_id[personal_shelf_id]["item_count"], 0)
+        self.assertEqual(personal_by_id[personal_shelf_id]["preview_books"], [])
+
+        shared_response = assert_response(
+            self.client.get(
+                "/api/v1/shelves/?scope=shared&include_preview_books=true",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        shared_by_id = {
+            str(row["id"]): row
+            for row in payload_list(response_data_dict(shared_response), "results")
+        }
+        self.assertNotIn(str(empty_listed.id), shared_by_id)
+        self.assertNotIn(str(hidden_only.id), shared_by_id)
+        self.assertEqual(shared_by_id[str(group_shelf.id)]["item_count"], 0)
+        self.assertEqual(shared_by_id[str(group_shelf.id)]["preview_books"], [])
 
     def test_bearer_cannot_read_private_other_users_shelf(self):
         self.client.logout()

@@ -41,6 +41,14 @@ class ShelfDetailEndpointTests(BaseShelvesAPITest):
         )
         self.assertEqual(listed.status_code, status.HTTP_201_CREATED)
         listed_id = response_data_dict(listed)["id"]
+        added = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{listed_id}/items/",
+                data={"book": str(self.book_public.id)},
+                format="json",
+            )
+        )
+        self.assertEqual(added.status_code, status.HTTP_201_CREATED)
 
         owner_list = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(owner_list.status_code, status.HTTP_200_OK)
