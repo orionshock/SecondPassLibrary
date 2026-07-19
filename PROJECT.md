@@ -1,36 +1,27 @@
 # Second Pass Library
 
-Second Pass Library is a self-hosted EPUB-focused reading system.
+Second Pass Library is a self-hosted, EPUB-focused system for keeping a reading library and durable, user-owned reading data.
 
-It is intended to provide:
-- Library management for EPUB files
-- User-owned reading metadata
-- Reading progress sync
-- Highlights and annotations
-- Reading history / reread support
-- Exportable user data
+It provides:
+
+- EPUB library management
+- Reading progress, sessions, highlights, notes, and bookmarks
+- Exportable reading data
 - A stable REST/JSON API for reader clients
 
-The project is not intended to be:
-- A Kindle clone dependent on Amazon or cloud services
-- An AI-powered reading product
+It is not:
+
+- A vendor-cloud Kindle clone
 - A PDF annotation system
-- A SaaS-first multi-tenant platform
+- An AI product
+- A SaaS-first document platform
 
-Core principles:
-- Self-hosted first
-- EPUB first
-- SQLite-first, PostgreSQL-compatible later
-- External authentication eventually, not custom password logic
-- User reading state must be durable and exportable
-- The API should be boring, documented, and versioned
+Principles:
 
-## Format Support Position
+- Self-hosted and EPUB first
+- SQLite first, with conventional Django
+- Explicit, maintainable code over clever abstractions
+- Durable, exportable user data
+- Predictable, versioned APIs
 
-Second Pass Library is EPUB-first and EPUB-only for the current implementation.
-
-Do not add PDF support unless explicitly requested. PDF annotation and reading support is intentionally out of scope.
-
-The architecture should remain format-aware rather than hardcoding EPUB assumptions into every model. Prefer fields such as `file_format` and flexible locator JSON over EPUB-specific database columns.
-
-Possible future formats, such as comic archives, should not require a major rewrite, but no code for them should be added now.
+The current implementation is EPUB-only. Do not add PDF or speculative format support unless explicitly requested.
