@@ -190,9 +190,16 @@ class ShelfItemRenderingJavaScriptTests:
               "shelf-view-items",
               "shelf-view-items-status",
               "shelf-view-items-results",
-              "shelf-view-items-prev",
-              "shelf-view-items-next",
-              "shelf-view-items-page-note",
+              "shelf-view-items-prev-top",
+              "shelf-view-items-prev-bottom",
+              "shelf-view-items-next-top",
+              "shelf-view-items-next-bottom",
+              "shelf-view-items-page-size-top",
+              "shelf-view-items-page-size-bottom",
+              "shelf-view-items-range-top",
+              "shelf-view-items-range-bottom",
+              "shelf-view-items-pager-top",
+              "shelf-view-items-pager-bottom",
               "shelf-title",
               "shelf-view-edit-wrap",
               "shelf-view-edit-link",
@@ -212,7 +219,7 @@ class ShelfItemRenderingJavaScriptTests:
                 created_by: {{ username: "creator", email: "creator@example.test" }},
                 can_edit: false,
               }});
-              if (url === "/api/v1/shelves/shelf-1/items/") return jsonResponse({{
+              if (url === "/api/v1/shelves/shelf-1/items/?page_size=20") return jsonResponse({{
                 count: 1,
                 next: null,
                 previous: null,
@@ -245,7 +252,7 @@ class ShelfItemRenderingJavaScriptTests:
               calls,
               html,
               text: elements.get("#shelf-view-items-results").textContent,
-              note: elements.get("#shelf-view-items-page-note").textContent,
+              note: elements.get("#shelf-view-items-range-bottom").textContent,
               title: elements.get("#shelf-title").textContent,
             }}));
             """
@@ -255,10 +262,10 @@ class ShelfItemRenderingJavaScriptTests:
         assert result["calls"] == [
             "/api/v1/accounts/me/",
             "/api/v1/shelves/shelf-1/",
-            "/api/v1/shelves/shelf-1/items/",
+            "/api/v1/shelves/shelf-1/items/?page_size=20",
         ]
         assert result["title"] == "Reader Shelf"
-        assert result["note"] == "1 total"
+        assert result["note"] == "Showing 1-1 of 1"
         assert 'href="/library/books/book%20id%2Fone/"' in html
         assert "&lt;img src=x onerror=alert(1)&gt;" in html
         assert "Author &lt;script&gt;alert(2)&lt;/script&gt;" in html

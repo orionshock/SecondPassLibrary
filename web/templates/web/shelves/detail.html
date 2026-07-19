@@ -31,11 +31,8 @@
 
   <section id="shelf-view-items" class="shelf-view-items is-hidden">
     <div id="shelf-view-items-status" class="muted"></div>
-    <div id="shelf-view-items-results" class="muted"></div>
-    <div class="pager">
-      <button id="shelf-view-items-prev" class="button" type="button">Previous</button>
-      <button id="shelf-view-items-next" class="button" type="button">Next</button>
-      <span id="shelf-view-items-page-note" class="muted"></span>
-    </div>
+    {% include "web/shelves/_view_pager.html" with position="top" sticky=False only %}
+    <div id="shelf-view-items-results" class="library-results"></div>
+    {% include "web/shelves/_view_pager.html" with position="bottom" sticky=True only %}
   </section>
 {% endblock %}

@@ -1,0 +1,16 @@
+<div id="shelf-view-items-pager-{{ position }}" class="pager library-pager shelf-view-pager{% if sticky %} library-pager--sticky{% endif %}" aria-label="Shelf books pagination">
+  <div id="shelf-view-items-range-{{ position }}" class="library-pager__range" aria-live="polite">Showing 0 of 0</div>
+  <label class="library-pager__page-size" for="shelf-view-items-page-size-{{ position }}">
+    <span>Per page</span>
+    <select id="shelf-view-items-page-size-{{ position }}" data-shelf-view-page-size name="page_size">
+      <option value="20" selected>20</option>
+      <option value="30">30</option>
+      <option value="40">40</option>
+      <option value="50">50</option>
+    </select>
+  </label>
+  <div class="library-pager__actions">
+    <button id="shelf-view-items-prev-{{ position }}" data-shelf-view-prev class="button" type="button" disabled>Previous</button>
+    <button id="shelf-view-items-next-{{ position }}" data-shelf-view-next class="button" type="button" disabled>Next</button>
+  </div>
+</div>

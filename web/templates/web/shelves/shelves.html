@@ -9,29 +9,23 @@
 {% endblock %}
 
 {% block content %}
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Shelves</h1>
-      <div class="muted">Shelves organize presentation and never grant book access.</div>
-    </div>
-    <div>
-      <a class="button" href="/shelves/new/">New shelf</a>
-    </div>
+  <div class="page-header shelves-page-heading">
+    <h1 class="page-title">Shelves</h1>
   </div>
 
-  <div id="shelves-scope-tabs" class="tabs" role="tablist" aria-label="Shelf scope">
-    <button class="tab-button" type="button" role="tab" data-shelf-scope="personal">Personal</button>
-    <button class="tab-button" type="button" role="tab" data-shelf-scope="shared">Shared by Others</button>
-    <button class="tab-button" type="button" role="tab" data-shelf-scope="group">Group Shelves</button>
+  <div class="shelves-scope-header">
+    <div id="shelves-scope-tabs" class="tabs" role="tablist" aria-label="Shelf scope">
+      <button class="tab-button" type="button" role="tab" data-shelf-scope="personal">Personal</button>
+      <button class="tab-button" type="button" role="tab" data-shelf-scope="shared">Shared by Others</button>
+      <button class="tab-button" type="button" role="tab" data-shelf-scope="group">Group Shelves</button>
+    </div>
+    <a class="button shelves-scope-header__new" href="/shelves/new/">New shelf</a>
   </div>
 
   <section id="shelves-scope-panel" class="shelves-section" role="tabpanel">
     <div id="shelves-status" class="muted">Loading...</div>
+    {% include "web/shelves/_pager.html" with position="top" sticky=False only %}
     <div id="shelves-results" class="shelves-section__results"></div>
-    <div class="pager">
-      <button id="shelves-prev" class="button" type="button">Previous</button>
-      <button id="shelves-next" class="button" type="button">Next</button>
-      <span id="shelves-page-note" class="muted"></span>
-    </div>
+    {% include "web/shelves/_pager.html" with position="bottom" sticky=True only %}
   </section>
 {% endblock %}

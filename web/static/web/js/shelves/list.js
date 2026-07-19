@@ -49,12 +49,26 @@ function renderShelfRows(_payload, rows, emptyText) {
   return rows.map(renderShelfRow).join("");
 }
 
-function pageNote(payload, rows) {
-  if (!payload || payload.count == null) return "";
-  return `Showing ${rows.length} of ${Number(payload.count)}.`;
+const SHELF_SCOPES = new Set(["personal", "shared", "group"]);
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = new Set([20, 30, 40, 50]);
+
+function positiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-const SHELF_SCOPES = new Set(["personal", "shared", "group"]);
+function pageSize(value) {
+  const parsed = positiveInt(value, DEFAULT_PAGE_SIZE);
+  return PAGE_SIZE_OPTIONS.has(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+function rangeText(payload, rows, state) {
+  const count = Number(payload && payload.count) || 0;
+  if (!count || !rows.length) return "Showing 0 of 0";
+  const start = (state.page - 1) * state.pageSize + 1;
+  return `Showing ${start}-${Math.min(count, start + rows.length - 1)} of ${count}`;
+}
 
 export function shelfListState(search) {
   const params = new URLSearchParams(search || "");
@@ -62,23 +76,26 @@ export function shelfListState(search) {
   const scope = SHELF_SCOPES.has(requestedScope) ? requestedScope : "personal";
   const rawPage = Number.parseInt(params.get("page") || "1", 10);
   const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
-  return { scope, page };
+  return { scope, page, pageSize: pageSize(params.get("page_size")) };
 }
 
-export function shelfListBrowserHref(scope, page = 1, search = "") {
-  const state = shelfListState(`?scope=${encodeURIComponent(String(scope || ""))}&page=${page}`);
+export function shelfListBrowserHref(scope, page = 1, selectedPageSize = DEFAULT_PAGE_SIZE, search = "") {
+  const state = shelfListState(`?scope=${encodeURIComponent(String(scope || ""))}&page=${page}&page_size=${selectedPageSize}`);
   const params = new URLSearchParams(search || "");
   params.set("scope", state.scope);
   params.delete("page");
+  params.delete("page_size");
   if (state.page > 1) params.set("page", String(state.page));
+  if (state.pageSize !== DEFAULT_PAGE_SIZE) params.set("page_size", String(state.pageSize));
   return `/shelves/?${params.toString()}`;
 }
 
-export function shelfListApiUrl(scope, page = 1) {
-  const state = shelfListState(`?scope=${encodeURIComponent(String(scope || ""))}&page=${page}`);
+export function shelfListApiUrl(scope, page = 1, selectedPageSize = DEFAULT_PAGE_SIZE) {
+  const state = shelfListState(`?scope=${encodeURIComponent(String(scope || ""))}&page=${page}&page_size=${selectedPageSize}`);
   const params = new URLSearchParams({
     scope: state.scope,
     include_preview_books: "true",
+    page_size: String(state.pageSize),
   });
   if (state.page > 1) params.set("page", String(state.page));
   return `/api/v1/shelves/?${params.toString()}`;
@@ -90,9 +107,10 @@ export function shelfEmptyText(scope) {
   return "No personal shelves.";
 }
 
-function pageFromApiUrl(url) {
+function stateFromApiUrl(url, scope) {
   const parsed = new URL(url, window.location.origin);
-  return shelfListState(parsed.search).page;
+  const parsedState = shelfListState(parsed.search);
+  return { scope, page: parsedState.page, pageSize: parsedState.pageSize };
 }
 
 function setSelectedScope(tabs, scope) {
@@ -109,34 +127,44 @@ export async function initShelvesList() {
 
   const statusEl = $("#shelves-status");
   const resultsEl = $("#shelves-results");
-  const prevBtn = $("#shelves-prev");
-  const nextBtn = $("#shelves-next");
-  const noteEl = $("#shelves-page-note");
+  const prevButtons = [$("#shelves-prev-top"), $("#shelves-prev-bottom")].filter(Boolean);
+  const nextButtons = [$("#shelves-next-top"), $("#shelves-next-bottom")].filter(Boolean);
+  const pageSizeSelects = [$("#shelves-page-size-top"), $("#shelves-page-size-bottom")].filter(Boolean);
+  const rangeEls = [$("#shelves-range-top"), $("#shelves-range-bottom")].filter(Boolean);
+  const pagers = [$("#shelves-pager-top"), $("#shelves-pager-bottom")].filter(Boolean);
   const tabs = Array.from(document.querySelectorAll("[data-shelf-scope]"));
-  if (!statusEl || !resultsEl || !prevBtn || !nextBtn || !noteEl || !tabs.length) return;
+  if (!statusEl || !resultsEl || prevButtons.length !== 2 || nextButtons.length !== 2 || pageSizeSelects.length !== 2 || !tabs.length) return;
 
   installShelfCardNavigation(resultsEl);
   let state = shelfListState(window.location.search);
   setSelectedScope(tabs, state.scope);
-  window.history.replaceState({}, "", shelfListBrowserHref(state.scope, state.page, window.location.search));
+  window.history.replaceState({}, "", shelfListBrowserHref(state.scope, state.page, state.pageSize, window.location.search));
+
+  function syncPager(payload, rows) {
+    const text = rangeText(payload, rows, state);
+    rangeEls.forEach((element) => { element.textContent = text; });
+    pageSizeSelects.forEach((select) => { select.value = String(state.pageSize); });
+    prevButtons[0].disabled = prevButtons[1].disabled;
+    nextButtons[0].disabled = nextButtons[1].disabled;
+    pagers.forEach((pager) => pager.classList.toggle("is-hidden", !(payload && payload.count)));
+  }
 
   const controller = await createPagedListController({
     statusEl,
     resultsEl,
-    prevBtn,
-    nextBtn,
-    noteEl,
-    initialUrl: shelfListApiUrl(state.scope, state.page),
+    prevBtn: prevButtons[1],
+    nextBtn: nextButtons[1],
+    initialUrl: shelfListApiUrl(state.scope, state.page, state.pageSize),
     emptyText: shelfEmptyText(state.scope),
     autoLoad: false,
     clearResultsOnLoad: false,
     render: (payload, rows) => renderShelfRows(payload, rows, shelfEmptyText(state.scope)),
     formatStatus: () => "",
-    formatNote: pageNote,
     onLoaded: (_payload, _rows, { url, reason }) => {
-      state = { ...state, page: pageFromApiUrl(url) };
+      state = stateFromApiUrl(url, state.scope);
+      syncPager(_payload, _rows);
       if (reason === "next" || reason === "previous") {
-        window.history.pushState({}, "", shelfListBrowserHref(state.scope, state.page, window.location.search));
+        window.history.pushState({}, "", shelfListBrowserHref(state.scope, state.page, state.pageSize, window.location.search));
       }
     },
   });
@@ -145,16 +173,26 @@ export async function initShelvesList() {
     state = nextState;
     setSelectedScope(tabs, state.scope);
     if (history === "push") {
-      window.history.pushState({}, "", shelfListBrowserHref(state.scope, state.page, window.location.search));
+      window.history.pushState({}, "", shelfListBrowserHref(state.scope, state.page, state.pageSize, window.location.search));
     }
-    await controller.load(shelfListApiUrl(state.scope, state.page), { reason });
+    await controller.load(shelfListApiUrl(state.scope, state.page, state.pageSize), { reason });
   }
+
+  prevButtons[0].addEventListener("click", () => prevButtons[1].click());
+  nextButtons[0].addEventListener("click", () => nextButtons[1].click());
+  pageSizeSelects.forEach((select) => {
+    select.addEventListener("change", async () => {
+      const nextPageSize = pageSize(select.value);
+      if (nextPageSize === state.pageSize) return;
+      await loadState({ ...state, page: 1, pageSize: nextPageSize }, { history: "push", reason: "page-size" });
+    });
+  });
 
   for (const tab of tabs) {
     tab.addEventListener("click", async () => {
       const scope = shelfListState(`?scope=${tab.dataset.shelfScope || ""}`).scope;
       if (scope === state.scope) return;
-      await loadState({ scope, page: 1 }, { history: "push", reason: "scope" });
+      await loadState({ scope, page: 1, pageSize: state.pageSize }, { history: "push", reason: "scope" });
     });
   }
 

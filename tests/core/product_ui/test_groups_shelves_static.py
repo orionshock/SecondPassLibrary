@@ -222,9 +222,19 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'data-shelf-scope="group"')
         self.assertContains(response, 'id="shelves-status"')
         self.assertContains(response, 'id="shelves-results"')
-        self.assertContains(response, 'id="shelves-prev"')
-        self.assertContains(response, 'id="shelves-next"')
-        self.assertContains(response, 'id="shelves-page-note"')
+        self.assertContains(response, 'class="shelves-scope-header"')
+        self.assertContains(response, 'class="button shelves-scope-header__new"')
+        self.assertNotContains(
+            response,
+            "Shelves organize presentation and never grant book access.",
+        )
+        for position in ("top", "bottom"):
+            self.assertContains(response, f'id="shelves-pager-{position}"')
+            self.assertContains(response, f'id="shelves-range-{position}"')
+            self.assertContains(response, f'id="shelves-page-size-{position}"')
+            self.assertContains(response, f'id="shelves-prev-{position}"')
+            self.assertContains(response, f'id="shelves-next-{position}"')
+        self.assertContains(response, "library-pager--sticky", count=1)
         self.assertContains(response, 'href="/shelves/new/"')
         self.assertContains(response, "New shelf")
 
@@ -303,9 +313,29 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="shelf-view-description"')
         self.assertContains(response, 'id="shelf-view-created-by"')
         self.assertContains(response, 'id="shelf-view-items-results"')
-        self.assertContains(response, 'id="shelf-view-items-prev"')
-        self.assertContains(response, 'id="shelf-view-items-next"')
-        self.assertContains(response, 'id="shelf-view-items-page-note"')
+        self.assertContains(response, 'class="shelf-view-description is-hidden"')
+        self.assertContains(response, 'class="library-results"')
+        for position in ("top", "bottom"):
+            self.assertContains(
+                response,
+                f'id="shelf-view-items-pager-{position}"',
+            )
+            self.assertContains(
+                response,
+                f'id="shelf-view-items-range-{position}"',
+            )
+            self.assertContains(
+                response,
+                f'id="shelf-view-items-page-size-{position}"',
+            )
+            self.assertContains(
+                response,
+                f'id="shelf-view-items-prev-{position}"',
+            )
+            self.assertContains(
+                response,
+                f'id="shelf-view-items-next-{position}"',
+            )
         self.assertContains(response, 'id="shelf-view-edit-link"')
         self.assertNotContains(response, ">Details</h2>")
         self.assertNotContains(response, ">Books</h2>")

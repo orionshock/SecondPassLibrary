@@ -252,6 +252,9 @@
 .shelf-view-description {
   max-width: 72ch;
   margin: 0;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.55;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -272,6 +275,39 @@
 }
 .shelves-section {
   min-width: 0;
+}
+.shelves-page-heading {
+  margin-bottom: 8px;
+}
+.shelves-scope-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.shelves-scope-header .tabs {
+  margin: 0;
+}
+.shelves-scope-header__new {
+  margin-left: auto;
+}
+.shelves-pager,
+.shelf-view-pager {
+  margin: 10px 0;
+}
+.shelves-pager.library-pager--sticky,
+.shelf-view-pager.library-pager--sticky {
+  z-index: 4;
+}
+.shelf-view-items .library-row {
+  min-width: 0;
+}
+.shelf-view-items .library-row__tag-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 .shelves-section__title {
   margin: 0 0 8px;
@@ -308,6 +344,18 @@
 }
 .shelf-list-card .cover-preview-strip {
   justify-content: flex-end;
+}
+@media (max-width: 640px) {
+  .shelves-scope-header {
+    align-items: stretch;
+  }
+  .shelves-scope-header__new {
+    margin-left: 0;
+  }
+  .shelves-pager,
+  .shelf-view-pager {
+    align-items: stretch;
+  }
 }
 .group-list-card {
   display: grid;
