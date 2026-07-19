@@ -1,14 +1,9 @@
-import {
-  extractApiErrorMessage,
-  fetchJSON,
-  fetchJSONWithOptions,
-  getCsrfToken,
-  summarizeFieldErrors,
-} from "../api.js";
+import { fetchJSON, fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import {
   canManageGroupMemberships,
+  groupMutationErrorMessage,
   renderMembersManage,
   renderMembersReadOnly,
 } from "./shared.js";
@@ -192,10 +187,9 @@ export async function initGroupMembershipsTab({
       await membersCtl.reloadFirstPage();
     } catch (e2) {
       console.error("Failed to add member", { groupId, e2 });
-      const msg = extractApiErrorMessage(e2);
-      const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
-      setAddMemberStatus(fieldMsg || msg, true);
-      setGlobalError(fieldMsg || msg);
+      const msg = groupMutationErrorMessage(e2, "Failed to add member.");
+      setAddMemberStatus(msg, true);
+      setGlobalError(msg);
     }
   });
 
@@ -236,7 +230,7 @@ export async function initGroupMembershipsTab({
         await membersCtl.reloadFirstPage();
       } catch (e2) {
         console.error("Failed to remove member", { groupId, userId, e2 });
-        const msg = extractApiErrorMessage(e2);
+        const msg = groupMutationErrorMessage(e2, "Failed to remove member.");
         setRowStatus(msg, true);
         setStatus(membersStatus, msg, true);
         setGlobalError(msg);
@@ -286,11 +280,10 @@ export async function initGroupMembershipsTab({
     } catch (e2) {
       target.checked = !desired;
       console.error("Failed to update member curator status", { groupId, userId, e2 });
-      const msg = extractApiErrorMessage(e2);
-      const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
-      setRowStatus(fieldMsg || msg, true);
-      setStatus(membersStatus, fieldMsg || msg, true);
-      setGlobalError(fieldMsg || msg);
+      const msg = groupMutationErrorMessage(e2, "Failed to update curator status.");
+      setRowStatus(msg, true);
+      setStatus(membersStatus, msg, true);
+      setGlobalError(msg);
     } finally {
       target.disabled = false;
     }

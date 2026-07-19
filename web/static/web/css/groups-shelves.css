@@ -23,6 +23,15 @@
 .group-edit-book-row__action {
   align-self: center;
 }
+.group-edit-shelf-card {
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto) auto;
+}
+.group-edit-shelf-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 
 .group-view-summary {
   margin: -4px 0 16px;
@@ -65,6 +74,12 @@
   }
   .group-edit-book-row__action {
     justify-self: start;
+  }
+  .group-edit-shelf-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group-edit-shelf-card .cover-preview-strip {
+    justify-content: flex-start;
   }
 }
 

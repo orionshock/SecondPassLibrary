@@ -32,7 +32,7 @@ export async function initGroupShelvesTab({
       resultsEl: shelvesResults,
       nextBtn: shelvesNext,
       prevBtn: shelvesPrev,
-      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}`,
+      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}&include_preview_books=true`,
       emptyText: "No shelves yet.",
       render: (payload) => renderGroupShelvesCompact(payload, { canEdit: !!allowShelfManage }),
     });

@@ -131,9 +131,12 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn("addMemberRole.disabled = true", self.group_memberships_js)
         self.assertIn("const isCurator = !isPublicGroup", self.group_memberships_js)
         self.assertIn("Public cannot have curators.", self.group_memberships_js)
-        self.assertIn("summarizeFieldErrors", self.group_memberships_js)
+        self.assertIn("groupMutationErrorMessage", self.group_memberships_js)
+        self.assertIn("Failed to add member.", self.group_memberships_js)
+        self.assertIn("Failed to remove member.", self.group_memberships_js)
+        self.assertIn("Failed to update curator status.", self.group_memberships_js)
         self.assertIn("summarizeFieldErrors", self.user_memberships_js)
-        self.assertIn("fieldMsg || msg", self.group_memberships_js)
+        self.assertNotIn("fieldMsg || msg", self.group_memberships_js)
         self.assertIn("fieldMsg || msg", self.user_memberships_js)
 
     def test_no_membership_create_payload_uses_profile_id_field(self):

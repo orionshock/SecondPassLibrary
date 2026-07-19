@@ -126,12 +126,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'id="group-edit-shelves-actions"')
         self.assertContains(response, 'id="group-delete-root"')
         self.assertContains(
-            response,
-            "Managers, librarians, and owners can already manage books globally.",
-        )
-        self.assertContains(response, "Curator identifies members who specifically steward this group")
-        self.assertContains(
-            response, "group-scoped management access to readers."
+            response, "Curator grants group-scoped management access to readers."
         )
         html = response.content.decode("utf-8")
         root_start = html.index('id="group-edit-root"')

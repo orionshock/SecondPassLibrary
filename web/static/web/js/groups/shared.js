@@ -7,6 +7,7 @@ import {
 import { extractApiErrorMessage, summarizeFieldErrors } from "../api.js";
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
+import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { renderUserIdentity } from "../ui/identity.js";
 
 export function truthy(v) {
@@ -106,24 +107,27 @@ export function renderGroupShelvesCompact(payload, { canEdit }) {
 
       const descSnippet = desc && desc.length > 160 ? `${desc.slice(0, 160)}...` : desc;
       const metaLine = shelfMetadataLine(s);
+      const previews = renderCoverPreviewStrip(s && s.preview_books, {
+        href,
+        actionLabel: `View shelf ${name}`,
+      });
 
       const actions = [
-        id ? `<a class="button" href="${escapeHtml(href)}">View</a>` : "",
-        rowCanEdit && id ? `<a class="button" href="${escapeHtml(editHref)}">Edit</a>` : "",
+        id ? `<a class="icon-button" href="${escapeHtml(href)}" aria-label="View shelf ${escapeHtml(name)}" title="View shelf"><span class="material-symbols-outlined" aria-hidden="true">visibility</span></a>` : "",
+        rowCanEdit && id ? `<a class="icon-button" href="${escapeHtml(editHref)}" aria-label="Edit shelf ${escapeHtml(name)}" title="Edit shelf"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>` : "",
       ]
         .filter(truthy)
         .join(" ");
 
       return `
-        <article class="book">
-          <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-            <div style="flex: 1;">
-              <h3 class="book__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
-              ${descSnippet ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(descSnippet)}</div>` : ""}
-              ${metaLine ? `<div class="muted" style="margin-top: 4px;">${metaLine}</div>` : ""}
-            </div>
-            ${actions ? `<div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">${actions}</div>` : ""}
+        <article class="book shelf-list-card group-edit-shelf-card">
+          <div class="shelf-list-card__main">
+            <h3 class="book__title shelf-list-card__title"><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h3>
+            ${descSnippet ? `<div class="muted shelf-list-card__description">${escapeHtml(descSnippet)}</div>` : ""}
+            ${metaLine ? `<div class="muted shelf-list-card__metadata">${metaLine}</div>` : ""}
           </div>
+          ${previews}
+          ${actions ? `<div class="group-edit-shelf-card__actions">${actions}</div>` : ""}
         </article>
       `.trim();
     })
