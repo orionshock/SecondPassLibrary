@@ -4,6 +4,7 @@ import {
   fetchJSONWithOptions,
   getCsrfToken,
 } from "../api.js";
+import { isOwner } from "../auth.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import {
   canEditGroupDescription,
@@ -32,6 +33,10 @@ export async function initGroupEdit() {
 
   const badgesEl = $("#group-edit-badges");
   const descPreviewEl = $("#group-edit-description-preview");
+  const publicDetails = $("#group-edit-public-details");
+  const publicName = $("#group-edit-public-name");
+  const publicDescription = $("#group-edit-public-description");
+  const publicSettingsLink = $("#group-edit-public-settings-link");
   const editForm = $("#group-edit-form");
   const descInput = $("#group-edit-description");
   const saveStatus = $("#group-edit-save-status");
@@ -84,6 +89,10 @@ export async function initGroupEdit() {
     !notAllowedEl ||
     !badgesEl ||
     !descPreviewEl ||
+    !publicDetails ||
+    !publicName ||
+    !publicDescription ||
+    !publicSettingsLink ||
     !editForm ||
     !descInput ||
     !saveStatus ||
@@ -176,7 +185,17 @@ export async function initGroupEdit() {
 
   const allowDescriptionEdit = canEditGroupDescription({ me, group });
   descInput.value = group.description || "";
-  visible(editForm, allowDescriptionEdit);
+  if (isPublicGroup) {
+    publicName.textContent = group.name || "(empty)";
+    publicDescription.textContent = description || "(empty)";
+    visible(publicDetails, true);
+    visible(publicSettingsLink, isOwner(me));
+    editForm.remove();
+    if (deleteRoot) deleteRoot.remove();
+  } else {
+    visible(publicDetails, false);
+    visible(editForm, allowDescriptionEdit);
+  }
 
   // Delete (Owner/Manager only; never for Public)
   const canDeleteGroup = isManagerOrOwner(me) && !isPublicGroup;

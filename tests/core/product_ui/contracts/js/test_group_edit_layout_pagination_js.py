@@ -64,6 +64,40 @@ def test_group_edit_details_and_shelves_use_compact_accessible_sections():
     assert 'key="shelves" label="Shelves" position="bottom"' in shelves_panel
 
 
+def test_public_group_details_are_intentionally_read_only():
+    template = Path("web/templates/web/groups/edit.html").read_text(encoding="utf-8")
+    source = Path("web/static/web/js/groups/edit.js").read_text(encoding="utf-8")
+
+    public_details = template.split(
+        'id="group-edit-public-details"', 1
+    )[1].split("</section>", 1)[0]
+    assert "Public Library identity is managed in Server Settings." in public_details
+    assert 'id="group-edit-public-name"' in public_details
+    assert 'id="group-edit-public-description"' in public_details
+    assert 'id="group-edit-public-settings-link"' in public_details
+    assert 'href="/server/"' in public_details
+    assert "Open Server Settings" in public_details
+    assert "<input" not in public_details
+    assert "<textarea" not in public_details
+    assert ">Save<" not in public_details
+    assert ">Delete Group<" not in public_details
+
+    assert "publicName.textContent = group.name" in source
+    assert "publicDescription.textContent = description" in source
+    assert "visible(publicDetails, true)" in source
+    assert "visible(publicSettingsLink, isOwner(me))" in source
+    assert "editForm.remove()" in source
+    assert "deleteRoot.remove()" in source
+
+    custom_form = template.split('id="group-edit-form"', 1)[1].split("</form>", 1)[0]
+    assert 'id="group-edit-description"' in custom_form
+    assert 'id="group-edit-save"' in custom_form
+    assert 'id="group-delete-root"' in template
+    assert "visible(editForm, allowDescriptionEdit)" in source
+    for tab in ("books", "members", "shelves"):
+        assert f'data-tab="{tab}"' in template
+
+
 def test_group_edit_page_state_is_url_backed_and_page_size_resets_page():
     module_uri = (ROOT / "web/static/web/js/groups/edit_pagination.js").as_uri()
     state_module_uri = (ROOT / "web/static/web/js/groups/view_pagination.js").as_uri()

@@ -34,6 +34,26 @@
     </div>
 
     <div id="tab-details" class="tab-panel" role="tabpanel" data-tab-panel="details">
+      <section id="group-edit-public-details" class="group-edit-public-details is-hidden" aria-labelledby="group-edit-public-details-heading">
+        <div class="group-edit-public-details__header">
+          <div>
+            <h2 id="group-edit-public-details-heading" class="section-title">Public Library details</h2>
+            <p class="muted">Public Library identity is managed in Server Settings.</p>
+          </div>
+          <a id="group-edit-public-settings-link" class="button button--secondary is-hidden" href="/server/">Open Server Settings</a>
+        </div>
+        <dl class="group-edit-public-details__values">
+          <div>
+            <dt>Name</dt>
+            <dd id="group-edit-public-name"></dd>
+          </div>
+          <div>
+            <dt>Description</dt>
+            <dd id="group-edit-public-description"></dd>
+          </div>
+        </dl>
+      </section>
+
       <form id="group-edit-form" class="form group-edit-details-form">
         {% csrf_token %}
         <div class="group-edit-description-field">

@@ -50,6 +50,38 @@
 .group-edit-details-form {
   max-width: 860px;
 }
+.group-edit-public-details {
+  max-width: 860px;
+  padding: 4px 0 12px;
+}
+.group-edit-public-details__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.group-edit-public-details__header .section-title,
+.group-edit-public-details__header p {
+  margin: 0;
+}
+.group-edit-public-details__header p {
+  margin-top: 6px;
+}
+.group-edit-public-details__values {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.group-edit-public-details__values dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.group-edit-public-details__values dd {
+  margin: 3px 0 0;
+  white-space: pre-wrap;
+}
 .group-edit-description-field {
   display: grid;
   gap: 7px;
