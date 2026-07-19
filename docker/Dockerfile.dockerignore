@@ -1,4 +1,6 @@
 .env
+docker/.env
+docker/compose.yml
 .git
 .ruff_cache
 .cache

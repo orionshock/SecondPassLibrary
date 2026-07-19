@@ -10,17 +10,20 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class DockerStartupContractTests(SimpleTestCase):
     def test_compose_uses_env_file_userdata_mount_loopback_port_and_healthcheck(self):
-        source = (ROOT / "compose.example.yml").read_text(encoding="utf-8")
+        source = (ROOT / "docker" / "compose.example.yml").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("  secondpasslibrary:", source)
         self.assertNotIn("  app:", source)
-        self.assertIn("build:", source)
+        self.assertIn("context: ..", source)
+        self.assertIn("dockerfile: docker/Dockerfile", source)
         self.assertIn("APP_UID: ${APP_UID:-1000}", source)
         self.assertIn("APP_GID: ${APP_GID:-1000}", source)
         self.assertIn("env_file:", source)
         self.assertIn("- .env", source)
         self.assertNotIn("SECOND_PASS_USERDATA_DIR: /app/userdata", source)
-        self.assertIn("- ./userdata:/app/userdata", source)
+        self.assertIn("- ../userdata:/app/userdata", source)
         self.assertIn('- "127.0.0.1:8000:8000"', source)
         self.assertNotIn('- "8000:8000"', source)
         self.assertIn("healthcheck:", source)
@@ -28,7 +31,9 @@ class DockerStartupContractTests(SimpleTestCase):
         self.assertIn("http://127.0.0.1:8000/api/v1/health/", source)
 
     def test_compose_does_not_define_reverse_proxy_services(self):
-        source = (ROOT / "compose.example.yml").read_text(encoding="utf-8").lower()
+        source = (ROOT / "docker" / "compose.example.yml").read_text(
+            encoding="utf-8"
+        ).lower()
 
         self.assertNotIn("nginx", source)
         self.assertNotIn("caddy", source)
@@ -59,7 +64,7 @@ class DockerStartupContractTests(SimpleTestCase):
         self.assertNotIn("gunicorn", source.lower())
 
     def test_dockerfile_uses_runtime_requirements_entrypoint_and_not_windows_scripts(self):
-        source = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        source = (ROOT / "docker" / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("FROM python:3.13-slim", source)
         self.assertIn("ARG APP_UID=1000", source)
@@ -77,7 +82,9 @@ class DockerStartupContractTests(SimpleTestCase):
         self.assertNotIn("scripts/", source)
 
     def test_dockerignore_excludes_local_state_and_windows_scripts(self):
-        source = (ROOT / ".dockerignore").read_text(encoding="utf-8")
+        source = (ROOT / "docker" / "Dockerfile.dockerignore").read_text(
+            encoding="utf-8"
+        )
 
         for pattern in (
             ".env",
@@ -95,7 +102,7 @@ class DockerStartupContractTests(SimpleTestCase):
                 self.assertIn(pattern, source)
 
     def test_env_example_documents_docker_environment_contract(self):
-        source = (ROOT / ".env.example").read_text(encoding="utf-8")
+        source = (ROOT / "docker" / ".env.example").read_text(encoding="utf-8")
 
         self.assertIn("DJANGO_DEBUG=0", source)
         self.assertIn("APP_UID=1000", source)
@@ -116,4 +123,4 @@ class DockerStartupContractTests(SimpleTestCase):
     def test_gitignore_keeps_local_compose_file_untracked(self):
         source = (ROOT / ".gitignore").read_text(encoding="utf-8")
 
-        self.assertIn("compose.yml", source)
+        self.assertIn("docker/compose.yml", source)

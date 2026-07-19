@@ -1,6 +1,7 @@
 # Local environment and operator config
 .env
-compose.yml
+docker/.env
+docker/compose.yml
 .venv/
 env/
 venv/

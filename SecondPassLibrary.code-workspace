@@ -27,7 +27,7 @@
       "**/tests/**",
       "**/userdata/**",
       "**/var/**",
-      ".env.example",
+      "**/.env.example",
       ".gitattributes",
       ".git",
       ".gitignore",

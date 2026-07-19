@@ -197,7 +197,8 @@ raw media URLs.
 Production `collectstatic` output goes to `var/static/`, which is generated and
 can be rebuilt. Back up `userdata/`, not `var/static/`.
 
-Optional: copy `.env.example` to `.env` and set environment variables for your shell/session.
+Docker environment examples live at `docker/.env.example`. The local
+PowerShell helpers define their own environment in the script files.
 
 ## Run server
 
@@ -478,8 +479,8 @@ remaining positions:
 ```powershell
 python manage.py cleanup_shelves
 python manage.py cleanup_shelves --apply
-docker compose exec -T secondpasslibrary python manage.py cleanup_shelves
-docker compose exec -T secondpasslibrary python manage.py cleanup_shelves --apply
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves --apply
 ```
 
 This is operator-invoked cleanup, not live propagation. It does not touch

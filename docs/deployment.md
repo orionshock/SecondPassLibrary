@@ -35,10 +35,10 @@ remain deployment-owned.
 First run:
 
 ```powershell
-copy .env.example .env
-copy compose.example.yml compose.yml
+copy docker\.env.example docker\.env
+copy docker\compose.example.yml docker\compose.yml
 .\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-docker compose up --build
+docker compose -f docker/compose.yml up --build
 ```
 
 Set at least these values in `.env`:
@@ -64,7 +64,8 @@ On Windows Docker Desktop, bind-mount permissions are normally handled by
 Docker Desktop.
 
 The example binds host `127.0.0.1:8000` for a reverse proxy on the same host.
-Direct LAN or public exposure requires an intentional `compose.yml` change.
+Direct LAN or public exposure requires an intentional `docker/compose.yml`
+change.
 Startup performs:
 
 1. `python manage.py check --deploy`
@@ -82,11 +83,12 @@ Update with:
 
 ```powershell
 git pull
-docker compose up --build
+docker compose -f docker/compose.yml up --build
 ```
 
-Review `.env.example` and `compose.example.yml` during updates. Local `.env`
-and `compose.yml` files remain deployment-owned and untracked.
+Review `docker/.env.example` and `docker/compose.example.yml` during updates.
+Local `docker/.env` and `docker/compose.yml` files remain deployment-owned and
+untracked.
 
 ## Runtime data and backups
 
@@ -155,8 +157,8 @@ Unavailable items on personal shelves are retained until explicit cleanup.
 application cleanup. It is a dry run unless `--apply` is supplied:
 
 ```bash
-docker compose exec -T secondpasslibrary python manage.py cleanup_shelves
-docker compose exec -T secondpasslibrary python manage.py cleanup_shelves --apply
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves --apply
 ```
 
 The apply form permanently removes unavailable personal-shelf rows and compacts
@@ -166,10 +168,11 @@ before applying when reviewing a deployment manually.
 A host cron example:
 
 ```cron
-0 3 * * * root cd /srv/second-pass-library && /usr/bin/docker compose exec -T secondpasslibrary python manage.py cleanup_shelves --apply
+0 3 * * * root cd /srv/second-pass-library && /usr/bin/docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves --apply
 ```
 
-Replace the directory with the deployment directory containing `compose.yml`.
+Replace the directory with the repository directory containing
+`docker/compose.yml`.
 The scheduler account must be allowed to use Docker. Windows deployments can
 invoke the equivalent command from Task Scheduler.
 
