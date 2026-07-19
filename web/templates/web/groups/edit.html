@@ -36,11 +36,9 @@
     <div id="tab-details" class="tab-panel" role="tabpanel" data-tab-panel="details">
       <form id="group-edit-form" class="form group-edit-details-form">
         {% csrf_token %}
-        <div class="kv">
-          <div class="kv__k"><label for="group-edit-description">Description</label></div>
-          <div class="kv__v">
-            <textarea id="group-edit-description" class="form-control form-control--textarea" rows="4"></textarea>
-          </div>
+        <div class="group-edit-description-field">
+          <label for="group-edit-description">Description</label>
+          <textarea id="group-edit-description" class="form-control form-control--textarea" rows="5"></textarea>
         </div>
 
         <div class="form-actions group-edit-form-actions">
@@ -49,33 +47,35 @@
         </div>
       </form>
 
-      <section id="group-delete-root" class="card danger-zone is-hidden">
-        <h2 class="card__title">Danger Zone</h2>
-        <div class="muted">
-          Deleting a group is destructive:
-          <ul class="danger-zone__list">
-            <li>removes all book assignments to this group</li>
-            <li>removes all user memberships in this group</li>
-            <li>deletes group-owned shelves and their shelf items</li>
-            <li>deletes the group</li>
-          </ul>
-          Books/users left with no groups fall back to Public.
-        </div>
+      <details id="group-delete-root" class="card danger-zone is-hidden">
+        <summary class="danger-zone__summary">Delete Group</summary>
+        <div class="danger-zone__content">
+          <div class="muted">
+            Deleting a group is destructive:
+            <ul class="danger-zone__list">
+              <li>removes all book assignments to this group</li>
+              <li>removes all user memberships in this group</li>
+              <li>deletes group-owned shelves and their shelf items</li>
+              <li>deletes the group</li>
+            </ul>
+            Books/users left with no groups fall back to Public.
+          </div>
 
-        <form id="group-delete-form" class="form">
-          {% csrf_token %}
-          <div class="kv">
-            <div class="kv__k"><label for="group-delete-confirm">Type the group name to confirm</label></div>
-            <div class="kv__v">
-              <input id="group-delete-confirm" class="form-control" type="text" placeholder="Group name" />
+          <form id="group-delete-form" class="form">
+            {% csrf_token %}
+            <div class="kv">
+              <div class="kv__k"><label for="group-delete-confirm">Type the group name to confirm</label></div>
+              <div class="kv__v">
+                <input id="group-delete-confirm" class="form-control" type="text" placeholder="Group name" />
+              </div>
             </div>
-          </div>
-          <div class="form-actions group-edit-form-actions">
-            <span id="group-delete-status" class="muted"></span>
-            <button id="group-delete-btn" class="button button--danger" type="submit" disabled>Delete group</button>
-          </div>
-        </form>
-      </section>
+            <div class="form-actions group-edit-form-actions">
+              <span id="group-delete-status" class="muted"></span>
+              <button id="group-delete-btn" class="button button--danger" type="submit" disabled>Delete group</button>
+            </div>
+          </form>
+        </div>
+      </details>
     </div>
 
     <div id="tab-books" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="books">
@@ -127,9 +127,10 @@
     </div>
 
     <div id="tab-shelves" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="shelves">
-      <div id="group-edit-shelves-note" class="muted group-edit-helper"></div>
-      <div id="group-edit-shelves-actions" class="group-edit-section-actions is-hidden">
-        <a id="group-edit-shelves-create-link" class="button" href="#">Create shelf for this group</a>
+      <div class="group-edit-shelves-header">
+        <div id="group-edit-shelves-actions" class="group-edit-section-actions is-hidden">
+          <a id="group-edit-shelves-create-link" class="button" href="#">Create shelf for this group</a>
+        </div>
       </div>
       {% include "web/groups/_edit_pager.html" with key="shelves" label="Shelves" position="top" only %}
       <div id="group-edit-shelves-status" class="muted">Loading...</div>

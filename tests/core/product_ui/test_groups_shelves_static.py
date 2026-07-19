@@ -174,6 +174,9 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertIn("const canDeleteGroup = isManagerOrOwner(me) && !isPublicGroup", edit_js)
         self.assertIn("visible(deleteRoot, true)", edit_js)
         self.assertIn('method: "DELETE"', edit_js)
+        self.assertIn("window.confirm", edit_js)
+        self.assertIn("This cannot be undone.", edit_js)
+        self.assertLess(edit_js.index("window.confirm"), edit_js.index('method: "DELETE"'))
         self.assertIn('window.location.href = "/groups/"', edit_js)
 
     def test_authenticated_group_edit_malformed_id_returns_404(self):

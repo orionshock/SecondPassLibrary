@@ -32,6 +32,38 @@ def test_group_edit_layout_copy_actions_and_pagers_follow_product_contract():
     assert ".group-edit-section-actions" in css
 
 
+def test_group_edit_details_and_shelves_use_compact_accessible_sections():
+    template = Path("web/templates/web/groups/edit.html").read_text(encoding="utf-8")
+    css = Path("web/static/web/css/groups-shelves.css").read_text(encoding="utf-8")
+
+    description = template.split('id="group-edit-form"', 1)[1].split("</form>", 1)[0]
+    assert 'class="group-edit-description-field"' in description
+    assert '<label for="group-edit-description">Description</label>' in description
+    assert 'id="group-edit-description"' in description
+    assert 'class="kv"' not in description
+    assert description.index('id="group-edit-save-status"') < description.index(
+        'id="group-edit-save"'
+    )
+    assert ".group-edit-description-field textarea" in css
+    assert "width: 100%" in css
+
+    danger = template.split('id="group-delete-root"', 1)[1].split("</details>", 1)[0]
+    assert '<summary class="danger-zone__summary">Delete Group</summary>' in danger
+    assert " open" not in template.split('id="group-delete-root"', 1)[0].split("<details", 1)[-1]
+    assert 'id="group-delete-confirm"' in danger
+    assert 'id="group-delete-btn"' in danger
+    assert 'id="group-delete-status"' in danger
+    assert ".danger-zone__summary:focus-visible" in css
+
+    shelves_panel = template.split('id="tab-shelves"', 1)[1]
+    assert 'class="group-edit-shelves-header"' in shelves_panel
+    assert "group-edit-shelves-note" not in shelves_panel
+    assert "group-edit-shelves-header" in css
+    assert "Shelves organize presentation" not in template
+    assert 'key="shelves" label="Shelves" position="top"' in shelves_panel
+    assert 'key="shelves" label="Shelves" position="bottom"' in shelves_panel
+
+
 def test_group_edit_page_state_is_url_backed_and_page_size_resets_page():
     module_uri = (ROOT / "web/static/web/js/groups/edit_pagination.js").as_uri()
     state_module_uri = (ROOT / "web/static/web/js/groups/view_pagination.js").as_uri()

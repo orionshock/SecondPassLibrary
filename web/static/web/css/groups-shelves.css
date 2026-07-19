@@ -20,6 +20,16 @@
 .group-edit-details-form {
   max-width: 860px;
 }
+.group-edit-description-field {
+  display: grid;
+  gap: 7px;
+}
+.group-edit-description-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 116px;
+  resize: vertical;
+}
 .group-edit-form-actions {
   justify-content: flex-end;
 }
@@ -51,7 +61,15 @@
 .group-edit-section-actions {
   display: flex;
   justify-content: flex-end;
-  margin: 10px 0 12px;
+  margin: 0;
+}
+.group-edit-shelves-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 .group-edit-pager--top {
   margin: 0 0 10px;
@@ -160,6 +178,17 @@
   margin-top: 16px;
   border-color: rgba(251, 113, 133, 0.6);
   background: rgba(251, 113, 133, 0.06);
+}
+.danger-zone__summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.danger-zone__summary:focus-visible {
+  outline: 2px solid rgba(251, 113, 133, 0.7);
+  outline-offset: 3px;
+}
+.danger-zone__content {
+  margin-top: 14px;
 }
 .danger-zone__list { margin-top: 6px; }
 .shelf-owner-identity {

@@ -202,6 +202,9 @@ export async function initGroupEdit() {
     deleteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (deleteBtn.disabled) return;
+      if (!window.confirm(`Permanently delete ${group.name || "this group"}? This cannot be undone.`)) {
+        return;
+      }
       setStatus(deleteStatus, "Deleting...", false);
       setGlobalError("");
 

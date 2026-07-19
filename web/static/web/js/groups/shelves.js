@@ -8,16 +8,10 @@ export async function initGroupShelvesTab({
   shelvesResults,
   shelvesNext,
   shelvesPrev,
-  shelvesNote,
   shelvesActions,
   shelvesCreateLink,
   allowShelfManage,
 }) {
-  if (shelvesNote) {
-    shelvesNote.textContent =
-      "Shelves organize presentation and do not grant book access. Group shelves contain only books assigned to this group.";
-  }
-
   visible(shelvesActions, !!allowShelfManage);
   if (allowShelfManage && shelvesCreateLink) {
     shelvesCreateLink.setAttribute(
