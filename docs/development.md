@@ -15,7 +15,10 @@ Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
 adds local test/type tooling such as Django/DRF typing packages.
 Pillow is included for cover image validation.
 EPUB imports also attempt best-effort embedded cover extraction (JPEG/PNG/WebP only).
-ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style) to bootstrap metadata for new books only. Sidecar cover/assets are deferred.
+ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style)
+to bootstrap metadata for new books only. Valid JPEG, PNG, or WebP sidecar
+covers take precedence over embedded EPUB covers; other sidecar assets are not
+imported.
 
 `npm install` installs the pinned local Pyright dev tool. There is no frontend
 build step.

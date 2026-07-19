@@ -346,7 +346,11 @@ List filters:
 Shelf payload notes:
 
 - Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API authorization remains authoritative. Product UI/session-auth requests use normal shelf edit authorization, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
-- Shelves include a read-only integer `item_count` on list/detail payloads. This counts `ShelfItem` rows and is a UI display hint; it does not imply all shelf books are visible to every viewer (item visibility rules still apply to `/items/`).
+- Shelves include a read-only integer `item_count` on list/detail payloads. It
+  counts only shelf books visible to the current viewer. Other users' listed
+  shelves are omitted from list responses when this viewer-scoped count is
+  zero; owners still see their own empty shelves, and visible group-owned
+  shelves remain visible when empty.
 - User-owned shelves include `owner_user` as a compact user object with `profile_id` and `username`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
@@ -452,7 +456,7 @@ Catalog Tags are returned as `catalog_tags`; identifiers and visibility-scoped
 `GET /api/v1/library/books/?q=<term>` is the Books browse-axis search and
 matches title and sort title only.
 
-`GET /api/v1/library/search?q=<term>` is the broader User BookVerse search. It
+`GET /api/v1/library/search?q=<term>` is the broad library book search. It
 returns normal Book list rows in the normal paginated envelope and searches
 visible Books by title, sort title, subtitle, author name, series name,
 identifier value, Catalog Tag name, publisher, and description. Missing or
@@ -460,7 +464,7 @@ blank `q` returns an empty page rather than the whole library. Supported
 ordering is `title`, `-title`, `author`, `-author`, `series`, and `-series`;
 the default is `title`.
 
-BookVerse search supports `exclude_shelf=<shelf_id>` for a manageable shelf and
+Broad library book search supports `exclude_shelf=<shelf_id>` for a manageable shelf and
 `exclude_group=<group_id>` for a manageable group. These suppress already
 contained/assigned Books after visibility scoping. Unknown or inaccessible
 exclusion objects return `404`. Search rows use the Book list shape and never
@@ -720,15 +724,21 @@ LibraryGroups are access scopes, not shelves. Group book lists still filter each
 book through current visibility from `library.queries`.
 
 When advanced LibraryGroups are disabled, the group API exposes only the
-configured Public/Common Room group. Public list/detail, description, browse,
-preview, book-assignment, and membership operations retain their normal role
-checks. Custom group IDs return `404`, and group creation is unavailable. The
+configured Public/Common Room group. Public list/detail, browse, preview,
+book-assignment, and membership operations retain their normal role checks.
+The designated Public group's name and description are not writable through
+the normal Group PATCH endpoint; the Owner manages them through Server
+Settings. Custom group IDs return `404`, and group creation is unavailable. The
 feature-state change does not delete or rewrite existing custom-group data.
 
 - `GET /api/v1/library/groups/` (paginated)
 - `POST /api/v1/library/groups/` (Owner/Manager only; creates a group)
 - `GET /api/v1/library/groups/<group_id>/`
-- `PATCH /api/v1/library/groups/<group_id>/` (presentation only: `description`)
+- `PATCH /api/v1/library/groups/<group_id>/` (`name` and/or `description` for a
+  custom group; Manager/Owner may rename, while existing curator authority
+  governs description updates; designated Public returns `403`)
+- `DELETE /api/v1/library/groups/<group_id>/` (Manager/Owner for custom groups;
+  designated Public cannot be deleted)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
@@ -773,7 +783,8 @@ not expose Django auth user database ids:
 Membership record ids are intentionally not public identifiers. Create bodies and
 PATCH/DELETE routes use the user's `profile_id` as `user_id`.
 
-Group book assignment mutation responses preserve `added_by` as a compact public user object, not an integer user id.
+Group book assignment mutation responses are deliberately compact and contain
+only `id`, `group_id`, and `book_id`. They do not expose `added_by`.
 
 Group list/detail payloads contain group data and Public identity, without
 request-specific capability fields:
@@ -800,11 +811,14 @@ Public restrictions:
 - Public is default/fallback, not mandatory: membership may be removed when another group remains; removing a user's final membership restores Public.
 - Public is not universal access; Public group visibility follows normal
   LibraryGroup membership rules.
-- Librarian/Manager/Owner users may still curate/manage Public through global authority.
+- Librarian/Manager/Owner users may still manage Public book assignments and
+  other permitted Public operations through global authority. Public name and
+  description remain Owner-managed through Server Settings only.
 
 See `docs/permissions.md` for the visibility/curation rules.
 
-Group delete/scary delete is not part of the current documented product/API contract.
+Authorized Manager/Owner users may delete custom groups through the normal API
+and Product UI workflow. The designated Public group cannot be deleted.
 
 ## Reading
 

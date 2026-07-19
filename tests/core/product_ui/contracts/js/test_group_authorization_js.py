@@ -37,7 +37,11 @@ class ProductUiGroupAuthorizationJsContractTests(ProductUiTestCase):
         self.assertIn("String(membership.id) === String(group.id)", self.shared)
         self.assertIn("membership.is_curator === true", self.shared)
 
-    def test_group_edit_role_matrix_uses_one_curator_level_decision(self):
+    def test_group_edit_separates_public_identity_from_other_curation(self):
+        self.assertIn(
+            "if (group && group.is_public_group === true) return false",
+            self.shared,
+        )
         self.assertIn(
             "return canCurateGroup({ me, group });", self.shared
         )

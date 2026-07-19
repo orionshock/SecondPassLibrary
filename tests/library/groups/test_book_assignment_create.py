@@ -148,6 +148,8 @@ class LibraryGroupBookAssignmentCreateTests(
 
         self.assertEqual(created.status_code, 201)
         self.assertEqual(existing.status_code, 201)
+        self.assertEqual(set(created.json()), {"id", "group_id", "book_id"})
+        self.assertNotIn("added_by", created.json())
         self.assertEqual(created.json()["id"], existing.json()["id"])
         assignment = BookGroupAssignment.objects.get(book=self.hidden_book, group=self.club)
         self.assertEqual(assignment.added_by, self.manager)

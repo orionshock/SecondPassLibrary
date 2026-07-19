@@ -149,8 +149,9 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
             json.dumps({"description": "Updated simple mode"}),
             content_type="application/json",
         )
-        self.assertEqual(patch.status_code, 200)
-        self.assertEqual(patch.json()["description"], "Updated simple mode")
+        self.assertEqual(patch.status_code, 403)
+        self.public.refresh_from_db()
+        self.assertEqual(self.public.description, "Simple mode")
         for axis in ("authors", "series", "tags"):
             self.assertEqual(self.client.get(f"{public_url}{axis}/").status_code, 200)
         self.assertEqual(self.client.get(books_url).status_code, 200)

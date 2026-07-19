@@ -58,7 +58,7 @@ Group-owned shelves have no listed/public state. Visibility is derived from the 
 
 List/detail payloads also include:
 
-- `item_count`: number of shelf items
+- `item_count`: number of shelf books visible to the current viewer
 - `can_edit`: whether the current request context can edit the shelf
 - `matched_item_id`: included on list results when filtering by `?book=<book_id>`
 
@@ -220,12 +220,11 @@ Product UI routes:
 
 Behavior:
 
-- Shelf edit is the primary shelf management page. It uses tabs:
-  - Books in shelf (default): remove/reorder with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
-  - Add books: broad BookVerse search uses
+- Shelf edit is the primary shelf management page. It uses `Details`, `Books`,
+  and `Add Books` tabs. Books remove/reorder controls apply immediately.
+  `Add Books` uses broad library book search:
     `GET /api/v1/library/search?q=<term>&ordering=title&exclude_shelf=<shelf_id>`;
-    changes apply immediately and existing shelf books are excluded server-side.
-  - Details: edit name/description/visibility (user shelves only) and delete.
+  changes apply immediately and existing shelf books are excluded server-side.
 - Shelf list/detail/edit views place shelf ownership in the first metadata segment:
   - user-owned shelves show the Material Symbols `person` icon followed by `First Last <@username>` when a first or last name exists, falling back to `<@username>` without an empty gap
   - group-owned shelves show the Material Symbols `groups` icon followed by the group name

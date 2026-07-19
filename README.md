@@ -130,9 +130,9 @@ hostnames or IP addresses.
 For localhost production-mode testing on Windows, use
 `.\scripts\start-local-production.ps1`; it sets local-safe `DEBUG=0`
 environment defaults before running deploy checks, migrations, static
-collection, and Waitress. The scripts remain local/dev convenience helpers;
-Docker-based deployment orchestration can own final production process and
-environment wiring later.
+collection, and Waitress. The scripts remain local/dev convenience helpers.
+Docker Compose is also a currently supported deployment path and owns the
+container process and environment wiring described below.
 
 ## Docker Quick Start
 

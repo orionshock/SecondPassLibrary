@@ -64,13 +64,16 @@ Notes:
   - EPUB2 `<meta name="cover" content="...">` + manifest lookup
 - Unsupported/corrupt/oversized covers are ignored; import still succeeds.
 - ZIP imports can use OPF sidecars (Calibre-style) to bootstrap metadata for
-  new books only. Sidecar cover/assets are deferred.
+  new books only. A valid sidecar JPEG, PNG, or WebP cover takes precedence
+  over the embedded EPUB cover; unsupported sidecar assets are not imported.
 
 ## ZIP OPF sidecars (current)
 
 When importing a `.zip` of EPUBs, the importer can optionally use an OPF sidecar
 to bootstrap metadata **for new books only** (not a sync/refresh mechanism).
-Sidecar cover/assets are deferred.
+OPF 2 guide cover references are resolved relative to the sidecar. A valid
+JPEG, PNG, or WebP sidecar cover takes precedence over the embedded EPUB cover;
+missing or invalid sidecar covers fall back to embedded cover extraction.
 
 Sidecar lookup (per EPUB member), in order:
 

@@ -95,6 +95,10 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
 
     def patch(self, request, *args, **kwargs):
         group = self.get_object()
+        if is_public_group(group):
+            raise PermissionDenied(
+                "Public group identity is managed through Server Settings."
+            )
         serializer = LibraryGroupPatchSerializer(data=request.data or {}, partial=True)
         serializer.is_valid(raise_exception=True)
         if "name" in serializer.validated_data and not is_manager(request.user):

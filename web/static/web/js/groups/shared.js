@@ -83,6 +83,7 @@ export function canEditGroupPage({ me, group }) {
 }
 
 export function canEditGroupDescription({ me, group }) {
+  if (group && group.is_public_group === true) return false;
   return canCurateGroup({ me, group });
 }
 

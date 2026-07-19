@@ -47,17 +47,32 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
         self.assertEqual(exact.json()["description"], "Reader curated")
         self.assertEqual(other.status_code, 403)
 
-    def test_librarian_can_patch_public_description(self):
-        self.assertTrue(self.client.login(username="librarian", password="pw"))
+    def test_normal_group_patch_rejects_public_name_and_description_for_all_roles(self):
+        attempts = [
+            ("librarian", {"description": "Shared by everyone"}),
+            ("manager", {"name": "Library Lobby"}),
+            ("owner", {"name": "Owner Lobby", "description": "Owner update"}),
+        ]
 
-        response = self.client.patch(
-            f"/api/v1/library/groups/{self.public.id}/",
-            json.dumps({"description": "Shared by everyone"}),
-            content_type="application/json",
-        )
+        for username, payload in attempts:
+            with self.subTest(username=username):
+                self.client.logout()
+                self.assertTrue(self.client.login(username=username, password="pw"))
+                response = self.client.patch(
+                    f"/api/v1/library/groups/{self.public.id}/",
+                    json.dumps(payload),
+                    content_type="application/json",
+                )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["description"], "Shared by everyone")
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(
+                    response.json(),
+                    {
+                        "detail": (
+                            "Public group identity is managed through Server Settings."
+                        )
+                    },
+                )
 
     def test_manager_and_owner_can_patch_group_name_and_description(self):
         for username in ["manager", "owner"]:
@@ -97,19 +112,6 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
         )
 
         self.assertEqual(response.status_code, 404)
-
-    def test_patch_public_group_identity_is_allowed_for_manager(self):
-        self.assertTrue(self.client.login(username="manager", password="pw"))
-
-        response = self.client.patch(
-            f"/api/v1/library/groups/{self.public.id}/",
-            json.dumps({"name": "Library Lobby", "description": "Still public"}),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["name"], "Library Lobby")
-        self.assertTrue(response.json()["is_public_group"])
 
     def test_patch_validates_blank_name_and_ignores_list_params(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))

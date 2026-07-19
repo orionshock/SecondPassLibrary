@@ -122,7 +122,7 @@ Librarian can:
 - assign/remove books from existing LibraryGroups (via safe curation services)
 - edit group presentation fields where allowed
 - edit description for non-Public LibraryGroups
-- later: manage group-owned shelves for all groups where applicable
+- manage group-owned shelves for all groups where applicable
 
 Librarian cannot:
 
@@ -134,10 +134,11 @@ Librarian cannot:
 - set curator flags
 - manage global user roles
 
-Public-specific librarian rule:
+Public identity rule:
 
-- Librarian may edit Public description only.
-- Librarian may not change Public name.
+- The designated Public group's name and description are Owner-managed through
+  Server Settings only. Normal Group PATCH rejects Public identity updates for
+  every role.
 
 ### Reader
 
@@ -145,7 +146,7 @@ Reader can:
 
 - browse/download books they have access to
 - manage their own reading metadata
-- manage their own future personal shelves (if implemented later)
+- manage their own personal shelves
 
 Reader cannot:
 
@@ -195,10 +196,12 @@ Presentation/configuration fields:
 
 Rules:
 
-- Name should be treated as immutable in normal product workflows after group creation.
-- The Public display name is configured during first-run setup or by the Owner
-  through server settings.
-- Description is a presentation/configuration field and may be editable according to role policy.
+- Manager and Owner may rename custom groups.
+- Existing exact-group curator authority governs custom-group description
+  updates; Librarian, Manager, and Owner retain their existing broad authority.
+- The Public display name and description are configured during first-run setup
+  or by the Owner through Server Settings. Normal Group PATCH cannot update
+  either field.
 
 ## Public group
 
@@ -209,7 +212,8 @@ identity.
 - Public is the only special built-in LibraryGroup.
 - Public behavior is based on `is_public_group()` / `get_public_group()` (not boolean flags).
 - Renaming the Public display name does not change its identity or protections.
-- Public cannot be deleted.
+- Public cannot be deleted. Authorized Manager/Owner users may delete custom
+  groups through the supported Product UI/API workflow.
 - Public cannot have curator assignments (`is_curator=true` is invalid).
 - Public is not universally visible. Access to Public books and shelves follows
   normal LibraryGroup membership rules.
@@ -253,8 +257,10 @@ and description changes continue through Server Settings.
 
 Role constraints:
 
-- Librarian may edit Public description only.
-- Managers/Owner may manage Public only within the protected Public rules.
+- No role may update Public name or description through normal Group PATCH.
+- Owner manages Public name and description through Server Settings.
+- Librarian/Manager/Owner may perform their other permitted Public operations
+  within the protected Public rules.
 
 ## Safe group mutation (services)
 
@@ -293,12 +299,14 @@ When exposing groups through the API:
   visibility from `library.queries` (a viewable group must not leak
   inaccessible books).
 - Group curation endpoints should call the safe group curation services above.
-- Group presentation updates should be limited to `description` via `PATCH /api/v1/library/groups/<group_id>/`.
+- Normal Group PATCH accepts `name` and `description` for custom groups. Rename
+  requires Manager/Owner; description updates use the existing exact-curator
+  and broad-role authority model. The designated Public group rejects normal
+  Group PATCH.
 
-Not implemented (non-goals):
+Not implemented (non-goal):
 
 - No public API for anonymous users to create LibraryGroups.
-- Group delete/scary delete is not part of the current documented product/API contract.
 
 ## Shelves are separate (design principle)
 
@@ -308,6 +316,9 @@ LibraryGroups are access scopes. Shelves are presentation/organization objects.
 - Shelf visibility controls whether the shelf/list itself can be seen.
 - Each book on a shelf must still pass current book visibility from
   `library.queries`.
+- Shelf `item_count` is viewer-scoped. Other users' listed shelves are omitted
+  when they contain no viewer-visible books; owners still see their own empty
+  shelves, and visible group-owned shelves remain visible when empty.
 - User-owned shelves preserve durable user intent. User-owned shelf items are
   not deleted merely because access changes, though normal visible APIs hide
   unavailable items.

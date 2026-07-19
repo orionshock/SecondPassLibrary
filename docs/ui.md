@@ -9,7 +9,9 @@ The first minimal product UI shell now exists:
 - `/` redirects to `/dashboard/` after setup
 - `/dashboard/` is the authenticated dashboard shell
 - `/dashboard/` shows recent reading activity (from `GET /api/v1/reading/sessions/recent/`) and dashboard action cards
-- `/server/` is an authenticated Owner-only Server Settings page (server identity + Django Admin / Service Hatch link)
+- `/server/` is an authenticated Owner-only Server Settings page with General,
+  Public Library, and Library Groups tabs plus the authorized Django Admin /
+  Service Hatch link. Public name and description are editable only here.
 - `/profile/` is the authenticated self account page (identity + groups + access summary + self-profile edit)
 - `/profile/password/` is the authenticated self password change page
 - `/library/` is an authenticated library browse page
@@ -18,7 +20,8 @@ The first minimal product UI shell now exists:
 - `/imports/` is an API-driven imports page (upload + latest transient result)
 - `/groups/` is an authenticated group list page
 - `/groups/<group_id>/` is an authenticated group view page (Books/Members/Shelves tabs; read-oriented)
-- `/groups/<group_id>/edit/` is an authenticated group management page (Details/Books/Members/Shelves tabs; management-oriented)
+- `/groups/<group_id>/edit/` is an authenticated group management page
+  (Details/Books/Add Books/Members/Shelves tabs; management-oriented)
 - `/groups/new/` is an authenticated group create page (Owner/Manager only)
 - `/users/` provides functional user management for Manager/Owner only
 - `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
@@ -106,17 +109,20 @@ ZIP OPF sidecars (current):
   - if there is exactly one `.opf` in the same directory, use it
 - A valid OPF sidecar is a full metadata replacement and takes precedence over EPUB embedded metadata.
 - Duplicate EPUB checksum imports are rejected/skipped and do not refresh metadata or covers.
-- Embedded EPUB cover extraction is best-effort; sidecar cover/assets are deferred.
+- Embedded EPUB cover extraction is best-effort. A valid JPEG, PNG, or WebP
+  cover referenced by an OPF sidecar takes precedence; a missing or invalid
+  sidecar cover falls back to the embedded EPUB cover.
 
 The groups UI is API-driven using:
 
 - `GET /api/v1/library/groups/` (paginated list)
 - `POST /api/v1/library/groups/` (Owner/Manager only; create)
 - `GET /api/v1/library/groups/<group_id>/` (detail)
-- `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
+- `PATCH /api/v1/library/groups/<group_id>/` (`name` and/or `description` for
+  authorized custom-group updates; designated Public is not writable here)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
 - `GET /api/v1/library/search?q=<search>&ordering=title&exclude_group=<group_id>`
-  (broad BookVerse search for the Groups UI picker; all existing assignments
+  (broad library book search for the Groups UI picker; all existing assignments
   are excluded before pagination)
 - `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
@@ -165,7 +171,9 @@ Password management:
 
 User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
 
-The users page shows each user's LibraryGroup memberships read-only; membership mutation is handled on the Group Edit page (`/groups/<group_id>/edit/`).
+LibraryGroup membership can be managed from either side of the relationship:
+User Edit manages the selected user's memberships, while Group Edit manages the
+selected group's members. Both use the same authorized membership API.
 
 ## 1. UI philosophy
 
@@ -377,7 +385,8 @@ UI behaviors:
 Non-goals:
 
 - No Calibre `metadata.db` imports.
-- No sidecar cover/assets.
+- No general sidecar asset import beyond supported OPF-referenced JPEG, PNG, or
+  WebP covers.
 
 ## 7. LibraryGroup (Groups) screen
 
@@ -389,8 +398,11 @@ Primary endpoints:
   - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
   - `POST /api/v1/library/groups/<group_id>/books/` body `{"book_id": "<book_id>"}`
   - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
-- Presentation-only updates:
-  - `PATCH /api/v1/library/groups/<group_id>/` (only `description`)
+- Custom-group presentation updates:
+  - `PATCH /api/v1/library/groups/<group_id>/` accepts `name` and `description`.
+    Manager/Owner may rename; description updates follow existing custom-group
+    curator and broad-role authority. Public identity is Owner-managed through
+    Server Settings instead.
 
 UI behaviors:
 
@@ -399,7 +411,7 @@ UI behaviors:
 - Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
 - Group View and Group Edit use the endpoint's normal pagination envelope and
   preserve the current page and supported filters in the Product UI URL.
-- The add-book picker uses broad BookVerse search with server-side
+- The add-book picker uses broad library book search with server-side
   `exclude_group`; it never builds an exclusion set from only the currently
   displayed assigned-book page.
 - Broad-role controls should use `/api/v1/accounts/me/` role and owner state.
@@ -410,7 +422,9 @@ Current implemented UI:
 
 - Group creation exists at `/groups/new/` for Owner/Manager.
 - Group membership management exists on the Group Edit page for Manager/Owner.
-- Group deletion is not exposed in the Product UI.
+- Authorized Manager/Owner users can delete custom groups from Group Edit. The
+  destructive section is collapsed by default and requires a final browser
+  confirmation. The designated Public group cannot be deleted.
 
 ## 8. User management screen
 
@@ -472,7 +486,7 @@ UI behaviors:
 - Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
   - Uses tabs to reduce scroll:
     - Books in shelf (default): remove and reorder items with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
-    - Add books: broad BookVerse search with `exclude_shelf`; changes apply
+    - Add books: broad library book search with `exclude_shelf`; changes apply
       immediately and books already in the shelf are omitted server-side.
     - Details: edit name/description (and visibility for user-owned shelves only) and delete shelf.
   - Delete shelf removes the shelf and its shelf items only; it never deletes books or files.
