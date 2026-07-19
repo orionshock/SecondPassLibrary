@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+from asgiref.sync import sync_to_async
+from django.core.handlers.asgi import ASGIRequest
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -36,12 +38,18 @@ class BookDownloadView(LibraryBearerReadMixin, APIView):
             return _storage_unavailable_response(book=book, user=request.user, exc=exc)
 
         try:
-            return FileResponse(
+            response = FileResponse(
                 file_handle,
                 as_attachment=True,
                 filename=book_download_filename(book.title),
                 content_type=EPUB_CONTENT_TYPE,
             )
+            if isinstance(request._request, ASGIRequest):
+                response.streaming_content = _async_file_iterator(
+                    file_handle,
+                    block_size=response.block_size,
+                )
+            return response
         except Exception as exc:
             try:
                 file_handle.close()
@@ -70,3 +78,9 @@ def _storage_unavailable_response(*, book: Book, user, exc: Exception):
 
 def _safe_label(value, fallback) -> str:
     return (" ".join(str(value or "").split()) or str(fallback))[:160]
+
+
+async def _async_file_iterator(file_handle, *, block_size: int):
+    read = sync_to_async(file_handle.read, thread_sensitive=False)
+    while chunk := await read(block_size):
+        yield chunk

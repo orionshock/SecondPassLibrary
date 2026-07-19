@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.test import TestCase
+from django.test import AsyncClient, TestCase
 from django.utils.http import content_disposition_header
 from rest_framework.test import APIClient
 
@@ -100,6 +100,20 @@ class BookDownloadApiTests(IsolatedMediaRootMixin, TestCase):
                 body = self._streamed_body(response)
                 self.assertEqual(body, self.visible_bytes)
                 self.assertNotIn(self.visible_book.book_file.name.encode(), body)
+
+    async def test_asgi_download_uses_async_streaming_iterator(self):
+        response = await AsyncClient().get(
+            self._url(self.visible_book),
+            headers={"authorization": f"Bearer {self.reader_token}"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.is_async)
+        try:
+            body = b"".join([chunk async for chunk in response.streaming_content])
+        finally:
+            response.close()
+        self.assertEqual(body, self.visible_bytes)
 
     def test_privileged_session_and_bearer_keep_broad_download_visibility(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))
