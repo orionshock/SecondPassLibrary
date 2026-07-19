@@ -37,8 +37,13 @@ export function setGroupViewUrl(groupId, tab, { replace = false, resetPage = fal
   else window.history.pushState({}, "", href);
 }
 
-export function setGroupEditUrl(groupId, tab, { replace = false } = {}) {
-  const href = groupTabHref(groupEditHref(groupId, tab), tab, "details");
+export function setGroupEditUrl(groupId, tab, { replace = false, resetPage = false } = {}) {
+  let href = groupTabHref(groupEditHref(groupId, tab), tab, "details");
+  if (resetPage) {
+    const url = new URL(href, window.location.origin);
+    url.searchParams.delete("page");
+    href = `${url.pathname}${url.search}`;
+  }
   if (replace) window.history.replaceState({}, "", href);
   else window.history.pushState({}, "", href);
 }
@@ -91,7 +96,12 @@ export function initGroupEditNavigation(root, groupId) {
     if (!(source instanceof Element)) return;
     const tab = source.closest(".tab-button[data-tab]");
     if (!tab || !root.contains(tab)) return;
-    setGroupEditUrl(groupId, tab.getAttribute("data-tab") || "details");
+    const nextTab = tab.getAttribute("data-tab") || "details";
+    if (nextTab === groupEditTabFromSearch()) return;
+    setGroupEditUrl(groupId, nextTab, { resetPage: true });
+    window.dispatchEvent(new CustomEvent("group-edit-tab-change", {
+      detail: { tab: nextTab },
+    }));
   });
 
   window.addEventListener("popstate", () => {

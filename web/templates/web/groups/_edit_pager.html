@@ -1,0 +1,10 @@
+<div class="pager library-pager group-edit-pager{% if position == 'bottom' %} library-pager--sticky{% else %} group-edit-pager--top{% endif %}" aria-label="{{ label }} {{ position }} pagination">
+  <span id="group-edit-{{ key }}-range{% if position == 'top' %}-top{% endif %}" class="library-pager__range">Loading...</span>
+  <label class="library-pager__page-size" for="group-edit-{{ key }}-page-size{% if position == 'top' %}-top{% endif %}">Per page
+    <select id="group-edit-{{ key }}-page-size{% if position == 'top' %}-top{% endif %}"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+  </label>
+  <div class="library-pager__actions">
+    <button id="group-edit-{{ key }}-prev{% if position == 'top' %}-top{% endif %}" class="button" type="button" disabled>Previous</button>
+    <button id="group-edit-{{ key }}-next{% if position == 'top' %}-top{% endif %}" class="button" type="button" disabled>Next</button>
+  </div>
+</div>

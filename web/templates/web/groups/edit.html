@@ -33,8 +33,8 @@
       <button class="tab-button" type="button" role="tab" aria-controls="tab-shelves" data-tab="shelves">Shelves</button>
     </div>
 
-    <div id="tab-details" class="card tab-panel" role="tabpanel" data-tab-panel="details">
-      <form id="group-edit-form" class="form">
+    <div id="tab-details" class="tab-panel" role="tabpanel" data-tab-panel="details">
+      <form id="group-edit-form" class="form group-edit-details-form">
         {% csrf_token %}
         <div class="kv">
           <div class="kv__k"><label for="group-edit-description">Description</label></div>
@@ -43,9 +43,9 @@
           </div>
         </div>
 
-        <div class="form-actions">
-          <button id="group-edit-save" class="button" type="submit">Save</button>
+        <div class="form-actions group-edit-form-actions">
           <span id="group-edit-save-status" class="muted"></span>
+          <button id="group-edit-save" class="button" type="submit">Save</button>
         </div>
       </form>
 
@@ -70,81 +70,71 @@
               <input id="group-delete-confirm" class="form-control" type="text" placeholder="Group name" />
             </div>
           </div>
-          <div class="form-actions">
-            <button id="group-delete-btn" class="button button--danger" type="submit" disabled>Delete group</button>
+          <div class="form-actions group-edit-form-actions">
             <span id="group-delete-status" class="muted"></span>
+            <button id="group-delete-btn" class="button button--danger" type="submit" disabled>Delete group</button>
           </div>
         </form>
       </section>
     </div>
 
-    <div id="tab-books" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="books">
+    <div id="tab-books" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="books">
+      {% include "web/groups/_edit_pager.html" with key="books" label="Assigned books" position="top" only %}
       <div id="group-edit-books-status" class="muted" aria-live="polite">Loading...</div>
-      <div id="group-edit-books-results" class="books"></div>
-
-      <div class="pager" aria-label="Assigned group books pagination">
-        <button id="group-edit-books-prev" class="button" type="button" disabled>Previous</button>
-        <button id="group-edit-books-next" class="button" type="button" disabled>Next</button>
-      </div>
+      <div id="group-edit-books-results" class="books group-edit-results"></div>
+      {% include "web/groups/_edit_pager.html" with key="books" label="Assigned books" position="bottom" only %}
     </div>
 
-    <div id="tab-add-books" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="add-books">
-      <form id="group-edit-book-search-form" class="search is-hidden" autocomplete="off">
+    <div id="tab-add-books" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="add-books">
+      <form id="group-edit-book-search-form" class="search group-edit-search is-hidden" autocomplete="off">
         <label class="search__label" for="group-edit-book-search">Find a book to add</label>
-        <input id="group-edit-book-search" class="search__input" type="search" placeholder="Search the BookVerse..." />
+        <input id="group-edit-book-search" class="search__input" type="search" placeholder="Search the library..." />
         <button id="group-edit-book-search-btn" class="button" type="submit">Search</button>
         <span id="group-edit-book-search-status" class="muted"></span>
       </form>
 
-      <div id="group-edit-book-search-results-wrap" class="is-hidden" style="margin-top: 10px;">
-        <div id="group-edit-book-search-results" class="books"></div>
-        <div class="pager">
-          <button id="group-edit-book-search-prev" class="button" type="button" disabled>Previous</button>
-          <button id="group-edit-book-search-next" class="button" type="button" disabled>Next</button>
-        </div>
+      <div id="group-edit-book-search-results-wrap" class="group-edit-search-results is-hidden">
+        {% include "web/groups/_edit_pager.html" with key="book-search" label="Book search" position="top" only %}
+        <div id="group-edit-book-search-results" class="books group-edit-results"></div>
+        {% include "web/groups/_edit_pager.html" with key="book-search" label="Book search" position="bottom" only %}
       </div>
     </div>
 
-    <div id="tab-members" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="members">
-      <div id="group-edit-members-note" class="muted"></div>
-      <p class="muted">
+    <div id="tab-members" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="members">
+      <div id="group-edit-members-note" class="muted group-edit-helper"></div>
+      <p class="muted group-edit-helper">
         Curator grants group-scoped management access to readers.
       </p>
 
       <form id="group-edit-add-member" class="form is-hidden" autocomplete="off">
         <label class="search__label" for="group-edit-member-search">Add member by username</label>
-        <div class="form-actions">
+        <div class="form-actions group-edit-member-add-row">
           <div class="member-choice-picker">
             <input id="group-edit-member-search" class="search__input" type="search" placeholder="Search usernames..." aria-controls="group-edit-member-choices" aria-expanded="false" />
             <div id="group-edit-member-choices" class="member-choice-picker__menu is-hidden" role="listbox"></div>
           </div>
           <input id="group-edit-member-user" type="hidden" />
           <label><input id="group-edit-member-role" type="checkbox" /> Curator</label>
-          <button class="button" type="submit">Add</button>
           <span id="group-edit-add-member-status" class="muted" aria-live="polite"></span>
+          <button class="button group-edit-member-add" type="submit">Add</button>
         </div>
       </form>
 
-      <div id="group-edit-members-status" class="muted" style="margin-top: 10px;">Loading...</div>
-      <div id="group-edit-members-results" class="books"></div>
-
-      <div class="pager">
-        <button id="group-edit-members-prev" class="button" type="button" disabled>Previous</button>
-        <button id="group-edit-members-next" class="button" type="button" disabled>Next</button>
-      </div>
+      {% include "web/groups/_edit_pager.html" with key="members" label="Members" position="top" only %}
+      <div id="group-edit-members-status" class="muted">Loading...</div>
+      <div id="group-edit-members-results" class="books group-edit-results"></div>
+      {% include "web/groups/_edit_pager.html" with key="members" label="Members" position="bottom" only %}
     </div>
 
-    <div id="tab-shelves" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="shelves">
-      <div id="group-edit-shelves-note" class="muted"></div>
-      <div id="group-edit-shelves-actions" class="is-hidden" style="margin-top: 10px;">
+    <div id="tab-shelves" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="shelves">
+      <div id="group-edit-shelves-note" class="muted group-edit-helper"></div>
+      <div id="group-edit-shelves-actions" class="group-edit-section-actions is-hidden">
         <a id="group-edit-shelves-create-link" class="button" href="#">Create shelf for this group</a>
       </div>
-      <div id="group-edit-shelves-status" class="muted" style="margin-top: 10px;">Loading...</div>
-      <div id="group-edit-shelves-results" class="books"></div>
-      <div class="pager">
-        <button id="group-edit-shelves-prev" class="button" type="button" disabled>Previous</button>
-        <button id="group-edit-shelves-next" class="button" type="button" disabled>Next</button>
-      </div>
+      {% include "web/groups/_edit_pager.html" with key="shelves" label="Shelves" position="top" only %}
+      <div id="group-edit-shelves-status" class="muted">Loading...</div>
+      <div id="group-edit-shelves-results" class="books group-edit-results"></div>
+      {% include "web/groups/_edit_pager.html" with key="shelves" label="Shelves" position="bottom" only %}
     </div>
   </section>
 {% endblock %}

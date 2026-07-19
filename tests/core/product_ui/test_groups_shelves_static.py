@@ -127,7 +127,8 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'data-tab="shelves"')
         self.assertContains(response, 'id="group-edit-book-search-form"')
         self.assertContains(response, 'id="group-edit-book-search-results"')
-        self.assertContains(response, 'aria-label="Assigned group books pagination"')
+        self.assertContains(response, 'aria-label="Assigned books top pagination"')
+        self.assertContains(response, 'aria-label="Assigned books bottom pagination"')
         self.assertNotContains(response, "Debug: add book by UUID")
         self.assertNotContains(response, 'id="group-edit-book-uuid-debug"')
         self.assertNotContains(response, 'id="group-edit-add-book"')
@@ -141,9 +142,11 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         html = response.content.decode("utf-8")
         root_start = html.index('id="group-edit-root"')
         tabs_start = html.index('aria-label="Group edit tabs"', root_start)
-        details_panel = html.index('id="tab-details" class="card tab-panel"', root_start)
+        details_panel = html.index('id="tab-details" class="tab-panel"', root_start)
         self.assertLess(tabs_start, details_panel)
         self.assertNotIn('id="group-edit-root" class="card', html)
+        for tab in ("details", "books", "add-books", "members", "shelves"):
+            self.assertNotIn(f'id="tab-{tab}" class="card', html)
         books_panel = html[html.index('id="tab-books"'):html.index('id="tab-add-books"')]
         add_books_panel = html[html.index('id="tab-add-books"'):html.index('id="tab-members"')]
         self.assertNotIn('id="group-edit-book-search-form"', books_panel)

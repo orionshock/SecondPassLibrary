@@ -1,6 +1,6 @@
 import { fetchJSON, fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { setGlobalError, visible } from "../layout.js";
-import { createPagedListController } from "../ui/paged_list.js";
+import { createGroupEditPager } from "./edit_pagination.js";
 import {
   canManageGroupMemberships,
   groupMutationErrorMessage,
@@ -49,7 +49,9 @@ export async function initGroupMembershipsTab({
     addMemberSearch.setAttribute("aria-expanded", "false");
   }
 
-  const membersCtl = await createPagedListController({
+  const membersCtl = await createGroupEditPager({
+    key: "members",
+    tab: "members",
     statusEl: membersStatus,
     resultsEl: membersResults,
     nextBtn: membersNext,
@@ -58,6 +60,7 @@ export async function initGroupMembershipsTab({
     emptyText: "No members.",
     render: (payload) =>
       allowMembershipManage ? renderMembersManage(payload, { isPublicGroup }) : renderMembersReadOnly(payload),
+    loadErrorText: "Unable to load group members.",
   });
 
   if (!allowMembershipManage) return { membersCtl };

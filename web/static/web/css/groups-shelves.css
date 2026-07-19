@@ -14,6 +14,54 @@
 .group-edit-root > .tabs {
   margin-bottom: 12px;
 }
+.group-edit-root .tab-panel {
+  padding-top: 0;
+}
+.group-edit-details-form {
+  max-width: 860px;
+}
+.group-edit-form-actions {
+  justify-content: flex-end;
+}
+.group-edit-form-actions .muted {
+  margin-right: auto;
+}
+.group-edit-search {
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.group-edit-search .search__input {
+  min-width: min(360px, 100%);
+}
+.group-edit-search-results {
+  margin-top: 12px;
+}
+.group-edit-helper {
+  max-width: 72ch;
+  margin: 0 0 12px;
+}
+.group-edit-member-add-row {
+  align-items: center;
+  gap: 8px 12px;
+}
+.group-edit-member-add {
+  margin-left: auto;
+}
+.group-edit-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0 12px;
+}
+.group-edit-pager--top {
+  margin: 0 0 10px;
+}
+.group-edit-results {
+  padding-bottom: 76px;
+}
+.group-edit-pager.library-pager--sticky {
+  margin-top: 12px;
+}
 .group-edit-book-row__body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -92,6 +140,16 @@
   }
   .group-edit-shelf-card .cover-preview-strip {
     justify-content: flex-start;
+  }
+  .group-edit-search .search__input {
+    min-width: 0;
+    width: 100%;
+  }
+  .group-edit-member-add {
+    margin-left: 0;
+  }
+  .group-edit-pager .library-pager__page-size {
+    order: 2;
   }
   .group-view-pager .library-pager__page-size {
     order: 2;

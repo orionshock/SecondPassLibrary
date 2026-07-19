@@ -56,18 +56,21 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertNotIn("page_size=", self.source)
 
     def test_add_picker_keeps_existing_rendering_pagination_and_bounded_errors(self):
-        self.assertIn("createPagedListController", self.source)
+        self.assertIn("createGroupEditPager", self.source)
         self.assertIn("renderBooksCompact(payload", self.source)
         self.assertIn('loadErrorText: "Book search failed."', self.source)
         self.assertIn("bookSearchNext", self.source)
         self.assertIn("bookSearchPrev", self.source)
 
     def test_assigned_books_keep_page_and_step_back_after_last_removal(self):
-        self.assertIn("initialUrl: groupBooksApiUrl(groupId)", self.source)
+        self.assertIn("initialUrl: (search) => groupBooksApiUrl(groupId, search)", self.source)
         self.assertIn("state.resultCount === 1 && state.previousUrl", self.source)
         self.assertIn('booksCtl.loadPrevious("remove-back")', self.source)
         self.assertIn("await booksCtl.reload()", self.source)
-        self.assertIn('window.addEventListener("popstate"', self.source)
+        pager = Path("web/static/web/js/groups/edit_pagination.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('window.addEventListener("popstate"', pager)
 
     def test_empty_picker_query_uses_broad_search_empty_result_contract(self):
         self.assertIn("q: term", self.source)

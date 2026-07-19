@@ -1,13 +1,11 @@
 import { fetchJSONWithOptions, getCsrfToken } from "../api.js";
 import { setGlobalError, visible } from "../layout.js";
-import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
 import { groupMutationErrorMessage, renderBooksCompact } from "./shared.js";
 import {
-  groupBookPageStatus,
   groupBooksApiUrl,
-  syncGroupBookPage,
 } from "./book_pagination.js";
+import { createGroupEditPager, syncGroupEditPageUrl } from "./edit_pagination.js";
 
 export async function initGroupBooksTab({
   me,
@@ -27,29 +25,24 @@ export async function initGroupBooksTab({
 }) {
   visible(bookSearchForm, allowBookManage);
   visible(bookSearchWrap, false);
+  bookSearchInput.value = new URLSearchParams(window.location.search).get("q") || "";
 
-  const booksCtl = await createPagedListController({
+  const booksCtl = await createGroupEditPager({
+    key: "books",
+    tab: "books",
     statusEl: booksStatus,
     resultsEl: booksResults,
     nextBtn: booksNext,
     prevBtn: booksPrev,
-    initialUrl: groupBooksApiUrl(groupId),
+    initialUrl: (search) => groupBooksApiUrl(groupId, search),
     emptyText: "No books in this group.",
     render: (payload) => renderBooksCompact(payload, { groupId, canRemove: allowBookManage }),
-    formatStatus: (payload, results, context) =>
-      groupBookPageStatus(payload, results, context.url),
     onLoaded: (_payload, _results, context) => {
-      if (context.reason === "next" || context.reason === "previous") {
-        syncGroupBookPage(context.url);
-      } else if (context.reason === "remove-back") {
-        syncGroupBookPage(context.url, { replace: true });
+      if (context.reason === "remove-back") {
+        syncGroupEditPageUrl("books", context.url, { replace: true });
       }
     },
     loadErrorText: "Unable to load assigned books.",
-  });
-
-  window.addEventListener("popstate", async () => {
-    await booksCtl.load(groupBooksApiUrl(groupId), { reason: "history" });
   });
 
   if (!allowBookManage) return { booksCtl };
@@ -58,17 +51,27 @@ export async function initGroupBooksTab({
     setStatus(bookSearchStatus, text, isError);
   }
 
-  const bookSearchCtl = await createPagedListController({
+  const bookSearchCtl = await createGroupEditPager({
+    key: "book-search",
+    tab: "add-books",
     statusEl: bookSearchStatus,
     resultsEl: bookSearchResults,
     nextBtn: bookSearchNext,
     prevBtn: bookSearchPrev,
-    initialUrl: `/api/v1/library/search?q=&ordering=title&exclude_group=${encodeURIComponent(String(groupId))}`,
+    initialUrl: (search) => {
+      const query = new URLSearchParams(search || "").get("q") || "";
+      const params = new URLSearchParams({
+        q: query,
+        ordering: "title",
+        exclude_group: String(groupId),
+      });
+      return `/api/v1/library/search?${params.toString()}`;
+    },
     emptyText: "No results.",
     render: (payload) => renderBooksCompact(payload, { groupId, canRemove: false, canAdd: true }),
     onLoaded: () => visible(bookSearchWrap, true),
     loadErrorText: "Book search failed.",
-    autoLoad: false,
+    autoLoad: !!new URLSearchParams(window.location.search).get("q"),
   });
 
   bookSearchForm.addEventListener("submit", async (e) => {

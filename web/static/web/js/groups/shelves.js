@@ -1,5 +1,5 @@
 import { visible } from "../layout.js";
-import { createPagedListController } from "../ui/paged_list.js";
+import { createGroupEditPager } from "./edit_pagination.js";
 import { renderGroupShelvesCompact } from "./shared.js";
 
 export async function initGroupShelvesTab({
@@ -27,7 +27,9 @@ export async function initGroupShelvesTab({
   }
 
   if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
-    await createPagedListController({
+    await createGroupEditPager({
+      key: "shelves",
+      tab: "shelves",
       statusEl: shelvesStatus,
       resultsEl: shelvesResults,
       nextBtn: shelvesNext,
@@ -35,6 +37,7 @@ export async function initGroupShelvesTab({
       initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}&include_preview_books=true`,
       emptyText: "No shelves yet.",
       render: (payload) => renderGroupShelvesCompact(payload, { canEdit: !!allowShelfManage }),
+      loadErrorText: "Unable to load group shelves.",
     });
   }
 }
