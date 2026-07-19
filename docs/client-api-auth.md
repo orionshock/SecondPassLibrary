@@ -120,18 +120,23 @@ Allowed surface is an explicit allow-list.
 
 Library details:
 
+Exact Library routes, query parameters, and response schemas are owned by
+`docs/api.md`; this section summarizes the bearer-specific client contract.
+
 - Bearer credentials are read-only under `/api/v1/library/` regardless of
   account role; mixed endpoint writes still require Django session auth.
 - Books, Authors, Series, Catalog Tags, visible LibraryGroups, and visible
   group-scoped Books/Auth/Series/Tags are bearer-readable.
 - `/api/v1/library/books/?q=<term>` remains the title-only Books axis search.
   `/api/v1/library/search?q=<term>` is the broad Books-only library search
-  search across titles, subtitle, authors, series, identifiers, Catalog Tags,
-  publisher, and description. Blank `q` returns an empty paginated response.
+  across title, sort title, subtitle, author names, series name, identifier
+  values, Catalog Tag names, publisher, and description. It is not a
+  mixed-result endpoint. Missing or blank `q` returns an empty paginated
+  response.
   It supports title/author/series ordering in either direction plus manageable
   `exclude_shelf` and `exclude_group` suppressors. Rows use the ordinary Book
   list shape and omit download, checksum, storage/source, and group data.
-- Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
+- Book, Author, and Series browse filters use `tag=<slug>`; UUID tag
   filters are not part of the client contract. `tag` is the compact query
   parameter for filtering by Catalog Tag slug.
 - All results, counts, filters, and pagination are scoped to books visible to
@@ -152,10 +157,15 @@ Library details:
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author
   and Series lists also support the same opt-in. Tag endpoints do not currently
   attach preview books.
+- Book endpoints do not need preview items because their results are already
+  Books. Tag endpoints are count/filter facets and do not support
+  `include_preview_books`.
 - `/media/books/` is not public. Reader clients must use Book detail
   `file.download_url` and the authenticated download endpoint for EPUB bytes.
-  Storage names and paths are never returned. Cover URLs remain public display
-  assets under `/media/covers/`.
+  The endpoint accepts bearer GET for visible Books, returns the complete file
+  rather than a byte range, and uses the established bounded unavailable-file
+  error. Storage names and paths are never returned. Cover URLs remain public
+  display assets under `/media/covers/`.
 
 Reading details:
 
@@ -164,6 +174,11 @@ Reading details:
   `recent`, and activity summary.
 - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key`
   (recommended) for safe retries.
+- `POST /api/v1/reading/annotations/batch/` accepts bearer authentication. It
+  creates up to 100 annotations for one session owned by the token user, checks
+  current Book visibility, validates the complete request before writing, and
+  succeeds atomically with `201 {"annotations": [...]}`. Optional item
+  `client_id` values are echoed for client-side correlation.
 - For "continue reading" UIs, use
   `GET /api/v1/reading/sessions/recent/?limit=10`.
 - Marginalia import/export endpoints are **session-only** and reject Client API

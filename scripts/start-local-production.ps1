@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $PythonExecutable = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 $Bind = if ($env:BIND) { $env:BIND } else { "127.0.0.1:8000" }
-$WaitressThreads = if ($env:WAITRESS_THREADS) { $env:WAITRESS_THREADS } else { "4" }
+$WaitressThreads = if ($env:WAITRESS_THREADS) { $env:WAITRESS_THREADS } else { "16" }
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 $env:DJANGO_DEBUG = "0"

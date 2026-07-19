@@ -432,7 +432,40 @@ Rules:
 - Authors: `GET /api/v1/library/authors/` (paginated), `GET/PATCH /api/v1/library/authors/<id>/`
 - Series: `GET /api/v1/library/series/` (paginated), `GET/PATCH /api/v1/library/series/<id>/`
 - Catalog Tags: `GET /api/v1/library/tags/` (paginated), `GET /api/v1/library/tags/<id>/`
-- Books: `GET /api/v1/library/books/` (paginated), `GET/PATCH /api/v1/library/books/<id>/`
+- Books: `GET /api/v1/library/books/` (paginated),
+  `GET/PUT/PATCH /api/v1/library/books/<id>/`
+
+### Book response shapes
+
+Book list, broad-search, and group-scoped Book results share one compact row
+shape:
+
+- `id`, `title`, `sort_title`, and `subtitle`
+- `authors`, `series`, and compact Catalog Tag field `tags`
+- `language` and `publisher`
+- `published_year`, `published_month`, `published_day`, and
+  `published_date_precision`
+- `cover_url` and top-level `file_format`
+
+Compact rows do not include `catalog_tags`, `file`, `groups`, `identifiers`,
+checksums, download URLs, or storage/source fields.
+
+Book detail, Book metadata PATCH/PUT responses, and cover replacement/clear
+responses share the detail shape. It includes normal Book metadata plus
+`identifiers`, detail/write Catalog Tag field `catalog_tags`, visibility-scoped
+`groups`, and `file`. It does not repeat compact-row `tags` or top-level
+`file_format`.
+
+`file` is `null` when no stored file is available. Otherwise it contains only:
+
+```json
+{
+  "format": "epub",
+  "file_size": 123456,
+  "checksum": "sha256 checksum",
+  "download_url": "/api/v1/library/books/<book_id>/download/"
+}
+```
 
 Book detail responses include a read-only `groups` array containing only group
 assignments visible to the caller. Each summary contains `id`, `name`,
@@ -442,30 +475,22 @@ custom groups remain hidden. This API representation does not imply a Product
 UI relationship tab: Book Detail hides its Groups tab in simple mode. Book list
 rows do not include `groups`.
 
-Book list rows, broad-search rows, and group-scoped Book rows use the compact
-Book shape. Catalog Tags are returned as `tags`, and the stored format is
-returned as top-level `file_format`. These rows do not include `catalog_tags`,
-`identifiers`, `groups`, or the detail `file` object.
-
-Book detail, Book PATCH, and cover-mutation responses use the detail shape.
-Catalog Tags are returned as `catalog_tags`; identifiers and visibility-scoped
-`groups` are included; and file metadata is returned only through `file` (or
-`null` when no file is stored). Detail responses do not repeat compact-row
-`tags` or top-level `file_format`.
+### Book search
 
 `GET /api/v1/library/books/?q=<term>` is the Books browse-axis search and
 matches title and sort title only.
 
 `GET /api/v1/library/search?q=<term>` is the broad library book search. It
-returns normal Book list rows in the normal paginated envelope and searches
-visible Books by title, sort title, subtitle, author name, series name,
-identifier value, Catalog Tag name, publisher, and description. Missing or
+is a GET-only, Books-only endpoint, not a mixed-result search. It returns
+compact Book rows in the normal paginated envelope and searches
+visible Books by title, sort title, subtitle, author names, series name,
+identifier values, Catalog Tag names, publisher, and description. Missing or
 blank `q` returns an empty page rather than the whole library. Supported
 ordering is `title`, `-title`, `author`, `-author`, `series`, and `-series`;
 the default is `title`.
 
-Broad library book search supports `exclude_shelf=<shelf_id>` for a manageable shelf and
-`exclude_group=<group_id>` for a manageable group. These suppress already
+Broad library book search supports `exclude_shelf=<shelf_id>` for a manageable
+shelf and `exclude_group=<group_id>` for a manageable group. These suppress already
 contained/assigned Books after visibility scoping. Unknown or inaccessible
 exclusion objects return `404`. Search rows use the Book list shape and never
 include download URLs, checksums, storage/source names, file keys, or group
@@ -509,6 +534,8 @@ visibility. Hidden-only details return `404`; counts, filters, previews, and
 pagination are calculated after visibility scoping. Group routes require exact
 group visibility. When advanced groups are disabled, Public/Common Room remains
 available and custom group routes return `404`.
+
+### EPUB download and covers
 
 Book detail `file` data contains format, size, checksum, and the authenticated
 `download_url`. `GET /api/v1/library/books/<book_id>/download/` streams the
@@ -570,8 +597,11 @@ is GET-only; there is no standalone tag create, update, or delete API, and
 bearer authentication grants no tag mutation capability. Catalog Tag
 relationships are mutated only through Book PATCH `catalog_tags`.
 
+Tag endpoints are count/filter facets. They do not accept
+`include_preview_books` and do not return `preview_books`.
+
 Book, Author, and Series list endpoints accept the compact query parameter
-`tag=<tag-slug>`, which filters by Catalog Tag slug. Books are
+`tag=<slug>`, which filters by Catalog Tag slug. Books are
 filtered to books directly carrying that tag. Authors and Series are filtered
 to records with at least one caller-visible tagged book, and their `book_count`
 reflects that filtered visible-book context. Group-scoped Book, Author, and
@@ -609,8 +639,9 @@ Several browse/context endpoints support optional bounded book-cover previews:
 - `GET /api/v1/library/groups/<group_id>/authors/?include_preview_books=true`
 - `GET /api/v1/library/groups/<group_id>/series/?include_preview_books=true`
 
-Book and Catalog Tag endpoints do not currently attach `preview_books`; Book
-payloads already represent concrete books, and Tag payloads remain count-only.
+Book endpoints do not attach `preview_books` because they already return Books.
+Catalog Tag endpoints do not accept the preview option and remain count/filter
+facets without preview cards.
 
 Request behavior:
 
@@ -669,21 +700,16 @@ Client guidance:
 - Render a placeholder when `cover_url` is `null`.
 - If a preview cover is interactive, clients may open the preview book detail by `id` or open the parent context, but should not infer file/download capability from the preview item.
 
-Book payload notes:
+Book write and media notes:
 
-- Book detail payloads include visibility-scoped `groups` summaries. Compact
-  Book list, search, and group-scoped Book rows do not include `groups`.
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; raw book media such as `/media/books/...` is not public and EPUB/book content should be delivered only through authenticated app/API endpoints.
 - Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.
 - `identifiers[]` response items include `id`, `scheme`, and `value`.
-- Compact Book rows use `tags[]`; Book detail and PATCH use `catalog_tags[]`.
-  Items in either representation include `id`, `name`, and generated `slug`.
-- Compact Book rows expose top-level `file_format`. Book detail exposes file
-  metadata only through `file.format`, `file.file_size`, `file.checksum`, and
-  authenticated `file.download_url`.
+- Items in compact `tags[]` and detail `catalog_tags[]` contain `id`, `name`,
+  and generated `slug`; see the canonical response shapes above.
 - Book PATCH accepts `identifiers` as a complete replacement list of
   `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
   preserves existing rows; `identifiers: []` clears them.
@@ -839,7 +865,12 @@ and Product UI workflow. The designated Public group cannot be deleted.
   - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?kind=highlight|bookmark` (may be repeated)
   - Ordering: `?ordering=created|-created|modified|-modified`
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
-  - `POST /api/v1/reading/annotations/batch/` creates up to 100 annotations for one session in one all-or-nothing request.
+  - `POST /api/v1/reading/annotations/batch/` accepts Django session or Client
+    API bearer authentication and creates up to 100 annotations for one session
+    owned by the authenticated user. The Book must currently be visible for
+    writes. The request is validated before creation and commits all items or
+    none. Success returns `201` with `{"annotations": [...]}`; an optional
+    per-item `client_id` is echoed in its corresponding response item.
 - Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
   - `GET /api/v1/reading/export/` exports all owned current-user sessions, including sessions for books the user can no longer view.
   - `POST /api/v1/reading/export/` exports selected owned books/sessions, including owned sessions for books the user can no longer view.
