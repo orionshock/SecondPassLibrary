@@ -53,6 +53,18 @@
 .group-view-root > .tabs {
   margin-bottom: 12px;
 }
+.group-view-root .tab-panel {
+  padding-top: 0;
+}
+.group-view-pager--top {
+  margin: 0 0 10px;
+}
+.group-view-results {
+  padding-bottom: 76px;
+}
+.group-view-pager.library-pager--sticky {
+  margin-top: 12px;
+}
 .group-view-member-row {
   display: flex;
   align-items: center;
@@ -80,6 +92,9 @@
   }
   .group-edit-shelf-card .cover-preview-strip {
     justify-content: flex-start;
+  }
+  .group-view-pager .library-pager__page-size {
+    order: 2;
   }
 }
 

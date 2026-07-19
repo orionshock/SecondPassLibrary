@@ -35,31 +35,79 @@
       <button class="tab-button" type="button" role="tab" aria-controls="tab-shelves" data-tab="shelves">Shelves</button>
     </div>
 
-    <div id="tab-books" class="card tab-panel" role="tabpanel" data-tab-panel="books">
-      <div id="group-view-books-status" class="muted" style="margin-top: 10px;" aria-live="polite">Loading...</div>
-      <div id="group-view-books-results" class="books"></div>
-      <div class="pager" aria-label="Group books pagination">
+    <div id="tab-books" class="tab-panel" role="tabpanel" data-tab-panel="books">
+      <div class="pager library-pager group-view-pager group-view-pager--top" aria-label="Group books top pagination">
+        <span id="group-view-books-range-top" class="library-pager__range">Loading...</span>
+        <label class="library-pager__page-size" for="group-view-books-page-size-top">Per page
+          <select id="group-view-books-page-size-top" data-group-page-size="books"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+        </label>
+        <div class="library-pager__actions">
+          <button id="group-view-books-prev-top" class="button" type="button" disabled>Previous</button>
+          <button id="group-view-books-next-top" class="button" type="button" disabled>Next</button>
+        </div>
+      </div>
+      <div id="group-view-books-status" class="muted" aria-live="polite">Loading...</div>
+      <div id="group-view-books-results" class="books group-view-results"></div>
+      <div class="pager library-pager library-pager--sticky group-view-pager" aria-label="Group books pagination">
+        <span id="group-view-books-range" class="library-pager__range">Loading...</span>
+        <label class="library-pager__page-size" for="group-view-books-page-size">Per page
+          <select id="group-view-books-page-size" data-group-page-size="books"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+        </label>
+        <div class="library-pager__actions">
         <button id="group-view-books-prev" class="button" type="button" disabled>Previous</button>
         <button id="group-view-books-next" class="button" type="button" disabled>Next</button>
+        </div>
       </div>
     </div>
 
-    <div id="tab-members" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="members">
+    <div id="tab-members" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="members">
+      <div class="pager library-pager group-view-pager group-view-pager--top" aria-label="Group members top pagination">
+        <span id="group-view-members-range-top" class="library-pager__range">Loading...</span>
+        <label class="library-pager__page-size" for="group-view-members-page-size-top">Per page
+          <select id="group-view-members-page-size-top" data-group-page-size="members"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+        </label>
+        <div class="library-pager__actions">
+          <button id="group-view-members-prev-top" class="button" type="button" disabled>Previous</button>
+          <button id="group-view-members-next-top" class="button" type="button" disabled>Next</button>
+        </div>
+      </div>
       <div id="group-view-members-note" class="muted"></div>
-      <div id="group-view-members-status" class="muted" style="margin-top: 10px;">Loading...</div>
-      <div id="group-view-members-results" class="books"></div>
-      <div class="pager">
+      <div id="group-view-members-status" class="muted">Loading...</div>
+      <div id="group-view-members-results" class="books group-view-results"></div>
+      <div class="pager library-pager library-pager--sticky group-view-pager" aria-label="Group members pagination">
+        <span id="group-view-members-range" class="library-pager__range">Loading...</span>
+        <label class="library-pager__page-size" for="group-view-members-page-size">Per page
+          <select id="group-view-members-page-size" data-group-page-size="members"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+        </label>
+        <div class="library-pager__actions">
         <button id="group-view-members-prev" class="button" type="button" disabled>Previous</button>
         <button id="group-view-members-next" class="button" type="button" disabled>Next</button>
+        </div>
       </div>
     </div>
 
-    <div id="tab-shelves" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="shelves">
-      <div id="group-view-shelves-status" class="muted" style="margin-top: 10px;">Loading...</div>
-      <div id="group-view-shelves-results" class="books"></div>
-      <div class="pager">
+    <div id="tab-shelves" class="tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="shelves">
+      <div class="pager library-pager group-view-pager group-view-pager--top" aria-label="Group shelves top pagination">
+        <span id="group-view-shelves-range-top" class="library-pager__range">Loading...</span>
+        <label class="library-pager__page-size" for="group-view-shelves-page-size-top">Per page
+          <select id="group-view-shelves-page-size-top" data-group-page-size="shelves"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+        </label>
+        <div class="library-pager__actions">
+          <button id="group-view-shelves-prev-top" class="button" type="button" disabled>Previous</button>
+          <button id="group-view-shelves-next-top" class="button" type="button" disabled>Next</button>
+        </div>
+      </div>
+      <div id="group-view-shelves-status" class="muted">Loading...</div>
+      <div id="group-view-shelves-results" class="books group-view-results"></div>
+      <div class="pager library-pager library-pager--sticky group-view-pager" aria-label="Group shelves pagination">
+        <span id="group-view-shelves-range" class="library-pager__range">Loading...</span>
+        <label class="library-pager__page-size" for="group-view-shelves-page-size">Per page
+          <select id="group-view-shelves-page-size" data-group-page-size="shelves"><option>20</option><option>30</option><option>40</option><option>50</option></select>
+        </label>
+        <div class="library-pager__actions">
         <button id="group-view-shelves-prev" class="button" type="button" disabled>Previous</button>
         <button id="group-view-shelves-next" class="button" type="button" disabled>Next</button>
+        </div>
       </div>
     </div>
   </section>

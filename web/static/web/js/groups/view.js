@@ -2,9 +2,7 @@ import { extractApiErrorMessage, fetchJSON } from "../api.js";
 import { $, loadMeAndInitShell, setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import {
-  groupBookPageStatus,
   groupBooksApiUrl,
-  syncGroupBookPage,
 } from "./book_pagination.js";
 import { setStatus } from "../ui/status.js";
 import { initTabs } from "../ui/tabs.js";
@@ -23,6 +21,90 @@ import {
   renderGroupViewMembers,
   renderGroupViewShelves,
 } from "./view_renderers.js";
+import {
+  groupViewPagedApiUrl,
+  groupViewPageSizeSearch,
+  groupViewPageState,
+  groupViewRangeText,
+  syncGroupViewPageUrl,
+} from "./view_pagination.js";
+
+function pagerElements(tab) {
+  return {
+    statusEl: $(`#group-view-${tab}-status`),
+    resultsEl: $(`#group-view-${tab}-results`),
+    nextBtn: $(`#group-view-${tab}-next`),
+    prevBtn: $(`#group-view-${tab}-prev`),
+    nextTopBtn: $(`#group-view-${tab}-next-top`),
+    prevTopBtn: $(`#group-view-${tab}-prev-top`),
+    rangeEl: $(`#group-view-${tab}-range`),
+    rangeTopEl: $(`#group-view-${tab}-range-top`),
+    pageSizeEl: $(`#group-view-${tab}-page-size`),
+    pageSizeTopEl: $(`#group-view-${tab}-page-size-top`),
+  };
+}
+
+async function initGroupViewPager({ tab, apiUrl, emptyText, render, loadErrorText }) {
+  const elements = pagerElements(tab);
+  if (Object.values(elements).some((element) => !element)) return null;
+  const {
+    statusEl,
+    resultsEl,
+    nextBtn,
+    prevBtn,
+    nextTopBtn,
+    prevTopBtn,
+    rangeEl,
+    rangeTopEl,
+    pageSizeEl,
+    pageSizeTopEl,
+  } = elements;
+
+  function syncPager(payload, results, url) {
+    const state = groupViewPageState(new URL(url, window.location.origin).search);
+    const range = groupViewRangeText(payload, results.length, url);
+    rangeEl.textContent = range;
+    rangeTopEl.textContent = range;
+    pageSizeEl.value = String(state.pageSize);
+    pageSizeTopEl.value = String(state.pageSize);
+    nextTopBtn.disabled = nextBtn.disabled;
+    prevTopBtn.disabled = prevBtn.disabled;
+  }
+
+  const controller = await createPagedListController({
+    statusEl,
+    resultsEl,
+    nextBtn,
+    prevBtn,
+    initialUrl: apiUrl(window.location.search),
+    emptyText,
+    render,
+    formatStatus: (_payload, results) => results.length ? "" : emptyText,
+    onLoaded: (payload, results, context) => {
+      syncPager(payload, results, context.url);
+      if (["next", "previous", "page-size"].includes(context.reason)) {
+        syncGroupViewPageUrl(tab, context.url);
+      }
+    },
+    loadErrorText,
+  });
+
+  nextTopBtn.addEventListener("click", () => nextBtn.click());
+  prevTopBtn.addEventListener("click", () => prevBtn.click());
+
+  async function changePageSize(source) {
+    const search = groupViewPageSizeSearch(source.value);
+    pageSizeEl.value = String(groupViewPageState(search).pageSize);
+    pageSizeTopEl.value = pageSizeEl.value;
+    await controller.load(apiUrl(search), { reason: "page-size" });
+  }
+  pageSizeEl.addEventListener("change", () => changePageSize(pageSizeEl));
+  pageSizeTopEl.addEventListener("change", () => changePageSize(pageSizeTopEl));
+
+  return {
+    loadFromLocation: () => controller.load(apiUrl(window.location.search), { reason: "history" }),
+  };
+}
 
 export async function initGroupView() {
   const me = await loadMeAndInitShell();
@@ -38,21 +120,7 @@ export async function initGroupView() {
   const editWrap = $("#group-view-edit-link-wrap");
   const editLink = $("#group-view-edit-link");
 
-  const booksStatus = $("#group-view-books-status");
-  const booksResults = $("#group-view-books-results");
-  const booksNext = $("#group-view-books-next");
-  const booksPrev = $("#group-view-books-prev");
-
   const membersNote = $("#group-view-members-note");
-  const membersStatus = $("#group-view-members-status");
-  const membersResults = $("#group-view-members-results");
-  const membersNext = $("#group-view-members-next");
-  const membersPrev = $("#group-view-members-prev");
-
-  const shelvesStatus = $("#group-view-shelves-status");
-  const shelvesResults = $("#group-view-shelves-results");
-  const shelvesNext = $("#group-view-shelves-next");
-  const shelvesPrev = $("#group-view-shelves-prev");
 
   if (
     !root ||
@@ -62,14 +130,6 @@ export async function initGroupView() {
     !subtitleEl ||
     !badgesEl ||
     !descEl ||
-    !booksStatus ||
-    !booksResults ||
-    !booksNext ||
-    !booksPrev ||
-    !membersStatus ||
-    !membersResults ||
-    !membersNext ||
-    !membersPrev ||
     !membersNote
   ) {
     return;
@@ -81,16 +141,6 @@ export async function initGroupView() {
   initTabs(root, { defaultTab: initialTab });
   selectGroupViewTab(root, initialTab);
   syncGroupBreadcrumb({ groupName: "Group" });
-  root.addEventListener("click", (event) => {
-    const source = event.target;
-    if (!(source instanceof Element)) return;
-    const tab = source.closest(".tab-button[data-tab]");
-    if (!tab || !root.contains(tab)) return;
-    setGroupViewUrl(groupId, tab.getAttribute("data-tab") || "books");
-  });
-  window.addEventListener("popstate", () => {
-    selectGroupViewTab(root, groupViewTabFromSearch());
-  });
 
   setStatus(statusEl, "Loading...", false);
   visible(root, false);
@@ -144,48 +194,50 @@ export async function initGroupView() {
   visible(root, true);
   setStatus(statusEl, "", false);
 
-  const booksCtl = await createPagedListController({
-    statusEl: booksStatus,
-    resultsEl: booksResults,
-    nextBtn: booksNext,
-    prevBtn: booksPrev,
-    initialUrl: groupBooksApiUrl(groupId),
+  const pagers = {};
+  pagers.books = await initGroupViewPager({
+    tab: "books",
+    apiUrl: (search) => groupBooksApiUrl(groupId, search),
     emptyText: "No books in this group.",
     render: (payload) => renderGroupViewBooks(payload),
-    formatStatus: (payload, results, context) =>
-      groupBookPageStatus(payload, results, context.url),
-    onLoaded: (_payload, _results, context) => {
-      if (context.reason === "next" || context.reason === "previous") {
-        syncGroupBookPage(context.url);
-      }
-    },
     loadErrorText: "Unable to load group books.",
   });
 
-  window.addEventListener("popstate", async () => {
-    await booksCtl.load(groupBooksApiUrl(groupId), { reason: "history" });
-  });
-
   membersNote.textContent = "";
-  await createPagedListController({
-    statusEl: membersStatus,
-    resultsEl: membersResults,
-    nextBtn: membersNext,
-    prevBtn: membersPrev,
-    initialUrl: `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`,
+  const membershipsBase = `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`;
+  pagers.members = await initGroupViewPager({
+    tab: "members",
+    apiUrl: (search) => groupViewPagedApiUrl(membershipsBase, search),
     emptyText: "No members.",
     render: (payload) => renderGroupViewMembers(payload),
+    loadErrorText: "Unable to load group members.",
   });
 
-  if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
-    await createPagedListController({
-      statusEl: shelvesStatus,
-      resultsEl: shelvesResults,
-      nextBtn: shelvesNext,
-      prevBtn: shelvesPrev,
-      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}&include_preview_books=true`,
-      emptyText: "No shelves yet.",
-      render: (payload) => renderGroupViewShelves(payload),
-    });
-  }
+  const shelvesBase = `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}&include_preview_books=true`;
+  pagers.shelves = await initGroupViewPager({
+    tab: "shelves",
+    apiUrl: (search) => groupViewPagedApiUrl(shelvesBase, search),
+    emptyText: "No shelves yet.",
+    render: (payload) => renderGroupViewShelves(payload),
+    loadErrorText: "Unable to load group shelves.",
+  });
+
+  root.addEventListener("click", async (event) => {
+    const source = event.target;
+    if (!(source instanceof Element)) return;
+    const tabButton = source.closest(".tab-button[data-tab]");
+    if (!tabButton || !root.contains(tabButton)) return;
+    const nextTab = tabButton.getAttribute("data-tab") || "books";
+    if (nextTab === groupViewTabFromSearch()) return;
+    setGroupViewUrl(groupId, nextTab, { resetPage: true });
+    const pager = pagers[nextTab];
+    if (pager) await pager.loadFromLocation();
+  });
+
+  window.addEventListener("popstate", async () => {
+    const tab = groupViewTabFromSearch();
+    selectGroupViewTab(root, tab);
+    const pager = pagers[tab];
+    if (pager) await pager.loadFromLocation();
+  });
 }

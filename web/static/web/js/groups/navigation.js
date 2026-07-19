@@ -26,8 +26,13 @@ export function groupEditHref(groupId, tab = "details") {
   return tab && tab !== "details" ? `${base}?view=${encodeURIComponent(String(tab))}` : base;
 }
 
-export function setGroupViewUrl(groupId, tab, { replace = false } = {}) {
-  const href = groupTabHref(groupViewHref(groupId, tab), tab, "books");
+export function setGroupViewUrl(groupId, tab, { replace = false, resetPage = false } = {}) {
+  let href = groupTabHref(groupViewHref(groupId, tab), tab, "books");
+  if (resetPage) {
+    const url = new URL(href, window.location.origin);
+    url.searchParams.delete("page");
+    href = `${url.pathname}${url.search}`;
+  }
   if (replace) window.history.replaceState({}, "", href);
   else window.history.pushState({}, "", href);
 }

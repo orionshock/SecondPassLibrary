@@ -68,6 +68,8 @@ def test_group_book_controllers_use_safe_shared_pagination_without_new_axes():
     assert "Invalid paginated response." in helper
     assert "pagination continuation repeated." in helper
     assert 'loadErrorText: "Unable to load group books."' in view
+    assert "initGroupViewPager" in view
+    assert "syncGroupViewPageUrl" in view
     assert 'window.addEventListener("popstate"' in view
     assert 'const GROUP_VIEW_TABS = new Set(["books", "members", "shelves"])' in navigation
     assert '"authors"' not in navigation.split("const GROUP_VIEW_TABS", 1)[1].split(";", 1)[0]
