@@ -5,6 +5,41 @@
 }
 .group-edit-summary__description { margin-top: 10px; }
 
+.group-view-summary {
+  margin: -4px 0 16px;
+  min-width: 0;
+}
+.group-view-summary__description {
+  max-width: 72ch;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.group-view-root,
+.group-view-root .tab-panel,
+.group-view-book-row,
+.group-view-member-row,
+.group-view-shelf-card {
+  min-width: 0;
+}
+.group-view-root > .tabs {
+  margin-bottom: 12px;
+}
+.group-view-member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.group-view-member-row .user-identity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .danger-zone {
   margin-top: 16px;
   border-color: rgba(251, 113, 133, 0.6);

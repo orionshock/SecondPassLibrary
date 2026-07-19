@@ -17,10 +17,12 @@ import {
 import {
   canEditGroupPage,
   currentUserGroupMembership,
-  renderBooksCompact,
-  renderGroupShelvesCompact,
-  renderMembersReadOnly,
 } from "./shared.js";
+import {
+  renderGroupViewBooks,
+  renderGroupViewMembers,
+  renderGroupViewShelves,
+} from "./view_renderers.js";
 
 export async function initGroupView() {
   const me = await loadMeAndInitShell();
@@ -149,7 +151,7 @@ export async function initGroupView() {
     prevBtn: booksPrev,
     initialUrl: groupBooksApiUrl(groupId),
     emptyText: "No books in this group.",
-    render: (payload) => renderBooksCompact(payload, { groupId, canRemove: false }),
+    render: (payload) => renderGroupViewBooks(payload),
     formatStatus: (payload, results, context) =>
       groupBookPageStatus(payload, results, context.url),
     onLoaded: (_payload, _results, context) => {
@@ -172,7 +174,7 @@ export async function initGroupView() {
     prevBtn: membersPrev,
     initialUrl: `/api/v1/library/groups/${encodeURIComponent(String(groupId))}/memberships/`,
     emptyText: "No members.",
-    render: (payload) => renderMembersReadOnly(payload),
+    render: (payload) => renderGroupViewMembers(payload),
   });
 
   if (shelvesStatus && shelvesResults && shelvesNext && shelvesPrev) {
@@ -181,9 +183,9 @@ export async function initGroupView() {
       resultsEl: shelvesResults,
       nextBtn: shelvesNext,
       prevBtn: shelvesPrev,
-      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}`,
+      initialUrl: `/api/v1/shelves/?owner_group=${encodeURIComponent(String(groupId))}&include_preview_books=true`,
       emptyText: "No shelves yet.",
-      render: (payload) => renderGroupShelvesCompact(payload, { canEdit: false }),
+      render: (payload) => renderGroupViewShelves(payload),
     });
   }
 }

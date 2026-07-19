@@ -74,6 +74,16 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, 'aria-label="Group books pagination"')
         self.assertContains(response, 'id="group-view-members-results"')
         self.assertContains(response, 'id="group-view-shelves-results"')
+        html = response.content.decode("utf-8")
+        root_start = html.index('id="group-view-root"')
+        tabs_start = html.index('aria-label="Group view tabs"', root_start)
+        panel_start = html.index('id="tab-books" class="card tab-panel"', root_start)
+        self.assertLess(tabs_start, panel_start)
+        self.assertNotIn('id="group-view-root" class="card', html)
+        self.assertNotIn(">Details</h2>", html)
+        self.assertNotIn(">Books</h2>", html)
+        self.assertNotIn(">Members</h2>", html)
+        self.assertNotIn(">Shelves</h2>", html)
 
     def test_authenticated_group_detail_malformed_id_returns_404(self):
         self.client.force_login(self.user)
