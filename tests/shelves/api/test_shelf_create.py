@@ -4,6 +4,7 @@ import pytest
 from rest_framework import status
 
 from core import server_settings
+from shelves.models import ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import assert_response, payload_dict, response_data_dict
 
@@ -177,8 +178,29 @@ class ShelfCreateEndpointTests(BaseShelvesAPITest):
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
         listed_id = response_data_dict(r2)["id"]
 
+        owner_results = response_data_dict(
+            assert_response(self.client.get("/api/v1/shelves/"))
+        )["results"]
+        owner_ids = {row["id"] for row in owner_results}
+        self.assertIn(private_id, owner_ids)
+        self.assertIn(listed_id, owner_ids)
+
         self.client.logout()
         self.client.login(username="other", password="pw")
+        empty_listed_resp = assert_response(self.client.get("/api/v1/shelves/"))
+        self.assertEqual(empty_listed_resp.status_code, status.HTTP_200_OK)
+        empty_ids = {
+            row["id"]
+            for row in response_data_dict(empty_listed_resp)["results"]
+        }
+        self.assertNotIn(listed_id, empty_ids)
+        self.assertNotIn(private_id, empty_ids)
+
+        ShelfItem.objects.create(
+            shelf_id=listed_id,
+            book=self.book_public,
+            added_by=self.reader,
+        )
         list_resp = assert_response(self.client.get("/api/v1/shelves/"))
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
         results = response_data_dict(list_resp)["results"]
