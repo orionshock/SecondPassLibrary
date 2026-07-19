@@ -230,9 +230,10 @@ Default/fallback behavior:
 
 `advanced_library_groups_enabled` is off by default. Disabled means the server
 is centered on Common Room/Public Library. Product UI hides advanced group
-management, group controls, group-owned shelf creation controls, and group
-membership management. Normal group mutation API endpoints are blocked while
-disabled.
+management, book group relationship controls, custom-group selectors, and group
+membership management. Public/Common Room remains a real access scope, and
+supported group-scoped API reads may expose it. Normal group mutation API
+endpoints are blocked while disabled.
 
 An Owner can enable advanced library groups from Product UI with an explicit
 confirmation. Product UI does not offer a disable action after enablement;
@@ -244,6 +245,11 @@ feature. Public Library/Common Room remains available while advanced groups are
 disabled: Public display name/description are still managed through Server
 Settings, and librarian/manager Public book assignment behavior remains
 available.
+
+Simple mode does not disable shelves. User-owned private/listed shelves retain
+their normal ownership and visibility, and Public group-owned shelves retain
+their normal group ownership and visibility. Owner-managed Public display name
+and description changes continue through Server Settings.
 
 Role constraints:
 

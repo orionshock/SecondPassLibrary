@@ -107,6 +107,9 @@ Public group shelves:
 - Public group shelves are editable only by Owner/Manager/Librarian
 - Public group shelves follow normal Public group membership visibility; Public
   is not a universal shelf visibility bypass.
+- These ownership and visibility rules apply in both simple and advanced group
+  modes. Simple mode hides advanced group relationship/management UI; it does
+  not disable user-owned shelves or Public group-owned shelves.
 
 Client API bearer-token requests are narrower than product UI/session-auth requests:
 

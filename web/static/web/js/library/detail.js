@@ -2,6 +2,7 @@ import { fetchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
 import {
   $,
+  advancedLibraryGroupsEnabled,
   loadMeAndInitShell,
   setGlobalError,
   setGlobalErrorFromError,
@@ -316,7 +317,8 @@ export async function initBookDetail() {
   const catalogTagsBody = $("#book-catalog-tags-body");
   const groupsSection = $("#book-groups");
   const groupsBody = $("#book-groups-body");
-  const groupsFeatureEnabled = !!groupsSection && !!groupsBody;
+  const groupsFeatureEnabled =
+    advancedLibraryGroupsEnabled() && !!groupsSection && !!groupsBody;
   const shelvesSection = $("#book-shelves");
   const shelvesBody = $("#book-shelves-body");
   const downloadLink = $("#book-download-link");

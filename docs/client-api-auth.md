@@ -131,7 +131,8 @@ Library details:
 - Book detail `groups` contains the same visibility-scoped group summaries as
   session-authenticated detail (`id`, `name`, `description`, and
   `is_public_group`). It contains no membership or user data. In simple mode,
-  only Public/Common Room can appear.
+  only Public/Common Room can appear. Reader clients may use that API context;
+  the Product UI itself hides the Book Detail Groups tab in simple mode.
 - Author, Series, Group, and Shelf list/detail payloads may opt into
   `preview_books` with `include_preview_books=true`; preview items contain only
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author

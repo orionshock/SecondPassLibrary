@@ -26,6 +26,9 @@ class BookDetailLayoutTests(ProductUiTestCase):
         template = Path("web/templates/web/library/book_detail.html").read_text(
             encoding="utf-8"
         )
+        detail_js = Path("web/static/web/js/library/detail.js").read_text(
+            encoding="utf-8"
+        )
 
         identity_at = template.index('class="book-detail__identity"')
         sections_at = template.index('class="book-detail__sections"')
@@ -38,7 +41,8 @@ class BookDetailLayoutTests(ProductUiTestCase):
         self.assertIn('id="book-summary"', template)
         self.assertIn('data-tab="shelves"', template)
         self.assertIn('data-tab="groups"', template)
-        self.assertNotIn("{% if advanced_library_groups_enabled %}", template)
+        self.assertIn("{% if advanced_library_groups_enabled %}", template)
+        self.assertIn("advancedLibraryGroupsEnabled()", detail_js)
         self.assertIn('data-tab="metadata"', template)
         self.assertNotIn('id="book-cover-edit"', template)
         self.assertNotIn('id="book-cover-modal"', template)

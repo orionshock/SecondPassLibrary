@@ -432,7 +432,9 @@ Book detail responses include a read-only `groups` array containing only group
 assignments visible to the caller. Each summary contains `id`, `name`,
 `description`, and `is_public_group`; membership records and users are not
 included. In simple mode this array may include Public/Common Room, while
-custom groups remain hidden. Book list rows do not include `groups`.
+custom groups remain hidden. This API representation does not imply a Product
+UI relationship tab: Book Detail hides its Groups tab in simple mode. Book list
+rows do not include `groups`.
 
 The Groups add-book picker uses
 `GET /api/v1/library/books/?q=<title>&exclude_group=<group_id>`. The optional

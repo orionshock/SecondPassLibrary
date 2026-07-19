@@ -38,7 +38,9 @@
     <section class="book-detail__sections" aria-label="Book relationships and metadata">
       <div class="tabs" role="tablist" aria-label="Book detail tabs">
         <button class="tab-button is-active" type="button" data-tab="shelves">Shelves</button>
+        {% if advanced_library_groups_enabled %}
         <button class="tab-button" type="button" data-tab="groups">Groups</button>
+        {% endif %}
         <button class="tab-button" type="button" data-tab="metadata">Metadata</button>
       </div>
 
@@ -46,9 +48,11 @@
         <div id="book-shelves-body" class="muted"></div>
       </div>
 
+      {% if advanced_library_groups_enabled %}
       <div id="book-groups" class="tab-panel is-hidden" data-tab-panel="groups">
         <div id="book-groups-body" class="muted"></div>
       </div>
+      {% endif %}
 
       <div id="tab-metadata" class="tab-panel is-hidden" data-tab-panel="metadata">
         <div class="book-detail__metadata-grid">
