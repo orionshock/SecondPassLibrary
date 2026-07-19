@@ -2,45 +2,38 @@
 
 {% block page_id %}group-new{% endblock %}
 
-{% block title %}New group - {{ server_name }}{% endblock %}
+{% block title %}New Group - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
-  {% include "web/partials/breadcrumbs.html" with parent_href="/groups/" parent_label="Groups" current_label="New" only %}
+  {% include "web/partials/breadcrumbs.html" with parent_href="/groups/" parent_label="Groups" current_label="New Group" only %}
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <h1 class="page-title">New group</h1>
-      <div class="muted">Owner and Manager only.</div>
+      <h1 class="page-title">New Group</h1>
     </div>
   </div>
 
   <div id="group-new-not-allowed" class="error is-hidden">Not allowed.</div>
 
-  <section id="group-new-root" class="card is-hidden">
-    <h2 class="card__title">Details</h2>
-
-    <form id="group-new-form" style="margin-top: 10px;">
+  <section id="group-new-root" class="group-new-root is-hidden">
+    <form id="group-new-form" class="form group-new-form">
       {% csrf_token %}
-      <div class="kv">
-        <div class="kv__k"><label for="group-new-name">Name</label></div>
-        <div class="kv__v">
-          <input id="group-new-name" style="width: 100%;" placeholder="Group name" />
-        </div>
+      <div class="group-new-field">
+        <label for="group-new-name">Name</label>
+        <input id="group-new-name" class="form-control" placeholder="Group name" />
       </div>
 
-      <div class="kv" style="margin-top: 10px;">
-        <div class="kv__k"><label for="group-new-description">Description</label></div>
-        <div class="kv__v">
-          <textarea id="group-new-description" rows="4" style="width: 100%;"></textarea>
-        </div>
+      <div class="group-new-field">
+        <label for="group-new-description">Description</label>
+        <textarea id="group-new-description" class="form-control form-control--textarea" rows="5"></textarea>
       </div>
 
-      <div style="margin-top: 10px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
-        <button id="group-new-save" class="button" type="submit">Create group</button>
-        <a class="button" href="/groups/">Cancel</a>
+      <div class="form-actions group-new-actions">
         <span id="group-new-status" class="muted"></span>
+        <a class="button" href="/groups/">Cancel</a>
+        <button id="group-new-save" class="button" type="submit">Create group</button>
       </div>
     </form>
   </section>

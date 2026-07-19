@@ -1,3 +1,33 @@
+.group-new-root,
+.group-new-form {
+  width: 100%;
+  max-width: 860px;
+  min-width: 0;
+}
+.group-new-form {
+  display: grid;
+  gap: 18px;
+}
+.group-new-field {
+  display: grid;
+  gap: 7px;
+}
+.group-new-field .form-control {
+  box-sizing: border-box;
+  width: 100%;
+}
+.group-new-field textarea {
+  min-height: 116px;
+  resize: vertical;
+}
+.group-new-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+.group-new-actions .muted {
+  margin-right: auto;
+}
+
 .group-edit-summary {
   padding-bottom: 12px;
   margin-bottom: 12px;

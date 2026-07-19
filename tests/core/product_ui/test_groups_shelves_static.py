@@ -59,6 +59,26 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-page="group-new"')
         self.assertContains(response, 'id="group-new-form"')
+        self.assertContains(response, "<title>New Group -")
+        self.assertContains(response, '<h1 class="page-title">New Group</h1>')
+        self.assertContains(response, 'aria-current="page">New Group</li>')
+        self.assertNotContains(response, "Owner and Manager only.")
+        self.assertContains(response, 'id="group-new-root" class="group-new-root is-hidden"')
+        self.assertNotContains(response, 'id="group-new-root" class="card')
+        self.assertContains(response, 'class="form group-new-form"')
+        self.assertContains(response, 'class="group-new-field"', count=2)
+        self.assertContains(response, 'id="group-new-save"')
+        self.assertContains(response, 'href="/groups/">Cancel</a>')
+
+        html = response.content.decode("utf-8")
+        form = html.split('id="group-new-form"', 1)[1].split("</form>", 1)[0]
+        self.assertNotIn('class="kv"', form)
+        self.assertLess(form.index('for="group-new-name"'), form.index('id="group-new-name"'))
+        self.assertLess(
+            form.index('for="group-new-description"'),
+            form.index('id="group-new-description"'),
+        )
+        self.assertIn("group-new-actions", form)
 
     def test_authenticated_group_detail_returns_200_and_has_container(self):
         server_settings.enable_advanced_library_groups()
