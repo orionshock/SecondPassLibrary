@@ -29,4 +29,8 @@ python manage.py check --deploy
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
-exec gunicorn secondpass.wsgi:application --bind 0.0.0.0:8000
+exec python -m uvicorn secondpass.asgi:application \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 1 \
+    --no-access-log

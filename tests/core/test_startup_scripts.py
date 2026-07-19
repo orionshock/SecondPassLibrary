@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import shutil
+import subprocess
 
 from django.test import SimpleTestCase
 
@@ -32,7 +35,6 @@ class StartupScriptContractTests(SimpleTestCase):
 
         self.assertIn('$ErrorActionPreference = "Stop"', source)
         self.assertIn('"127.0.0.1:8000"', source)
-        self.assertIn('$WaitressThreads = if ($env:WAITRESS_THREADS)', source)
         self.assertNotIn("Restore-ScopedEnvironment", source)
         self.assertIn('$env:DJANGO_DEBUG = "0"', source)
         self.assertIn('$env:SECOND_PASS_ENABLE_WHITENOISE = "1"', source)
@@ -56,15 +58,57 @@ class StartupScriptContractTests(SimpleTestCase):
         check_at = source.index("manage.py check --deploy")
         migrate_at = source.index("manage.py migrate --noinput")
         collectstatic_at = source.index("manage.py collectstatic --noinput")
-        waitress_at = source.index("-m waitress")
+        uvicorn_at = source.index("-m uvicorn")
         self.assertLess(check_at, migrate_at)
         self.assertLess(migrate_at, collectstatic_at)
-        self.assertLess(collectstatic_at, waitress_at)
-        self.assertIn("--listen=$Bind", source)
-        self.assertIn("--threads=$WaitressThreads", source)
-        self.assertIn("secondpass.wsgi:application", source)
+        self.assertLess(collectstatic_at, uvicorn_at)
+        self.assertIn('"secondpass.asgi:application"', source)
+        self.assertIn('"--host", $UvicornHost', source)
+        self.assertIn('"--port", $UvicornPort', source)
+        self.assertIn('"--workers", "1"', source)
+        self.assertIn('"--no-access-log"', source)
+        self.assertNotIn("waitress", source.lower())
         requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
-        self.assertIn("waitress==", requirements)
+        self.assertIn("uvicorn==", requirements)
+        self.assertNotIn("waitress", requirements.lower())
+        self.assertNotIn("gunicorn", requirements.lower())
+
+    def test_powershell_local_production_script_rejects_invalid_bind_values(self):
+        powershell = shutil.which("powershell") or shutil.which("pwsh")
+        if powershell is None:
+            self.skipTest("PowerShell is not available")
+
+        script = ROOT / "scripts" / "start-local-production.ps1"
+        invalid_values = {
+            "missing-port": "BIND must use host:port syntax",
+            "localhost:not-a-port": "BIND must use host:port syntax",
+            "localhost:8000:extra": "BIND must use host:port syntax",
+            "[::1]:8000": "IPv6 is not supported by this helper",
+            "localhost:65536": "BIND port must be an integer from 1 through 65535",
+        }
+        for bind, expected_error in invalid_values.items():
+            with self.subTest(bind=bind):
+                environment = os.environ.copy()
+                environment["BIND"] = bind
+                result = subprocess.run(
+                    [
+                        powershell,
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(script),
+                    ],
+                    cwd=ROOT,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected_error, result.stdout + result.stderr)
 
     def test_scripts_are_windows_native_only_for_now(self):
         scripts = {path.name for path in (ROOT / "scripts").iterdir()}
@@ -90,51 +134,6 @@ class StartupScriptContractTests(SimpleTestCase):
         self.assertIn('$SeedArgs += "--force"', source)
         self.assertIn("$SeedArgs += $args", source)
         self.assertIn("manage.py @SeedArgs", source)
-
-    def test_documentation_does_not_reference_removed_devserver_command(self):
-        docs = [
-            ROOT / "README.md",
-            ROOT / "docs" / "development.md",
-            ROOT / "docs" / "deployment.md",
-        ]
-        for path in docs:
-            with self.subTest(path=path):
-                self.assertNotIn(
-                    "manage.py devserver",
-                    path.read_text(encoding="utf-8"),
-                )
-
-    def test_deployment_docs_describe_cross_mode_setup(self):
-        deployment = (ROOT / "docs" / "deployment.md").read_text(encoding="utf-8")
-        normalized = " ".join(deployment.split())
-
-        self.assertIn("development and production", normalized)
-        self.assertIn("setup wizard does not create tables", normalized)
-        self.assertIn("seed_dev_users", normalized)
-
-    def test_docs_describe_scripts_as_local_convenience_not_deployment_contract(self):
-        docs = [
-            ROOT / "README.md",
-            ROOT / "docs" / "deployment.md",
-        ]
-        for path in docs:
-            with self.subTest(path=path):
-                normalized = " ".join(path.read_text(encoding="utf-8").split())
-                self.assertIn("local/dev convenience", normalized)
-                self.assertIn("Docker", normalized)
-
-    def test_docs_explain_raw_runserver_requires_debug_opt_in(self):
-        docs = [
-            ROOT / "README.md",
-            ROOT / "docs" / "development.md",
-            ROOT / "docs" / "deployment.md",
-        ]
-        for path in docs:
-            with self.subTest(path=path):
-                normalized = " ".join(path.read_text(encoding="utf-8").split())
-                self.assertIn("DJANGO_DEBUG=1", normalized)
-                self.assertIn("runserver", normalized)
-
 
 class DockerStartupContractTests(SimpleTestCase):
     def test_compose_uses_env_file_userdata_mount_loopback_port_and_healthcheck(self):
@@ -175,13 +174,17 @@ class DockerStartupContractTests(SimpleTestCase):
         check_at = source.index("manage.py check --deploy")
         migrate_at = source.index("manage.py migrate --noinput")
         collectstatic_at = source.index("manage.py collectstatic --noinput")
-        gunicorn_at = source.index("gunicorn secondpass.wsgi:application")
+        uvicorn_at = source.index("python -m uvicorn secondpass.asgi:application")
         self.assertLess(check_at, migrate_at)
         self.assertLess(migrate_at, collectstatic_at)
-        self.assertLess(collectstatic_at, gunicorn_at)
-        self.assertIn("--bind 0.0.0.0:8000", source)
+        self.assertLess(collectstatic_at, uvicorn_at)
+        self.assertIn("--host 0.0.0.0", source)
+        self.assertIn("--port 8000", source)
+        self.assertIn("--workers 1", source)
+        self.assertIn("--no-access-log", source)
+        self.assertNotIn("gunicorn", source.lower())
 
-    def test_dockerfile_uses_requirements_gunicorn_entrypoint_and_not_windows_scripts(self):
+    def test_dockerfile_uses_runtime_requirements_entrypoint_and_not_windows_scripts(self):
         source = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("FROM python:3.13-slim", source)

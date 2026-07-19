@@ -222,7 +222,12 @@ running raw `runserver`.
 
 For production-likeness, use `.\scripts\start-local-production.ps1`; it keeps
 `DJANGO_DEBUG=0`, runs `collectstatic`, and uses WhiteNoise in manifest-backed
-mode.
+mode. It runs one direct Uvicorn worker against
+`secondpass.asgi:application`, matching the Docker application target and
+runtime path. Access logs are disabled in both deployment-like paths. Static
+and media routing is unchanged: covers remain public display assets, while
+EPUB downloads remain authenticated application/API responses. Proxy-header
+trust remains deployment-owned and is not broadened by these startup helpers.
 
 The development script also sets `DJANGO_ALLOWED_HOSTS` to
 `localhost,127.0.0.1,[::1]` when it is not already set. Preserve or override

@@ -130,7 +130,10 @@ hostnames or IP addresses.
 For localhost production-mode testing on Windows, use
 `.\scripts\start-local-production.ps1`; it sets local-safe `DEBUG=0`
 environment defaults before running deploy checks, migrations, static
-collection, and Waitress. The scripts remain local/dev convenience helpers.
+collection, then starts one Uvicorn worker with `secondpass.asgi:application`.
+Uvicorn access logs are disabled in this production-like path. The scripts
+remain local/dev convenience helpers. Normal development continues to use
+Django's `runserver` through `start-dev.ps1`.
 Docker Compose is also a currently supported deployment path and owns the
 container process and environment wiring described below.
 
@@ -151,6 +154,10 @@ set `DJANGO_ALLOWED_HOSTS` to the hostnames or LAN IPs users will use. Edit
 The container runs as a non-root `secondpass` user and serves Django on
 `127.0.0.1:8000` by default for a reverse proxy on the same host. Direct LAN or
 public exposure requires intentionally changing the compose port binding. The
+`secondpasslibrary` service runs one direct Uvicorn worker against
+`secondpass.asgi:application`, with access logs disabled for runtime parity and
+lower routine request noise. Proxy-header trust remains an operator deployment
+concern and is not broadened by the supplied configuration. The
 container bind-mounts `./userdata` for the SQLite database, stored EPUBs,
 covers, and imports, and its healthcheck uses `/api/v1/health/`.
 

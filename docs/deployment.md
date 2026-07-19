@@ -25,9 +25,10 @@ unrelated media files.
 
 ## Docker Compose
 
-The example deployment runs one Django/Gunicorn service named
+The example deployment runs one Django/Uvicorn service named
 `secondpasslibrary`, uses SQLite, and bind-mounts `./userdata` at
-`/app/userdata`. Reverse proxy and TLS configuration remain deployment-owned.
+`/app/userdata`. Uvicorn serves `secondpass.asgi:application` directly with one
+worker. Reverse proxy and TLS configuration remain deployment-owned.
 
 First run:
 
@@ -64,11 +65,13 @@ Startup performs:
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
 3. `python manage.py collectstatic --noinput`
-4. `gunicorn secondpass.wsgi:application --bind 0.0.0.0:8000`
+4. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-access-log`
 
 The healthcheck calls `/api/v1/health/` inside the container. Docker does not
 generate `DJANGO_SECRET_KEY`; startup fails when it is missing or still uses
-the documented placeholder.
+the documented placeholder. Uvicorn access logs are disabled to match the
+Windows production-like path and avoid routine request noise; startup,
+shutdown, application, and error output still use stdout/stderr.
 
 Update with:
 
@@ -96,7 +99,8 @@ Generated `var/static/` output is not user data and can be regenerated with
 Do not expose `userdata/` or all of `userdata/media/` through a web server.
 WhiteNoise serves packaged application assets under `/static/`. Django exposes
 only `/media/covers/` as public display assets. Stored EPUBs are protected and
-must be downloaded through authenticated application/API endpoints.
+downloads are authenticated application/API responses. This static and media
+behavior is the same under direct Uvicorn as it was under the previous runtime.
 
 ## Reverse proxy and HTTPS
 
@@ -117,6 +121,12 @@ A direct HTTP LAN deployment may leave secure cookies and forwarded-header
 trust disabled. Never enable forwarded host/protocol trust for an untrusted or
 pass-through proxy. Django's deploy check may report HTTPS/HSTS warnings whose
 resolution depends on the deployment boundary.
+
+Uvicorn retains its safe proxy-header defaults. The supplied startup commands
+do not broaden which proxy addresses are trusted. If a deployment needs a
+different trusted proxy address or network, configure that deliberately at the
+deployment boundary together with Django's forwarded-protocol and forwarded-
+host settings.
 
 ## Service Hatch and logging
 
@@ -167,10 +177,11 @@ For localhost production-mode checks:
 ```
 
 The helper uses `DJANGO_DEBUG=0`, runs deploy checks, migrations, and static
-collection, then starts Waitress on `127.0.0.1:8000` by default. It supplies
-local-safe defaults and is not a production secret-management mechanism. It
-enables Django Admin only when `SECOND_PASS_ENABLE_DJANGO_ADMIN` is unset and
-respects an explicit `0`.
+collection, then starts one direct Uvicorn worker with
+`secondpass.asgi:application` on `127.0.0.1:8000` by default. Access logs are
+disabled, matching Docker. It supplies local-safe defaults and is not a
+production secret-management mechanism. It enables Django Admin only when
+`SECOND_PASS_ENABLE_DJANGO_ADMIN` is unset and respects an explicit `0`.
 
 Useful environment controls include:
 
@@ -183,9 +194,10 @@ Useful environment controls include:
 - `SECOND_PASS_USERDATA_DIR`: runtime directory; default `./userdata`
 - `SECOND_PASS_ENABLE_DJANGO_ADMIN`: register `/admin/` when set to `1`
 - `APP_UID` / `APP_GID`: container app-user identity at build time
-- `BIND`: Windows helper bind address
-- `WAITRESS_THREADS`: Windows helper thread count
+- `BIND`: Windows helper `host:port`; defaults to `127.0.0.1:8000` and accepts
+  hostnames or IPv4 addresses, but not IPv6 syntax
 
-Raw `runserver` or WSGI commands are usable after migrations have been applied
-manually. Prefer the provided startup paths so schema checks and migrations
-finish before the web process starts.
+Normal development remains on Django's `runserver`. Raw server commands are
+usable after migrations have been applied manually. Prefer the provided
+startup paths so schema checks and migrations finish before the web process
+starts.
