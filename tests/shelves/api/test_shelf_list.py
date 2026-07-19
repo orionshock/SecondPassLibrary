@@ -17,7 +17,7 @@ pytestmark = [pytest.mark.integration]
 
 
 class ShelfListEndpointTests(BaseShelvesAPITest):
-    def test_list_scope_personal_and_shared_preserve_visibility_rules(self):
+    def test_list_scopes_partition_visible_shelves_and_preserve_empty_rows(self):
         own_private = Shelf.objects.create(
             name="Own Private",
             owner_type=Shelf.OWNER_TYPE_USER,
@@ -74,6 +74,9 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
                 str(group_shelf.id),
             },
         )
+        all_response = assert_response(self.client.get("/api/v1/shelves/?scope=all"))
+        self.assertEqual(all_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data_dict(default_response), response_data_dict(all_response))
 
         personal_response = assert_response(
             self.client.get("/api/v1/shelves/?scope=personal"),
@@ -81,6 +84,11 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
         self.assertEqual(personal_response.status_code, status.HTTP_200_OK)
         personal_ids = {row["id"] for row in response_data_list(personal_response)}
         self.assertEqual(personal_ids, {str(own_private.id), str(own_listed.id)})
+        personal_page = assert_response(
+            self.client.get("/api/v1/shelves/?scope=personal&page_size=1")
+        )
+        self.assertEqual(response_data_dict(personal_page)["count"], 2)
+        self.assertIn("scope=personal", response_data_dict(personal_page)["next"])
 
         shared_response = assert_response(
             self.client.get("/api/v1/shelves/?scope=shared"),
@@ -88,23 +96,25 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
         self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
         shared_rows = response_data_list(shared_response)
         shared_ids = {row["id"] for row in shared_rows}
-        self.assertEqual(shared_ids, {str(other_listed.id), str(group_shelf.id)})
+        self.assertEqual(shared_ids, {str(other_listed.id)})
         self.assertNotIn(str(other_private.id), shared_ids)
         other_listed_row = next(
             row for row in shared_rows if row["id"] == str(other_listed.id)
-        )
-        group_shelf_row = next(
-            row for row in shared_rows if row["id"] == str(group_shelf.id)
         )
         self._assert_compact_user_payload(
             payload_dict(other_listed_row, "owner_user"),
             user=self.other,
         )
-        self.assertEqual(
-            payload_dict(group_shelf_row, "owner_group")["name"],
-            "G",
-        )
         self.assertEqual(other_listed_row["item_count"], 1)
+
+        group_response = assert_response(
+            self.client.get("/api/v1/shelves/?scope=group")
+        )
+        self.assertEqual(group_response.status_code, status.HTTP_200_OK)
+        group_rows = response_data_list(group_response)
+        self.assertEqual({row["id"] for row in group_rows}, {str(group_shelf.id)})
+        group_shelf_row = group_rows[0]
+        self.assertEqual(payload_dict(group_shelf_row, "owner_group")["name"], "G")
         self.assertEqual(group_shelf_row["item_count"], 0)
 
         for username in ("manager", "owner"):
@@ -192,7 +202,7 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
 
         shared_response = assert_response(
             self.client.get(
-                f"/api/v1/shelves/?scope=shared&owner_group={self.group.id}"
+                f"/api/v1/shelves/?scope=group&owner_group={self.group.id}"
             ),
         )
         self.assertEqual(shared_response.status_code, status.HTTP_200_OK)
@@ -305,7 +315,7 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
 
         response = assert_response(
             self.client.get(
-                f"/api/v1/shelves/?owner_group={self.group.id}&ordering=name&include_preview_books=true"
+                f"/api/v1/shelves/?scope=group&owner_group={self.group.id}&ordering=name&include_preview_books=true"
             )
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -333,6 +343,10 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
         )
         self.assertEqual(invalid_scope.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("scope", response_data_dict(invalid_scope))
+        self.assertEqual(
+            response_data_dict(invalid_scope)["scope"],
+            "Must be one of: all, personal, shared, group.",
+        )
 
         malformed_owner_group = assert_response(
             self.client.get("/api/v1/shelves/?owner_group=not-a-uuid"),

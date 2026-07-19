@@ -26,8 +26,9 @@ def test_browser_completes_setup_and_opens_seeded_install(
     assert response is not None
     assert response.status == 200
     expect(page.get_by_role("heading", name="Shelves", exact=True)).to_be_visible()
-    expect(page.get_by_role("heading", name="Personal Shelves")).to_be_visible()
-    expect(page.get_by_role("heading", name="Shared Shelves")).to_be_visible()
+    expect(page.get_by_role("tab", name="Personal")).to_be_visible()
+    expect(page.get_by_role("tab", name="Shared by Others")).to_be_visible()
+    expect(page.get_by_role("tab", name="Group Shelves")).to_be_visible()
 
 
 def test_book_edit_persists_aggregate_edits_and_renders_owned_file(

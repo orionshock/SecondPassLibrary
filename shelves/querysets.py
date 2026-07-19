@@ -53,9 +53,9 @@ def parse_shelf_list_filters(query_params) -> ShelfListFilters:
     scope: str | None = None
     if "scope" in query_params:
         scope = str(query_params.get("scope") or "").strip().lower()
-        if scope not in {"personal", "shared"}:
+        if scope not in {"all", "personal", "shared", "group"}:
             raise ValidationError(
-                {"scope": "Must be one of: personal, shared."}
+                {"scope": "Must be one of: all, personal, shared, group."}
             )
 
     owner_group_id = _parse_uuid_query_param(query_params, "owner_group")
@@ -93,9 +93,13 @@ def build_visible_shelf_list_queryset(
             owner_user=user,
         )
     elif filters.scope == "shared":
-        visible_qs = visible_qs.exclude(
+        visible_qs = visible_qs.filter(
             owner_type=Shelf.OWNER_TYPE_USER,
-            owner_user=user,
+            visibility=Shelf.VISIBILITY_LISTED,
+        ).exclude(owner_user=user)
+    elif filters.scope == "group":
+        visible_qs = visible_qs.filter(
+            owner_type=Shelf.OWNER_TYPE_GROUP,
         )
 
     if filters.owner_group_id is not None:

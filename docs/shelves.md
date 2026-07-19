@@ -170,15 +170,17 @@ Shelves are under `/api/v1/shelves/`:
 
 - `GET /api/v1/shelves/` (paginated)
   - filters:
-    - `?scope=personal` (visible user-owned shelves owned by the current user)
-    - `?scope=shared` (visible shelves not owned by the current user)
+    - omitted `scope` or `?scope=all` (combined visible shelves)
+    - `?scope=personal` (current user's user-owned shelves, including empty)
+    - `?scope=shared` (other users' listed shelves with a viewer-visible item)
+    - `?scope=group` (visible group-owned shelves, including empty)
     - `?owner_group=<group_id>` (group-owned shelves for a group)
     - `?book=<book_id>` (shelves containing the book; includes `matched_item_id` when applicable)
   - validation/combinations:
-    - `scope` accepts only `personal` or `shared`
+    - `scope` accepts only `all`, `personal`, `shared`, or `group`
     - `owner_group` and `book` must be valid UUIDs
     - `scope=personal&owner_group=<group_id>` is invalid and returns `400`
-    - `scope=shared&owner_group=<group_id>` is valid
+    - `scope=group&owner_group=<group_id>` is valid
     - malformed or incompatible supplied filters return `400`
 - `POST /api/v1/shelves/` (create)
 - `GET /api/v1/shelves/<id>/`
@@ -193,7 +195,9 @@ Shelves are under `/api/v1/shelves/`:
 
 Notes:
 
-- Omitting `scope` preserves the combined visible-shelves list.
+- Omitting `scope` and `scope=all` return the same combined visible-shelves list.
+- All scopes use the normal DRF paginated envelope; no grouped response is returned.
+- Session and bearer reads use the same scope rules.
 - Scope filters do not bypass visibility policy. Other users' private shelves are excluded from personal, shared, and unscoped lists, including for Manager and Owner users.
 - Shelf item `book` summaries include `cover_url` when available.
 - Shelf item positions are stored zero-based and canonicalized as contiguous integers.
@@ -209,7 +213,7 @@ Notes:
 
 Product UI routes:
 
-- `GET /shelves/` (independently paginated Personal Shelves and Shared Shelves lists)
+- `GET /shelves/` (URL-backed Personal, Shared by Others, and Group Shelves tabs)
 - `GET /shelves/new/` (create)
 - `GET /shelves/<shelf_id>/` (view)
 - `GET /shelves/<shelf_id>/edit/` (edit/manage items)

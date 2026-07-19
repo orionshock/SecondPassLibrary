@@ -65,7 +65,9 @@ class ShelfBookFilterEndpointTests(BaseShelvesAPITest):
         item_id = response_data_dict(add)["id"]
 
         list_resp = assert_response(
-            self.client.get(f"/api/v1/shelves/?book={self.book_public.id}")
+            self.client.get(
+                f"/api/v1/shelves/?scope=personal&book={self.book_public.id}"
+            )
         )
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
         results = response_data_list(list_resp)

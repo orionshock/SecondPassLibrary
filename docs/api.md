@@ -323,9 +323,11 @@ Endpoints:
 
 List filters:
 
-- `GET /api/v1/shelves/?scope=personal` returns visible user-owned shelves owned by the current user.
-- `GET /api/v1/shelves/?scope=shared` returns visible shelves not owned by the current user, including visible group shelves and other users' listed shelves.
-- Omitting `scope` preserves the existing combined visible-shelves list.
+- `GET /api/v1/shelves/?scope=personal` returns the current user's user-owned shelves, including empty shelves.
+- `GET /api/v1/shelves/?scope=shared` returns other users' listed shelves with at least one viewer-visible item.
+- `GET /api/v1/shelves/?scope=group` returns visible group-owned shelves, including empty shelves.
+- Omitting `scope` and `scope=all` return the same combined visible-shelves list.
+- Every scope retains the normal DRF paginated list envelope; no grouped/sections response is introduced. Session and bearer reads use the same scope rules.
 - Scope filtering is applied after normal visibility rules; other users' private shelves are excluded from every normal list scope.
 - `GET /api/v1/shelves/?owner_group=<group_id>` filters to group-owned shelves for that group (still visibility-scoped to the caller).
 - `GET /api/v1/shelves/?book=<book_id>` filters to shelves containing the given book (still visibility-scoped to the caller).
@@ -336,10 +338,10 @@ List filters:
   - Missing/blank `ordering` defaults to `name`.
   - Invalid ordering values return `400`.
   - Ordering composes with `scope`, `owner_group`, `book`, pagination, and `include_preview_books=true`.
-- `scope` accepts only `personal` or `shared`; other supplied values return `400`.
+- `scope` accepts only `all`, `personal`, `shared`, or `group`; other supplied values return `400`.
 - `owner_group` and `book` must be valid UUIDs when supplied; malformed values return `400`.
 - `scope=personal` cannot be combined with `owner_group` and returns `400`.
-- `scope=shared` may be combined with `owner_group`.
+- `scope=group` may be combined with `owner_group`.
 
 Shelf payload notes:
 

@@ -54,74 +54,113 @@ function pageNote(payload, rows) {
   return `Showing ${rows.length} of ${Number(payload.count)}.`;
 }
 
-async function createShelfSectionController({
-  statusEl,
-  resultsEl,
-  prevBtn,
-  nextBtn,
-  noteEl,
-  initialUrl,
-  emptyText,
-}) {
-  return createPagedListController({
-    statusEl,
-    resultsEl,
-    prevBtn,
-    nextBtn,
-    noteEl,
-    initialUrl,
-    emptyText,
-    autoLoad: false,
-    clearResultsOnLoad: false,
-    render: renderShelfRows,
-    formatStatus: () => "",
-    formatNote: pageNote,
+const SHELF_SCOPES = new Set(["personal", "shared", "group"]);
+
+export function shelfListState(search) {
+  const params = new URLSearchParams(search || "");
+  const requestedScope = String(params.get("scope") || "").toLowerCase();
+  const scope = SHELF_SCOPES.has(requestedScope) ? requestedScope : "personal";
+  const rawPage = Number.parseInt(params.get("page") || "1", 10);
+  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  return { scope, page };
+}
+
+export function shelfListBrowserHref(scope, page = 1, search = "") {
+  const state = shelfListState(`?scope=${encodeURIComponent(String(scope || ""))}&page=${page}`);
+  const params = new URLSearchParams(search || "");
+  params.set("scope", state.scope);
+  params.delete("page");
+  if (state.page > 1) params.set("page", String(state.page));
+  return `/shelves/?${params.toString()}`;
+}
+
+export function shelfListApiUrl(scope, page = 1) {
+  const state = shelfListState(`?scope=${encodeURIComponent(String(scope || ""))}&page=${page}`);
+  const params = new URLSearchParams({
+    scope: state.scope,
+    include_preview_books: "true",
   });
+  if (state.page > 1) params.set("page", String(state.page));
+  return `/api/v1/shelves/?${params.toString()}`;
+}
+
+export function shelfEmptyText(scope) {
+  if (scope === "shared") return "No shared shelves from other users.";
+  if (scope === "group") return "No group shelves.";
+  return "No personal shelves.";
+}
+
+function pageFromApiUrl(url) {
+  const parsed = new URL(url, window.location.origin);
+  return shelfListState(parsed.search).page;
+}
+
+function setSelectedScope(tabs, scope) {
+  for (const tab of tabs) {
+    const selected = tab.dataset.shelfScope === scope;
+    tab.classList.toggle("is-active", selected);
+    tab.setAttribute("aria-selected", selected ? "true" : "false");
+  }
 }
 
 export async function initShelvesList() {
   await loadMeAndInitShell();
   setGlobalError("");
 
-  const personal = {
-    statusEl: $("#personal-shelves-status"),
-    resultsEl: $("#personal-shelves-results"),
-    prevBtn: $("#personal-shelves-prev"),
-    nextBtn: $("#personal-shelves-next"),
-    noteEl: $("#personal-shelves-page-note"),
-  };
-  const shared = {
-    statusEl: $("#shared-shelves-status"),
-    resultsEl: $("#shared-shelves-results"),
-    prevBtn: $("#shared-shelves-prev"),
-    nextBtn: $("#shared-shelves-next"),
-    noteEl: $("#shared-shelves-page-note"),
-  };
-  if (
-    Object.values(personal).some((element) => !element) ||
-    Object.values(shared).some((element) => !element)
-  ) {
-    return;
+  const statusEl = $("#shelves-status");
+  const resultsEl = $("#shelves-results");
+  const prevBtn = $("#shelves-prev");
+  const nextBtn = $("#shelves-next");
+  const noteEl = $("#shelves-page-note");
+  const tabs = Array.from(document.querySelectorAll("[data-shelf-scope]"));
+  if (!statusEl || !resultsEl || !prevBtn || !nextBtn || !noteEl || !tabs.length) return;
+
+  installShelfCardNavigation(resultsEl);
+  let state = shelfListState(window.location.search);
+  setSelectedScope(tabs, state.scope);
+  window.history.replaceState({}, "", shelfListBrowserHref(state.scope, state.page, window.location.search));
+
+  const controller = await createPagedListController({
+    statusEl,
+    resultsEl,
+    prevBtn,
+    nextBtn,
+    noteEl,
+    initialUrl: shelfListApiUrl(state.scope, state.page),
+    emptyText: shelfEmptyText(state.scope),
+    autoLoad: false,
+    clearResultsOnLoad: false,
+    render: (payload, rows) => renderShelfRows(payload, rows, shelfEmptyText(state.scope)),
+    formatStatus: () => "",
+    formatNote: pageNote,
+    onLoaded: (_payload, _rows, { url, reason }) => {
+      state = { ...state, page: pageFromApiUrl(url) };
+      if (reason === "next" || reason === "previous") {
+        window.history.pushState({}, "", shelfListBrowserHref(state.scope, state.page, window.location.search));
+      }
+    },
+  });
+
+  async function loadState(nextState, { history = "none", reason = "load" } = {}) {
+    state = nextState;
+    setSelectedScope(tabs, state.scope);
+    if (history === "push") {
+      window.history.pushState({}, "", shelfListBrowserHref(state.scope, state.page, window.location.search));
+    }
+    await controller.load(shelfListApiUrl(state.scope, state.page), { reason });
   }
 
-  installShelfCardNavigation(personal.resultsEl);
-  installShelfCardNavigation(shared.resultsEl);
+  for (const tab of tabs) {
+    tab.addEventListener("click", async () => {
+      const scope = shelfListState(`?scope=${tab.dataset.shelfScope || ""}`).scope;
+      if (scope === state.scope) return;
+      await loadState({ scope, page: 1 }, { history: "push", reason: "scope" });
+    });
+  }
 
-  const [personalController, sharedController] = await Promise.all([
-    createShelfSectionController({
-      ...personal,
-      initialUrl: "/api/v1/shelves/?scope=personal&include_preview_books=true",
-      emptyText: "No personal shelves.",
-    }),
-    createShelfSectionController({
-      ...shared,
-      initialUrl: "/api/v1/shelves/?scope=shared&include_preview_books=true",
-      emptyText: "No shared shelves.",
-    }),
-  ]);
+  window.addEventListener("popstate", async () => {
+    await loadState(shelfListState(window.location.search), { reason: "popstate" });
+  });
 
-  await Promise.all([
-    personalController.loadFirst(),
-    sharedController.loadFirst(),
-  ]);
+  await loadState(state);
 }

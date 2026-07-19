@@ -120,10 +120,34 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         shared_rows = payload_list(response_data_dict(shared_response), "results")
         shared_by_id = {str(row["id"]): row for row in shared_rows}
         self.assertIn(listed_shelf_id, shared_by_id)
-        self.assertIn(group_shelf_id, shared_by_id)
+        self.assertNotIn(group_shelf_id, shared_by_id)
         self.assertNotIn(private_shelf_id, shared_by_id)
         self.assertFalse(shared_by_id[listed_shelf_id]["can_edit"])
-        self.assertFalse(shared_by_id[group_shelf_id]["can_edit"])
+
+        group_response = assert_response(
+            self.client.get(
+                "/api/v1/shelves/?scope=group",
+                HTTP_AUTHORIZATION=self._auth,
+            ),
+        )
+        group_rows = payload_list(response_data_dict(group_response), "results")
+        group_by_id = {str(row["id"]): row for row in group_rows}
+        self.assertIn(group_shelf_id, group_by_id)
+        self.assertFalse(group_by_id[group_shelf_id]["can_edit"])
+
+        default_response = assert_response(
+            self.client.get("/api/v1/shelves/", HTTP_AUTHORIZATION=self._auth)
+        )
+        all_response = assert_response(
+            self.client.get(
+                "/api/v1/shelves/?scope=all",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        self.assertEqual(
+            {str(row["id"]) for row in payload_list(response_data_dict(default_response), "results")},
+            {str(row["id"]) for row in payload_list(response_data_dict(all_response), "results")},
+        )
 
     def test_bearer_hides_empty_other_listed_shelf_but_keeps_empty_owned_and_group_shelves(self):
         personal_shelf_id = self._create_personal_shelf_as_owner()
@@ -180,8 +204,19 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         }
         self.assertNotIn(str(empty_listed.id), shared_by_id)
         self.assertNotIn(str(hidden_only.id), shared_by_id)
-        self.assertEqual(shared_by_id[str(group_shelf.id)]["item_count"], 0)
-        self.assertEqual(shared_by_id[str(group_shelf.id)]["preview_books"], [])
+
+        group_response = assert_response(
+            self.client.get(
+                "/api/v1/shelves/?scope=group&include_preview_books=true",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        group_by_id = {
+            str(row["id"]): row
+            for row in payload_list(response_data_dict(group_response), "results")
+        }
+        self.assertEqual(group_by_id[str(group_shelf.id)]["item_count"], 0)
+        self.assertEqual(group_by_id[str(group_shelf.id)]["preview_books"], [])
 
     def test_bearer_cannot_read_private_other_users_shelf(self):
         self.client.logout()

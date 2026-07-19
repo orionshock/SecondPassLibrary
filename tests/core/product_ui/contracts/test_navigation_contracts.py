@@ -165,23 +165,16 @@ class ProductUiNavigationContractsTests(ProductUiTestCase):
         template = Path("web/templates/web/shelves/shelves.html").read_text(encoding="utf-8")
         list_js = Path("web/static/web/js/shelves/list.js").read_text()
 
-        self.assertIn('id="personal-shelves-results"', template)
-        self.assertIn('id="shared-shelves-results"', template)
-        self.assertIn(
-            'initialUrl: "/api/v1/shelves/?scope=personal&include_preview_books=true"',
-            list_js,
-        )
-        self.assertIn(
-            'initialUrl: "/api/v1/shelves/?scope=shared&include_preview_books=true"',
-            list_js,
-        )
-        self.assertEqual(list_js.count("include_preview_books=true"), 2)
-        self.assertIn("createShelfSectionController", list_js)
+        self.assertIn('id="shelves-results"', template)
+        for scope in ("personal", "shared", "group"):
+            self.assertIn(f'data-shelf-scope="{scope}"', template)
+        self.assertIn('include_preview_books: "true"', list_js)
         self.assertIn("createPagedListController", list_js)
-        self.assertIn("Promise.all", list_js)
+        self.assertIn('window.addEventListener("popstate"', list_js)
+        self.assertIn("window.history.pushState", list_js)
+        self.assertIn("window.history.replaceState", list_js)
         self.assertIn("shelfMetadataLine", list_js)
         self.assertIn("renderCoverPreviewStrip(shelf.preview_books", list_js)
-        self.assertNotIn('initialUrl: "/api/v1/shelves/"', list_js)
         self.assertNotIn(".filter(", list_js)
         self.assertNotIn("owner_user.profile_id", list_js)
         self.assertNotIn(".email", list_js)
