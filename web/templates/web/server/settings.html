@@ -18,12 +18,13 @@
     {% endif %}
   </div>
 
-  <section id="server-settings-card" class="card server-settings-card">
-    <div class="server-settings-card__header">
-      <div>
-        <h2 class="card__title">Settings</h2>
-        <p class="server-settings-card__copy">Manage how this server presents itself to readers and librarians.</p>
-      </div>
+  <div id="server-settings-root" class="server-settings-root" data-tab-root>
+    <div class="server-settings-nav-row">
+    <div class="tabs server-settings-tabs" role="tablist" aria-label="Server settings sections">
+      <button id="server-settings-tab-identity" class="tab-button is-active" type="button" data-tab="identity" role="tab" aria-selected="true" aria-controls="server-settings-panel-identity">General</button>
+      <button id="server-settings-tab-public" class="tab-button" type="button" data-tab="public-library" role="tab" aria-selected="false" aria-controls="server-settings-panel-public">Public Library</button>
+      <button id="server-settings-tab-library-groups" class="tab-button" type="button" data-tab="library-groups" role="tab" aria-selected="false" aria-controls="server-settings-panel-library-groups">Library Groups</button>
+    </div>
       <div class="server-settings-actions">
         <button id="server-settings-edit-btn" class="button" type="button">Edit</button>
         <button id="server-settings-save-btn" class="button is-hidden" type="submit" form="server-settings-form">Save</button>
@@ -31,64 +32,66 @@
       </div>
     </div>
 
-    <div class="tabs server-settings-tabs" role="tablist" aria-label="Server settings sections">
-      <button id="server-settings-tab-identity" class="tab-button is-active" type="button" data-tab="identity" role="tab" aria-selected="true" aria-controls="server-settings-panel-identity">Identity</button>
-      <button id="server-settings-tab-dashboard" class="tab-button" type="button" data-tab="dashboard" role="tab" aria-selected="false" aria-controls="server-settings-panel-dashboard">Dashboard</button>
-      <button id="server-settings-tab-public" class="tab-button" type="button" data-tab="public-library" role="tab" aria-selected="false" aria-controls="server-settings-panel-public">Public Library</button>
-      <button id="server-settings-tab-library-groups" class="tab-button" type="button" data-tab="library-groups" role="tab" aria-selected="false" aria-controls="server-settings-panel-library-groups">Library Groups</button>
-    </div>
-
     <form id="server-settings-form" class="server-settings-form">
       <div id="server-settings-panel-identity" class="tab-panel server-settings-panel" data-tab-panel="identity" role="tabpanel" aria-labelledby="server-settings-tab-identity">
-        <div class="server-settings-field">
-          <label class="server-settings-label" for="server-settings-name-input">Server name</label>
-          <span id="server-settings-name-display" class="server-settings-display">Loading...</span>
-          <input id="server-settings-name-input" class="form-control is-hidden server-settings-control" type="text" value="" maxlength="120" />
-        </div>
-
-        <div class="server-settings-field">
-          <label class="server-settings-label" for="server-settings-description-input">
-            Server Description
-            <span class="material-symbols-outlined server-settings-info-icon" title="Shows on Login page and Client Discovery" aria-label="Shows on Login page and Client Discovery">info</span>
-          </label>
-          <span id="server-settings-description-display" class="server-settings-display">Loading...</span>
-          <textarea id="server-settings-description-input" class="form-control form-control--textarea is-hidden server-settings-control" maxlength="1000"></textarea>
-        </div>
-      </div>
-
-      <div id="server-settings-panel-dashboard" class="tab-panel server-settings-panel is-hidden" data-tab-panel="dashboard" role="tabpanel" aria-labelledby="server-settings-tab-dashboard">
-        <div class="server-settings-field">
-          <label class="server-settings-label" for="server-settings-banner-input">
-            Banner Text
-            <span class="material-symbols-outlined server-settings-info-icon" title="Server's Message for the Dashboard" aria-label="Server's Message for the Dashboard">info</span>
-          </label>
-          <span id="server-settings-banner-display" class="server-settings-display">Loading...</span>
-          <textarea id="server-settings-banner-input" class="form-control form-control--textarea is-hidden server-settings-control server-settings-control--banner" maxlength="500"></textarea>
-        </div>
+        <section class="card server-settings-section-card">
+          <h2 class="card__title">Server identity</h2>
+          <div class="server-settings-field">
+            <label class="server-settings-label" for="server-settings-name-input">Server name</label>
+            <span id="server-settings-name-display" class="server-settings-display">Loading...</span>
+            <input id="server-settings-name-input" class="form-control is-hidden server-settings-control" type="text" value="" maxlength="120" />
+          </div>
+          <div class="server-settings-field">
+            <div class="server-settings-label-row">
+              <label class="server-settings-label" for="server-settings-description-input">Server description</label>
+              <button class="server-settings-help-button" type="button" aria-label="Server description help" aria-describedby="server-settings-description-help"><span class="material-symbols-outlined" aria-hidden="true">help</span><span id="server-settings-description-help" class="server-settings-help-popover" role="tooltip">Shown on the login page and during client discovery.</span></button>
+            </div>
+            <span id="server-settings-description-display" class="server-settings-display">Loading...</span>
+            <textarea id="server-settings-description-input" class="form-control form-control--textarea is-hidden server-settings-control" maxlength="1000"></textarea>
+          </div>
+        </section>
+        <section class="card server-settings-section-card">
+          <h2 class="card__title">Banner</h2>
+          <div class="server-settings-field">
+            <div class="server-settings-label-row">
+              <label class="server-settings-label" for="server-settings-banner-input">Banner text</label>
+              <button class="server-settings-help-button" type="button" aria-label="Banner text help" aria-describedby="server-settings-banner-help"><span class="material-symbols-outlined" aria-hidden="true">help</span><span id="server-settings-banner-help" class="server-settings-help-popover" role="tooltip">Shown at the top of the Dashboard.</span></button>
+            </div>
+            <span id="server-settings-banner-display" class="server-settings-display">Loading...</span>
+            <textarea id="server-settings-banner-input" class="form-control form-control--textarea is-hidden server-settings-control server-settings-control--banner" maxlength="500"></textarea>
+          </div>
+        </section>
       </div>
 
       <div id="server-settings-panel-public" class="tab-panel server-settings-panel is-hidden" data-tab-panel="public-library" role="tabpanel" aria-labelledby="server-settings-tab-public">
-        <div class="server-settings-field">
+        <section class="card server-settings-section-card">
+          <h2 class="card__title">Public Library</h2>
+          <div class="server-settings-field">
           <label class="server-settings-label" for="server-settings-public-name-input">Public group name</label>
           <span id="server-settings-public-name-display" class="server-settings-display">Loading...</span>
           <input id="server-settings-public-name-input" class="form-control is-hidden server-settings-control" type="text" value="" maxlength="255" />
-        </div>
+          </div>
 
-        <div class="server-settings-field">
+          <div class="server-settings-field">
           <label class="server-settings-label" for="server-settings-public-description-input">Public group description</label>
           <span id="server-settings-public-description-display" class="server-settings-display">Loading...</span>
           <textarea id="server-settings-public-description-input" class="form-control form-control--textarea is-hidden server-settings-control"></textarea>
-        </div>
+          </div>
+        </section>
       </div>
 
       <div id="server-settings-panel-library-groups" class="tab-panel server-settings-panel is-hidden" data-tab-panel="library-groups" role="tabpanel" aria-labelledby="server-settings-tab-library-groups">
-        <div class="server-settings-field server-settings-feature">
+        <section class="card server-settings-section-card server-settings-feature">
           <div class="server-settings-label">Advanced library groups</div>
-          <span id="server-settings-advanced-groups-display" class="server-settings-display server-settings-display--status">Loading...</span>
-          <div id="server-settings-advanced-groups-disabled" class="warning is-hidden">
-            <strong>Disabled.</strong>
-            Enabling exposes advanced group management, memberships, curator controls, group-owned shelves, and non-Public group book assignment. Product UI does not normally offer a way to turn this off again.
-            <div style="margin-top: 10px;">
+          <div class="server-settings-help muted">
+            Create separate library spaces with their own members, curators, and shelves. Leave this off if the Public Library is all you need.
+          </div>
+          <div class="server-settings-feature-state">
+            <span id="server-settings-advanced-groups-display" class="server-settings-display server-settings-display--status">Loading...</span>
+            <div id="server-settings-advanced-groups-disabled" class="server-settings-feature-detail is-hidden">
+              Enabling this setting exposes advanced group management. Turning it off later requires the Service Hatch
+              <button class="server-settings-help-button" type="button" aria-label="Service Hatch help" aria-describedby="server-settings-disabled-service-hatch-help"><span class="material-symbols-outlined" aria-hidden="true">help</span><span id="server-settings-disabled-service-hatch-help" class="server-settings-help-popover" role="tooltip">Advanced settings and recovery tools provided through Django Admin.</span></button>.
+            <div class="server-settings-feature-action">
               <button
                 id="server-settings-enable-advanced-groups-btn"
                 class="button"
@@ -97,19 +100,18 @@
                 Enable advanced library groups
               </button>
             </div>
+            </div>
+            <div id="server-settings-advanced-groups-enabled" class="server-settings-feature-detail is-hidden">
+              Turning this off later requires the Service Hatch
+              <button class="server-settings-help-button" type="button" aria-label="Service Hatch help" aria-describedby="server-settings-enabled-service-hatch-help"><span class="material-symbols-outlined" aria-hidden="true">help</span><span id="server-settings-enabled-service-hatch-help" class="server-settings-help-popover" role="tooltip">Advanced settings and recovery tools provided through Django Admin.</span></button>.
+            </div>
           </div>
-          <div id="server-settings-advanced-groups-enabled" class="muted is-hidden">
-            Enabled. Disabling this later is an operator recovery action through Django admin; Product UI does not provide a disable action.
-          </div>
-          <div class="server-settings-help muted">
-            Advanced library groups let you create separate curator-managed library rooms with their own memberships and group-owned shelves. Leave this off if you only need the Common Room, managed by librarians as the shared public library space.
-          </div>
-        </div>
+        </section>
       </div>
 
       <div class="server-settings-status-row">
         <span id="server-settings-status" class="muted"></span>
       </div>
     </form>
-  </section>
+  </div>
 {% endblock %}

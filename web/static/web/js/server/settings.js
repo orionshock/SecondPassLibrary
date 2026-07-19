@@ -19,6 +19,14 @@ function setEditing(on) {
   visible($("#server-settings-public-description-input"), on);
 }
 
+function setDisplayValue(selector, value) {
+  const element = $(selector);
+  if (!element) return;
+  const empty = !value;
+  setText(element, empty ? "(empty)" : value);
+  element.classList.toggle("server-settings-display--empty", empty);
+}
+
 function fill(identity) {
   const name = identity && identity.server_name ? String(identity.server_name) : "";
   const desc = identity && identity.server_description ? String(identity.server_description) : "";
@@ -26,12 +34,17 @@ function fill(identity) {
   const publicName = identity && identity.public_group_name ? String(identity.public_group_name) : "";
   const publicDesc = identity && identity.public_group_description ? String(identity.public_group_description) : "";
   const advancedGroups = !!(identity && identity.advanced_library_groups_enabled);
-  setText($("#server-settings-name-display"), name || "(unset)");
-  setText($("#server-settings-description-display"), desc || "(empty)");
-  setText($("#server-settings-banner-display"), banner || "(empty)");
-  setText($("#server-settings-public-name-display"), publicName || "(unset)");
-  setText($("#server-settings-public-description-display"), publicDesc || "(empty)");
+  setDisplayValue("#server-settings-name-display", name);
+  setDisplayValue("#server-settings-description-display", desc);
+  setDisplayValue("#server-settings-banner-display", banner);
+  setDisplayValue("#server-settings-public-name-display", publicName);
+  setDisplayValue("#server-settings-public-description-display", publicDesc);
   setText($("#server-settings-advanced-groups-display"), advancedGroups ? "Enabled" : "Disabled");
+  const advancedGroupsDisplay = $("#server-settings-advanced-groups-display");
+  if (advancedGroupsDisplay) {
+    advancedGroupsDisplay.classList.toggle("is-enabled", advancedGroups);
+    advancedGroupsDisplay.classList.toggle("is-disabled", !advancedGroups);
+  }
   visible($("#server-settings-advanced-groups-disabled"), !advancedGroups);
   visible($("#server-settings-advanced-groups-enabled"), advancedGroups);
   const nameInput = $("#server-settings-name-input");
@@ -50,7 +63,7 @@ export async function initServerSettings() {
   const me = await loadMeAndInitShell();
   if (!me || !me.is_owner) return;
 
-  initTabs($("#server-settings-card"));
+  initTabs($("#server-settings-root"));
   setEditing(false);
   setStatus("#server-settings-status", "Loading...");
 

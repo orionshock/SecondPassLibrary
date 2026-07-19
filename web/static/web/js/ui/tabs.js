@@ -6,7 +6,8 @@ export function initTabs(root, options = {}) {
     return;
   }
   for (const group of groups) {
-    const panelRoot = group.closest("section") || group.parentElement || scope;
+    const panelRoot =
+      group.closest("[data-tab-root]") || group.closest("section") || group.parentElement || scope;
     initTabGroup(group, panelRoot, options);
   }
 }
