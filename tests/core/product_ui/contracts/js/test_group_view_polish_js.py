@@ -74,7 +74,8 @@ def test_group_view_uses_safe_view_only_rows_and_shelf_previews():
     assert "include_preview_books=true" in view
     assert 'class="library-row group-view-book-row"' in renderers
     assert 'class="library-row__title"' in renderers
-    assert 'class="library-row__meta"' in renderers
+    assert 'class="library-row__meta book-metadata"' in renderers
+    assert "renderBookMetadataHtml(book" in renderers
     assert "/library/books/${encodeURIComponent(String(book.id))}/" in renderers
     assert "renderCoverPreviewStrip(shelf && shelf.preview_books" in renderers
     assert 'class="book shelf-list-card group-view-shelf-card"' in renderers

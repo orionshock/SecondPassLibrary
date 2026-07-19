@@ -25,10 +25,8 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         )
         self.assertIn('class="library-row group-edit-book-row"', shared)
         self.assertIn('class="library-row__title"', shared)
-        self.assertIn('class="library-row__meta"', shared)
-        self.assertIn("b.series.series_index != null", shared)
-        self.assertIn("b.publisher", shared)
-        self.assertIn("b.published_date", shared)
+        self.assertIn('class="library-row__meta book-metadata"', shared)
+        self.assertIn("renderBookMetadataHtml(b", shared)
         self.assertIn('data-action="remove-book"', shared)
         self.assertIn('data-action="add-book"', shared)
 

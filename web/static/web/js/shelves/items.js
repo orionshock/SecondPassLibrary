@@ -8,6 +8,7 @@ import {
 import { escapeHtml, setGlobalError } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 import { mountCovers } from "../ui/covers.js";
+import { renderBookMetadataHtml } from "../ui/book_metadata.js";
 
 export async function initShelfItemsEditor({
   shelfId,
@@ -37,9 +38,7 @@ export async function initShelfItemsEditor({
           const bid = b.id ? String(b.id) : "";
           const title = b.title ? String(b.title) : "(Untitled)";
           const coverUrl = b.cover_url ? String(b.cover_url) : "";
-          const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
-          const series = b.series && b.series.name ? String(b.series.name) : "";
-          const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
+          const metadata = renderBookMetadataHtml(b);
           const storedPosition = Number(it.position);
           const hasPosition = Number.isFinite(storedPosition);
           const displayPosition = hasPosition ? storedPosition + 1 : "";
@@ -57,7 +56,7 @@ export async function initShelfItemsEditor({
                   <h3 class="book__title">
                     <a href="/library/books/${encodeURIComponent(bid)}/">${escapeHtml(title)}</a>
                   </h3>
-                  ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
+                  ${metadata ? `<div class="muted book-metadata">${metadata}</div>` : ""}
                   <div class="muted" style="margin-top: 6px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
                     <span class="muted">#${escapeHtml(displayPosition)}</span>
                     <button class="button" type="button" data-action="move-up" data-item-id="${escapeHtml(it.id)}"${canMoveUp ? "" : " disabled"}>Move up</button>

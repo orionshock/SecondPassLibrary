@@ -7,6 +7,7 @@ import {
 import { escapeHtml, setGlobalError } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 import { mountCovers } from "../ui/covers.js";
+import { renderBookMetadataHtml } from "../ui/book_metadata.js";
 
 export function initShelfBookSearch({
   shelfId,
@@ -45,9 +46,7 @@ export function initShelfBookSearch({
         const bid = b.id ? String(b.id) : "";
         const title = b.title ? String(b.title) : "(Untitled)";
         const coverUrl = b.cover_url ? String(b.cover_url) : "";
-        const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
-        const series = b.series && b.series.name ? String(b.series.name) : "";
-        const meta = [authors.length ? authors.join(", ") : "", series].filter(Boolean).join("  -  ");
+        const metadata = renderBookMetadataHtml(b);
         const inShelf = bid && currentShelfBookIds.has(bid);
         if (inShelf) return "";
 
@@ -60,8 +59,8 @@ export function initShelfBookSearch({
             <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
             <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
               <div style="flex: 1;">
-                <h3 class="book__title">${escapeHtml(title)}</h3>
-                ${meta ? `<div class="muted" style="margin-top: 4px;">${escapeHtml(meta)}</div>` : ""}
+                <h3 class="book__title"><a href="/library/books/${encodeURIComponent(bid)}/">${escapeHtml(title)}</a></h3>
+                ${metadata ? `<div class="muted book-metadata">${metadata}</div>` : ""}
               </div>
               <div>
                 ${addBtn}

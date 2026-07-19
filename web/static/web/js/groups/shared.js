@@ -9,6 +9,7 @@ import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { renderUserIdentity } from "../ui/identity.js";
+import { renderBookMetadataHtml } from "../ui/book_metadata.js";
 
 export function truthy(v) {
   return !!v;
@@ -134,13 +135,6 @@ export function renderGroupShelvesCompact(payload, { canEdit }) {
     .join("");
 }
 
-function publishedYear(value) {
-  const raw = value == null ? "" : String(value).trim();
-  if (!raw) return "";
-  const match = raw.match(/\d{4}/);
-  return match ? match[0] : raw;
-}
-
 export function renderBooksCompact(payload, { groupId, canRemove, canAdd = false }) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
@@ -150,19 +144,8 @@ export function renderBooksCompact(payload, { groupId, canRemove, canAdd = false
       const title = b.title || "(Untitled)";
       const subtitle = b.subtitle ? String(b.subtitle).trim() : "";
       const href = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
-      const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
-      const seriesName = b.series && b.series.name ? String(b.series.name) : "";
-      const seriesIndex = b.series && b.series.series_index != null && b.series.series_index !== ""
-        ? String(b.series.series_index)
-        : "";
-      const series = seriesName ? `${seriesName}${seriesIndex ? ` ${seriesIndex}` : ""}` : "";
-      const publisher = b.publisher ? String(b.publisher).trim() : "";
-      const year = publishedYear(b.published_date);
-      const metadata = [authors.join(", "), series, [publisher, year].filter(Boolean).join(" - ")]
-        .filter(Boolean)
-        .map((value) => `<span>${escapeHtml(value)}</span>`)
-        .join("");
+      const metadata = renderBookMetadataHtml(b, { emptyText: "No metadata." });
 
       const removeBtn =
         canRemove && b.id && groupId
@@ -184,7 +167,7 @@ export function renderBooksCompact(payload, { groupId, canRemove, canAdd = false
                 ${href ? `<a href="${escapeHtml(href)}">${escapeHtml(title)}</a>` : escapeHtml(title)}
               </h3>
               ${subtitle ? `<div class="library-row__subtitle">${escapeHtml(subtitle)}</div>` : ""}
-              <div class="library-row__meta">${metadata || '<span class="muted">No metadata.</span>'}</div>
+              <div class="library-row__meta book-metadata">${metadata}</div>
             </div>
             ${action ? `<div class="group-edit-book-row__action">${action}</div>` : ""}
           </div>

@@ -8,6 +8,7 @@ import {
   shelfCreatedByDisplay,
 } from "./shared.js";
 import { mountCovers } from "../ui/covers.js";
+import { bookMetadataItems } from "../ui/book_metadata.js";
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -21,10 +22,6 @@ function renderShelfItem(item) {
   const bookId = book.id ? String(book.id) : "";
   const title = book.title ? String(book.title) : "(Untitled)";
   const coverUrl = book.cover_url ? String(book.cover_url) : "";
-  const authors = Array.isArray(book.authors)
-    ? book.authors.map((author) => author && author.name).filter(Boolean)
-    : [];
-  const series = book.series && book.series.name ? String(book.series.name) : "";
 
   const article = el("article", "book book--with-cover");
   const cover = el("div", "book__cover");
@@ -39,9 +36,16 @@ function renderShelfItem(item) {
   heading.appendChild(link);
   content.appendChild(heading);
 
-  const metadata = el("div", "muted inline-metadata-row");
-  for (const part of [authors.join(", "), series].filter(Boolean)) {
-    metadata.appendChild(el("span", "metadata-piece", part));
+  const metadata = el("div", "muted book-metadata");
+  for (const item of bookMetadataItems(book)) {
+    const group = el("span", "book-metadata__item");
+    const icon = el("span", "material-symbols-outlined book-metadata__icon", item.icon);
+    icon.setAttribute("aria-hidden", "true");
+    group.appendChild(icon);
+    const label = el("span", "sr-only", `${item.label}: `);
+    group.appendChild(label);
+    group.appendChild(el("span", "book-metadata__value", item.value));
+    metadata.appendChild(group);
   }
   if (metadata.childNodes.length) content.appendChild(metadata);
 

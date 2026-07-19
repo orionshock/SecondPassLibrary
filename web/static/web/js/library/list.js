@@ -11,6 +11,7 @@ import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
+import { renderBookMetadataHtml } from "../ui/book_metadata.js";
 import { setStatus } from "../ui/status.js";
 import { initCatalogTagFilter } from "./catalog_tags.js";
 import {
@@ -32,13 +33,6 @@ function safeContextSaveError(error) {
   const body = error && error.body && typeof error.body === "object" ? error.body : null;
   if (!body) return "Failed to save changes.";
   return extractApiErrorMessage({ body }).slice(0, 240) || "Failed to save changes.";
-}
-
-function publishedYear(value) {
-  const raw = value == null ? "" : String(value).trim();
-  if (!raw) return "";
-  const match = raw.match(/\d{4}/);
-  return match ? match[0] : raw;
 }
 
 function compactSubtitle(title, subtitle) {
@@ -103,19 +97,8 @@ function renderBooks(payload, context = null) {
       const title = b.title || "(Untitled)";
       const bookHref = b.id ? libraryBookDetailHref(b.id, context) : null;
       const subtitle = compactSubtitle(title, b.subtitle);
-      const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
-      const series = b.series && b.series.name ? b.series.name : "";
-      const seriesIndex = b.series_index != null && b.series_index !== "" ? String(b.series_index) : "";
-      const seriesLine = series ? `${series}${seriesIndex ? ` ${seriesIndex}` : ""}` : "";
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
-      const year = publishedYear(b.published_date);
-      const publisher = b.publisher ? String(b.publisher).trim() : "";
-      const publisherLine = [publisher, year].filter(Boolean).join(" - ");
-
-      const metaLines = [];
-      if (authors.length) metaLines.push(`<span>${escapeHtml(authors.join(", "))}</span>`);
-      if (seriesLine) metaLines.push(`<span>${escapeHtml(seriesLine)}</span>`);
-      if (publisherLine) metaLines.push(`<span>${escapeHtml(publisherLine)}</span>`);
+      const metadata = renderBookMetadataHtml(b, { emptyText: "No metadata." });
       const tags = renderTags(b.tags);
       const groups = renderGroups(b.groups);
 
@@ -129,7 +112,7 @@ function renderBooks(payload, context = null) {
                   : `${escapeHtml(title)}`
               }</h3>
               ${subtitle ? `<div class="library-row__subtitle">${escapeHtml(subtitle)}</div>` : ""}
-              <div class="library-row__meta">${metaLines.join("") || '<span class="muted">No metadata.</span>'}</div>
+              <div class="library-row__meta book-metadata">${metadata}</div>
               ${tags}
               ${groups}
             </div>

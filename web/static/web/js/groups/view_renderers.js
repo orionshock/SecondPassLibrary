@@ -2,13 +2,7 @@ import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
 import { renderUserIdentity } from "../ui/identity.js";
-
-function publishedYear(value) {
-  const raw = value == null ? "" : String(value).trim();
-  if (!raw) return "";
-  const match = raw.match(/\d{4}/);
-  return match ? match[0] : raw;
-}
+import { renderBookMetadataHtml } from "../ui/book_metadata.js";
 
 export function renderGroupViewBooks(payload) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
@@ -18,24 +12,8 @@ export function renderGroupViewBooks(payload) {
     const href = book && book.id
       ? `/library/books/${encodeURIComponent(String(book.id))}/`
       : "";
-    const authors = Array.isArray(book && book.authors)
-      ? book.authors.map((author) => author && author.name).filter(Boolean)
-      : [];
-    const seriesName = book && book.series && book.series.name
-      ? String(book.series.name)
-      : "";
-    const seriesIndex = book && book.series_index != null && book.series_index !== ""
-      ? String(book.series_index)
-      : "";
-    const series = seriesName ? `${seriesName}${seriesIndex ? ` ${seriesIndex}` : ""}` : "";
-    const publisher = book && book.publisher ? String(book.publisher).trim() : "";
-    const year = publishedYear(book && book.published_date);
-    const publisherLine = [publisher, year].filter(Boolean).join(" - ");
     const coverUrl = book && book.cover_url ? String(book.cover_url) : "";
-    const metadata = [authors.join(", "), series, publisherLine]
-      .filter(Boolean)
-      .map((value) => `<span>${escapeHtml(value)}</span>`)
-      .join("");
+    const metadata = renderBookMetadataHtml(book, { emptyText: "No metadata." });
 
     return `
       <article class="library-row group-view-book-row">
@@ -43,7 +21,7 @@ export function renderGroupViewBooks(payload) {
         <div class="library-row__body">
           <h3 class="library-row__title">${href ? `<a href="${escapeHtml(href)}">${escapeHtml(title)}</a>` : escapeHtml(title)}</h3>
           ${subtitle ? `<div class="library-row__subtitle">${escapeHtml(subtitle)}</div>` : ""}
-          <div class="library-row__meta">${metadata || '<span class="muted">No metadata.</span>'}</div>
+          <div class="library-row__meta book-metadata">${metadata}</div>
         </div>
       </article>
     `.trim();
