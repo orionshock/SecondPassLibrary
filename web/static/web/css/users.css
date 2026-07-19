@@ -1,6 +1,9 @@
 /* Users list */
+.users-list-section { min-width: 0; }
 .users-filters { margin: 8px 0 10px 0; display: flex; gap: 8px; flex-wrap: wrap; }
 .users-rows { margin-top: 10px; display: grid; gap: 8px; }
+.users-pager { margin: 10px 0; }
+.users-pager.library-pager--sticky { z-index: 4; }
 .users-header {
   display: grid;
   grid-template-columns: minmax(220px, 1.6fr) minmax(90px, 0.55fr) minmax(120px, 0.8fr) minmax(260px, 1.7fr) auto;
@@ -10,6 +13,44 @@
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+
+/* User forms */
+.user-form-section,
+.user-form {
+  width: min(100%, 720px);
+}
+.user-form__fields {
+  display: grid;
+  gap: 15px;
+}
+.user-form__field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.user-form__field input,
+.user-form__field select,
+.user-form__field textarea {
+  width: 100%;
+  max-width: 100%;
+}
+.user-form__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+}
+.user-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.user-edit-form {
+  max-width: 680px;
 }
 .users-header__identity {
   display: flex;

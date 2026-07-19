@@ -10,7 +10,7 @@
 
 {% block content %}
   <div class="page-header">
-    <h1 class="page-title">Edit user</h1>
+    <h1 class="page-title">Edit User</h1>
   </div>
 
   <div id="user-edit" data-profile-id="{{ profile_id|escape }}"></div>
@@ -21,53 +21,42 @@
   <section id="user-edit-card" class="card is-hidden">
     <h2 class="card__title">User</h2>
 
-    <form id="user-edit-form">
+    <form id="user-edit-form" class="user-form user-edit-form">
       {% csrf_token %}
-      <div class="kv">
-        <div class="kv__k">User</div>
-        <div class="kv__v" id="user-edit-username"></div>
+      <div class="user-form__fields">
+        <div class="user-form__field"><span>User</span><div id="user-edit-username"></div></div>
 
         {% if advanced_library_groups_enabled %}
-        <div class="kv__k">Groups</div>
-        <div class="kv__v" id="user-edit-groups"></div>
+        <div class="user-form__field"><span>Groups</span><div id="user-edit-groups"></div></div>
         {% endif %}
 
-        <div class="kv__k"><label for="user-edit-email">Email</label></div>
-        <div class="kv__v"><input id="user-edit-email" type="email" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="user-edit-first">First name</label></div>
-        <div class="kv__v"><input id="user-edit-first" type="text" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="user-edit-last">Last name</label></div>
-        <div class="kv__v"><input id="user-edit-last" type="text" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="user-edit-role">Role</label></div>
-        <div class="kv__v">
+        <label class="user-form__field" for="user-edit-email"><span>Email</span><input id="user-edit-email" type="email" /></label>
+        <label class="user-form__field" for="user-edit-first"><span>First name</span><input id="user-edit-first" type="text" /></label>
+        <label class="user-form__field" for="user-edit-last"><span>Last name</span><input id="user-edit-last" type="text" /></label>
+        <label class="user-form__field" for="user-edit-role">
+          <span>Role</span>
           <select id="user-edit-role">
             <option value="reader">reader</option>
             <option value="librarian">librarian</option>
             <option value="manager">manager</option>
           </select>
-        </div>
-
-        <div class="kv__k"><label for="user-edit-active">Active</label></div>
-        <div class="kv__v">
+        </label>
+        <label class="user-form__field" for="user-edit-active">
+          <span>Active</span>
           <select id="user-edit-active">
             <option value="true">true</option>
             <option value="false">false</option>
           </select>
-        </div>
-
-        <div class="kv__k"><label for="user-edit-must-change">Must change password</label></div>
-        <div class="kv__v">
+        </label>
+        <label class="user-form__check" for="user-edit-must-change">
           <input id="user-edit-must-change" type="checkbox" />
-          <span class="muted" style="margin-left: 8px;">Force password change on next login</span>
-        </div>
+          <span>Require password change at next login</span>
+        </label>
       </div>
 
-      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <button id="user-edit-submit" class="button" type="submit">Save</button>
+      <div class="user-form__actions">
         <span id="user-edit-save-status" class="muted"></span>
+        <button id="user-edit-submit" class="button" type="submit">Save</button>
       </div>
     </form>
   </section>
@@ -92,13 +81,7 @@
   <section id="user-memberships-card" class="card is-hidden">
     <h2 class="card__title">Group Memberships</h2>
 
-    <div id="user-memberships-note" class="muted">
-      Managers, librarians, and owners can already manage books globally.
-      Curator identifies members who specifically steward this group and grants
-      group-scoped management access to readers.
-    </div>
-
-    <br />
+    <div id="user-memberships-note" class="muted">Manage this user's group membership and curator assignments.</div>
     <div id="user-memberships-results"></div>
 
     <form id="user-memberships-add-form" class="membership-add-tile">

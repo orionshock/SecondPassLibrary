@@ -11,8 +11,55 @@ import {
 import { renderGroupBadge } from "../ui/groups.js";
 import { renderUserIdentity, userDisplayName, userIdentityText } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
-import { setUsersFilterUrl, usersFilterFromSearch } from "./navigation.js";
 import { formatDateTime, passesFilter } from "./shared.js";
+
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = new Set([20, 30, 40, 50]);
+const SORT_KEYS = new Set(["name", "username", "email", "role", "last_login"]);
+
+function normalizedPageSize(value) {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  return PAGE_SIZE_OPTIONS.has(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+export function usersListState(search = "") {
+  const params = new URLSearchParams(search || "");
+  const role = String(params.get("role") || "").toLowerCase();
+  const status = String(params.get("status") || "").toLowerCase();
+  const filter = role && !status
+    ? ["reader", "curator", "librarian", "manager"].includes(role) ? role : "all"
+    : status === "inactive" && !role ? "inactive" : "all";
+  const rawOrdering = String(params.get("ordering") || "-role");
+  const descending = rawOrdering.startsWith("-");
+  const requestedSort = descending ? rawOrdering.slice(1) : rawOrdering;
+  const sortKey = SORT_KEYS.has(requestedSort) ? requestedSort : "role";
+  const rawPage = Number.parseInt(params.get("page") || "1", 10);
+  return {
+    filter,
+    sortKey,
+    sortDirection: descending ? "desc" : "asc",
+    page: Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+    pageSize: normalizedPageSize(params.get("page_size")),
+  };
+}
+
+export function usersListHref(state) {
+  const params = new URLSearchParams();
+  if (["reader", "curator", "librarian", "manager"].includes(state.filter)) params.set("role", state.filter);
+  if (state.filter === "inactive") params.set("status", "inactive");
+  const ordering = `${state.sortDirection === "desc" ? "-" : ""}${state.sortKey}`;
+  if (ordering !== "-role") params.set("ordering", ordering);
+  if (state.page > 1) params.set("page", String(state.page));
+  if (state.pageSize !== DEFAULT_PAGE_SIZE) params.set("page_size", String(state.pageSize));
+  const query = params.toString();
+  return query ? `/users/?${query}` : "/users/";
+}
+
+function usersApiUrl(state) {
+  const params = new URLSearchParams({ page_size: String(state.pageSize) });
+  if (state.page > 1) params.set("page", String(state.page));
+  return `/api/v1/accounts/users/?${params.toString()}`;
+}
 
 function titleCaseRole(role) {
   const value = String(role || "reader").trim().toLowerCase();
@@ -48,10 +95,13 @@ export async function initUsersList() {
   const filtersEl = $("#users-filters");
   const statusEl = $("#users-status");
   const resultsEl = $("#users-results");
-  const nextBtn = $("#users-next");
-  const prevBtn = $("#users-prev");
+  const nextButtons = [$("#users-next-top"), $("#users-next-bottom")];
+  const prevButtons = [$("#users-prev-top"), $("#users-prev-bottom")];
+  const pageSizeSelects = [$("#users-page-size-top"), $("#users-page-size-bottom")];
+  const rangeEls = [$("#users-range-top"), $("#users-range-bottom")];
+  const pagers = [$("#users-pager-top"), $("#users-pager-bottom")];
 
-  if (!notAllowedEl || !createLink || !filtersEl || !statusEl || !resultsEl || !nextBtn || !prevBtn) {
+  if (!notAllowedEl || !createLink || !filtersEl || !statusEl || !resultsEl || [...nextButtons, ...prevButtons, ...pageSizeSelects, ...rangeEls, ...pagers].some((element) => !element)) {
     return;
   }
 
@@ -64,12 +114,13 @@ export async function initUsersList() {
 
   let nextUrl = null;
   let prevUrl = null;
-  let currentUrl = "/api/v1/accounts/users/";
+  let state = usersListState(window.location.search);
+  let currentUrl = usersApiUrl(state);
   let currentResults = [];
   let totalUsersCount = null;
-  let activeFilter = "all";
-  let sortKey = "role";
-  let sortDirection = "desc";
+  let activeFilter = state.filter;
+  let sortKey = state.sortKey;
+  let sortDirection = state.sortDirection;
 
   const sortLabels = {
     name: "Name",
@@ -158,6 +209,23 @@ export async function initUsersList() {
     }
   }
 
+  function syncPager(resultCount) {
+    const total = Number(totalUsersCount) || 0;
+    const start = total && resultCount ? (state.page - 1) * state.pageSize + 1 : 0;
+    const range = start
+      ? `Showing ${start}-${Math.min(total, start + resultCount - 1)} of ${total}`
+      : "Showing 0 of 0";
+    rangeEls.forEach((element) => { element.textContent = range; });
+    pageSizeSelects.forEach((select) => { select.value = String(state.pageSize); });
+    pagers.forEach((pager) => pager.classList.toggle("is-hidden", !total));
+  }
+
+  function writeState({ replace = false } = {}) {
+    const href = usersListHref(state);
+    if (replace) window.history.replaceState({}, "", href);
+    else window.history.pushState({}, "", href);
+  }
+
   function setActiveFilter(filter, { writeUrl = false } = {}) {
     activeFilter = filter || "all";
     const buttons = filtersEl.querySelectorAll("button[data-filter]");
@@ -165,7 +233,8 @@ export async function initUsersList() {
       const isActive = btn.getAttribute("data-filter") === activeFilter;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     }
-    if (writeUrl) setUsersFilterUrl(activeFilter);
+    state = { ...state, filter: activeFilter };
+    if (writeUrl) writeState();
     render();
     updateStatusLabel();
   }
@@ -259,8 +328,8 @@ export async function initUsersList() {
     setGlobalError("");
     setStatus(statusEl, "Loading users...", false);
     resultsEl.innerHTML = "";
-    nextBtn.disabled = true;
-    prevBtn.disabled = true;
+    nextButtons.forEach((button) => { button.disabled = true; });
+    prevButtons.forEach((button) => { button.disabled = true; });
 
     currentUrl = url;
 
@@ -279,16 +348,18 @@ export async function initUsersList() {
         setStatus(statusEl, "No users.", false);
         nextUrl = null;
         prevUrl = null;
+        syncPager(0);
         render();
         return;
       }
 
       nextUrl = payload.next || null;
       prevUrl = payload.previous || null;
-      nextBtn.disabled = !nextUrl;
-      prevBtn.disabled = !prevUrl;
+      nextButtons.forEach((button) => { button.disabled = !nextUrl; });
+      prevButtons.forEach((button) => { button.disabled = !prevUrl; });
 
       render();
+      syncPager(results.length);
       updateStatusLabel();
     } catch (e) {
       console.error("Failed to load users", { url, e });
@@ -321,20 +392,41 @@ export async function initUsersList() {
       sortKey = nextSort;
       sortDirection = "asc";
     }
+    state = { ...state, sortKey, sortDirection };
+    writeState();
     render();
   });
 
-  setActiveFilter(usersFilterFromSearch());
+  window.history.replaceState({}, "", usersListHref(state));
+  setActiveFilter(state.filter);
   await load(currentUrl);
 
-  window.addEventListener("popstate", () => {
-    setActiveFilter(usersFilterFromSearch());
+  window.addEventListener("popstate", async () => {
+    state = usersListState(window.location.search);
+    activeFilter = state.filter;
+    sortKey = state.sortKey;
+    sortDirection = state.sortDirection;
+    setActiveFilter(activeFilter);
+    await load(usersApiUrl(state));
   });
 
-  nextBtn.addEventListener("click", async () => {
-    if (nextUrl) await load(nextUrl);
-  });
-  prevBtn.addEventListener("click", async () => {
-    if (prevUrl) await load(prevUrl);
-  });
+  nextButtons.forEach((button) => button.addEventListener("click", async () => {
+    if (!nextUrl) return;
+    state = { ...state, page: state.page + 1 };
+    writeState();
+    await load(nextUrl);
+  }));
+  prevButtons.forEach((button) => button.addEventListener("click", async () => {
+    if (!prevUrl) return;
+    state = { ...state, page: Math.max(1, state.page - 1) };
+    writeState();
+    await load(prevUrl);
+  }));
+  pageSizeSelects.forEach((select) => select.addEventListener("change", async () => {
+    const nextPageSize = normalizedPageSize(select.value);
+    if (nextPageSize === state.pageSize) return;
+    state = { ...state, page: 1, pageSize: nextPageSize };
+    writeState();
+    await load(usersApiUrl(state));
+  }));
 }

@@ -11,16 +11,12 @@
 {% block content %}
   <div class="page-header">
     <h1 class="page-title">Users</h1>
-    <a id="users-create-link" class="button is-hidden" href="/users/new/">Create user</a>
+    <a id="users-create-link" class="button is-hidden" href="/users/new/">Create User</a>
   </div>
-
-  <p class="muted">Manage local users and roles{% if advanced_library_groups_enabled %}, and group memberships{% endif %}.</p>
 
   <div id="users-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
 
-  <section class="card">
-    <h2 class="card__title">User List</h2>
-
+  <section class="users-list-section">
     <div id="users-filters" class="users-filters is-hidden" aria-label="User filters">
       <button class="button" type="button" data-filter="all" aria-pressed="true">All</button>
       <button class="button" type="button" data-filter="reader" aria-pressed="false">Reader</button>
@@ -33,11 +29,8 @@
     </div>
 
     <div id="users-status" class="muted">Loading...</div>
+    {% include "web/users/_pager.html" with position="top" sticky=False only %}
     <div id="users-results" class="users-rows"></div>
-
-    <div class="pager">
-      <button id="users-prev" class="button" type="button" disabled>Previous</button>
-      <button id="users-next" class="button" type="button" disabled>Next</button>
-    </div>
+    {% include "web/users/_pager.html" with position="bottom" sticky=True only %}
   </section>
 {% endblock %}

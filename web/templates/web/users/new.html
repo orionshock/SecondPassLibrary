@@ -10,47 +10,38 @@
 
 {% block content %}
   <div class="page-header">
-    <h1 class="page-title">Create user</h1>
+    <h1 class="page-title">Create User</h1>
   </div>
 
   <div id="user-new-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
   <div id="user-new-status" class="muted"></div>
 
-  <section id="user-new-form-card" class="card">
-    <h2 class="card__title">New User</h2>
-    <form id="user-new-form">
+  <section id="user-new-form-card" class="user-form-section">
+    <form id="user-new-form" class="user-form">
       {% csrf_token %}
-      <div class="kv">
-        <div class="kv__k"><label for="user-new-username">Username</label></div>
-        <div class="kv__v"><input id="user-new-username" type="text" style="width: 100%;" required /></div>
-
-        <div class="kv__k"><label for="user-new-email">Email</label></div>
-        <div class="kv__v"><input id="user-new-email" type="email" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="user-new-first">First name</label></div>
-        <div class="kv__v"><input id="user-new-first" type="text" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="user-new-last">Last name</label></div>
-        <div class="kv__v"><input id="user-new-last" type="text" style="width: 100%;" /></div>
-
-        <div class="kv__k"><label for="user-new-role">Role</label></div>
-        <div class="kv__v">
+      <div class="user-form__fields">
+        <label class="user-form__field" for="user-new-username"><span>Username</span><input id="user-new-username" type="text" required /></label>
+        <label class="user-form__field" for="user-new-email"><span>Email</span><input id="user-new-email" type="email" /></label>
+        <label class="user-form__field" for="user-new-first"><span>First name</span><input id="user-new-first" type="text" /></label>
+        <label class="user-form__field" for="user-new-last"><span>Last name</span><input id="user-new-last" type="text" /></label>
+        <label class="user-form__field" for="user-new-role">
+          <span>Role</span>
           <select id="user-new-role">
             <option value="reader">reader</option>
             <option value="librarian">librarian</option>
             <option value="manager">manager</option>
           </select>
-        </div>
-
-        <div class="kv__k"><label for="user-new-active">Active</label></div>
-        <div class="kv__v">
+        </label>
+        <label class="user-form__check" for="user-new-active">
           <input id="user-new-active" type="checkbox" checked />
-        </div>
+          <span>Active</span>
+        </label>
       </div>
 
-      <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <button id="user-new-submit" class="button" type="submit">Create user</button>
+      <div class="user-form__actions">
         <span id="user-new-submit-status" class="muted"></span>
+        <a class="button" href="/users/">Cancel</a>
+        <button id="user-new-submit" class="button" type="submit">Create User</button>
       </div>
     </form>
   </section>

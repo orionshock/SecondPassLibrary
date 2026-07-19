@@ -51,10 +51,15 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'data-filter="inactive"')
         self.assertNotContains(response, 'data-filter="curator"')
         self.assertContains(response, 'id="users-create-link"')
-        self.assertContains(
-            response,
-            "Manage local users and roles.",
-        )
+        self.assertContains(response, 'class="users-list-section"')
+        self.assertNotContains(response, '<section class="card">')
+        self.assertNotContains(response, "Manage local users and roles")
+        for position in ("top", "bottom"):
+            self.assertContains(response, f'id="users-pager-{position}"')
+            self.assertContains(response, f'id="users-range-{position}"')
+            self.assertContains(response, f'id="users-page-size-{position}"')
+            self.assertContains(response, f'id="users-prev-{position}"')
+            self.assertContains(response, f'id="users-next-{position}"')
         self.assertNotContains(response, "Django users")
 
     def test_authenticated_users_shows_group_membership_filter_when_enabled(self):
@@ -63,7 +68,7 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         response = self.client.get("/users/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-filter="curator"')
-        self.assertContains(response, "Manage local users and roles, and group memberships.")
+        self.assertNotContains(response, "Manage local users and roles")
 
     def test_authenticated_user_new_returns_200_and_has_form(self):
         self.client.force_login(self.user)
@@ -74,6 +79,10 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="user-new-form"')
         self.assertContains(response, 'id="user-new-username"')
         self.assertContains(response, 'id="user-new-created-password"')
+        self.assertContains(response, 'class="user-form-section"')
+        self.assertContains(response, 'class="user-form__actions"')
+        self.assertContains(response, 'href="/users/">Cancel</a>')
+        self.assertNotContains(response, '<h2 class="card__title">New User</h2>')
 
     def test_authenticated_user_edit_returns_200_and_hides_memberships_by_default(self):
         self.client.force_login(self.user)
@@ -87,6 +96,9 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="user-edit-username"')
         self.assertContains(response, 'id="user-edit-must-change"')
         self.assertContains(response, 'id="user-reset-password-btn"')
+        self.assertContains(response, 'class="user-form user-edit-form"')
+        self.assertContains(response, 'class="user-form__actions"')
+        self.assertNotContains(response, 'class="tabs"')
         self.assertNotContains(response, 'id="user-edit-groups"')
         self.assertNotContains(response, 'id="user-memberships-card"')
         self.assertNotContains(response, 'id="user-memberships-add-form"')
@@ -104,7 +116,10 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, 'id="user-memberships-add-form"')
         self.assertContains(response, 'class="membership-add-tile"')
         self.assertContains(response, 'class="membership-add-tile__curator"')
-        self.assertContains(response, "Curator identifies members who specifically steward this group")
+        self.assertContains(
+            response,
+            "Manage this user's group membership and curator assignments.",
+        )
 
     def test_authenticated_user_edit_malformed_profile_id_returns_404(self):
         self.client.force_login(self.user)
