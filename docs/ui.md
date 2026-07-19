@@ -115,9 +115,9 @@ The groups UI is API-driven using:
 - `GET /api/v1/library/groups/<group_id>/` (detail)
 - `PATCH /api/v1/library/groups/<group_id>/` (presentation fields only: description)
 - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-- `GET /api/v1/library/books/?q=<search>&exclude_group=<group_id>` (title search
-  for the Groups UI picker; all existing assignments are excluded before
-  pagination)
+- `GET /api/v1/library/search?q=<search>&ordering=title&exclude_group=<group_id>`
+  (broad BookVerse search for the Groups UI picker; all existing assignments
+  are excluded before pagination)
 - `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
 - Memberships:
@@ -322,8 +322,9 @@ UI behaviors:
 - Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
 - Group View and Group Edit use the endpoint's normal pagination envelope and
   preserve the current page and supported filters in the Product UI URL.
-- The add-book picker relies on server-side `exclude_group`; it never builds an
-  exclusion set from only the currently displayed assigned-book page.
+- The add-book picker uses broad BookVerse search with server-side
+  `exclude_group`; it never builds an exclusion set from only the currently
+  displayed assigned-book page.
 - Broad-role controls should use `/api/v1/accounts/me/` role and owner state.
 - Reader group-scoped controls should use the matching non-Public
   `groups[]` membership with `is_curator=true`.
@@ -394,7 +395,8 @@ UI behaviors:
 - Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
   - Uses tabs to reduce scroll:
     - Books in shelf (default): remove and reorder items with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
-    - Add books: search and add; changes apply immediately; books already in shelf are hidden from results.
+    - Add books: broad BookVerse search with `exclude_shelf`; changes apply
+      immediately and books already in the shelf are omitted server-side.
     - Details: edit name/description (and visibility for user-owned shelves only) and delete shelf.
   - Delete shelf removes the shelf and its shelf items only; it never deletes books or files.
 - Shelf metadata displays put the owner identity segment first:

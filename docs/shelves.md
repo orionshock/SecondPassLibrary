@@ -222,7 +222,9 @@ Behavior:
 
 - Shelf edit is the primary shelf management page. It uses tabs:
   - Books in shelf (default): remove/reorder with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
-  - Add books: search/add; changes apply immediately; books already in the shelf are hidden from results.
+  - Add books: broad BookVerse search uses
+    `GET /api/v1/library/search?q=<term>&ordering=title&exclude_shelf=<shelf_id>`;
+    changes apply immediately and existing shelf books are excluded server-side.
   - Details: edit name/description/visibility (user shelves only) and delete.
 - Shelf list/detail/edit views place shelf ownership in the first metadata segment:
   - user-owned shelves show the Material Symbols `person` icon followed by `First Last <@username>` when a first or last name exists, falling back to `<@username>` without an empty gap

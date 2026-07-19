@@ -39,10 +39,20 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertNotIn("setStatus(booksStatus, extractApiErrorMessage(e2)", self.source)
 
     def test_add_picker_uses_server_side_complete_group_exclusion(self):
+        self.assertIn("/api/v1/library/search?", self.source)
+        self.assertIn('ordering: "title"', self.source)
         self.assertIn("exclude_group: String(groupId)", self.source)
+        self.assertNotIn("/api/v1/library/books/?${params.toString()}", self.source)
         self.assertNotIn("fetchAllPaginatedResults", self.source)
         self.assertNotIn("groupBookIds", self.source)
         self.assertNotIn("page_size=", self.source)
+
+    def test_add_picker_keeps_existing_rendering_pagination_and_bounded_errors(self):
+        self.assertIn("createPagedListController", self.source)
+        self.assertIn("renderBookSearchResults", self.source)
+        self.assertIn('loadErrorText: "Book search failed."', self.source)
+        self.assertIn("bookSearchNext", self.source)
+        self.assertIn("bookSearchPrev", self.source)
 
     def test_assigned_books_keep_page_and_step_back_after_last_removal(self):
         self.assertIn("initialUrl: groupBooksApiUrl(groupId)", self.source)

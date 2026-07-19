@@ -438,10 +438,24 @@ custom groups remain hidden. This API representation does not imply a Product
 UI relationship tab: Book Detail hides its Groups tab in simple mode. Book list
 rows do not include `groups`.
 
-The Groups add-book picker uses
-`GET /api/v1/library/books/?q=<title>&exclude_group=<group_id>`. The optional
-`exclude_group` UUID removes every book already assigned to that visible group
-before pagination; it is not limited to the group's currently displayed page.
+`GET /api/v1/library/books/?q=<term>` is the Books browse-axis search and
+matches title and sort title only.
+
+`GET /api/v1/library/search?q=<term>` is the broader User BookVerse search. It
+returns normal Book list rows in the normal paginated envelope and searches
+visible Books by title, sort title, subtitle, author name, series name,
+identifier value, Catalog Tag name, publisher, and description. Missing or
+blank `q` returns an empty page rather than the whole library. Supported
+ordering is `title`, `-title`, `author`, `-author`, `series`, and `-series`;
+the default is `title`.
+
+BookVerse search supports `exclude_shelf=<shelf_id>` for a manageable shelf and
+`exclude_group=<group_id>` for a manageable group. These suppress already
+contained/assigned Books after visibility scoping. Unknown or inaccessible
+exclusion objects return `404`. Search rows use the Book list shape and never
+include download URLs, checksums, storage/source names, file keys, or group
+membership data. Session and client bearer GET requests use the same
+visibility rules.
 
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 
@@ -452,6 +466,7 @@ Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 Client API bearer token support (read-only allow-list):
 
 - `GET /api/v1/library/books/`
+- `GET /api/v1/library/search?q=<term>`
 - `GET /api/v1/library/books/<id>/`
 - `GET /api/v1/library/books/<id>/download/`
 - `GET /api/v1/library/authors/`

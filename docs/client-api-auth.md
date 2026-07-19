@@ -112,7 +112,7 @@ Allowed surface is an explicit allow-list.
 | Domain | Bearer access | Notes |
 | --- | --- | --- |
 | `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, banner text, and advanced-groups state. Bearer `PATCH` is rejected. |
-| `/api/v1/library/` Books, Authors, Series, Tags | read-only | List/detail endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list rows do not include groups. |
+| `/api/v1/library/` Books, BookVerse Search, Authors, Series, Tags | read-only | List/detail/search endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list/search rows do not include groups. |
 | `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |
 | `/api/v1/library/groups/` and group-scoped Books/Auth/Series/Tags | read-only | Group reads require group visibility. Simple mode exposes Public/Common Room only. |
 | `/api/v1/reading/` sessions/progress/annotations | read/write for owned reading state | Bearer mutations are limited to the token owner's sessions, progress, and annotations. Writes that open/read/write a book require current book visibility. |
@@ -124,6 +124,13 @@ Library details:
   account role; mixed endpoint writes still require Django session auth.
 - Books, Authors, Series, Catalog Tags, visible LibraryGroups, and visible
   group-scoped Books/Auth/Series/Tags are bearer-readable.
+- `/api/v1/library/books/?q=<term>` remains the title-only Books axis search.
+  `/api/v1/library/search?q=<term>` is the broad Books-only User BookVerse
+  search across titles, subtitle, authors, series, identifiers, Catalog Tags,
+  publisher, and description. Blank `q` returns an empty paginated response.
+  It supports title/author/series ordering in either direction plus manageable
+  `exclude_shelf` and `exclude_group` suppressors. Rows use the ordinary Book
+  list shape and omit download, checksum, storage/source, and group data.
 - Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
   filters are not part of the client contract.
 - All results, counts, filters, and pagination are scoped to books visible to

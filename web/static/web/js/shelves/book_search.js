@@ -25,11 +25,12 @@ export function initShelfBookSearch({
       return;
     }
     setStatus(searchStatus, "Searching...", false);
-    const baseUrl =
-      ownerType === "group" && ownerGroupId
-        ? `/api/v1/library/groups/${encodeURIComponent(String(ownerGroupId))}/books/`
-        : "/api/v1/library/books/";
-    const payload = await fetchJSON(`${baseUrl}?q=${encodeURIComponent(term)}`);
+    const params = new URLSearchParams({
+      q: term,
+      ordering: "title",
+      exclude_shelf: String(shelfId),
+    });
+    const payload = await fetchJSON(`/api/v1/library/search?${params.toString()}`);
     const results = Array.isArray(payload && payload.results) ? payload.results : [];
 
     if (!results.length) {

@@ -124,8 +124,12 @@ export async function initGroupBooksTab({
       visible(bookSearchWrap, false);
       return;
     }
-    const params = new URLSearchParams({ q: term, exclude_group: String(groupId) });
-    const url = `/api/v1/library/books/?${params.toString()}`;
+    const params = new URLSearchParams({
+      q: term,
+      ordering: "title",
+      exclude_group: String(groupId),
+    });
+    const url = `/api/v1/library/search?${params.toString()}`;
     visible(bookSearchWrap, true);
     await bookSearchCtl.load(url, { reason: "search" });
   });
