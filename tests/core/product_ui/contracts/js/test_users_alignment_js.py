@@ -96,6 +96,37 @@ def test_edit_user_keeps_meaningful_cards_without_tabs_and_bounded_form():
     password = template.index('for="user-edit-must-change"')
     assert first < last < email < role < active < password
 
+    form_end = template.index("</form>", template.index('id="user-edit-form"'))
+    password_card = template.index('id="user-password-card"')
+    require_change = template.index('id="user-edit-must-change"')
+    reset_result = template.index('id="user-reset-password-result"')
+    copy_warning = template.index("Copy it now. It will not be shown again.")
+    assert form_end < password_card < require_change
+    assert "Require Password Change on next login." in template
+    assert reset_result < copy_warning
+    assert "Generate a secure temporary password. Copy it now" not in template
+
+
+def test_password_change_requirement_saves_inline_outside_user_form():
+    template = Path("web/templates/web/users/edit.html").read_text(encoding="utf-8")
+    source = Path("web/static/web/js/users/edit.js").read_text(encoding="utf-8")
+
+    form_end = template.index("</form>", template.index('id="user-edit-form"'))
+    checkbox = template.index('id="user-edit-must-change"')
+    assert form_end < checkbox
+    assert 'id="user-edit-must-change-status"' in template
+    assert 'aria-live="polite"' in template
+    assert 'mustChangeInput.addEventListener("change"' in source
+    assert "JSON.stringify({ must_change_password: desired })" in source
+    assert 'setStatus(mustChangeStatus, "Saving...", false)' in source
+    assert 'setStatus(mustChangeStatus, "Saved.", false)' in source
+    assert "mustChangeInput.checked = !!original.must_change_password" in source
+
+    main_form_payload = source.split(
+        'form.addEventListener("submit"', 1
+    )[1].split('mustChangeInput.addEventListener("change"', 1)[0]
+    assert "must_change_password" not in main_form_payload
+
 
 def test_users_rendering_keeps_documented_identity_boundary():
     list_js = Path("web/static/web/js/users/list.js").read_text(encoding="utf-8")

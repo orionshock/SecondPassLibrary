@@ -76,8 +76,21 @@
   align-items: center;
   gap: 12px;
 }
-.user-edit-form__check {
-  margin-left: 144px;
+.user-password-card__require-change {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.user-password-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.user-password-card__result {
+  margin-top: 10px;
 }
 .users-header__identity {
   display: flex;
@@ -188,9 +201,6 @@
     grid-template-columns: 1fr;
     gap: 5px;
   }
-  .user-edit-form__check {
-    margin-left: 0;
-  }
   .user-row {
     grid-template-columns: 1fr;
   }
@@ -243,6 +253,25 @@
 }
 .membership-row__note {
   flex-basis: 100%;
+}
+.public-curator-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.public-curator-note__help {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 50%;
+  cursor: help;
+}
+.public-curator-note__help:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.public-curator-note__icon {
+  font-size: 16px;
+  opacity: 0.7;
 }
 .membership-row__status {
   min-width: 56px;

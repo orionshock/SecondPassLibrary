@@ -34,10 +34,12 @@ export async function initUserEdit() {
   const roleSelect = $("#user-edit-role");
   const activeSelect = $("#user-edit-active");
   const mustChangeInput = $("#user-edit-must-change");
+  const mustChangeStatus = $("#user-edit-must-change-status");
   const submitBtn = $("#user-edit-submit");
   const saveStatus = $("#user-edit-save-status");
 
   const passwordCard = $("#user-password-card");
+  const resetActions = $("#user-reset-password-actions");
   const resetBtn = $("#user-reset-password-btn");
   const resetStatus = $("#user-reset-password-status");
   const resetResult = $("#user-reset-password-result");
@@ -73,9 +75,11 @@ export async function initUserEdit() {
     !roleSelect ||
     !activeSelect ||
     !mustChangeInput ||
+    !mustChangeStatus ||
     !submitBtn ||
     !saveStatus ||
     !passwordCard ||
+    !resetActions ||
     !resetBtn ||
     !resetStatus ||
     !resetResult ||
@@ -99,6 +103,7 @@ export async function initUserEdit() {
 
   visible(notAllowedEl, !allowed);
   visible(cardEl, allowed);
+  visible(passwordCard, false);
   visible(membershipsCard, allowed && canManageMemberships);
 
   function setFormEnabled(on, message) {
@@ -177,7 +182,8 @@ export async function initUserEdit() {
         }
       }
     }
-    visible(passwordCard, canResetPassword);
+    visible(passwordCard, true);
+    visible(resetActions, canResetPassword);
     visible(resetResult, false);
     resetCopy.value = "";
     setStatus(resetStatus, "", false);
@@ -258,7 +264,6 @@ export async function initUserEdit() {
       last_name: lastInput.value || "",
       role: roleSelect.value || "reader",
       is_active: activeSelect.value === "true",
-      must_change_password: !!mustChangeInput.checked,
     };
 
     const patch = {};
@@ -298,6 +303,46 @@ export async function initUserEdit() {
       const fieldMsg = summarizeFieldErrors(e2 && e2.body ? e2.body : null);
       setStatus(saveStatus, fieldMsg ? `${msg} (${fieldMsg})` : msg, true);
       setGlobalError(msg);
+    }
+  });
+
+  mustChangeInput.addEventListener("change", async () => {
+    if (!original) {
+      mustChangeInput.checked = false;
+      setStatus(mustChangeStatus, "User not loaded.", true);
+      return;
+    }
+    if (original.is_owner || (!me.is_owner && original.role === "manager")) {
+      mustChangeInput.checked = !!original.must_change_password;
+      return;
+    }
+
+    const desired = !!mustChangeInput.checked;
+    if (desired === !!original.must_change_password) return;
+
+    mustChangeInput.disabled = true;
+    setStatus(mustChangeStatus, "Saving...", false);
+    try {
+      const csrf = getCsrfToken();
+      const headers = { Accept: "application/json", "Content-Type": "application/json" };
+      if (csrf) headers["X-CSRFToken"] = csrf;
+      const updated = await fetchJSONWithOptions(
+        `/api/v1/accounts/users/${encodeURIComponent(String(profileId))}/`,
+        {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ must_change_password: desired }),
+        }
+      );
+      applyUserPayload(updated);
+      setStatus(mustChangeStatus, "Saved.", false);
+    } catch (error) {
+      mustChangeInput.checked = !!original.must_change_password;
+      const message = extractApiErrorMessage(error);
+      setStatus(mustChangeStatus, message, true);
+      setGlobalError(message);
+    } finally {
+      mustChangeInput.disabled = original.is_owner || (!me.is_owner && original.role === "manager");
     }
   });
 }

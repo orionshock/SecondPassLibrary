@@ -75,7 +75,7 @@ def test_group_edit_shelves_request_previews_and_members_keep_safe_controls():
     assert "includeDisplayName: false" in shared
     assert 'data-action="member-remove"' in shared
     assert 'data-action="member-curator"' in shared
-    assert "Public fallback group; curator unavailable." in shared
+    assert "renderPublicCuratorRestriction().outerHTML" in shared
     assert "addMemberRole.disabled = true" in memberships
     assert "groupMutationErrorMessage" in memberships
     assert 'data-tab-panel="books"' in template

@@ -93,7 +93,7 @@ class ProductUiDisplaySitesJsContractsTests(ProductUiTestCase):
         self.assertIn('class="membership-row__actions"', groups_shared_js)
         self.assertIn('class="membership-row__status muted"', groups_shared_js)
         self.assertIn('data-action="member-curator"', groups_shared_js)
-        self.assertIn("Public fallback group; curator unavailable.", groups_shared_js)
+        self.assertIn("renderPublicCuratorRestriction().outerHTML", groups_shared_js)
         self.assertIn("remove_circle", groups_shared_js)
         self.assertIn('aria-label="Remove member"', groups_shared_js)
         self.assertIn("icon-button--danger", groups_shared_js)

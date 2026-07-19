@@ -40,10 +40,6 @@
             <option value="false">false</option>
           </select>
         </label>
-        <label class="user-form__check user-edit-form__check" for="user-edit-must-change">
-          <input id="user-edit-must-change" type="checkbox" />
-          <span>Require Password Change</span>
-        </label>
       </div>
 
       <div class="user-form__actions">
@@ -56,15 +52,21 @@
   <section id="user-password-card" class="card is-hidden">
     <h2 class="card__title">Password</h2>
 
-    <div class="muted">Generate a secure temporary password. Copy it now; it will not be shown again.</div>
+    <div class="user-password-card__require-change">
+      <label class="user-form__check" for="user-edit-must-change">
+        <input id="user-edit-must-change" type="checkbox" />
+        <span>Require Password Change on next login.</span>
+      </label>
+      <span id="user-edit-must-change-status" class="muted" aria-live="polite"></span>
+    </div>
 
-    <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <div id="user-reset-password-actions" class="user-password-card__actions is-hidden">
       <button id="user-reset-password-btn" class="button" type="button">Reset password</button>
       <span id="user-reset-password-status" class="muted"></span>
     </div>
 
-    <div id="user-reset-password-result" class="is-hidden" style="margin-top: 10px;">
-      <div class="muted">Copy this now. It will not be shown again.</div>
+    <div id="user-reset-password-result" class="user-password-card__result is-hidden">
+      <div class="muted">Copy it now. It will not be shown again.</div>
       <textarea id="user-reset-password-copy" readonly style="width: 100%; min-height: 80px; margin-top: 8px;"></textarea>
     </div>
   </section>

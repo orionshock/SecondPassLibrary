@@ -6,7 +6,7 @@ import {
   summarizeFieldErrors,
 } from "../api.js";
 import { escapeHtml, setGlobalError, visible } from "../layout.js";
-import { renderGroupBadge } from "../ui/groups.js";
+import { renderGroupBadge, renderPublicCuratorRestriction } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
 
 export function renderGroupsReadOnly(groups) {
@@ -46,7 +46,7 @@ export function renderMembershipControls(groups, allGroups = [], profileId = "")
       const isPublic = !!g.is_public_group;
 
       const note = isPublic
-        ? '<div class="membership-row__note muted">Public fallback group; curator unavailable.</div>'
+        ? renderPublicCuratorRestriction().outerHTML
         : "";
       const groupBadge = renderGroupBadge(g).outerHTML;
       const description = descriptionForGroup(g, groupDetailsById);

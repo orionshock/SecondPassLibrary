@@ -94,7 +94,27 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn('class="membership-row__controls"', self.user_memberships_js)
         self.assertIn('class="membership-row__actions"', self.user_memberships_js)
         self.assertIn('class="membership-row__status muted"', self.user_memberships_js)
-        self.assertIn("Public fallback group; curator unavailable.", self.user_memberships_js)
+        self.assertIn(
+            "renderPublicCuratorRestriction().outerHTML",
+            self.user_memberships_js,
+        )
+
+    def test_public_curator_help_is_shared_accessible_and_plain_language(self):
+        groups_ui_js = Path("web/static/web/js/ui/groups.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('label.textContent = "Public Group"', groups_ui_js)
+        self.assertIn(
+            'const helpText = "Only Librarians/Managers may Curate the Public Group"',
+            groups_ui_js,
+        )
+        self.assertIn('help.setAttribute("aria-label", helpText)', groups_ui_js)
+        self.assertIn('help.setAttribute("title", helpText)', groups_ui_js)
+        self.assertIn("help.tabIndex = 0", groups_ui_js)
+        self.assertIn('icon.textContent = "help"', groups_ui_js)
+        self.assertIn('icon.setAttribute("aria-hidden", "true")', groups_ui_js)
+        self.assertNotIn("Public fallback group", groups_ui_js)
         self.assertIn("descriptionForGroup", self.user_memberships_js)
         self.assertIn("titleAttr", self.user_memberships_js)
         self.assertNotIn('<span class="pill">Member</span>', self.user_memberships_js)

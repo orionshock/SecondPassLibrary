@@ -29,3 +29,28 @@ export function renderGroupBadge(group, options = {}) {
 
   return badge;
 }
+
+export function renderPublicCuratorRestriction() {
+  const note = document.createElement("div");
+  note.className = "membership-row__note muted public-curator-note";
+
+  const label = document.createElement("span");
+  label.textContent = "Public Group";
+  note.appendChild(label);
+
+  const helpText = "Only Librarians/Managers may Curate the Public Group";
+  const help = document.createElement("span");
+  help.className = "public-curator-note__help";
+  help.tabIndex = 0;
+  help.setAttribute("aria-label", helpText);
+  help.setAttribute("title", helpText);
+
+  const icon = document.createElement("span");
+  icon.className = "material-symbols-outlined public-curator-note__icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "help";
+  help.appendChild(icon);
+  note.appendChild(help);
+
+  return note;
+}

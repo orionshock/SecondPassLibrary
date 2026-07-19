@@ -8,6 +8,7 @@ import { extractApiErrorMessage, summarizeFieldErrors } from "../api.js";
 import { escapeHtml } from "../layout.js";
 import { shelfMetadataLine } from "../shelves/shared.js";
 import { renderCoverPreviewStrip } from "../ui/cover_previews.js";
+import { renderPublicCuratorRestriction } from "../ui/groups.js";
 import { renderUserIdentity } from "../ui/identity.js";
 import { renderBookMetadataHtml } from "../ui/book_metadata.js";
 
@@ -206,7 +207,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
       const isCurator = !!m.is_curator;
       const identity = renderUserIdentity(user, { includeDisplayName: false }).outerHTML;
       const note = isPublicGroup
-        ? '<div class="membership-row__note muted">Public fallback group; curator unavailable.</div>'
+        ? renderPublicCuratorRestriction().outerHTML
         : "";
       const curatorControl = isPublicGroup
         ? ""
