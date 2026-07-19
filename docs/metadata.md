@@ -17,10 +17,9 @@ routes are described in [api.md](api.md).
 - `book_file`, `file_format`, `checksum`, and `file_size`
 - optional `cover_file`
 
-There is no separate `BookFile` model or endpoint. `source_filename` is a
-transient import diagnostic, not canonical Book metadata, provenance, or a
-public API field. Fileless Books and missing physical EPUB files are repair
-states, not supported normal product states.
+Import source labels are transient diagnostics, not canonical Book metadata or
+provenance. Fileless Books and missing physical EPUB files are repair states,
+not supported normal product states.
 
 Series membership is represented by `BookSeries`, which links a Book to a
 Series and stores its `series_index`. Author biographies and Series summaries
@@ -72,8 +71,7 @@ are generated from current Book metadata rather than retained source filenames
 or storage keys.
 
 Stored EPUBs are protected content. Clients download them through the
-authenticated API URL provided by Book Detail; raw `/media/books/` paths are
-not a supported serving contract.
+authenticated API URL provided by Book Detail.
 
 ## Covers
 

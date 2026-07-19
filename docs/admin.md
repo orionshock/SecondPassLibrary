@@ -87,8 +87,7 @@ its stored EPUB fields directly:
 - `file_size`
 - `cover_file`
 
-There is no `BookFile` model in the current library catalog schema. If a
-legacy/operator mistake leaves a `Book` without `book_file`, with a missing
+If a legacy/operator mistake leaves a `Book` without `book_file`, with a missing
 physical EPUB, or with a file that must be deliberately replaced, open the Book
 in Django admin and use **Repair stored EPUB**. This route is restricted to
 superusers. The generic Book form keeps `book_file`, `file_format`, `checksum`,

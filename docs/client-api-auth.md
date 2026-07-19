@@ -160,8 +160,8 @@ Exact Library routes, query parameters, and response schemas are owned by
 - Book endpoints do not need preview items because their results are already
   Books. Tag endpoints are count/filter facets and do not support
   `include_preview_books`.
-- `/media/books/` is not public. Reader clients must use Book detail
-  `file.download_url` and the authenticated download endpoint for EPUB bytes.
+- Reader clients use Book detail `file.download_url` and the authenticated
+  download endpoint for EPUB bytes.
   The endpoint accepts bearer GET for visible Books, returns the complete file
   rather than a byte range, and uses the established bounded unavailable-file
   error. Storage names and paths are never returned. Cover URLs remain public

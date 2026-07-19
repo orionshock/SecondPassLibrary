@@ -81,9 +81,9 @@ The API returns a transient batch summary with per-item `imported`, `duplicate`,
 label, resulting Book ID, and a bounded message. Results cannot be retrieved
 after the request; there is no import detail endpoint.
 
-Source names exist only for immediate diagnostics. They are not stored as a
-Book `source_filename`, file provenance, or canonical metadata. Final EPUB and
-cover files are stored through the fields owned by `Book`.
+Source names exist only for immediate diagnostics and are not retained as Book
+metadata or provenance. Final EPUB and cover files are stored through the
+fields owned by `Book`.
 
 ## Operator import command
 
@@ -145,5 +145,3 @@ The following are intentionally unsupported:
 - arbitrary OPF sidecar assets beyond a supported referenced cover
 - sidecar-driven refresh of an existing checksum-duplicate Book
 - metadata-only or normally fileless Books
-- raw serving of stored EPUB files from `/media/books/`
-- a separate `BookFile` import model or endpoint

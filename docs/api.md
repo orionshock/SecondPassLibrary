@@ -547,8 +547,7 @@ BOOK_FILE_UNAVAILABLE`; missing or unreadable storage returns the same bounded
 code with `503` and no storage detail.
 
 The download endpoint currently returns the complete file with `200`; byte
-Range requests are not implemented. Raw `/media/books/` paths remain
-inaccessible and are never exposed. `cover_url` continues to use the public
+Range requests are not implemented. `cover_url` continues to use the public
 display-only `/media/covers/` namespace; cover mutation remains session-only.
 
 Author/Series payload notes:
@@ -703,7 +702,7 @@ Client guidance:
 Book write and media notes:
 
 - Books include a singular `file` object (or `null`) rather than `files[]`.
-- Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; raw book media such as `/media/books/...` is not public and EPUB/book content should be delivered only through authenticated app/API endpoints.
+- Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; EPUB content is delivered through authenticated app/API endpoints.
 - Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.

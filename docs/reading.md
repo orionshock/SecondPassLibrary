@@ -32,8 +32,7 @@ generated from the Book title rather than the content-addressed storage key.
 The endpoint does not currently implement byte Range responses.
 
 Fileless, unsupported, missing, or unreadable Book files return bounded API
-errors without revealing storage details. Raw `/media/books/` URLs remain
-inaccessible.
+errors without revealing storage details.
 
 ## Sessions
 

@@ -13,12 +13,12 @@ npm install
 
 Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
 adds local test/type tooling such as Django/DRF typing packages.
-Pillow is included for cover image validation.
-EPUB imports also attempt best-effort embedded cover extraction (JPEG/PNG/WebP only).
-ZIP imports can also use `metadata.opf` / sidecar `.opf` files (Calibre-style)
-to bootstrap metadata for new books only. Valid JPEG, PNG, or WebP sidecar
-covers take precedence over embedded EPUB covers; other sidecar assets are not
-imported.
+Pillow is included for cover image validation. EPUB import supports embedded
+JPEG, PNG, and WebP covers. ZIP imports also support matching OPF sidecars for
+new Books, including safely resolved JPEG, PNG, or WebP sidecar covers. A valid
+sidecar cover takes precedence over an embedded cover; arbitrary sidecar assets
+are not imported. See [Imports](imports.md) and
+[Metadata and identifiers](metadata.md) for the current precedence rules.
 
 `npm install` installs the pinned local Pyright dev tool. There is no frontend
 build step.
@@ -33,6 +33,21 @@ fake the new initial migrations onto an old database.
 Existing files under `userdata/media/` may be retained, but their old database
 rows are not reusable. Books must be re-imported into the fresh database before
 the retained media can be treated as library content again.
+
+Create normal schema changes with migrations from the current initial state.
+Do not add compatibility migrations, fake initial state, or application-level
+shims to make databases from the deleted migration history appear compatible.
+
+## Code and fixture boundaries
+
+`Book` owns its EPUB and cover fields directly.
+Do not add compatibility re-export modules or wrapper imports for deleted or
+renamed modules. Update callers to the current module boundary instead.
+
+Runtime files belong under `userdata/` or a test-isolated temporary root.
+Committed files under `TestFiles/` or `tests/fixtures/` are fixtures only, not
+runtime storage or a destination for generated artifacts. Browser artifacts
+belong under the ignored `test-artifacts/` directory.
 
 ## Optional browser diagnostics and E2E tests
 
@@ -146,11 +161,13 @@ Choose the least severe useful level:
   useful exception context where it helps diagnose the failure, without
   exposing sensitive input.
 
-Never log secrets, passwords, authentication or client tokens, raw uploaded
-content, or unsafe ZIP member paths. For unsafe archive input, log a safe
-summary or count rather than repeating attacker-controlled path text. Avoid
-high-volume per-request success messages; Django and the serving stack already
-provide request-level diagnostics where configured.
+Use structured or consistently bounded messages. Never log secrets, passwords,
+authentication or client tokens, email addresses, marginalia content, raw
+uploads or payloads, unsafe or absolute paths, file hashes, or storage keys.
+For unsafe archive input, log a safe summary or count rather than repeating
+attacker-controlled text. Avoid high-volume per-request success messages;
+Django and the serving stack already provide request-level diagnostics where
+configured.
 
 When reviewing a runtime change, explicitly decide whether logging would help
 operate or diagnose it. If not, leave the code quiet and state in the
@@ -336,6 +353,10 @@ If PowerShell blocks `npm.ps1`, use `npm.cmd run typecheck`.
 
 Prefer pytest for focused test runs. Run the smallest package, module, class,
 or test that covers the change. Broad suites are intentional, not the default.
+When tests change, report each test or coherent test group as an `invariant`,
+`contract`, `regression`, or `implementation detail`. Do not weaken an
+invariant or contract assertion without explicitly identifying and justifying
+the weaker guarantee.
 Use markers to keep routine runs away from known slow integration areas:
 
 ```powershell
