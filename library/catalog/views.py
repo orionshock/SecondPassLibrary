@@ -19,9 +19,8 @@ from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user, visible_groups_for_user
 
 
-def book_browse_queryset(queryset):
+def book_row_queryset(queryset):
     return queryset.select_related("book_series__series").prefetch_related(
-        "identifiers",
         Prefetch(
             "book_authors",
             queryset=BookAuthor.objects.select_related("author").order_by("position", "id"),
@@ -35,6 +34,10 @@ def book_browse_queryset(queryset):
             ),
         ),
     )
+
+
+def book_detail_queryset(queryset):
+    return book_row_queryset(queryset).prefetch_related("identifiers")
 
 
 def attach_visible_groups_to_book(*, book, user):
@@ -56,7 +59,7 @@ class BookListView(LibraryBearerReadMixin, ListAPIView):
             user=self.request.user,
             raw_group_id=self.request.query_params.get("exclude_group", ""),
         )
-        queryset = book_browse_queryset(queryset)
+        queryset = book_row_queryset(queryset)
         queryset = apply_book_filters(queryset, self.request.query_params)
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
 
@@ -67,7 +70,7 @@ class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
 
     def get_queryset(self):
         queryset = visible_books_for_user(self.request.user, cached=False)
-        return book_browse_queryset(queryset)
+        return book_detail_queryset(queryset)
 
     def retrieve(self, request, *args, **kwargs):
         book = attach_visible_groups_to_book(book=self.get_object(), user=request.user)

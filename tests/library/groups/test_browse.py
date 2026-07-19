@@ -108,6 +108,11 @@ class LibraryGroupBrowseTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Club Alpha", "Club Beta", "Shared Book"])
+        row = response.json()["results"][0]
+        self.assertEqual([tag["name"] for tag in row["tags"]], ["Fantasy"])
+        self.assertIn("file_format", row)
+        for detail_field in ("catalog_tags", "file", "groups", "identifiers"):
+            self.assertNotIn(detail_field, row)
 
     def test_group_books_exclude_books_visible_through_another_group(self):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/books/")

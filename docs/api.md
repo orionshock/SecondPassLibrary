@@ -438,6 +438,17 @@ custom groups remain hidden. This API representation does not imply a Product
 UI relationship tab: Book Detail hides its Groups tab in simple mode. Book list
 rows do not include `groups`.
 
+Book list rows, broad-search rows, and group-scoped Book rows use the compact
+Book shape. Catalog Tags are returned as `tags`, and the stored format is
+returned as top-level `file_format`. These rows do not include `catalog_tags`,
+`identifiers`, `groups`, or the detail `file` object.
+
+Book detail, Book PATCH, and cover-mutation responses use the detail shape.
+Catalog Tags are returned as `catalog_tags`; identifiers and visibility-scoped
+`groups` are included; and file metadata is returned only through `file` (or
+`null` when no file is stored). Detail responses do not repeat compact-row
+`tags` or top-level `file_format`.
+
 `GET /api/v1/library/books/?q=<term>` is the Books browse-axis search and
 matches title and sort title only.
 
@@ -555,7 +566,8 @@ is GET-only; there is no standalone tag create, update, or delete API, and
 bearer authentication grants no tag mutation capability. Catalog Tag
 relationships are mutated only through Book PATCH `catalog_tags`.
 
-Book, Author, and Series list endpoints accept `tag=<tag-slug>`. Books are
+Book, Author, and Series list endpoints accept the compact query parameter
+`tag=<tag-slug>`, which filters by Catalog Tag slug. Books are
 filtered to books directly carrying that tag. Authors and Series are filtered
 to records with at least one caller-visible tagged book, and their `book_count`
 reflects that filtered visible-book context. Group-scoped Book, Author, and
@@ -655,17 +667,19 @@ Client guidance:
 
 Book payload notes:
 
-- Book list/detail payloads do not currently include assigned LibraryGroup
-  summaries. Group context is available through
-  `GET /api/v1/library/groups/` and the group-scoped catalog listings such as
-  `GET /api/v1/library/groups/<group_id>/books/`.
+- Book detail payloads include visibility-scoped `groups` summaries. Compact
+  Book list, search, and group-scoped Book rows do not include `groups`.
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; raw book media such as `/media/books/...` is not public and EPUB/book content should be delivered only through authenticated app/API endpoints.
 - Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.
 - `identifiers[]` response items include `id`, `scheme`, and `value`.
-- `catalog_tags[]` response items include `id`, `name`, and generated `slug`.
+- Compact Book rows use `tags[]`; Book detail and PATCH use `catalog_tags[]`.
+  Items in either representation include `id`, `name`, and generated `slug`.
+- Compact Book rows expose top-level `file_format`. Book detail exposes file
+  metadata only through `file.format`, `file.file_size`, `file.checksum`, and
+  authenticated `file.download_url`.
 - Book PATCH accepts `identifiers` as a complete replacement list of
   `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
   preserves existing rows; `identifiers: []` clears them.

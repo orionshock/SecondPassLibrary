@@ -155,6 +155,12 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
 
         self.assertEqual(first.status_code, 200)
         self.assertIsNone(first.json()["cover_url"])
+        self.assertIn("catalog_tags", first.json())
+        self.assertIn("identifiers", first.json())
+        self.assertIn("groups", first.json())
+        self.assertIn("file", first.json())
+        self.assertNotIn("tags", first.json())
+        self.assertNotIn("file_format", first.json())
         self.assertEqual(second.status_code, 200)
         self.assertIsNone(second.json()["cover_url"])
         self.assertFalse(self.book.cover_file)

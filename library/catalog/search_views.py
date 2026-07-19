@@ -8,7 +8,7 @@ from rest_framework.generics import ListAPIView
 from library.api_access import LibraryBearerReadMixin
 from library.catalog.ordering import apply_book_ordering, parse_ordering_param
 from library.catalog.serializers import BookListSerializer
-from library.catalog.views import book_browse_queryset
+from library.catalog.views import book_row_queryset
 from library.groups.api_access import groups_available_via_api
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_user
@@ -52,7 +52,7 @@ class UserBookVerseSearchView(LibraryBearerReadMixin, ListAPIView):
             user=self.request.user,
             raw_group_id=self.request.query_params.get("exclude_group", ""),
         )
-        queryset = book_browse_queryset(queryset)
+        queryset = book_row_queryset(queryset)
         ordering = parse_ordering_param(
             self.request,
             allowed=SEARCH_ORDERINGS,

@@ -27,7 +27,7 @@ from library.catalog.serializers import (
     CatalogTagAxisSerializer,
     SeriesAxisSerializer,
 )
-from library.catalog.views import book_browse_queryset
+from library.catalog.views import book_row_queryset
 from library.groups.api_access import groups_available_via_api
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
@@ -53,7 +53,7 @@ class GroupBookListView(GroupBrowseMixin, ListAPIView):
     serializer_class = BookListSerializer
 
     def get_queryset(self):
-        queryset = book_browse_queryset(self.visible_group_books())
+        queryset = book_row_queryset(self.visible_group_books())
         queryset = apply_book_filters(queryset, self.request.query_params)
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
 

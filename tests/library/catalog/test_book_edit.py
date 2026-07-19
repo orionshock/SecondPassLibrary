@@ -49,6 +49,8 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertNotIn("book_file", payload["file"])
         self.assertEqual(payload["catalog_tags"][0]["name"], "Fantasy")
         self.assertEqual(payload["catalog_tags"][0]["slug"], "fantasy")
+        self.assertNotIn("tags", payload)
+        self.assertNotIn("file_format", payload)
 
     def test_patch_omitted_catalog_tags_preserves_relationships(self):
         self.client.logout()
@@ -62,6 +64,8 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([tag["name"] for tag in response.json()["catalog_tags"]], ["Fantasy"])
+        self.assertNotIn("tags", response.json())
+        self.assertNotIn("file_format", response.json())
 
     def test_patch_replaces_catalog_tags_and_deletes_orphan(self):
         self.client.logout()

@@ -235,13 +235,26 @@ class BookDetailSerializer(BookListSerializer):
 
     class Meta(BookListSerializer.Meta):
         fields = [
-            *BookListSerializer.Meta.fields,
+            "id",
+            "title",
+            "sort_title",
+            "subtitle",
+            "authors",
+            "series",
+            "language",
+            "publisher",
+            "published_year",
+            "published_month",
+            "published_day",
+            "published_date_precision",
+            "cover_url",
             "description",
             "identifiers",
             "catalog_tags",
             "file",
             "groups",
         ]
+        read_only_fields = fields
         read_only_fields = fields
 
 

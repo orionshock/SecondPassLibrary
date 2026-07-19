@@ -132,7 +132,8 @@ Library details:
   `exclude_shelf` and `exclude_group` suppressors. Rows use the ordinary Book
   list shape and omit download, checksum, storage/source, and group data.
 - Book, Author, and Series browse filters use `tag=<tag-slug>`; UUID tag
-  filters are not part of the client contract.
+  filters are not part of the client contract. `tag` is the compact query
+  parameter for filtering by Catalog Tag slug.
 - All results, counts, filters, and pagination are scoped to books visible to
   the token owner; inaccessible details and groups return `404`.
 - Book detail `groups` contains the same visibility-scoped group summaries as
@@ -140,6 +141,12 @@ Library details:
   `is_public_group`). It contains no membership or user data. In simple mode,
   only Public/Common Room can appear. Reader clients may use that API context;
   the Product UI itself hides the Book Detail Groups tab in simple mode.
+- Book list, broad-search, and group-scoped Book rows use compact `tags` and
+  top-level `file_format`; they omit `catalog_tags`, `identifiers`, `groups`,
+  and the detail `file` object.
+- Book detail uses `catalog_tags`, `identifiers`, visibility-scoped `groups`,
+  and the singular `file` object. It does not repeat compact-row `tags` or
+  top-level `file_format`. When no stored file exists, `file` is `null`.
 - Author, Series, Group, and Shelf list/detail payloads may opt into
   `preview_books` with `include_preview_books=true`; preview items contain only
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author

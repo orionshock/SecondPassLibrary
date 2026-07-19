@@ -34,6 +34,11 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
             set(response.json()["groups"][0]),
             {"id", "name", "description", "is_public_group"},
         )
+        self.assertIn("catalog_tags", response.json())
+        self.assertIn("identifiers", response.json())
+        self.assertIn("file", response.json())
+        self.assertNotIn("tags", response.json())
+        self.assertNotIn("file_format", response.json())
 
     def test_hidden_only_catalog_details_are_404(self):
         hidden_author = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
