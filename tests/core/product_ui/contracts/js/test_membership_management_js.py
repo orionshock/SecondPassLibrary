@@ -89,15 +89,20 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
     def test_user_edit_membership_rows_use_group_badges_and_public_curator_copy(self):
         self.assertIn('from "../ui/groups.js"', self.user_memberships_js)
         self.assertIn("renderGroupBadge(g", self.user_memberships_js)
-        self.assertIn('class="membership-row"', self.user_memberships_js)
+        self.assertIn(
+            'class="membership-row membership-row--user-edit"',
+            self.user_memberships_js,
+        )
         self.assertIn('class="membership-row__group"', self.user_memberships_js)
-        self.assertIn('class="membership-row__controls"', self.user_memberships_js)
-        self.assertIn('class="membership-row__actions"', self.user_memberships_js)
+        self.assertIn('class="membership-row__left"', self.user_memberships_js)
+        self.assertIn('class="membership-row__right"', self.user_memberships_js)
+        self.assertNotIn('class="membership-row__middle"', self.user_memberships_js)
         self.assertIn('class="membership-row__status muted"', self.user_memberships_js)
         self.assertIn(
             "renderPublicCuratorRestriction().outerHTML",
             self.user_memberships_js,
         )
+        self.assertIn("${isPublic ? note : curatorControl}", self.user_memberships_js)
 
     def test_public_curator_help_is_shared_accessible_and_plain_language(self):
         groups_ui_js = Path("web/static/web/js/ui/groups.js").read_text(
@@ -109,9 +114,12 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
             'const helpText = "Only Librarians/Managers may Curate the Public Group"',
             groups_ui_js,
         )
-        self.assertIn('help.setAttribute("aria-label", helpText)', groups_ui_js)
-        self.assertIn('help.setAttribute("title", helpText)', groups_ui_js)
-        self.assertIn("help.tabIndex = 0", groups_ui_js)
+        self.assertIn("helpLabel.textContent = helpText", groups_ui_js)
+        self.assertIn('const help = document.createElement("button")', groups_ui_js)
+        self.assertIn('help.setAttribute("aria-describedby", helpId)', groups_ui_js)
+        self.assertIn('helpLabel.setAttribute("role", "tooltip")', groups_ui_js)
+        self.assertNotIn('help.setAttribute("title"', groups_ui_js)
+        self.assertNotIn("help.tabIndex", groups_ui_js)
         self.assertIn('icon.textContent = "help"', groups_ui_js)
         self.assertIn('icon.setAttribute("aria-hidden", "true")', groups_ui_js)
         self.assertNotIn("Public fallback group", groups_ui_js)

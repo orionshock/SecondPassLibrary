@@ -61,14 +61,13 @@ export function renderMembershipControls(groups, allGroups = [], profileId = "")
             `.trim();
 
       return `
-          <article class="membership-row">
-            <div class="membership-row__actions">
+          <article class="membership-row membership-row--user-edit">
+            <div class="membership-row__left">
               <button class="icon-button icon-button--danger" type="button" data-action="membership-remove" data-group-id="${escapeHtml(groupId)}" data-user-id="${escapeHtml(profileId)}" aria-label="Remove membership" title="Remove membership"><span class="material-symbols-outlined" aria-hidden="true">remove_circle</span></button>
+              <div class="membership-row__group"${titleAttr}>${groupBadge}</div>
             </div>
-            <div class="membership-row__group"${titleAttr}>${groupBadge}</div>
-            <div class="membership-row__controls">
-              ${curatorControl}
-              ${note}
+            <div class="membership-row__right">
+              ${isPublic ? note : curatorControl}
               <span class="membership-row__status muted" aria-live="polite"></span>
             </div>
           </article>

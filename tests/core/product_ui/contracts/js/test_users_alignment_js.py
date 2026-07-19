@@ -128,6 +128,56 @@ def test_password_change_requirement_saves_inline_outside_user_form():
     assert "must_change_password" not in main_form_payload
 
 
+def test_user_edit_cards_and_membership_grid_are_compact_and_structured():
+    template = Path("web/templates/web/users/edit.html").read_text(encoding="utf-8")
+    memberships = Path("web/static/web/js/users/memberships.js").read_text(
+        encoding="utf-8"
+    )
+    css = Path("web/static/web/css/users.css").read_text(encoding="utf-8")
+
+    for card_id in ("user-edit-card", "user-password-card", "user-memberships-card"):
+        assert f'id="{card_id}"' in template
+    assert "#user-edit-card" in css and "#user-password-card" in css
+    assert "width: min(100%, 760px)" in css
+    assert 'class="user-password-card__body"' in template
+    assert "width: min(100%, 680px)" in css
+
+    assert 'class="membership-row membership-row--user-edit"' in memberships
+    left = memberships.index('class="membership-row__left"')
+    right = memberships.index('class="membership-row__right"')
+    assert left < right
+    assert 'class="membership-row__middle"' not in memberships
+    assert "grid-template-columns: minmax(0, 1fr) minmax(220px, 280px)" in css
+    assert ".membership-row__right" in css
+    right_css = css.split(".membership-row__right {", 1)[1].split("}", 1)[0]
+    assert "justify-content: flex-start" in right_css
+    assert "max-width: 280px" in right_css
+    assert ".membership-row__status {\n  min-width: 64px;" in css
+    assert "#user-memberships-card" in css
+    assert "width: min(100%, 760px)" in css
+
+    assert 'class="membership-add-tile__group"' in template
+    assert 'class="membership-add-tile__curator"' in template
+    assert 'class="membership-add-tile__actions"' in template
+    assert "JSON.stringify({ user_id: String(profileId), is_curator: isCurator })" in memberships
+
+    groups_ui = Path("web/static/web/js/ui/groups.js").read_text(encoding="utf-8")
+    assert 'help.setAttribute("title"' not in groups_ui
+    assert 'help.setAttribute("aria-describedby", helpId)' in groups_ui
+    assert ".public-curator-note__popover" in css
+    assert "opacity: 0" in css
+    assert ".public-curator-note__help:hover .public-curator-note__popover" in css
+    assert ".public-curator-note__help:focus .public-curator-note__popover" in css
+    popover_css = css.split(".public-curator-note__popover {", 1)[1].split("}", 1)[0]
+    assert "left: 100%" in popover_css
+    assert "bottom: 100%" in popover_css
+    assert "transform:" not in popover_css
+    assert "max-width:" not in popover_css
+    assert "white-space: nowrap" in popover_css
+    assert "font-weight: 600" in popover_css
+    assert "rgba(125, 211, 252, 0.65)" in popover_css
+
+
 def test_users_rendering_keeps_documented_identity_boundary():
     list_js = Path("web/static/web/js/users/list.js").read_text(encoding="utf-8")
     memberships_js = Path("web/static/web/js/users/memberships.js").read_text(

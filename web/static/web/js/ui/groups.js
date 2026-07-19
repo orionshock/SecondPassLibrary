@@ -8,6 +8,8 @@ export function groupBadgeText(group) {
   return groupDisplayName(group);
 }
 
+let publicCuratorHelpSequence = 0;
+
 export function renderGroupBadge(group, options = {}) {
   const badge = document.createElement(options.element || "span");
   badge.className = "group-badge";
@@ -39,17 +41,25 @@ export function renderPublicCuratorRestriction() {
   note.appendChild(label);
 
   const helpText = "Only Librarians/Managers may Curate the Public Group";
-  const help = document.createElement("span");
+  const help = document.createElement("button");
   help.className = "public-curator-note__help";
-  help.tabIndex = 0;
-  help.setAttribute("aria-label", helpText);
-  help.setAttribute("title", helpText);
+  help.type = "button";
+  publicCuratorHelpSequence += 1;
+  const helpId = `public-curator-help-${publicCuratorHelpSequence}`;
+  help.setAttribute("aria-label", "Public Group curator help");
+  help.setAttribute("aria-describedby", helpId);
 
   const icon = document.createElement("span");
   icon.className = "material-symbols-outlined public-curator-note__icon";
   icon.setAttribute("aria-hidden", "true");
   icon.textContent = "help";
   help.appendChild(icon);
+  const helpLabel = document.createElement("span");
+  helpLabel.id = helpId;
+  helpLabel.className = "public-curator-note__popover";
+  helpLabel.setAttribute("role", "tooltip");
+  helpLabel.textContent = helpText;
+  help.appendChild(helpLabel);
   note.appendChild(help);
 
   return note;
