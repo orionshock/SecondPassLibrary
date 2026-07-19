@@ -13,7 +13,6 @@ import {
   initUserMembershipsManager,
   loadAllGroups,
   refreshAddGroupOptions,
-  renderGroupsReadOnly,
   renderMembershipControls,
 } from "./memberships.js";
 import { syncUserEditBreadcrumb } from "./navigation.js";
@@ -26,10 +25,9 @@ export async function initUserEdit() {
   const root = $("#user-edit");
   const notAllowedEl = $("#user-edit-not-allowed");
   const statusEl = $("#user-edit-status");
+  const titleEl = $("#user-edit-title");
   const cardEl = $("#user-edit-card");
   const form = $("#user-edit-form");
-  const usernameEl = $("#user-edit-username");
-  const groupsEl = $("#user-edit-groups");
   const emailInput = $("#user-edit-email");
   const firstInput = $("#user-edit-first");
   const lastInput = $("#user-edit-last");
@@ -54,7 +52,6 @@ export async function initUserEdit() {
   const addStatus = $("#user-memberships-add-status");
   const groupUiEnabled =
     advancedLibraryGroupsEnabled() &&
-    !!groupsEl &&
     !!membershipsCard &&
     !!membershipsResults &&
     !!addForm &&
@@ -67,9 +64,9 @@ export async function initUserEdit() {
     !root ||
     !notAllowedEl ||
     !statusEl ||
+    !titleEl ||
     !cardEl ||
     !form ||
-    !usernameEl ||
     !emailInput ||
     !firstInput ||
     !lastInput ||
@@ -128,8 +125,10 @@ export async function initUserEdit() {
   function applyUserPayload(payload) {
     original = payload;
     syncUserEditBreadcrumb(payload);
-    usernameEl.replaceChildren(renderUserIdentity(payload));
-    if (groupUiEnabled) groupsEl.innerHTML = renderGroupsReadOnly(payload.groups);
+    titleEl.replaceChildren(
+      document.createTextNode("Editing User: "),
+      renderUserIdentity(payload, { className: "user-edit-title__identity" })
+    );
     emailInput.value = payload.email || "";
     firstInput.value = payload.first_name || "";
     lastInput.value = payload.last_name || "";

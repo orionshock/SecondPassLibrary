@@ -10,7 +10,7 @@
 
 {% block content %}
   <div class="page-header">
-    <h1 class="page-title">Edit User</h1>
+    <h1 class="page-title user-edit-title" id="user-edit-title">Editing User</h1>
   </div>
 
   <div id="user-edit" data-profile-id="{{ profile_id|escape }}"></div>
@@ -18,21 +18,13 @@
   <div id="user-edit-not-allowed" class="error is-hidden" role="alert">Not allowed.</div>
   <div id="user-edit-status" class="muted">Loading...</div>
 
-  <section id="user-edit-card" class="card is-hidden">
-    <h2 class="card__title">User</h2>
-
+  <section id="user-edit-card" class="card is-hidden" aria-labelledby="user-edit-title">
     <form id="user-edit-form" class="user-form user-edit-form">
       {% csrf_token %}
       <div class="user-form__fields">
-        <div class="user-form__field"><span>User</span><div id="user-edit-username"></div></div>
-
-        {% if advanced_library_groups_enabled %}
-        <div class="user-form__field"><span>Groups</span><div id="user-edit-groups"></div></div>
-        {% endif %}
-
+        <label class="user-form__field" for="user-edit-first"><span>First Name</span><input id="user-edit-first" type="text" /></label>
+        <label class="user-form__field" for="user-edit-last"><span>Last Name</span><input id="user-edit-last" type="text" /></label>
         <label class="user-form__field" for="user-edit-email"><span>Email</span><input id="user-edit-email" type="email" /></label>
-        <label class="user-form__field" for="user-edit-first"><span>First name</span><input id="user-edit-first" type="text" /></label>
-        <label class="user-form__field" for="user-edit-last"><span>Last name</span><input id="user-edit-last" type="text" /></label>
         <label class="user-form__field" for="user-edit-role">
           <span>Role</span>
           <select id="user-edit-role">
@@ -48,9 +40,9 @@
             <option value="false">false</option>
           </select>
         </label>
-        <label class="user-form__check" for="user-edit-must-change">
+        <label class="user-form__check user-edit-form__check" for="user-edit-must-change">
           <input id="user-edit-must-change" type="checkbox" />
-          <span>Require password change at next login</span>
+          <span>Require Password Change</span>
         </label>
       </div>
 

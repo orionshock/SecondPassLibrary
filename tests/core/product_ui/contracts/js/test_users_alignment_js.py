@@ -70,18 +70,31 @@ def test_create_user_form_is_bounded_vertical_without_redundant_card_heading():
 
 def test_edit_user_keeps_meaningful_cards_without_tabs_and_bounded_form():
     template = Path("web/templates/web/users/edit.html").read_text(encoding="utf-8")
+    source = Path("web/static/web/js/users/edit.js").read_text(encoding="utf-8")
+    css = Path("web/static/web/css/users.css").read_text(encoding="utf-8")
 
     assert 'id="user-edit-card" class="card is-hidden"' in template
     assert 'id="user-memberships-card" class="card is-hidden"' in template
-    assert '<h2 class="card__title">User</h2>' in template
     assert '<h2 class="card__title">Group Memberships</h2>' in template
     assert 'class="tabs"' not in template
     assert 'class="user-form user-edit-form"' in template
     assert 'class="user-form__actions"' in template
     assert 'id="user-edit-submit"' in template
-    assert "Owner cannot be edited here." in Path(
-        "web/static/web/js/users/edit.js"
-    ).read_text(encoding="utf-8")
+    assert "Owner cannot be edited here." in source
+    assert 'id="user-edit-title"' in template
+    assert 'id="user-edit-username"' not in template
+    assert 'id="user-edit-groups"' not in template
+    assert 'document.createTextNode("Editing User: ")' in source
+    assert 'renderUserIdentity(payload, { className: "user-edit-title__identity" })' in source
+    assert "grid-template-columns: 132px minmax(0, 1fr)" in css
+
+    first = template.index('for="user-edit-first"')
+    last = template.index('for="user-edit-last"')
+    email = template.index('for="user-edit-email"')
+    role = template.index('for="user-edit-role"')
+    active = template.index('for="user-edit-active"')
+    password = template.index('for="user-edit-must-change"')
+    assert first < last < email < role < active < password
 
 
 def test_users_rendering_keeps_documented_identity_boundary():
