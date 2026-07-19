@@ -3,7 +3,8 @@ from __future__ import annotations
 from django.urls import reverse
 from rest_framework import serializers
 
-from library.models import Author, Book, BookIdentifier, CatalogTag, Series
+from library.groups.public_group import is_public_group
+from library.models import Author, Book, BookIdentifier, CatalogTag, LibraryGroup, Series
 
 
 def book_cover_url(obj: Book, request=None) -> str | None:
@@ -35,6 +36,18 @@ class CatalogTagSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = CatalogTag
         fields = ["id", "name", "slug"]
+        read_only_fields = fields
+
+
+class BookGroupSummarySerializer(serializers.ModelSerializer):
+    is_public_group = serializers.SerializerMethodField(read_only=True)
+
+    def get_is_public_group(self, obj: LibraryGroup) -> bool:
+        return is_public_group(obj)
+
+    class Meta:
+        model = LibraryGroup
+        fields = ["id", "name", "description", "is_public_group"]
         read_only_fields = fields
 
 
@@ -204,6 +217,7 @@ class BookDetailSerializer(BookListSerializer):
     identifiers = BookIdentifierSerializer(many=True, read_only=True)
     catalog_tags = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
+    groups = serializers.SerializerMethodField(read_only=True)
 
     def get_file(self, obj: Book) -> dict | None:
         if not obj.book_file:
@@ -214,8 +228,20 @@ class BookDetailSerializer(BookListSerializer):
         tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]
         return CatalogTagSummarySerializer(tags, many=True).data
 
+    def get_groups(self, obj: Book) -> list[dict]:
+        return BookGroupSummarySerializer(
+            getattr(obj, "_visible_groups", []), many=True
+        ).data
+
     class Meta(BookListSerializer.Meta):
-        fields = [*BookListSerializer.Meta.fields, "description", "identifiers", "catalog_tags", "file"]
+        fields = [
+            *BookListSerializer.Meta.fields,
+            "description",
+            "identifiers",
+            "catalog_tags",
+            "file",
+            "groups",
+        ]
         read_only_fields = fields
 
 

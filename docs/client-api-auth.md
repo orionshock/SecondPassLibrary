@@ -112,7 +112,7 @@ Allowed surface is an explicit allow-list.
 | Domain | Bearer access | Notes |
 | --- | --- | --- |
 | `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, banner text, and advanced-groups state. Bearer `PATCH` is rejected. |
-| `/api/v1/library/` Books, Authors, Series, Tags | read-only | List/detail endpoints are visibility-scoped. Book detail exposes `file.download_url` for visible EPUB downloads. |
+| `/api/v1/library/` Books, Authors, Series, Tags | read-only | List/detail endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list rows do not include groups. |
 | `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |
 | `/api/v1/library/groups/` and group-scoped Books/Auth/Series/Tags | read-only | Group reads require group visibility. Simple mode exposes Public/Common Room only. |
 | `/api/v1/reading/` sessions/progress/annotations | read/write for owned reading state | Bearer mutations are limited to the token owner's sessions, progress, and annotations. Writes that open/read/write a book require current book visibility. |
@@ -128,6 +128,10 @@ Library details:
   filters are not part of the client contract.
 - All results, counts, filters, and pagination are scoped to books visible to
   the token owner; inaccessible details and groups return `404`.
+- Book detail `groups` contains the same visibility-scoped group summaries as
+  session-authenticated detail (`id`, `name`, `description`, and
+  `is_public_group`). It contains no membership or user data. In simple mode,
+  only Public/Common Room can appear.
 - Author, Series, Group, and Shelf list/detail payloads may opt into
   `preview_books` with `include_preview_books=true`; preview items contain only
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author

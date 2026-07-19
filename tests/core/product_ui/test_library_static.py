@@ -27,7 +27,7 @@ class ProductUiLibraryTests(ProductUiTestCase):
             f"/api-auth/login/?next=/library/books/{book_id}/edit/",
         )
 
-    def test_authenticated_book_detail_returns_200_and_hides_group_panel_by_default(self):
+    def test_authenticated_book_detail_returns_200_and_shows_simple_mode_group_panel(self):
         self.client.force_login(self.user)
         book_id = uuid4()
         response = self.client.get(f"/library/books/{book_id}/")
@@ -47,9 +47,9 @@ class ProductUiLibraryTests(ProductUiTestCase):
         self.assertContains(response, 'data-tab="metadata"')
         self.assertContains(response, 'data-tab-panel="shelves"')
         self.assertContains(response, 'data-tab-panel="metadata"')
-        self.assertNotContains(response, 'id="book-groups"')
-        self.assertNotContains(response, 'data-tab="groups"')
-        self.assertNotContains(response, 'data-tab-panel="groups"')
+        self.assertContains(response, 'id="book-groups"')
+        self.assertContains(response, 'data-tab="groups"')
+        self.assertContains(response, 'data-tab-panel="groups"')
         self.assertContains(response, 'id="tab-metadata"')
         self.assertContains(response, f'href="/library/books/{book_id}/edit/"')
 

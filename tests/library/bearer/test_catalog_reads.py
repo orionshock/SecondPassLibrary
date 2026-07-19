@@ -22,6 +22,19 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
                 self.assertEqual(detail.status_code, 200)
                 self.assertEqual(detail.json()[field], expected)
 
+    def test_book_detail_includes_same_visibility_scoped_group_summaries(self):
+        response = self.bearer_get(f"/api/v1/library/books/{self.multi_group.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [group["name"] for group in response.json()["groups"]],
+            ["Common Room"],
+        )
+        self.assertEqual(
+            set(response.json()["groups"][0]),
+            {"id", "name", "description", "is_public_group"},
+        )
+
     def test_hidden_only_catalog_details_are_404(self):
         hidden_author = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
         hidden_series = Series.objects.create(name="Hidden Only", sort_name="Hidden Only")

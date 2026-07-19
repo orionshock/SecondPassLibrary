@@ -77,7 +77,12 @@ Cover note: book lists/cards throughout the product UI render cover art when `co
 
 Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). The only public media URL namespace is `/media/covers/`; book files and other protected user data are never served as raw media URLs.
 
-The book detail page also shows the book's assigned LibraryGroups (filtered for Readers, including readers with group curator flags, to only viewable groups) with links to the group pages.
+The book detail Groups tab shows the book's visible LibraryGroup assignments
+from the Book detail payload, including Public/Common Room. Readers see only
+groups they can view; broad library roles follow their existing group
+visibility. In simple mode the tab remains available for Public/Common Room,
+while custom groups remain hidden. The empty state is shown only when no
+assigned group is visible.
 
 The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Authors are selected from existing records; a series may be selected or created and assigned with the same atomic Book save. Catalog Tags are searchable removable pills loaded from the paginated read-only tag API; load failures remain visible without blocking manual tag entry. Tag names are submitted only through the same Book PATCH. Identifier add/edit/remove controls likewise update local page state and are saved with the Book PATCH. LibraryGroup assignments remain on their group relationship endpoints. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only Book-owned file metadata and a separate Librarian+ cover editor with current/replacement previews, reset, replace, and confirmed clear actions. Cover operations use the dedicated cover endpoint and do not participate in metadata Save. The stored EPUB is not edited from this page.
 

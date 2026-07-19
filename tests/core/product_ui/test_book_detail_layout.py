@@ -38,6 +38,7 @@ class BookDetailLayoutTests(ProductUiTestCase):
         self.assertIn('id="book-summary"', template)
         self.assertIn('data-tab="shelves"', template)
         self.assertIn('data-tab="groups"', template)
+        self.assertNotIn("{% if advanced_library_groups_enabled %}", template)
         self.assertIn('data-tab="metadata"', template)
         self.assertNotIn('id="book-cover-edit"', template)
         self.assertNotIn('id="book-cover-modal"', template)

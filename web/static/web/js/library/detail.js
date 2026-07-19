@@ -2,7 +2,6 @@ import { fetchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
 import {
   $,
-  advancedLibraryGroupsEnabled,
   loadMeAndInitShell,
   setGlobalError,
   setGlobalErrorFromError,
@@ -175,7 +174,7 @@ function renderFile(container, file) {
   container.appendChild(wrap);
 }
 
-function renderBookGroups(container, groups) {
+export function renderBookGroups(container, groups) {
   clear(container);
   if (!Array.isArray(groups) || groups.length === 0) {
     container.appendChild(el("div", "muted", "No visible groups."));
@@ -317,8 +316,7 @@ export async function initBookDetail() {
   const catalogTagsBody = $("#book-catalog-tags-body");
   const groupsSection = $("#book-groups");
   const groupsBody = $("#book-groups-body");
-  const groupsFeatureEnabled =
-    advancedLibraryGroupsEnabled() && !!groupsSection && !!groupsBody;
+  const groupsFeatureEnabled = !!groupsSection && !!groupsBody;
   const shelvesSection = $("#book-shelves");
   const shelvesBody = $("#book-shelves-body");
   const downloadLink = $("#book-download-link");

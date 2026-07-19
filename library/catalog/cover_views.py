@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from accounts.roles import is_librarian
 from library.catalog.serializers import BookDetailSerializer
-from library.catalog.views import book_browse_queryset
+from library.catalog.views import attach_visible_groups_to_book, book_browse_queryset
 from library.cover_services import (
     InvalidBookCover,
     clear_book_cover,
@@ -60,5 +60,6 @@ class BookCoverView(APIView):
         book = book_browse_queryset(visible_books_for_user(request.user, cached=False)).get(
             pk=book_id
         )
+        book = attach_visible_groups_to_book(book=book, user=request.user)
         payload = BookDetailSerializer(book, context={"request": request}).data
         return Response(payload, status=status.HTTP_200_OK)

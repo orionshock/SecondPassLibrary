@@ -71,8 +71,25 @@ class StartupScriptContractTests(SimpleTestCase):
 
         self.assertIn("start-dev.ps1", scripts)
         self.assertIn("start-local-production.ps1", scripts)
+        self.assertIn("seed-dev-users.ps1", scripts)
         self.assertNotIn("start-dev.sh", scripts)
         self.assertNotIn("start-production.sh", scripts)
+
+    def test_powershell_seed_script_supports_dev_and_production_settings(self):
+        source = (ROOT / "scripts" / "seed-dev-users.ps1").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('$ErrorActionPreference = "Stop"', source)
+        self.assertIn("$env:PYTHON", source)
+        self.assertIn(
+            "[string]::IsNullOrWhiteSpace($env:DJANGO_DEBUG)", source
+        )
+        self.assertIn('$env:DJANGO_DEBUG = "1"', source)
+        self.assertIn('$env:DJANGO_DEBUG -eq "0"', source)
+        self.assertIn('$SeedArgs += "--force"', source)
+        self.assertIn("$SeedArgs += $args", source)
+        self.assertIn("manage.py @SeedArgs", source)
 
     def test_documentation_does_not_reference_removed_devserver_command(self):
         docs = [

@@ -14,8 +14,9 @@ from library.catalog.filters import apply_book_filters
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
 from library.catalog.serializers import BookDetailSerializer, BookListSerializer, BookUpdateSerializer
 from library.groups.book_filters import exclude_books_assigned_to_group
+from library.groups.api_access import groups_available_via_api
 from library.models import BookAuthor, BookCatalogTag
-from library.queries import visible_books_for_user
+from library.queries import visible_books_for_user, visible_groups_for_user
 
 
 def book_browse_queryset(queryset):
@@ -34,6 +35,15 @@ def book_browse_queryset(queryset):
             ),
         ),
     )
+
+
+def attach_visible_groups_to_book(*, book, user):
+    book._visible_groups = list(
+        groups_available_via_api(visible_groups_for_user(user))
+        .filter(book_assignments__book=book)
+        .order_by("name", "id")
+    )
+    return book
 
 
 class BookListView(LibraryBearerReadMixin, ListAPIView):
@@ -58,6 +68,10 @@ class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
     def get_queryset(self):
         queryset = visible_books_for_user(self.request.user, cached=False)
         return book_browse_queryset(queryset)
+
+    def retrieve(self, request, *args, **kwargs):
+        book = attach_visible_groups_to_book(book=self.get_object(), user=request.user)
+        return Response(self.get_serializer(book).data)
 
     def partial_update(self, request, *args, **kwargs):
         if not is_librarian(request.user):
@@ -89,7 +103,9 @@ class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
             raise serializers.ValidationError(
                 exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             ) from exc
-        refreshed = self.get_queryset().get(pk=book.pk)
+        refreshed = attach_visible_groups_to_book(
+            book=self.get_queryset().get(pk=book.pk), user=request.user
+        )
         return Response(BookDetailSerializer(refreshed, context={"request": request}).data, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):

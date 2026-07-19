@@ -59,7 +59,7 @@ export function bindGroupActions({
       await fetchJSONWithOptions(`/api/v1/library/groups/${encodeURIComponent(String(gid))}/books/`, {
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRFToken": csrf },
-        body: JSON.stringify({ book: String(bookId) }),
+        body: JSON.stringify({ book_id: String(bookId) }),
       });
       setStatus(groupsAddStatusEl, "Added.", false);
       await refreshBook();

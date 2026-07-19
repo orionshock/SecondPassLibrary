@@ -428,12 +428,19 @@ Rules:
 - Catalog Tags: `GET /api/v1/library/tags/` (paginated), `GET /api/v1/library/tags/<id>/`
 - Books: `GET /api/v1/library/books/` (paginated), `GET/PATCH /api/v1/library/books/<id>/`
 
+Book detail responses include a read-only `groups` array containing only group
+assignments visible to the caller. Each summary contains `id`, `name`,
+`description`, and `is_public_group`; membership records and users are not
+included. In simple mode this array may include Public/Common Room, while
+custom groups remain hidden. Book list rows do not include `groups`.
+
 The Groups add-book picker uses
 `GET /api/v1/library/books/?q=<title>&exclude_group=<group_id>`. The optional
 `exclude_group` UUID removes every book already assigned to that visible group
 before pagination; it is not limited to the group's currently displayed page.
 
 Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
+
 - `GET /api/v1/library/groups/<group_id>/books/`
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
