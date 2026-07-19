@@ -1,33 +1,26 @@
 $ErrorActionPreference = "Stop"
 
-$PythonExecutable = if ($env:PYTHON) { $env:PYTHON } else { "python" }
-$Bind = if ($env:BIND) { $env:BIND } else { "127.0.0.1:8000" }
+$PythonExecutable = "python"
+$UvicornHost = "127.0.0.1"
+$UvicornPort = 8000
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
-if ($Bind -match "[\[\]]" -or $Bind -notmatch "^(?<Host>[^\s:]+):(?<Port>[0-9]+)$") {
-    [Console]::Error.WriteLine("BIND must use host:port syntax with a hostname or IPv4 address; IPv6 is not supported by this helper. Received: $Bind")
-    exit 1
-}
-
-$UvicornHost = $Matches.Host
-$UvicornPort = 0
-if (-not [int]::TryParse($Matches.Port, [ref]$UvicornPort) -or $UvicornPort -lt 1 -or $UvicornPort -gt 65535) {
-    [Console]::Error.WriteLine("BIND port must be an integer from 1 through 65535. Received: $Bind")
-    exit 1
-}
-
+$env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "0"
-$env:SECOND_PASS_ENABLE_WHITENOISE = "1"
 $env:DJANGO_SECRET_KEY = "secondpass-local-production-mode-not-for-real-deployments"
+$env:DJANGO_TIME_ZONE = "America/Phoenix"
 $env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,[::1]"
 $env:DJANGO_CSRF_TRUSTED_ORIGINS = "http://localhost:8000,http://127.0.0.1:8000"
 $env:DJANGO_SECURE_COOKIES = "0"
 $env:DJANGO_TRUST_X_FORWARDED_PROTO = "0"
 $env:DJANGO_USE_X_FORWARDED_HOST = "0"
-$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
 $env:DJANGO_SILENCED_SYSTEM_CHECKS = "security.W004,security.W008,security.W012,security.W016"
-
-Write-Host "SECOND_PASS_ENABLE_DJANGO_ADMIN=$env:SECOND_PASS_ENABLE_DJANGO_ADMIN"
+$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
+$env:SECOND_PASS_ENABLE_WHITENOISE = "1"
+$env:SECOND_PASS_USERDATA_DIR = Join-Path $ProjectRoot "userdata"
+$env:SECOND_PASS_SERVER_VERSION = "0.1.0-dev"
+$env:SECOND_PASS_SERVER_RELEASE = "pre-release"
+$env:SECOND_PASS_SERVER_RELEASE_DATE = "2026-07-03"
 
 Push-Location $ProjectRoot
 try {

@@ -207,9 +207,11 @@ Optional: copy `.env.example` to `.env` and set environment variables for your s
 
 The script sets `DJANGO_DEBUG=1`, disables WhiteNoise runtime caching for faster
 template/static iteration, runs `python manage.py migrate --noinput`, and only
-then starts Django's development server. Set `PYTHON` to override the Python
-executable. Additional arguments
-are passed through to `runserver`, for example:
+then starts Django's development server. Its Python executable and application
+environment are defined in the script and do not inherit configuration choices
+from the calling shell. Edit the values near the top of the script when local
+settings need to change. Additional arguments are passed through to
+`runserver`, for example:
 
 ```powershell
 .\scripts\start-dev.ps1 127.0.0.1:8080 --noreload
@@ -229,9 +231,9 @@ and media routing is unchanged: covers remain public display assets, while
 EPUB downloads remain authenticated application/API responses. Proxy-header
 trust remains deployment-owned and is not broadened by these startup helpers.
 
-The development script also sets `DJANGO_ALLOWED_HOSTS` to
-`localhost,127.0.0.1,[::1]` when it is not already set. Preserve or override
-that value in your shell if you need a LAN hostname or IP during development.
+The development script sets `DJANGO_ALLOWED_HOSTS` to
+`localhost,127.0.0.1,[::1]` and enables the Django Admin service hatch. Edit
+the script if a LAN hostname or IP is needed during development.
 
 For a clean local reset:
 
@@ -425,7 +427,7 @@ Test helpers:
 Create a richer development/demo world for manual UI testing:
 
 ```powershell
-python manage.py seed_dev_users
+.\scripts\seed-dev-users.ps1
 ```
 
 The command:
@@ -453,9 +455,9 @@ advanced library groups are enabled.
 Useful options:
 
 ```powershell
-python manage.py seed_dev_users --seed family-demo
-python manage.py seed_dev_users --users 12 --groups 3
-python manage.py seed_dev_users --skip-shelves
+.\scripts\seed-dev-users.ps1 --seed family-demo
+.\scripts\seed-dev-users.ps1 --users 12 --groups 3
+.\scripts\seed-dev-users.ps1 --skip-shelves
 ```
 
 Safety:

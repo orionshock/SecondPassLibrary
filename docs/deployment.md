@@ -28,7 +28,9 @@ unrelated media files.
 The example deployment runs one Django/Uvicorn service named
 `secondpasslibrary`, uses SQLite, and bind-mounts `./userdata` at
 `/app/userdata`. Uvicorn serves `secondpass.asgi:application` directly with one
-worker. Reverse proxy and TLS configuration remain deployment-owned.
+worker. The container entrypoint always enables WhiteNoise; this is not an
+operator-configurable Docker setting. Reverse proxy and TLS configuration
+remain deployment-owned.
 
 First run:
 
@@ -57,6 +59,9 @@ different ownership. On native Linux, prepare the bind mount accordingly:
 mkdir -p userdata
 sudo chown -R 1000:1000 userdata
 ```
+
+On Windows Docker Desktop, bind-mount permissions are normally handled by
+Docker Desktop.
 
 The example binds host `127.0.0.1:8000` for a reverse proxy on the same host.
 Direct LAN or public exposure requires an intentional `compose.yml` change.
@@ -180,22 +185,14 @@ The helper uses `DJANGO_DEBUG=0`, runs deploy checks, migrations, and static
 collection, then starts one direct Uvicorn worker with
 `secondpass.asgi:application` on `127.0.0.1:8000` by default. Access logs are
 disabled, matching Docker. It supplies local-safe defaults and is not a
-production secret-management mechanism. It enables Django Admin only when
-`SECOND_PASS_ENABLE_DJANGO_ADMIN` is unset and respects an explicit `0`.
+production secret-management mechanism. It always enables Django Admin for
+local operator use.
 
-Useful environment controls include:
-
-- `DJANGO_SECRET_KEY`: required and non-default when debug is off
-- `DJANGO_ALLOWED_HOSTS`: comma-separated hostnames or IP addresses
-- `DJANGO_CSRF_TRUSTED_ORIGINS`: scheme-qualified trusted origins
-- `DJANGO_TRUST_X_FORWARDED_PROTO`: trusted-proxy HTTPS indication
-- `DJANGO_USE_X_FORWARDED_HOST`: trusted-proxy host indication
-- `DJANGO_SECURE_COOKIES`: enable for HTTPS deployments
-- `SECOND_PASS_USERDATA_DIR`: runtime directory; default `./userdata`
-- `SECOND_PASS_ENABLE_DJANGO_ADMIN`: register `/admin/` when set to `1`
-- `APP_UID` / `APP_GID`: container app-user identity at build time
-- `BIND`: Windows helper `host:port`; defaults to `127.0.0.1:8000` and accepts
-  hostnames or IPv4 addresses, but not IPv6 syntax
+The Python executable, bind host and port, and complete application environment
+are defined near the top of the script. Values inherited from the calling shell
+are replaced. Edit the script directly when a different local configuration is
+needed. This rule applies only to the local helper; Docker deployments continue
+to use `.env` and the Compose build arguments documented above.
 
 Normal development remains on Django's `runserver`. Raw server commands are
 usable after migrations have been applied manually. Prefer the provided

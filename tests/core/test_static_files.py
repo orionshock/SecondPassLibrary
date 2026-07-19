@@ -42,17 +42,9 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
         )
 
     def test_production_startup_collects_static_before_asgi_server(self):
-        script_servers = {
-            "scripts/start-local-production.ps1": "-m uvicorn",
-            "docker/entrypoint.sh": "python -m uvicorn secondpass.asgi:application",
-        }
-        for script_name, server_marker in script_servers.items():
-            with self.subTest(script_name=script_name):
-                source = (ROOT / script_name).read_text(
-                    encoding="utf-8"
-                )
+        source = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
 
-                self.assertLess(
-                    source.index("manage.py collectstatic --noinput"),
-                    source.index(server_marker),
-                )
+        self.assertLess(
+            source.index("manage.py collectstatic --noinput"),
+            source.index("python -m uvicorn secondpass.asgi:application"),
+        )

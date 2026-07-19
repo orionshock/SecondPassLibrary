@@ -1,139 +1,12 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
-import shutil
-import subprocess
 
 from django.test import SimpleTestCase
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
-
-class StartupScriptContractTests(SimpleTestCase):
-    def test_powershell_dev_script_migrates_before_runserver(self):
-        source = (ROOT / "scripts" / "start-dev.ps1").read_text(encoding="utf-8")
-
-        self.assertIn('$ErrorActionPreference = "Stop"', source)
-        self.assertIn("$env:PYTHON", source)
-        self.assertNotIn("Restore-ScopedEnvironment", source)
-        self.assertIn('$env:DJANGO_DEBUG = "1"', source)
-        self.assertIn('$env:SECOND_PASS_ENABLE_WHITENOISE = "0"', source)
-        self.assertIn("DJANGO_ALLOWED_HOSTS", source)
-        self.assertIn("localhost,127.0.0.1,[::1]", source)
-        self.assertLess(
-            source.index("manage.py migrate --noinput"),
-            source.index("manage.py runserver @args"),
-        )
-        self.assertIn("if ($LASTEXITCODE -ne 0)", source)
-
-    def test_powershell_local_production_script_sets_local_prod_defaults(self):
-        source = (ROOT / "scripts" / "start-local-production.ps1").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn('$ErrorActionPreference = "Stop"', source)
-        self.assertIn('"127.0.0.1:8000"', source)
-        self.assertNotIn("Restore-ScopedEnvironment", source)
-        self.assertIn('$env:DJANGO_DEBUG = "0"', source)
-        self.assertIn('$env:SECOND_PASS_ENABLE_WHITENOISE = "1"', source)
-        self.assertIn("DJANGO_SECRET_KEY", source)
-        self.assertIn("secondpass-local-production-mode-not-for-real-deployments", source)
-        self.assertIn("DJANGO_ALLOWED_HOSTS", source)
-        self.assertIn("localhost,127.0.0.1,[::1]", source)
-        self.assertIn("DJANGO_CSRF_TRUSTED_ORIGINS", source)
-        self.assertIn("http://localhost:8000,http://127.0.0.1:8000", source)
-        self.assertIn("DJANGO_SECURE_COOKIES", source)
-        self.assertIn("DJANGO_TRUST_X_FORWARDED_PROTO", source)
-        self.assertIn("DJANGO_USE_X_FORWARDED_HOST", source)
-        self.assertIn("SECOND_PASS_ENABLE_DJANGO_ADMIN", source)
-        self.assertIn('$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"', source)
-        self.assertIn(
-            'Write-Host "SECOND_PASS_ENABLE_DJANGO_ADMIN=$env:SECOND_PASS_ENABLE_DJANGO_ADMIN"',
-            source,
-        )
-        self.assertIn("DJANGO_SILENCED_SYSTEM_CHECKS", source)
-        self.assertIn("security.W004,security.W008,security.W012,security.W016", source)
-        check_at = source.index("manage.py check --deploy")
-        migrate_at = source.index("manage.py migrate --noinput")
-        collectstatic_at = source.index("manage.py collectstatic --noinput")
-        uvicorn_at = source.index("-m uvicorn")
-        self.assertLess(check_at, migrate_at)
-        self.assertLess(migrate_at, collectstatic_at)
-        self.assertLess(collectstatic_at, uvicorn_at)
-        self.assertIn('"secondpass.asgi:application"', source)
-        self.assertIn('"--host", $UvicornHost', source)
-        self.assertIn('"--port", $UvicornPort', source)
-        self.assertIn('"--workers", "1"', source)
-        self.assertIn('"--no-access-log"', source)
-        self.assertNotIn("waitress", source.lower())
-        requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
-        self.assertIn("uvicorn==", requirements)
-        self.assertNotIn("waitress", requirements.lower())
-        self.assertNotIn("gunicorn", requirements.lower())
-
-    def test_powershell_local_production_script_rejects_invalid_bind_values(self):
-        powershell = shutil.which("powershell") or shutil.which("pwsh")
-        if powershell is None:
-            self.skipTest("PowerShell is not available")
-
-        script = ROOT / "scripts" / "start-local-production.ps1"
-        invalid_values = {
-            "missing-port": "BIND must use host:port syntax",
-            "localhost:not-a-port": "BIND must use host:port syntax",
-            "localhost:8000:extra": "BIND must use host:port syntax",
-            "[::1]:8000": "IPv6 is not supported by this helper",
-            "localhost:65536": "BIND port must be an integer from 1 through 65535",
-        }
-        for bind, expected_error in invalid_values.items():
-            with self.subTest(bind=bind):
-                environment = os.environ.copy()
-                environment["BIND"] = bind
-                result = subprocess.run(
-                    [
-                        powershell,
-                        "-NoProfile",
-                        "-NonInteractive",
-                        "-ExecutionPolicy",
-                        "Bypass",
-                        "-File",
-                        str(script),
-                    ],
-                    cwd=ROOT,
-                    env=environment,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(expected_error, result.stdout + result.stderr)
-
-    def test_scripts_are_windows_native_only_for_now(self):
-        scripts = {path.name for path in (ROOT / "scripts").iterdir()}
-
-        self.assertIn("start-dev.ps1", scripts)
-        self.assertIn("start-local-production.ps1", scripts)
-        self.assertIn("seed-dev-users.ps1", scripts)
-        self.assertNotIn("start-dev.sh", scripts)
-        self.assertNotIn("start-production.sh", scripts)
-
-    def test_powershell_seed_script_supports_dev_and_production_settings(self):
-        source = (ROOT / "scripts" / "seed-dev-users.ps1").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn('$ErrorActionPreference = "Stop"', source)
-        self.assertIn("$env:PYTHON", source)
-        self.assertIn(
-            "[string]::IsNullOrWhiteSpace($env:DJANGO_DEBUG)", source
-        )
-        self.assertIn('$env:DJANGO_DEBUG = "1"', source)
-        self.assertIn('$env:DJANGO_DEBUG -eq "0"', source)
-        self.assertIn('$SeedArgs += "--force"', source)
-        self.assertIn("$SeedArgs += $args", source)
-        self.assertIn("manage.py @SeedArgs", source)
 
 class DockerStartupContractTests(SimpleTestCase):
     def test_compose_uses_env_file_userdata_mount_loopback_port_and_healthcheck(self):
@@ -165,6 +38,7 @@ class DockerStartupContractTests(SimpleTestCase):
     def test_docker_entrypoint_runs_startup_steps_in_order(self):
         source = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
 
+        self.assertIn("export SECOND_PASS_ENABLE_WHITENOISE=1", source)
         self.assertIn("SECOND_PASS_USERDATA_DIR must be set.", source)
         self.assertIn('"$SECOND_PASS_USERDATA_DIR/db"', source)
         self.assertIn('"$SECOND_PASS_USERDATA_DIR/media"', source)

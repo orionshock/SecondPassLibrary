@@ -1,20 +1,26 @@
 $ErrorActionPreference = "Stop"
 
-$PythonExecutable = if ($env:PYTHON) { $env:PYTHON } else { "python" }
+$PythonExecutable = "python"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $SeedArgs = @("seed_dev_users")
 
-# An ordinary interactive shell is a development context unless the caller
-# explicitly selected production settings.
-if ([string]::IsNullOrWhiteSpace($env:DJANGO_DEBUG)) {
-    $env:DJANGO_DEBUG = "1"
-}
+$env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
+$env:DJANGO_DEBUG = "1"
+$env:DJANGO_SECRET_KEY = "secondpass-local-development-only"
+$env:DJANGO_TIME_ZONE = "America/Phoenix"
+$env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,[::1]"
+$env:DJANGO_CSRF_TRUSTED_ORIGINS = "http://localhost:8000,http://127.0.0.1:8000"
+$env:DJANGO_SECURE_COOKIES = "0"
+$env:DJANGO_TRUST_X_FORWARDED_PROTO = "0"
+$env:DJANGO_USE_X_FORWARDED_HOST = "0"
+$env:DJANGO_SILENCED_SYSTEM_CHECKS = ""
+$env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
+$env:SECOND_PASS_ENABLE_WHITENOISE = "0"
+$env:SECOND_PASS_USERDATA_DIR = Join-Path $ProjectRoot "userdata"
+$env:SECOND_PASS_SERVER_VERSION = "0.1.0-dev"
+$env:SECOND_PASS_SERVER_RELEASE = "pre-release"
+$env:SECOND_PASS_SERVER_RELEASE_DATE = "2026-07-03"
 
-# The management command requires --force when run with production settings.
-# Production configuration, including DJANGO_SECRET_KEY, remains caller-owned.
-if ($env:DJANGO_DEBUG -eq "0") {
-    $SeedArgs += "--force"
-}
 $SeedArgs += $args
 
 Push-Location $ProjectRoot
