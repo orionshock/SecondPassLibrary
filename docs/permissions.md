@@ -1,343 +1,205 @@
-# Permissions and Roles
+# Permissions and visibility
 
-This document describes the intended permission model for Second Pass Library.
+This document defines current role authority and visibility rules. Exact HTTP
+routes and payloads belong in `docs/api.md`; shelf lifecycle and scope behavior
+belong in `docs/shelves.md`; Product UI structure belongs in `docs/ui.md`.
 
-Key principles:
+## Identity concepts
 
-- Reading metadata is user-owned and durable.
-- LibraryGroups are **access scopes**, not shelves.
-- Access to a book is determined by `LibraryGroupMembership` + `BookGroupAssignment`.
-- Losing book access does not hide or remove a user's existing reading sessions
-  and annotations from that user, but it does block live reading activity,
-  annotation/progress writes, new sessions, and book-file download.
-- Session summary/detail payloads may expose `can_open=false` for owned
-  sessions whose book is no longer visible. That is a UI hint for open/continue
-  capability, not a denial of marginalia ownership.
-- Global role authority lives in `accounts.roles`; group-scoped curator authority
-  lives in `library.roles`; book/group visibility lives in `library.queries`.
-  App services and views own action-specific business rules.
+Second Pass Library has one system Owner and three application roles:
 
-In plain language:
+- **Owner**: represented by Django `is_superuser`; not a normal profile role.
+- **Manager**: manages users, Library Groups, and library operations within the
+  restrictions below.
+- **Librarian**: manages Books, imports, group Book assignments, and supported
+  group/shelf presentation.
+- **Reader**: reads visible Books and owns personal reading and shelf data.
 
-- Readers live in groups.
-- Curator is an optional group-membership stewardship flag.
-- Librarians manage the collection globally.
-- Managers manage people globally.
-- Owners manage the installation.
+`LibraryGroupMembership` grants access to one Library Group. Its optional
+`is_curator=true` flag grants group-scoped stewardship for that exact custom
+group; Curator is not a global role.
 
-## Roles (global)
+Role/capability values returned to a client are UI hints. Every operation still
+enforces authority at the API/service boundary.
 
-Global roles live on `UserProfile.role`:
+## Global role authority
 
-- `manager`
-- `librarian`
-- `reader`
+### Owner
 
-### Owner (Django `is_superuser`)
+Owner may:
 
-- Owner is Django `is_superuser`.
-- Owner is a system/root authority, not a normal app role.
-- Owner can do everything.
-- Only Owner can promote users to Manager or demote existing Managers.
-- Owner may use Django admin/service hatches for recovery.
-- The first-run setup page creates the initial active superuser and an
-  associated Manager `UserProfile`; it does not add an `owner` profile role.
-- The setup page is unavailable once any active superuser exists.
+- manage all non-Owner users and assign global roles;
+- perform all Manager and Librarian operations;
+- manage designated Public group identity through Server Settings;
+- enable advanced library groups;
+- use the separately gated Django Admin Service Hatch for recovery.
+
+Owner cannot deactivate or reset their own account through managed-user APIs.
+Owner is still subject to protected Public-group and user-data invariants.
 
 ### Manager
 
-Manager is the app-level administrator.
+Manager may:
 
-Manager can:
+- create Librarian and Reader accounts and manage non-Manager, non-Owner users;
+- create, rename, update, and delete custom Library Groups;
+- manage group memberships and curator flags;
+- perform Librarian library and shelf operations.
 
-- manage users
-- assign users as Librarian or Reader
-- manage LibraryGroup membership (add/remove users from groups)
-- set or clear the `is_curator` stewardship flag on group memberships
-- create LibraryGroups
-- manage LibraryGroup identity, subject to Public restrictions
-- perform all Librarian-level book/library operations
-
-API note (current implementation):
-
-- LibraryGroup create endpoints are available to Owner/Manager only.
-- Group membership management is now exposed via Manager/Owner-only group membership endpoints (see `docs/api.md`).
-
-Manager cannot (unless also Owner):
-
-- promote users to Manager
-- demote existing Managers
-- change Public's fixed identity
-
-## User management API (narrow)
-
-User management is intentionally limited:
-
-- `POST /api/v1/accounts/users/` (Manager/Owner only; creates local Django user and returns a temporary password once)
-- `POST /api/v1/accounts/users/<profile_id>/reset-password/` (Manager/Owner only; resets a managed user's password and returns a temporary password once)
-- `GET /api/v1/accounts/users/`
-- `GET /api/v1/accounts/users/<profile_id>/`
-- `PATCH /api/v1/accounts/users/<profile_id>/` (safe fields only; no password reset/invite/delete endpoints)
-
-Invite-by-email is not a core account lifecycle requirement. Self-hosted
-installations may use Owner/Manager-managed local users and the Django admin
-service hatch without configuring SMTP. See `docs/architecture.md` for the
-canonical account, email, and future external-auth posture.
-
-Creation rules:
-
-- Owner can create `manager`, `librarian`, or `reader` users.
-- Manager can create `librarian` or `reader` users only (cannot create `manager`).
-- Librarian/Reader cannot create users.
-
-### `/api/v1/accounts/me/` account hints
-
-`GET /api/v1/accounts/me/` includes the caller's identity, global `role`, `is_owner` flag, and `groups` memberships to help future UIs decide what to show.
-
-These are **account hints**, not a replacement for authorization. Broad Product
-UI affordances are derived from `role` and `is_owner`; reader-curator
-affordances are derived by matching the LibraryGroup id against the caller's
-`groups[]` entry and reading its `is_curator` flag. LibraryGroup payloads do not
-carry capability fields. Every endpoint still enforces authorization in the
-relevant domain service/view.
-
-Rules:
-
-- Owner can manage all users, but cannot deactivate themselves via the API.
-- Manager can manage non-Owner, non-Manager users only.
-- Managers cannot promote/demote Managers.
-- Managers cannot change their own role.
-- No user can deactivate themselves via the API.
-- Managed user password resets set `UserProfile.must_change_password=true` (force change on next login via product UI redirect).
+Manager cannot promote/demote Managers, manage Owner, change their own role, or
+change designated Public group name/description.
 
 ### Librarian
 
-Librarian is the global book/content manager.
+Librarian may:
 
-Librarian can:
+- import Books and edit Book metadata, files, Catalog Tags, and covers;
+- assign/remove Books from visible Library Groups through the supported group
+  services;
+- update custom-group descriptions;
+- create and manage group-owned shelves, including Public group shelves.
 
-- import books
-- edit book metadata
-- manage book files
-- assign/remove books from existing LibraryGroups (via safe curation services)
-- edit group presentation fields where allowed
-- edit description for non-Public LibraryGroups
-- manage group-owned shelves for all groups where applicable
-
-Librarian cannot:
-
-- create LibraryGroups
-- rename LibraryGroups
-- change LibraryGroup identity fields
-- manage LibraryGroup membership
-- add/remove users from groups
-- set curator flags
-- manage global user roles
-
-Public identity rule:
-
-- The designated Public group's name and description are Owner-managed through
-  Server Settings only. Normal Group PATCH rejects Public identity updates for
-  every role.
+Librarian cannot create/rename/delete groups, manage group memberships or
+curator flags, manage global roles, or edit designated Public identity.
 
 ### Reader
 
-Reader can:
+Reader may:
 
-- browse/download books they have access to
-- manage their own reading metadata
-- manage their own personal shelves
+- browse and download Books visible through their group memberships;
+- manage their own reading sessions, progress, and annotations;
+- create and manage their own private/listed shelves;
+- read other visible shelf/group surfaces.
 
-Reader cannot:
+Reader has no global library, group, or user-management authority.
 
-- manage library inventory
-- import books
-- manage LibraryGroups
-- manage users
+## Book visibility
 
-## Curator (group-scoped flag)
+Library Groups are Book access scopes. A Reader sees a Book when it is assigned
+to at least one group the Reader can see. Librarian, Manager, and Owner retain
+their existing broad library visibility.
 
-Curator is **not** a global role. A `LibraryGroupMembership` means ordinary group membership; `is_curator=true` is an optional group-scoped curator/stewardship flag on that exact membership.
+Visibility is applied before counts, filters, pagination, previews, search, and
+nested summaries. A visible group or shelf never permits hidden Book metadata
+to leak through its rows, counts, previews, or empty-state behavior.
 
-Reader users with `is_curator=true` can curate that exact **non-Public** LibraryGroup only:
+Reading metadata remains owned by its user. Existing sessions and annotations
+are not deleted when Book access changes, although opening the Book and new
+writes require current visibility.
 
-- edit group description
-- add books they can already view/read to the group
-- remove books from the group
-- create and manage group-owned shelves for that group
+## Designated Public group
 
-Curator cannot:
+Public/Common Room is a real designated `LibraryGroup`, identified by the
+stored Public group id rather than its display name. `Common Room` is only its
+default name.
 
-- curate Public
-- import books
-- delete books from the system
-- create/rename LibraryGroups
-- change LibraryGroup identity fields
-- manage group membership
-- add/remove users from groups
-- assign or remove curator flags
-- add books they cannot already view/read
+- Public exists in both simple and advanced modes.
+- Public is the default/fallback membership and Book assignment when an object
+  would otherwise have no group.
+- Public cannot be deleted.
+- Public cannot have `is_curator=true` memberships.
+- Public is not universal access; normal Public membership controls Reader
+  access to its Books and shelves.
+- Designated Public name and description are editable only by Owner through
+  Server Settings. Normal Group PATCH rejects both fields for every role,
+  including Owner.
+- Librarian, Manager, and Owner retain their supported Public Book-assignment,
+  membership-management, and shelf operations, subject to Public protections.
 
-Librarian, Manager, and Owner users can curate groups through their broad global authority. They may also have `is_curator=true` on a non-Public group as stewardship metadata, but their broad authority does not depend on that flag.
+Group Edit therefore presents Public Details as read-only and points Owner to
+Server Settings. Product UI layout details remain in `docs/ui.md`.
 
-## LibraryGroups
+## Simple and advanced group modes
 
-LibraryGroups are access scopes. They are not shelves and they do not exist to provide presentation/organization.
+Simple mode is the supported one-Public-group Product UI mode. It hides custom
+group navigation, relationship controls, selectors, and management surfaces.
+It does not remove Public from the backend, disable Public group-scoped reads,
+or disable shelves.
 
-### Identity vs presentation
+Custom groups are an advanced-mode concept. Owner can enable advanced groups
+with explicit confirmation. The normal Product UI does not disable the feature
+after use. Disable/collapse is an operator recovery workflow through the
+Django Admin Service Hatch that consolidates supported custom-group state into
+Public before disabling the feature.
 
-Identity fields:
+## Custom group authority
 
-- `name`
+For a visible custom group:
 
-Presentation/configuration fields:
+- Manager and Owner may create, rename, update, and delete it.
+- Librarian, Manager, and Owner may update its description.
+- A Reader curator may update the description and manage Books/shelves only for
+  the exact custom group carrying their curator membership.
+- A Reader curator may add only Books they can already see.
+- Manager and Owner alone manage group memberships and curator flags.
+- Direct members and broad roles may read the membership list; inaccessible
+  groups return 404 to avoid existence leakage.
 
-- `description`
+Group View is the presentation/read surface. Group Edit is the authorized
+management surface, including broad library Book search with `exclude_group`.
+Authorized custom-group deletion is a supported API/Product UI workflow.
 
-Rules:
+## Membership and fallback rules
 
-- Manager and Owner may rename custom groups.
-- Existing exact-group curator authority governs custom-group description
-  updates; Librarian, Manager, and Owner retain their existing broad authority.
-- The Public display name and description are configured during first-run setup
-  or by the Owner through Server Settings. Normal Group PATCH cannot update
-  either field.
+- New users start as ordinary Public members.
+- New/imported Books start assigned to Public.
+- Removing a user's final membership restores ordinary Public membership.
+- Removing a Book's final assignment restores its Public assignment.
+- A Public membership may be removed only when another membership remains.
+- Public curator assignment is always invalid.
+- Membership APIs identify users by public profile id rather than Django auth
+  user id; membership record ids are not public identifiers.
 
-## Public group
+User Edit and Group Edit are both valid Product UI membership-management
+surfaces for authorized Manager/Owner users.
 
-Public is special. `Common Room` is its default display name, not its internal
-identity.
+## Shelf ownership and visibility authority
 
-- Public is identified by `ServerSetting(public_group_id)`.
-- Public is the only special built-in LibraryGroup.
-- Public behavior is based on `is_public_group()` / `get_public_group()` (not boolean flags).
-- Renaming the Public display name does not change its identity or protections.
-- Public cannot be deleted. Authorized Manager/Owner users may delete custom
-  groups through the supported Product UI/API workflow.
-- Public cannot have curator assignments (`is_curator=true` is invalid).
-- Public is not universally visible. Access to Public books and shelves follows
-  normal LibraryGroup membership rules.
+Shelves organize Books; they never grant Book access.
 
-Default/fallback behavior:
+- A user-owned private shelf is visible/editable only to its owner.
+- A user-owned listed shelf is editable only by its owner and may be read by
+  authenticated users when it has at least one Book visible to that viewer.
+- A group-owned shelf is visible to the owning group's members and broad roles.
+- Owner, Manager, and Librarian may manage group-owned shelves.
+- A Reader curator may manage shelves owned by their exact custom group.
+- Public group shelves cannot have curator authority and are managed by
+  Librarian, Manager, or Owner.
+- Other users' private shelves remain hidden even from broad application roles.
 
-- Public, displayed as `Common Room` by default, is the shared public library
-  space managed by librarians and managers.
-- First-run Owner setup creates/repairs Public, saves its configured name and
-  description, and adds the Owner as an ordinary member.
-- New users default to Public ordinary membership.
-- New/imported books default to Public (book assignment).
-- Users/books must belong to at least one LibraryGroup.
-- Public is fallback only: if a user/book would otherwise have zero groups, it is restored to Public.
-- If `public_group_id` is missing, corrupt, invalid, or points to a deleted
-  group, explicit Public group service access recreates `Common Room` with a
-  warning description for operator cleanup and stores the new id.
+Personal shelves and visible group-owned shelves may remain visible when empty.
+Other users' listed shelves are omitted when their viewer-visible `item_count`
+is zero. Detailed scopes, retained-item behavior, and cleanup policy are in
+`docs/shelves.md`.
 
-`advanced_library_groups_enabled` is off by default. Disabled means the server
-is centered on Common Room/Public Library. Product UI hides advanced group
-management, book group relationship controls, custom-group selectors, and group
-membership management. Public/Common Room remains a real access scope, and
-supported group-scoped API reads may expose it. Normal group mutation API
-endpoints are blocked while disabled.
+## Client bearer restrictions
 
-An Owner can enable advanced library groups from Product UI with an explicit
-confirmation. Product UI does not offer a disable action after enablement;
-disabling later is an operator recovery action through Django admin, not a
-manual setting edit. That recovery action renames and moves custom group-owned
-shelves into Public, removes custom group book/user associations through the
-normal group services, deletes the custom group containers, then disables the
-feature. Public Library/Common Room remains available while advanced groups are
-disabled: Public display name/description are still managed through Server
-Settings, and librarian/manager Public book assignment behavior remains
-available.
+Client bearer tokens are reader-client credentials, not management tokens.
 
-Simple mode does not disable shelves. User-owned private/listed shelves retain
-their normal ownership and visibility, and Public group-owned shelves retain
-their normal group ownership and visibility. Owner-managed Public display name
-and description changes continue through Server Settings.
+- Library and visible group reads are read-only through bearer authentication.
+- Library/group mutation, imports, covers, and membership management require a
+  Django session and their normal role authority.
+- Bearer clients may read shelves visible to the token user.
+- Bearer clients may create/edit/delete and manage items only in the token
+  user's personal shelves.
+- Group-owned and other users' shelves are read-only to bearer clients, even if
+  the same user could manage a group shelf through Product UI session auth.
+- Bearer reading mutations are restricted to the token user's reading state.
 
-Role constraints:
+Pairing and the full bearer route surface are documented in
+`docs/client-api-auth.md`.
 
-- No role may update Public name or description through normal Group PATCH.
-- Owner manages Public name and description through Server Settings.
-- Librarian/Manager/Owner may perform their other permitted Public operations
-  within the protected Public rules.
+## Implementation guardrails
 
-## Safe group mutation (services)
-
-Safe changes to group assignments should go through:
-
-- `library.groups.services.add_book_to_group()`
-- `library.groups.services.remove_book_from_group()`
-
-This prevents scattered direct `BookGroupAssignment` writes and centralizes invariants (including the Public fallback invariant).
-
-## Shelves
-
-Shelves are a presentation/organization feature and **do not** grant book access. See `docs/shelves.md`.
-
-Shelves API is implemented under `/api/v1/shelves/`. Shelves have product UI support; they remain separate from access control.
-
-## Group membership management (current)
-
-- **Viewing group members (read-only):**
-  - Owner/Manager/Librarian can list group members.
-  - Direct members of a group can list that group's members (including Public).
-  - Non-members cannot list memberships for non-Public groups they cannot view (anti-leakage behavior).
-- **Owner/Manager** can manage LibraryGroup memberships via the API (add/remove users and set `is_curator`).
-- **Librarian/Curator/Reader** cannot manage memberships via the API.
-- **Public protections**:
-  - Public is default/fallback (assigned on user creation, and restored if a user would otherwise have zero memberships).
-  - Public memberships can be removed when another group remains; removing a user's final membership restores Public.
-  - Public cannot have curator assignments.
-
-## Group API and anti-existence-leakage rules
-
-When exposing groups through the API:
-
-- Prefer returning `404 Not Found` for groups the user cannot view (avoid leaking group existence).
-- Group book listings must still filter each book through current book
-  visibility from `library.queries` (a viewable group must not leak
-  inaccessible books).
-- Group curation endpoints should call the safe group curation services above.
-- Normal Group PATCH accepts `name` and `description` for custom groups. Rename
-  requires Manager/Owner; description updates use the existing exact-curator
-  and broad-role authority model. The designated Public group rejects normal
-  Group PATCH.
-
-Not implemented (non-goal):
-
-- No public API for anonymous users to create LibraryGroups.
-
-## Shelves are separate (design principle)
-
-LibraryGroups are access scopes. Shelves are presentation/organization objects.
-
-- A shelf never grants access to a book.
-- Shelf visibility controls whether the shelf/list itself can be seen.
-- Each book on a shelf must still pass current book visibility from
-  `library.queries`.
-- Shelf `item_count` is viewer-scoped. Other users' listed shelves are omitted
-  when they contain no viewer-visible books; owners still see their own empty
-  shelves, and visible group-owned shelves remain visible when empty.
-- User-owned shelves preserve durable user intent. User-owned shelf items are
-  not deleted merely because access changes, though normal visible APIs hide
-  unavailable items.
-- Group-owned shelves are membership-validating. When a book is removed from a
-  LibraryGroup, it is removed from shelves owned by that same group.
-- Curators may manage group-owned shelves only for groups where
-  `is_curator=true`; broad roles may manage group-owned shelves through global
-  authority.
-
-## Current authority vocabulary
-
-- `accounts.roles.effective_role_rank(user)`
-- `accounts.roles.is_owner(user)`
-- `accounts.roles.is_manager(user)`
-- `accounts.roles.is_librarian(user)`
-- `library.roles.is_curator(user, group)`
-- `library.queries.visible_books_for_user(user, cached=...)`
-- `library.queries.visible_books_for_group(user, group, cached=...)`
-
-Action-specific account, reading, shelf, and library rules live next to the
-service/view performing that action. Do not recreate broad authorization modules or
-generic permission-string frameworks.
+- Group assignment changes go through
+  `library.groups.services.add_book_to_group()` and
+  `library.groups.services.remove_book_from_group()`.
+- Group removal/fallback behavior remains centralized in group services.
+- Book and group list/detail queries use the visibility helpers in
+  `library.queries`; do not reproduce visibility policy in serializers or UI
+  JavaScript.
+- Prefer 404 for inaccessible group/object detail where existence itself is
+  protected.
+- Do not treat capability fields, role names, or `can_edit` response hints as a
+  substitute for server authorization.
+- Do not use shelves as an access-control mechanism.

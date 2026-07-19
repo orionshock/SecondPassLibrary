@@ -1,193 +1,149 @@
 # Imports
 
-Second Pass Library is EPUB-first. Product imports are intended to be API-mediated.
-Operator-only management commands are available for direct local imports from a
-host/container filesystem path.
+Second Pass Library is EPUB-first. Product imports are synchronous,
+session-authenticated workflows for Owner, Manager, and Librarian users.
+Operator-only management commands provide the same import behavior for local
+host or container paths.
 
-## API-mediated imports (synchronous uploads)
+Normalized metadata and cover meaning are described in
+[metadata.md](metadata.md). Exact HTTP fields and responses are described in
+[api.md](api.md).
 
-Import books with a multipart upload field named `file`:
+## Book import workflow
 
-```text
-POST /api/v1/library/imports/
-```
+The Product UI submits a multipart `file` upload to the Library import API.
+Readers cannot import Books. The request accepts:
 
-### Permissions
+- one `.epub` file
+- one `.zip` containing EPUB files and optional matching OPF sidecars
 
-Library imports are currently intended for library managers only:
+Non-EPUB ZIP entries are ignored unless they are a selected OPF sidecar or its
+safely resolved cover image. Imports complete within the request. The system
+does not create import jobs or retain import history.
 
-- Owner / Manager / Librarian can import books.
-- Readers cannot import books (they receive `403 Forbidden`).
-- Import history is not stored. The import endpoint returns the result of the
-  synchronous import request.
+### EPUB and OPF metadata precedence
 
-### Supported uploads
+Every candidate must contain a valid EPUB; an OPF sidecar cannot make an
+invalid EPUB importable. Embedded EPUB metadata is the baseline and fallback.
 
-- A single `.epub`
-- A simple `.zip` containing `.epub` files (non-EPUB entries are ignored)
-  - ZIP imports may include OPF sidecars (Calibre-style) to bootstrap metadata for **new books only**.
-  - Sidecar lookup (per EPUB member), in order:
-    - `metadata.opf` in the same directory as the EPUB
-    - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
-    - if there is exactly one `.opf` in the same directory, use it
-  - A valid OPF sidecar is a full metadata replacement and takes precedence over EPUB metadata.
-  - OPF 2 guide cover references are resolved relative to the sidecar. A valid
-    sidecar JPEG, PNG, or WebP cover takes precedence over the embedded EPUB
-    cover; missing or invalid sidecar covers fall back to the embedded cover.
-    Cover extraction is best-effort and never invalidates an otherwise valid
-    book import.
-  - Duplicate EPUB checksum imports are still returned as duplicates and do not refresh metadata or covers.
+For each EPUB member in a ZIP, sidecar lookup uses this order:
 
-### Resource limits
+1. `metadata.opf` in the EPUB's directory;
+2. a same-basename OPF in that directory (`Foo.epub` and `Foo.opf`);
+3. the only OPF in that directory, when exactly one exists.
 
-Uploads are app-limited before parser/checksum work to keep untrusted files from consuming unbounded local resources:
+A safely parsed sidecar with a real, nonblank, non-`Untitled` title replaces
+the embedded metadata candidate for a new Book. This is a whole-record
+replacement, not a field-by-field merge or a later synchronization mechanism.
+Missing, malformed, oversized, or non-qualifying sidecars fall back to embedded
+EPUB metadata.
 
-- Single EPUB upload: 200 MiB
+Checksum duplicate detection takes precedence over metadata refresh. A
+duplicate returns the existing Book without changing metadata, identifiers,
+Catalog Tags, EPUB bytes, or cover. A new candidate whose identifiers conflict
+with an existing Book is reported as a conflict rather than partially applied.
+
+### Cover import behavior
+
+Embedded EPUB cover extraction is best-effort. A selected sidecar may reference
+a JPEG, PNG, or WebP cover; OPF 2 guide references are resolved relative to the
+sidecar. A valid sidecar cover takes precedence over an embedded cover.
+
+Missing, unsafe, ambiguous, colliding, invalid, unsupported, or oversized
+sidecar cover input is ignored and embedded extraction is attempted. Cover
+validation or storage failure does not invalidate an otherwise valid Book
+import. Arbitrary sidecar assets are not imported. See
+[metadata.md](metadata.md) for validation, storage, and serving rules.
+
+## Limits and archive safety
+
+Application limits are enforced before untrusted input reaches expensive
+parser or checksum work:
+
+- single EPUB upload: 200 MiB
 - ZIP upload: 1 GiB
-- ZIP entries: 5,000 total entries
-- EPUB member inside a ZIP: 200 MiB uncompressed
-- Total EPUB members inside a ZIP: 2 GiB uncompressed
-- Marginalia JSON import: 25 MiB
+- ZIP entries: 5,000
+- EPUB member in a ZIP: 200 MiB uncompressed
+- total EPUB members in a ZIP: 2 GiB uncompressed
+- marginalia JSON import: 25 MiB
 
-Large library migrations should be split into smaller ZIP batches. These limits are independent of any reverse-proxy upload limits.
+Large migrations should be split into smaller ZIP batches. Reverse-proxy
+limits may impose a lower ceiling.
 
-### Response shape
+Archive members and sidecar references are resolved without exposing or
+trusting unsafe filesystem paths. Import result messages use safe source labels
+and do not return local paths, storage keys, or internal parser details.
 
-The import response is transient and cannot be retrieved later:
+## Book import results
 
-```json
-{
-  "source_type": "zip",
-  "source_label": "bundle.zip",
-  "counts": {
-    "imported": 1,
-    "duplicate": 0,
-    "conflict": 0,
-    "failed": 1,
-    "skipped": 0
-  },
-  "items": [
-    {
-      "status": "imported",
-      "source_label": "book.epub",
-      "book_id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
-      "safe_message": "Imported EPUB."
-    },
-    {
-      "status": "failed",
-      "source_label": "bad.epub",
-      "safe_message": "Invalid or unsupported EPUB file."
-    }
-  ]
-}
-```
+The API returns a transient batch summary with per-item `imported`, `duplicate`,
+`conflict`, `failed`, or `skipped` status. Each item may include its safe source
+label, resulting Book ID, and a bounded message. Results cannot be retrieved
+after the request; there is no import detail endpoint.
 
-The response does not include operator details or local filesystem paths. There
-is no stored import history and no import detail endpoint.
+Source names exist only for immediate diagnostics. They are not stored as a
+Book `source_filename`, file provenance, or canonical metadata. Final EPUB and
+cover files are stored through the fields owned by `Book`.
 
-### Unsupported (non-goals)
+## Operator import command
 
-- Calibre sync/import of `metadata.db` (Second Pass Library is not a Calibre sync target)
-- PDF
+`python manage.py import_library <path>` imports:
 
-## Marginalia import policy
-
-Server-side marginalia import supports preview and a minimal apply path for
-Second Pass Library Marginalia Profile files only.
-
-Foreign/provider-specific annotation formats should not be imported directly by
-the server. A reader client should normalize foreign annotations and submit them
-through the normal reading session/progress/annotation APIs, or an external tool
-can convert them into the SPL native marginalia profile before server import.
-
-Product UI:
-
-```text
-GET /reading/import/
-```
-
-Preview API:
-
-```text
-POST /api/v1/reading/import/preview/
-```
-
-The preview endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It validates the uploaded JSON against `docs/specs/marginalia-export.schema.json`, summarizes books/sessions/annotations, reports visible local book matches by file hash only, and does not write to the database.
-
-Apply API:
-
-```text
-POST /api/v1/reading/import/apply/
-```
-
-Preview stores a short-lived staged copy under `userdata/imports/staged/` and returns an `import_token`. Staged files are filesystem-only, expire after roughly 24 hours, and are deleted after successful apply. Operators can remove expired staged previews explicitly with `python manage.py cleanup_staged_imports`. No import jobs or import history are stored.
-
-The apply endpoint is Django session-authenticated only. Client API bearer tokens are rejected. It requires the preview `import_token`, re-validates the staged payload against the schema, and imports matched sessions from file-hash-matched visible local books. It does not create import jobs and does not accept direct file uploads.
-
-Apply may include an optional multipart `selection` field containing JSON. If omitted, all matched sessions are imported. If present, only selected sessions are imported, and each selected session may override the imported session `name` and `notes`.
-
-```json
-{
-  "books": [
-    {
-      "source": "book:sha256:...",
-      "sessions": [
-        {
-          "export_session_id": "session-1",
-          "selected": true,
-          "name": "Imported session name",
-          "notes": "Imported session notes"
-        }
-      ]
-    }
-  ]
-}
-```
-
-Selection uses export-local book/session identifiers from the uploaded file, not SPL database ids. Session selection is supported; annotation-level selection is not.
-
-### Marginalia apply policy
-
-Server-side apply follows these rules:
-
-- Import matched books only. A book is matched only when it maps to a visible local book for the requesting user.
-- Match marginalia imports by book file hash only. Do not use ISBN or title/author fallback for server-side locator import.
-- Perform only shallow CFI-shaped validation server-side: EPUB CFI values must look like `epubcfi(...)`; malformed locator sessions should be sent through Reader-assisted import.
-- Skip unmatched books and report them as unmatched/possibly foreign; do not create local books from marginalia imports.
-- Treat the import unit as a reading session. Annotation-level selection/import is not supported.
-- Create new historical/imported sessions for matched books. Exported active sessions must not become active local sessions; they should import as historical/inactive sessions.
-- Treat possible duplicates as warnings, not blockers. Do not silently de-duplicate or overwrite existing sessions/annotations without an explicit future policy.
-- Continue to reject Client API bearer tokens for server-side marginalia import.
-
-## Storage
-
-- Temporary import staging lives under `userdata/imports/` during request
-  processing and is cleaned after the synchronous import completes.
-- Final stored EPUB files are written through `Book.book_file`; `Book` also owns
-  `file_format`, `checksum`, `file_size`, and optional `cover_file`.
-- Source filenames exist only as transient import diagnostics and are not stored
-  as Book or file provenance.
-- Product policy: Books are import-only and file-backed. Fileless metadata-only
-  Books are not a supported normal state.
-
-## Operator management command
-
-`python manage.py import_library <path>` is the operator-only host-side import
-path. It supports:
-
-- one local `.epub` file
-- one local `.zip` archive
+- one local `.epub`
+- one local `.zip`
 - one non-recursive directory containing `.epub` and `.zip` files
 
-It shares the same service path as the upload API:
+It uses the same import services, checksum duplicate handling, OPF sidecar
+behavior, cover precedence, archive limits, and bounded per-item failures as
+the Product UI/API path. It prints only the current run's item results and
+summary. Duplicate items do not fail the command; failed or conflicting items
+produce a nonzero exit.
 
-- single EPUB import
-- EPUB member discovery
-- ZIP OPF sidecars for new books
-- duplicate detection by EPUB checksum
-- safe per-item errors
-- the same ZIP archive, entry-count, per-member EPUB, and total EPUB payload limits
+Temporary request and batch staging lives under `userdata/imports/` and is
+cleaned according to the relevant synchronous or staged workflow. No database
+ImportJob or durable Book-import history is created.
 
-The command does not create durable import history or database ImportJob records.
-It prints per-item results and a summary for the immediate run. Duplicate items
-do not fail the command; failed or conflicting items produce a nonzero exit.
+## Marginalia import
+
+Marginalia import is a separate, session-only Product UI workflow. Client API
+bearer tokens cannot call its preview or apply endpoints.
+
+Preview validates a Second Pass Library Marginalia Profile, summarizes its
+books, reading sessions, and annotations, and matches only visible local Books
+by EPUB file hash. It does not write database records. Foreign/provider-specific
+formats must first be normalized by a reader client or external conversion
+tool.
+
+A successful preview creates a short-lived staged file under
+`userdata/imports/staged/` and returns an import token. Staged files expire
+after roughly 24 hours, are deleted after successful apply, and can be cleaned
+with `python manage.py cleanup_staged_imports`.
+
+Apply revalidates the staged profile and can import all matched sessions or a
+selection of sessions. Selection uses export-local book/session identifiers;
+it may override an imported session's name and notes. Annotation-level
+selection is not supported.
+
+Apply follows these rules:
+
+- match by file hash only, never ISBN or title/author fallback;
+- import only Books visible to the requesting user;
+- skip and report unmatched Books without creating local Books;
+- accept only shallow `epubcfi(...)` locator validation server-side;
+- create new historical/inactive sessions, including exported active sessions;
+- report possible duplicates as warnings without overwriting existing data.
+
+Marginalia staging is filesystem-only. It does not create import jobs or import
+history.
+
+## Unsupported import behavior
+
+The following are intentionally unsupported:
+
+- PDF import
+- Calibre `metadata.db` synchronization
+- arbitrary OPF sidecar assets beyond a supported referenced cover
+- sidecar-driven refresh of an existing checksum-duplicate Book
+- metadata-only or normally fileless Books
+- raw serving of stored EPUB files from `/media/books/`
+- a separate `BookFile` import model or endpoint

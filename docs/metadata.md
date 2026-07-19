@@ -1,99 +1,120 @@
 # Metadata
 
-## Core objects
+Second Pass Library keeps bibliographic metadata normalized around a `Book`.
+Import behavior is described in [imports.md](imports.md); API field shapes and
+routes are described in [api.md](api.md).
 
-- `Book`: canonical, user-facing bibliographic fields plus stored EPUB fields.
-  `Book` owns `book_file`, `file_format`, `checksum`, `file_size`, and optional
-  `cover_file`.
+## Canonical Book data
 
-Notes:
-- `Book.subtitle` may be blank.
-- `Author.biography` and `Series.summary` are optional catalog description fields.
-- Series data is represented by `BookSeries`, which links `Book` to `Series`
-  and stores `series_index`.
-- `BookIdentifier` is Book-owned editable bibliographic metadata with a public
-  `scheme`/`value` shape and an internal normalized value for uniqueness.
-- Fileless Books and missing physical EPUB files are repair states, not normal
-  product states.
-- `CatalogTag` stores a first-created display name, Unicode/casefold-normalized
-  identity, and generated unique slug. `BookCatalogTag` explicitly relates tags
-  to Books; tags are created lazily and deleted when their final relationship is removed.
+`Book` owns both the user-facing bibliographic record and its stored EPUB:
 
-## Identifiers
+- title, sort title, and optional subtitle
+- authors and series relationships
+- publisher, language, and description
+- published date and date-precision fields
+- identifiers
+- Catalog Tags
+- `book_file`, `file_format`, `checksum`, and `file_size`
+- optional `cover_file`
 
-- `BookIdentifier` stores external/source identifiers (ISBNs and non-ISBN identifiers like ASIN/DOI/OCLC/LCCN/Open Library IDs/Calibre IDs/EPUB unique identifiers/URI/URN/etc).
-- Book edits replace identifiers through `PATCH /api/v1/library/books/<book_id>/`.
-  Omitting the field preserves existing identifiers; an empty list clears them.
+There is no separate `BookFile` model or endpoint. `source_filename` is a
+transient import diagnostic, not canonical Book metadata, provenance, or a
+public API field. Fileless Books and missing physical EPUB files are repair
+states, not supported normal product states.
+
+Series membership is represented by `BookSeries`, which links a Book to a
+Series and stores its `series_index`. Author biographies and Series summaries
+are optional descriptive metadata.
+
+## Dates and identifiers
+
+Published dates retain their known precision instead of inventing missing
+month or day values. See the API contract for the current date fields.
+
+`BookIdentifier` stores external identifiers such as ISBN-10, ISBN-13, ASIN,
+DOI, OCLC, LCCN, Open Library identifiers, Calibre identifiers, EPUB unique
+identifiers, and URI/URN values. Its public shape is `scheme` and `value`; the
+normalized value used for uniqueness is internal.
+
+Book metadata edits replace identifiers through the Book metadata endpoint.
+Omitting `identifiers` preserves existing identifiers; an empty list clears
+them. EPUB duplicate detection remains checksum-based, not identifier-based.
 
 ## Catalog Tags
 
-- EPUB subjects and existing Calibre tag metadata use the same CatalogTag resolver.
-- Book PATCH accepts `catalog_tags` as a complete replacement list of names.
-  Omitting it preserves relationships; `[]` clears them.
-- Display names preserve the first-created spelling and casing. Matching uses
-  Unicode normalization, collapsed whitespace, and casefolding.
-- Tag list, detail, and group-tag browse payloads expose only `id`, `name`,
-  `slug`, and the caller-visible `book_count`. Internal `sort_name` and
-  `normalized_name` fields are not public API fields.
-- `GET /api/v1/library/tags/`, `GET /api/v1/library/tags/<id>/`, and
-  `GET /api/v1/library/groups/<group_id>/tags/` accept session or Client API
-  bearer authentication as read-only surfaces. Visibility and group feature
-  gates apply before tags and counts are calculated. Tag detail is GET-only;
-  Book PATCH `catalog_tags` is the only API mutation surface.
-- Book, Author, and Series browse lists accept `tag=<slug>`. Unknown,
-  inaccessible, and UUID tag values produce empty results; the filter never
-  expands the caller's visible-book universe.
-- Duplicate-checksum imports return the existing Book without refreshing tags.
+Catalog Tags are controlled, normalized facets. They are the public tagging
+contract; there is no legacy Subject model or Subject API. EPUB subject values
+and Calibre tag metadata are normalized through the same Catalog Tag resolver.
 
-## Import/cleanup philosophy
+`CatalogTag` preserves the first-created display spelling and generates a
+stable slug from its normalized identity. Matching uses Unicode normalization,
+collapsed whitespace, and casefolding. `BookCatalogTag` explicitly relates a
+tag to a Book, and an unused tag is removed when its final relationship is
+deleted.
 
-- Keep `Book` user-facing fields clean and stable.
-- If raw imported metadata/provenance is needed later, model it separately (don't overload `Book`).
+The API deliberately uses different names by context:
 
-## Cover art (current)
+- compact Book rows expose `tags`
+- Book Detail and Book metadata writes use `catalog_tags`
+- `tag=<slug>` is the compact query parameter for filtering by Catalog Tag slug
 
-- `Book.cover_file` stores the current cover image (optional).
-- `cover_url` is exposed in Book API payloads and recent reading payloads; it is `null` when no cover exists.
-- Covers are validated with Pillow and stored as the original validated bytes (no re-encoding/thumbnails yet).
-- Librarian+ Product UI cover replacement uses the same JPEG/PNG/WebP byte and
-  pixel validation and content-addressed storage. Old unreferenced cover files
-  are removed only after the database change commits; shared files are retained.
-- EPUB embedded cover extraction is implemented during import (best-effort).
-- Cover discovery uses the EPUB package OPF:
-  - EPUB3 manifest item with `properties~="cover-image"`
-  - EPUB2 `<meta name="cover" content="...">` + manifest lookup
-- Unsupported/corrupt/oversized covers are ignored; import still succeeds.
-- ZIP imports can use OPF sidecars (Calibre-style) to bootstrap metadata for
-  new books only. A valid sidecar JPEG, PNG, or WebP cover takes precedence
-  over the embedded EPUB cover; unsupported sidecar assets are not imported.
+Book PATCH treats `catalog_tags` as a complete replacement when supplied.
+Omitting it preserves current relationships; `[]` clears them. Tag list and
+detail payloads expose only their documented public fields and viewer-visible
+counts. Duplicate-checksum imports return the existing Book without refreshing
+its Catalog Tags.
 
-## ZIP OPF sidecars (current)
+## Stored EPUB and filenames
 
-When importing a `.zip` of EPUBs, the importer can optionally use an OPF sidecar
-to bootstrap metadata **for new books only** (not a sync/refresh mechanism).
-OPF 2 guide cover references are resolved relative to the sidecar. A valid
-JPEG, PNG, or WebP sidecar cover takes precedence over the embedded EPUB cover;
-missing or invalid sidecar covers fall back to embedded cover extraction.
+EPUB bytes are stored through `Book.book_file` under content-addressed storage.
+The checksum is the canonical duplicate key. Human-readable download filenames
+are generated from current Book metadata rather than retained source filenames
+or storage keys.
 
-Sidecar lookup (per EPUB member), in order:
+Stored EPUBs are protected content. Clients download them through the
+authenticated API URL provided by Book Detail; raw `/media/books/` paths are
+not a supported serving contract.
 
-- `metadata.opf` in the same directory as the EPUB (Calibre-style)
-- same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
-- if there is exactly one `.opf` in the same directory, use it
+## Covers
 
-Metadata precedence:
+`Book.cover_file` stores the current optional cover. Cover URLs are public
+display assets, while the EPUB remains an authenticated download.
 
-- A valid OPF sidecar is a full metadata replacement for new imports. It must
-  have a real nonblank, non-`Untitled` title before it replaces EPUB metadata.
-- Duplicate EPUB checksum imports are still treated as duplicates and do not refresh metadata or covers.
+Cover input is accepted only when it decodes as JPEG, PNG, or WebP and satisfies
+the configured 10 MiB and 20-million-pixel limits. Validated original bytes are
+stored without re-encoding or thumbnail generation. Storage is
+content-addressed, so identical files can be shared. Replacing a cover removes
+an old file only after the database change commits and only when no other Book
+references it.
 
-Media serving note:
+Import cover precedence is:
 
-- Covers are stored under `MEDIA_ROOT/covers` and addressed under `MEDIA_URL` (default: `/media/`).
-- Django serves `/media/covers/` narrowly so covers render in direct-server usage.
-- Stored EPUB files and other protected media are never served as raw media URLs.
+1. a valid, safely resolved cover referenced by the selected ZIP OPF sidecar;
+2. a valid cover embedded in the EPUB package;
+3. no cover.
 
-## Duplicate detection and filenames
+Embedded discovery supports the EPUB 3 `cover-image` manifest property and the
+EPUB 2 cover metadata/manifest convention. An OPF 2 guide cover reference is
+resolved relative to its sidecar.
 
-- Duplicate EPUB detection is checksum-driven (file SHA-256), not identifier-driven.
-- Human-readable download filenames are generated from `Book` metadata (not from the stored content-addressed filename).
+Missing, unsafe, ambiguous, colliding, corrupt, oversized, or unsupported
+sidecar cover input is ignored. Import continues and falls back to embedded
+cover extraction when possible. Cover extraction and storage failures are
+non-fatal to an otherwise valid metadata import. Duplicate or conflicting Book
+imports do not attach or replace a cover.
+
+OPF sidecars may contribute only the supported metadata and a referenced JPEG,
+PNG, or WebP cover. Arbitrary sidecar assets are not imported.
+
+## Import relationship
+
+An EPUB must remain valid even when a ZIP supplies a sidecar OPF. For a new
+Book, a qualifying sidecar metadata record replaces the embedded metadata
+candidate as a whole; it is not merged field by field. Embedded EPUB metadata
+is used when no qualifying sidecar is available. Exact sidecar selection,
+validation, duplicate/conflict behavior, limits, and operational workflows are
+owned by [imports.md](imports.md).
+
+Raw imported metadata is not retained on `Book`. If durable provenance is
+needed later, it should be modeled separately rather than overloading the
+canonical bibliographic record.
