@@ -182,6 +182,83 @@ The users page shows each user's LibraryGroup memberships read-only; membership 
 - Do not "fix" established anti-leak 404 responses to 403 without an explicit product/security decision.
 - Decorative UI punctuation and separators should not be written as HTML character entities in live templates or JavaScript-generated markup. Use semantic inline elements with CSS-generated separators, or real text only when the character is meaningful content. ARIA labels should use plain readable punctuation or words.
 
+### Product UI icon conventions
+
+- Use Material Symbols Outlined. Icons are decorative by default and use
+  `aria-hidden="true"`.
+- Do not replace visible text with an icon alone unless the control has an
+  accessible name. Interactive icon buttons need visible text or a clear
+  `aria-label`.
+- Reuse shared rendering helpers and styles instead of adding one-off raw icon
+  spans. Metadata icons should use subdued sizing and color so they do not
+  compete with book titles.
+- Compact book metadata uses this vocabulary consistently with the reader
+  client: Author is `person`, Series is `auto_stories`, and Publisher is
+  `apartment`.
+- Compact metadata values are not links. The book title remains the primary
+  link. Each metadata group keeps a visually hidden Author, Series, or Publisher
+  label for screen readers while its icon remains decorative.
+- Use wrapping flex layout and gap spacing between metadata groups. Do not add
+  literal or CSS-generated dot separators.
+- Reuse the compact book metadata helper and style across these surfaces:
+  - Library book rows
+  - Group View book rows
+  - Group Edit assigned and add-book rows
+  - Shelf View item rows
+  - Shelf Edit item and add-book rows
+- Avoid `menu_book` for Series because it can be mistaken for the current book.
+  Avoid `store` for Publisher because it suggests a retailer.
+
+#### Reader-client icon reference
+
+The reader client currently uses the following Material Symbols Outlined
+vocabulary. Product UI surfaces are not required to use these icons. When the
+Product UI does represent the same action or concept with an icon, prefer the
+same token so the meaning stays consistent across clients. A different token is
+appropriate only when the Product UI concept is materially different.
+
+| Token | Reader-client context |
+| --- | --- |
+| `arrow_back` | Return from reader activity or session view |
+| `arrow_forward` | Advance to the next book |
+| `auto_stories` | Library Series axis and series sorting |
+| `bookmark` | Existing bookmark annotation type |
+| `bookmark_add` | Add bookmark reader action |
+| `bookmark_added` | Current location is bookmarked |
+| `border_color` | Highlight annotation type |
+| `chat_bubble` | Highlight with note or comment |
+| `check` | Confirm edits, saved metadata, or added shelf state |
+| `check_circle` | Enabled marginalia layer |
+| `chevron_left` | Previous reader page |
+| `chevron_right` | Next reader page |
+| `close` | Close drawers, menus, editors, or dialogs; cancel edits |
+| `delete` | Delete a shelf, shelf item, highlight, bookmark, or annotation |
+| `done` | Finish shelf editing |
+| `edit` | Edit shelf or session metadata |
+| `edit_note` | Edit an annotation note or generic annotation fallback |
+| `expand_more` | Library scope menu disclosure |
+| `flag` | Reader activity completion when no next book exists |
+| `format_list_numbered` | Count/order sorting and explicit shelf/series order |
+| `groups` | Private/non-public Library group scope or shelf ownership |
+| `home` | Return to application or Library home from the reader |
+| `ink_highlighter` | Open marginalia or highlight controls |
+| `keyboard_arrow_down` | Move a shelf item down |
+| `keyboard_arrow_up` | Move a shelf item up |
+| `library_books` | All Library scope |
+| `link` | Start client pairing or linking |
+| `local_library` | Connected Library identity in the application header |
+| `menu` | Open the reader table of contents |
+| `menu_book` | Library Books axis |
+| `more_vert` | Open the shelf action menu |
+| `my_location` | Navigate to an annotation or bookmark location |
+| `open_in_new` | Open a pairing authorization page or annotation target |
+| `person` | Authors axis, author sorting, or user-owned shelves |
+| `public` | Public Library group scope or public group ownership |
+| `radio_button_unchecked` | Disabled marginalia layer |
+| `search` | Open in-book search |
+| `settings` | Application and reader display settings |
+| `sort_by_alpha` | Alphabetical book, author, series, or shelf sorting |
+
 ## 2. First UI surface
 
 Likely top-level sections (navigation may be role-gated):
