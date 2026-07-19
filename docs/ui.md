@@ -1,229 +1,95 @@
-# UI Planning
+# Product UI
 
-This document sketches the first product web UI for Second Pass Library at a high level, before implementation.
+This document defines the current browser Product UI contract. Exact API
+routes, parameters, and response fields belong in `docs/api.md`; bearer-client
+authentication belongs in `docs/client-api-auth.md`; role and visibility rules
+belong in `docs/permissions.md`.
 
-## Status (first UI shell)
+## Authentication and navigation
 
-The first minimal product UI shell now exists:
+The Product UI is server-rendered by Django and enhanced with page-focused
+JavaScript modules. Authenticated pages use Django session authentication. The
+UI does not treat client bearer tokens as browser sessions.
 
-- `/` redirects to `/dashboard/` after setup
-- `/dashboard/` is the authenticated dashboard shell
-- `/dashboard/` shows recent reading activity (from `GET /api/v1/reading/sessions/recent/`) and dashboard action cards
-- `/server/` is an authenticated Owner-only Server Settings page with General,
-  Public Library, and Library Groups tabs plus the authorized Django Admin /
-  Service Hatch link. Public name and description are editable only here.
-- `/profile/` is the authenticated self account page (identity + groups + access summary + self-profile edit)
-- `/profile/password/` is the authenticated self password change page
-- `/library/` is an authenticated library browse page
-- `/library/books/<book_id>/` is an API-driven book detail page (functional-first)
-- `/library/books/<book_id>/edit/` is an API-driven book metadata edit page (Manager/Librarian/Owner only)
-- `/imports/` is an API-driven imports page (upload + latest transient result)
-- `/groups/` is an authenticated group list page
-- `/groups/<group_id>/` is an authenticated group view page (Books/Members/Shelves tabs; read-oriented)
-- `/groups/<group_id>/edit/` is an authenticated group management page
-  (Details/Books/Add Books/Members/Shelves tabs; management-oriented)
-- `/groups/new/` is an authenticated group create page (Owner/Manager only)
-- `/users/` provides functional user management for Manager/Owner only
-- `/users/new/` provides functional local user creation for Manager/Owner (generated temporary password shown once)
-- `/users/<profile_id>/edit/` provides a dedicated user edit screen for Manager/Owner
-- `/reading/sessions/books/<book_id>/` shows the current user's reading sessions for a book
-- `/reading/sessions/books/<book_id>/<session_id>/` shows session-specific Marginalia (progress + annotations) for the current user
+Fresh installations begin at `/setup/`. Setup configures server identity, the
+designated Public group's display identity, advanced-library-group preference,
+and the first Owner. After setup, `/` leads to the authenticated dashboard.
 
-Implementation note: the product UI lives in the dedicated Django app `web` (not `core`).
+The primary navigation exposes only surfaces appropriate to the current user
+and server mode. Django Admin is an operator Service Hatch, not normal product
+navigation. Its link appears only through the gated Owner Server Settings
+surface when Django Admin is enabled.
 
-UI JavaScript is split into page-focused vanilla ES modules under `web/static/web/js/` and loaded via a single `<script type="module">` entrypoint (`web/static/web/js/main.js`). There is no frontend build step.
+Product object routes use stable UUID-backed URLs. Malformed, missing, or
+inaccessible objects may return a styled 404 rather than revealing existence.
+Logout is POST-based.
 
-Product UI error handling:
+## Shared presentation conventions
 
-- Missing Product UI pages return styled HTML error pages, not API JSON.
-- Styled Product UI error pages currently exist for `404 Page not found`, `403 Not allowed`, and `500 Something went wrong`.
-- Error pages should use the Product UI dark theme/shell where it is safe, avoid tracebacks and debug details in non-debug mode, and include a dashboard action.
-- `/dashboard/` is the canonical dashboard route.
-- `/app/` is not a supported route; it should remain a normal styled 404.
-- Product UI object routes that expect UUID-backed IDs should reject malformed IDs with 404 before rendering a broken shell. Valid inaccessible objects may still intentionally return 404 to avoid leaking existence.
+- Page headings identify the current object or task. Frequent primary actions
+  sit on the right side of the heading or relevant section controls and wrap on
+  narrow screens.
+- Tabs use the shared `.tabs` and `.tab-button` treatment and sit outside the
+  selected content. The selected content does not receive a decorative outer
+  card solely for being tab content.
+- Tab, filter, page, and page-size state is URL-backed where the controller
+  supports it. Direct URLs, reload, and browser back/forward restore that state.
+- Library-style pagers provide Previous, Next, a visible result range/status,
+  and a page-size selector. Long lists may use controls above and below the
+  list, with the established sticky bottom pager.
+- Changing page size resets the current page to 1. Changing a tab or scope
+  resets only incompatible page state.
+- Forms use bounded readable widths. Labels and controls align consistently;
+  fields do not expand to viewport width without a reason.
+- Cards are reserved for meaningful grouping, such as User, Password, and
+  Group Memberships. A card is not added merely to wrap a page or list.
+- Destructive group and shelf actions use a native collapsed disclosure and a
+  final browser confirmation. Canceling confirmation makes no API request.
+- Loading, success, and error messages use bounded status surfaces. API errors,
+  tracebacks, or returned HTML are not rendered as raw markup.
+- User-controlled values are inserted as text or passed through established
+  escaping helpers. The UI does not interpret metadata as HTML.
+- Compact identity rendering uses username/profile identity only unless a
+  self-profile or authorized user-management workflow explicitly exposes more.
 
-Fresh installs first use the server-rendered `/setup/` page to configure the
-server name and optional description, the Public group's display name and
-description, the advanced-groups setting, and the initial Owner account.
-Defaults are `Second Pass Library`, a blank server description, `Common Room`,
-`Main Public Library Room for everyone`, and advanced groups disabled. Common
-Room remains the internally special Public group. Public is not universal access;
-normal Public group membership still controls Public books and shelves.
-Advanced groups present separate curator-managed rooms and enable normal
-non-Public group mutation workflows. Setup is
-available only while no active Django superuser exists. After setup,
-authentication for Product UI pages continues to use the existing login at
-`/api-auth/login/`.
+Shelf `can_edit` and similar payload hints control affordances, not authority.
+The UI still handles authoritative 403 and anti-leakage 404 responses.
 
-Logout is POST-based (no GET logout links) and uses the existing `/api-auth/logout/`.
+## Icons and compact book metadata
 
-Planned auth/login session revocation behavior (and terminology vs `reading` sessions) is documented in `docs/session-management.md`.
+Product UI icons use Material Symbols Outlined.
 
-The library browse screen is API-driven using vanilla JS fetch calls to `GET /api/v1/library/books/` (paginated), with basic loading/error/empty states.
+- Decorative icons use `aria-hidden="true"`.
+- Interactive icon buttons require visible text or a clear `aria-label` and
+  remain keyboard-focusable.
+- Shared helpers and styles are preferred over one-off raw icon spans.
+- Metadata icons are subdued so they do not compete with the Book title.
 
-The book detail page is API-driven using `GET /api/v1/library/books/<book_id>/` and is cover-forward:
+Canonical compact Book metadata icons are:
 
-- The identity area uses a large display-only cover (or scaled placeholder)
-  beside title, series, authors, publication facts, Catalog Tags, and
-  description. It stacks the cover above the identity on narrow screens.
-- Download remains in the identity actions when a file is available.
-  Librarian, Manager, and Owner users also receive one quiet `Edit book` link
-  there; Readers receive no edit action.
-- Tabs default to Shelves and always include Shelves and Metadata. Advanced
-  mode additionally shows Groups. Metadata uses the canonical description/date
-  fields and includes Catalog Tags, identifiers, and Book-owned file details.
+| Field | Material Symbol |
+| --- | --- |
+| Author | `person` |
+| Series | `auto_stories` |
+| Publisher | `apartment` |
 
-Dashboard note: recent reading items render a cover image when `book.cover_url` is present; otherwise they show a placeholder cover box. Recent reading cards link to the session Marginalia page and include an `[All Sessions]` link for the book.
+Compact metadata values are text, not links. The Book title remains the primary
+canonical link. Visually hidden labels identify Author, Series, and Publisher
+for screen readers while the icons remain decorative. Metadata groups use a
+wrapping flex layout and gap spacing; they do not use literal or CSS-generated
+dot separators.
 
-Reading access-loss note: Product UI session history and export show owned marginalia even when the related book is no longer visible. Those rows use redacted book context and do not offer per-book/open navigation. Continue-reading/dashboard entrypoints omit inaccessible-book sessions.
+The shared metadata treatment is used by Library Book rows, Group View Books,
+Group Edit assigned/search rows, Shelf View items, and Shelf Edit item/search
+rows. `menu_book` is avoided for Series because it can be confused with the
+current Book; `store` is avoided for Publisher because it suggests a retailer.
 
-Cover note: book lists/cards throughout the product UI render cover art when `cover_url` is present; placeholders remain when it is `null`.
+### Reader-client icon advisory
 
-Media note: `cover_url` points under `MEDIA_URL` (default: `/media/`). The only public media URL namespace is `/media/covers/`; book files and other protected user data are never served as raw media URLs.
-
-In advanced mode, the book detail Groups tab shows the book's visible
-LibraryGroup assignments from the Book detail payload, including Public/Common
-Room when assigned and visible. Readers see only groups they can view; broad
-library roles follow their existing group visibility. Simple mode hides this
-advanced relationship tab because Public/Common Room is the only supported
-group. Public remains a real server-side group and available through supported
-group-scoped API reads. Shelves remain available on Book Detail in both modes.
-
-The book metadata edit page is organized into client-side tabs (Metadata, Authors & Series, Library Groups, Shelves, Identifiers & File Info). It is API-driven using `PATCH /api/v1/library/books/<book_id>/` and supports basic metadata fields plus author/series editing. `series_index` supports integers or one decimal place. Authors are selected from existing records; a series may be selected or created and assigned with the same atomic Book save. Catalog Tags are searchable removable pills loaded from the paginated read-only tag API; load failures remain visible without blocking manual tag entry. Tag names are submitted only through the same Book PATCH. Identifier add/edit/remove controls likewise update local page state and are saved with the Book PATCH. LibraryGroup assignments remain on their group relationship endpoints. The Shelves tab lists visible shelves containing the book and can remove the book from editable shelves. The Identifiers & File Info tab includes read-only Book-owned file metadata and a separate Librarian+ cover editor with current/replacement previews, reset, replace, and confirmed clear actions. Cover operations use the dedicated cover endpoint and do not participate in metadata Save. The stored EPUB is not edited from this page.
-
-The imports page is API-driven using:
-
-- `POST /api/v1/library/imports/` (multipart upload field `file`)
-
-Library imports are synchronous. The page shows the latest returned import
-result for the current browser session; import history is not stored.
-
-It intentionally supports only `.epub` and simple `.zip` of EPUBs (no Calibre sync/import of `metadata.db`, and no PDF).
-
-ZIP OPF sidecars (current):
-
-- When importing a `.zip`, the importer can optionally use an OPF sidecar to bootstrap metadata **for new books only** (not a sync/refresh mechanism).
-- Sidecar lookup (per EPUB member), in order:
-  - `metadata.opf` in the same directory as the EPUB (Calibre-style)
-  - same-basename `.opf` in the same directory (`Foo.epub` -> `Foo.opf`)
-  - if there is exactly one `.opf` in the same directory, use it
-- A valid OPF sidecar is a full metadata replacement and takes precedence over EPUB embedded metadata.
-- Duplicate EPUB checksum imports are rejected/skipped and do not refresh metadata or covers.
-- Embedded EPUB cover extraction is best-effort. A valid JPEG, PNG, or WebP
-  cover referenced by an OPF sidecar takes precedence; a missing or invalid
-  sidecar cover falls back to the embedded EPUB cover.
-
-The groups UI is API-driven using:
-
-- `GET /api/v1/library/groups/` (paginated list)
-- `POST /api/v1/library/groups/` (Owner/Manager only; create)
-- `GET /api/v1/library/groups/<group_id>/` (detail)
-- `PATCH /api/v1/library/groups/<group_id>/` (`name` and/or `description` for
-  authorized custom-group updates; designated Public is not writable here)
-- `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-- `GET /api/v1/library/search?q=<search>&ordering=title&exclude_group=<group_id>`
-  (broad library book search for the Groups UI picker; all existing assignments
-  are excluded before pagination)
-- `POST /api/v1/library/groups/<group_id>/books/` (add book by id from picker)
-- `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/` (remove)
-- Memberships:
-  - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; visible to group members + managers/owners/librarians + Public viewers)
-  - `POST/PATCH/DELETE /api/v1/library/groups/<group_id>/memberships/...` (Manager/Owner only)
-
-Note: Group product routes use UUIDs and `LibraryGroup` no longer has a slug. The special Public group is identified internally by `ServerSetting(public_group_id)` (not by a slug string).
-
-Dashboard note: the old "Sections" navigation card was removed from `/dashboard/` because the top navigation already provides the same links.
-
-Shelves product UI pages exist (API-driven):
-
-- `GET /shelves/` (list)
-- `GET /shelves/new/` (create)
-- `GET /shelves/<shelf_id>/` (view)
-- `GET /shelves/<shelf_id>/edit/` (edit/manage items)
-
-Book pages:
-
-- Book detail (`/library/books/<book_id>/`) shows visible shelves containing the book.
-- Book edit Shelves tab links to visible shelves containing the book (item management lives on Shelf Edit).
-  - Book Edit Shelves tab (`/library/books/<book_id>/edit/`) lists shelves containing the book and can remove this book from editable shelves (it deletes only the ShelfItem).
-
-Group shelves UX:
-
-- Group View Shelves tab (`/groups/<group_id>/`) lists shelves owned by the group.
-- Group Edit Shelves tab (`/groups/<group_id>/edit/`) lists shelves and links to View/Edit; creation deep-links to `GET /shelves/new/?owner_group=<group_id>`.
-- Shelf Edit remains the canonical shelf management page (details + items + add/remove + ordering + delete).
-
-The users UI is API-driven using:
-
-- `GET /api/v1/accounts/users/` (paginated list; Manager/Owner only)
-- `PATCH /api/v1/accounts/users/<profile_id>/` (safe fields only; no passwords/invites)
-- `POST /api/v1/accounts/users/` (creates local Django user and returns a temporary password once)
-- `POST /api/v1/accounts/users/<profile_id>/reset-password/` (managed reset; temporary password shown once)
-
-Password management:
-
-- The top-right username links to `/profile/`.
-- If `me.must_change_password=true`, product UI pages redirect to `/profile/password/` until the user changes their password.
-- Self password change keeps the current login session but logs out other web sessions for that user.
-- `/profile/` includes a Session management section with a "Log out all other web sessions" action.
-- `/profile/` also lists active Device/API sessions (Client API bearer sessions) and allows revoking them.
-- `/profile/` includes a "Connect a device/app" link to `/client-api/authorize/` to begin the human side of pairing.
-
-User deletion, invitations, email verification, password reset flows, and MFA are intentionally not implemented yet.
-
-LibraryGroup membership can be managed from either side of the relationship:
-User Edit manages the selected user's memberships, while Group Edit manages the
-selected group's members. Both use the same authorized membership API.
-
-## 1. UI philosophy
-
-- Django `/admin` is the service hatch for operators and recovery. It is not the product UI.
-- The product UI should not expose the service hatch as a normal nav item; it is linked from the Owner-only Server Settings page (`/server/`).
-- Operator recovery posture is documented in `docs/admin.md`.
-- The product UI should expose normal workflows only. Advanced controls should be hidden unless relevant to the user's role, owner flag, or group membership.
-- The UI should not hardcode role logic in many places. It should treat `GET /api/v1/accounts/me/` as the bootstrap source of truth for:
-  - identity (`username`, `email`)
-  - global role (`role`) and `is_owner`
-  - direct group memberships (`groups`)
-  - exact membership stewardship (`groups[].is_curator`)
-- Shelf `can_edit` payload hints are not authorization guarantees. The UI must still handle 403/404 responses from specific endpoints.
-- Do not "fix" established anti-leak 404 responses to 403 without an explicit product/security decision.
-- Decorative UI punctuation and separators should not be written as HTML character entities in live templates or JavaScript-generated markup. Use semantic inline elements with CSS-generated separators, or real text only when the character is meaningful content. ARIA labels should use plain readable punctuation or words.
-
-### Product UI icon conventions
-
-- Use Material Symbols Outlined. Icons are decorative by default and use
-  `aria-hidden="true"`.
-- Do not replace visible text with an icon alone unless the control has an
-  accessible name. Interactive icon buttons need visible text or a clear
-  `aria-label`.
-- Reuse shared rendering helpers and styles instead of adding one-off raw icon
-  spans. Metadata icons should use subdued sizing and color so they do not
-  compete with book titles.
-- Compact book metadata uses this vocabulary consistently with the reader
-  client: Author is `person`, Series is `auto_stories`, and Publisher is
-  `apartment`.
-- Compact metadata values are not links. The book title remains the primary
-  link. Each metadata group keeps a visually hidden Author, Series, or Publisher
-  label for screen readers while its icon remains decorative.
-- Use wrapping flex layout and gap spacing between metadata groups. Do not add
-  literal or CSS-generated dot separators.
-- Reuse the compact book metadata helper and style across these surfaces:
-  - Library book rows
-  - Group View book rows
-  - Group Edit assigned and add-book rows
-  - Shelf View item rows
-  - Shelf Edit item and add-book rows
-- Avoid `menu_book` for Series because it can be mistaken for the current book.
-  Avoid `store` for Publisher because it suggests a retailer.
-
-#### Reader-client icon reference
-
-The reader client currently uses the following Material Symbols Outlined
-vocabulary. Product UI surfaces are not required to use these icons. When the
-Product UI does represent the same action or concept with an icon, prefer the
-same token so the meaning stays consistent across clients. A different token is
-appropriate only when the Product UI concept is materially different.
+The reader client uses the following Material Symbols Outlined vocabulary.
+Product UI surfaces are not required to use every token. When both clients use
+an icon for the same concept, prefer the same token unless the Product UI
+meaning is materially different.
 
 | Token | Reader-client context |
 | --- | --- |
@@ -239,15 +105,15 @@ appropriate only when the Product UI concept is materially different.
 | `check_circle` | Enabled marginalia layer |
 | `chevron_left` | Previous reader page |
 | `chevron_right` | Next reader page |
-| `close` | Close drawers, menus, editors, or dialogs; cancel edits |
+| `close` | Close a drawer, menu, editor, or dialog; cancel an edit |
 | `delete` | Delete a shelf, shelf item, highlight, bookmark, or annotation |
 | `done` | Finish shelf editing |
 | `edit` | Edit shelf or session metadata |
 | `edit_note` | Edit an annotation note or generic annotation fallback |
 | `expand_more` | Library scope menu disclosure |
-| `flag` | Reader activity completion when no next book exists |
+| `flag` | Complete reader activity when no next Book exists |
 | `format_list_numbered` | Count/order sorting and explicit shelf/series order |
-| `groups` | Private/non-public Library group scope or shelf ownership |
+| `groups` | Non-Public Library group scope or shelf ownership |
 | `home` | Return to application or Library home from the reader |
 | `ink_highlighter` | Open marginalia or highlight controls |
 | `keyboard_arrow_down` | Move a shelf item down |
@@ -259,277 +125,243 @@ appropriate only when the Product UI concept is materially different.
 | `menu_book` | Library Books axis |
 | `more_vert` | Open the shelf action menu |
 | `my_location` | Navigate to an annotation or bookmark location |
-| `open_in_new` | Open a pairing authorization page or annotation target |
+| `open_in_new` | Open pairing authorization or an annotation target |
 | `person` | Authors axis, author sorting, or user-owned shelves |
 | `public` | Public Library group scope or public group ownership |
 | `radio_button_unchecked` | Disabled marginalia layer |
-| `search` | Open in-book search |
+| `search` | Open in-Book search |
 | `settings` | Application and reader display settings |
-| `sort_by_alpha` | Alphabetical book, author, series, or shelf sorting |
+| `sort_by_alpha` | Alphabetical Book, Author, Series, or shelf sorting |
 
-## 2. First UI surface
+## Library
 
-Likely top-level sections (navigation may be role-gated):
+The Library page has Books, Authors, and Series axes. Catalog Tags appear as a
+filter rail rather than a fourth axis.
 
-- Library (browse/search)
-- Book detail (metadata, file, reading info)
-- Imports (upload and latest synchronous result)
-- Groups (LibraryGroups: view, curation, presentation)
-- Reading (history, sessions, annotations)
-- Users (management)
-- Settings / system (lightweight configuration and diagnostics)
-- Optional future reader UI (separate scope; not required for the first product UI)
+- Books-axis search matches Book title and sort title only.
+- Authors and Series have axis-specific search and ordering.
+- Author and Series rows may show bounded cover previews for visible Books.
+- Catalog Tag filtering uses the tag slug supplied by the API. Tag rows are
+  filter/facet data, not preview-card surfaces.
+- Picker workflows use the broad library book search endpoint. Product copy and
+  Product UI documentation call this “library search” or “broad library book
+  search,” not internal programming shorthand.
 
-## 3. Role-based navigation
+Library axis, ordering, filter, pagination, and selected-tab state remain in
+the URL. List rows use the shared Book row and metadata treatment.
 
-The UI should gate navigation based on `/api/v1/accounts/me/`:
+### Book Detail
 
-### Reader
+Book Detail uses a large-cover identity layout with the Book title and safe
+visible metadata. The title/hero area is not replaced with a compact list row.
 
-- Sees: Library, Book detail, Reading, Settings (limited)
-- Does not see: Imports, Users, advanced group controls
+Its relationship/content tabs are Shelves, optional Groups, and Metadata. The
+Groups tab is present only when advanced library groups are enabled. In simple
+mode Public/Common Room remains a real backend group, but the Product UI does
+not show an advanced Book/group relationship tab.
 
-### Curator (group-scoped)
+Visible shelf and group relationships are read-only on Book Detail. EPUB
+download uses the authenticated action supplied by Book Detail file metadata.
+Cover replacement and clearing are not Book Detail actions.
 
-Curator is not a global role and is not mutually exclusive with ordinary membership. A group membership is ordinary membership; `is_curator=true` is an optional curator/stewardship flag on that exact membership.
+### Book Edit
 
-Reader users gain scoped curation authority only for non-Public groups where their membership has `is_curator=true`. Librarian, Manager, and Owner users have broad curation authority through their global role; they may also be marked `is_curator=true` on a non-Public group as stewardship metadata.
+Authorized Book Edit uses these tabs:
 
-Sees:
+1. Book Details
+2. Catalog
+3. Authors & Series
+4. Library Groups, when advanced mode exposes group management
+5. Shelves
+6. Identifiers & File Info
 
-- Library, Book detail, Reading
-- Groups section, but focused on the groups they can curate
+Metadata changes are saved through the Book edit workflow. Catalog Tags and
+identifiers are managed with the Book rather than through standalone mutation
+pages. Cover replacement/clear lives in Book Edit and uses its separate cover
+workflow. Shelf and group relationship controls retain their own mutation
+boundaries.
 
-### Librarian
+## Library Groups
 
-- Sees: Library (+ management controls), Book detail (+ management controls), Imports, Groups (presentation + curation), Reading
-- Does not see: Users
+Simple mode hides advanced group navigation, relationship tabs, and custom
+group management. The designated Public/Common Room group still exists and
+continues to support applicable group-scoped API reads and shelf ownership.
 
-### Manager
+### Group View
 
-- Sees: Everything a Librarian sees, plus Users
-- May see additional system-level tools (still keep them minimal in the product UI)
+Group View is presentation/read mode with tabs outside the content:
 
-### Owner
+1. Books
+2. Members
+3. Shelves
 
-Owner is Django `is_superuser`. In the product UI, treat Owner as "Manager+".
+Books use Library-style rows and canonical Book Detail links. Members display
+compact username identity only. Shelves retain empty visible group shelves and
+show safe preview strips without Edit actions. All three lists use URL-backed
+Library-style pagination where applicable.
 
-## 4. Library browse screen
+Group View does not add Author, Series, or Catalog Tag axes. It does not render
+email, first/last names, raw user IDs, membership IDs, file paths, checksums, or
+download metadata.
 
-Primary endpoint:
+### Group Edit
 
-- `GET /api/v1/library/books/` (paginated)
+Group Edit is management mode with these tabs:
 
-Recommended query params (current implementation):
+1. Details
+2. Books
+3. Add Books
+4. Members
+5. Shelves
 
-- Search: `q=<text>` (Book title and internal title-sort value only)
-- Filters: `author=<author_id>`, `series=<series_id>`, `language=<code>`, `has_files=true|false`
-- Ordering: `ordering=title|created_at|updated_at|published_date` (prefix with `-` for descending)
+Books shows currently assigned Books and Remove actions. Add Books uses broad
+library book search with `exclude_group`, then refreshes assigned and candidate
+state after a successful add. Both tabs use Library-style rows and pagers.
 
-UI behaviors:
+Members preserves authorized add, curator-update, and remove behavior while
+rendering username-only identity. Shelves retains create/view/edit management
+actions, empty shelves, preview strips, and pagination.
 
-- Paginated list with "next/previous" and page size controls.
-- Search box + filter panel.
-- Each row/card should show enough metadata to disambiguate (title, authors, series if present, language, published date if present).
-- If `file` is present on the book payload, show a "Download" action that links
-  to the authenticated book download endpoint.
-- The current endpoint is
-  `GET /api/v1/library/books/<book_id>/download/`; it accepts session and bearer
-  reads and returns the complete EPUB attachment without Range support.
-- Optional: when the user is browsing in a specific group context, the UI should show that context and use the Groups APIs for the group book list rather than mixing access logic on the client.
+For a custom group, Details exposes the currently authorized description edit.
+Authorized Manager/Owner users may delete a custom group through a collapsed
+Delete Group disclosure and final browser confirmation.
 
-## 5. Book detail screen
+The designated Public group has an intentional read-only Details state showing
+its current name and description. It explains that Public Library identity is
+managed in Server Settings and gives Owner a same-window Server Settings link.
+It has no Details Save or Delete Group control. Books, Members, and Shelves
+remain available according to their existing authority.
 
-Primary endpoint:
+## Shelves
 
-- `GET /api/v1/library/books/<book_id>/`
+The Shelves page uses explicit scope tabs:
 
-Content:
+1. Personal
+2. Shared by Others
+3. Group Shelves
 
-- Metadata: title, subtitle, description, publisher, language, published date/precision, and Catalog Tags
-- Authors and series, including author biography and series summary where provided
-- Librarian+ may edit an author name/biography or series name/summary from its Library browse context; readers see the same context read-only.
-- Identifiers (scheme/value)
-- File: show the stored EPUB metadata from the Book-owned file fields when present.
+The API also supports omitted/`all` combined scope, but the Product UI uses an
+explicit scope so selected state is durable in the URL. Personal and visible
+group-owned shelves remain listed when empty. Other users' listed shelves are
+omitted when they have no viewer-visible Books, including hidden-only shelves.
+Private shelf visibility is unchanged.
 
-Reading summary (current API surface):
+The scope header keeps New shelf separate from the tabs. Shelf cards retain
+ownership/visibility metadata and safe preview strips. Scope, page, and page
+size survive direct URLs and browser history.
 
-- "Continue reading" / "Open" uses:
-  - `GET /api/v1/reading/books/<book_id>/active-session/`
-- Sessions and annotations summaries can be built from:
-  - `GET /api/v1/reading/sessions/` (paginated)
-  - `GET /api/v1/reading/annotations/?book_id=<book_id>` (paginated)
+### Shelf View
 
-Management controls (role-gated):
+Shelf View presents its description as subtle user text without a separate
+heavy card. Items use Library-style Book rows, compact icon metadata, optional
+safe Catalog Tag pills, canonical Book Detail links, and top/bottom pagers.
+File, storage, checksum, source, and hidden Book metadata are never rendered.
 
-- Librarian/Manager/Owner: metadata edits (where supported by API), file management (where supported), group curation affordances.
-- Curator: group-specific curation actions only where allowed.
+### Shelf Edit
 
-## 6. Import screen
-
-Visible for Librarian, Manager, or Owner.
+Shelf Edit uses:
 
-Primary endpoints:
-
-- Upload: `POST /api/v1/library/imports/` (multipart field name `file`)
-
-UI behaviors:
-
-- Upload form supporting `.epub` or `.zip` of `.epub` files.
-- Disable upload controls while the synchronous import request is running.
-- Show that large ZIP files may take a while.
-- Show the returned result immediately (source label, counts, items).
-- No stored import history, async/background job, OPF-only upload, or target
-  group selection is implemented.
-
-Non-goals:
-
-- No Calibre `metadata.db` imports.
-- No general sidecar asset import beyond supported OPF-referenced JPEG, PNG, or
-  WebP covers.
-
-## 7. LibraryGroup (Groups) screen
-
-Primary endpoints:
-
-- List: `GET /api/v1/library/groups/` (paginated)
-- Detail: `GET /api/v1/library/groups/<group_id>/`
-- Group books:
-  - `GET /api/v1/library/groups/<group_id>/books/` (paginated)
-  - `POST /api/v1/library/groups/<group_id>/books/` body `{"book_id": "<book_id>"}`
-  - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
-- Custom-group presentation updates:
-  - `PATCH /api/v1/library/groups/<group_id>/` accepts `name` and `description`.
-    Manager/Owner may rename; description updates follow existing custom-group
-    curator and broad-role authority. Public identity is Owner-managed through
-    Server Settings instead.
-
-UI behaviors:
-
-- Readers should only see groups they can view. Public/Common Room follows
-  normal group membership visibility.
-- Group book listings must be treated as filtered by server policy; the UI must not assume group visibility implies book visibility.
-- Group View and Group Edit use the endpoint's normal pagination envelope and
-  preserve the current page and supported filters in the Product UI URL.
-- The add-book picker uses broad library book search with server-side
-  `exclude_group`; it never builds an exclusion set from only the currently
-  displayed assigned-book page.
-- Broad-role controls should use `/api/v1/accounts/me/` role and owner state.
-- Reader group-scoped controls should use the matching non-Public
-  `groups[]` membership with `is_curator=true`.
-
-Current implemented UI:
-
-- Group creation exists at `/groups/new/` for Owner/Manager.
-- Group membership management exists on the Group Edit page for Manager/Owner.
-- Authorized Manager/Owner users can delete custom groups from Group Edit. The
-  destructive section is collapsed by default and requires a final browser
-  confirmation. The designated Public group cannot be deleted.
-
-## 8. User management screen
-
-Visible only for Manager/Owner.
-
-Primary endpoints:
-
-- List: `GET /api/v1/accounts/users/` (paginated)
-- Detail: `GET /api/v1/accounts/users/<profile_id>/`
-- Patch: `PATCH /api/v1/accounts/users/<profile_id>/` (safe fields only; no password handling)
-- Create: `POST /api/v1/accounts/users/` (Manager/Owner only; returns generated temporary password once)
-
-UI behaviors:
-
-- `/users/` is a compact list screen with simple client-side role tabs/filters (over the currently loaded page):
-  - All, Readers, Curators, Librarians, Managers, Inactive
-  - Curators are detected via `groups[].is_curator` and may show a "Curates: ..." summary
-- Editing is on a dedicated page: `/users/<profile_id>/edit/`.
-- For Manager/Owner, the user edit page includes user-centric group membership management (add/update/remove).
-- Membership editors use ordinary membership plus a Curator checkbox/toggle, not a Reader/Curator role selector. Displays may show Member and Curator indicators separately.
-- Show safe editable fields (email, first_name, last_name, is_active, role) on the edit page.
-- Make role editing rules explicit in the UI:
-  - Owner-only Manager promotion/demotion
-  - Managers cannot manage Owner accounts, other Managers, or their own role
-- Include a Create User flow at `/users/new/`:
-  - Manager may create Librarian/Reader users only
-  - Owner may create Manager/Librarian/Reader users
-  - A server-generated temporary password is shown once and must be copied immediately
-
-## 9. Reading metadata screens
-
-Reading data belongs to the authenticated user and should remain durable/exportable.
-
-Primary endpoints:
-
-- Sessions: `GET /api/v1/reading/sessions/` (paginated), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`)
-- Active session entrypoint: `GET /api/v1/reading/books/<book_id>/active-session/`
-- Start over: `POST /api/v1/reading/books/<book_id>/start-over/`
-- Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/`
-- Annotations: `GET /api/v1/reading/annotations/` (paginated), supports `?book_id=...`, `?session_id=...`, `?include_deleted=true`
-
-UI behaviors:
-
-- Sessions list (by default newest-first in UI; actual API ordering is server-defined).
-- Annotations view with filters by book and session and a toggle for deleted items.
-- Soft delete should be communicated clearly (deleted items can be shown when requested).
-
-## 10. Shelves UI
-
-- The top-level shelves page (`/shelves/`) uses the existing tab style for
-  Personal, Shared by Others, and Group Shelves. The selected scope and page
-  are stored in the URL and restored by direct navigation and browser history.
-  - Personal uses `scope=personal` and includes empty owned shelves.
-  - Shared by Others uses `scope=shared`; the API omits listed shelves with no
-    viewer-visible items.
-  - Group Shelves uses `scope=group` and includes empty visible group shelves.
-  - Each tab keeps the normal paginated envelope and existing shelf cards,
-    metadata, and preview strips.
-- Shelf edit (`/shelves/<shelf_id>/edit/`) is the full in-context shelf management page:
-  - Uses tabs to reduce scroll:
-    - Books in shelf (default): remove and reorder items with `Move up` / `Move down` and a `Move to` dropdown; changes apply immediately.
-    - Add books: broad library book search with `exclude_shelf`; changes apply
-      immediately and books already in the shelf are omitted server-side.
-    - Details: edit name/description (and visibility for user-owned shelves only) and delete shelf.
-  - Delete shelf removes the shelf and its shelf items only; it never deletes books or files.
-- Shelf metadata displays put the owner identity segment first:
-  - User-owned shelves use the Material Symbols `person` icon followed by `First Last <@username>` when a name exists, or `<@username>` without an empty gap when it does not.
-  - Group-owned shelves use the Material Symbols `groups` icon followed by the group name.
-  - Visibility and item count follow the owner identity segment with separators, for example `person Owen Benji <@owner> - Private - 17 items` or `groups Public - Private - 6 items`.
-  - `profile_id` is used only for identity comparison and is never displayed.
-- Shelf item positions are stored zero-based and contiguous; UI labels may show one-based positions like `#1`.
-- First/last shelf items disable invalid edge moves; the `Move to` dropdown uses one-based labels and applies immediately.
-- Drag/drop and per-row numeric position inputs are not implemented in the current shelf edit UI.
-- Shelves are presentation/organization objects, not access control.
-
-## 11. Implementation options (non-binding)
-
-### Option A: Django templates
-
-- Pros: simplest stack, minimal build tooling, integrates easily with session auth.
-- Cons: richer interactivity requires more server-rendered patterns or incremental JS.
-
-### Option B: Django templates + vanilla JS (progressive enhancement)
-
-- Pros: still minimal dependencies, can use API directly for dynamic screens, easy to start small.
-- Cons: you must design consistent client-side state and error handling without a framework.
-
-### Option C: React SPA
-
-- Pros: strong patterns for complex UI state and routing.
-- Cons: more dependencies/tooling and a larger surface area than needed for the first iteration.
-
-Recommendation (first pass): start with Django templates + vanilla JS progressive enhancement. Keep navigation and shell server-rendered; use the API for the dynamic parts (lists, uploads, inline edits) and rely on `/api/v1/accounts/me/` to build the initial UI state.
-
-## 12. Known limitations
-
-Current limitations and intentional non-goals that affect the product UI:
-
-- LibraryGroups:
-  - no public API for creating/deleting groups (groups are currently bootstrap/admin-oriented)
-- Reading:
-  - reading history/export exists, but there is no in-server EPUB reader UI
-- Users:
-  - no email-based invites or password reset flows (managed user creation/reset exists for self-host administration)
-
-Nice to have:
-
-- A small "system info" endpoint for build/version and configured features (optional; UI can also display a static build label).
+1. Details
+2. Books
+3. Add Books
+
+Breadcrumbs provide navigation context; there are no redundant View Shelf or
+View Group buttons. Details uses a bounded vertical form. Delete Shelf is a
+collapsed disclosure with a final browser confirmation.
+
+Books retains accessible move-up, move-down, move-to-position, and Remove
+controls in a compact action area. Add Books uses broad library book search
+with `exclude_shelf`; blank search does not load the whole Library. Both lists
+use the shared Book row treatment and pagination where applicable.
+
+User-owned shelf items preserve durable intent when Book access changes.
+Unavailable items remain stored until explicit `cleanup_shelves` processing,
+but Product UI responses and controls do not reveal the hidden Book data.
+
+## Users
+
+Users management is available according to the current Manager/Owner policy.
+
+- The Users list has role/status filters, sorting, URL-backed pagination, and a
+  right-aligned Create User action.
+- Create User uses a bounded vertical form and right-aligned Create/Cancel
+  actions.
+- Edit User remains section-card based and does not use tabs.
+
+Edit User contains three meaningful cards:
+
+1. User
+2. Password
+3. Group Memberships
+
+The page title includes the edited user's display identity and username. The
+User card keeps its main Save separate from password state. “Require Password
+Change on next login.” saves asynchronously and is not submitted by the main
+User Save. Reset Password reveals the generated temporary password and its
+one-time-copy warning only after a successful reset.
+
+Group Memberships uses compact two-cluster rows: destructive remove plus group
+badge on the left, and Curator state on the right. For Public, a Public Group
+label replaces the curator checkbox. Its keyboard-accessible Product UI help
+popover explains: “Only Librarians/Managers may Curate the Public Group.” The
+help is available on hover and focus rather than permanently occupying the row.
+
+User Edit and Group Edit are both valid membership-management surfaces. They
+use the same authorized membership operations from opposite sides of the
+relationship. Neither surface renders raw user IDs, membership IDs, hidden
+group data, or unrelated profile internals.
+
+## Imports and reading activity
+
+Library import is a session-authenticated Product UI workflow for Librarian,
+Manager, and Owner. EPUB and supported ZIP batches show bounded validation and
+result summaries. ZIP OPF sidecars may replace embedded metadata for new Books;
+valid referenced JPEG, PNG, or WebP sidecar covers take precedence over the
+embedded cover. Missing or invalid sidecar covers fall back safely.
+
+Reading session and Marginalia pages show only the authenticated user's data.
+Owned history remains available after Book access loss with redacted Book
+context and without open/continue actions. Dashboard continue-reading surfaces
+omit inaccessible Books.
+
+Marginalia import/export in the Product UI is session-only. Import uses preview,
+selection, and apply steps; export supports the current user's owned sessions.
+Detailed data formats and Reading API semantics belong in `docs/reading.md`,
+`docs/api.md`, and the marginalia profile specification.
+
+## Server Settings
+
+Server Settings is Owner-only and uses these tabs:
+
+1. General
+2. Public Library
+3. Library Groups
+
+General contains server name, server description, and banner text. Public
+Library manages the designated Public/Common Room name and description; normal
+Group Edit does not edit this identity. Library Groups shows advanced-group
+status and the enable action.
+
+Enabling advanced groups requires browser confirmation. The normal Product UI
+does not provide disable/collapse after enablement. That operation is a
+recovery workflow through the Service Hatch.
+
+“Service Hatch” means advanced settings and recovery tools provided through
+Django Admin. Help uses the established keyboard-focusable Product UI popover,
+not a native `title` tooltip. The Django Admin / Service Hatch action retains
+its configured authorization and deployment visibility gates.
+
+## Accessibility, privacy, and responsive behavior
+
+- Tabs and action groups wrap without horizontal page scrolling.
+- Sticky pagers do not obscure list content.
+- Form controls, disclosures, help affordances, and icon actions are keyboard
+  reachable and have accessible names.
+- Hover help is also available by focus and through `aria-describedby`.
+- Empty states are specific to the selected scope/tab and do not show broken
+  pagination controls.
+- The UI never renders membership record IDs, raw authentication user IDs,
+  tokens, passwords, filesystem paths, source filenames, internal file keys, or
+  inaccessible Book/group metadata.
+- Email and personal-name fields appear only on authorized self-profile or user
+  management surfaces, not compact Group member identity rows.
