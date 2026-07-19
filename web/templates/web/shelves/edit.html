@@ -17,15 +17,7 @@
         <div id="shelf-edit-visibility-context"></div>
         <div id="shelf-edit-item-count"></div>
       </div>
-      <div id="shelf-edit-header-actions" style="margin-top: 10px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <a id="shelf-edit-view-link" class="button" href="/shelves/{{ shelf_id|escape }}/">View shelf</a>
-        {% if advanced_library_groups_enabled %}
-        <a id="shelf-edit-group-link" class="button is-hidden" href="#">View group</a>
-        {% else %}
-        <a id="shelf-edit-group-link" class="button is-hidden" href="#" aria-hidden="true"></a>
-        {% endif %}
-      </div>
-      <div id="shelf-edit-context-note" class="muted" style="margin-top: 10px;"></div>
+      <div id="shelf-edit-context-note" class="muted shelf-edit-context-note"></div>
     </div>
   </div>
 
@@ -36,57 +28,46 @@
   </div>
 
   <div id="shelf-edit-tabs" class="tabs is-hidden" style="margin-top: 12px;" role="tablist" aria-label="Shelf edit tabs">
-    <button id="shelf-edit-tab-books" class="tab-button is-active" type="button" data-tab="books" role="tab" aria-selected="true" aria-controls="shelf-edit-panel-books">Books in shelf</button>
-    <button id="shelf-edit-tab-add" class="tab-button" type="button" data-tab="add" role="tab" aria-selected="false" aria-controls="shelf-edit-panel-add">Add books</button>
     <button id="shelf-edit-tab-details" class="tab-button" type="button" data-tab="details" role="tab" aria-selected="false" aria-controls="shelf-edit-panel-details">Details</button>
+    <button id="shelf-edit-tab-books" class="tab-button is-active" type="button" data-tab="books" role="tab" aria-selected="true" aria-controls="shelf-edit-panel-books">Books</button>
+    <button id="shelf-edit-tab-add" class="tab-button" type="button" data-tab="add" role="tab" aria-selected="false" aria-controls="shelf-edit-panel-add">Add Books</button>
   </div>
 
   <div id="shelf-edit-panel-books" class="tab-panel is-hidden" data-tab-panel="books" role="tabpanel" aria-labelledby="shelf-edit-tab-books">
-    <section id="shelf-edit-items" class="card is-hidden">
-      <h2 class="card__title">Books in shelf</h2>
-      <div class="muted">Changes apply immediately. There is no separate save for book membership.</div>
-
-      <div id="shelf-edit-items-status" class="muted" style="margin-top: 10px;"></div>
-      <div id="shelf-edit-items-results" class="muted"></div>
-      <div id="shelf-edit-items-note" class="muted" style="margin-top: 10px;">
-        Tip: Use Move up / Move down or Move to to reorder books. Drag/drop is not supported yet.
-      </div>
-      <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <button id="shelf-edit-items-prev" class="button" type="button">Previous</button>
-        <button id="shelf-edit-items-next" class="button" type="button">Next</button>
-        <span id="shelf-edit-items-page-note" class="muted"></span>
-      </div>
+    <section id="shelf-edit-items" class="shelf-edit-section is-hidden">
+      <div id="shelf-edit-items-status" class="muted"></div>
+      {% include "web/shelves/_edit_items_pager.html" with position="top" sticky=False only %}
+      <div id="shelf-edit-items-results" class="library-results"></div>
+      {% include "web/shelves/_edit_items_pager.html" with position="bottom" sticky=True only %}
     </section>
   </div>
 
   <div id="shelf-edit-panel-add" class="tab-panel is-hidden" data-tab-panel="add" role="tabpanel" aria-labelledby="shelf-edit-tab-add">
-    <section id="shelf-edit-add" class="card is-hidden">
-      <h2 class="card__title">Add books</h2>
-      <div class="muted">Adding a book applies immediately. Books already in this shelf are hidden from results.</div>
-
-      <form id="shelf-edit-book-search-form" style="margin-top: 12px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input id="shelf-edit-book-search-input" type="text" autocomplete="off" placeholder="Search books..." style="min-width: 240px; flex: 1;" />
+    <section id="shelf-edit-add" class="shelf-edit-section is-hidden">
+      <form id="shelf-edit-book-search-form" class="shelf-edit-search-form">
+        <input id="shelf-edit-book-search-input" type="search" autocomplete="off" placeholder="Search books..." />
         <button id="shelf-edit-book-search-btn" class="button" type="submit">Search</button>
         <span id="shelf-edit-book-search-status" class="muted"></span>
       </form>
-      <div id="shelf-edit-book-search-results" class="muted" style="margin-top: 10px;"></div>
+      <div id="shelf-edit-book-search-results" class="library-results shelf-edit-search-results"></div>
     </section>
   </div>
 
   <div id="shelf-edit-panel-details" class="tab-panel is-hidden" data-tab-panel="details" role="tabpanel" aria-labelledby="shelf-edit-tab-details">
-    <section id="shelf-edit" class="card is-hidden" data-shelf-id="{{ shelf_id|escape }}">
-      <h2 class="card__title">Details</h2>
-      <form id="shelf-edit-form">
+    <section id="shelf-edit" class="shelf-edit-section shelf-edit-details is-hidden" data-shelf-id="{{ shelf_id|escape }}">
+      <form id="shelf-edit-form" class="shelf-edit-form">
         {% csrf_token %}
-        <div class="kv">
-          <div class="kv__k"><label for="shelf-edit-name">Name</label></div>
-          <div class="kv__v"><input id="shelf-edit-name" type="text" required style="width: 100%;" /></div>
-
-          <div class="kv__k"><label for="shelf-edit-description">Description</label></div>
-          <div class="kv__v"><textarea id="shelf-edit-description" rows="4" style="width: 100%;"></textarea></div>
-
-          <div id="shelf-edit-visibility-row" class="kv__k"><label for="shelf-edit-visibility">Visibility</label></div>
-          <div id="shelf-edit-visibility-row-v" class="kv__v">
+        <div class="shelf-edit-form__fields">
+          <label class="shelf-edit-form__field" for="shelf-edit-name">
+            <span>Name</span>
+            <input id="shelf-edit-name" type="text" required />
+          </label>
+          <label class="shelf-edit-form__field" for="shelf-edit-description">
+            <span>Description</span>
+            <textarea id="shelf-edit-description" rows="4"></textarea>
+          </label>
+          <div id="shelf-edit-visibility-row" class="shelf-edit-form__field">
+            <label for="shelf-edit-visibility">Visibility</label>
             <select id="shelf-edit-visibility">
               <option value="private">Private</option>
               <option value="listed">Listed</option>
@@ -94,20 +75,22 @@
             <div id="shelf-edit-visibility-note" class="muted" style="margin-top: 6px;"></div>
           </div>
         </div>
-        <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <button id="shelf-edit-save-btn" class="button" type="submit">Save details</button>
+        <div class="shelf-edit-form__actions">
           <span id="shelf-edit-save-status" class="muted"></span>
+          <button id="shelf-edit-save-btn" class="button" type="submit">Save details</button>
         </div>
       </form>
     </section>
 
-    <section id="shelf-edit-danger" class="card is-hidden">
-      <h2 class="card__title">Danger</h2>
-      <div class="muted">Deleting a shelf removes only the shelf and its shelf items. Books and files are not deleted.</div>
-      <div style="margin-top: 12px; display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <button id="shelf-edit-delete-btn" class="button" type="button">Delete shelf</button>
-        <span id="shelf-edit-delete-status" class="muted"></span>
+    <details id="shelf-edit-danger" class="card danger-zone is-hidden">
+      <summary class="danger-zone__summary">Delete Shelf</summary>
+      <div class="danger-zone__content">
+        <div class="muted">Deleting this shelf also removes its shelf items. Books and files are not deleted.</div>
+        <div class="shelf-edit-danger__actions">
+          <span id="shelf-edit-delete-status" class="muted"></span>
+          <button id="shelf-edit-delete-btn" class="button" type="button">Delete Shelf</button>
+        </div>
       </div>
-    </section>
+    </details>
   </div>
 {% endblock %}

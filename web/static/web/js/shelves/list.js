@@ -127,13 +127,13 @@ export async function initShelvesList() {
 
   const statusEl = $("#shelves-status");
   const resultsEl = $("#shelves-results");
-  const prevButtons = [$("#shelves-prev-top"), $("#shelves-prev-bottom")].filter(Boolean);
-  const nextButtons = [$("#shelves-next-top"), $("#shelves-next-bottom")].filter(Boolean);
-  const pageSizeSelects = [$("#shelves-page-size-top"), $("#shelves-page-size-bottom")].filter(Boolean);
-  const rangeEls = [$("#shelves-range-top"), $("#shelves-range-bottom")].filter(Boolean);
-  const pagers = [$("#shelves-pager-top"), $("#shelves-pager-bottom")].filter(Boolean);
+  const prevButtons = [$("#shelves-prev-top"), $("#shelves-prev-bottom")];
+  const nextButtons = [$("#shelves-next-top"), $("#shelves-next-bottom")];
+  const pageSizeSelects = [$("#shelves-page-size-top"), $("#shelves-page-size-bottom")];
+  const rangeEls = [$("#shelves-range-top"), $("#shelves-range-bottom")];
+  const pagers = [$("#shelves-pager-top"), $("#shelves-pager-bottom")];
   const tabs = Array.from(document.querySelectorAll("[data-shelf-scope]"));
-  if (!statusEl || !resultsEl || prevButtons.length !== 2 || nextButtons.length !== 2 || pageSizeSelects.length !== 2 || !tabs.length) return;
+  if (!statusEl || !resultsEl || [...prevButtons, ...nextButtons, ...pageSizeSelects, ...rangeEls, ...pagers].some((element) => !element) || !tabs.length) return;
 
   installShelfCardNavigation(resultsEl);
   let state = shelfListState(window.location.search);

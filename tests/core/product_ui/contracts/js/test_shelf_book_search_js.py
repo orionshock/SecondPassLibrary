@@ -6,7 +6,7 @@ import pytest
 pytestmark = [pytest.mark.product_ui, pytest.mark.static_contract]
 
 
-class TestShelfBookSearchJavaScriptContracts:
+class TestShelfBookSearchJavaScriptTests:
     def setup_method(self):
         self.source = Path("web/static/web/js/shelves/book_search.js").read_text(
             encoding="utf-8"
@@ -22,11 +22,14 @@ class TestShelfBookSearchJavaScriptContracts:
     def test_picker_keeps_existing_safe_rendering_and_bounded_errors(self):
         for contract in (
             "escapeHtml(title)",
-            "escapeHtml(meta)",
+            "renderBookMetadataHtml(b)",
             "mountCovers(searchResults)",
             "extractApiErrorMessage(e2)",
             'data-action="add-book"',
             'JSON.stringify({ book: bookId })',
+            'class="library-row shelf-edit-book-row"',
+            'class="library-row__title"',
+            'class="shelf-edit-book-row__actions"',
         ):
             self.assert_source(contract)
 

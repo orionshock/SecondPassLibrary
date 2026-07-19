@@ -6,7 +6,6 @@ import {
 } from "../api.js";
 import {
   $,
-  advancedLibraryGroupsEnabled,
   loadMeAndInitShell,
   setGlobalError,
   visible,
@@ -38,14 +37,15 @@ export async function initShelfEdit() {
   const visEl = $("#shelf-edit-visibility");
   const visNote = $("#shelf-edit-visibility-note");
   const visRowK = $("#shelf-edit-visibility-row");
-  const visRowV = $("#shelf-edit-visibility-row-v");
   const saveStatus = $("#shelf-edit-save-status");
   const itemsCard = $("#shelf-edit-items");
   const itemsStatus = $("#shelf-edit-items-status");
   const itemsResults = $("#shelf-edit-items-results");
-  const prevBtn = $("#shelf-edit-items-prev");
-  const nextBtn = $("#shelf-edit-items-next");
-  const noteEl = $("#shelf-edit-items-page-note");
+  const prevButtons = [$("#shelf-edit-items-prev-top"), $("#shelf-edit-items-prev-bottom")].filter(Boolean);
+  const nextButtons = [$("#shelf-edit-items-next-top"), $("#shelf-edit-items-next-bottom")].filter(Boolean);
+  const pageSizeSelects = [$("#shelf-edit-items-page-size-top"), $("#shelf-edit-items-page-size-bottom")].filter(Boolean);
+  const rangeEls = [$("#shelf-edit-items-range-top"), $("#shelf-edit-items-range-bottom")].filter(Boolean);
+  const itemPagers = [$("#shelf-edit-items-pager-top"), $("#shelf-edit-items-pager-bottom")].filter(Boolean);
   const searchForm = $("#shelf-edit-book-search-form");
   const searchInput = $("#shelf-edit-book-search-input");
   const searchStatus = $("#shelf-edit-book-search-status");
@@ -54,7 +54,6 @@ export async function initShelfEdit() {
   const ownerContextEl = $("#shelf-edit-owner-context");
   const visibilityContextEl = $("#shelf-edit-visibility-context");
   const itemCountEl = $("#shelf-edit-item-count");
-  const groupLinkEl = $("#shelf-edit-group-link");
   const contextNoteEl = $("#shelf-edit-context-note");
   const addCard = $("#shelf-edit-add");
   const dangerCard = $("#shelf-edit-danger");
@@ -78,14 +77,13 @@ export async function initShelfEdit() {
     !visEl ||
     !visNote ||
     !visRowK ||
-    !visRowV ||
     !saveStatus ||
     !itemsCard ||
     !itemsStatus ||
     !itemsResults ||
-    !prevBtn ||
-    !nextBtn ||
-    !noteEl ||
+    prevButtons.length !== 2 ||
+    nextButtons.length !== 2 ||
+    pageSizeSelects.length !== 2 ||
     !searchForm ||
     !searchInput ||
     !searchStatus ||
@@ -94,7 +92,6 @@ export async function initShelfEdit() {
     !ownerContextEl ||
     !visibilityContextEl ||
     !itemCountEl ||
-    !groupLinkEl ||
     !contextNoteEl ||
     !addCard ||
     !dangerCard ||
@@ -142,7 +139,6 @@ export async function initShelfEdit() {
   const ownerType = shelf && shelf.owner_type ? String(shelf.owner_type) : "";
   const ownerGroup = shelf && shelf.owner_group ? shelf.owner_group : null;
   const ownerGroupId = ownerType === "group" && ownerGroup && ownerGroup.id ? String(ownerGroup.id) : "";
-  const groupUiEnabled = advancedLibraryGroupsEnabled();
 
   titleEl.textContent = shelf && shelf.name ? String(shelf.name) : "Shelf";
   syncShelfEditBreadcrumb({ shelfId, shelfName: shelf.name || "Shelf" });
@@ -151,26 +147,15 @@ export async function initShelfEdit() {
   if (ownerType === "user") {
     ownerContextEl.innerHTML = metadata;
     visibilityContextEl.textContent = "";
-    contextNoteEl.textContent =
-      "User shelves do not grant book access. Books are shown only while you can access them. Listed shelves do not grant access.";
-    visible(groupLinkEl, false);
+    contextNoteEl.textContent = "";
   } else if (ownerType === "group") {
     ownerContextEl.innerHTML = metadata;
     visibilityContextEl.textContent = "";
-    contextNoteEl.textContent = groupUiEnabled
-      ? "Only books assigned to this group can be added."
-      : "";
-    if (groupUiEnabled && ownerGroupId) {
-      groupLinkEl.setAttribute("href", `/groups/${encodeURIComponent(String(ownerGroupId))}/`);
-      visible(groupLinkEl, true);
-    } else {
-      visible(groupLinkEl, false);
-    }
+    contextNoteEl.textContent = "Only books assigned to this group can be added.";
   } else {
     ownerContextEl.textContent = "";
     visibilityContextEl.textContent = "";
     contextNoteEl.textContent = "";
-    visible(groupLinkEl, false);
   }
 
   const canEdit = shelf && shelf.can_edit != null ? !!shelf.can_edit : inferCanEditShelf({ me, shelf });
@@ -187,12 +172,10 @@ export async function initShelfEdit() {
     visEl.value = "private";
     visEl.disabled = true;
     visRowK.style.display = "";
-    visRowV.style.display = "";
     visNote.textContent = "Group shelves are visible to group members only.";
   } else {
     visEl.disabled = false;
     visRowK.style.display = "";
-    visRowV.style.display = "";
     visEl.value = shelf.visibility || "private";
     visNote.textContent = "Listed shelves are visible to authenticated users but do not grant book access.";
   }
@@ -238,9 +221,11 @@ export async function initShelfEdit() {
     shelfId,
     itemsStatus,
     itemsResults,
-    prevBtn,
-    nextBtn,
-    noteEl,
+    prevButtons,
+    nextButtons,
+    pageSizeSelects,
+    rangeEls,
+    pagers: itemPagers,
     itemCountEl,
   });
 
@@ -258,7 +243,7 @@ export async function initShelfEdit() {
 
   deleteBtn.addEventListener("click", async () => {
     const shelfName = shelf && shelf.name ? String(shelf.name) : "";
-    const ok = window.confirm(`Delete shelf${shelfName ? ` "${shelfName}"` : ""}? This cannot be undone.`);
+    const ok = window.confirm(`Permanently delete ${shelfName || "this shelf"}? This cannot be undone.`);
     if (!ok) return;
 
     setGlobalError("");

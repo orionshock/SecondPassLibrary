@@ -14,13 +14,23 @@ export async function initShelfItemsEditor({
   shelfId,
   itemsStatus,
   itemsResults,
-  prevBtn,
-  nextBtn,
-  noteEl,
+  prevButtons,
+  nextButtons,
+  pageSizeSelects,
+  rangeEls,
+  pagers,
   itemCountEl,
 }) {
   let currentItems = [];
   let currentItemTotal = 0;
+  let currentPage = 1;
+  let currentPageSize = 20;
+
+  function rangeText(resultCount) {
+    if (!currentItemTotal || !resultCount) return "Showing 0 of 0";
+    const start = (currentPage - 1) * currentPageSize + 1;
+    return `Showing ${start}-${Math.min(currentItemTotal, start + resultCount - 1)} of ${currentItemTotal}`;
+  }
 
   async function loadItems(url) {
     setStatus(itemsStatus, "Loading...", false);
@@ -49,26 +59,26 @@ export async function initShelfItemsEditor({
             return `<option value="${idx}"${selected}>#${idx + 1}</option>`;
           }).join("");
           return `
-            <article class="book book--with-cover">
+            <article class="library-row shelf-edit-book-row">
               <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
-              <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-                <div style="flex: 1;">
-                  <h3 class="book__title">
+              <div class="library-row__body shelf-edit-book-row__body">
+                <div class="shelf-edit-book-row__content">
+                  <h3 class="library-row__title">
                     <a href="/library/books/${encodeURIComponent(bid)}/">${escapeHtml(title)}</a>
                   </h3>
-                  ${metadata ? `<div class="muted book-metadata">${metadata}</div>` : ""}
-                  <div class="muted" style="margin-top: 6px; display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
-                    <span class="muted">#${escapeHtml(displayPosition)}</span>
-                    <button class="button" type="button" data-action="move-up" data-item-id="${escapeHtml(it.id)}"${canMoveUp ? "" : " disabled"}>Move up</button>
-                    <button class="button" type="button" data-action="move-down" data-item-id="${escapeHtml(it.id)}"${canMoveDown ? "" : " disabled"}>Move down</button>
-                    <label>
-                      <span class="muted">Move to</span>
-                      <select data-action="move-to" data-item-id="${escapeHtml(it.id)}" data-current-position="${escapeHtml(hasPosition ? storedPosition : "")}" aria-label="Move ${escapeHtml(title)} to position">
-                        ${moveOptions}
-                      </select>
-                    </label>
-                    <button class="button" type="button" data-action="remove-item" data-item-id="${escapeHtml(it.id)}">Remove</button>
-                  </div>
+                  ${metadata ? `<div class="library-row__meta book-metadata">${metadata}</div>` : ""}
+                </div>
+                <div class="shelf-edit-book-row__actions">
+                  <span class="muted shelf-edit-book-row__position">#${escapeHtml(displayPosition)}</span>
+                  <button class="button" type="button" data-action="move-up" data-item-id="${escapeHtml(it.id)}"${canMoveUp ? "" : " disabled"}>Move up</button>
+                  <button class="button" type="button" data-action="move-down" data-item-id="${escapeHtml(it.id)}"${canMoveDown ? "" : " disabled"}>Move down</button>
+                  <label class="shelf-edit-book-row__move-to">
+                    <span>Move to</span>
+                    <select data-action="move-to" data-item-id="${escapeHtml(it.id)}" data-current-position="${escapeHtml(hasPosition ? storedPosition : "")}" aria-label="Move ${escapeHtml(title)} to position">
+                      ${moveOptions}
+                    </select>
+                  </label>
+                  <button class="button" type="button" data-action="remove-item" data-item-id="${escapeHtml(it.id)}">Remove</button>
                 </div>
               </div>
             </article>
@@ -76,9 +86,11 @@ export async function initShelfItemsEditor({
         })
         .join("");
     }
-    prevBtn.disabled = !payload.previous;
-    nextBtn.disabled = !payload.next;
-    noteEl.textContent = payload.count != null ? `${payload.count} total` : "";
+    prevButtons.forEach((button) => { button.disabled = !payload.previous; });
+    nextButtons.forEach((button) => { button.disabled = !payload.next; });
+    pageSizeSelects.forEach((select) => { select.value = String(currentPageSize); });
+    rangeEls.forEach((element) => { element.textContent = rangeText(results.length); });
+    pagers.forEach((pager) => pager.classList.toggle("is-hidden", !currentItemTotal));
     itemCountEl.textContent = payload.count != null ? `Items: ${payload.count}` : "";
     setStatus(itemsStatus, "", false);
     mountCovers(itemsResults);
@@ -87,7 +99,7 @@ export async function initShelfItemsEditor({
 
   let itemsNext = null;
   let itemsPrev = null;
-  let currentItemsUrl = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/`;
+  let currentItemsUrl = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/?page_size=${currentPageSize}`;
   let currentShelfBookIds = new Set();
 
   async function refreshAllShelfBookIds() {
@@ -114,16 +126,25 @@ export async function initShelfItemsEditor({
     await refreshAllShelfBookIds();
   }
 
-  prevBtn.addEventListener("click", () => {
+  prevButtons.forEach((button) => button.addEventListener("click", () => {
     if (!itemsPrev) return;
     currentItemsUrl = itemsPrev;
+    currentPage = Math.max(1, currentPage - 1);
     reloadItems().catch((e) => setGlobalError(extractApiErrorMessage(e)));
-  });
-  nextBtn.addEventListener("click", () => {
+  }));
+  nextButtons.forEach((button) => button.addEventListener("click", () => {
     if (!itemsNext) return;
     currentItemsUrl = itemsNext;
+    currentPage += 1;
     reloadItems().catch((e) => setGlobalError(extractApiErrorMessage(e)));
-  });
+  }));
+  pageSizeSelects.forEach((select) => select.addEventListener("change", () => {
+    const requested = Number.parseInt(String(select.value || ""), 10);
+    currentPageSize = [20, 30, 40, 50].includes(requested) ? requested : 20;
+    currentPage = 1;
+    currentItemsUrl = `/api/v1/shelves/${encodeURIComponent(String(shelfId))}/items/?page_size=${currentPageSize}`;
+    reloadItems().catch((e) => setGlobalError(extractApiErrorMessage(e)));
+  }));
 
   async function patchShelfItemMove(itemId, move) {
     const csrf = getCsrfToken();

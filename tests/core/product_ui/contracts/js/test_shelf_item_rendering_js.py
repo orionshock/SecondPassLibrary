@@ -288,9 +288,11 @@ class ShelfItemRenderingJavaScriptTests:
             {FETCH_FIXTURE}
             const itemsStatus = element("items-status");
             const itemsResults = element("items-results");
-            const prevBtn = element("prev", "button");
-            const nextBtn = element("next", "button");
-            const noteEl = element("note");
+            const prevButtons = [element("prev-top", "button"), element("prev-bottom", "button")];
+            const nextButtons = [element("next-top", "button"), element("next-bottom", "button")];
+            const pageSizeSelects = [element("size-top", "select"), element("size-bottom", "select")];
+            const rangeEls = [element("range-top"), element("range-bottom")];
+            const pagers = [element("pager-top"), element("pager-bottom")];
             const itemCountEl = element("item-count");
 
             const pagePayload = {{
@@ -325,19 +327,21 @@ class ShelfItemRenderingJavaScriptTests:
               shelfId: "shelf-1",
               itemsStatus,
               itemsResults,
-              prevBtn,
-              nextBtn,
-              noteEl,
+              prevButtons,
+              nextButtons,
+              pageSizeSelects,
+              rangeEls,
+              pagers,
               itemCountEl,
             }});
 
             process.stdout.write(JSON.stringify({{
               calls,
               html: itemsResults.innerHTML,
-              note: noteEl.textContent,
+              note: rangeEls[1].textContent,
               itemCount: itemCountEl.textContent,
-              prevDisabled: prevBtn.disabled,
-              nextDisabled: nextBtn.disabled,
+              prevDisabled: prevButtons[1].disabled,
+              nextDisabled: nextButtons[1].disabled,
               currentIds: Array.from(controller.getCurrentShelfBookIds()),
             }}));
             """
@@ -345,7 +349,7 @@ class ShelfItemRenderingJavaScriptTests:
 
         html = result["html"]
         assert result["calls"] == [
-            "/api/v1/shelves/shelf-1/items/",
+            "/api/v1/shelves/shelf-1/items/?page_size=20",
             "/api/v1/shelves/shelf-1/items/",
         ]
         assert 'href="/library/books/book%2Fid-1/"' in html
@@ -369,7 +373,7 @@ class ShelfItemRenderingJavaScriptTests:
         assert "download_url" not in html
         assert "/download/" not in html
         assert "userdata/media/books/private.epub" not in html
-        assert result["note"] == "2 total"
+        assert result["note"] == "Showing 1-1 of 2"
         assert result["itemCount"] == "Items: 2"
         assert result["prevDisabled"] is True
         assert result["nextDisabled"] is True

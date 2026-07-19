@@ -55,14 +55,14 @@ export function initShelfBookSearch({
           ? `<button class="button" type="button" data-action="add-book" data-book-id="${escapeHtml(bid)}">Add</button>`
           : "";
         return `
-          <article class="book book--with-cover">
+          <article class="library-row shelf-edit-book-row">
             <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
-            <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-              <div style="flex: 1;">
-                <h3 class="book__title"><a href="/library/books/${encodeURIComponent(bid)}/">${escapeHtml(title)}</a></h3>
-                ${metadata ? `<div class="muted book-metadata">${metadata}</div>` : ""}
+            <div class="library-row__body shelf-edit-book-row__body">
+              <div class="shelf-edit-book-row__content">
+                <h3 class="library-row__title"><a href="/library/books/${encodeURIComponent(bid)}/">${escapeHtml(title)}</a></h3>
+                ${metadata ? `<div class="library-row__meta book-metadata">${metadata}</div>` : ""}
               </div>
-              <div>
+              <div class="shelf-edit-book-row__actions">
                 ${addBtn}
               </div>
             </div>
