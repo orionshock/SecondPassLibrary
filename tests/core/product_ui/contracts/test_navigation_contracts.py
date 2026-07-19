@@ -66,7 +66,7 @@ class ProductUiNavigationContractsTests(ProductUiTestCase):
         self.assertIn("export function syncGroupBreadcrumb", group_navigation_js)
         self.assertIn("export function syncGroupEditBreadcrumb", group_navigation_js)
         self.assertIn('const GROUP_VIEW_TABS = new Set(["books", "members", "shelves"])', group_navigation_js)
-        self.assertIn('const GROUP_EDIT_TABS = new Set(["details", "books", "members", "shelves"])', group_navigation_js)
+        self.assertIn('const GROUP_EDIT_TABS = new Set(["details", "books", "add-books", "members", "shelves"])', group_navigation_js)
         self.assertIn('return tab && tab !== "books" ? `${base}?view=${encodeURIComponent(String(tab))}` : base', group_navigation_js)
         self.assertIn('return tab && tab !== "details" ? `${base}?view=${encodeURIComponent(String(tab))}` : base', group_navigation_js)
         self.assertIn('const base = `/groups/${encodeURIComponent(String(groupId))}/edit/`', group_navigation_js)

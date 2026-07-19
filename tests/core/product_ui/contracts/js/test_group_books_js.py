@@ -19,10 +19,18 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertIn("JSON.stringify({ book_id: bookId })", self.source)
         self.assertNotIn("JSON.stringify({ book: bookId })", self.source)
 
-    def test_series_index_uses_nested_current_book_shape(self):
-        self.assertIn("b.series.series_index != null", self.source)
-        self.assertIn("String(b.series.series_index)", self.source)
-        self.assertNotIn("b.series_index != null", self.source)
+    def test_book_rows_use_shared_library_style_presentation(self):
+        shared = Path("web/static/web/js/groups/shared.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('class="library-row group-edit-book-row"', shared)
+        self.assertIn('class="library-row__title"', shared)
+        self.assertIn('class="library-row__meta"', shared)
+        self.assertIn("b.series.series_index != null", shared)
+        self.assertIn("b.publisher", shared)
+        self.assertIn("b.published_date", shared)
+        self.assertIn('data-action="remove-book"', shared)
+        self.assertIn('data-action="add-book"', shared)
 
     def test_remove_route_keeps_group_and_book_uuids(self):
         self.assertIn("/books/${encodeURIComponent(", self.source)
@@ -49,7 +57,7 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
 
     def test_add_picker_keeps_existing_rendering_pagination_and_bounded_errors(self):
         self.assertIn("createPagedListController", self.source)
-        self.assertIn("renderBookSearchResults", self.source)
+        self.assertIn("renderBooksCompact(payload", self.source)
         self.assertIn('loadErrorText: "Book search failed."', self.source)
         self.assertIn("bookSearchNext", self.source)
         self.assertIn("bookSearchPrev", self.source)
@@ -60,3 +68,14 @@ class ProductUiGroupBooksJsContractsTests(ProductUiTestCase):
         self.assertIn('booksCtl.loadPrevious("remove-back")', self.source)
         self.assertIn("await booksCtl.reload()", self.source)
         self.assertIn('window.addEventListener("popstate"', self.source)
+
+    def test_empty_picker_query_uses_broad_search_empty_result_contract(self):
+        self.assertIn("q: term", self.source)
+        self.assertNotIn('initialUrl: "/api/v1/library/books/"', self.source)
+        self.assertNotIn('setBookSearchStatus("Enter a search term."', self.source)
+        self.assertNotIn("if (!term)", self.source)
+
+    def test_add_refreshes_assigned_and_excluded_search_results(self):
+        add_success = self.source.split('setBookSearchStatus("Added."', 1)[1]
+        self.assertIn("await booksCtl.reload()", add_success)
+        self.assertIn("await bookSearchCtl.reload()", add_success)

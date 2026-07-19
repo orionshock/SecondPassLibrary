@@ -19,20 +19,21 @@
   <div id="group-edit-status" class="muted">Loading...</div>
   <div id="group-edit-not-allowed" class="error is-hidden">Not allowed.</div>
 
-  <section id="group-edit-root" class="card is-hidden" data-group-id="{{ group_id|escape }}">
+  <section id="group-edit-root" class="group-edit-root is-hidden" data-group-id="{{ group_id|escape }}">
     <div id="group-edit-summary" class="group-edit-summary is-hidden">
       <div id="group-edit-badges"></div>
       <div id="group-edit-description-preview" class="muted group-edit-summary__description"></div>
     </div>
 
     <div class="tabs" role="tablist" aria-label="Group edit tabs">
-      <button class="tab-button is-active" type="button" data-tab="details">Details</button>
-      <button class="tab-button" type="button" data-tab="books">Books</button>
-      <button class="tab-button" type="button" data-tab="members">Members</button>
-      <button class="tab-button" type="button" data-tab="shelves">Shelves</button>
+      <button class="tab-button is-active" type="button" role="tab" aria-controls="tab-details" data-tab="details">Details</button>
+      <button class="tab-button" type="button" role="tab" aria-controls="tab-books" data-tab="books">Books</button>
+      <button class="tab-button" type="button" role="tab" aria-controls="tab-add-books" data-tab="add-books">Add Books</button>
+      <button class="tab-button" type="button" role="tab" aria-controls="tab-members" data-tab="members">Members</button>
+      <button class="tab-button" type="button" role="tab" aria-controls="tab-shelves" data-tab="shelves">Shelves</button>
     </div>
 
-    <div id="tab-details" class="tab-panel" data-tab-panel="details">
+    <div id="tab-details" class="card tab-panel" role="tabpanel" data-tab-panel="details">
       <form id="group-edit-form" class="form">
         {% csrf_token %}
         <div class="kv">
@@ -77,12 +78,20 @@
       </section>
     </div>
 
-    <div id="tab-books" class="tab-panel is-hidden" data-tab-panel="books">
-      <h2 class="card__title">Books</h2>
+    <div id="tab-books" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="books">
+      <div id="group-edit-books-status" class="muted" aria-live="polite">Loading...</div>
+      <div id="group-edit-books-results" class="books"></div>
 
+      <div class="pager" aria-label="Assigned group books pagination">
+        <button id="group-edit-books-prev" class="button" type="button" disabled>Previous</button>
+        <button id="group-edit-books-next" class="button" type="button" disabled>Next</button>
+      </div>
+    </div>
+
+    <div id="tab-add-books" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="add-books">
       <form id="group-edit-book-search-form" class="search is-hidden" autocomplete="off">
         <label class="search__label" for="group-edit-book-search">Find a book to add</label>
-        <input id="group-edit-book-search" class="search__input" placeholder="Search book titles..." />
+        <input id="group-edit-book-search" class="search__input" type="search" placeholder="Search the BookVerse..." />
         <button id="group-edit-book-search-btn" class="button" type="submit">Search</button>
         <span id="group-edit-book-search-status" class="muted"></span>
       </form>
@@ -94,17 +103,9 @@
           <button id="group-edit-book-search-next" class="button" type="button" disabled>Next</button>
         </div>
       </div>
-
-      <div id="group-edit-books-status" class="muted" style="margin-top: 10px;" aria-live="polite">Loading...</div>
-      <div id="group-edit-books-results" class="books"></div>
-
-      <div class="pager" aria-label="Assigned group books pagination">
-        <button id="group-edit-books-prev" class="button" type="button" disabled>Previous</button>
-        <button id="group-edit-books-next" class="button" type="button" disabled>Next</button>
-      </div>
     </div>
 
-    <div id="tab-members" class="tab-panel is-hidden" data-tab-panel="members">
+    <div id="tab-members" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="members">
       <h2 class="card__title">Members</h2>
       <div id="group-edit-members-note" class="muted"></div>
       <p class="muted">
@@ -136,7 +137,7 @@
       </div>
     </div>
 
-    <div id="tab-shelves" class="tab-panel is-hidden" data-tab-panel="shelves">
+    <div id="tab-shelves" class="card tab-panel is-hidden" role="tabpanel" aria-hidden="true" data-tab-panel="shelves">
       <h2 class="card__title">Shelves</h2>
       <div id="group-edit-shelves-note" class="muted"></div>
       <div id="group-edit-shelves-actions" class="is-hidden" style="margin-top: 10px;">

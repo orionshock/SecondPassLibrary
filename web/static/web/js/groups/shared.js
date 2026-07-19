@@ -130,17 +130,35 @@ export function renderGroupShelvesCompact(payload, { canEdit }) {
     .join("");
 }
 
-export function renderBooksCompact(payload, { groupId, canRemove }) {
+function publishedYear(value) {
+  const raw = value == null ? "" : String(value).trim();
+  if (!raw) return "";
+  const match = raw.match(/\d{4}/);
+  return match ? match[0] : raw;
+}
+
+export function renderBooksCompact(payload, { groupId, canRemove, canAdd = false }) {
   const results = Array.isArray(payload && payload.results) ? payload.results : [];
   if (results.length === 0) return "";
 
   return results
     .map((b) => {
       const title = b.title || "(Untitled)";
-      const subtitle = b.subtitle ? ` <span class="muted">- ${escapeHtml(b.subtitle)}</span>` : "";
+      const subtitle = b.subtitle ? String(b.subtitle).trim() : "";
       const href = b.id ? `/library/books/${encodeURIComponent(String(b.id))}/` : null;
       const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
       const coverUrl = b.cover_url ? String(b.cover_url) : "";
+      const seriesName = b.series && b.series.name ? String(b.series.name) : "";
+      const seriesIndex = b.series && b.series.series_index != null && b.series.series_index !== ""
+        ? String(b.series.series_index)
+        : "";
+      const series = seriesName ? `${seriesName}${seriesIndex ? ` ${seriesIndex}` : ""}` : "";
+      const publisher = b.publisher ? String(b.publisher).trim() : "";
+      const year = publishedYear(b.published_date);
+      const metadata = [authors.join(", "), series, [publisher, year].filter(Boolean).join(" - ")]
+        .filter(Boolean)
+        .map((value) => `<span>${escapeHtml(value)}</span>`)
+        .join("");
 
       const removeBtn =
         canRemove && b.id && groupId
@@ -148,18 +166,23 @@ export function renderBooksCompact(payload, { groupId, canRemove }) {
               b.id
             )}">Remove</button>`
           : "";
+      const addBtn = canAdd && b.id
+        ? `<button class="button" type="button" data-action="add-book" data-book-id="${escapeHtml(b.id)}">Add</button>`
+        : "";
+      const action = removeBtn || addBtn;
 
       return `
-        <article class="book book--with-cover">
+        <article class="library-row group-edit-book-row">
           <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
-          <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-            <div>
-              <h3 class="book__title" style="display:inline;">
-                ${href ? `<a href="${escapeHtml(href)}">${escapeHtml(title)}</a>${subtitle}` : `${escapeHtml(title)}${subtitle}`}
+          <div class="library-row__body group-edit-book-row__body">
+            <div class="group-edit-book-row__content">
+              <h3 class="library-row__title">
+                ${href ? `<a href="${escapeHtml(href)}">${escapeHtml(title)}</a>` : escapeHtml(title)}
               </h3>
-              ${authors.length ? `<div class="muted">${escapeHtml(authors.join(", "))}</div>` : ""}
+              ${subtitle ? `<div class="library-row__subtitle">${escapeHtml(subtitle)}</div>` : ""}
+              <div class="library-row__meta">${metadata || '<span class="muted">No metadata.</span>'}</div>
             </div>
-            ${removeBtn ? `<div>${removeBtn}</div>` : ""}
+            ${action ? `<div class="group-edit-book-row__action">${action}</div>` : ""}
           </div>
         </article>
       `.trim();
@@ -174,7 +197,7 @@ export function renderMembersReadOnly(payload) {
   return results
     .map((m) => {
       const user = m && m.user ? m.user : m;
-      const identity = renderUserIdentity(user).outerHTML;
+      const identity = renderUserIdentity(user, { includeDisplayName: false }).outerHTML;
       const curator = m && m.is_curator ? ' <span class="muted">(Curator)</span>' : "";
       return `
         <article class="membership-row membership-row--readonly">
@@ -194,7 +217,7 @@ export function renderMembersManage(payload, { isPublicGroup }) {
       const user = m && m.user ? m.user : m;
       const userId = user && user.profile_id ? String(user.profile_id) : "";
       const isCurator = !!m.is_curator;
-      const identity = renderUserIdentity(user).outerHTML;
+      const identity = renderUserIdentity(user, { includeDisplayName: false }).outerHTML;
       const note = isPublicGroup
         ? '<div class="membership-row__note muted">Public fallback group; curator unavailable.</div>'
         : "";

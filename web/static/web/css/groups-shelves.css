@@ -4,6 +4,25 @@
   border-bottom: 1px solid var(--border);
 }
 .group-edit-summary__description { margin-top: 10px; }
+.group-edit-root,
+.group-edit-root .tab-panel,
+.group-edit-book-row,
+.group-edit-book-row__body,
+.group-edit-book-row__content {
+  min-width: 0;
+}
+.group-edit-root > .tabs {
+  margin-bottom: 12px;
+}
+.group-edit-book-row__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 14px;
+  align-items: start;
+}
+.group-edit-book-row__action {
+  align-self: center;
+}
 
 .group-view-summary {
   margin: -4px 0 16px;
@@ -38,6 +57,15 @@
 .group-view-member-row .user-identity {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .group-edit-book-row__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group-edit-book-row__action {
+    justify-self: start;
+  }
 }
 
 .danger-zone {

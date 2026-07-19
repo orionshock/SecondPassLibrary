@@ -2,7 +2,7 @@ import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { initTabs } from "../ui/tabs.js";
 
 const GROUP_VIEW_TABS = new Set(["books", "members", "shelves"]);
-const GROUP_EDIT_TABS = new Set(["details", "books", "members", "shelves"]);
+const GROUP_EDIT_TABS = new Set(["details", "books", "add-books", "members", "shelves"]);
 
 export function groupViewTabFromSearch(search = window.location.search) {
   const params = new URLSearchParams(search || "");

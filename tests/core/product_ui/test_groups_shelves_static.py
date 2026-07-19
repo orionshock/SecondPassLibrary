@@ -112,6 +112,7 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(response, f'data-group-id="{group_id}"')
         self.assertContains(response, 'data-tab="details"')
         self.assertContains(response, 'data-tab="books"')
+        self.assertContains(response, 'data-tab="add-books"')
         self.assertContains(response, 'data-tab="members"')
         self.assertContains(response, 'data-tab="shelves"')
         self.assertContains(response, 'id="group-edit-book-search-form"')
@@ -132,6 +133,16 @@ class ProductUiGroupsShelvesTests(ProductUiTestCase):
         self.assertContains(
             response, "group-scoped management access to readers."
         )
+        html = response.content.decode("utf-8")
+        root_start = html.index('id="group-edit-root"')
+        tabs_start = html.index('aria-label="Group edit tabs"', root_start)
+        details_panel = html.index('id="tab-details" class="card tab-panel"', root_start)
+        self.assertLess(tabs_start, details_panel)
+        self.assertNotIn('id="group-edit-root" class="card', html)
+        books_panel = html[html.index('id="tab-books"'):html.index('id="tab-add-books"')]
+        add_books_panel = html[html.index('id="tab-add-books"'):html.index('id="tab-members"')]
+        self.assertNotIn('id="group-edit-book-search-form"', books_panel)
+        self.assertIn('id="group-edit-book-search-form"', add_books_panel)
 
     def test_group_edit_books_js_has_no_manual_uuid_debug_path(self):
         books_js = Path("web/static/web/js/groups/books.js").read_text(

@@ -41,7 +41,10 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn("payload && payload.results", self.group_shared_js)
         self.assertIn("m && m.user ? m.user : m", self.group_shared_js)
         self.assertIn("user.profile_id", self.group_shared_js)
-        self.assertIn("renderUserIdentity(user)", self.group_shared_js)
+        self.assertIn(
+            "renderUserIdentity(user, { includeDisplayName: false })",
+            self.group_shared_js,
+        )
         self.assertNotIn("user.first_name", self.group_shared_js)
         self.assertNotIn("user.last_name", self.group_shared_js)
         self.assertNotIn("includeEmail: true", self.group_shared_js)

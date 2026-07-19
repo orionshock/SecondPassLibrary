@@ -1,5 +1,5 @@
 import { fetchJSONWithOptions, getCsrfToken } from "../api.js";
-import { escapeHtml, setGlobalError, visible } from "../layout.js";
+import { setGlobalError, visible } from "../layout.js";
 import { createPagedListController } from "../ui/paged_list.js";
 import { setStatus } from "../ui/status.js";
 import { groupMutationErrorMessage, renderBooksCompact } from "./shared.js";
@@ -58,59 +58,14 @@ export async function initGroupBooksTab({
     setStatus(bookSearchStatus, text, isError);
   }
 
-  function renderBookSearchResults(payload) {
-    const results = Array.isArray(payload && payload.results) ? payload.results : [];
-    if (!results.length) return "";
-
-    return results
-      .map((b) => {
-        const id = b && b.id ? String(b.id) : "";
-        const title = b.title || "(Untitled)";
-        const coverUrl = b.cover_url ? String(b.cover_url) : "";
-        const subtitle = b.subtitle ? ` <span class="muted">- ${escapeHtml(b.subtitle)}</span>` : "";
-        const authors = Array.isArray(b.authors) ? b.authors.map((a) => a.name).filter(Boolean) : [];
-        const series = b.series && b.series.name ? b.series.name : "";
-        const seriesIndex =
-          b.series && b.series.series_index != null && b.series.series_index !== ""
-            ? String(b.series.series_index)
-            : "";
-
-        const metaBits = [];
-        if (authors.length) metaBits.push(escapeHtml(authors.join(", ")));
-        if (series) metaBits.push(`${escapeHtml(series)}${seriesIndex ? ` #${escapeHtml(seriesIndex)}` : ""}`);
-        const meta = metaBits.length ? `<div class="muted">${metaBits.join("  -  ")}</div>` : "";
-
-        const addBtn =
-          id
-            ? `<button class="button" type="button" data-action="add-book" data-book-id="${escapeHtml(
-                id
-              )}">Add</button>`
-            : "";
-
-        return `
-            <article class="book book--with-cover">
-              <div class="book__cover" data-cover-url="${escapeHtml(coverUrl)}" data-cover-title="${escapeHtml(title)}"></div>
-              <div style="display:flex; gap: 12px; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-                <div>
-                  <h3 class="book__title" style="display:inline;">${escapeHtml(title)}${subtitle}</h3>
-                  ${meta}
-                </div>
-                ${addBtn ? `<div>${addBtn}</div>` : ""}
-              </div>
-            </article>
-          `.trim();
-      })
-      .join("");
-  }
-
   const bookSearchCtl = await createPagedListController({
     statusEl: bookSearchStatus,
     resultsEl: bookSearchResults,
     nextBtn: bookSearchNext,
     prevBtn: bookSearchPrev,
-    initialUrl: "/api/v1/library/books/",
+    initialUrl: `/api/v1/library/search?q=&ordering=title&exclude_group=${encodeURIComponent(String(groupId))}`,
     emptyText: "No results.",
-    render: (payload) => renderBookSearchResults(payload),
+    render: (payload) => renderBooksCompact(payload, { groupId, canRemove: false, canAdd: true }),
     onLoaded: () => visible(bookSearchWrap, true),
     loadErrorText: "Book search failed.",
     autoLoad: false,
@@ -119,11 +74,6 @@ export async function initGroupBooksTab({
   bookSearchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const term = (bookSearchInput.value || "").trim();
-    if (!term) {
-      setBookSearchStatus("Enter a search term.", true);
-      visible(bookSearchWrap, false);
-      return;
-    }
     const params = new URLSearchParams({
       q: term,
       ordering: "title",
