@@ -14,8 +14,10 @@ def exclude_books_assigned_to_group(queryset, *, user, raw_group_id: str):
     raw_group_id = (raw_group_id or "").strip()
     if not raw_group_id:
         return queryset
+    pk_field = LibraryGroup._meta.pk
+    assert pk_field is not None
     try:
-        group_id = LibraryGroup._meta.pk.to_python(raw_group_id)
+        group_id = pk_field.to_python(raw_group_id)
     except (ValueError, DjangoValidationError) as exc:
         raise ValidationError({"exclude_group": "Invalid id."}) from exc
     group = get_object_or_404(
