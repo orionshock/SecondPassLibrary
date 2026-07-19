@@ -17,6 +17,8 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 import environ
 
+from secondpass.version import SERVER_RELEASE, SERVER_RELEASE_DATE, SERVER_VERSION
+
 try:
     import django_stubs_ext
 except ImportError:
@@ -77,11 +79,9 @@ RUNNING_TESTS = "test" in sys.argv or any(
     Path(argument).name.startswith("pytest") for argument in sys.argv
 ) or "pytest" in sys.modules
 
-SECOND_PASS_SERVER_VERSION = env.str("SECOND_PASS_SERVER_VERSION", default="0.1.0-dev")
-SECOND_PASS_SERVER_RELEASE = env.str("SECOND_PASS_SERVER_RELEASE", default="pre-release")
-SECOND_PASS_SERVER_RELEASE_DATE = env.str(
-    "SECOND_PASS_SERVER_RELEASE_DATE", default="2026-07-03"
-)
+SECOND_PASS_SERVER_VERSION = SERVER_VERSION
+SECOND_PASS_SERVER_RELEASE = SERVER_RELEASE
+SECOND_PASS_SERVER_RELEASE_DATE = SERVER_RELEASE_DATE
 
 # Ensure required directories exist
 (USERDATA_DIR / "db").mkdir(parents=True, exist_ok=True)

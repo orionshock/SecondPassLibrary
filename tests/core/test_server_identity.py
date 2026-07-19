@@ -177,7 +177,7 @@ class ServerIdentitySettingsTests(TestCase):
                 "server_description": "",
                 "server_version": "0.1.0-dev",
                 "server_release": "pre-release",
-                "server_release_date": "2026-07-03",
+                "server_release_date": "2026-07-19",
                 "api_base_url": "http://testserver/api/v1/",
             },
         )
@@ -213,7 +213,7 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(payload["server_description"], "Private.")
         self.assertEqual(payload["server_version"], "0.1.0-dev")
         self.assertEqual(payload["server_release"], "pre-release")
-        self.assertEqual(payload["server_release_date"], "2026-07-03")
+        self.assertEqual(payload["server_release_date"], "2026-07-19")
         self.assertEqual(payload["api_base_url"], "http://testserver/api/v1/")
         self.assertNotIn("banner_text", payload)
         self.assertNotIn("advanced_library_groups_enabled", payload)
