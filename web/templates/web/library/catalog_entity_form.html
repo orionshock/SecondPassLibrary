@@ -36,11 +36,38 @@
         </div>
       </form>
       {% if entity_id %}
-        <details id="catalog-entity-delete" class="danger-zone catalog-entity-delete">
-          <summary>Delete {{ entity_label }}</summary>
-          <p id="catalog-entity-delete-help" class="muted">Only unattached catalog entities can be deleted.</p>
-          <button id="catalog-entity-delete-btn" class="button button--danger" type="button">Delete {{ entity_label }}</button>
-          <div id="catalog-entity-delete-status" class="muted" role="status"></div>
+        <details id="catalog-entity-delete" class="card danger-zone catalog-entity-delete">
+          <summary class="danger-zone__summary">Delete {{ entity_label }}</summary>
+          <div class="danger-zone__content">
+            <div class="muted">
+              {% if entity_kind == "authors" %}
+                Deleting an author is permanent.
+                <p>This author can only be deleted when no books are attached.</p>
+              {% else %}
+                Deleting a series is permanent.
+                <p>This series can only be deleted when no books are attached.</p>
+              {% endif %}
+              <ul class="danger-zone__list">
+                <li>The catalog record is permanently removed.</li>
+                <li>Books are not detached, reassigned, or merged.</li>
+              </ul>
+              <p id="catalog-entity-delete-help">Checking attached books...</p>
+            </div>
+            <form id="catalog-entity-delete-form" class="form">
+              <div id="catalog-entity-delete-confirm-fields" class="kv">
+                <div class="kv__k">
+                  <label for="catalog-entity-delete-confirm">Type the {{ entity_label|lower }} name to confirm</label>
+                </div>
+                <div class="kv__v">
+                  <input id="catalog-entity-delete-confirm" class="form-control" type="text" autocomplete="off" aria-describedby="catalog-entity-delete-help" />
+                </div>
+              </div>
+              <div class="form-actions catalog-entity-delete__actions">
+                <span id="catalog-entity-delete-status" class="muted" role="status"></span>
+                <button id="catalog-entity-delete-btn" class="button button--danger" type="submit" disabled>Delete {{ entity_label }}</button>
+              </div>
+            </form>
+          </div>
         </details>
       {% endif %}
     </div>

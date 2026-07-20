@@ -70,7 +70,8 @@ async function loadAttachedBooks(cfg) {
   url.searchParams.set("page_size", "100");
   if (cfg.kind === "series") url.searchParams.set("ordering", "series_index");
   const payload = await fetchJSON(url.toString());
-  return Array.isArray(payload.results) ? payload.results : [];
+  const books = Array.isArray(payload.results) ? payload.results : [];
+  return { books, count: Number(payload.count || books.length) };
 }
 
 export async function initCatalogEntityForm() {
@@ -85,12 +86,22 @@ export async function initCatalogEntityForm() {
   const warning = $("#catalog-entity-duplicate-warning");
   const formStatus = $("#catalog-entity-form-status");
   const attachedRoot = $("#catalog-entity-attached-books");
+  const deleteForm = $("#catalog-entity-delete-form");
+  const deleteConfirmFields = $("#catalog-entity-delete-confirm-fields");
+  const deleteConfirm = $("#catalog-entity-delete-confirm");
   const deleteButton = $("#catalog-entity-delete-btn");
   const deleteHelp = $("#catalog-entity-delete-help");
   const deleteStatus = $("#catalog-entity-delete-status");
   if (!form || !name || !sortName || !prose || !warning || !formStatus) return;
   let allEntities = [];
   let attached = [];
+  let attachedCount = 0;
+  let entityName = "";
+
+  function syncDeleteEnabled() {
+    if (!deleteButton || !deleteConfirm) return;
+    deleteButton.disabled = attachedCount > 0 || deleteConfirm.value !== entityName;
+  }
 
   function updateDuplicateWarning() {
     const normalized = normalizeName(name.value);
@@ -106,22 +117,31 @@ export async function initCatalogEntityForm() {
   try {
     allEntities = await fetchAllPaginatedResults(managementApiUrl(cfg.kind));
     if (cfg.id) {
-      const [entity, books] = await Promise.all([
+      const [entity, attachedPayload] = await Promise.all([
         fetchJSON(managementApiUrl(cfg.kind, cfg.id)),
         loadAttachedBooks(cfg),
       ]);
-      name.value = String(entity.name || "");
+      entityName = String(entity.name || "");
+      name.value = entityName;
       sortName.value = String(entity.sort_name || "");
       prose.value = String(cfg.kind === "authors" ? entity.biography || "" : entity.summary || "");
-      attached = books;
+      attached = attachedPayload.books;
+      attachedCount = attachedPayload.count;
       if (attachedRoot) {
         for (const book of attached) attachedRoot.appendChild(renderBookRow(book));
         if (!attached.length) attachedRoot.textContent = "No attached Books.";
       }
-      if (deleteButton) deleteButton.disabled = attached.length > 0;
-      if (deleteHelp && attached.length) {
-        deleteHelp.textContent = `${cfg.label} cannot be deleted while attached to Books.`;
+      if (deleteConfirm) {
+        deleteConfirm.value = "";
+        deleteConfirm.disabled = attachedCount > 0;
       }
+      if (deleteConfirmFields) visible(deleteConfirmFields, attachedCount === 0);
+      if (deleteHelp) {
+        deleteHelp.textContent = attachedCount
+          ? `${cfg.label} cannot be deleted because ${attachedCount} ${attachedCount === 1 ? "book is" : "books are"} attached.`
+          : `No books are attached. Type the ${cfg.label.toLowerCase()} name to enable deletion.`;
+      }
+      syncDeleteEnabled();
     }
     updateDuplicateWarning();
   } catch (error) {
@@ -153,9 +173,12 @@ export async function initCatalogEntityForm() {
     }
   });
 
-  if (deleteButton && deleteStatus) {
-    deleteButton.addEventListener("click", async () => {
-      if (attached.length || !window.confirm(`Delete this ${cfg.label.toLowerCase()}?`)) return;
+  if (deleteForm && deleteConfirm && deleteButton && deleteStatus) {
+    deleteConfirm.addEventListener("input", syncDeleteEnabled);
+    deleteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (deleteButton.disabled || attachedCount > 0) return;
+      if (!window.confirm(`Permanently delete ${entityName || `this ${cfg.label.toLowerCase()}`}? This cannot be undone.`)) return;
       const csrf = getCsrfToken();
       try {
         await fetchJSONWithOptions(`${apiBase(cfg.kind)}${encodeURIComponent(cfg.id)}/`, {

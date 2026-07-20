@@ -9,6 +9,17 @@
   flex-wrap: wrap;
   margin: 12px 0 8px;
 }
+.library-axis-row {
+  display: flex;
+  gap: 10px 18px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 12px 0 8px;
+}
+.library-axis-row .library-tabs { margin: 0; }
+.library-axis-row #library-axis-create { margin-left: auto; }
+.library-search-row { display: flex; width: 100%; margin-bottom: 12px; }
 .library-search {
   flex: 1 1 520px;
   justify-content: flex-end;
@@ -687,8 +698,8 @@
 .catalog-entity-form textarea { width: 100%; box-sizing: border-box; }
 .catalog-entity-form__actions { justify-content: flex-end; margin-top: 8px; }
 .catalog-entity-duplicate { padding: 8px 10px; font-size: 13px; }
-.catalog-entity-delete { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
-.catalog-entity-delete summary { cursor: pointer; }
+.catalog-entity-delete { margin-top: 18px; }
+.catalog-entity-delete__actions { justify-content: flex-end; }
 .catalog-entity-attached { margin-top: 28px; }
 .catalog-entity-book-grid {
   display: grid;

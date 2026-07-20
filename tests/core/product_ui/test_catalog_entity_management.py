@@ -50,7 +50,12 @@ class CatalogEntityManagementProductUiTests(ProductUiTestCase):
             self.assertContains(response, 'class="catalog-entity-form-panel"')
             self.assertContains(response, 'class="form-actions catalog-entity-form__actions"')
             self.assertContains(response, 'id="catalog-entity-delete"')
+            self.assertContains(response, 'class="card danger-zone catalog-entity-delete"')
+            self.assertContains(response, 'class="danger-zone__summary"')
+            self.assertContains(response, 'id="catalog-entity-delete-form"')
+            self.assertContains(response, 'id="catalog-entity-delete-confirm"')
             self.assertContains(response, 'id="catalog-entity-delete-btn"')
+            self.assertContains(response, 'id="catalog-entity-delete-btn" class="button button--danger" type="submit" disabled')
             self.assertContains(response, 'class="catalog-entity-book-grid"')
             self.assertLess(
                 response.content.index(b'id="catalog-entity-delete"'),
@@ -75,6 +80,24 @@ class CatalogEntityManagementProductUiTests(ProductUiTestCase):
         self.assertIn('/library/${filter.kind === "author" ? "authors" : "series"}', source)
         self.assertNotIn('name="library-context-name"', prose)
         self.assertNotIn('data-action="save-library-context"', prose)
+
+        axis_start = template.index('class="library-axis-row"')
+        search_start = template.index('class="library-search-row"')
+        create_start = template.index('id="library-axis-create"')
+        self.assertLess(axis_start, create_start)
+        self.assertLess(create_start, search_start)
+        self.assertIn('id="library-search" class="search library-search"', template[search_start:])
+        self.assertIn('class="search__input"', template[search_start:])
+        self.assertIn('type="submit">Search</button>', template[search_start:])
+        self.assertIn('!allowContextEdit || !createKind', source)
+
+    def test_delete_requires_exact_name_and_keeps_browser_confirmation(self):
+        source = Path("web/static/web/js/catalog_entities/main.js").read_text(encoding="utf-8")
+        self.assertIn("deleteConfirm.value !== entityName", source)
+        self.assertIn("attachedCount > 0", source)
+        self.assertIn("deleteConfirm.disabled = attachedCount > 0", source)
+        self.assertIn("window.confirm", source)
+        self.assertLess(source.index("window.confirm"), source.index('method: "DELETE"'))
 
     def test_attached_books_use_compact_cover_previews(self):
         source = Path("web/static/web/js/catalog_entities/main.js").read_text(encoding="utf-8")

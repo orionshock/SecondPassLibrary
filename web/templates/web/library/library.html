@@ -11,18 +11,23 @@
 {% block content %}
   <div class="page-header">
     <h1 class="page-title">Library</h1>
+  </div>
+
+  <div class="library-axis-row">
+    <div class="library-tabs" role="tablist" aria-label="Library browse views">
+      <button id="library-tab-books" class="tab-button is-active" type="button" role="tab" aria-selected="true" data-view="books">Books</button>
+      <button id="library-tab-authors" class="tab-button" type="button" role="tab" aria-selected="false" data-view="authors">Authors</button>
+      <button id="library-tab-series" class="tab-button" type="button" role="tab" aria-selected="false" data-view="series">Series</button>
+    </div>
+    <a id="library-axis-create" class="button is-hidden" href="#"></a>
+  </div>
+
+  <div class="library-search-row">
     <form id="library-search" class="search library-search" autocomplete="off">
       <label class="search__label" for="q">Search</label>
       <input id="q" name="q" type="search" class="search__input" placeholder="Book title..." />
       <button class="button" type="submit">Search</button>
     </form>
-    <a id="library-axis-create" class="button is-hidden" href="#"></a>
-  </div>
-
-  <div class="library-tabs" role="tablist" aria-label="Library browse views">
-    <button id="library-tab-books" class="tab-button is-active" type="button" role="tab" aria-selected="true" data-view="books">Books</button>
-    <button id="library-tab-authors" class="tab-button" type="button" role="tab" aria-selected="false" data-view="authors">Authors</button>
-    <button id="library-tab-series" class="tab-button" type="button" role="tab" aria-selected="false" data-view="series">Series</button>
   </div>
 
   <div class="library-browse-layout">
