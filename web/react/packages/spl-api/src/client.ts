@@ -1,4 +1,4 @@
-import { ApiError, apiErrorFromPayload } from "./errors";
+import { ApiError, NetworkError, apiErrorFromPayload } from "./errors";
 
 export interface ApiClient {
   request<T>(path: string, init?: RequestInit): Promise<T>;
@@ -10,11 +10,16 @@ export function createApiClient(fetchImplementation: typeof fetch = fetch): ApiC
       const headers = new Headers(init.headers);
       headers.set("Accept", "application/json");
 
-      const response = await fetchImplementation(path, {
-        ...init,
-        credentials: "same-origin",
-        headers,
-      });
+      let response: Response;
+      try {
+        response = await fetchImplementation(path, {
+          ...init,
+          credentials: "same-origin",
+          headers,
+        });
+      } catch {
+        throw new NetworkError();
+      }
       const payload = await parseJson(response);
 
       if (!response.ok) throw apiErrorFromPayload(response.status, payload);

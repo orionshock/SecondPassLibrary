@@ -2,32 +2,50 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
 
-function LandingPage() {
+export const sectionRoutes = [
+  { path: "library", title: "Library" },
+  { path: "groups", title: "Groups" },
+  { path: "shelves", title: "Shelves" },
+  { path: "users", title: "Users" },
+  { path: "imports", title: "Imports" },
+  { path: "server", title: "Server Settings" },
+] as const;
+
+export function PlaceholderPage({ title }: { title: string }) {
   return (
-    <section>
-      <p className="eyebrow">React foundation</p>
-      <h1>Your library, ready for its next pass.</h1>
-      <p>The authenticated React Product UI shell is running.</p>
+    <section className="page-panel">
+      <p className="eyebrow">React Product UI</p>
+      <h1>{title}</h1>
+      <p>This section has not been rebuilt yet.</p>
     </section>
   );
 }
 
-function PlaceholderPage() {
+export function NotFoundPage() {
   return (
-    <section>
-      <p className="eyebrow">Coming next</p>
-      <h1>This Product UI section is ready to be built.</h1>
+    <section className="page-panel">
+      <p className="eyebrow">Not found</p>
+      <h1>Page not found</h1>
+      <p>This address does not match a Product UI page.</p>
     </section>
   );
 }
 
-export const router = createBrowserRouter([
+export const appRoutes = [
   {
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <LandingPage /> },
-      { path: "*", element: <PlaceholderPage /> },
+      { index: true, element: <PlaceholderPage title="Dashboard" /> },
+      ...sectionRoutes.map(({ path, title }) => ({
+        path,
+        element: <PlaceholderPage title={title} />,
+      })),
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
-]);
+];
+
+export function createAppRouter() {
+  return createBrowserRouter(appRoutes);
+}

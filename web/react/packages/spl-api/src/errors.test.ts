@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { apiErrorFromPayload } from "./errors";
+import {
+  ApiError,
+  NetworkError,
+  apiErrorFromPayload,
+  classifyApiError,
+  isAuthenticationError,
+} from "./errors";
 
 describe("apiErrorFromPayload", () => {
   it("normalizes structured server errors", () => {
@@ -14,5 +20,14 @@ describe("apiErrorFromPayload", () => {
     expect(error.message).toBe("Check the submitted fields.");
     expect(error.code).toBe("validation_error");
     expect(error.fields).toEqual({ email: ["Enter a valid email address."] });
+  });
+
+  it("classifies authentication, validation, network, and unknown failures", () => {
+    expect(classifyApiError(new ApiError("Signed out", 401))).toBe("authentication");
+    expect(classifyApiError(new ApiError("Forbidden", 403))).toBe("authentication");
+    expect(classifyApiError(new ApiError("Invalid", 400))).toBe("validation");
+    expect(classifyApiError(new NetworkError())).toBe("network");
+    expect(classifyApiError(new Error("Unexpected"))).toBe("unknown");
+    expect(isAuthenticationError(new ApiError("Signed out", 401))).toBe(true);
   });
 });

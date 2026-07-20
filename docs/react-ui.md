@@ -10,6 +10,10 @@ Vite is the primary development surface. Django serves the authenticated React s
 
 There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or otherwise special-cased.
 
+The React shell bootstraps the authenticated user through `getCurrentUser()` and server identity through `getServerInfo()` from `@second-pass/spl-api`. Server identity comes from `/.well-known/secondpass`. Components do not make raw `fetch()` calls. The shell provides loading, login-required, retryable error, server identity/banner, user identity, and logout states. `/logout/` remains a Django endpoint.
+
+Dashboard (`/`), Library, Groups, Shelves, Users, Imports, and Server Settings (`/server`) currently have React placeholder routes. Real domain pages are still pending; unknown paths within Django's explicit React route policy render an in-shell not-found page.
+
 ## Deferred production integration
 
 The current local build and root-shell integration may be used for smoke checks. Docker and production React build integration are explicitly deferred.

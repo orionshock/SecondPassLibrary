@@ -9,6 +9,7 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5174,
     proxy: {
+      "/.well-known": djangoTarget,
       "/api": djangoTarget,
       "/media": djangoTarget,
       "/admin": djangoTarget,

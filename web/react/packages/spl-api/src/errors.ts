@@ -17,6 +17,27 @@ export class ApiError extends Error {
   }
 }
 
+export class NetworkError extends Error {
+  constructor(message = "The server could not be reached.") {
+    super(message);
+    this.name = "NetworkError";
+  }
+}
+
+export type ApiErrorKind = "authentication" | "validation" | "network" | "unknown";
+
+export function classifyApiError(error: unknown): ApiErrorKind {
+  if (error instanceof NetworkError) return "network";
+  if (!(error instanceof ApiError)) return "unknown";
+  if (error.status === 401 || error.status === 403) return "authentication";
+  if (error.status >= 400 && error.status < 500) return "validation";
+  return "unknown";
+}
+
+export function isAuthenticationError(error: unknown): boolean {
+  return classifyApiError(error) === "authentication";
+}
+
 type ErrorPayload = {
   detail?: unknown;
   code?: unknown;
