@@ -67,6 +67,8 @@ describe("first React feature pages", () => {
 
     expect(markup).toContain("Ada Lovelace");
     expect(markup).toContain("ada@example.test");
+    expect(markup).toMatch(/<dt>Role<\/dt><dd><span[^>]*>Owner<\/span><\/dd>/);
+    expect(markup).not.toContain("<dt>Owner</dt>");
     expect(markup).toContain("Password change required");
     expect(markup).toContain("Save profile");
     expect(markup).toContain("Change password");

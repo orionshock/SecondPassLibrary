@@ -207,6 +207,10 @@ button:disabled {
   gap: 1rem;
 }
 
+.profile-page {
+  width: min(100%, 48rem);
+}
+
 .page-header {
   display: flex;
   align-items: end;
@@ -355,6 +359,16 @@ h1 {
 .action-feedback {
   min-width: 0;
   min-height: 1.5rem;
+}
+
+.action-feedback--success {
+  justify-self: end;
+  text-align: right;
+}
+
+.action-feedback--error {
+  width: 100%;
+  justify-self: start;
 }
 
 .action-feedback .error-panel {

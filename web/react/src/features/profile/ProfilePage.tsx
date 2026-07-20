@@ -20,6 +20,7 @@ import {
   PageHeader,
   Surface,
 } from "../../components/ui";
+import { displayUserRole } from "../../domain/users/presentation";
 
 interface MutationState {
   pending: boolean;
@@ -138,8 +139,7 @@ function ProfileIdentityRegion({ user }: { user: CurrentUser }) {
       <KeyValueList items={[
         { label: "Username", value: user.username },
         { label: "Display name", value: displayName },
-        { label: "Role", value: <Badge>{titleCase(user.role)}</Badge> },
-        { label: "Owner", value: user.isOwner ? <Badge tone="accent">Owner</Badge> : "No" },
+        { label: "Role", value: <Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge> },
         { label: "Email", value: user.email || "Not provided" },
       ]} />
     </Surface>
@@ -295,7 +295,7 @@ function ActionRow({
 }) {
   return (
     <div className="form-action-row">
-      <div className="action-feedback">
+      <div className={`action-feedback${state.error ? " action-feedback--error" : state.message ? " action-feedback--success" : ""}`}>
         {state.error ? <ErrorPanel>{state.error.message}</ErrorPanel> : null}
         {state.message ? (
           <span className="success-message" role="status">
@@ -332,10 +332,6 @@ function normalizedError(error: unknown): ApiError | Error {
 
 function fieldError(error: ApiError | Error | undefined, field: string): string | undefined {
   return error instanceof ApiError ? error.fields?.[field]?.[0] : undefined;
-}
-
-function titleCase(value: string): string {
-  return value ? `${value[0].toUpperCase()}${value.slice(1).toLowerCase()}` : "Reader";
 }
 
 export type { MutationState };

@@ -40,6 +40,8 @@ Profile at `/profile` is the first real React feature page. It displays current 
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 
+Cross-page product semantics that are not API shapes are tracked in [React Product UI Rules](react-ui-rules.md).
+
 ## Shell and UI conventions
 
 `AppFrame` owns the compact server/navigation/account header and the low-emphasis product/version footer. Profile owns its controlled form drafts, cancellation, mutation feedback, and field errors; Cancel never calls the server.
