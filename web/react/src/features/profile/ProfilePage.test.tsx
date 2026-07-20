@@ -8,6 +8,7 @@ import { AppFrame } from "../../app/layout/AppFrame";
 import { DashboardPage } from "../dashboard/DashboardPage";
 import {
   confirmClientSessionRevoke,
+  confirmLogoutOtherWebSessions,
   ProfilePage,
   ProfilePageView,
   profileDraftFromUser,
@@ -67,9 +68,14 @@ describe("first React feature pages", () => {
 
     expect(markup).toContain("Ada Lovelace");
     expect(markup).toContain("ada@example.test");
-    expect(markup).toMatch(/<dt>Role<\/dt><dd><span[^>]*>Owner<\/span><\/dd>/);
-    expect(markup).not.toContain("<dt>Owner</dt>");
-    expect(markup).toContain("Save profile");
+    expect(markup).toContain("&lt;@ada&gt;");
+    expect(markup).toContain("Owner");
+    expect(markup).not.toContain("<dt>Role</dt>");
+    expect(markup).toContain("Edit");
+    expect(markup).not.toContain("Save profile");
+    expect(markup).not.toContain("Profile details");
+    expect(markup.indexOf("First Name")).toBeLessThan(markup.indexOf("Last Name"));
+    expect(markup.indexOf("Last Name")).toBeLessThan(markup.indexOf("Email"));
     expect(markup).toContain("Change password");
     expect(markup).toContain('href="/profile/password"');
   });
@@ -124,6 +130,12 @@ describe("first React feature pages", () => {
     const confirm = vi.fn(() => false);
     expect(confirmClientSessionRevoke("Living Room Reader", confirm)).toBe(false);
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Living Room Reader"));
+  });
+
+  it("requires browser confirmation before logging out other web sessions", () => {
+    const confirm = vi.fn(() => false);
+    expect(confirmLogoutOtherWebSessions(confirm)).toBe(false);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("all other web sessions"));
   });
 
 });

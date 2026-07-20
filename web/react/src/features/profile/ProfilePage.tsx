@@ -61,18 +61,29 @@ function ProfileDetailsRegion({ user, state, onSave, onCancel }: {
   onSave: (input: UpdateCurrentUserInput) => void | Promise<void>; onCancel: () => void;
 }) {
   const [draft, dispatch] = useReducer(profileDraftReducer, user, profileDraftFromUser);
+  const [editing, setEditing] = useState(Boolean(state.error));
+  useEffect(() => { if (state.message) setEditing(false); }, [state.message]);
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void onSave(draft); }
-  function cancel() { dispatch({ type: "reset", value: profileDraftFromUser(user) }); onCancel(); }
+  function edit() { onCancel(); setEditing(true); }
+  function cancel() { dispatch({ type: "reset", value: profileDraftFromUser(user) }); onCancel(); setEditing(false); }
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username;
-  return <Surface title="Profile details"><KeyValueList items={[
-    { label: "User", value: `${displayName} · <@${user.username}>` },
-    { label: "Role", value: <Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge> },
-  ]} /><form className="form-grid profile-details-form" onSubmit={submit}>
-    <FormField label="Email" htmlFor="profile-email" error={fieldError(state.error, "email")}><input id="profile-email" type="email" value={draft.email} autoComplete="email" onChange={(event) => dispatch({ type: "change", field: "email", value: event.target.value })} /></FormField>
-    <FormField label="First name" htmlFor="profile-first-name" error={fieldError(state.error, "first_name")}><input id="profile-first-name" value={draft.firstName} autoComplete="given-name" onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })} /></FormField>
-    <FormField label="Last name" htmlFor="profile-last-name" error={fieldError(state.error, "last_name")}><input id="profile-last-name" value={draft.lastName} autoComplete="family-name" onChange={(event) => dispatch({ type: "change", field: "lastName", value: event.target.value })} /></FormField>
-    <ActionRow state={state} submitLabel="Save profile" pendingLabel="Saving..." onCancel={cancel} />
-  </form></Surface>;
+  return <Surface>
+    <div className="profile-user-row">
+      <span className="profile-row-label">User</span>
+      <span className="profile-user-summary"><span>{displayName}</span><span className="css-dot" aria-hidden="true" /><span>&lt;@{user.username}&gt;</span><Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge></span>
+      {!editing ? <div className="profile-edit-actions"><InlineFeedback state={state} /><Button type="button" onClick={edit}>Edit</Button></div> : null}
+    </div>
+    {editing ? <form className="form-grid profile-details-form" onSubmit={submit}>
+      <FormField label="First Name" htmlFor="profile-first-name" error={fieldError(state.error, "first_name")}><input id="profile-first-name" value={draft.firstName} autoComplete="given-name" onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })} /></FormField>
+      <FormField label="Last Name" htmlFor="profile-last-name" error={fieldError(state.error, "last_name")}><input id="profile-last-name" value={draft.lastName} autoComplete="family-name" onChange={(event) => dispatch({ type: "change", field: "lastName", value: event.target.value })} /></FormField>
+      <FormField label="Email" htmlFor="profile-email" error={fieldError(state.error, "email")}><input id="profile-email" type="email" value={draft.email} autoComplete="email" onChange={(event) => dispatch({ type: "change", field: "email", value: event.target.value })} /></FormField>
+      <ActionRow state={state} submitLabel="Save profile" pendingLabel="Saving..." onCancel={cancel} />
+    </form> : <KeyValueList items={[
+      { label: "First Name", value: user.firstName || "Not provided" },
+      { label: "Last Name", value: user.lastName || "Not provided" },
+      { label: "Email", value: user.email || "Not provided" },
+    ]} />}
+  </Surface>;
 }
 
 function GroupMembershipRegion({ user }: { user: CurrentUser }) {
@@ -90,6 +101,7 @@ function AccountSessionsRegion() {
   const [webState, setWebState] = useState<MutationState>(idleMutation);
   useEffect(() => { let active = true; listClientSessions().then((value) => { if (active) setSessions(value); }).catch((error) => { if (active) setClientState({ pending: false, error: normalizedError(error) }); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
   async function logoutOthers() {
+    if (!confirmLogoutOtherWebSessions()) return;
     setWebState({ pending: true });
     try { await logoutOtherWebSessions(); setWebState({ pending: false, message: "Other web sessions logged out." }); }
     catch (error: unknown) { setWebState({ pending: false, error: normalizedError(error) }); }
@@ -101,7 +113,7 @@ function AccountSessionsRegion() {
     catch (error: unknown) { setClientState({ pending: false, error: normalizedError(error) }); }
   }
   return <Surface><div className="region-stack">
-    <div className="session-action"><span className="surface-title session-label">Session management</span><Button disabled={webState.pending} onClick={() => void logoutOthers()}>{webState.pending ? "Logging out..." : "Log out all other web sessions"}</Button><InlineFeedback state={webState} /></div>
+    <div className="session-management-row"><span className="profile-row-label">Session management</span><div className="session-management-controls"><InlineFeedback state={webState} /><Button disabled={webState.pending} onClick={() => void logoutOthers()}>{webState.pending ? "Logging out..." : "Log Out All Other Web Sessions"}</Button></div></div>
     <div className="section-divider" />
     <div className="section-actions"><h2 className="surface-title">Device/API sessions</h2><Link className="button" to="/profile/client-pairing">Connect a Device/App</Link></div>
     {loading ? <p aria-live="polite">Loading connected clients...</p> : null}
@@ -116,6 +128,12 @@ export function confirmClientSessionRevoke(
   confirmAction: (message: string) => boolean = window.confirm,
 ): boolean {
   return confirmAction(`Revoke ${clientName}? This client will need to pair again.`);
+}
+
+export function confirmLogoutOtherWebSessions(
+  confirmAction: (message: string) => boolean = window.confirm,
+): boolean {
+  return confirmAction("Log out all other web sessions? This browser will remain signed in.");
 }
 
 function ActionRow({ state, submitLabel, pendingLabel, onCancel }: { state: MutationState; submitLabel: string; pendingLabel: string; onCancel: () => void }) {
