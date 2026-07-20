@@ -2,14 +2,21 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.contrib.staticfiles.finders import FileSystemFinder
-from django.test import override_settings
-from django.urls import resolve
+from django.contrib.auth import get_user_model
+from django.test import TestCase, override_settings
+from django.urls import Resolver404, resolve
 
-from tests.core.product_ui.helpers import ProductUiTestCase
 from web.views import react_app
 
 
-class ReactAppRouteContractTests(ProductUiTestCase):
+class ReactAppRouteContractTests(TestCase):
+    def setUp(self):
+        self.owner = get_user_model().objects.create_superuser(
+            username="react-owner",
+            email="react-owner@example.test",
+            password="pw",
+        )
+
     def test_missing_build_returns_bounded_service_unavailable(self):
         with TemporaryDirectory() as directory:
             missing_dist = Path(directory) / "missing"
@@ -37,15 +44,22 @@ class ReactAppRouteContractTests(ProductUiTestCase):
         self.assertContains(root, "/static/react/assets/app.js")
 
     def test_existing_routes_are_not_captured_by_react(self):
-        self.client.force_login(self.bootstrap_owner)
+        self.client.force_login(self.owner)
 
         self.assertIs(resolve("/app/").func, react_app)
         self.assertIsNot(resolve("/").func, react_app)
-        self.assertIsNot(resolve("/legacy/").func, react_app)
         self.assertIsNot(resolve("/api/v1/health/").func, react_app)
         self.assertEqual(self.client.get("/").status_code, 302)
-        self.assertEqual(self.client.get("/legacy/").status_code, 302)
+        self.assertEqual(self.client.get("/")["Location"], "/app/")
+        with self.assertRaises(Resolver404):
+            resolve("/legacy/")
         self.assertEqual(self.client.get("/api/v1/health/").status_code, 200)
+
+    def test_retired_product_ui_routes_are_not_registered(self):
+        for path in ("/dashboard/", "/library/", "/groups/", "/shelves/", "/users/", "/imports/", "/server/"):
+            with self.subTest(path=path):
+                with self.assertRaises(Resolver404):
+                    resolve(path)
 
     def test_react_static_prefix_is_discoverable(self):
         with TemporaryDirectory() as directory:

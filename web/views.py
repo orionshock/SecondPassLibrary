@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from functools import wraps
+from collections.abc import Mapping
 from typing import Any, cast
-from uuid import UUID
 
+from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
-from django.http import Http404
 from django.shortcuts import redirect, render
-from django.urls import reverse
 
 from accounts import client_api
 from accounts.bootstrap import (
@@ -21,12 +17,6 @@ from accounts.bootstrap import (
     has_active_owner,
 )
 from accounts.forms import FirstOwnerSetupForm
-from accounts.roles import is_librarian, is_owner
-from core import server_settings as server_settings_service
-from library.models import Book
-from library.queries import visible_books_for_user
-from reading.sessions.queries import list_sessions_for_book, list_sessions_for_user
-from reading.models import ReadingSession
 
 
 REACT_BUILD_MISSING_MESSAGE = (
@@ -34,7 +24,16 @@ REACT_BUILD_MISSING_MESSAGE = (
 )
 
 
+def index(request: HttpRequest) -> HttpResponse:
+    if not has_active_owner():
+        return redirect("web:setup")
+    return redirect("react_app")
+
+
 def react_app(request: HttpRequest, react_path: str = "") -> HttpResponse:
+    if not has_active_owner():
+        return redirect("web:setup")
+
     index_path = settings.REACT_UI_DIST_DIR / "index.html"
     try:
         index_html = index_path.read_text(encoding="utf-8")
@@ -50,48 +49,12 @@ def react_app(request: HttpRequest, react_path: str = "") -> HttpResponse:
     return response
 
 
-def _uuid_or_404(value: str) -> UUID:
-    try:
-        return UUID(str(value))
-    except (TypeError, ValueError):
-        raise Http404() from None
-
-
-def _can_view_book(*, user, book: Book) -> bool:
-    return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
-
-
-def _product_url_name(request: HttpRequest, name: str) -> str:
-    namespace = "legacy" if request.resolver_match.namespace == "legacy" else "web"
-    return f"{namespace}:{name}"
-
-
-def product_login_required(
-    view_func: Callable[..., HttpResponse],
-) -> Callable[..., HttpResponse]:
-    login_view = cast(Callable[..., HttpResponse], login_required(view_func))
-
-    @wraps(view_func)
-    def wrapped(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        if not has_active_owner():
-            return redirect(_product_url_name(request, "setup"))
-        return login_view(request, *args, **kwargs)
-
-    return wrapped
-
-
-def index(request: HttpRequest) -> HttpResponse:
-    if not has_active_owner():
-        return redirect(_product_url_name(request, "setup"))
-    return redirect(_product_url_name(request, "dashboard"))
-
-
 def login(request: HttpRequest) -> HttpResponse:
     if not has_active_owner():
         return redirect("web:setup")
-    return auth_views.LoginView.as_view(
-        template_name="rest_framework/login.html"
-    )(request)
+    return auth_views.LoginView.as_view(template_name="rest_framework/login.html")(
+        request
+    )
 
 
 def setup(request: HttpRequest) -> HttpResponse:
@@ -135,262 +98,7 @@ def setup(request: HttpRequest) -> HttpResponse:
     return render(request, "web/setup.html", {"form": form})
 
 
-@product_login_required
-def dashboard(request: HttpRequest) -> HttpResponse:
-    return render(
-        request,
-        "web/dashboard/app.html",
-        {"server_banner_message": server_settings_service.get_server_banner_message()},
-    )
-
-
-@product_login_required
-def reading_sessions(request: HttpRequest) -> HttpResponse:
-    sessions = list_sessions_for_user(user=request.user)
-    return render(request, "web/reading/sessions.html", {"sessions": sessions})
-
-
-@product_login_required
-def reading_export(request: HttpRequest) -> HttpResponse:
-    rows_by_book: dict[str, dict] = {}
-    for row in list_sessions_for_user(user=request.user):
-        book = cast(Mapping[str, Any], row.get("book") or {})
-        book_id = str(book.get("id") or "")
-        if not book_id:
-            continue
-        entry = rows_by_book.setdefault(
-            book_id,
-            {
-                "id": book_id,
-                "title": book.get("title") or "Book unavailable",
-                "authors": book.get("authors") or [],
-                "series_name": book.get("series_name") or "",
-                "series_index": book.get("series_index"),
-                "cover_url": book.get("cover_url") or "",
-                "session_count": 0,
-                "annotation_count": 0,
-                "sessions": [],
-            },
-        )
-        entry["session_count"] += 1
-        entry["annotation_count"] += int(row.get("annotation_count") or 0)
-        entry["sessions"].append(row)
-
-    books = sorted(rows_by_book.values(), key=lambda b: str(b.get("title") or "").lower())
-    return render(request, "web/reading/export.html", {"books": books})
-
-
-@product_login_required
-def reading_import(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/reading/import.html")
-
-
-@product_login_required
-def reading_session_marginalia(
-    request: HttpRequest, book_id: str, session_id: str
-) -> HttpResponse:
-    book_uuid = _uuid_or_404(book_id)
-    session_uuid = _uuid_or_404(session_id)
-    session = (
-        ReadingSession.objects.select_related("book")
-        .filter(id=session_uuid, user=request.user)
-        .first()
-    )
-    if session is None:
-        raise Http404()
-    if session.book_id != book_uuid:
-        raise Http404()
-
-    return render(
-        request,
-        "web/reading/book_activity.html",
-        {
-            "book_id": str(book_uuid),
-            "session_id": str(session_uuid),
-            "can_open": _can_view_book(user=request.user, book=session.book),
-        },
-    )
-
-
-@product_login_required
-def reading_book_sessions_canonical(request: HttpRequest, book_id: str) -> HttpResponse:
-    book_uuid = _uuid_or_404(book_id)
-    book = (
-        Book.objects.select_related("book_series", "book_series__series")
-        .prefetch_related("authors")
-        .filter(id=book_uuid)
-        .first()
-    )
-    if book is None:
-        raise Http404()
-    if not _can_view_book(user=request.user, book=book):
-        raise Http404()
-
-    sessions = list_sessions_for_book(user=request.user, book=book)
-    recent_session_id = sessions[0]["id"] if sessions else ""
-    try:
-        series_link = book.book_series
-    except Book.book_series.RelatedObjectDoesNotExist:
-        series = None
-        series_index = None
-    else:
-        series = series_link.series
-        series_index = series_link.series_index
-
-    return render(
-        request,
-        "web/reading/book_sessions.html",
-        {
-            "book": book,
-            "series": series,
-            "series_index": series_index,
-            "sessions": sessions,
-            "recent_session_id": recent_session_id,
-        },
-    )
-
-@product_login_required
-def library_browse(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/library/library.html")
-
-
-@product_login_required
-def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
-    book_uuid = _uuid_or_404(book_id)
-    return render(request, "web/library/book_detail.html", {"book_id": str(book_uuid)})
-
-
-@product_login_required
-def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
-    book_uuid = _uuid_or_404(book_id)
-    return render(request, "web/library/book_edit.html", {"book_id": str(book_uuid)})
-
-
-def _catalog_entity_context(kind: str, entity_id: str = "") -> dict[str, str]:
-    singular = "Author" if kind == "authors" else "Series"
-    return {"entity_kind": kind, "entity_label": singular, "entity_id": entity_id}
-
-
-def _require_catalog_manager(request: HttpRequest) -> None:
-    if not is_librarian(request.user):
-        raise PermissionDenied("Not allowed.")
-
-
-@product_login_required
-def catalog_entity_list(request: HttpRequest, kind: str) -> HttpResponse:
-    return redirect(f'{reverse(_product_url_name(request, "library"))}?view={kind}')
-
-
-@product_login_required
-def catalog_entity_new(request: HttpRequest, kind: str) -> HttpResponse:
-    _require_catalog_manager(request)
-    return render(request, "web/library/catalog_entity_form.html", _catalog_entity_context(kind))
-
-
-@product_login_required
-def catalog_entity_detail(request: HttpRequest, kind: str, entity_id: str) -> HttpResponse:
-    entity_uuid = _uuid_or_404(entity_id)
-    singular = "author" if kind == "authors" else "series"
-    library_url = reverse(_product_url_name(request, "library"))
-    return redirect(f"{library_url}?view={singular}&{singular}={entity_uuid}")
-
-
-@product_login_required
-def catalog_entity_edit(request: HttpRequest, kind: str, entity_id: str) -> HttpResponse:
-    _require_catalog_manager(request)
-    entity_uuid = _uuid_or_404(entity_id)
-    return render(
-        request,
-        "web/library/catalog_entity_form.html",
-        _catalog_entity_context(kind, str(entity_uuid)),
-    )
-
-
-@product_login_required
-def imports(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/imports/imports.html")
-
-
-def _require_advanced_library_groups_enabled() -> None:
-    if not server_settings_service.advanced_library_groups_enabled():
-        raise Http404()
-
-
-@product_login_required
-def groups(request: HttpRequest) -> HttpResponse:
-    _require_advanced_library_groups_enabled()
-    return render(request, "web/groups/groups.html")
-
-
-@product_login_required
-def group_detail(request: HttpRequest, group_id: str) -> HttpResponse:
-    _require_advanced_library_groups_enabled()
-    group_uuid = _uuid_or_404(group_id)
-    return render(request, "web/groups/detail.html", {"group_id": str(group_uuid)})
-
-
-@product_login_required
-def group_new(request: HttpRequest) -> HttpResponse:
-    _require_advanced_library_groups_enabled()
-    return render(request, "web/groups/new.html")
-
-
-@product_login_required
-def group_edit(request: HttpRequest, group_id: str) -> HttpResponse:
-    _require_advanced_library_groups_enabled()
-    group_uuid = _uuid_or_404(group_id)
-    return render(request, "web/groups/edit.html", {"group_id": str(group_uuid)})
-
-
-@product_login_required
-def users(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/users/users.html")
-
-
-@product_login_required
-def user_new(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/users/new.html")
-
-
-@product_login_required
-def user_edit(request: HttpRequest, profile_id: str) -> HttpResponse:
-    profile_uuid = _uuid_or_404(profile_id)
-    return render(request, "web/users/edit.html", {"profile_id": str(profile_uuid)})
-
-
-@product_login_required
-def shelves(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/shelves/shelves.html")
-
-
-@product_login_required
-def shelf_new(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/shelves/new.html")
-
-
-@product_login_required
-def shelf_detail(request: HttpRequest, shelf_id: str) -> HttpResponse:
-    shelf_uuid = _uuid_or_404(shelf_id)
-    return render(request, "web/shelves/detail.html", {"shelf_id": str(shelf_uuid)})
-
-
-@product_login_required
-def shelf_edit(request: HttpRequest, shelf_id: str) -> HttpResponse:
-    shelf_uuid = _uuid_or_404(shelf_id)
-    return render(request, "web/shelves/edit.html", {"shelf_id": str(shelf_uuid)})
-
-
-@product_login_required
-def profile(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/profile/profile.html")
-
-
-@product_login_required
-def profile_password(request: HttpRequest) -> HttpResponse:
-    return render(request, "web/profile/password.html")
-
-
-@product_login_required
+@login_required
 def client_api_authorize(request: HttpRequest) -> HttpResponse:
     code = str(request.GET.get("code") or "").strip()
     client_name = ""
@@ -409,15 +117,11 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
         else:
             try:
                 if action == "approve":
-                    # Allow user to edit the client name during approval.
-                    if raw_client_name is None:
-                        # Backwards-compatible: if the form field was not sent, keep the
-                        # existing request client_name.
-                        final_name = (login_request.client_name or "").strip()
-                    else:
-                        # If the field was present, treat empty/whitespace as invalid.
-                        final_name = (client_name or "").strip()
-
+                    final_name = (
+                        (login_request.client_name or "").strip()
+                        if raw_client_name is None
+                        else client_name
+                    )
                     if not final_name:
                         error = "Device/client name is required."
                     elif len(final_name) > 200:
@@ -427,8 +131,6 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
                             login_request.client_name = final_name
                             login_request.save(update_fields=["client_name", "updated_at"])
                         client_name = final_name
-
-                    if not error:
                         client_api.approve_login_request(
                             login_request=login_request, user=request.user
                         )
@@ -438,10 +140,7 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
                         login_request=login_request, user=request.user
                     )
                     message = "Client request denied."
-                elif action == "lookup":
-                    # No-op: just render the request details for confirmation.
-                    pass
-                else:
+                elif action != "lookup":
                     error = "Invalid action."
             except ValueError as exc:
                 error = str(exc)
@@ -477,15 +176,4 @@ def client_api_authorize(request: HttpRequest) -> HttpResponse:
             "error": error,
             "done": False,
         },
-    )
-
-
-@product_login_required
-def server_settings(request: HttpRequest) -> HttpResponse:
-    if not is_owner(getattr(request, "user", None)):
-        raise PermissionDenied
-    return render(
-        request,
-        "web/server/settings.html",
-        {"django_admin_enabled": settings.SECOND_PASS_ENABLE_DJANGO_ADMIN},
     )

@@ -34,4 +34,4 @@ class ApiRouteErrorTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertIn("text/html", response.headers["Content-Type"])
         self.assertContains(response, "Page not found", status_code=404)
-        self.assertContains(response, 'href="/dashboard/"', status_code=404)
+        self.assertContains(response, 'href="/app/"', status_code=404)

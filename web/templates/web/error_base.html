@@ -11,7 +11,7 @@
   <body class="error-page">
     <header class="error-page__topbar">
       <div class="container error-page__topbar-inner">
-        <a class="brand" href="/dashboard/">
+        <a class="brand" href="/app/">
           <img class="brand__icon" src="{% static 'web/favicon.png' %}" alt="" aria-hidden="true" />
           <span>{{ server_name|default:"Second Pass Library" }}</span>
         </a>
@@ -24,7 +24,7 @@
         <h1 id="error-page-title" class="page-title error-page__title">{% block heading %}{% endblock %}</h1>
         <p class="error-page__message">{% block message %}{% endblock %}</p>
         <div class="error-page__actions">
-          <a class="button" href="/dashboard/">Go to dashboard</a>
+          <a class="button" href="/app/">Go to application</a>
         </div>
       </section>
     </main>

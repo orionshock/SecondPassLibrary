@@ -14,11 +14,11 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 ## Product and security boundaries
 
 - Keep REST/JSON APIs under `/api/v1/`. Never expose filesystem paths, storage identities, secrets, or authentication internals.
-- New Product UI work uses React under `web/react`; the server-rendered Django Product UI remains supported during the transition and will eventually move under `/legacy`.
+- The Product UI is React under `web/react`. The retired Django Product UI is parked under `web/legacy` for reference and is not an active or supported route surface.
 - Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
 - React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
-- Production remains one Django/Uvicorn container: Django serves the React shell and WhiteNoise serves built assets. The Vite server is development-only and proxies same-origin-style requests to Django.
-- `/app/` is the temporary Django-served React mount. Do not move `/` to React without an explicit cutover; first-time setup, login/logout/session auth, DRF auth screens, and Django Admin remain Django-rendered surfaces.
+- Vite is the primary Product UI development surface and proxies same-origin-style requests to Django. Production and Docker React integration are deferred.
+- `/` redirects to the React shell at `/app/` after setup. First-time setup, login/logout/session auth, Reader Client authorization, DRF auth screens, and Django Admin remain Django-rendered surfaces.
 - Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
 - Django Admin is a technical service hatch, not the Product UI.
 - Preserve user ownership and scoping for reading data.
@@ -30,7 +30,7 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 - Add operational logging when it materially helps diagnosis or operation. Never log secrets, tokens, passwords, raw uploads, unsafe archive paths, marginalia, request payloads, filesystem paths, hashes, or routine request success.
 - Files under `scripts/` are self-contained local/operator conveniences, not production contracts. Do not use script-behavior tests as production guarantees.
 - Docker deployment behavior and support files belong under `docker/` and `docs/deployment.md`. Docker runs direct Uvicorn against the ASGI application, and WhiteNoise is mandatory in Docker rather than an operator `.env` option.
-- Slice the legacy UI migration. Do not combine its `/legacy` route remount, physical file moves, React scaffolding, and page rewrites in one change.
+- Do not restore retired Product UI routes or preserve their layout/static tests. Keep tests only for retained Django surfaces and backend/API invariants; add React tests with new React behavior.
 - Release version, label, and date belong in checked-in source, not environment files or scripts.
 
 ## Scope guardrails

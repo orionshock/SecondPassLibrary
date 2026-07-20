@@ -171,7 +171,7 @@ class FirstRunProductUiTests(TestCase):
         self.assertContains(response, "Set up your library")
 
     def test_root_app_and_login_direct_to_setup_without_active_owner(self):
-        for path in ("/", "/dashboard/", "/api-auth/login/"):
+        for path in ("/", "/app/", "/api-auth/login/"):
             with self.subTest(path=path):
                 response = self.client.get(path, follow=False)
                 self.assertEqual(response.status_code, 302)
@@ -210,12 +210,12 @@ class FirstRunProductUiTests(TestCase):
             {
                 "username": "owner",
                 "password": "Correct-Horse-Battery-47",
-                "next": "/dashboard/",
+                "next": "/app/",
             },
             follow=False,
         )
         self.assertEqual(login_response.status_code, 302)
-        self.assertEqual(login_response["Location"], "/dashboard/")
+        self.assertEqual(login_response["Location"], "/app/")
 
     def test_setup_redirects_to_login_after_completion(self):
         User.objects.create_superuser(

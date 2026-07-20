@@ -292,41 +292,29 @@ cookie credentials are not enabled; clients must use `Authorization: Bearer ...`
 tokens for protected API calls. The Product UI remains same-origin and uses
 session auth with CSRF.
 
-## Product UI (current)
+## Product UI
 
-- Dashboard: `/dashboard/`
-- Owner server settings: `/server/` (Owner only; includes Django Admin / Service Hatch link)
-- Library browse: `/library/`
-- Book detail: `/library/books/<book_id>/`
-- Edit book metadata: `/library/books/<book_id>/edit/`
-- Imports: `/imports/`
-- Groups: `/groups/`
-- Users: `/users/` (Manager/Owner)
-- Create user: `/users/new/` (Manager/Owner; temporary password shown once)
-- Edit user: `/users/<profile_id>/edit/` (Manager/Owner)
+The active Product UI is the Vite React workspace under `web/react`. After
+bootstrap setup, `/` redirects to the Django-served React shell at `/app/`;
+ordinary development should use the Vite server on port 5174. Retired Django
+Product UI code is parked under `web/legacy` and is not routed or tested.
 
-Before first-run setup is complete, unauthenticated Product UI routes direct to
-`/setup/`. After setup, unauthenticated pages redirect to
-`/api-auth/login/?next=...` as usual.
-
-Logout is POST-based via `/api-auth/logout/` (no GET logout links in the product UI).
-
-The product UI code lives in the Django app `web`.
+Django continues to render `/setup/`, login/logout and session-auth screens,
+Reader Client authorization, DRF `/api-auth/`, and the optional `/admin/`
+service hatch.
 
 ## Error-handling checks
 
-Product UI and API missing-route behavior intentionally differ:
+HTML and API missing-route behavior intentionally differs:
 
-- Product UI missing pages return styled HTML error pages.
+- Non-API missing pages return styled HTML error pages.
 - `/api/` missing routes return JSON 404 responses shaped as `{"detail": "Not found."}`.
-- Product UI error-page tests should run with `DEBUG=False`.
 - API route-level 404 tests should assert JSON content type and response body.
 
 Useful focused checks:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/core/test_api_route_errors.py -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/contracts/test_error_pages.py -q
 .\.venv\Scripts\python.exe tools\static_hygiene.py
 .\.venv\Scripts\python.exe -m ruff check .
 ```

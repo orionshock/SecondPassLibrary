@@ -139,7 +139,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "accounts.middleware.UserWebSessionMiddleware",
-    "web.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -161,7 +160,6 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.server_identity",
-                "web.context_processors.product_ui_mount",
             ],
         },
     },
@@ -291,7 +289,7 @@ CSRF_COOKIE_HTTPONLY = False
 
 # Product UI pages reuse DRF's built-in login views.
 LOGIN_URL = "/api-auth/login/"
-LOGIN_REDIRECT_URL = "/dashboard/"
+LOGIN_REDIRECT_URL = "/app/"
 LOGOUT_REDIRECT_URL = "/"
 
 # CORS

@@ -1,12 +1,6 @@
-{% extends "web/base.html" %}
-
-{% block page_id %}client-api-authorize{% endblock %}
+{% extends "web/auth_base.html" %}
 
 {% block title %}Authorize client - {{ server_name }}{% endblock %}
-
-{% block breadcrumbs %}
-  {% include "web/partials/breadcrumbs.html" with parent_href="/profile/" parent_label="Profile" current_label="Authorize Reader Client" only %}
-{% endblock %}
 
 {% block content %}
   <div class="page-header">
