@@ -32,6 +32,9 @@ function boundedSafeMessage(message, fallback) {
 
 export function initBookCoverEditor({ bookId, onCoverChanged }) {
   const root = $("#book-edit-cover-editor");
+  const modal = $("#book-edit-cover-modal");
+  const openButton = $("#book-edit-cover-change");
+  const closeButton = $("#book-edit-cover-close");
   const currentCover = $("#book-edit-cover-current");
   const form = $("#book-edit-cover-form");
   const fileInput = $("#book-edit-cover-file");
@@ -44,6 +47,9 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
   const resetButton = $("#book-edit-cover-reset");
   if (
     !root ||
+    !modal ||
+    !openButton ||
+    !closeButton ||
     !currentCover ||
     !form ||
     !fileInput ||
@@ -62,6 +68,20 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
   let currentCoverUrl = "";
   let currentTitle = "";
   let previewUrl = "";
+
+  function closeModal() {
+    resetSelection();
+    modal.close();
+  }
+
+  openButton.addEventListener("click", () => {
+    modal.showModal();
+    fileInput.focus();
+  });
+
+  closeButton.addEventListener("click", closeModal);
+  modal.addEventListener("cancel", () => resetSelection());
+  modal.addEventListener("close", () => openButton.focus());
 
   function renderCurrentCover() {
     currentCover.dataset.coverUrl = currentCoverUrl;
@@ -165,7 +185,7 @@ export function initBookCoverEditor({ bookId, onCoverChanged }) {
     }
   });
 
-  resetButton.addEventListener("click", () => resetSelection());
+  resetButton.addEventListener("click", closeModal);
 
   return {
     setCurrentCover({ url, title }) {

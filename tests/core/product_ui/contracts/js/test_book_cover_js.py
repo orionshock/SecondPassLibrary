@@ -26,7 +26,9 @@ class BookCoverProductUiContractTests:
         assert 'id="book-cover-modal"' not in detail_template
         assert "can_manage_library" not in edit_template
         assert 'id="book-edit-cover-editor"' in edit_template
-        assert 'class="book-cover-editor is-hidden"' in edit_template
+        assert 'id="book-edit-cover-modal"' in edit_template
+        assert 'id="book-edit-cover-change"' in edit_template
+        assert 'aria-label="Change book cover"' in edit_template
         assert 'from "../library/cover_editor.js"' in edit_main
         assert "const canManage = canManageLibrary(me)" in edit_main
         assert "visible(root, true)" in editor
@@ -48,8 +50,11 @@ class BookCoverProductUiContractTests:
         assert 'id="book-edit-cover-preview"' in template
         assert "URL.createObjectURL(file)" in editor
         assert "URL.revokeObjectURL(previewUrl)" in editor
-        assert 'resetButton.addEventListener("click", () => resetSelection())' in editor
+        assert 'resetButton.addEventListener("click", closeModal)' in editor
         assert 'window.confirm("Clear this cover?")' in editor
+        assert 'modal.showModal()' in editor
+        assert 'modal.addEventListener("cancel"' in editor
+        assert 'modal.addEventListener("close", () => openButton.focus())' in editor
         assert 'setStatus(statusEl, "Cover updated.", false)' in editor
         assert 'setStatus(statusEl, "Cover cleared.", false)' in editor
         assert 'console.error("Failed to replace book cover"' in editor
@@ -89,6 +94,27 @@ class BookCoverProductUiContractTests:
         assert 'method: "PATCH"' in edit_main
         assert 'form.addEventListener("submit"' in editor
         assert "buildBookPatchPayload" not in editor
+
+    def test_cover_workflow_is_in_the_hero_not_identifiers(self):
+        template = (ROOT / "web/templates/web/library/book_edit.html").read_text(
+            encoding="utf-8"
+        )
+
+        hero = template.split('id="book-edit-header"', 1)[1].split(
+            'id="book-edit-status"', 1
+        )[0]
+        identifiers = template.split('id="tab-idents"', 1)[1].split(
+            'id="book-edit-cover-modal"', 1
+        )[0]
+        assert 'class="book-edit-hero' in hero
+        assert 'id="book-edit-cover-current"' in hero
+        assert 'id="book-edit-cover-change"' in hero
+        assert 'id="book-edit-cover-' not in identifiers
+        assert 'id="book-edit-identifiers"' in identifiers
+        assert 'id="book-edit-file-info"' in identifiers
+        assert 'id="book-edit-cover-submit"' in template
+        assert 'id="book-edit-cover-clear"' in template
+        assert 'id="book-edit-cover-reset"' in template
 
     def test_successful_cover_urls_are_cache_busted(self):
         result = run_node_json(
