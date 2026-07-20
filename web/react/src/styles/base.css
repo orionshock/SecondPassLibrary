@@ -1,0 +1,45 @@
+:root {
+  color: #20221f;
+  background: #f3efe5;
+  font-family: Georgia, "Times New Roman", serif;
+  font-synthesis: none;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  width: min(56rem, calc(100% - 3rem));
+  margin: 0 auto;
+}
+
+header {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #b9b09f;
+}
+
+header a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+main {
+  padding: 5rem 0;
+}
+
+h1 {
+  max-width: 14ch;
+  margin: 0;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  line-height: 1;
+}
+
+.eyebrow {
+  font-family: system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}

@@ -20,8 +20,8 @@ sidecar cover takes precedence over an embedded cover; arbitrary sidecar assets
 are not imported. See [Imports](imports.md) and
 [Metadata and identifiers](metadata.md) for the current precedence rules.
 
-`npm install` installs the pinned local Pyright dev tool. There is no frontend
-build step.
+The root `npm install` installs the pinned local Pyright dev tool. The new React
+Product UI has a separate workspace under `web/react`; see [React Product UI](react-ui.md).
 
 ## Pre-release migration reset
 
@@ -139,6 +139,7 @@ that specifically needs the larger catalog, not by every E2E test. Browser artif
 - [Reading data](reading.md)
 - [Metadata and identifiers](metadata.md)
 - [Production startup](deployment.md)
+- [React Product UI](react-ui.md)
 
 ## Application logging
 

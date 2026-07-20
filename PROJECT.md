@@ -25,3 +25,5 @@ Principles:
 - Predictable, versioned APIs
 
 The current implementation is EPUB-only. Do not add PDF or speculative format support unless explicitly requested.
+
+The Product UI is entering a sliced React rewrite. The existing Django UI remains supported while the new app is built under `web/react`.
