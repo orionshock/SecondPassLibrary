@@ -54,8 +54,8 @@ belong under the ignored `test-artifacts/` directory.
 The development requirements include the Python `pytest-playwright` plugin for
 rendered-state inspection, JavaScript interaction diagnosis, console and
 network inspection, screenshots, and a small number of focused browser
-regressions. It is development-only. Service, API, Product UI template, and
-JavaScript static-contract tests remain the default for ordinary work.
+regressions. It is development-only. Focused service, API, retained Django
+surface, and Vitest coverage remain the default for ordinary work.
 
 After installing or updating development dependencies, install Chromium
 separately for the active virtual environment:
@@ -303,6 +303,8 @@ Django application. It is not imported, discovered, routed, or tested.
 Django continues to render `/setup/`, `/login/`, `/logout/`, and the optional
 `/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client
 authorization webpage is retired pending a React replacement.
+There are no `/app/` or `/legacy/` mounts and no compatibility routes for the
+retired Django Product UI.
 
 ## Error-handling checks
 
@@ -324,7 +326,7 @@ Useful focused checks:
 
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
 
-- **Django session authentication** (browser-based development and the DRF browsable API)
+- **Django session authentication** for the React Product UI
 - **Client API bearer token authentication** on selected reader-client endpoints
 - **Django admin authentication** at `/admin/` (a service hatch; not the product UI)
 
@@ -364,7 +366,7 @@ Use markers to keep routine runs away from known slow integration areas:
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/library/imports/api -q
 .\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
-.\.venv\Scripts\python.exe -m pytest -m static_contract tests/core/product_ui -q
+.\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
 .\.venv\Scripts\python.exe -m pytest tests/reading/annotations/test_views.py -q --durations=10
 ```
 
@@ -373,8 +375,8 @@ Marker intent:
 - `unit`: no database, pure logic/static parsing.
 - `db`: database-backed tests.
 - `filesystem`: writes generated files or temp paths.
-- `product_ui`: Product UI route/static/template tests.
-- `static_contract`: source/static/template contract tests that avoid runtime flows.
+- `product_ui`: retained setup/auth and React route-boundary tests.
+- `static_contract`: source/static contract tests that avoid runtime flows.
 - `integration`: broad cross-app or API flow tests.
 - `slow`: tests known to be slow enough to avoid in routine focused runs.
 - `e2e`: opt-in Playwright browser tests; excluded by default.
@@ -383,8 +385,6 @@ Targeted pytest examples:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/reading -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/contracts -q
 .\.venv\Scripts\python.exe -m pytest tests/reading -q
 .\.venv\Scripts\python.exe -m pytest tests/library -q
 .\.venv\Scripts\python.exe -m pytest tests/accounts -q

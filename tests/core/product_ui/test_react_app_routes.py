@@ -73,6 +73,8 @@ class ReactRootRouteContractTests(TestCase):
             "/legacy/",
             "/client-api/authorize/",
             "/api-auth/login/",
+            "/reading/",
+            "/server/",
         ):
             with self.subTest(path=path), self.assertRaises(Resolver404):
                 resolve(path)

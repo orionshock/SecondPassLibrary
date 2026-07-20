@@ -8,6 +8,8 @@ Run Django on port 8000 and the Product UI Vite server on port 5174. Port 5173 r
 
 Vite is the primary development surface. Django serves the authenticated React shell at `/` and intended Product UI deep links when a local build exists. Before bootstrap, these routes redirect to `/setup/`; afterward unauthenticated requests redirect to `/login/`.
 
+There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or otherwise special-cased.
+
 ## Deferred production integration
 
 The current local build and root-shell integration may be used for smoke checks. Docker and production React build integration are explicitly deferred.

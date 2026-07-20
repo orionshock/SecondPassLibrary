@@ -49,7 +49,7 @@ Avoid putting workflows in serializers, viewsets, `Model.save()`, admin classes,
 
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
 
-- Django **session authentication** (supports browser-based development and the DRF browsable API)
+- Django **session authentication** for the React Product UI
 - Explicit **Client API bearer token authentication** on selected reader-client endpoints
 - Session login/logout at `/login/` and `/logout/`
 - Optional Django admin at `/admin/` when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`

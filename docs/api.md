@@ -8,7 +8,7 @@ All `/api/v1/` endpoints require authentication unless a specific endpoint expli
 
 Current supported authentication methods:
 
-- Django session authentication (browser-based development + DRF browsable API)
+- Django session authentication for the React Product UI
 - Explicit Client API bearer tokens on selected reader-client endpoints
 - Session login/logout is provided by `/login/` and `/logout/`; API responses are JSON-only.
 - Optional Django admin authentication via `/admin/` when
@@ -811,8 +811,7 @@ Group list ordering:
 Group book ordering:
 
 Group book list responses use the normal `{count, next, previous, results}`
-pagination envelope. Product UI Group View and Group Edit URLs retain the
-current `page` and supported book filters while paging.
+pagination envelope. React owns any UI paging state built on this API.
 
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=title` orders by title A-Z and is the default.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
