@@ -26,4 +26,4 @@ Principles:
 
 The current implementation is EPUB-only. Do not add PDF or speculative format support unless explicitly requested.
 
-The Product UI is being rebuilt in React under `web/react`. Retired Django UI code is parked under `web/legacy` for reference; only setup and authentication surfaces remain Django-rendered.
+The Product UI is being rebuilt in React under `web/react` and owns `/`. Retired Django UI code is parked under `web/legacy`; only bootstrap setup, login/logout, and admin/auth internals remain Django-rendered.

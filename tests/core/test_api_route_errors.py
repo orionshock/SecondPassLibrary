@@ -27,11 +27,3 @@ class ApiRouteErrorTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.headers["Content-Type"], "application/json")
         self.assertEqual(response.json(), {"detail": "Not found."})
-
-    def test_product_ui_route_miss_returns_styled_html_404(self):
-        response = self.client.get("/not-a-real-page/")
-
-        self.assertEqual(response.status_code, 404)
-        self.assertIn("text/html", response.headers["Content-Type"])
-        self.assertContains(response, "Page not found", status_code=404)
-        self.assertContains(response, 'href="/app/"', status_code=404)

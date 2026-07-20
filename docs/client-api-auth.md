@@ -100,8 +100,7 @@ the single server banner.
 
 Product UI (Django templates):
 
-- `GET /client-api/authorize/` (code entry / confirmation UI; may accept `?code=...`)
-- `POST /client-api/authorize/` (approve or deny)
+- The former `/client-api/authorize/` code-entry and approval webpage is retired. A React replacement is pending; the underlying client API/token workflow remains.
 
 ## Permissions / API surface
 
@@ -225,7 +224,7 @@ Management endpoints reject Client API tokens unless explicitly allowed.
 ## Product UI integration
 
 - `/profile/` lists active Device/API sessions (Client API sessions) for the current user and allows revoking them.
-- `/profile/` links to `/client-api/authorize/` to begin the human side of pairing.
+- The retired Django profile/authorization pages no longer provide the human side of pairing; that surface will be rebuilt in React.
 
 ## Non-goals
 

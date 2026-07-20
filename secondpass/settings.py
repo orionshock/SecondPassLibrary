@@ -288,9 +288,9 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 
 # Product UI pages reuse DRF's built-in login views.
-LOGIN_URL = "/api-auth/login/"
-LOGIN_REDIRECT_URL = "/app/"
-LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 # CORS
 #

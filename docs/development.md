@@ -267,7 +267,7 @@ separate curator-managed rooms as a first-class UI feature and enables normal
 non-Public group mutation workflows. Product UI does not provide a disable
 control after enablement; disabling is a Django admin recovery flow that
 consolidates custom group state into Public/Common Room. Once an active Owner
-exists, `/setup/` is disabled and normal login at `/api-auth/login/` is used.
+exists, `/setup/` is disabled and normal Product UI login at `/login/` is used.
 
 Raw `python manage.py runserver` remains available, but it does not create or
 migrate the database schema. If using raw `runserver`, set `DJANGO_DEBUG=1` for
@@ -294,14 +294,14 @@ session auth with CSRF.
 
 ## Product UI
 
-The active Product UI is the Vite React workspace under `web/react`. After
-bootstrap setup, `/` redirects to the Django-served React shell at `/app/`;
-ordinary development should use the Vite server on port 5174. Retired Django
+The active Product UI is the Vite React workspace under `web/react`. Django
+serves the authenticated React shell at `/`; ordinary development should use
+the Vite server on port 5174. Retired Django
 Product UI code is parked under `web/legacy` and is not routed or tested.
 
-Django continues to render `/setup/`, login/logout and session-auth screens,
-Reader Client authorization, DRF `/api-auth/`, and the optional `/admin/`
-service hatch.
+Django continues to render `/setup/`, `/login/`, `/logout/`, DRF `/api-auth/`
+internals, and the optional `/admin/` service hatch. The old Reader Client
+authorization webpage is retired pending a React replacement.
 
 ## Error-handling checks
 

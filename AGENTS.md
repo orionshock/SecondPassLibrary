@@ -1,5 +1,13 @@
 # Agent Instructions
 
+## EXTREMELY HIGH IMPORTANCE: THIS PROJECT IS PRE-RELEASE
+
+- The project is pre-release. There is no user base to preserve compatibility for.
+- Do not add compatibility shims, transitional wrappers, legacy aliases, compatibility migrations, or other compatibility machinery.
+- Database migrations are a development convenience. Use them when useful, but expect them to be periodically collapsed; do not treat migration history as a permanent compatibility contract.
+- Churn is highly permitted when it produces a real, desirable effect.
+- Do not block a good change merely because it creates legitimate downstream cleanup. Make the correct change and update affected callers and boundaries directly.
+
 Read `PROJECT.md` before editing. Use the focused documents under `docs/` for domain and operational detail; this file contains only repository-wide guardrails.
 
 ## Code and architecture
@@ -18,7 +26,7 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 - Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
 - React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
 - Vite is the primary Product UI development surface and proxies same-origin-style requests to Django. Production and Docker React integration are deferred.
-- `/` redirects to the React shell at `/app/` after setup. First-time setup, login/logout/session auth, Reader Client authorization, DRF auth screens, and Django Admin remain Django-rendered surfaces.
+- React owns `/` and intended Product UI deep links after setup and login. First-time setup, `/login/`, `/logout/`, DRF auth internals, and Django Admin remain Django-rendered surfaces. `/app/` and the old Reader Client authorization webpage are retired.
 - Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
 - Django Admin is a technical service hatch, not the Product UI.
 - Preserve user ownership and scoping for reading data.

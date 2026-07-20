@@ -19,6 +19,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.templatetags.static import static
@@ -50,12 +51,14 @@ urlpatterns = [
         favicon,
         name="favicon",
     ),
-    # React Product UI shell. Vite remains the primary development surface.
-    path("app/", web_views.react_app, name="react_app"),
-    path("app/<path:react_path>", web_views.react_app, name="react_app_deep_link"),
-    # Retained Django-rendered setup/bootstrap routes. Root redirects to React.
+    # Retained Django-rendered setup/bootstrap and session-auth routes.
     path("", include(("web.urls", "web"), namespace="web")),
-    path("api-auth/login/", web_views.login, name="login"),
+    path("login/", web_views.login, name="login"),
+    path(
+        "logout/",
+        auth_views.LogoutView.as_view(next_page="/login/"),
+        name="logout",
+    ),
     # API v1 (versioned, REST/JSON)
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),
     path(
@@ -98,4 +101,10 @@ def _cover_media(request, path: str):
 urlpatterns += [
     # Keep cover URLs stable in direct-server mode without exposing all media.
     re_path(r"^media/covers/(?P<path>.*)$", _cover_media),
+    # Authenticated React Product UI routes. Reserved service prefixes never fall through.
+    re_path(
+        r"^(?!(?:api|api-auth|admin|static|media|setup|login|logout|client-api|app|legacy|\.well-known)(?:/|$))(?P<react_path>.*)$",
+        web_views.react_app,
+        name="react_app",
+    ),
 ]

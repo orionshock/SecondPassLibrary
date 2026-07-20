@@ -1,15 +1,15 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from django.contrib.staticfiles.finders import FileSystemFinder
 from django.contrib.auth import get_user_model
+from django.contrib.staticfiles.finders import FileSystemFinder
 from django.test import TestCase, override_settings
 from django.urls import Resolver404, resolve
 
 from web.views import react_app
 
 
-class ReactAppRouteContractTests(TestCase):
+class ReactRootRouteContractTests(TestCase):
     def setUp(self):
         self.owner = get_user_model().objects.create_superuser(
             username="react-owner",
@@ -17,49 +17,64 @@ class ReactAppRouteContractTests(TestCase):
             password="pw",
         )
 
-    def test_missing_build_returns_bounded_service_unavailable(self):
-        with TemporaryDirectory() as directory:
-            missing_dist = Path(directory) / "missing"
-            with override_settings(REACT_UI_DIST_DIR=missing_dist):
-                response = self.client.get("/app/")
+    def _built_dist(self, directory: str) -> Path:
+        dist = Path(directory)
+        (dist / "index.html").write_text(
+            '<!doctype html><div id="root"></div><script src="/static/react/assets/app.js"></script>',
+            encoding="utf-8",
+        )
+        return dist
 
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response["Content-Type"], "text/plain; charset=utf-8")
-        self.assertContains(response, "npm.cmd run build", status_code=503)
-        self.assertNotContains(response, str(missing_dist), status_code=503)
+    def test_unauthenticated_root_and_deep_link_redirect_to_user_login(self):
+        for path in ("/", "/library/books/example/"):
+            with self.subTest(path=path):
+                response = self.client.get(path, follow=False)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response["Location"], f"/login/?next={path}")
 
-    def test_root_and_deep_link_serve_the_same_built_shell(self):
+    def test_authenticated_root_and_deep_link_serve_the_same_shell(self):
+        self.client.force_login(self.owner)
         with TemporaryDirectory() as directory:
-            dist = Path(directory)
-            shell = '<!doctype html><div id="root"></div><script src="/static/react/assets/app.js"></script>'
-            (dist / "index.html").write_text(shell, encoding="utf-8")
+            dist = self._built_dist(directory)
             with override_settings(REACT_UI_DIST_DIR=dist):
-                root = self.client.get("/app/")
-                deep_link = self.client.get("/app/library/books/example/")
+                root = self.client.get("/")
+                deep_link = self.client.get("/library/books/example/")
 
         self.assertEqual(root.status_code, 200)
         self.assertEqual(deep_link.status_code, 200)
         self.assertEqual(root.content, deep_link.content)
         self.assertEqual(root["Cache-Control"], "no-cache")
-        self.assertContains(root, "/static/react/assets/app.js")
 
-    def test_existing_routes_are_not_captured_by_react(self):
+    def test_missing_build_returns_bounded_service_unavailable_after_auth(self):
         self.client.force_login(self.owner)
+        with TemporaryDirectory() as directory:
+            missing_dist = Path(directory) / "missing"
+            with override_settings(REACT_UI_DIST_DIR=missing_dist):
+                response = self.client.get("/")
 
-        self.assertIs(resolve("/app/").func, react_app)
-        self.assertIsNot(resolve("/").func, react_app)
-        self.assertIsNot(resolve("/api/v1/health/").func, react_app)
-        self.assertEqual(self.client.get("/").status_code, 302)
-        self.assertEqual(self.client.get("/")["Location"], "/app/")
-        with self.assertRaises(Resolver404):
-            resolve("/legacy/")
-        self.assertEqual(self.client.get("/api/v1/health/").status_code, 200)
+        self.assertEqual(response.status_code, 503)
+        self.assertContains(response, "npm.cmd run build", status_code=503)
+        self.assertNotContains(response, str(missing_dist), status_code=503)
 
-    def test_retired_product_ui_routes_are_not_registered(self):
-        for path in ("/dashboard/", "/library/", "/groups/", "/shelves/", "/users/", "/imports/", "/server/"):
+    def test_app_legacy_and_client_authorization_pages_are_retired(self):
+        for path in ("/app/", "/legacy/", "/client-api/authorize/"):
             with self.subTest(path=path):
                 with self.assertRaises(Resolver404):
                     resolve(path)
+
+    def test_service_routes_are_not_captured_by_react(self):
+        self.assertIs(resolve("/").func, react_app)
+        self.assertIsNot(resolve("/api/v1/health/").func, react_app)
+        self.assertIsNot(resolve("/api-auth/login/").func, react_app)
+        self.assertIsNot(resolve("/media/covers/missing.png").func, react_app)
+        with self.assertRaises(Resolver404):
+            resolve("/static/web/app.css")
+        self.assertEqual(self.client.get("/api/v1/health/").status_code, 200)
+
+    def test_legacy_product_ui_routes_now_belong_to_react(self):
+        for path in ("/dashboard/", "/library/", "/groups/", "/shelves/", "/users/", "/imports/", "/server/"):
+            with self.subTest(path=path):
+                self.assertIs(resolve(path).func, react_app)
 
     def test_react_static_prefix_is_discoverable(self):
         with TemporaryDirectory() as directory:
@@ -68,6 +83,8 @@ class ReactAppRouteContractTests(TestCase):
             asset.parent.mkdir()
             asset.write_text("export {};", encoding="utf-8")
             with override_settings(STATICFILES_DIRS=[("react", dist)]):
-                discovered = FileSystemFinder().find(str(Path("react") / "assets" / "app.js"))
+                discovered = FileSystemFinder().find(
+                    str(Path("react") / "assets" / "app.js")
+                )
 
         self.assertEqual(Path(discovered), asset)

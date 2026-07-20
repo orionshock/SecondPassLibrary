@@ -15,8 +15,33 @@ body {
 }
 
 header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 1.5rem 0;
   border-bottom: 1px solid #b9b09f;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+nav a,
+.session-state a {
+  color: inherit;
+}
+
+.server-banner {
+  padding: 0.75rem 1rem;
+  background: #ded5c4;
+}
+
+.session-state {
+  width: min(36rem, calc(100% - 3rem));
+  margin: 5rem auto;
 }
 
 header a {

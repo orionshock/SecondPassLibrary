@@ -5,12 +5,11 @@ from typing import Any, cast
 
 from django.conf import settings
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
-from accounts import client_api
 from accounts.bootstrap import (
     SetupAlreadyComplete,
     create_first_owner,
@@ -24,15 +23,11 @@ REACT_BUILD_MISSING_MESSAGE = (
 )
 
 
-def index(request: HttpRequest) -> HttpResponse:
-    if not has_active_owner():
-        return redirect("web:setup")
-    return redirect("react_app")
-
-
 def react_app(request: HttpRequest, react_path: str = "") -> HttpResponse:
     if not has_active_owner():
         return redirect("web:setup")
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path(), login_url="login")
 
     index_path = settings.REACT_UI_DIST_DIR / "index.html"
     try:
@@ -96,84 +91,3 @@ def setup(request: HttpRequest) -> HttpResponse:
             return redirect("login")
 
     return render(request, "web/setup.html", {"form": form})
-
-
-@login_required
-def client_api_authorize(request: HttpRequest) -> HttpResponse:
-    code = str(request.GET.get("code") or "").strip()
-    client_name = ""
-    message = ""
-    error = ""
-    login_request = None
-
-    if request.method == "POST":
-        action = str(request.POST.get("action") or "").strip().lower()
-        code = str(request.POST.get("code") or "").strip()
-        raw_client_name = request.POST.get("client_name", None)
-        client_name = str(raw_client_name or "").strip()
-        login_request = client_api.get_pending_login_request_for_code(code)
-        if not login_request:
-            error = "Invalid or expired code."
-        else:
-            try:
-                if action == "approve":
-                    final_name = (
-                        (login_request.client_name or "").strip()
-                        if raw_client_name is None
-                        else client_name
-                    )
-                    if not final_name:
-                        error = "Device/client name is required."
-                    elif len(final_name) > 200:
-                        error = "Device/client name is too long."
-                    else:
-                        if final_name != login_request.client_name:
-                            login_request.client_name = final_name
-                            login_request.save(update_fields=["client_name", "updated_at"])
-                        client_name = final_name
-                        client_api.approve_login_request(
-                            login_request=login_request, user=request.user
-                        )
-                        message = "Client authorized. Return to your reader."
-                elif action == "deny":
-                    client_api.deny_login_request(
-                        login_request=login_request, user=request.user
-                    )
-                    message = "Client request denied."
-                elif action != "lookup":
-                    error = "Invalid action."
-            except ValueError as exc:
-                error = str(exc)
-
-        return render(
-            request,
-            "web/client_api/authorize.html",
-            {
-                "code": client_api.format_human_code(code),
-                "client_name": client_name,
-                "login_request": login_request,
-                "message": message,
-                "error": error,
-                "done": bool(message) and not bool(error),
-            },
-        )
-
-    if code:
-        login_request = client_api.get_pending_login_request_for_code(code)
-        if not login_request:
-            error = "Invalid or expired code."
-        else:
-            client_name = login_request.client_name
-
-    return render(
-        request,
-        "web/client_api/authorize.html",
-        {
-            "code": client_api.format_human_code(code),
-            "client_name": client_name,
-            "login_request": login_request,
-            "message": message,
-            "error": error,
-            "done": False,
-        },
-    )
