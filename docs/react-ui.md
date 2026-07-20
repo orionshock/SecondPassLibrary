@@ -39,3 +39,9 @@ The SDK public index exports domain operations, app-facing types, and errors—n
 Profile at `/profile` is the first real React feature page. It displays current identity, edits the supported self-profile fields, and changes the current user's password through `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
+
+## Shell and UI conventions
+
+`AppFrame` owns the compact server/navigation/account header and the low-emphasis product/version footer. Profile owns its controlled form drafts, cancellation, mutation feedback, and field errors; Cancel never calls the server.
+
+Use the shared `MaterialIcon` component for Material Symbols instead of ad hoc icon spans. It centralizes the outlined-font class, token rendering, sizing, and decorative versus labeled accessibility behavior.

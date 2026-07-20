@@ -85,19 +85,19 @@ button:disabled {
 }
 
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  min-height: 4.5rem;
+  gap: 0.75rem;
+  min-height: 3.5rem;
   border-bottom: 1px solid var(--border);
 }
 
 .app-identity,
-.user-identity {
+.user-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .app-identity {
@@ -110,40 +110,31 @@ button:disabled {
   text-decoration: none;
 }
 
-.app-identity span:not(.app-mark),
-.user-identity span {
-  display: grid;
-  min-width: 0;
-  gap: 0.1rem;
-}
-
-.app-identity strong,
-.app-identity small,
-.user-identity strong,
-.user-identity small {
+.app-identity strong {
+  max-width: 14rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.app-identity small,
-.user-identity small,
 .muted,
 .page-description {
   color: var(--muted);
 }
 
-.app-mark {
-  display: grid;
-  width: 2.4rem;
-  height: 2.4rem;
+.app-identity img {
+  width: 1.75rem;
+  height: 1.75rem;
   flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgb(125 211 252 / 42%);
-  border-radius: 0.65rem;
-  color: var(--link);
-  background: rgb(125 211 252 / 8%);
-  font-weight: 800;
+  border-radius: 0.35rem;
+}
+
+.profile-link {
+  max-width: 10rem;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .logout-link {
@@ -171,8 +162,8 @@ button:disabled {
   display: flex;
   overflow-x: auto;
   gap: 0.25rem;
-  padding: 0.85rem 0;
-  border-bottom: 1px solid var(--border);
+  min-width: 0;
+  padding: 0;
 }
 
 .primary-nav a {
@@ -197,7 +188,7 @@ button:disabled {
 
 .app-content {
   width: 100%;
-  padding: clamp(1.75rem, 5vw, 3.5rem) 0;
+  padding: clamp(1.25rem, 3vw, 2rem) 0;
   flex: 1;
 }
 
@@ -221,7 +212,7 @@ button:disabled {
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.15rem;
 }
 
 .page-header h1,
@@ -321,13 +312,15 @@ h1 {
 
 .form-grid {
   display: grid;
-  max-width: 42rem;
-  gap: 0.9rem;
+  width: min(100%, 44rem);
+  gap: 0.7rem;
 }
 
 .form-field {
   display: grid;
-  gap: 0.35rem;
+  grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 1rem;
 }
 
 .form-field label {
@@ -346,6 +339,28 @@ h1 {
   font: inherit;
 }
 
+.form-field .field-error {
+  grid-column: 2;
+}
+
+.form-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding-top: 0.2rem;
+}
+
+.action-feedback {
+  min-width: 0;
+  min-height: 1.5rem;
+}
+
+.action-feedback .error-panel {
+  padding: 0.45rem 0.65rem;
+}
+
 .error-panel {
   padding: 0.7rem 0.85rem;
   border: 1px solid rgb(251 113 133 / 55%);
@@ -360,30 +375,81 @@ h1 {
 }
 
 .success-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--success);
+}
+
+.material-symbols-outlined,
+.material-icon {
+  display: inline-block;
+  font-family: "Material Symbols Outlined";
+  font-size: 1.25rem;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "liga";
+}
+
+.success-icon {
+  color: var(--success);
+}
+
+.section-note {
+  margin-bottom: 0.8rem !important;
+}
+
+.button--secondary {
+  color: var(--muted);
+  background: transparent;
 }
 
 @media (max-width: 42rem) {
   .app-header,
-  .user-identity,
+  .user-actions,
   .page-header {
     align-items: flex-start;
   }
 
-  .app-header,
   .page-header {
     flex-direction: column;
     padding: 0.9rem 0;
   }
 
-  .user-identity {
-    width: 100%;
-    justify-content: space-between;
+  .app-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.65rem 0;
   }
 
-  .key-value-list > div {
+  .primary-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .key-value-list > div,
+  .form-field {
     grid-template-columns: 1fr;
     gap: 0.1rem;
+  }
+
+  .form-field .field-error {
+    grid-column: 1;
+  }
+
+  .form-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    justify-content: flex-end;
   }
 
   .app-footer {

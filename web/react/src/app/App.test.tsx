@@ -56,10 +56,13 @@ describe("app shell bootstrap", () => {
     const markup = renderBootstrap({ status: "ready", user, server });
 
     expect(markup).toContain("Family Library");
-    expect(markup).toContain("Books for everyone.");
-    expect(markup).toContain("Ada Reader");
+    expect(markup).not.toContain("Books for everyone.");
+    expect(markup).toContain('href="/profile"');
+    expect(markup).toContain(">owner</a>");
     expect(markup).toContain("Maintenance tonight");
     expect(markup).toContain('href="/logout/"');
+    expect(markup).toContain("Second Pass Library");
+    expect(markup).toContain("0.1.0-dev");
   });
 
   it("renders a login action for an authentication failure", () => {
@@ -94,11 +97,12 @@ describe("app shell navigation", () => {
       "Shelves",
       "Import",
       "Server Settings",
-      "Profile",
     ]) {
       expect(markup).toContain(label);
     }
     expect(markup).toMatch(/aria-current="page" class="active" href="\/library"/);
+    expect(markup).toContain('<a class="profile-link" href="/profile"');
+    expect(markup).not.toContain("Books for everyone.");
   });
 
   it("defines the expected placeholder routes and an in-app not-found page", () => {

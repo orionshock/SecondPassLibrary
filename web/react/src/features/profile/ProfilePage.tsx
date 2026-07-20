@@ -6,10 +6,11 @@ import {
   type CurrentUser,
   type UpdateCurrentUserInput,
 } from "@second-pass/spl-api";
-import { useState, type FormEvent } from "react";
+import { useReducer, useState, type FormEvent } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { MaterialIcon } from "../../components/icons/MaterialIcon";
 import {
   Badge,
   Button,
@@ -26,7 +27,32 @@ interface MutationState {
   error?: ApiError | Error;
 }
 
+export interface ProfileDraft {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface PasswordDraft {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+type ProfileDraftAction =
+  | { type: "change"; field: keyof ProfileDraft; value: string }
+  | { type: "reset"; value: ProfileDraft };
+
+type PasswordDraftAction =
+  | { type: "change"; field: keyof PasswordDraft; value: string }
+  | { type: "reset" };
+
 const idleMutation: MutationState = { pending: false };
+const emptyPasswordDraft: PasswordDraft = {
+  currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
+};
 
 export function ProfilePage() {
   const { currentUser, onCurrentUserChange } = useOutletContext<AppOutletContext>();
@@ -62,6 +88,8 @@ export function ProfilePage() {
       passwordState={passwordState}
       onSaveProfile={saveProfile}
       onSavePassword={savePassword}
+      onCancelProfile={() => setProfileState(idleMutation)}
+      onCancelPassword={() => setPasswordState(idleMutation)}
     />
   );
 }
@@ -72,23 +100,33 @@ export function ProfilePageView({
   passwordState,
   onSaveProfile,
   onSavePassword,
+  onCancelProfile,
+  onCancelPassword,
 }: {
   user: CurrentUser;
   profileState: MutationState;
   passwordState: MutationState;
   onSaveProfile: (input: UpdateCurrentUserInput) => void | Promise<void>;
   onSavePassword: (input: ChangeCurrentUserPasswordInput) => void | Promise<void>;
+  onCancelProfile: () => void;
+  onCancelPassword: () => void;
 }) {
   return (
-    <div className="page-stack">
-      <PageHeader
-        eyebrow="Account"
-        title="Profile"
-        description="Review your identity, update safe profile fields, or change your password."
-      />
+    <div className="page-stack profile-page">
+      <PageHeader eyebrow="Account" title="Profile" />
       <ProfileIdentityRegion user={user} />
-      <ProfileDetailsRegion user={user} state={profileState} onSave={onSaveProfile} />
-      <PasswordRegion user={user} state={passwordState} onSave={onSavePassword} />
+      <ProfileDetailsRegion
+        user={user}
+        state={profileState}
+        onSave={onSaveProfile}
+        onCancel={onCancelProfile}
+      />
+      <PasswordRegion
+        user={user}
+        state={passwordState}
+        onSave={onSavePassword}
+        onCancel={onCancelPassword}
+      />
     </div>
   );
 }
@@ -112,38 +150,62 @@ function ProfileDetailsRegion({
   user,
   state,
   onSave,
+  onCancel,
 }: {
   user: CurrentUser;
   state: MutationState;
   onSave: (input: UpdateCurrentUserInput) => void | Promise<void>;
+  onCancel: () => void;
 }) {
+  const [draft, dispatch] = useReducer(profileDraftReducer, user, profileDraftFromUser);
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    void onSave({
-      email: String(data.get("email") ?? "").trim(),
-      firstName: String(data.get("firstName") ?? "").trim(),
-      lastName: String(data.get("lastName") ?? "").trim(),
-    });
+    void onSave(draft);
+  }
+
+  function cancel() {
+    dispatch({ type: "reset", value: profileDraftFromUser(user) });
+    onCancel();
   }
 
   return (
     <Surface title="Profile details">
       <form className="form-grid" onSubmit={submit}>
-        {state.error ? <ErrorPanel>{state.error.message}</ErrorPanel> : null}
         <FormField label="Email" htmlFor="profile-email" error={fieldError(state.error, "email")}>
-          <input id="profile-email" name="email" type="email" defaultValue={user.email} autoComplete="email" />
+          <input
+            id="profile-email"
+            name="email"
+            type="email"
+            value={draft.email}
+            autoComplete="email"
+            onChange={(event) => dispatch({ type: "change", field: "email", value: event.target.value })}
+          />
         </FormField>
         <FormField label="First name" htmlFor="profile-first-name" error={fieldError(state.error, "first_name")}>
-          <input id="profile-first-name" name="firstName" defaultValue={user.firstName} autoComplete="given-name" />
+          <input
+            id="profile-first-name"
+            name="firstName"
+            value={draft.firstName}
+            autoComplete="given-name"
+            onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })}
+          />
         </FormField>
         <FormField label="Last name" htmlFor="profile-last-name" error={fieldError(state.error, "last_name")}>
-          <input id="profile-last-name" name="lastName" defaultValue={user.lastName} autoComplete="family-name" />
+          <input
+            id="profile-last-name"
+            name="lastName"
+            value={draft.lastName}
+            autoComplete="family-name"
+            onChange={(event) => dispatch({ type: "change", field: "lastName", value: event.target.value })}
+          />
         </FormField>
-        <div className="form-actions">
-          <Button type="submit" disabled={state.pending}>{state.pending ? "Saving…" : "Save profile"}</Button>
-          {state.message ? <span className="success-message" role="status">{state.message}</span> : null}
-        </div>
+        <ActionRow
+          state={state}
+          submitLabel="Save profile"
+          pendingLabel="Saving..."
+          onCancel={cancel}
+        />
       </form>
     </Surface>
   );
@@ -153,42 +215,115 @@ function PasswordRegion({
   user,
   state,
   onSave,
+  onCancel,
 }: {
   user: CurrentUser;
   state: MutationState;
   onSave: (input: ChangeCurrentUserPasswordInput) => void | Promise<void>;
+  onCancel: () => void;
 }) {
+  const [draft, dispatch] = useReducer(passwordDraftReducer, emptyPasswordDraft);
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    void Promise.resolve(onSave({
-      currentPassword: String(data.get("currentPassword") ?? ""),
-      newPassword: String(data.get("newPassword") ?? ""),
-      confirmPassword: String(data.get("confirmPassword") ?? ""),
-    }));
+    void onSave(draft);
+  }
+
+  function cancel() {
+    dispatch({ type: "reset" });
+    onCancel();
   }
 
   return (
     <Surface title="Change password">
-      {user.mustChangePassword ? <p><Badge tone="accent">Password change required</Badge></p> : null}
+      {user.mustChangePassword ? <p className="section-note"><Badge tone="accent">Password change required</Badge></p> : null}
       <form className="form-grid" onSubmit={submit}>
-        {state.error ? <ErrorPanel>{state.error.message}</ErrorPanel> : null}
         <FormField label="Current password" htmlFor="current-password" error={fieldError(state.error, "current_password")}>
-          <input id="current-password" name="currentPassword" type="password" autoComplete="current-password" required />
+          <input
+            id="current-password"
+            name="currentPassword"
+            type="password"
+            value={draft.currentPassword}
+            autoComplete="current-password"
+            required
+            onChange={(event) => dispatch({ type: "change", field: "currentPassword", value: event.target.value })}
+          />
         </FormField>
         <FormField label="New password" htmlFor="new-password" error={fieldError(state.error, "new_password")}>
-          <input id="new-password" name="newPassword" type="password" autoComplete="new-password" required />
+          <input
+            id="new-password"
+            name="newPassword"
+            type="password"
+            value={draft.newPassword}
+            autoComplete="new-password"
+            required
+            onChange={(event) => dispatch({ type: "change", field: "newPassword", value: event.target.value })}
+          />
         </FormField>
-        <FormField label="Confirm new password" htmlFor="confirm-password" error={fieldError(state.error, "confirm_password")}>
-          <input id="confirm-password" name="confirmPassword" type="password" autoComplete="new-password" required />
+        <FormField label="Confirm password" htmlFor="confirm-password" error={fieldError(state.error, "confirm_password")}>
+          <input
+            id="confirm-password"
+            name="confirmPassword"
+            type="password"
+            value={draft.confirmPassword}
+            autoComplete="new-password"
+            required
+            onChange={(event) => dispatch({ type: "change", field: "confirmPassword", value: event.target.value })}
+          />
         </FormField>
-        <div className="form-actions">
-          <Button type="submit" disabled={state.pending}>{state.pending ? "Changing…" : "Change password"}</Button>
-          {state.message ? <span className="success-message" role="status">{state.message}</span> : null}
-        </div>
+        <ActionRow
+          state={state}
+          submitLabel="Change password"
+          pendingLabel="Changing..."
+          onCancel={cancel}
+        />
       </form>
     </Surface>
   );
+}
+
+function ActionRow({
+  state,
+  submitLabel,
+  pendingLabel,
+  onCancel,
+}: {
+  state: MutationState;
+  submitLabel: string;
+  pendingLabel: string;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="form-action-row">
+      <div className="action-feedback">
+        {state.error ? <ErrorPanel>{state.error.message}</ErrorPanel> : null}
+        {state.message ? (
+          <span className="success-message" role="status">
+            <MaterialIcon name="check_circle" className="success-icon" />
+            {state.message}
+          </span>
+        ) : null}
+      </div>
+      <div className="form-actions">
+        <Button type="button" className="button--secondary" disabled={state.pending} onClick={onCancel}>Cancel</Button>
+        <Button type="submit" disabled={state.pending}>{state.pending ? pendingLabel : submitLabel}</Button>
+      </div>
+    </div>
+  );
+}
+
+export function profileDraftFromUser(user: CurrentUser): ProfileDraft {
+  return { email: user.email, firstName: user.firstName, lastName: user.lastName };
+}
+
+export function profileDraftReducer(state: ProfileDraft, action: ProfileDraftAction): ProfileDraft {
+  if (action.type === "reset") return action.value;
+  return { ...state, [action.field]: action.value };
+}
+
+export function passwordDraftReducer(state: PasswordDraft, action: PasswordDraftAction): PasswordDraft {
+  if (action.type === "reset") return emptyPasswordDraft;
+  return { ...state, [action.field]: action.value };
 }
 
 function normalizedError(error: unknown): ApiError | Error {

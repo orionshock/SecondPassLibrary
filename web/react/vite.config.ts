@@ -16,6 +16,7 @@ export default defineConfig(({ command }) => ({
       "/login": djangoTarget,
       "/logout": djangoTarget,
       "/setup": djangoTarget,
+      "/static": djangoTarget,
     },
   },
 }));

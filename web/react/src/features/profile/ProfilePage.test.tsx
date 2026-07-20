@@ -6,7 +6,13 @@ import { ApiError, type CurrentUser, type ServerInfo } from "@second-pass/spl-ap
 
 import { AppFrame } from "../../app/layout/AppFrame";
 import { DashboardPage } from "../dashboard/DashboardPage";
-import { ProfilePage, ProfilePageView } from "./ProfilePage";
+import {
+  ProfilePage,
+  ProfilePageView,
+  passwordDraftReducer,
+  profileDraftFromUser,
+  profileDraftReducer,
+} from "./ProfilePage";
 
 const user: CurrentUser = {
   username: "ada",
@@ -66,11 +72,35 @@ describe("first React feature pages", () => {
     expect(markup).toContain("Change password");
   });
 
-  it("renders mutation success and field-error states", () => {
+  it("renders stable success check icons for both mutations", () => {
     const markup = renderToStaticMarkup(
       <ProfilePageView
         user={user}
         profileState={{ pending: false, message: "Profile saved." }}
+        passwordState={{ pending: false, message: "Password changed." }}
+        onSaveProfile={vi.fn()}
+        onSavePassword={vi.fn()}
+        onCancelProfile={vi.fn()}
+        onCancelPassword={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain("Profile saved.");
+    expect(markup).toContain("Password changed.");
+    expect(markup.match(/check_circle/g)).toHaveLength(2);
+    expect(markup).toContain("success-icon");
+  });
+
+  it("renders profile and password errors beside their action areas", () => {
+    const markup = renderToStaticMarkup(
+      <ProfilePageView
+        user={user}
+        profileState={{
+          pending: false,
+          error: new ApiError("Check the profile.", 400, {
+            fields: { email: ["Enter a valid email address."] },
+          }),
+        }}
         passwordState={{
           pending: false,
           error: new ApiError("Check the password.", 400, {
@@ -79,11 +109,39 @@ describe("first React feature pages", () => {
         }}
         onSaveProfile={vi.fn()}
         onSavePassword={vi.fn()}
+        onCancelProfile={vi.fn()}
+        onCancelPassword={vi.fn()}
       />,
     );
 
-    expect(markup).toContain("Profile saved.");
+    expect(markup).toContain("Enter a valid email address.");
     expect(markup).toContain("Current password is incorrect.");
     expect(markup).toContain('role="alert"');
+    expect(markup.match(/form-action-row/g)).toHaveLength(2);
+  });
+
+  it("resets unsaved profile edits to current user values", () => {
+    const saved = profileDraftFromUser(user);
+    const edited = profileDraftReducer(saved, {
+      type: "change",
+      field: "email",
+      value: "unsaved@example.test",
+    });
+
+    expect(profileDraftReducer(edited, { type: "reset", value: saved })).toEqual(saved);
+  });
+
+  it("clears every unsaved password field", () => {
+    const edited = {
+      currentPassword: "not-logged",
+      newPassword: "not-logged-either",
+      confirmPassword: "still-not-logged",
+    };
+
+    expect(passwordDraftReducer(edited, { type: "reset" })).toEqual({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
   });
 });
