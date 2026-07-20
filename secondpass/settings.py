@@ -265,6 +265,10 @@ LOGGING = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "var" / "static"
+REACT_UI_DIST_DIR = BASE_DIR / "web" / "react" / "dist"
+STATICFILES_DIRS = (
+    [("react", REACT_UI_DIST_DIR)] if REACT_UI_DIST_DIR.is_dir() else []
+)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",

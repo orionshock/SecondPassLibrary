@@ -35,11 +35,3 @@ class ApiRouteErrorTests(TestCase):
         self.assertIn("text/html", response.headers["Content-Type"])
         self.assertContains(response, "Page not found", status_code=404)
         self.assertContains(response, 'href="/dashboard/"', status_code=404)
-
-    def test_removed_app_route_remains_styled_html_404(self):
-        response = self.client.get("/app/")
-
-        self.assertEqual(response.status_code, 404)
-        self.assertIn("text/html", response.headers["Content-Type"])
-        self.assertContains(response, "Page not found", status_code=404)
-        self.assertContains(response, 'href="/dashboard/"', status_code=404)

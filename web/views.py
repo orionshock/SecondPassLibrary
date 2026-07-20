@@ -29,6 +29,27 @@ from reading.sessions.queries import list_sessions_for_book, list_sessions_for_u
 from reading.models import ReadingSession
 
 
+REACT_BUILD_MISSING_MESSAGE = (
+    "React Product UI build is missing. Run 'npm.cmd run build' from web/react."
+)
+
+
+def react_app(request: HttpRequest, react_path: str = "") -> HttpResponse:
+    index_path = settings.REACT_UI_DIST_DIR / "index.html"
+    try:
+        index_html = index_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return HttpResponse(
+            REACT_BUILD_MISSING_MESSAGE,
+            status=503,
+            content_type="text/plain; charset=utf-8",
+        )
+
+    response = HttpResponse(index_html, content_type="text/html; charset=utf-8")
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
 def _uuid_or_404(value: str) -> UUID:
     try:
         return UUID(str(value))

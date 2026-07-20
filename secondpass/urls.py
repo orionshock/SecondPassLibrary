@@ -50,6 +50,9 @@ urlpatterns = [
         favicon,
         name="favicon",
     ),
+    # Temporary React Product UI mount. Keep this narrow until explicit cutover.
+    path("app/", web_views.react_app, name="react_app"),
+    path("app/<path:react_path>", web_views.react_app, name="react_app_deep_link"),
     # Legacy Product UI transition mount. Keep before the unprefixed catch-all.
     path("legacy/", include(("web.urls", "web"), namespace="legacy")),
     # Product UI (Django templates; capability-driven client-side nav)

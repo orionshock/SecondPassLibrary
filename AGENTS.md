@@ -18,6 +18,7 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 - Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
 - React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
 - Production remains one Django/Uvicorn container: Django serves the React shell and WhiteNoise serves built assets. The Vite server is development-only and proxies same-origin-style requests to Django.
+- `/app/` is the temporary Django-served React mount. Do not move `/` to React without an explicit cutover; first-time setup, login/logout/session auth, DRF auth screens, and Django Admin remain Django-rendered surfaces.
 - Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
 - Django Admin is a technical service hatch, not the Product UI.
 - Preserve user ownership and scoping for reading data.
