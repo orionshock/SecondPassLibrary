@@ -7,7 +7,7 @@ import {
   type ServerInfo,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 import { AppFrame } from "./layout/AppFrame";
 
@@ -20,6 +20,12 @@ export function App() {
   const location = useLocation();
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<BootstrapState>({ status: "loading" });
+
+  async function refreshCurrentUser(): Promise<CurrentUser> {
+    const user = await getCurrentUser();
+    setState((current) => current.status === "ready" ? { ...current, user } : current);
+    return user;
+  }
 
   useEffect(() => {
     let active = true;
@@ -41,6 +47,8 @@ export function App() {
       state={state}
       loginPath={`/login/?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`}
       onRetry={() => setAttempt((current) => current + 1)}
+      currentPath={location.pathname}
+      onRefreshCurrentUser={refreshCurrentUser}
       onCurrentUserChange={(user) => {
         setState((current) => current.status === "ready" ? { ...current, user } : current);
       }}
@@ -53,11 +61,15 @@ export function AppBootstrapView({
   loginPath,
   onRetry,
   onCurrentUserChange,
+  currentPath,
+  onRefreshCurrentUser,
 }: {
   state: BootstrapState;
   loginPath: string;
   onRetry: () => void;
   onCurrentUserChange: (user: CurrentUser) => void;
+  currentPath?: string;
+  onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {
   if (state.status === "loading") {
     return (
@@ -90,13 +102,22 @@ export function AppBootstrapView({
     );
   }
 
+  if (forcedPasswordChangeDestination(state.user, currentPath)) {
+    return <Navigate to="/password-change" replace />;
+  }
+
   return (
     <AppFrame
       user={state.user}
       server={state.server}
       onCurrentUserChange={onCurrentUserChange}
+      onRefreshCurrentUser={onRefreshCurrentUser}
     />
   );
 }
 
 export type { BootstrapState };
+
+export function forcedPasswordChangeDestination(user: CurrentUser, currentPath?: string): string | undefined {
+  return user.mustChangePassword && currentPath && currentPath !== "/password-change" ? "/password-change" : undefined;
+}

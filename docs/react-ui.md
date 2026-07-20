@@ -12,13 +12,13 @@ There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or o
 
 The React shell bootstraps the authenticated user through `getCurrentUser()` and server identity through `getServerInfo()` from `@second-pass/spl-api`. Server identity comes from `/.well-known/secondpass`. Components do not make raw `fetch()` calls. The shell provides loading, login-required, retryable error, server identity/banner, user identity, and logout states. `/logout/` remains a Django endpoint.
 
-Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) is implemented. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
+Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/password-change`; pairing approval uses `/profile/client-pairing`. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
 
 ## Deferred production integration
 
 The current local build and root-shell integration may be used for smoke checks. Docker and production React build integration are explicitly deferred.
 
-First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch are the only retained Django-rendered application surfaces. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client authorization webpage is retired; its backend API/token logic remains for later React work. Dashboard, library/catalog, books, groups, shelves, users and password flows, imports, and Product UI server settings are React scope.
+First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch are the only retained Django-rendered application surfaces. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client authorization webpage is retired. React pairing approval uses authenticated JSON endpoints under `/api/v1/client-api/`; token delivery remains confined to external-client polling. Dashboard, library/catalog, books, groups, shelves, users, imports, and Product UI server settings are React scope.
 
 ## Server boundary
 
@@ -36,7 +36,7 @@ The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not ad
 
 The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, and React imports in the SDK. Vite proxy declarations are development transport configuration, not an application communication layer.
 
-Profile at `/profile` is the first real React feature page. It displays current identity, edits the supported self-profile fields, and changes the current user's password through `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.
+Profile at `/profile` is the first real React feature page. It displays current identity and group/curator status, edits supported self-profile fields, logs out other web sessions, and lists/revokes connected clients. The App orchestrator forces `must_change_password` users through the dedicated password route until refreshed current-user state clears the requirement. All operations use `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 

@@ -3,6 +3,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
+import { ClientPairingPage } from "../features/profile/ClientPairingPage";
+import { PasswordChangePage } from "../features/password-change/PasswordChangePage";
 
 export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
@@ -45,6 +47,8 @@ export const appRoutes = [
         element: <PlaceholderPage title={title} />,
       })),
       { path: "profile", element: <ProfilePage /> },
+      { path: "profile/client-pairing", element: <ClientPairingPage /> },
+      { path: "password-change", element: <PasswordChangePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, cast
 
 from django.utils import timezone
-from rest_framework.permissions import AllowAny
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -130,3 +131,59 @@ class ClientLoginRequestPollView(APIView):
 
         # Safety fallback
         return Response({"status": str(obj.status)}, status=status.HTTP_200_OK)
+
+
+class ClientPairingLookupView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        code = str((request.data or {}).get("code") or "").strip()
+        login_request = client_api.get_pending_login_request_for_code(code)
+        if login_request is None:
+            return Response(
+                {"detail": "Invalid or expired pairing code."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(
+            {
+                "code": client_api.format_human_code(code),
+                "client_name": login_request.client_name,
+                "client_type": login_request.client_type,
+                "expires_at": login_request.expires_at.isoformat(),
+            }
+        )
+
+
+class ClientPairingDecisionView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = cast(dict[str, Any], request.data or {})
+        code = str(data.get("code") or "").strip()
+        action = str(data.get("action") or "").strip().lower()
+        login_request = client_api.get_pending_login_request_for_code(code)
+        if login_request is None:
+            return Response(
+                {"detail": "Invalid or expired pairing code."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            if action == "approve":
+                client_name = str(data.get("client_name") or "").strip()
+                if not client_name:
+                    raise ValueError("Device/client name is required.")
+                if len(client_name) > 200:
+                    raise ValueError("Device/client name is too long.")
+                if client_name != login_request.client_name:
+                    login_request.client_name = client_name
+                    login_request.save(update_fields=["client_name", "updated_at"])
+                client_api.approve_login_request(login_request=login_request, user=request.user)
+            elif action == "deny":
+                client_api.deny_login_request(login_request=login_request, user=request.user)
+            else:
+                raise ValueError("Action must be approve or deny.")
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "approved" if action == "approve" else "denied"})

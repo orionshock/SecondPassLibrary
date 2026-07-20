@@ -90,6 +90,8 @@ Client API (JSON):
 - `{api_base_url}client-api/discovery/`
 - `{api_base_url}client-api/login-requests/`
 - `{api_base_url}client-api/login-requests/{id}/poll/`
+- `{api_base_url}client-api/pairing/lookup/` (session authenticated)
+- `{api_base_url}client-api/pairing/decision/` (session authenticated)
 
 `/.well-known/secondpass` is public server identity/discovery only. It includes
 `server_description`, but not banner text, advanced library group state,
@@ -98,9 +100,9 @@ capabilities, or route manifests. Reader clients should use authenticated
 `advanced_library_groups_enabled` for group browsing UI and `banner_text` for
 the single server banner.
 
-Product UI (Django templates):
+Product UI (React):
 
-- Code-entry and pairing approval UI will be built in React. The JSON client API/token workflow remains under `/api/v1/client-api/` and does not expose a separate browser authorization-page URL.
+- Code-entry and pairing approval UI is React-only at `/profile/client-pairing`. Its authenticated lookup/decision endpoints and the external client create/poll workflow remain under `/api/v1/client-api/`; there is no separate browser authorization-page URL.
 
 ## Permissions / API surface
 
@@ -224,7 +226,7 @@ Management endpoints reject Client API tokens unless explicitly allowed.
 ## Product UI integration
 
 - `/profile/` lists active Device/API sessions (Client API sessions) for the current user and allows revoking them.
-- The retired Django profile/authorization pages no longer provide the human side of pairing; that surface will be rebuilt in React.
+- The retired Django profile/authorization pages no longer provide the human side of pairing; `/profile/client-pairing` provides it in React.
 
 ## Non-goals
 

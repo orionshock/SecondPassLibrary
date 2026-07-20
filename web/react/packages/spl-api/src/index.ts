@@ -1,11 +1,20 @@
 export {
   changeCurrentUserPassword,
   getCurrentUser,
+  listClientSessions,
+  logoutOtherWebSessions,
+  revokeClientSession,
   updateCurrentUser,
   type ChangeCurrentUserPasswordInput,
   type CurrentUser,
+  type ClientSession,
   type UpdateCurrentUserInput,
 } from "./accounts";
+export {
+  decideClientPairing,
+  lookupClientPairing,
+  type ClientPairingRequest,
+} from "./pairing";
 export {
   ApiError,
   classifyApiError,

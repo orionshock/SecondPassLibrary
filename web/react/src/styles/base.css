@@ -421,6 +421,40 @@ h1 {
   margin-bottom: 0.8rem !important;
 }
 
+.region-stack,
+.item-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.item-row,
+.section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.item-row p,
+.section-actions p {
+  margin: 0.15rem 0 0;
+}
+
+.item-badges,
+.form-actions--right {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.required-notice {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border-left: 3px solid var(--danger);
+  color: #fecdd3;
+  background: rgb(251 113 133 / 8%);
+}
+
 .button--secondary {
   color: var(--muted);
   background: transparent;
@@ -464,6 +498,12 @@ h1 {
 
   .form-actions {
     justify-content: flex-end;
+  }
+
+  .item-row,
+  .section-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .app-footer {

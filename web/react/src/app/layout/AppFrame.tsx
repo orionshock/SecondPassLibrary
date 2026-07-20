@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 export interface AppOutletContext {
   currentUser: CurrentUser;
   onCurrentUserChange: (user: CurrentUser) => void;
+  refreshCurrentUser: () => Promise<CurrentUser>;
 }
 
 const navigation = [
@@ -20,10 +21,12 @@ export function AppFrame({
   user,
   server,
   onCurrentUserChange,
+  onRefreshCurrentUser = async () => user,
 }: {
   user: CurrentUser;
   server: ServerInfo;
   onCurrentUserChange: (user: CurrentUser) => void;
+  onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {
   return (
     <div className="app-shell">
@@ -48,7 +51,7 @@ export function AppFrame({
       {user.bannerText ? <aside className="server-banner">{user.bannerText}</aside> : null}
 
       <main className="app-content">
-        <Outlet context={{ currentUser: user, onCurrentUserChange } satisfies AppOutletContext} />
+        <Outlet context={{ currentUser: user, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser } satisfies AppOutletContext} />
       </main>
 
       <footer className="app-footer">

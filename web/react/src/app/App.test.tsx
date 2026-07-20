@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 
-import { AppBootstrapView, type BootstrapState } from "./App";
+import { AppBootstrapView, forcedPasswordChangeDestination, type BootstrapState } from "./App";
 import { AppFrame } from "./layout/AppFrame";
 import { NotFoundPage, PlaceholderPage, sectionRoutes } from "./router";
 
@@ -82,6 +82,10 @@ describe("app shell bootstrap", () => {
 });
 
 describe("app shell navigation", () => {
+  it("forces password-change users away from every other React route", () => {
+    expect(forcedPasswordChangeDestination({ ...user, mustChangePassword: true }, "/profile")).toBe("/password-change");
+    expect(forcedPasswordChangeDestination({ ...user, mustChangePassword: true }, "/password-change")).toBeUndefined();
+  });
   it("renders every section link and marks the current section active", () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/library"]}>

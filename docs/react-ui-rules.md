@@ -7,3 +7,10 @@ This is the running list of cross-page presentation and interaction rules that a
 - Owner is presented as the highest user role, above Manager.
 - The API intentionally exposes `role` and `is_owner` separately. UI role displays resolve `is_owner` first and show `Owner`; they do not show a redundant separate Owner row.
 - Use the shared user-role presentation helper so role precedence stays consistent across Profile and future user surfaces.
+
+## Account management
+
+- A user with `must_change_password` may use only the React `/password-change` workflow (and Django logout) until a successful change refreshes current-user state.
+- Profile displays group membership and curator/Public status, but does not mutate memberships.
+- Profile may revoke connected client sessions and log out other web sessions. It never displays bearer tokens.
+- Client pairing approval is React-only at `/profile/client-pairing`; `/client-api/authorize/` does not exist.
