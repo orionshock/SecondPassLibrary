@@ -58,6 +58,7 @@ Unless explicitly requested, do not add:
 - Classify changed tests as `invariant`, `contract`, `regression`, or `implementation detail` in the final report.
 - Do not weaken invariant or contract tests without explicitly explaining why.
 - Do not add tests that pin documentation wording, headings, or capitalization.
+- Keep every React/Vitest test under `web/react/src/__tests__`; do not colocate Vitest files with runtime components or SDK source.
 - Do not treat local helper scripts as production contracts.
 - Docs-only changes do not require application tests.
 - Do not claim the full suite passed unless it was actually run; report focused and skipped verification accurately.

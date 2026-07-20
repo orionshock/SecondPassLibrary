@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toPage } from "../pagination";
+import { toPage } from "../../packages/spl-api/src/pagination";
 
 describe("toPage", () => {
   it("maps server results to stable app items", () => {

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { MaterialIcon } from "../MaterialIcon";
+import { MaterialIcon } from "../components/icons/MaterialIcon";
 
 describe("MaterialIcon", () => {
   it("hides decorative icons from assistive technology", () => {

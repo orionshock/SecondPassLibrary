@@ -6,7 +6,7 @@ import {
   apiErrorFromPayload,
   classifyApiError,
   isAuthenticationError,
-} from "../errors";
+} from "../../packages/spl-api/src/errors";
 
 describe("apiErrorFromPayload", () => {
   it("normalizes structured server errors", () => {

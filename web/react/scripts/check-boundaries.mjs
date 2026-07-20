@@ -11,6 +11,7 @@ const sourceExtensions = new Set([".ts", ".tsx"]);
 const violations = [];
 
 scan(appSource, (file, source) => {
+  if (isSdkTest(file)) return;
   check(file, source, /\bfetch\s*\(/, "raw fetch");
   check(file, source, /\/api\/v1(?:\/|\b)/, "raw API path");
   check(file, source, /\/\.well-known(?:\/|\b)/, "raw well-known path");
@@ -44,4 +45,9 @@ function check(file, source, pattern, label) {
   if (pattern.test(source)) {
     violations.push(`- ${relative(workspace, file)}: ${label}`);
   }
+}
+
+function isSdkTest(file) {
+  const path = relative(appSource, file).replaceAll("\\", "/");
+  return path.startsWith("__tests__/sdk.");
 }

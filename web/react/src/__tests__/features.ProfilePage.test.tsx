@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
 
-import { AppFrame } from "../../../app/layout/AppFrame";
-import { DashboardPage } from "../../dashboard/DashboardPage";
+import { AppFrame } from "../app/layout/AppFrame";
+import { DashboardPage } from "../features/dashboard/DashboardPage";
 import {
   confirmClientSessionRevoke,
   confirmLogoutOtherWebSessions,
@@ -13,7 +13,7 @@ import {
   ProfilePageView,
   profileDraftFromUser,
   profileDraftReducer,
-} from "../ProfilePage";
+} from "../features/profile/ProfilePage";
 
 const user: CurrentUser = {
   username: "ada",

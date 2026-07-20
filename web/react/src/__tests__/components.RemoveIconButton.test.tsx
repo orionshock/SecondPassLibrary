@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { RemoveIconButton } from "../RemoveIconButton";
+import { RemoveIconButton } from "../components/icons/RemoveIconButton";
 
 describe("RemoveIconButton", () => {
   it("owns the standard destructive icon treatment and accessible label", () => {

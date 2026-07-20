@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 
-import { AppBootstrapView, forcedPasswordChangeDestination, type BootstrapState } from "../App";
-import { AppFrame } from "../layout/AppFrame";
-import { NotFoundPage, PlaceholderPage, sectionRoutes } from "../router";
+import { AppBootstrapView, forcedPasswordChangeDestination, type BootstrapState } from "../app/App";
+import { AppFrame } from "../app/layout/AppFrame";
+import { NotFoundPage, PlaceholderPage, sectionRoutes } from "../app/router";
 
 const user: CurrentUser = {
   username: "owner",

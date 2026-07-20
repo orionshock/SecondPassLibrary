@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createApiClient } from "../client";
+import { createApiClient } from "../../packages/spl-api/src/client";
 
 describe("createApiClient", () => {
   it("adds same-origin credentials and CSRF to unsafe requests", async () => {

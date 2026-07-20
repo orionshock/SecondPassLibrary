@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApiClient } from "../client";
-import { getServerInfo } from "../server";
+import type { ApiClient } from "../../packages/spl-api/src/client";
+import { getServerInfo } from "../../packages/spl-api/src/server";
 
 describe("getServerInfo", () => {
   it("maps discovery metadata to a stable app-facing server identity", async () => {

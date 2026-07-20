@@ -50,3 +50,5 @@ Cross-page product semantics that are not API shapes are tracked in [React Produ
 
 Use the shared `MaterialIcon` component for Material Symbols instead of ad hoc icon spans. It centralizes the outlined-font class, token rendering, sizing, and decorative versus labeled accessibility behavior.
 Use `RemoveIconButton` for compact remove/delete/revoke controls so those operations share the established `remove_circle` danger treatment. Branches remain responsible for confirmation and mutation behavior.
+
+All Vitest files live together under `web/react/src/__tests__`; do not create colocated `*.test.*` files or component-specific test directories. `vite.config.ts` limits discovery to that directory. The workspace recommends the Vitest Explorer extension so the suite is available in VS Code's Testing panel; `npm run test:vitest` provides its watch-mode command.
