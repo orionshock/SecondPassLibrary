@@ -4,7 +4,7 @@ The new Product UI lives in `web/react`. The existing server-rendered Django UI 
 
 ## Development
 
-Run Django on port 8000 and Vite on port 5173. From `web/react`, run `npm install` and `npm run dev`. Vite proxies `/api`, `/media`, `/admin`, and `/api-auth` to Django, so the app uses Django session authentication through same-origin-style URLs.
+Run Django on port 8000 and the Product UI Vite server on port 5174. Port 5173 remains available for the standalone Reading Client. From `web/react`, run `npm install` and `npm run dev`. Vite proxies `/api`, `/media`, `/admin`, and `/api-auth` to Django, so the app uses Django session authentication through same-origin-style URLs.
 
 The first scaffold is development-only and does not claim a Django route. Production shell integration is deferred.
 

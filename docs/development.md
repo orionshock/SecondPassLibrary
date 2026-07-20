@@ -208,15 +208,18 @@ PowerShell helpers define their own environment in the script files.
 ```
 
 The script sets `DJANGO_DEBUG=1`, disables WhiteNoise runtime caching for faster
-template/static iteration, runs `python manage.py migrate --noinput`, and only
-then starts Django's development server. Its Python executable and application
-environment are defined in the script and do not inherit configuration choices
-from the calling shell. Edit the values near the top of the script when local
-settings need to change. Additional arguments are passed through to
-`runserver`, for example:
+template/static iteration, runs `python manage.py migrate --noinput`, and then
+starts Django on port 8000 and the Product UI Vite server on port 5174. Run `npm.cmd install` from
+`web/react` before using it for the first time. Vite uses the proxy configuration
+documented in [React Product UI](react-ui.md) and is stopped when the Django
+process exits. The script's Python executable and application environment are
+defined in the script and do not inherit configuration choices from the calling
+shell. Edit the values near the top of the script when local settings need to
+change. Additional arguments are passed through to Django's `runserver`, for
+example:
 
 ```powershell
-.\scripts\start-dev.ps1 127.0.0.1:8080 --noreload
+.\scripts\start-dev.ps1 --noreload
 ```
 
 Raw `python manage.py runserver` uses the normal settings defaults. Because
