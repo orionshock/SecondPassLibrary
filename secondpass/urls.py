@@ -101,10 +101,11 @@ def _cover_media(request, path: str):
 urlpatterns += [
     # Keep cover URLs stable in direct-server mode without exposing all media.
     re_path(r"^media/covers/(?P<path>.*)$", _cover_media),
-    # Authenticated React Product UI routes. Reserved service prefixes never fall through.
+    # Authenticated React Product UI routes. Add new top-level UI sections explicitly.
+    path("", web_views.react_app, name="react_app"),
     re_path(
-        r"^(?!(?:api|api-auth|admin|static|media|setup|login|logout|client-api|app|legacy|\.well-known)(?:/|$))(?P<react_path>.*)$",
+        r"^(?P<react_path>(?:dashboard|library|groups|shelves|users|imports|settings|profile|password-change)(?:/.*)?)/?$",
         web_views.react_app,
-        name="react_app",
+        name="react_app_deep_link",
     ),
 ]

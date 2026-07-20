@@ -100,7 +100,7 @@ the single server banner.
 
 Product UI (Django templates):
 
-- The former `/client-api/authorize/` code-entry and approval webpage is retired. A React replacement is pending; the underlying client API/token workflow remains.
+- Code-entry and pairing approval UI will be built in React. The JSON client API/token workflow remains under `/api/v1/client-api/` and does not expose a separate browser authorization-page URL.
 
 ## Permissions / API surface
 

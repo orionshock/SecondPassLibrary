@@ -156,7 +156,7 @@ Client API route conventions under `api_base_url`:
 Login request / authorization:
 
 - `POST /api/v1/client-api/login-requests/` (anonymous allowed)
-- The former `/client-api/authorize/` browser page is retired. Pairing approval UI will be rebuilt in React; client API/token endpoints remain unchanged for now.
+- Pairing approval UI will be built in React. Client API discovery and login-request responses do not advertise a separate browser authorization page.
 - `GET /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is an unguessable UUID)
   - `status=approved` always includes `access_token`; after the token is delivered once, polling returns `status=consumed`.
   - Login request creation returns `interval`, the recommended poll interval in seconds.

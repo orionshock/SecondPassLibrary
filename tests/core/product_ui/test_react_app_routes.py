@@ -56,12 +56,6 @@ class ReactRootRouteContractTests(TestCase):
         self.assertContains(response, "npm.cmd run build", status_code=503)
         self.assertNotContains(response, str(missing_dist), status_code=503)
 
-    def test_app_legacy_and_client_authorization_pages_are_retired(self):
-        for path in ("/app/", "/legacy/", "/client-api/authorize/"):
-            with self.subTest(path=path):
-                with self.assertRaises(Resolver404):
-                    resolve(path)
-
     def test_service_routes_are_not_captured_by_react(self):
         self.assertIs(resolve("/").func, react_app)
         self.assertIsNot(resolve("/api/v1/health/").func, react_app)

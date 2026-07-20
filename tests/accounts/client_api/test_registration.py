@@ -29,9 +29,7 @@ class ClientApiRegistrationTests(ClientApiTestCase):
             body.get("login_request_endpoint"),
             "http://testserver/api/v1/client-api/login-requests/",
         )
-        self.assertEqual(
-            body.get("authorize_url"), "http://testserver/client-api/authorize/"
-        )
+        self.assertNotIn("authorize_url", body)
         self.assertEqual(
             body.get("poll_endpoint_template"),
             "http://testserver/api/v1/client-api/login-requests/%7Bid%7D/poll/",
@@ -48,7 +46,7 @@ class ClientApiRegistrationTests(ClientApiTestCase):
         code = body.get("code")
         self.assertTrue(req_id)
         self.assertTrue(code)
-        self.assertIn("authorize_url", body)
+        self.assertNotIn("authorize_url", body)
         self.assertIn("poll_url", body)
 
         obj = ClientLoginRequest.objects.get(pk=req_id)

@@ -26,7 +26,6 @@ class ClientApiDiscoveryView(APIView):
             "login_request_endpoint": request.build_absolute_uri(
                 "/api/v1/client-api/login-requests/"
             ),
-            "authorize_url": request.build_absolute_uri("/client-api/authorize/"),
             "poll_endpoint_template": request.build_absolute_uri(
                 "/api/v1/client-api/login-requests/{id}/poll/"
             ),
@@ -57,9 +56,6 @@ class ClientLoginRequestCreateView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        authorize_url = request.build_absolute_uri(
-            f"/client-api/authorize/?code={code}"
-        )
         poll_url = request.build_absolute_uri(
             f"/api/v1/client-api/login-requests/{obj.pk}/poll/"
         )
@@ -68,7 +64,6 @@ class ClientLoginRequestCreateView(APIView):
             {
                 "id": str(obj.pk),
                 "code": code,
-                "authorize_url": authorize_url,
                 "poll_url": poll_url,
                 "expires_at": obj.expires_at.isoformat(),
                 "interval": client_api.POLL_INTERVAL_SECONDS,
