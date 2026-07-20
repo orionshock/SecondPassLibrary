@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 from django.conf import settings
+from django.contrib.auth import logout as django_logout
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ValidationError
@@ -50,6 +51,11 @@ def login(request: HttpRequest) -> HttpResponse:
     return auth_views.LoginView.as_view(template_name="rest_framework/login.html")(
         request
     )
+
+
+def logout(request: HttpRequest) -> HttpResponse:
+    django_logout(request)
+    return redirect("login")
 
 
 def setup(request: HttpRequest) -> HttpResponse:

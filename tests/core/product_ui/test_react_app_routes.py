@@ -45,6 +45,14 @@ class ReactRootRouteContractTests(TestCase):
         self.assertEqual(root.content, deep_link.content)
         self.assertEqual(root["Cache-Control"], "no-cache")
 
+    def test_get_logout_clears_session_and_redirects_to_login(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get("/logout/")
+
+        self.assertRedirects(response, "/login/", fetch_redirect_response=False)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
     def test_missing_build_returns_bounded_service_unavailable_after_auth(self):
         self.client.force_login(self.owner)
         with TemporaryDirectory() as directory:

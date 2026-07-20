@@ -19,7 +19,6 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.templatetags.static import static
@@ -54,11 +53,7 @@ urlpatterns = [
     # Retained Django-rendered setup/bootstrap and session-auth routes.
     path("", include(("web.urls", "web"), namespace="web")),
     path("login/", web_views.login, name="login"),
-    path(
-        "logout/",
-        auth_views.LogoutView.as_view(next_page="/login/"),
-        name="logout",
-    ),
+    path("logout/", web_views.logout, name="logout"),
     # API v1 (versioned, REST/JSON)
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),
     path(
