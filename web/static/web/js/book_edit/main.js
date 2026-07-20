@@ -15,7 +15,7 @@ import {
 } from "../layout.js";
 import { setStatus } from "../ui/status.js";
 import { uniqueById } from "./shared.js";
-import { initTabs } from "../ui/tabs.js";
+import { initBookEditNavigation } from "./navigation.js";
 import { applyBookToMetadataForm, buildBookPatchPayload } from "./metadata.js";
 import { renderSelectedAuthors, syncAuthorSelectOptions, syncSeriesSelectOptions } from "./authors_series.js";
 import { renderGroups, syncGroupsAddOptions } from "./groups.js";
@@ -53,8 +53,6 @@ function syncBookEditBreadcrumbs({ bookId, title }) {
 
 export async function initBookEdit() {
   const me = await loadMeAndInitShell();
-  initTabs(document, { defaultTab: "book-details" });
-
   const headerEl = $("#book-edit-header");
   const headerTitleEl = $("#book-edit-header-title");
   const headerAuthorsEl = $("#book-edit-header-authors");
@@ -183,6 +181,7 @@ export async function initBookEdit() {
     setStatus(statusEl, "Missing book id.", true);
     return;
   }
+  initBookEditNavigation(rootEl);
   syncBookEditBreadcrumbs({ bookId, title: "Book" });
 
   const canManage = canManageLibrary(me);

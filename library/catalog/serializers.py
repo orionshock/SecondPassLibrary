@@ -90,6 +90,7 @@ class AuthorAxisUpdateSerializer(serializers.Serializer):
 
 class AuthorCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
+    sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class SeriesAxisUpdateSerializer(serializers.Serializer):

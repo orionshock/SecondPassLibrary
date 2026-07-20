@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from library.models import Author
+from accounts.models import UserProfile
+from library.models import Author, BookAuthor
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
     assert_axis_detail_ignores_list_params,
@@ -10,6 +12,7 @@ from tests.library.helpers import (
     response_book_counts,
     response_names,
 )
+from tests.utils.users import set_user_role
 
 
 def preview_titles(row):
@@ -17,24 +20,91 @@ def preview_titles(row):
 
 
 class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
-    def test_librarian_can_create_author(self):
+    def test_librarian_manager_and_owner_can_create_author(self):
+        User = get_user_model()
+        librarian = User.objects.create_user(username="librarian", password="pw")
+        set_user_role(librarian, UserProfile.ROLE_LIBRARIAN)
+        User.objects.create_superuser(username="owner", password="pw")
+
+        for username in ("librarian", "manager", "owner"):
+            with self.subTest(username=username):
+                self.client.logout()
+                self.assertTrue(self.client.login(username=username, password="pw"))
+                response = self.client.post(
+                    "/api/v1/library/authors/",
+                    data={"name": f"{username} Writer"},
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, 201)
+                self.assertEqual(
+                    set(response.json()),
+                    {"id", "name", "sort_name", "biography", "book_count"},
+                )
+                self.assertEqual(response.json()["book_count"], 0)
+
+    def test_create_author_accepts_sort_name_and_does_not_assign_a_book(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
         response = self.client.post(
             "/api/v1/library/authors/",
-            data={"name": "New Writer"},
+            data={"name": "New Writer", "sort_name": "Writer, New"},
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 201)
         author = Author.objects.get(name="New Writer")
-        self.assertEqual(author.sort_name, "New Writer")
-        self.assertEqual(response.json(), {
-            "id": str(author.id),
-            "name": "New Writer",
-            "sort_name": "New Writer",
-        })
+        self.assertEqual(author.sort_name, "Writer, New")
+        self.assertFalse(BookAuthor.objects.filter(author=author).exists())
+
+    def test_duplicate_author_names_are_allowed(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        for _ in range(2):
+            response = self.client.post(
+                "/api/v1/library/authors/",
+                data={"name": "Deliberate Duplicate"},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 201)
+
+        self.assertEqual(Author.objects.filter(name="Deliberate Duplicate").count(), 2)
+
+    def test_blank_and_overlong_author_names_are_rejected(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        for name in ("   ", "x" * 256):
+            with self.subTest(length=len(name)):
+                response = self.client.post(
+                    "/api/v1/library/authors/",
+                    data={"name": name},
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("name", response.json())
+
+    def test_anonymous_cannot_create_author(self):
+        self.client.logout()
+        response = self.client.post(
+            "/api/v1/library/authors/",
+            data={"name": "Anonymous Writer"},
+            content_type="application/json",
+        )
+
+        self.assertIn(response.status_code, {401, 403})
+        self.assertFalse(Author.objects.filter(name="Anonymous Writer").exists())
+
+    def test_series_collection_remains_get_only(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        response = self.client.post(
+            "/api/v1/library/series/",
+            data={"name": "Not Created"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 405)
 
     def test_reader_cannot_create_author(self):
         response = self.client.post(

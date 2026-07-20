@@ -3,8 +3,8 @@ from __future__ import annotations
 from library.models import Author, Series
 
 
-def create_author(*, name: str) -> Author:
-    author = Author(name=name, sort_name=name)
+def create_author(*, name: str, sort_name: str = "") -> Author:
+    author = Author(name=name, sort_name=sort_name or name)
     author.full_clean()
     author.save()
     return author

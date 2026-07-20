@@ -60,6 +60,16 @@ class LibraryBearerCatalogMutationBoundaryTests(LibraryBearerApiTestCase):
                 instance.refresh_from_db()
                 self.assertEqual(instance.name, original_name)
 
+    def test_privileged_bearer_cannot_create_author(self):
+        response = self.bearer.post(
+            "/api/v1/library/authors/",
+            {"name": "Bearer Writer"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_cover_and_import_mutations_remain_session_only(self):
         headers = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
         cover_url = f"/api/v1/library/books/{self.visible_one.id}/cover/"

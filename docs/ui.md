@@ -181,6 +181,15 @@ pages. Cover replacement/clear lives in Book Edit and uses its separate cover
 workflow. Shelf and group relationship controls retain their own mutation
 boundaries.
 
+Authors & Series may create a catalog-global Author and select it in the form;
+the Author-to-Book relationship is not applied until the normal Book Save.
+
+Book Edit tab state is URL-backed with `tab=book`, `tab=catalog`,
+`tab=authors-series`, `tab=groups`, `tab=shelves`, and
+`tab=identifiers-file`. Reload and browser Back/Forward restore the selected
+tab. Library Groups remains absent in simple mode; requesting its URL value
+falls back safely to Book Details.
+
 ## Library Groups
 
 Simple mode hides advanced group navigation, relationship tabs, and custom

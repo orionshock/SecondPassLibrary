@@ -29,9 +29,15 @@ class ProductUiNavigationContractsTests(ProductUiTestCase):
         self.assertIn("is-active", helper_js)
         self.assertIn("is-hidden", helper_js)
 
-        self.assertIn('from "../ui/tabs.js"', book_edit_main_js)
+        book_edit_navigation_js = Path(
+            "web/static/web/js/book_edit/navigation.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('from "./navigation.js"', book_edit_main_js)
+        self.assertIn('from "../ui/tabs.js"', book_edit_navigation_js)
         self.assertIn('from "../ui/breadcrumbs.js"', book_edit_main_js)
-        self.assertIn('defaultTab: "book-details"', book_edit_main_js)
+        self.assertIn("initBookEditNavigation(rootEl)", book_edit_main_js)
+        self.assertIn('window.addEventListener("popstate"', book_edit_navigation_js)
+        self.assertIn("window.history.pushState", book_edit_navigation_js)
         self.assertNotIn('from "./tabs.js"', book_edit_main_js)
         self.assertIn("function syncBookEditBreadcrumbs", book_edit_main_js)
         self.assertIn('{ label: "Library", href: "/library/" }', book_edit_main_js)

@@ -130,15 +130,17 @@ class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
         serializer = AuthorCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
         try:
-            author = create_author(name=serializer.validated_data["name"])
+            author = create_author(
+                name=serializer.validated_data["name"],
+                sort_name=serializer.validated_data.get("sort_name", ""),
+            )
         except DjangoValidationError as exc:
             raise serializers.ValidationError(
                 exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             ) from exc
-        return Response(
-            {"id": str(author.id), "name": author.name, "sort_name": author.sort_name},
-            status=status.HTTP_201_CREATED,
-        )
+        author.book_count = 0
+        response_serializer = AuthorAxisSerializer(author, context=self.get_serializer_context())
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):
