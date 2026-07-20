@@ -34,6 +34,8 @@ The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not ad
 - Shared components are dumb, server-blind primitives. Data and operations cross layers through typed props, callbacks, or outlet context.
 - `@second-pass/spl-api` is the only server communication layer. It owns URLs, fetch, same-origin credentials, CSRF, parsing, error normalization, and response mapping.
 
+The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, and React imports in the SDK. Vite proxy declarations are development transport configuration, not an application communication layer.
+
 Profile at `/profile` is the first real React feature page. It displays current identity, edits the supported self-profile fields, and changes the current user's password through `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.

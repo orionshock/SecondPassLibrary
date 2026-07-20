@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "test": "node scripts/check-boundaries.mjs && vitest run"
   },
   "dependencies": {
     "@second-pass/spl-api": "workspace:*",

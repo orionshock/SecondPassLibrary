@@ -6,11 +6,8 @@ export {
   type CurrentUser,
   type UpdateCurrentUserInput,
 } from "./accounts";
-export { apiClient, createApiClient, type ApiClient } from "./client";
 export {
   ApiError,
-  NetworkError,
-  apiErrorFromPayload,
   classifyApiError,
   isAuthenticationError,
   type ApiErrorDetails,
