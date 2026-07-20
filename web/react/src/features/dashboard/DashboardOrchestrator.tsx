@@ -1,6 +1,6 @@
 import { PageHeader, Surface } from "../../components/ui";
 
-export function DashboardPage() {
+export function DashboardOrchestrator() {
   return (
     <div className="page-stack">
       <PageHeader

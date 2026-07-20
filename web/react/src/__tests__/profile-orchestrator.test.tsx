@@ -22,5 +22,6 @@ describe("ProfileOrchestrator", () => {
     expect(markup).toContain("Owner");
     expect(markup).toContain('href="/profile/password"');
     expect(markup).toContain("Device/API sessions");
+    expect(markup).not.toContain('<p class="eyebrow">Profile</p>');
   });
 });

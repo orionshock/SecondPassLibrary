@@ -4,9 +4,14 @@ This is the running list of cross-page presentation and interaction rules that a
 
 ## File responsibilities
 
+- Folders must earn their keep. A folder for one or two files is usually noise unless it marks a real architectural boundary.
+- Use a folder for a coherent group of three or more files, or for a group expected to grow there.
+- Prefer responsibility suffixes (`Orchestrator`, `PageRegion`, `Component`, and `SubComponent`) before adding directory depth.
 - Feature route controllers use the `Orchestrator` suffix and own SDK calls and workflow state.
 - Major page sections use the `PageRegion` suffix and receive explicit data/action props.
 - Presentational pieces use `Component`; use `SubComponent` only for a clearly subordinate element.
+- Feature folders may use shared `regions/` and `components/` folders when each contains several related files.
+- Do not prematurely create `list/`, `create/`, or `edit/` folders unless each workflow has grown its own coherent cluster.
 - Promote genuinely cross-feature behavior into a focused `src/shared` module. Do not promote feature-specific rules merely to reduce line count.
 - A feature may contain many focused files. Prefer explicit responsibility names over a large page file.
 - Keep all Vitest files centralized under `web/react/src/__tests__/`; organize them by subject rather than colocating them with production modules.

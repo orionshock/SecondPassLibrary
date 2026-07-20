@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
-import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
@@ -16,7 +16,7 @@ export const sectionRoutes = [
   { path: "server", title: "Server Settings" },
 ] as const;
 
-export function PlaceholderPage({ title }: { title: string }) {
+export function PlaceholderPageRegion({ title }: { title: string }) {
   return (
     <section className="page-panel">
       <p className="eyebrow">React Product UI</p>
@@ -26,7 +26,7 @@ export function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
-export function NotFoundPage() {
+export function NotFoundPageRegion() {
   return (
     <section className="page-panel">
       <p className="eyebrow">Not found</p>
@@ -41,15 +41,15 @@ export const appRoutes = [
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <DashboardOrchestrator /> },
       ...sectionRoutes.map(({ path, title }) => ({
         path,
-        element: <PlaceholderPage title={title} />,
+        element: <PlaceholderPageRegion title={title} />,
       })),
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },
-      { path: "*", element: <NotFoundPage /> },
+      { path: "*", element: <NotFoundPageRegion /> },
     ],
   },
 ];

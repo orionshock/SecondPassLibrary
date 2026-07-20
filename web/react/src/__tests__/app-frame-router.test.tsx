@@ -4,15 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
-import { NotFoundPage, PlaceholderPage, sectionRoutes } from "../app/router";
-import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
+import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, advancedLibraryGroupsEnabled: false, bannerText: "", groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", version: "0.1.0-dev", release: "Early Access", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
 
 describe("app frame and router", () => {
   it("renders the dashboard placeholder inside the frame", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardPage />} /></Route></Routes></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Your reading home");
     expect(markup).toContain("Dashboard preview");
     expect(markup).toContain("Family Library");
@@ -25,7 +25,7 @@ describe("app frame and router", () => {
   });
   it("defines placeholder and not-found routes", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves", "/users", "/imports", "/server"]);
-    expect(renderToStaticMarkup(<PlaceholderPage title="Library" />)).toContain("Library");
-    expect(renderToStaticMarkup(<NotFoundPage />)).toContain("Page not found");
+    expect(renderToStaticMarkup(<PlaceholderPageRegion title="Library" />)).toContain("Library");
+    expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
   });
 });
