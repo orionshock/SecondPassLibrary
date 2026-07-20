@@ -26,17 +26,22 @@ First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch 
 
 The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not add GraphQL or a generated API client.
 
-## Application layers
+## Application layers and naming
 
 - `App` owns bootstrap plus global loading, login-required, and retryable error states.
 - `AppFrame` owns the server/user header, top navigation, footer, and route outlet.
-- Branch orchestrators such as Dashboard and Profile assemble their own regions. Regions do not reach into sibling branches.
-- Shared components are dumb, server-blind primitives. Data and operations cross layers through typed props, callbacks, or outlet context.
+- Feature route controllers end in `Orchestrator`. They own SDK calls, branch workflow state, route/outlet context, and assembly of their page regions.
+- Files that contain a major local page section end in `PageRegion`. PageRegions receive data and actions through props and contain only their section's form or display sprawl.
+- Presentational building blocks end in `Component`; use `SubComponent` only for a clearly subordinate piece. Features may have many focused files—the naming is meant to make that safe, not force a one-file feature.
+- Promote behavior to `src/shared` when it plausibly serves multiple branches such as Profile, Users, Imports, Server Settings, or Book Edit. Keep domain-specific drafts, messages, and rules inside their feature.
+- Shared components and behaviors are server-blind. Data and operations cross layers through typed props, callbacks, outlet context, or stable structural error contracts.
 - `@second-pass/spl-api` is the only server communication layer. It owns URLs, fetch, same-origin credentials, CSRF, parsing, error normalization, and response mapping.
 
-React CSS follows the same ownership boundaries: `styles/base.css` contains only global tokens/reset/typography, AppFrame owns shell CSS, shared UI and icons own their component CSS, and feature pages import their own layout CSS. Vitest files live in mirrored `tests/` folders beside the source area they cover; SDK tests follow the same convention under `packages/spl-api/src/tests`.
+React CSS follows the same ownership boundaries: `styles/base.css` contains only global tokens/reset/typography, AppFrame owns shell CSS, shared UI and icons own their component CSS, and feature branches import their own layout CSS. All Vitest files live centrally under `src/__tests__` and are named by subject.
 
 The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, and React imports in the SDK. Vite proxy declarations are development transport configuration, not an application communication layer.
+
+Within the SDK, `accounts.ts` owns current-user/profile/password mapping while `accountSessions.ts` owns web-session and connected-client operations and metadata mapping.
 
 Profile at `/profile` is the first real React feature page. It displays current identity and group/curator status, edits supported self-profile fields, logs out other web sessions, and lists/revokes connected clients. The App orchestrator forces `must_change_password` users through the dedicated password route until refreshed current-user state clears the requirement. All operations use `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.
 
@@ -46,7 +51,7 @@ Cross-page product semantics that are not API shapes are tracked in [React Produ
 
 ## Shell and UI conventions
 
-`AppFrame` owns the compact server/navigation/account header and the low-emphasis product/version footer. Profile owns its controlled form drafts, cancellation, mutation feedback, and field errors; Cancel never calls the server.
+`AppFrame` owns the compact server/navigation/account header and the low-emphasis product/version footer. Branch Orchestrators own mutations; PageRegions own controlled local form presentation where appropriate. Shared action rows, feedback, normalized mutation errors, and field-error extraction live above individual features. Cancel never calls the server.
 
 Use the shared `MaterialIcon` component for Material Symbols instead of ad hoc icon spans. It centralizes the outlined-font class, token rendering, sizing, and decorative versus labeled accessibility behavior.
 Use `RemoveIconButton` for compact remove/delete/revoke controls so those operations share the established `remove_circle` danger treatment. Branches remain responsible for confirmation and mutation behavior.

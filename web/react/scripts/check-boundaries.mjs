@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const workspace = fileURLToPath(new URL("..", import.meta.url));
 const appSource = join(workspace, "src");
 const sharedComponents = join(appSource, "components");
+const sharedSource = join(appSource, "shared");
 const sdkSource = join(workspace, "packages", "spl-api", "src");
 const sourceExtensions = new Set([".ts", ".tsx"]);
 
@@ -20,6 +21,12 @@ scan(appSource, (file, source) => {
 
 scan(sharedComponents, (file, source) => {
   check(file, source, /@second-pass\/spl-api/, "SDK import in a shared UI primitive");
+});
+
+scan(sharedSource, (file, source) => {
+  check(file, source, /@second-pass\/spl-api/, "SDK import in shared code");
+  check(file, source, /\bfetch\s*\(/, "raw fetch in shared code");
+  check(file, source, /\/api\/v1(?:\/|\b)/, "raw API path in shared code");
 });
 
 scan(sdkSource, (file, source) => {

@@ -1,15 +1,17 @@
 export {
   changeCurrentUserPassword,
   getCurrentUser,
-  listClientSessions,
-  logoutOtherWebSessions,
-  revokeClientSession,
   updateCurrentUser,
   type ChangeCurrentUserPasswordInput,
   type CurrentUser,
-  type ClientSession,
   type UpdateCurrentUserInput,
 } from "./accounts";
+export {
+  listClientSessions,
+  logoutOtherWebSessions,
+  revokeClientSession,
+  type ClientSession,
+} from "./accountSessions";
 export {
   decideClientPairing,
   lookupClientPairing,

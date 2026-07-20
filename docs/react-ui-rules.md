@@ -2,6 +2,15 @@
 
 This is the running list of cross-page presentation and interaction rules that are easy to lose when implementing individual React branches. API storage shapes remain documented in `docs/api.md`; these rules describe Product UI meaning.
 
+## File responsibilities
+
+- Feature route controllers use the `Orchestrator` suffix and own SDK calls and workflow state.
+- Major page sections use the `PageRegion` suffix and receive explicit data/action props.
+- Presentational pieces use `Component`; use `SubComponent` only for a clearly subordinate element.
+- Promote genuinely cross-feature behavior into a focused `src/shared` module. Do not promote feature-specific rules merely to reduce line count.
+- A feature may contain many focused files. Prefer explicit responsibility names over a large page file.
+- Keep all Vitest files centralized under `web/react/src/__tests__/`; organize them by subject rather than colocating them with production modules.
+
 ## User identity and roles
 
 - Owner is presented as the highest user role, above Manager.
