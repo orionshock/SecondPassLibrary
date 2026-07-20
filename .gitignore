@@ -29,7 +29,6 @@ htmlcov/
 .hypothesis/
 .tox/
 .nox/
-test-artifacts/
 
 # Django/local database and logs
 *.log

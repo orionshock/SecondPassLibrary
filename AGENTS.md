@@ -62,7 +62,6 @@ Unless explicitly requested, do not add:
 - Do not treat local helper scripts as production contracts.
 - Docs-only changes do not require application tests.
 - Do not claim the full suite passed unless it was actually run; report focused and skipped verification accurately.
-- Playwright is optional and should be limited to focused rendered-UI or interaction diagnosis. Keep artifacts under ignored `test-artifacts/`.
 
 ## Use focused docs for details
 
