@@ -107,6 +107,17 @@ Response shape:
   - `POST /api/v1/accounts/users/` (creates a local Django user and returns a generated temporary password once)
   - `POST /api/v1/accounts/users/<profile_id>/reset-password/` (Manager/Owner only; returns a generated temporary password once)
 
+Managed user list queries are server-filtered and paginated. `q` searches
+username, first name, last name, display name, and management-visible email.
+`role` accepts `owner`, `manager`, `librarian`, and `reader`; `curator` is also
+available when advanced Library Groups are enabled and means any user with a
+curator membership, not a global account role. `is_active` accepts `true` or
+`false`. `ordering` accepts `username`, `name`, `role`, and `is_active`, with a
+leading `-` for descending order. Name ordering uses last name, first name,
+username, and id. Role ordering uses Owner, Manager, Librarian, Reader rank,
+then username/id. The default is `username`. Invalid filter or ordering values
+return `400`. Existing `page` and `page_size` pagination applies after filters.
+
 ## Client API
 
 The Client API provides a pairing flow (human code + browser approval) and bearer tokens for reader clients. Client API bearer tokens are valid for:

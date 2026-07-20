@@ -90,6 +90,42 @@ class UserChoiceQuerySerializer(serializers.Serializer):
     exclude_group = serializers.UUIDField(required=False)
 
 
+class ManagedUserListQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    role = serializers.ChoiceField(
+        required=False,
+        allow_blank=True,
+        choices=["owner", "manager", "librarian", "reader", "curator"],
+    )
+    is_active = serializers.ChoiceField(
+        required=False,
+        allow_blank=True,
+        choices=["true", "false"],
+    )
+    ordering = serializers.ChoiceField(
+        required=False,
+        allow_blank=True,
+        choices=[
+            "username",
+            "-username",
+            "name",
+            "-name",
+            "role",
+            "-role",
+            "is_active",
+            "-is_active",
+        ],
+    )
+
+    def validate_q(self, value: str) -> str:
+        return value.strip()
+
+    def validate_role(self, value: str) -> str:
+        if value == "curator" and not self.context.get("advanced_groups_enabled", False):
+            raise serializers.ValidationError("Curator filtering is unavailable in simple mode.")
+        return value
+
+
 class ManagedUserPatchSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True)
     first_name = serializers.CharField(required=False, allow_blank=True)

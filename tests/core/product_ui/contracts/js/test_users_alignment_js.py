@@ -14,20 +14,24 @@ def test_users_list_filter_order_page_and_page_size_are_url_backed():
     result = run_node_json(
         f"""
         const mod = await import("{module_uri}");
-        const state = mod.usersListState("?role=librarian&ordering=-last_login&page=3&page_size=40");
-        console.log(JSON.stringify({{ state, href: mod.usersListHref(state) }}));
+        const state = mod.usersListState("?q=ada&role=librarian&is_active=false&ordering=-role&page=3&page_size=40");
+        console.log(JSON.stringify({{ state, href: mod.usersListHref(state), api: mod.usersApiUrl(state) }}));
         """
     )
 
     assert result["state"] == {
-        "filter": "librarian",
-        "sortKey": "last_login",
-        "sortDirection": "desc",
+        "q": "ada",
+        "role": "librarian",
+        "isActive": "false",
+        "ordering": "-role",
         "page": 3,
         "pageSize": 40,
     }
     assert result["href"] == (
-        "/users/?role=librarian&ordering=-last_login&page=3&page_size=40"
+        "/users/?q=ada&role=librarian&is_active=false&ordering=-role&page=3&page_size=40"
+    )
+    assert result["api"] == (
+        "/api/v1/accounts/users/?q=ada&role=librarian&is_active=false&ordering=-role&page=3&page_size=40"
     )
 
 
@@ -47,8 +51,16 @@ def test_users_list_uses_library_pagers_history_and_right_aligned_rows():
     assert "window.history.replaceState" in source
     assert "window.history.pushState" in source
     assert 'window.addEventListener("popstate"' in source
-    assert "page: 1, pageSize: nextPageSize" in source
+    assert "state = { ...state, ...changes, page: 1 }" in source
+    assert "passesFilter" not in source
+    assert "sortedUsers" not in source
+    assert 'id="users-search"' in template
+    assert 'id="users-is-active"' in template
     assert ".user-row__actions { justify-content: flex-end; }" in css
+    assert '.users-filters .button[aria-pressed="true"]' in css
+    assert "user-row--inactive" in source
+    assert ".user-row--inactive" in css
+    assert ".pill--inactive" in css
 
 
 def test_create_user_form_is_bounded_vertical_without_redundant_card_heading():

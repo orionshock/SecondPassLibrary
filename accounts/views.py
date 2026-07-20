@@ -20,6 +20,7 @@ from .serializers import (
     CurrentUserClientSessionSerializer,
     ManagedUserPatchSerializer,
     ManagedUserCreateSerializer,
+    ManagedUserListQuerySerializer,
     ManagedUserSerializer,
     UserChoiceQuerySerializer,
     UserChoiceSerializer,
@@ -34,10 +35,12 @@ from .services import (
     update_user_via_management_api,
 )
 from .user_payloads import managed_user_create_envelope, managed_user_payload
+from .user_queries import filter_and_order_managed_users
 from accounts import session_control
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 from accounts.roles import is_manager, is_owner
+from core.server_settings import advanced_library_groups_enabled
 
 
 User = get_user_model()
@@ -220,7 +223,14 @@ class ManagedUserViewSet(
         return Response(envelope, status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        query = ManagedUserListQuerySerializer(
+            data=request.query_params,
+            context={"advanced_groups_enabled": advanced_library_groups_enabled()},
+        )
+        query.is_valid(raise_exception=True)
+        queryset = filter_and_order_managed_users(
+            self.get_queryset(), query=cast(dict[str, Any], query.validated_data)
+        )
         page = self.paginate_queryset(queryset)
         users = list(page) if page is not None else list(queryset)
         payload = [managed_user_payload(user) for user in users]

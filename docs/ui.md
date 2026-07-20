@@ -299,8 +299,11 @@ but Product UI responses and controls do not reveal the hidden Book data.
 
 Users management is available according to the current Manager/Owner policy.
 
-- The Users list has role/status filters, sorting, URL-backed pagination, and a
-  right-aligned Create User action.
+- The Users list has server-driven search, role/status filters, sorting, and
+  pagination. Its `q`, `role`, `is_active`, `ordering`, `page`, and `page_size`
+  state is URL-backed. Curator appears as a derived filter only when advanced
+  Library Groups are enabled; it is not an account role. Create User remains
+  right-aligned.
 - Create User uses a bounded vertical form and right-aligned Create/Cancel
   actions.
 - Edit User remains section-card based and does not use tabs.

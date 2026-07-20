@@ -78,7 +78,8 @@ class ProductUiMembershipManagementJsContractsTests(ProductUiTestCase):
         self.assertIn('setAddMemberStatus("Could not search users.", true)', self.group_memberships_js)
 
     def test_managed_users_ui_keeps_full_management_endpoint(self):
-        self.assertIn('return `/api/v1/accounts/users/?${params.toString()}`', self.users_list_js)
+        self.assertIn("/api/v1/accounts/users/", self.users_list_js)
+        self.assertIn("export function usersApiUrl", self.users_list_js)
 
     def test_group_and_user_mutations_route_by_profile_uuid(self):
         self.assertIn('data-user-id="${escapeHtml(userId)}"', self.group_shared_js)

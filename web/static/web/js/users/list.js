@@ -9,13 +9,17 @@ import {
   visible,
 } from "../layout.js";
 import { renderGroupBadge } from "../ui/groups.js";
-import { renderUserIdentity, userDisplayName, userIdentityText } from "../ui/identity.js";
+import { renderUserIdentity, userIdentityText } from "../ui/identity.js";
 import { setStatus } from "../ui/status.js";
-import { formatDateTime, passesFilter } from "./shared.js";
+import { formatDateTime } from "./shared.js";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = new Set([20, 30, 40, 50]);
-const SORT_KEYS = new Set(["name", "username", "email", "role", "last_login"]);
+const ROLES = new Set(["owner", "manager", "librarian", "reader", "curator"]);
+const ACTIVE_FILTERS = new Set(["true", "false"]);
+const ORDERINGS = new Set([
+  "username", "-username", "name", "-name", "role", "-role", "is_active", "-is_active",
+]);
 
 function normalizedPageSize(value) {
   const parsed = Number.parseInt(String(value || ""), 10);
@@ -25,40 +29,37 @@ function normalizedPageSize(value) {
 export function usersListState(search = "") {
   const params = new URLSearchParams(search || "");
   const role = String(params.get("role") || "").toLowerCase();
-  const status = String(params.get("status") || "").toLowerCase();
-  const filter = role && !status
-    ? ["reader", "curator", "librarian", "manager"].includes(role) ? role : "all"
-    : status === "inactive" && !role ? "inactive" : "all";
-  const rawOrdering = String(params.get("ordering") || "-role");
-  const descending = rawOrdering.startsWith("-");
-  const requestedSort = descending ? rawOrdering.slice(1) : rawOrdering;
-  const sortKey = SORT_KEYS.has(requestedSort) ? requestedSort : "role";
+  const isActive = String(params.get("is_active") || "").toLowerCase();
+  const ordering = String(params.get("ordering") || "username").toLowerCase();
   const rawPage = Number.parseInt(params.get("page") || "1", 10);
   return {
-    filter,
-    sortKey,
-    sortDirection: descending ? "desc" : "asc",
+    q: String(params.get("q") || "").trim(),
+    role: ROLES.has(role) ? role : "",
+    isActive: ACTIVE_FILTERS.has(isActive) ? isActive : "",
+    ordering: ORDERINGS.has(ordering) ? ordering : "username",
     page: Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1,
     pageSize: normalizedPageSize(params.get("page_size")),
   };
 }
 
-export function usersListHref(state) {
+function stateParams(state, { includeDefaults = false } = {}) {
   const params = new URLSearchParams();
-  if (["reader", "curator", "librarian", "manager"].includes(state.filter)) params.set("role", state.filter);
-  if (state.filter === "inactive") params.set("status", "inactive");
-  const ordering = `${state.sortDirection === "desc" ? "-" : ""}${state.sortKey}`;
-  if (ordering !== "-role") params.set("ordering", ordering);
-  if (state.page > 1) params.set("page", String(state.page));
-  if (state.pageSize !== DEFAULT_PAGE_SIZE) params.set("page_size", String(state.pageSize));
-  const query = params.toString();
+  if (state.q) params.set("q", state.q);
+  if (state.role) params.set("role", state.role);
+  if (state.isActive) params.set("is_active", state.isActive);
+  if (includeDefaults || state.ordering !== "username") params.set("ordering", state.ordering);
+  if (includeDefaults || state.page > 1) params.set("page", String(state.page));
+  if (includeDefaults || state.pageSize !== DEFAULT_PAGE_SIZE) params.set("page_size", String(state.pageSize));
+  return params;
+}
+
+export function usersListHref(state) {
+  const query = stateParams(state).toString();
   return query ? `/users/?${query}` : "/users/";
 }
 
-function usersApiUrl(state) {
-  const params = new URLSearchParams({ page_size: String(state.pageSize) });
-  if (state.page > 1) params.set("page", String(state.page));
-  return `/api/v1/accounts/users/?${params.toString()}`;
+export function usersApiUrl(state) {
+  return `/api/v1/accounts/users/?${stateParams(state, { includeDefaults: true }).toString()}`;
 }
 
 function titleCaseRole(role) {
@@ -68,31 +69,16 @@ function titleCaseRole(role) {
   return "Reader";
 }
 
-function userSortName(user) {
-  return userDisplayName(user) || String(user && user.username ? user.username : "");
-}
-
-function roleSortValue(user) {
-  if (user && user.is_owner === true) return 3;
-  const role = String((user && user.role) || "reader").toLowerCase();
-  if (role === "manager") return 2;
-  if (role === "librarian") return 1;
-  return 0;
-}
-
-function lastLoginTime(user) {
-  if (!user || !user.last_login) return null;
-  const value = new Date(user.last_login).getTime();
-  return Number.isNaN(value) ? null : value;
-}
-
 export async function initUsersList() {
   const me = await loadMeAndInitShell();
   setGlobalError("");
 
   const notAllowedEl = $("#users-not-allowed");
   const createLink = $("#users-create-link");
+  const searchForm = $("#users-search");
+  const searchInput = $("#users-q");
   const filtersEl = $("#users-filters");
+  const activeSelect = $("#users-is-active");
   const statusEl = $("#users-status");
   const resultsEl = $("#users-results");
   const nextButtons = [$("#users-next-top"), $("#users-next-bottom")];
@@ -100,143 +86,53 @@ export async function initUsersList() {
   const pageSizeSelects = [$("#users-page-size-top"), $("#users-page-size-bottom")];
   const rangeEls = [$("#users-range-top"), $("#users-range-bottom")];
   const pagers = [$("#users-pager-top"), $("#users-pager-bottom")];
-
-  if (!notAllowedEl || !createLink || !filtersEl || !statusEl || !resultsEl || [...nextButtons, ...prevButtons, ...pageSizeSelects, ...rangeEls, ...pagers].some((element) => !element)) {
-    return;
-  }
+  const required = [
+    notAllowedEl, createLink, searchForm, searchInput, filtersEl, activeSelect, statusEl, resultsEl,
+    ...nextButtons, ...prevButtons, ...pageSizeSelects, ...rangeEls, ...pagers,
+  ];
+  if (required.some((element) => !element)) return;
 
   const allowed = canManageUsers(me);
   const groupUiEnabled = advancedLibraryGroupsEnabled();
+  let state = usersListState(window.location.search);
+  if (!groupUiEnabled && state.role === "curator") state = { ...state, role: "", page: 1 };
+  let hasNext = false;
+  let hasPrevious = false;
+  let totalUsersCount = 0;
 
   visible(notAllowedEl, !allowed);
   visible(createLink, allowed);
+  visible(searchForm, allowed);
   visible(filtersEl, allowed);
+  visible(activeSelect.closest("label"), allowed);
 
-  let nextUrl = null;
-  let prevUrl = null;
-  let state = usersListState(window.location.search);
-  let currentUrl = usersApiUrl(state);
-  let currentResults = [];
-  let totalUsersCount = null;
-  let activeFilter = state.filter;
-  let sortKey = state.sortKey;
-  let sortDirection = state.sortDirection;
+  function orderingParts() {
+    const descending = state.ordering.startsWith("-");
+    return { key: state.ordering.replace(/^-/, ""), descending };
+  }
 
-  const sortLabels = {
-    name: "Name",
-    username: "Username",
-    email: "Email",
-    role: "Role",
-    last_login: "Last Login",
-  };
-
-  function sortButton(key) {
-    const label = sortLabels[key] || key;
-    const active = sortKey === key;
-    const directionText = active
-      ? sortDirection === "asc"
-        ? "sorted ascending"
-        : "sorted descending"
-      : "not sorted";
-    const visibleDirection = active ? (sortDirection === "asc" ? "arrow_upward" : "arrow_downward") : "unfold_more";
-    return `<button class="user-sort-button" type="button" data-sort="${escapeHtml(key)}" aria-sort="${escapeHtml(active ? (sortDirection === "asc" ? "ascending" : "descending") : "none")}" aria-label="Sort by ${escapeHtml(label)}; ${escapeHtml(directionText)}">${escapeHtml(label)} <span class="material-symbols-outlined user-sort-button__icon" aria-hidden="true">${visibleDirection}</span><span class="sr-only"> ${escapeHtml(directionText)}</span></button>`;
+  function sortButton(key, label) {
+    const current = orderingParts();
+    const active = current.key === key;
+    const direction = active && current.descending ? "descending" : active ? "ascending" : "none";
+    const icon = active ? (current.descending ? "arrow_downward" : "arrow_upward") : "unfold_more";
+    return `<button class="user-sort-button" type="button" data-sort="${escapeHtml(key)}" aria-sort="${direction}" aria-label="Sort by ${escapeHtml(label)}">${escapeHtml(label)} <span class="material-symbols-outlined user-sort-button__icon" aria-hidden="true">${icon}</span></button>`;
   }
 
   function renderHeader() {
     return `
       <div class="users-header" aria-label="User columns">
         <div class="users-header__identity">
-          ${sortButton("name")}
-          ${sortButton("username")}
-          ${sortButton("email")}
+          ${sortButton("name", "Name")}
+          ${sortButton("username", "Username")}
+          <span>Email</span>
         </div>
-        <div class="users-header__role">${sortButton("role")}</div>
-        <div class="users-header__last-login">${sortButton("last_login")}</div>
+        <div class="users-header__role">${sortButton("role", "Role")} ${sortButton("is_active", "Status")}</div>
+        <div class="users-header__last-login">Last Login</div>
         ${groupUiEnabled ? '<div class="users-header__memberships">Groups / Curates</div>' : ""}
         <div class="users-header__actions">Actions</div>
       </div>
     `.trim();
-  }
-
-  function compareText(a, b) {
-    return String(a || "").localeCompare(String(b || ""), undefined, {
-      sensitivity: "base",
-      numeric: true,
-    });
-  }
-
-  function sortedUsers(users) {
-    const rows = [...users];
-    if (!sortKey) return rows;
-    rows.sort((a, b) => {
-      let result = 0;
-      if (sortKey === "name") {
-        result = compareText(userSortName(a), userSortName(b));
-      } else if (sortKey === "username") {
-        result = compareText(a && a.username, b && b.username);
-      } else if (sortKey === "email") {
-        result = compareText(a && a.email, b && b.email);
-      } else if (sortKey === "role") {
-        result = roleSortValue(a) - roleSortValue(b);
-      } else if (sortKey === "last_login") {
-        const left = lastLoginTime(a);
-        const right = lastLoginTime(b);
-        if (left == null && right == null) result = 0;
-        else if (left == null) result = 1;
-        else if (right == null) result = -1;
-        else result = left - right;
-      }
-      return sortDirection === "desc" && sortKey !== "last_login"
-        ? -result
-        : sortDirection === "desc" && sortKey === "last_login" && lastLoginTime(a) != null && lastLoginTime(b) != null
-          ? -result
-          : result;
-    });
-    return rows;
-  }
-
-  function updateStatusLabel() {
-    if (!allowed) return;
-    const total = totalUsersCount != null ? Number(totalUsersCount) : null;
-    const pageCount = Array.isArray(currentResults) ? currentResults.length : 0;
-    const filteredCount = (currentResults || []).filter((u) => passesFilter(u, activeFilter)).length;
-    if (total != null && activeFilter && activeFilter !== "all") {
-      setStatus(statusEl, `Showing ${filteredCount} filtered users on this page. Total users: ${total}.`, false);
-    } else if (total != null) {
-      setStatus(statusEl, `Showing ${pageCount} of ${total}.`, false);
-    } else {
-      setStatus(statusEl, "", false);
-    }
-  }
-
-  function syncPager(resultCount) {
-    const total = Number(totalUsersCount) || 0;
-    const start = total && resultCount ? (state.page - 1) * state.pageSize + 1 : 0;
-    const range = start
-      ? `Showing ${start}-${Math.min(total, start + resultCount - 1)} of ${total}`
-      : "Showing 0 of 0";
-    rangeEls.forEach((element) => { element.textContent = range; });
-    pageSizeSelects.forEach((select) => { select.value = String(state.pageSize); });
-    pagers.forEach((pager) => pager.classList.toggle("is-hidden", !total));
-  }
-
-  function writeState({ replace = false } = {}) {
-    const href = usersListHref(state);
-    if (replace) window.history.replaceState({}, "", href);
-    else window.history.pushState({}, "", href);
-  }
-
-  function setActiveFilter(filter, { writeUrl = false } = {}) {
-    activeFilter = filter || "all";
-    const buttons = filtersEl.querySelectorAll("button[data-filter]");
-    for (const btn of buttons) {
-      const isActive = btn.getAttribute("data-filter") === activeFilter;
-      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
-    }
-    state = { ...state, filter: activeFilter };
-    if (writeUrl) writeState();
-    render();
-    updateStatusLabel();
   }
 
   function renderRow(user) {
@@ -246,187 +142,133 @@ export async function initUsersList() {
     const isOwner = !!user.is_owner;
     const isActive = user.is_active !== false;
     const lastLogin = user.last_login ? formatDateTime(user.last_login) : "";
-
     const roleBadge = isOwner
       ? '<span class="pill pill--owner">Owner</span>'
       : `<span class="pill">${escapeHtml(titleCaseRole(role))}</span>`;
-    const inactiveBadge = isActive ? "" : '<span class="pill">inactive</span>';
-
+    const inactiveBadge = isActive ? "" : '<span class="pill pill--inactive">Inactive</span>';
     const groups = groupUiEnabled && Array.isArray(user && user.groups) ? user.groups : [];
-    const memberGroupBadges = groups
-      .map((group) =>
-        renderGroupBadge(group, { compact: true }).outerHTML
-      )
-      .join(" ");
-    const groupsLine = memberGroupBadges
-      ? `<div class="user-row__badge-list">${memberGroupBadges}</div>`
-      : `<div class="user-row__line muted">(none)</div>`;
-    const curatedGroupBadges = groups
-      .filter(
-        (group) => group && group.is_curator === true
-      )
-      .map((group) =>
-        renderGroupBadge(group, { compact: true }).outerHTML
-      )
-      .join(" ");
-    const curatesLine = curatedGroupBadges
-      ? `<div class="user-row__badge-list">${curatedGroupBadges}</div>`
-      : `<div class="user-row__line muted">(none)</div>`;
-
-    const lastLoginLine = lastLogin
-      ? `<div class="user-row__line">${escapeHtml(lastLogin)}</div>`
-      : '<div class="user-row__line muted">(never)</div>';
-
-    const editHref = profileId ? `/users/${encodeURIComponent(String(profileId))}/edit/` : "#";
-    const identityMarkup = renderUserIdentity(user, {
-      includeEmail: true,
-    }).outerHTML;
+    const badges = (items) => items.map((group) => renderGroupBadge(group, { compact: true }).outerHTML).join(" ");
+    const groupsLine = badges(groups) || '<span class="muted">(none)</span>';
+    const curatesLine = badges(groups.filter((group) => group && group.is_curator === true)) || '<span class="muted">(none)</span>';
+    const editHref = profileId ? `/users/${encodeURIComponent(profileId)}/edit/` : "#";
+    const identityMarkup = renderUserIdentity(user, { includeEmail: true }).outerHTML;
     const editLabel = `Edit ${userIdentityText(user, { includeEmail: true })}`;
-
     return `
-      <article class="user-row">
-        <div class="user-row__identity">
-          ${identityMarkup}
-          ${email ? "" : '<div class="user-row__line muted">(no email)</div>'}
-        </div>
-        <div class="user-row__role">
-          ${roleBadge}
-          ${inactiveBadge}
-        </div>
-        <div class="user-row__last-login">
-          ${lastLoginLine}
-        </div>
-        ${groupUiEnabled ? `<div class="user-row__memberships">
-          <div class="user-row__membership-block">
-            ${groupsLine}
-          </div>
-          <div class="user-row__membership-block">
-            ${curatesLine}
-          </div>
-        </div>` : ""}
-        <div class="user-row__actions">
-          <a class="icon-button" href="${escapeHtml(editHref)}" aria-label="${escapeHtml(editLabel)}" title="${escapeHtml(editLabel)}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
-        </div>
+      <article class="user-row${isActive ? "" : " user-row--inactive"}">
+        <div class="user-row__identity">${identityMarkup}${email ? "" : '<div class="user-row__line muted">(no email)</div>'}</div>
+        <div class="user-row__role">${roleBadge}${inactiveBadge}</div>
+        <div class="user-row__last-login"><div class="user-row__line${lastLogin ? "" : " muted"}">${escapeHtml(lastLogin || "(never)")}</div></div>
+        ${groupUiEnabled ? `<div class="user-row__memberships"><div class="user-row__badge-list">${groupsLine}</div><div class="user-row__badge-list">${curatesLine}</div></div>` : ""}
+        <div class="user-row__actions"><a class="icon-button" href="${escapeHtml(editHref)}" aria-label="${escapeHtml(editLabel)}" title="${escapeHtml(editLabel)}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a></div>
       </article>
     `.trim();
   }
 
-  function render() {
-    resultsEl.innerHTML = "";
-    if (!allowed) return;
-
-    const filtered = (currentResults || []).filter((u) => passesFilter(u, activeFilter));
-    if (filtered.length === 0) {
-      resultsEl.innerHTML = '<div class="muted">No users match this filter on this page.</div>';
-      return;
-    }
-    const sorted = sortedUsers(filtered);
-    resultsEl.innerHTML = `${renderHeader()}${sorted.map(renderRow).join("")}`;
+  function syncControls() {
+    searchInput.value = state.q;
+    activeSelect.value = state.isActive;
+    filtersEl.querySelectorAll("button[data-filter]").forEach((button) => {
+      const value = button.getAttribute("data-filter") || "all";
+      button.setAttribute("aria-pressed", (value === "all" ? !state.role : value === state.role) ? "true" : "false");
+    });
+    pageSizeSelects.forEach((select) => { select.value = String(state.pageSize); });
   }
 
-  async function load(url) {
+  function syncPager(resultCount) {
+    const start = totalUsersCount && resultCount ? (state.page - 1) * state.pageSize + 1 : 0;
+    const range = start ? `Showing ${start}-${Math.min(totalUsersCount, start + resultCount - 1)} of ${totalUsersCount}` : "Showing 0 of 0";
+    rangeEls.forEach((element) => { element.textContent = range; });
+    nextButtons.forEach((button) => { button.disabled = !hasNext; });
+    prevButtons.forEach((button) => { button.disabled = !hasPrevious; });
+    pagers.forEach((pager) => pager.classList.toggle("is-hidden", totalUsersCount === 0));
+  }
+
+  function writeState({ replace = false } = {}) {
+    const href = usersListHref(state);
+    if (replace) window.history.replaceState({}, "", href);
+    else window.history.pushState({}, "", href);
+  }
+
+  async function load() {
     setGlobalError("");
     setStatus(statusEl, "Loading users...", false);
-    resultsEl.innerHTML = "";
-    nextButtons.forEach((button) => { button.disabled = true; });
-    prevButtons.forEach((button) => { button.disabled = true; });
-
-    currentUrl = url;
-
+    resultsEl.replaceChildren();
     if (!allowed) {
       setStatus(statusEl, "Not allowed.", true);
       return;
     }
-
     try {
-      const payload = await fetchJSON(url);
+      const payload = await fetchJSON(usersApiUrl(state));
       const results = Array.isArray(payload && payload.results) ? payload.results : [];
-      currentResults = results;
-      totalUsersCount = payload && payload.count != null ? payload.count : null;
-
-      if (results.length === 0) {
-        setStatus(statusEl, "No users.", false);
-        nextUrl = null;
-        prevUrl = null;
-        syncPager(0);
-        render();
-        return;
-      }
-
-      nextUrl = payload.next || null;
-      prevUrl = payload.previous || null;
-      nextButtons.forEach((button) => { button.disabled = !nextUrl; });
-      prevButtons.forEach((button) => { button.disabled = !prevUrl; });
-
-      render();
+      totalUsersCount = Number(payload && payload.count) || 0;
+      hasNext = !!(payload && payload.next);
+      hasPrevious = !!(payload && payload.previous);
+      resultsEl.innerHTML = results.length
+        ? `${renderHeader()}${results.map(renderRow).join("")}`
+        : '<div class="muted">No users.</div>';
+      setStatus(statusEl, "", false);
       syncPager(results.length);
-      updateStatusLabel();
-    } catch (e) {
-      console.error("Failed to load users", { url, e });
+      syncControls();
+    } catch (error) {
+      hasNext = false;
+      hasPrevious = false;
       setStatus(statusEl, "Error loading users.", true);
-      setGlobalError(extractApiErrorMessage(e));
-      nextUrl = null;
-      prevUrl = null;
+      setGlobalError(String(extractApiErrorMessage(error) || "Failed to load users.").slice(0, 240));
+      syncPager(0);
     }
   }
 
-  filtersEl.addEventListener("click", (e) => {
-    const target = e.target;
-    if (!target || target.nodeType !== 1) return;
-    if (target.tagName !== "BUTTON") return;
-    const filter = target.getAttribute("data-filter");
-    if (!filter) return;
-    setActiveFilter(filter, { writeUrl: true });
-  });
-
-  resultsEl.addEventListener("click", (e) => {
-    const source = e.target;
-    if (!source || source.nodeType !== 1) return;
-    const target = source.closest("button[data-sort]");
-    if (!target || !resultsEl.contains(target)) return;
-    const nextSort = target.getAttribute("data-sort") || "";
-    if (!nextSort) return;
-    if (sortKey === nextSort) {
-      sortDirection = sortDirection === "asc" ? "desc" : "asc";
-    } else {
-      sortKey = nextSort;
-      sortDirection = "asc";
-    }
-    state = { ...state, sortKey, sortDirection };
+  async function changeState(changes) {
+    state = { ...state, ...changes, page: 1 };
     writeState();
-    render();
+    await load();
+  }
+
+  searchForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await changeState({ q: searchInput.value.trim() });
   });
-
-  window.history.replaceState({}, "", usersListHref(state));
-  setActiveFilter(state.filter);
-  await load(currentUrl);
-
-  window.addEventListener("popstate", async () => {
-    state = usersListState(window.location.search);
-    activeFilter = state.filter;
-    sortKey = state.sortKey;
-    sortDirection = state.sortDirection;
-    setActiveFilter(activeFilter);
-    await load(usersApiUrl(state));
+  filtersEl.addEventListener("click", async (event) => {
+    const source = event.target;
+    if (!(source instanceof Element)) return;
+    const button = source.closest("button[data-filter]");
+    if (!button) return;
+    const role = button.getAttribute("data-filter") || "";
+    await changeState({ role: role === "all" ? "" : role });
   });
-
+  activeSelect.addEventListener("change", async () => {
+    await changeState({ isActive: activeSelect.value });
+  });
+  resultsEl.addEventListener("click", async (event) => {
+    const source = event.target;
+    if (!(source instanceof Element)) return;
+    const button = source.closest("button[data-sort]");
+    if (!button) return;
+    const key = button.getAttribute("data-sort") || "username";
+    const current = orderingParts();
+    await changeState({ ordering: current.key === key && !current.descending ? `-${key}` : key });
+  });
   nextButtons.forEach((button) => button.addEventListener("click", async () => {
-    if (!nextUrl) return;
+    if (!hasNext) return;
     state = { ...state, page: state.page + 1 };
     writeState();
-    await load(nextUrl);
+    await load();
   }));
   prevButtons.forEach((button) => button.addEventListener("click", async () => {
-    if (!prevUrl) return;
+    if (!hasPrevious) return;
     state = { ...state, page: Math.max(1, state.page - 1) };
     writeState();
-    await load(prevUrl);
+    await load();
   }));
   pageSizeSelects.forEach((select) => select.addEventListener("change", async () => {
-    const nextPageSize = normalizedPageSize(select.value);
-    if (nextPageSize === state.pageSize) return;
-    state = { ...state, page: 1, pageSize: nextPageSize };
-    writeState();
-    await load(usersApiUrl(state));
+    await changeState({ pageSize: normalizedPageSize(select.value) });
   }));
+  window.addEventListener("popstate", async () => {
+    state = usersListState(window.location.search);
+    await load();
+  });
+
+  writeState({ replace: true });
+  syncControls();
+  await load();
 }

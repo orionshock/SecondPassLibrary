@@ -44,13 +44,25 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertContains(response, "/static/web/app.css")
         self.assertContains(response, 'id="users-results"')
         self.assertContains(response, 'id="users-filters"')
+        self.assertContains(response, 'id="users-search"')
+        self.assertContains(response, 'id="users-q"')
+        self.assertContains(response, 'id="users-is-active"')
         self.assertContains(response, 'data-filter="all"')
+        self.assertContains(response, 'data-filter="owner"')
         self.assertContains(response, 'data-filter="reader"')
         self.assertContains(response, 'data-filter="librarian"')
         self.assertContains(response, 'data-filter="manager"')
-        self.assertContains(response, 'data-filter="inactive"')
         self.assertNotContains(response, 'data-filter="curator"')
         self.assertContains(response, 'id="users-create-link"')
+        html = response.content.decode("utf-8")
+        search_row = html[html.index('class="users-search-row"'):html.index('class="users-filter-row"')]
+        self.assertIn('id="users-search"', search_row)
+        self.assertIn('id="users-create-link"', search_row)
+        filter_order = [
+            html.index(f'data-filter="{role}"')
+            for role in ("all", "reader", "librarian", "manager", "owner")
+        ]
+        self.assertEqual(filter_order, sorted(filter_order))
         self.assertContains(response, 'class="users-list-section"')
         self.assertNotContains(response, '<section class="card">')
         self.assertNotContains(response, "Manage local users and roles")
@@ -69,6 +81,12 @@ class ProductUiUsersProfileTests(ProductUiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-filter="curator"')
         self.assertNotContains(response, "Manage local users and roles")
+        html = response.content.decode("utf-8")
+        positions = [
+            html.index(f'data-filter="{role}"')
+            for role in ("all", "reader", "curator", "librarian", "manager", "owner")
+        ]
+        self.assertEqual(positions, sorted(positions))
 
     def test_authenticated_user_new_returns_200_and_has_form(self):
         self.client.force_login(self.user)
