@@ -1,12 +1,16 @@
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
+import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
+import type { BreadcrumbItem } from "../navigation/breadcrumbs";
 import "./AppFrame.css";
 
 export interface AppOutletContext {
   currentUser: CurrentUser;
   onCurrentUserChange: (user: CurrentUser) => void;
   refreshCurrentUser: () => Promise<CurrentUser>;
+  setBreadcrumbs: (pathname: string, items: readonly BreadcrumbItem[]) => void;
 }
 
 const navigation = [
@@ -30,6 +34,13 @@ export function AppFrame({
   onCurrentUserChange: (user: CurrentUser) => void;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {
+  const location = useLocation();
+  const [breadcrumbRegistration, setBreadcrumbRegistration] = useState<{ pathname: string; items: readonly BreadcrumbItem[] }>();
+  const setBreadcrumbs = useCallback((pathname: string, items: readonly BreadcrumbItem[]) => {
+    setBreadcrumbRegistration({ pathname, items });
+  }, []);
+  const breadcrumbs = breadcrumbRegistration?.pathname === location.pathname ? breadcrumbRegistration.items : [];
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -52,8 +63,10 @@ export function AppFrame({
 
       {user.bannerText ? <aside className="server-banner">{user.bannerText}</aside> : null}
 
+      <BreadcrumbsComponent items={breadcrumbs} />
+
       <main className="app-content">
-        <Outlet context={{ currentUser: user, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser } satisfies AppOutletContext} />
+        <Outlet context={{ currentUser: user, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, setBreadcrumbs } satisfies AppOutletContext} />
       </main>
 
       <footer className="app-footer">

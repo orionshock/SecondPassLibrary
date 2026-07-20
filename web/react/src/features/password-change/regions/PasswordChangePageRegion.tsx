@@ -1,5 +1,4 @@
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
 
 import { Button, FormField, PageHeader } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
@@ -15,7 +14,6 @@ export function PasswordChangePageRegion({ draft, state, mustChangePassword, onS
   onCancel: () => void;
 }) {
   return <div className="page-stack account-page">
-    {!mustChangePassword ? <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/profile">Profile</Link><span aria-hidden="true">/</span><span>Password</span></nav> : null}
     <PageHeader title="Change password" />
     {mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
     <form className="form-grid" onSubmit={onSubmit}>

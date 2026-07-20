@@ -2,13 +2,16 @@ import { decideClientPairing, lookupClientPairing, type ClientPairingRequest } f
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import "../../shared/layout/AccountPageLayout.css";
 import "./ClientPairing.css";
+import { clientPairingBreadcrumbFallback } from "./profileBreadcrumbs";
 import { PairingCompletionPageRegion } from "./regions/PairingCompletionPageRegion";
 import { PairingRequestPageRegion } from "./regions/PairingRequestPageRegion";
 
 export function ClientPairingOrchestrator() {
+  usePageBreadcrumbs(clientPairingBreadcrumbFallback);
   const [searchParams] = useSearchParams();
   const initialCode = searchParams.get("code")?.trim() ?? "";
   const initialLookupStarted = useRef(false);

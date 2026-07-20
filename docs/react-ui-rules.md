@@ -24,6 +24,15 @@ This is the running list of cross-page presentation and interaction rules that a
 - Profile may revoke connected client sessions and log out other web sessions. It never displays bearer tokens.
 - Client pairing approval is React-only at `/profile/client-pairing`; `/client-api/authorize/` does not exist.
 
+## Breadcrumbs
+
+- Breadcrumbs describe explicit in-app navigation context first and use the destination Orchestrator's canonical workflow fallback when context is unavailable or invalid.
+- Child links may carry a structured trail of labels and internal URLs in React Router location state. Breadcrumb data never contains raw HTML, and separators belong to AppFrame CSS rather than the data.
+- Do not infer context from browser history, persist or replay a history trail, or rely only on static route metadata.
+- AppFrame renders breadcrumbs; branch Orchestrators own fallback trails and outgoing child context. Top-level navigation starts a new branch.
+- Base branch routes such as `/profile` and `/users` do not render breadcrumbs. Breadcrumbs begin when navigation enters a child or contextual workflow.
+- Direct loads and refreshes use the canonical fallback. Forced password change suppresses breadcrumbs.
+
 ## Destructive collection actions
 
 - Use the shared `RemoveIconButton` for remove, revoke, detach, and delete actions presented as compact row/list controls.

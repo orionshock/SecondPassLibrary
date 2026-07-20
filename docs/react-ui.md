@@ -29,7 +29,7 @@ The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not ad
 ## Application layers and naming
 
 - `App` owns bootstrap plus global loading, login-required, and retryable error states.
-- `AppFrame` owns the server/user header, top navigation, footer, and route outlet.
+- `AppFrame` owns the server/user header, top navigation, contextual breadcrumb slot, footer, and route outlet.
 - Feature route controllers end in `Orchestrator`. They own SDK calls, branch workflow state, route/outlet context, and assembly of their page regions.
 - Files that contain a major local page section end in `PageRegion`. PageRegions receive data and actions through props and contain only their section's form or display sprawl.
 - Presentational building blocks end in `Component`; use `SubComponent` only for a clearly subordinate piece. Features may have many focused files—the naming is meant to make that safe, not force a one-file feature.
@@ -48,6 +48,12 @@ Profile at `/profile` is the first real React feature page. It displays current 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 
 Cross-page product semantics that are not API shapes are tracked in [React Product UI Rules](react-ui-rules.md).
+
+## Contextual breadcrumbs
+
+Breadcrumbs prefer explicit navigation context carried in React Router location state. A link to a child workflow builds a structured text/internal-URL trail; it never carries HTML. Context is marked for the current app runtime so a refresh cannot replay stale history state. On direct entry, refresh, external navigation, or malformed state, the destination Orchestrator supplies its canonical fallback. Breadcrumbs do not inspect browser history and are not defined solely as static route metadata.
+
+`AppFrame` owns the consistent breadcrumb position and visual separators. Orchestrators register the resolved trail for their pathname; base branch routes such as `/profile` and `/users` do not render breadcrumbs, and top-level navigation starts a new branch without carrying stale context. Child workflows retain their canonical hierarchy. The forced password-change workflow suppresses breadcrumbs so it does not offer navigation away from the required action.
 
 ## Shell and UI conventions
 

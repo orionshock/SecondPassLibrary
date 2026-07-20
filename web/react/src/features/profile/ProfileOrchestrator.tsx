@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
+import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { PageHeader } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import "../../shared/layout/AccountPageLayout.css";
@@ -17,9 +19,11 @@ import { AccountSessionsPageRegion } from "./regions/AccountSessionsPageRegion";
 import { GroupMembershipsPageRegion } from "./regions/GroupMembershipsPageRegion";
 import { ProfileDetailsPageRegion } from "./regions/ProfileDetailsPageRegion";
 import "./Profile.css";
+import { clientPairingBreadcrumbFallback, passwordBreadcrumbFallback, profileBreadcrumbFallback } from "./profileBreadcrumbs";
 import { confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "./profileConfirmations";
 
 export function ProfileOrchestrator() {
+  usePageBreadcrumbs(profileBreadcrumbFallback);
   const { currentUser, onCurrentUserChange } = useOutletContext<AppOutletContext>();
   const [profileState, setProfileState] = useState<MutationState>(idleMutationState);
   const [sessions, setSessions] = useState<ClientSession[]>([]);
@@ -71,7 +75,7 @@ export function ProfileOrchestrator() {
   }
 
   return <div className="page-stack account-page">
-    <PageHeader eyebrow="Profile" title="Profile" actions={<Link className="button" to="/profile/password">Change password</Link>} />
+    <PageHeader title="Profile" actions={<Link className="button" to="/profile/password" state={breadcrumbNavigationState(passwordBreadcrumbFallback)}>Change password</Link>} />
     <ProfileDetailsPageRegion user={currentUser} state={profileState} onSave={saveProfile} onClearStatus={() => setProfileState(idleMutationState)} />
     <GroupMembershipsPageRegion user={currentUser} />
     <AccountSessionsPageRegion
@@ -79,6 +83,7 @@ export function ProfileOrchestrator() {
       loading={sessionsLoading}
       clientState={clientState}
       webState={webState}
+      clientPairingLinkState={breadcrumbNavigationState(clientPairingBreadcrumbFallback)}
       onLogoutOthers={logoutOthers}
       onRevokeSession={revokeSession}
     />

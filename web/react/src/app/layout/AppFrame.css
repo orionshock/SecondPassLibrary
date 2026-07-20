@@ -109,6 +109,39 @@
   flex: 1;
 }
 
+.app-breadcrumbs {
+  padding-top: clamp(1.25rem, 3vw, 2rem);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.app-breadcrumbs + .app-content {
+  padding-top: 0.75rem;
+}
+
+.app-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-breadcrumbs li + li::before {
+  content: "/";
+  margin: 0 0.45rem;
+  color: rgb(168 179 194 / 55%);
+}
+
+.app-breadcrumbs a {
+  color: var(--muted);
+}
+
+.app-breadcrumbs [aria-current="page"] {
+  color: var(--text);
+}
+
 .app-footer {
   display: flex;
   justify-content: space-between;

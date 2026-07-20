@@ -3,7 +3,9 @@ import { useReducer, useState, type FormEvent } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { passwordBreadcrumbFallback } from "../profile/profileBreadcrumbs";
 import "../../shared/layout/AccountPageLayout.css";
 import { PasswordChangePageRegion } from "./regions/PasswordChangePageRegion";
 import { emptyPasswordDraft, passwordConfirmationError, passwordDraftReducer } from "./passwordChangeForm";
@@ -11,6 +13,7 @@ import "./PasswordChange.css";
 
 export function PasswordChangeOrchestrator() {
   const { currentUser, refreshCurrentUser } = useOutletContext<AppOutletContext>();
+  usePageBreadcrumbs(passwordBreadcrumbFallback, currentUser.mustChangePassword);
   const navigate = useNavigate();
   const [draft, dispatch] = useReducer(passwordDraftReducer, emptyPasswordDraft);
   const [state, setState] = useState<MutationState>(idleMutationState);
