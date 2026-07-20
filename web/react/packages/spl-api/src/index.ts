@@ -1,4 +1,11 @@
-export { getCurrentUser, type CurrentUser } from "./accounts";
+export {
+  changeCurrentUserPassword,
+  getCurrentUser,
+  updateCurrentUser,
+  type ChangeCurrentUserPasswordInput,
+  type CurrentUser,
+  type UpdateCurrentUserInput,
+} from "./accounts";
 export { apiClient, createApiClient, type ApiClient } from "./client";
 export {
   ApiError,

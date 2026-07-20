@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getCurrentUser } from "./accounts";
+import { changeCurrentUserPassword, getCurrentUser, updateCurrentUser } from "./accounts";
 import type { ApiClient } from "./client";
 
 describe("getCurrentUser", () => {
@@ -34,6 +34,54 @@ describe("getCurrentUser", () => {
       advancedLibraryGroupsEnabled: true,
       bannerText: "Welcome",
       groups: [{ id: "group-id", name: "Public", isPublicGroup: true, isCurator: false }],
+    });
+  });
+
+  it("adapts safe self-profile updates to the server request shape", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const response = {
+      username: "reader", email: "new@example.test", first_name: "New", last_name: "Name",
+      profile_id: "profile-id", role: "reader", must_change_password: false,
+      is_owner: false, advanced_library_groups_enabled: false, banner_text: "", groups: [],
+    };
+    const client: ApiClient = {
+      request: async <T>(path: string, init?: RequestInit) => {
+        calls.push({ path, init });
+        return response as T;
+      },
+    };
+
+    const user = await updateCurrentUser(
+      { email: "new@example.test", firstName: "New", lastName: "Name" },
+      client,
+    );
+
+    expect(calls[0]?.path).toBe("/api/v1/accounts/me/");
+    expect(calls[0]?.init?.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      email: "new@example.test", first_name: "New", last_name: "Name",
+    });
+    expect(user.firstName).toBe("New");
+  });
+
+  it("adapts self password changes to the server request shape", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = {
+      request: async <T>(path: string, init?: RequestInit) => {
+        calls.push({ path, init });
+        return { status: "ok" } as T;
+      },
+    };
+
+    await changeCurrentUserPassword(
+      { currentPassword: "old", newPassword: "new-password", confirmPassword: "new-password" },
+      client,
+    );
+
+    expect(calls[0]?.path).toBe("/api/v1/accounts/me/change-password/");
+    expect(calls[0]?.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      current_password: "old", new_password: "new-password", confirm_password: "new-password",
     });
   });
 });

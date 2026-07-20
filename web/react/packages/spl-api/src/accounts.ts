@@ -38,8 +38,55 @@ export interface CurrentUser {
   }>;
 }
 
+export interface UpdateCurrentUserInput {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ChangeCurrentUserPasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export async function getCurrentUser(client: ApiClient = apiClient): Promise<CurrentUser> {
   const response = await client.request<CurrentUserResponse>("/api/v1/accounts/me/");
+  return mapCurrentUser(response);
+}
+
+export async function updateCurrentUser(
+  input: UpdateCurrentUserInput,
+  client: ApiClient = apiClient,
+): Promise<CurrentUser> {
+  const response = await client.request<CurrentUserResponse>("/api/v1/accounts/me/", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: input.email,
+      first_name: input.firstName,
+      last_name: input.lastName,
+    }),
+  });
+  return mapCurrentUser(response);
+}
+
+export async function changeCurrentUserPassword(
+  input: ChangeCurrentUserPasswordInput,
+  client: ApiClient = apiClient,
+): Promise<void> {
+  await client.request<{ status: string }>("/api/v1/accounts/me/change-password/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      current_password: input.currentPassword,
+      new_password: input.newPassword,
+      confirm_password: input.confirmPassword,
+    }),
+  });
+}
+
+function mapCurrentUser(response: CurrentUserResponse): CurrentUser {
   return {
     username: response.username,
     email: response.email,

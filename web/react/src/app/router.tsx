@@ -1,8 +1,11 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
+import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { ProfilePage } from "../features/profile/ProfilePage";
 
 export const sectionRoutes = [
+  { path: "reading", title: "My Marginalia" },
   { path: "library", title: "Library" },
   { path: "groups", title: "Groups" },
   { path: "shelves", title: "Shelves" },
@@ -36,11 +39,12 @@ export const appRoutes = [
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <PlaceholderPage title="Dashboard" /> },
+      { index: true, element: <DashboardPage /> },
       ...sectionRoutes.map(({ path, title }) => ({
         path,
         element: <PlaceholderPage title={title} />,
       })),
+      { path: "profile", element: <ProfilePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

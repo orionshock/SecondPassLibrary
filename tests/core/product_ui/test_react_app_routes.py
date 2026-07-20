@@ -26,7 +26,7 @@ class ReactRootRouteContractTests(TestCase):
         return dist
 
     def test_unauthenticated_root_and_deep_link_redirect_to_user_login(self):
-        for path in ("/", "/library/books/example/", "/server"):
+        for path in ("/", "/reading", "/library/books/example/", "/server"):
             with self.subTest(path=path):
                 response = self.client.get(path, follow=False)
                 self.assertEqual(response.status_code, 302)
@@ -39,11 +39,13 @@ class ReactRootRouteContractTests(TestCase):
             with override_settings(REACT_UI_DIST_DIR=dist):
                 root = self.client.get("/")
                 deep_link = self.client.get("/library/books/example/")
+                marginalia_link = self.client.get("/reading")
                 server_link = self.client.get("/server")
 
         self.assertEqual(root.status_code, 200)
         self.assertEqual(deep_link.status_code, 200)
         self.assertEqual(root.content, deep_link.content)
+        self.assertEqual(root.content, marginalia_link.content)
         self.assertEqual(root.content, server_link.content)
         self.assertEqual(root["Cache-Control"], "no-cache")
 
@@ -75,7 +77,6 @@ class ReactRootRouteContractTests(TestCase):
             "/legacy/",
             "/client-api/authorize/",
             "/api-auth/login/",
-            "/reading/",
         ):
             with self.subTest(path=path), self.assertRaises(Resolver404):
                 resolve(path)

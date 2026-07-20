@@ -48,7 +48,10 @@ export function apiErrorFromPayload(status: number, payload: unknown): ApiError 
   const body = isRecord(payload) ? (payload as ErrorPayload) : {};
   const message = typeof body.detail === "string" ? body.detail : "The server could not complete the request.";
   const code = typeof body.code === "string" ? body.code : undefined;
-  const fields = normalizeFieldErrors(body.errors);
+  const fieldPayload = Object.fromEntries(
+    Object.entries(body).filter(([key]) => !["detail", "code", "errors"].includes(key)),
+  );
+  const fields = normalizeFieldErrors(body.errors) ?? normalizeFieldErrors(fieldPayload);
   return new ApiError(message, status, { code, fields });
 }
 

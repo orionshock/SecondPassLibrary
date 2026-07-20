@@ -30,4 +30,13 @@ describe("apiErrorFromPayload", () => {
     expect(classifyApiError(new Error("Unexpected"))).toBe("unknown");
     expect(isAuthenticationError(new ApiError("Signed out", 401))).toBe(true);
   });
+
+  it("normalizes DRF field errors without treating detail as a field", () => {
+    const error = apiErrorFromPayload(400, {
+      current_password: ["Current password is incorrect."],
+      detail: "Invalid password.",
+    });
+
+    expect(error.fields).toEqual({ current_password: ["Current password is incorrect."] });
+  });
 });

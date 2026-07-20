@@ -4,11 +4,21 @@ export interface ApiClient {
   request<T>(path: string, init?: RequestInit): Promise<T>;
 }
 
-export function createApiClient(fetchImplementation: typeof fetch = fetch): ApiClient {
+type CsrfTokenProvider = () => string | undefined;
+
+export function createApiClient(
+  fetchImplementation: typeof fetch = fetch,
+  csrfTokenProvider: CsrfTokenProvider = browserCsrfToken,
+): ApiClient {
   return {
     async request<T>(path: string, init: RequestInit = {}): Promise<T> {
       const headers = new Headers(init.headers);
       headers.set("Accept", "application/json");
+      const method = (init.method ?? "GET").toUpperCase();
+      if (!new Set(["GET", "HEAD", "OPTIONS", "TRACE"]).has(method)) {
+        const csrfToken = csrfTokenProvider();
+        if (csrfToken) headers.set("X-CSRFToken", csrfToken);
+      }
 
       let response: Response;
       try {
@@ -26,6 +36,15 @@ export function createApiClient(fetchImplementation: typeof fetch = fetch): ApiC
       return payload as T;
     },
   };
+}
+
+function browserCsrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  return document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("csrftoken="))
+    ?.slice("csrftoken=".length);
 }
 
 async function parseJson(response: Response): Promise<unknown> {

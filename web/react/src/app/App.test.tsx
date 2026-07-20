@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 
-import { AppBootstrapView, AppLayout, type BootstrapState } from "./App";
+import { AppBootstrapView, type BootstrapState } from "./App";
+import { AppFrame } from "./layout/AppFrame";
 import { NotFoundPage, PlaceholderPage, sectionRoutes } from "./router";
 
 const user: CurrentUser = {
@@ -27,13 +28,18 @@ const server: ServerInfo = {
   version: "0.1.0-dev",
   release: "Early Access",
   releaseDate: "2026-07-20",
-  apiBaseUrl: "http://localhost:8000/api/v1/",
+  apiBaseUrl: "unused-in-ui-tests",
 };
 
 function renderBootstrap(state: BootstrapState): string {
   return renderToStaticMarkup(
     <MemoryRouter>
-      <AppBootstrapView state={state} loginPath="/login/?next=%2Flibrary" onRetry={vi.fn()} />
+      <AppBootstrapView
+        state={state}
+        loginPath="/login/?next=%2Flibrary"
+        onRetry={vi.fn()}
+        onCurrentUserChange={vi.fn()}
+      />
     </MemoryRouter>,
   );
 }
@@ -76,18 +82,19 @@ describe("app shell navigation", () => {
   it("renders every section link and marks the current section active", () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/library"]}>
-        <AppLayout user={user} server={server} />
+        <AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />
       </MemoryRouter>,
     );
 
     for (const label of [
       "Dashboard",
+      "My Marginalia",
       "Library",
       "Groups",
       "Shelves",
-      "Users",
-      "Imports",
+      "Import",
       "Server Settings",
+      "Profile",
     ]) {
       expect(markup).toContain(label);
     }
@@ -96,6 +103,7 @@ describe("app shell navigation", () => {
 
   it("defines the expected placeholder routes and an in-app not-found page", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual([
+      "/reading",
       "/library",
       "/groups",
       "/shelves",
