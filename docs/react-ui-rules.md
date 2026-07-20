@@ -10,7 +10,7 @@ This is the running list of cross-page presentation and interaction rules that a
 
 ## Account management
 
-- A user with `must_change_password` may use only the React `/password-change` workflow (and Django logout) until a successful change refreshes current-user state.
+- A user with `must_change_password` may use only the React `/profile/password` workflow (and Django logout) until a successful change refreshes current-user state.
 - Profile displays group membership and curator/Public status, but does not mutate memberships.
 - Profile may revoke connected client sessions and log out other web sessions. It never displays bearer tokens.
 - Client pairing approval is React-only at `/profile/client-pairing`; `/client-api/authorize/` does not exist.

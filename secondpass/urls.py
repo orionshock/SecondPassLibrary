@@ -98,7 +98,7 @@ urlpatterns += [
     # Authenticated React Product UI routes. Add new top-level UI sections explicitly.
     path("", web_views.react_app, name="react_app"),
     re_path(
-        r"^(?P<react_path>(?:dashboard|reading|library|groups|shelves|users|imports|server|settings|profile|password-change)(?:/.*)?)/?$",
+        r"^(?P<react_path>(?:dashboard|reading|library|groups|shelves|users|imports|server|settings|profile)(?:/.*)?)/?$",
         web_views.react_app,
         name="react_app_deep_link",
     ),

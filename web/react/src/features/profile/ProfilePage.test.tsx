@@ -7,6 +7,7 @@ import { ApiError, type CurrentUser, type ServerInfo } from "@second-pass/spl-ap
 import { AppFrame } from "../../app/layout/AppFrame";
 import { DashboardPage } from "../dashboard/DashboardPage";
 import {
+  confirmClientSessionRevoke,
   ProfilePage,
   ProfilePageView,
   profileDraftFromUser,
@@ -70,7 +71,7 @@ describe("first React feature pages", () => {
     expect(markup).not.toContain("<dt>Owner</dt>");
     expect(markup).toContain("Save profile");
     expect(markup).toContain("Change password");
-    expect(markup).toContain('href="/password-change"');
+    expect(markup).toContain('href="/profile/password"');
   });
 
   it("renders a stable success check icon for profile updates", () => {
@@ -117,6 +118,12 @@ describe("first React feature pages", () => {
     });
 
     expect(profileDraftReducer(edited, { type: "reset", value: saved })).toEqual(saved);
+  });
+
+  it("requires browser confirmation before revoking a connected client", () => {
+    const confirm = vi.fn(() => false);
+    expect(confirmClientSessionRevoke("Living Room Reader", confirm)).toBe(false);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Living Room Reader"));
   });
 
 });

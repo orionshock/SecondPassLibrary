@@ -103,7 +103,7 @@ export function AppBootstrapView({
   }
 
   if (forcedPasswordChangeDestination(state.user, currentPath)) {
-    return <Navigate to="/password-change" replace />;
+    return <Navigate to="/profile/password" replace />;
   }
 
   return (
@@ -119,5 +119,5 @@ export function AppBootstrapView({
 export type { BootstrapState };
 
 export function forcedPasswordChangeDestination(user: CurrentUser, currentPath?: string): string | undefined {
-  return user.mustChangePassword && currentPath && currentPath !== "/password-change" ? "/password-change" : undefined;
+  return user.mustChangePassword && currentPath && currentPath !== "/profile/password" ? "/profile/password" : undefined;
 }

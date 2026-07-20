@@ -1,6 +1,6 @@
 import { ApiError, changeCurrentUserPassword, type ChangeCurrentUserPasswordInput } from "@second-pass/spl-api";
 import { useReducer, useState, type Dispatch, type FormEvent } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { Button, FormField, PageHeader, Surface } from "../../components/ui";
@@ -31,8 +31,8 @@ export function PasswordChangePage() {
   }
 
   function cancel() { dispatch({ type: "reset" }); setState({ pending: false }); }
-  return <div className="page-stack profile-page"><PageHeader eyebrow="Account security" title="Change password" />
-    <Surface>{currentUser.mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
+  return <div className="page-stack profile-page"><nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/profile">Profile</Link><span aria-hidden="true">/</span><span>Password</span></nav><PageHeader title="Change password" />
+    <Surface title="Password">{currentUser.mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
       <form className="form-grid" onSubmit={submit}>
         <PasswordField id="current-password" label="Current password" field="currentPassword" value={draft.currentPassword} state={state} dispatch={dispatch} autoComplete="current-password" />
         <PasswordField id="new-password" label="New password" field="newPassword" value={draft.newPassword} state={state} dispatch={dispatch} autoComplete="new-password" />

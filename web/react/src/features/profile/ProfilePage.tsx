@@ -47,24 +47,12 @@ export function ProfilePageView({ user, profileState, onSaveProfile, onCancelPro
 }) {
   return (
     <div className="page-stack profile-page">
-      <PageHeader eyebrow="Account" title="Profile" />
-      <ProfileIdentityRegion user={user} />
+      <PageHeader eyebrow="Profile" title="Profile" actions={<Link className="button" to="/profile/password">Change password</Link>} />
       <ProfileDetailsRegion user={user} state={profileState} onSave={onSaveProfile} onCancel={onCancelProfile} />
       <GroupMembershipRegion user={user} />
-      <AccountSecurityRegion />
-      <ConnectedClientsRegion />
+      <AccountSessionsRegion />
     </div>
   );
-}
-
-function ProfileIdentityRegion({ user }: { user: CurrentUser }) {
-  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Not provided";
-  return <Surface title="Account identity"><KeyValueList items={[
-    { label: "Username", value: user.username },
-    { label: "Display name", value: displayName },
-    { label: "Role", value: <Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge> },
-    { label: "Email", value: user.email || "Not provided" },
-  ]} /></Surface>;
 }
 
 function ProfileDetailsRegion({ user, state, onSave, onCancel }: {
@@ -74,7 +62,11 @@ function ProfileDetailsRegion({ user, state, onSave, onCancel }: {
   const [draft, dispatch] = useReducer(profileDraftReducer, user, profileDraftFromUser);
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void onSave(draft); }
   function cancel() { dispatch({ type: "reset", value: profileDraftFromUser(user) }); onCancel(); }
-  return <Surface title="Profile details"><form className="form-grid" onSubmit={submit}>
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username;
+  return <Surface title="Profile details"><KeyValueList items={[
+    { label: "User", value: `${displayName} · <@${user.username}>` },
+    { label: "Role", value: <Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge> },
+  ]} /><form className="form-grid profile-details-form" onSubmit={submit}>
     <FormField label="Email" htmlFor="profile-email" error={fieldError(state.error, "email")}><input id="profile-email" type="email" value={draft.email} autoComplete="email" onChange={(event) => dispatch({ type: "change", field: "email", value: event.target.value })} /></FormField>
     <FormField label="First name" htmlFor="profile-first-name" error={fieldError(state.error, "first_name")}><input id="profile-first-name" value={draft.firstName} autoComplete="given-name" onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })} /></FormField>
     <FormField label="Last name" htmlFor="profile-last-name" error={fieldError(state.error, "last_name")}><input id="profile-last-name" value={draft.lastName} autoComplete="family-name" onChange={(event) => dispatch({ type: "change", field: "lastName", value: event.target.value })} /></FormField>
@@ -90,37 +82,39 @@ function GroupMembershipRegion({ user }: { user: CurrentUser }) {
   </div></Surface>;
 }
 
-function AccountSecurityRegion() {
-  const [state, setState] = useState<MutationState>(idleMutation);
+function AccountSessionsRegion() {
+  const [sessions, setSessions] = useState<ClientSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [clientState, setClientState] = useState<MutationState>(idleMutation);
+  const [webState, setWebState] = useState<MutationState>(idleMutation);
+  useEffect(() => { let active = true; listClientSessions().then((value) => { if (active) setSessions(value); }).catch((error) => { if (active) setClientState({ pending: false, error: normalizedError(error) }); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
   async function logoutOthers() {
-    setState({ pending: true });
-    try { await logoutOtherWebSessions(); setState({ pending: false, message: "Other web sessions logged out." }); }
-    catch (error: unknown) { setState({ pending: false, error: normalizedError(error) }); }
+    setWebState({ pending: true });
+    try { await logoutOtherWebSessions(); setWebState({ pending: false, message: "Other web sessions logged out." }); }
+    catch (error: unknown) { setWebState({ pending: false, error: normalizedError(error) }); }
   }
-  return <Surface title="Account security"><div className="region-stack">
-    <div className="item-row"><div><strong>Password</strong><p className="muted">Change the password for this account.</p></div><Link className="button" to="/password-change">Change password</Link></div>
-    <div className="item-row"><div><strong>Web sessions</strong><p className="muted">Keep this browser signed in and end your other web sessions.</p></div><Button disabled={state.pending} onClick={() => void logoutOthers()}>{state.pending ? "Logging out..." : "Log out other sessions"}</Button></div>
-    <InlineFeedback state={state} />
+  async function revoke(session: ClientSession) {
+    if (!confirmClientSessionRevoke(session.name)) return;
+    setClientState({ pending: true });
+    try { await revokeClientSession(session.id); setSessions((current) => current.filter(({ id }) => id !== session.id)); setClientState({ pending: false, message: `${session.name} revoked.` }); }
+    catch (error: unknown) { setClientState({ pending: false, error: normalizedError(error) }); }
+  }
+  return <Surface><div className="region-stack">
+    <div className="session-action"><span className="surface-title session-label">Session management</span><Button disabled={webState.pending} onClick={() => void logoutOthers()}>{webState.pending ? "Logging out..." : "Log out all other web sessions"}</Button><InlineFeedback state={webState} /></div>
+    <div className="section-divider" />
+    <div className="section-actions"><h2 className="surface-title">Device/API sessions</h2><Link className="button" to="/profile/client-pairing">Connect a Device/App</Link></div>
+    {loading ? <p aria-live="polite">Loading connected clients...</p> : null}
+    {!loading && sessions.length === 0 ? <p className="muted">No connected clients.</p> : null}
+    {sessions.length > 0 ? <div className="session-table-wrap"><table className="session-table"><thead><tr><th aria-label="Actions" /><th>Device/client name</th><th>Type</th><th>Last seen</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}><td><Button className="icon-button button--secondary" title={`Revoke ${session.name}`} aria-label={`Revoke ${session.name}`} disabled={clientState.pending} onClick={() => void revoke(session)}><MaterialIcon name="remove" /></Button></td><td>{session.name}</td><td>{session.clientType}</td><td>{session.lastSeenAt ? new Date(session.lastSeenAt).toLocaleString() : "Never"}</td></tr>)}</tbody></table></div> : null}
+    <InlineFeedback state={clientState} />
   </div></Surface>;
 }
 
-function ConnectedClientsRegion() {
-  const [sessions, setSessions] = useState<ClientSession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [state, setState] = useState<MutationState>(idleMutation);
-  useEffect(() => { let active = true; listClientSessions().then((value) => { if (active) setSessions(value); }).catch((error) => { if (active) setState({ pending: false, error: normalizedError(error) }); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
-  async function revoke(session: ClientSession) {
-    setState({ pending: true });
-    try { await revokeClientSession(session.id); setSessions((current) => current.filter(({ id }) => id !== session.id)); setState({ pending: false, message: `${session.name} revoked.` }); }
-    catch (error: unknown) { setState({ pending: false, error: normalizedError(error) }); }
-  }
-  return <Surface title="Connected clients"><div className="region-stack">
-    <div className="section-actions"><p className="muted">Reader clients paired with this account.</p><Link className="button" to="/profile/client-pairing">Pair a client</Link></div>
-    {loading ? <p aria-live="polite">Loading connected clients...</p> : null}
-    {!loading && sessions.length === 0 ? <p className="muted">No connected clients.</p> : null}
-    {sessions.map((session) => <div className="item-row" key={session.id}><div><strong>{session.name}</strong><p className="muted">{session.clientType}{session.lastSeenAt ? ` · Last seen ${new Date(session.lastSeenAt).toLocaleString()}` : ""}</p></div><Button className="button--secondary" disabled={state.pending} onClick={() => void revoke(session)}>Revoke</Button></div>)}
-    <InlineFeedback state={state} />
-  </div></Surface>;
+export function confirmClientSessionRevoke(
+  clientName: string,
+  confirmAction: (message: string) => boolean = window.confirm,
+): boolean {
+  return confirmAction(`Revoke ${clientName}? This client will need to pair again.`);
 }
 
 function ActionRow({ state, submitLabel, pendingLabel, onCancel }: { state: MutationState; submitLabel: string; pendingLabel: string; onCancel: () => void }) {

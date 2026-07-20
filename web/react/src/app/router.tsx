@@ -48,7 +48,7 @@ export const appRoutes = [
       })),
       { path: "profile", element: <ProfilePage /> },
       { path: "profile/client-pairing", element: <ClientPairingPage /> },
-      { path: "password-change", element: <PasswordChangePage /> },
+      { path: "profile/password", element: <PasswordChangePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

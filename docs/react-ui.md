@@ -12,7 +12,7 @@ There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or o
 
 The React shell bootstraps the authenticated user through `getCurrentUser()` and server identity through `getServerInfo()` from `@second-pass/spl-api`. Server identity comes from `/.well-known/secondpass`. Components do not make raw `fetch()` calls. The shell provides loading, login-required, retryable error, server identity/banner, user identity, and logout states. `/logout/` remains a Django endpoint.
 
-Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/password-change`; pairing approval uses `/profile/client-pairing`. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
+Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
 
 ## Deferred production integration
 

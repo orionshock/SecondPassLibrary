@@ -83,8 +83,8 @@ describe("app shell bootstrap", () => {
 
 describe("app shell navigation", () => {
   it("forces password-change users away from every other React route", () => {
-    expect(forcedPasswordChangeDestination({ ...user, mustChangePassword: true }, "/profile")).toBe("/password-change");
-    expect(forcedPasswordChangeDestination({ ...user, mustChangePassword: true }, "/password-change")).toBeUndefined();
+    expect(forcedPasswordChangeDestination({ ...user, mustChangePassword: true }, "/profile")).toBe("/profile/password");
+    expect(forcedPasswordChangeDestination({ ...user, mustChangePassword: true }, "/profile/password")).toBeUndefined();
   });
   it("renders every section link and marks the current section active", () => {
     const markup = renderToStaticMarkup(
