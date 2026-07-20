@@ -11,6 +11,11 @@
 {% block content %}
   <div class="page-header">
     <h1 class="page-title">Library</h1>
+    <form id="library-search" class="search library-search" autocomplete="off">
+      <label class="search__label" for="q">Search</label>
+      <input id="q" name="q" type="search" class="search__input" placeholder="Book title..." />
+      <button class="button" type="submit">Search</button>
+    </form>
   </div>
 
   <div class="library-axis-row">
@@ -20,14 +25,6 @@
       <button id="library-tab-series" class="tab-button" type="button" role="tab" aria-selected="false" data-view="series">Series</button>
     </div>
     <a id="library-axis-create" class="button is-hidden" href="#"></a>
-  </div>
-
-  <div class="library-search-row">
-    <form id="library-search" class="search library-search" autocomplete="off">
-      <label class="search__label" for="q">Search</label>
-      <input id="q" name="q" type="search" class="search__input" placeholder="Book title..." />
-      <button class="button" type="submit">Search</button>
-    </form>
   </div>
 
   <div class="library-browse-layout">

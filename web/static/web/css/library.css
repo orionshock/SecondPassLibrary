@@ -18,8 +18,21 @@
   margin: 12px 0 8px;
 }
 .library-axis-row .library-tabs { margin: 0; }
-.library-axis-row #library-axis-create { margin-left: auto; }
-.library-search-row { display: flex; width: 100%; margin-bottom: 12px; }
+.library-axis-row .tab-button,
+.library-axis-row #library-axis-create {
+  display: inline-flex;
+  box-sizing: border-box;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+}
+.library-axis-row #library-axis-create {
+  margin-left: auto;
+}
 .library-search {
   flex: 1 1 520px;
   justify-content: flex-end;

@@ -81,14 +81,18 @@ class CatalogEntityManagementProductUiTests(ProductUiTestCase):
         self.assertNotIn('name="library-context-name"', prose)
         self.assertNotIn('data-action="save-library-context"', prose)
 
+        search_start = template.index('id="library-search"')
         axis_start = template.index('class="library-axis-row"')
-        search_start = template.index('class="library-search-row"')
         create_start = template.index('id="library-axis-create"')
+        self.assertLess(search_start, axis_start)
         self.assertLess(axis_start, create_start)
-        self.assertLess(create_start, search_start)
-        self.assertIn('id="library-search" class="search library-search"', template[search_start:])
-        self.assertIn('class="search__input"', template[search_start:])
-        self.assertIn('type="submit">Search</button>', template[search_start:])
+        header = template[template.index('class="page-header"'):axis_start]
+        axis_row = template[axis_start:template.index('class="library-browse-layout"')]
+        self.assertIn('class="search__input"', header)
+        self.assertIn('type="submit">Search</button>', header)
+        self.assertNotIn('id="library-axis-create"', header)
+        self.assertIn('aria-label="Library browse views"', axis_row)
+        self.assertIn('id="library-axis-create"', axis_row)
         self.assertIn('!allowContextEdit || !createKind', source)
 
     def test_delete_requires_exact_name_and_keeps_browser_confirmation(self):
