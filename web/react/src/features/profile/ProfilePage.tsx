@@ -13,6 +13,7 @@ import { Link, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
+import { RemoveIconButton } from "../../components/icons/RemoveIconButton";
 import { Badge, Button, ErrorPanel, FormField, KeyValueList, PageHeader, Surface } from "../../components/ui";
 import { displayUserRole } from "../../domain/users/presentation";
 
@@ -105,7 +106,7 @@ function AccountSessionsRegion() {
     <div className="section-actions"><h2 className="surface-title">Device/API sessions</h2><Link className="button" to="/profile/client-pairing">Connect a Device/App</Link></div>
     {loading ? <p aria-live="polite">Loading connected clients...</p> : null}
     {!loading && sessions.length === 0 ? <p className="muted">No connected clients.</p> : null}
-    {sessions.length > 0 ? <div className="session-table-wrap"><table className="session-table"><thead><tr><th aria-label="Actions" /><th>Device/client name</th><th>Type</th><th>Last seen</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}><td><Button className="icon-button button--secondary" title={`Revoke ${session.name}`} aria-label={`Revoke ${session.name}`} disabled={clientState.pending} onClick={() => void revoke(session)}><MaterialIcon name="remove" /></Button></td><td>{session.name}</td><td>{session.clientType}</td><td>{session.lastSeenAt ? new Date(session.lastSeenAt).toLocaleString() : "Never"}</td></tr>)}</tbody></table></div> : null}
+    {sessions.length > 0 ? <div className="session-table-wrap"><table className="session-table"><thead><tr><th aria-label="Actions" /><th>Device/client name</th><th>Type</th><th>Last seen</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}><td><RemoveIconButton label={`Revoke ${session.name}`} disabled={clientState.pending} onClick={() => void revoke(session)} /></td><td>{session.name}</td><td>{session.clientType}</td><td>{session.lastSeenAt ? new Date(session.lastSeenAt).toLocaleString() : "Never"}</td></tr>)}</tbody></table></div> : null}
     <InlineFeedback state={clientState} />
   </div></Surface>;
 }

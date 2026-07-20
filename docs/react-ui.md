@@ -12,7 +12,7 @@ There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or o
 
 The React shell bootstraps the authenticated user through `getCurrentUser()` and server identity through `getServerInfo()` from `@second-pass/spl-api`. Server identity comes from `/.well-known/secondpass`. Components do not make raw `fetch()` calls. The shell provides loading, login-required, retryable error, server identity/banner, user identity, and logout states. `/logout/` remains a Django endpoint.
 
-Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
+Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. The pairing page accepts `?code=...`, immediately looks up a supplied code, and otherwise presents code entry before approval. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
 
 ## Deferred production integration
 
@@ -47,3 +47,4 @@ Cross-page product semantics that are not API shapes are tracked in [React Produ
 `AppFrame` owns the compact server/navigation/account header and the low-emphasis product/version footer. Profile owns its controlled form drafts, cancellation, mutation feedback, and field errors; Cancel never calls the server.
 
 Use the shared `MaterialIcon` component for Material Symbols instead of ad hoc icon spans. It centralizes the outlined-font class, token rendering, sizing, and decorative versus labeled accessibility behavior.
+Use `RemoveIconButton` for compact remove/delete/revoke controls so those operations share the established `remove_circle` danger treatment. Branches remain responsible for confirmation and mutation behavior.

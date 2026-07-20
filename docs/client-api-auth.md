@@ -39,7 +39,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
 
 ### Human / browser
 
-1. User opens `authorize_url` in a browser.
+1. User opens `authorize_url` in a browser. The server returns this URL at `/profile/client-pairing?code=...` on the current origin.
 2. If needed, user logs in through any supported flow that establishes a
    normal authenticated Django browser session. This is local password login
    today and may include optional external login in the future.

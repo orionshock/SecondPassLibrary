@@ -46,7 +46,10 @@ class ClientApiRegistrationTests(ClientApiTestCase):
         code = body.get("code")
         self.assertTrue(req_id)
         self.assertTrue(code)
-        self.assertNotIn("authorize_url", body)
+        self.assertEqual(
+            body.get("authorize_url"),
+            f"http://testserver/profile/client-pairing?code={code}",
+        )
         self.assertIn("poll_url", body)
 
         obj = ClientLoginRequest.objects.get(pk=req_id)

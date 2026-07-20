@@ -3,7 +3,7 @@ import { useReducer, useState, type Dispatch, type FormEvent } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
-import { Button, FormField, PageHeader, Surface } from "../../components/ui";
+import { Button, FormField, PageHeader } from "../../components/ui";
 import { fieldError, InlineFeedback, normalizedError, type MutationState } from "../profile/ProfilePage";
 
 export type PasswordDraft = ChangeCurrentUserPasswordInput;
@@ -31,15 +31,16 @@ export function PasswordChangePage() {
   }
 
   function cancel() { dispatch({ type: "reset" }); setState({ pending: false }); }
-  return <div className="page-stack profile-page"><nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/profile">Profile</Link><span aria-hidden="true">/</span><span>Password</span></nav><PageHeader title="Change password" />
-    <Surface title="Password">{currentUser.mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
-      <form className="form-grid" onSubmit={submit}>
-        <PasswordField id="current-password" label="Current password" field="currentPassword" value={draft.currentPassword} state={state} dispatch={dispatch} autoComplete="current-password" />
-        <PasswordField id="new-password" label="New password" field="newPassword" value={draft.newPassword} state={state} dispatch={dispatch} autoComplete="new-password" />
-        <PasswordField id="confirm-password" label="Confirm password" field="confirmPassword" value={draft.confirmPassword} state={state} dispatch={dispatch} autoComplete="new-password" />
-        <div className="form-action-row"><InlineFeedback state={state} /><div className="form-actions"><Button type="button" className="button--secondary" disabled={state.pending} onClick={cancel}>Cancel</Button><Button type="submit" disabled={state.pending}>{state.pending ? "Changing..." : "Change password"}</Button></div></div>
-      </form>
-    </Surface>
+  return <div className="page-stack profile-page">
+    {!currentUser.mustChangePassword ? <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/profile">Profile</Link><span aria-hidden="true">/</span><span>Password</span></nav> : null}
+    <PageHeader title="Change password" />
+    {currentUser.mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
+    <form className="form-grid" onSubmit={submit}>
+      <PasswordField id="current-password" label="Current password" field="currentPassword" value={draft.currentPassword} state={state} dispatch={dispatch} autoComplete="current-password" />
+      <PasswordField id="new-password" label="New password" field="newPassword" value={draft.newPassword} state={state} dispatch={dispatch} autoComplete="new-password" />
+      <PasswordField id="confirm-password" label="Confirm password" field="confirmPassword" value={draft.confirmPassword} state={state} dispatch={dispatch} autoComplete="new-password" />
+      <div className="form-action-row"><InlineFeedback state={state} /><div className="form-actions"><Button type="button" className="button--secondary" disabled={state.pending} onClick={cancel}>Cancel</Button><Button type="submit" disabled={state.pending}>{state.pending ? "Changing..." : "Change password"}</Button></div></div>
+    </form>
   </div>;
 }
 

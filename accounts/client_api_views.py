@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from urllib.parse import urlencode
 
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
@@ -60,11 +61,15 @@ class ClientLoginRequestCreateView(APIView):
         poll_url = request.build_absolute_uri(
             f"/api/v1/client-api/login-requests/{obj.pk}/poll/"
         )
+        authorize_url = request.build_absolute_uri(
+            f"/profile/client-pairing?{urlencode({'code': code})}"
+        )
 
         return Response(
             {
                 "id": str(obj.pk),
                 "code": code,
+                "authorize_url": authorize_url,
                 "poll_url": poll_url,
                 "expires_at": obj.expires_at.isoformat(),
                 "interval": client_api.POLL_INTERVAL_SECONDS,

@@ -36,6 +36,15 @@ export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLBu
   return <button className={`button ${className}`.trim()} {...props} />;
 }
 
+export function IconButton({
+  className = "",
+  tone = "default",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "default" | "danger" }) {
+  const toneClass = tone === "danger" ? " icon-button--danger" : "";
+  return <button className={`icon-button${toneClass} ${className}`.trim()} {...props} />;
+}
+
 export function FormField({
   label,
   htmlFor,

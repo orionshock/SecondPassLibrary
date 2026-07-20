@@ -14,3 +14,15 @@ This is the running list of cross-page presentation and interaction rules that a
 - Profile displays group membership and curator/Public status, but does not mutate memberships.
 - Profile may revoke connected client sessions and log out other web sessions. It never displays bearer tokens.
 - Client pairing approval is React-only at `/profile/client-pairing`; `/client-api/authorize/` does not exist.
+
+## Destructive collection actions
+
+- Use the shared `RemoveIconButton` for remove, revoke, detach, and delete actions presented as compact row/list controls.
+- It owns the Material Symbols `remove_circle` token, danger styling, tooltip, and accessible label. Do not recreate this button with ad hoc icon spans or local styles.
+- The calling branch still owns confirmation and the actual operation; the shared button remains server-blind.
+
+## Form actions
+
+- Form and workflow action rows are right-aligned unless a page-specific interaction explicitly calls for another placement.
+- Put secondary or canceling actions before the default/desirable primary action so the primary action is farthest right.
+- Put success, error, or other action status immediately left of the buttons and right-align it toward the controls. Reserve the feedback area where practical so status changes do not cause large layout jumps.
