@@ -1,0 +1,259 @@
+button,
+.button-link,
+.button {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  color: var(--text);
+  background: rgb(255 255 255 / 6%);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:hover,
+.button-link:hover,
+.button:hover {
+  border-color: rgb(125 211 252 / 50%);
+  background: rgb(125 211 252 / 10%);
+  text-decoration: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button--secondary {
+  color: var(--muted);
+  background: transparent;
+}
+
+.icon-button {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgb(255 255 255 / 4%);
+  line-height: 1;
+}
+
+.icon-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.icon-button--danger {
+  border-color: rgb(251 113 133 / 60%);
+  color: rgb(251 113 133);
+  background: rgb(251 113 133 / 10%);
+}
+
+.icon-button--danger:hover {
+  color: rgb(254 205 211);
+  background: rgb(251 113 133 / 18%);
+}
+
+.page-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.15rem;
+}
+
+.page-header h1,
+.page-header p,
+.surface p {
+  margin: 0;
+}
+
+.page-description {
+  max-width: 44rem;
+  margin-top: 0.45rem !important;
+}
+
+.page-actions,
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.surface {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 12%);
+}
+
+.surface-title {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.key-value-list {
+  display: grid;
+  margin: 0;
+  gap: 0.55rem;
+}
+
+.key-value-list > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) 1fr;
+  gap: 1rem;
+}
+
+.key-value-list dt {
+  color: var(--muted);
+}
+
+.key-value-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 5%);
+  font-size: 0.78rem;
+}
+
+.badge--accent {
+  border-color: rgb(125 211 252 / 45%);
+  color: var(--text);
+}
+
+.form-grid {
+  display: grid;
+  width: min(100%, 44rem);
+  gap: 0.7rem;
+}
+
+.form-field {
+  display: grid;
+  grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+.form-field label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.form-field input {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.625rem;
+  color: var(--text);
+  background: var(--surface-raised);
+  font: inherit;
+}
+
+.form-field .field-error {
+  grid-column: 2;
+}
+
+.form-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding-top: 0.2rem;
+}
+
+.action-feedback {
+  min-width: 0;
+  min-height: 1.5rem;
+  justify-self: end;
+  text-align: right;
+}
+
+.action-feedback--success {
+  justify-self: end;
+  text-align: right;
+}
+
+.action-feedback--error {
+  max-width: 34rem;
+}
+
+.action-feedback .error-panel {
+  padding: 0.45rem 0.65rem;
+}
+
+.error-panel {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgb(251 113 133 / 55%);
+  border-radius: 0.625rem;
+  color: #fecdd3;
+  background: rgb(251 113 133 / 10%);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.success-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--success);
+}
+
+.success-icon {
+  color: var(--success);
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 42rem) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 0.9rem 0;
+  }
+
+  .key-value-list > div,
+  .form-field {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .form-field .field-error {
+    grid-column: 1;
+  }
+
+  .form-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    justify-content: flex-end;
+  }
+}

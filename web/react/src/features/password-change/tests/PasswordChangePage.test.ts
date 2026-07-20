@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emptyPasswordDraft, passwordCancelVisible, passwordConfirmationError, passwordDraftReducer } from "./PasswordChangePage";
+import { emptyPasswordDraft, passwordCancelVisible, passwordConfirmationError, passwordDraftReducer } from "../PasswordChangePage";
 
 describe("password change workflow", () => {
   it("rejects a confirmation mismatch before submission", () => {

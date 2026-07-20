@@ -1,0 +1,17 @@
+.material-symbols-outlined,
+.material-icon {
+  display: inline-block;
+  font-family: "Material Symbols Outlined";
+  font-size: 1.25rem;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "liga";
+}

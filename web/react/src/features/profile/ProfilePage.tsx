@@ -16,6 +16,8 @@ import { MaterialIcon } from "../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../components/icons/RemoveIconButton";
 import { Badge, Button, ErrorPanel, FormField, KeyValueList, PageHeader, Surface } from "../../components/ui";
 import { displayUserRole } from "../../domain/users/presentation";
+import "./AccountPage.css";
+import "./ProfilePage.css";
 
 export interface MutationState { pending: boolean; message?: string; error?: ApiError | Error }
 export interface ProfileDraft { email: string; firstName: string; lastName: string }
@@ -47,7 +49,7 @@ export function ProfilePageView({ user, profileState, onSaveProfile, onCancelPro
   onCancelProfile: () => void;
 }) {
   return (
-    <div className="page-stack profile-page">
+    <div className="page-stack account-page">
       <PageHeader eyebrow="Profile" title="Profile" actions={<Link className="button" to="/profile/password">Change password</Link>} />
       <ProfileDetailsRegion user={user} state={profileState} onSave={onSaveProfile} onCancel={onCancelProfile} />
       <GroupMembershipRegion user={user} />

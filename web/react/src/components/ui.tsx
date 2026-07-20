@@ -1,5 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
+import "./ui.css";
+
 export function PageHeader({
   eyebrow,
   title,

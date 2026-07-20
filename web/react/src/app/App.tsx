@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { AppFrame } from "./layout/AppFrame";
+import "../components/ui.css";
 
 type BootstrapState =
   | { status: "loading" }

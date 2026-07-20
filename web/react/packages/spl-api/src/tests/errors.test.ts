@@ -6,7 +6,7 @@ import {
   apiErrorFromPayload,
   classifyApiError,
   isAuthenticationError,
-} from "./errors";
+} from "../errors";
 
 describe("apiErrorFromPayload", () => {
   it("normalizes structured server errors", () => {

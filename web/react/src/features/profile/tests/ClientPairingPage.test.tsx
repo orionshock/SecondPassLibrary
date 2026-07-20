@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
-import { ClientPairingPage, PairingCompletion } from "./ClientPairingPage";
+import { ClientPairingPage, PairingCompletion } from "../ClientPairingPage";
 
 describe("client pairing completion", () => {
   it("offers clear exits without rendering pairing inputs", () => {

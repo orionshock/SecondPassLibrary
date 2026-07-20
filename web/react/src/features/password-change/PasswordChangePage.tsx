@@ -5,6 +5,8 @@ import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { Button, FormField, PageHeader } from "../../components/ui";
 import { fieldError, InlineFeedback, normalizedError, type MutationState } from "../profile/ProfilePage";
+import "../profile/AccountPage.css";
+import "./PasswordChangePage.css";
 
 export type PasswordDraft = ChangeCurrentUserPasswordInput;
 type PasswordAction = { type: "change"; field: keyof PasswordDraft; value: string } | { type: "reset" };
@@ -31,7 +33,7 @@ export function PasswordChangePage() {
   }
 
   function cancel() { dispatch({ type: "reset" }); setState({ pending: false }); navigate("/profile"); }
-  return <div className="page-stack profile-page">
+  return <div className="page-stack account-page">
     {!currentUser.mustChangePassword ? <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/profile">Profile</Link><span aria-hidden="true">/</span><span>Password</span></nav> : null}
     <PageHeader title="Change password" />
     {currentUser.mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}

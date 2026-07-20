@@ -1,3 +1,5 @@
+import "./MaterialIcon.css";
+
 export interface MaterialIconProps {
   name: string;
   label?: string;

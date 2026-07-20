@@ -34,6 +34,8 @@ The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not ad
 - Shared components are dumb, server-blind primitives. Data and operations cross layers through typed props, callbacks, or outlet context.
 - `@second-pass/spl-api` is the only server communication layer. It owns URLs, fetch, same-origin credentials, CSRF, parsing, error normalization, and response mapping.
 
+React CSS follows the same ownership boundaries: `styles/base.css` contains only global tokens/reset/typography, AppFrame owns shell CSS, shared UI and icons own their component CSS, and feature pages import their own layout CSS. Vitest files live in mirrored `tests/` folders beside the source area they cover; SDK tests follow the same convention under `packages/spl-api/src/tests`.
+
 The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, and React imports in the SDK. Vite proxy declarations are development transport configuration, not an application communication layer.
 
 Profile at `/profile` is the first real React feature page. It displays current identity and group/curator status, edits supported self-profile fields, logs out other web sessions, and lists/revokes connected clients. The App orchestrator forces `must_change_password` users through the dedicated password route until refreshed current-user state clears the requirement. All operations use `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.

@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { Button, ErrorPanel, FormField, PageHeader, Surface } from "../../components/ui";
 import { normalizedError } from "./ProfilePage";
+import "./AccountPage.css";
+import "./ClientPairingPage.css";
 
 export function ClientPairingPage() {
   const [searchParams] = useSearchParams();
@@ -64,7 +66,7 @@ export function ClientPairingPage() {
   }
 
   return (
-    <div className="page-stack pairing-page">
+    <div className="page-stack account-page">
       <nav className="breadcrumbs" aria-label="Breadcrumb">
         <Link to="/profile">Profile</Link>
         <span aria-hidden="true">/</span>

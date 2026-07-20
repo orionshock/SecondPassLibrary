@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { changeCurrentUserPassword, getCurrentUser, listClientSessions, logoutOtherWebSessions, revokeClientSession, updateCurrentUser } from "./accounts";
-import type { ApiClient } from "./client";
+import { changeCurrentUserPassword, getCurrentUser, listClientSessions, logoutOtherWebSessions, revokeClientSession, updateCurrentUser } from "../accounts";
+import type { ApiClient } from "../client";
 
 describe("getCurrentUser", () => {
   it("maps the server bootstrap shape to a stable app-facing user", async () => {

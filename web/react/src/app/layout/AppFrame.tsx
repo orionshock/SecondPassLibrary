@@ -1,6 +1,8 @@
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
+import "./AppFrame.css";
+
 export interface AppOutletContext {
   currentUser: CurrentUser;
   onCurrentUserChange: (user: CurrentUser) => void;
