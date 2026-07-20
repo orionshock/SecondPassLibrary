@@ -228,8 +228,10 @@ development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
 running raw `runserver`.
 
 For production-likeness, use `.\scripts\start-local-production.ps1`; it keeps
-`DJANGO_DEBUG=0`, runs `collectstatic`, and uses WhiteNoise in manifest-backed
-mode. It runs one direct Uvicorn worker against
+`DJANGO_DEBUG=0`, builds the React workspace, runs `collectstatic`, and uses
+WhiteNoise in manifest-backed mode. It requires `npm.cmd install` to have been
+run from `web/react`, but it does not run a Vite or Node server. It runs one
+direct Uvicorn worker against
 `secondpass.asgi:application`, matching the Docker application target and
 runtime path. Access logs are disabled in both deployment-like paths. Static
 and media routing is unchanged: covers remain public display assets, while

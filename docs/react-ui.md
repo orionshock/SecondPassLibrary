@@ -14,6 +14,8 @@ The first scaffold is development-only and does not claim a Django route. Produc
 
 The frontend build is `npm run build`. Django will serve the React shell, and WhiteNoise will serve the built static assets. Production remains a single Django/Uvicorn container with no Node server or separate frontend container. Docker build integration is a later slice.
 
+The local production helper runs the frontend build before Django deployment checks and static collection, then runs Uvicorn without a Node process. Until the React shell and collected-asset integration are wired, that build is validation only and the Django Product UI remains the served interface.
+
 ## Server boundary
 
 `web/react/packages/spl-api` is the first-party, framework-light TypeScript server communication package. It owns `fetch`, credentials, JSON parsing, structured error normalization, pagination types, server response mapping, and domain calls. React routes, components, and hooks consume its stable app-facing objects; they do not scatter raw `fetch()` calls or API URLs.
