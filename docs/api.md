@@ -429,8 +429,8 @@ Rules:
 
 ## Library
 
-- Authors: `GET/POST /api/v1/library/authors/` (GET is paginated), `GET/PATCH /api/v1/library/authors/<id>/`
-- Series: `GET /api/v1/library/series/` (paginated), `GET/PATCH /api/v1/library/series/<id>/`
+- Authors: `GET/POST /api/v1/library/authors/` (GET is paginated), `GET/PATCH/DELETE /api/v1/library/authors/<id>/`
+- Series: `GET/POST /api/v1/library/series/` (GET is paginated), `GET/PATCH/DELETE /api/v1/library/series/<id>/`
 - Catalog Tags: `GET /api/v1/library/tags/` (paginated), `GET /api/v1/library/tags/<id>/`
 - Books: `GET /api/v1/library/books/` (paginated),
   `GET/PUT/PATCH /api/v1/library/books/<id>/`
@@ -552,8 +552,22 @@ display-only `/media/covers/` namespace; cover mutation remains session-only.
 
 Author/Series payload notes:
 
-- `POST /api/v1/library/authors/` is a Django-session-only Librarian+ catalog
-  management operation. It accepts required `name` and optional `sort_name`;
+- Author and Series POST/PATCH/DELETE are Django-session-only Librarian+ catalog
+  management operations. POST accepts required `name`; Author accepts optional
+  `sort_name` and `biography`, while Series accepts optional `sort_name` and
+  `summary`. PATCH accepts the same entity fields. Blank sort names default to
+  the display name. Client bearer credentials remain read-only.
+- Management Product UI reads add `management=true`. For a Librarian+ session,
+  this returns catalog-global Authors/Series including unattached entities and
+  total Book counts. Reader sessions, bearer clients, and ordinary reads remain
+  visibility-scoped; `management=true` does not broaden them.
+- Names maintain an indexed, non-unique normalized value using Unicode NFKC,
+  collapsed whitespace, trim, and case-folding while preserving punctuation.
+  Normalized matches are advisory and do not block duplicate creation.
+- DELETE returns `204` for an unattached entity. Attached Authors and Series are
+  not detached automatically and return bounded `409 AUTHOR_IN_USE` or
+  `409 SERIES_IN_USE` errors.
+- Author POST accepts required `name` and optional `sort_name`/`biography`;
   blank or overlong values return normal structured validation errors. When
   `sort_name` is omitted or blank, it defaults to `name`.
 - Author display names are not unique in the current catalog model, so POST
@@ -561,8 +575,6 @@ Author/Series payload notes:
   The response uses the normal Author axis shape (`id`, `name`, `sort_name`,
   `biography`, and `book_count`, initially zero). Creation does not assign a
   Book. Client bearer credentials are rejected even for privileged accounts.
-- The Series collection remains GET-only. New Series creation continues through
-  the Book metadata save workflow rather than a standalone Series POST.
 - Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH `name` and the respective prose field on the detail endpoint; readers remain read-only.
 - Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
 - Author and Series list/detail payloads may opt into `preview_books` with

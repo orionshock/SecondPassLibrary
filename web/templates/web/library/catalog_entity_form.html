@@ -1,0 +1,42 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}catalog-entity-form{% endblock %}
+{% block title %}{% if entity_id %}Edit{% else %}Create{% endif %} {{ entity_label }} - {{ server_name }}{% endblock %}
+
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with grandparent_href="/library/" grandparent_label="Library" parent_href="/library/"|add:entity_kind|add:"/" parent_label=entity_label|add:"s" current_label=entity_label only %}
+{% endblock %}
+
+{% block content %}
+  <main id="catalog-entity-form-root" data-kind="{{ entity_kind }}" data-label="{{ entity_label }}" data-entity-id="{{ entity_id }}">
+    <h1 class="page-title">{% if entity_id %}Edit{% else %}Create{% endif %} {{ entity_label }}</h1>
+    <div id="catalog-entity-load-status" class="muted"></div>
+    <form id="catalog-entity-form" class="form catalog-entity-form">
+      {% csrf_token %}
+      <label for="catalog-entity-name">Name</label>
+      <input id="catalog-entity-name" type="text" maxlength="255" required />
+      <label for="catalog-entity-sort-name">Sort name</label>
+      <input id="catalog-entity-sort-name" type="text" maxlength="255" />
+      <label for="catalog-entity-prose">{% if entity_kind == "authors" %}Biography{% else %}Summary{% endif %}</label>
+      <textarea id="catalog-entity-prose" rows="8"></textarea>
+      <div id="catalog-entity-duplicate-warning" class="warning is-hidden" role="status"></div>
+      <div id="catalog-entity-form-status" class="muted" role="status" aria-live="polite"></div>
+      <div class="form-actions">
+        <button id="catalog-entity-save" class="button" type="submit">Save</button>
+        <a class="button button--secondary" href="/library/{{ entity_kind }}/{% if entity_id %}{{ entity_id }}/{% endif %}">Cancel</a>
+      </div>
+    </form>
+    {% if entity_id %}
+    <section aria-labelledby="catalog-entity-attached-heading">
+      <h2 id="catalog-entity-attached-heading">Attached Books</h2>
+      <div id="catalog-entity-attached-books" class="catalog-management-list"></div>
+    </section>
+    <details id="catalog-entity-delete" class="danger-zone">
+      <summary>Delete {{ entity_label }}</summary>
+      <p id="catalog-entity-delete-help" class="muted">Only unattached catalog entities can be deleted.</p>
+      <button id="catalog-entity-delete-btn" class="button button--danger" type="button">Delete {{ entity_label }}</button>
+      <div id="catalog-entity-delete-status" class="muted" role="status"></div>
+    </details>
+    {% endif %}
+  </main>
+{% endblock %}

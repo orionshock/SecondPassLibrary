@@ -25,6 +25,12 @@ Series membership is represented by `BookSeries`, which links a Book to a
 Series and stores its `series_index`. Author biographies and Series summaries
 are optional descriptive metadata.
 
+Author and Series names also maintain indexed, non-unique `normalized_name`
+values. Normalization applies Unicode NFKC, trims and collapses whitespace, and
+case-folds while preserving punctuation. These values support duplicate
+advisories; they are not identity constraints and do not prevent same-name
+records.
+
 ## Dates and identifiers
 
 Published dates retain their known precision instead of inventing missing

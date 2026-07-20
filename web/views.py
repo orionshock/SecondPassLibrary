@@ -20,7 +20,7 @@ from accounts.bootstrap import (
     has_active_owner,
 )
 from accounts.forms import FirstOwnerSetupForm
-from accounts.roles import is_owner
+from accounts.roles import is_librarian, is_owner
 from core import server_settings as server_settings_service
 from library.models import Book
 from library.queries import visible_books_for_user
@@ -237,6 +237,50 @@ def book_detail(request: HttpRequest, book_id: str) -> HttpResponse:
 def book_edit(request: HttpRequest, book_id: str) -> HttpResponse:
     book_uuid = _uuid_or_404(book_id)
     return render(request, "web/library/book_edit.html", {"book_id": str(book_uuid)})
+
+
+def _catalog_entity_context(kind: str, entity_id: str = "") -> dict[str, str]:
+    singular = "Author" if kind == "authors" else "Series"
+    return {"entity_kind": kind, "entity_label": singular, "entity_id": entity_id}
+
+
+def _require_catalog_manager(request: HttpRequest) -> None:
+    if not is_librarian(request.user):
+        raise PermissionDenied("Not allowed.")
+
+
+@product_login_required
+def catalog_entity_list(request: HttpRequest, kind: str) -> HttpResponse:
+    _require_catalog_manager(request)
+    return render(request, "web/library/catalog_entity_list.html", _catalog_entity_context(kind))
+
+
+@product_login_required
+def catalog_entity_new(request: HttpRequest, kind: str) -> HttpResponse:
+    _require_catalog_manager(request)
+    return render(request, "web/library/catalog_entity_form.html", _catalog_entity_context(kind))
+
+
+@product_login_required
+def catalog_entity_detail(request: HttpRequest, kind: str, entity_id: str) -> HttpResponse:
+    _require_catalog_manager(request)
+    entity_uuid = _uuid_or_404(entity_id)
+    return render(
+        request,
+        "web/library/catalog_entity_detail.html",
+        _catalog_entity_context(kind, str(entity_uuid)),
+    )
+
+
+@product_login_required
+def catalog_entity_edit(request: HttpRequest, kind: str, entity_id: str) -> HttpResponse:
+    _require_catalog_manager(request)
+    entity_uuid = _uuid_or_404(entity_id)
+    return render(
+        request,
+        "web/library/catalog_entity_form.html",
+        _catalog_entity_context(kind, str(entity_uuid)),
+    )
 
 
 @product_login_required

@@ -1,0 +1,29 @@
+{% extends "web/base.html" %}
+
+{% block page_id %}catalog-entity-list{% endblock %}
+{% block title %}{{ entity_label }}s - {{ server_name }}{% endblock %}
+
+{% block breadcrumbs %}
+  {% include "web/partials/breadcrumbs.html" with parent_href="/library/" parent_label="Library" current_label=entity_label|add:"s" only %}
+{% endblock %}
+
+{% block content %}
+  <main id="catalog-entity-list" data-kind="{{ entity_kind }}" data-label="{{ entity_label }}">
+    <div class="page-header catalog-management-header">
+      <h1 class="page-title">{{ entity_label }}s</h1>
+      <form id="catalog-entity-search" class="search" autocomplete="off">
+        <label class="search__label" for="catalog-entity-q">Search</label>
+        <input id="catalog-entity-q" class="search__input" type="search" />
+        <button class="button" type="submit">Search</button>
+      </form>
+      <a id="catalog-entity-create" class="button" href="/library/{{ entity_kind }}/new/">Create {{ entity_label }}</a>
+    </div>
+    <div id="catalog-entity-status" class="muted">Loading...</div>
+    <div id="catalog-entity-results" class="catalog-management-list"></div>
+    <div class="pager" aria-label="{{ entity_label }} pagination">
+      <button id="catalog-entity-prev" class="button" type="button">Previous</button>
+      <span id="catalog-entity-range" class="muted" aria-live="polite"></span>
+      <button id="catalog-entity-next" class="button" type="button">Next</button>
+    </div>
+  </main>
+{% endblock %}

@@ -150,6 +150,13 @@ filter rail rather than a fourth axis.
 Library axis, ordering, filter, pagination, and selected-tab state remain in
 the URL. List rows use the shared Book row and metadata treatment.
 
+Catalog managers have canonical Author and Series management routes under
+`/library/authors/` and `/library/series/`, with create, detail, and edit pages.
+These session-only surfaces include unattached entities, duplicate-name
+advisories, attached Books, and safe deletion for unattached records. The
+existing Library axes remain browse/detail-in-context surfaces; their Create
+and Edit actions link to the canonical management pages.
+
 ### Book Detail
 
 Book Detail uses a large-cover identity layout with the Book title and safe
@@ -181,8 +188,9 @@ pages. Cover replacement/clear lives in Book Edit and uses its separate cover
 workflow. Shelf and group relationship controls retain their own mutation
 boundaries.
 
-Authors & Series may create a catalog-global Author and select it in the form;
-the Author-to-Book relationship is not applied until the normal Book Save.
+Authors & Series is assignment-focused: it assigns/removes existing Authors,
+assigns an existing Series, and edits the Book-specific Series index. Author
+and Series lifecycle actions link to their canonical management pages.
 
 Book Edit tab state is URL-backed with `tab=book`, `tab=catalog`,
 `tab=authors-series`, `tab=groups`, `tab=shelves`, and

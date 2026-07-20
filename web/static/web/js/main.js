@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const registry = {
     app: { importer: () => import("./dashboard/main.js"), initExportName: "initDashboard", label: "App" },
     library: { importer: () => import("./library/list.js"), initExportName: "initLibraryBrowse", label: "Library" },
+    "catalog-entity-list": { importer: () => import("./catalog_entities/main.js"), initExportName: "initCatalogEntityList", label: "Catalog" },
+    "catalog-entity-detail": { importer: () => import("./catalog_entities/main.js"), initExportName: "initCatalogEntityDetail", label: "Catalog" },
+    "catalog-entity-form": { importer: () => import("./catalog_entities/main.js"), initExportName: "initCatalogEntityForm", label: "Catalog" },
     "book-detail": { importer: () => import("./library/detail.js"), initExportName: "initBookDetail", label: "Book" },
     "reading-book-activity": {
       importer: () => import("./reading/activity.js"),

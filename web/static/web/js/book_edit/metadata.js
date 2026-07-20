@@ -58,11 +58,7 @@ export function buildBookPatchPayload({ dom, selectedAuthors, identifiers, catal
       published_date_precision:
         dateParts.length === 3 ? "day" : dateParts.length === 2 ? "month" : dateParts.length === 1 ? "year" : "",
       authors: selectedAuthors.map((a) => String(a.id)).filter(Boolean),
-      series: (dom.seriesNewEl.value || "").trim()
-        ? { name: (dom.seriesNewEl.value || "").trim() }
-        : dom.seriesSelectEl.value
-          ? String(dom.seriesSelectEl.value)
-          : null,
+      series: dom.seriesSelectEl.value ? String(dom.seriesSelectEl.value) : null,
       series_index: seriesIndex,
       identifiers: identifiers.map((identifier) => ({
         scheme: String(identifier.scheme || "").trim(),

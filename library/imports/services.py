@@ -7,6 +7,7 @@ from django.core.files.base import File
 from django.db import transaction
 
 from library.imports.dto import ImportMetadata
+from library.catalog.names import normalize_catalog_entity_name
 from library.catalog.tag_services import resolve_catalog_tag
 from library.groups.book_assignments import add_book_to_group
 from library.groups.public_group import get_public_group
@@ -133,7 +134,11 @@ def _get_or_create_author(*, name: str, sort_name: str) -> Author:
     if existing is not None:
         _fill_blank_sort_name(existing, sort_name=sort_name)
         return existing
-    return Author.objects.create(name=name, sort_name=sort_name)
+    return Author.objects.create(
+        name=name,
+        sort_name=sort_name,
+        normalized_name=normalize_catalog_entity_name(name),
+    )
 
 
 def _persist_series(*, book: Book, metadata: ImportMetadata) -> None:
@@ -155,7 +160,11 @@ def _get_or_create_series(*, name: str, sort_name: str) -> Series:
     if existing is not None:
         _fill_blank_sort_name(existing, sort_name=sort_name)
         return existing
-    return Series.objects.create(name=name, sort_name=sort_name)
+    return Series.objects.create(
+        name=name,
+        sort_name=sort_name,
+        normalized_name=normalize_catalog_entity_name(name),
+    )
 
 
 def _fill_blank_sort_name(instance, *, sort_name: str) -> None:

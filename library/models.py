@@ -10,6 +10,7 @@ from django.db import models
 from django.db.models import Q
 
 from core.models import TimeStampedModel
+from library.catalog.names import normalize_catalog_entity_name
 
 
 _COVER_FILENAME_RE = re.compile(r"^(?P<sha>[0-9a-f]{64})(?P<ext>\.[A-Za-z0-9]+)?$")
@@ -45,10 +46,15 @@ def book_file_upload_path(instance: "Book", filename: str) -> str:
 class Author(TimeStampedModel):
     name = models.CharField(max_length=255)
     sort_name = models.CharField(max_length=255, blank=True)
+    normalized_name = models.CharField(max_length=255, blank=True, db_index=True)
     biography = models.TextField(blank=True)
 
     class Meta:
         ordering = ["sort_name", "name", "id"]
+
+    def clean(self) -> None:
+        super().clean()
+        self.normalized_name = normalize_catalog_entity_name(self.name)
 
     def __str__(self) -> str:
         return self.name
@@ -57,11 +63,16 @@ class Author(TimeStampedModel):
 class Series(TimeStampedModel):
     name = models.CharField(max_length=255)
     sort_name = models.CharField(max_length=255, blank=True)
+    normalized_name = models.CharField(max_length=255, blank=True, db_index=True)
     summary = models.TextField(blank=True)
 
     class Meta:
         verbose_name_plural = "series"
         ordering = ["sort_name", "name", "id"]
+
+    def clean(self) -> None:
+        super().clean()
+        self.normalized_name = normalize_catalog_entity_name(self.name)
 
     def __str__(self) -> str:
         return self.name
@@ -214,7 +225,7 @@ class Book(TimeStampedModel):
 
 class BookAuthor(TimeStampedModel):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="book_authors")
-    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="book_authors")
+    author = models.ForeignKey(Author, on_delete=models.PROTECT, related_name="book_authors")
     position = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
@@ -230,7 +241,7 @@ class BookAuthor(TimeStampedModel):
 
 class BookSeries(TimeStampedModel):
     book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name="book_series")
-    series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="book_series")
+    series = models.ForeignKey(Series, on_delete=models.PROTECT, related_name="book_series")
     series_index = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     class Meta:

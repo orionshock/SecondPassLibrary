@@ -70,6 +70,40 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             self.assertEqual(response.status_code, 201)
 
         self.assertEqual(Author.objects.filter(name="Deliberate Duplicate").count(), 2)
+        normalized = Author.objects.filter(name="Deliberate Duplicate").values_list(
+            "normalized_name", flat=True
+        )
+        self.assertEqual(set(normalized), {"deliberate duplicate"})
+
+    def test_manager_can_list_and_retrieve_unattached_author(self):
+        unattached = Author.objects.create(
+            name="Unattached", sort_name="Unattached", normalized_name="unattached"
+        )
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        listed = self.client.get("/api/v1/library/authors/", {"management": "true"})
+        detail = self.client.get(
+            f"/api/v1/library/authors/{unattached.id}/", {"management": "true"}
+        )
+
+        self.assertIn("Unattached", response_names(listed))
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["book_count"], 0)
+
+    def test_safe_delete_author(self):
+        unattached = Author.objects.create(
+            name="Disposable", sort_name="Disposable", normalized_name="disposable"
+        )
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        deleted = self.client.delete(f"/api/v1/library/authors/{unattached.id}/")
+        blocked = self.client.delete(f"/api/v1/library/authors/{self.alpha.id}/")
+
+        self.assertEqual(deleted.status_code, 204)
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(blocked.json()["error"]["code"], "AUTHOR_IN_USE")
 
     def test_blank_and_overlong_author_names_are_rejected(self):
         self.client.logout()
@@ -95,16 +129,6 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertIn(response.status_code, {401, 403})
         self.assertFalse(Author.objects.filter(name="Anonymous Writer").exists())
-
-    def test_series_collection_remains_get_only(self):
-        self.client.logout()
-        self.assertTrue(self.client.login(username="manager", password="pw"))
-        response = self.client.post(
-            "/api/v1/library/series/",
-            data={"name": "Not Created"},
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 405)
 
     def test_reader_cannot_create_author(self):
         response = self.client.post(
@@ -241,6 +265,7 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.alpha.refresh_from_db()
         self.assertEqual(self.alpha.name, "Updated Author Name")
         self.assertEqual(self.alpha.biography, "Updated biography.")
+        self.assertEqual(self.alpha.normalized_name, "updated author name")
         self.assertEqual(response.json()["name"], "Updated Author Name")
         self.assertEqual(response.json()["biography"], "Updated biography.")
 

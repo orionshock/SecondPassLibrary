@@ -106,7 +106,11 @@
 
       <div class="book-edit-relations">
         <section class="book-edit-relation" aria-labelledby="book-edit-authors-heading">
-          <h3 id="book-edit-authors-heading">Authors</h3>
+          <div class="book-edit-relation__heading">
+            <h3 id="book-edit-authors-heading">Authors</h3>
+            <a class="button button--secondary" href="/library/authors/">Manage Authors</a>
+            <a class="button button--secondary" href="/library/authors/new/">Create Author</a>
+          </div>
           <div id="book-edit-authors-selected" class="muted">Loading...</div>
 
           <div class="book-edit-relation__controls">
@@ -115,25 +119,18 @@
             <button id="book-edit-author-add-btn" class="button" type="button">Add</button>
             <span id="book-edit-authors-status" class="muted"></span>
           </div>
-          <form id="book-edit-author-create" class="book-edit-relation__controls">
-            <label for="book-edit-author-new" class="muted">New author</label>
-            <input id="book-edit-author-new" type="text" maxlength="255" autocomplete="off" />
-            <button id="book-edit-author-create-btn" class="button" type="submit">Create</button>
-            <span id="book-edit-author-create-status" class="muted" role="status" aria-live="polite"></span>
-          </form>
         </section>
 
         <section class="book-edit-relation" aria-labelledby="book-edit-series-heading">
-          <h3 id="book-edit-series-heading">Series</h3>
+          <div class="book-edit-relation__heading">
+            <h3 id="book-edit-series-heading">Series</h3>
+            <a class="button button--secondary" href="/library/series/">Manage Series</a>
+            <a class="button button--secondary" href="/library/series/new/">Create Series</a>
+          </div>
           <div class="book-edit-relation__controls">
             <label for="book-edit-series-select" class="muted">Assigned series</label>
             <select id="book-edit-series-select"></select>
             <span id="book-edit-series-status" class="muted"></span>
-          </div>
-          <div class="book-edit-relation__controls">
-            <label for="book-edit-series-new" class="muted">New series</label>
-            <input id="book-edit-series-new" type="text" maxlength="255" autocomplete="off" />
-            <span class="muted">Enter a name to create and select it when you save.</span>
           </div>
           <div class="book-edit-relation__controls">
             <label for="book-edit-series-index" class="muted">Series index</label>

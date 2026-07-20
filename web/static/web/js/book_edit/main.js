@@ -84,13 +84,8 @@ export async function initBookEdit() {
   const authorsStatusEl = $("#book-edit-authors-status");
   const authorAddSelectEl = $("#book-edit-author-add-select");
   const authorAddBtnEl = $("#book-edit-author-add-btn");
-  const authorCreateFormEl = $("#book-edit-author-create");
-  const authorNewEl = $("#book-edit-author-new");
-  const authorCreateBtnEl = $("#book-edit-author-create-btn");
-  const authorCreateStatusEl = $("#book-edit-author-create-status");
 
   const seriesSelectEl = $("#book-edit-series-select");
-  const seriesNewEl = $("#book-edit-series-new");
   const seriesStatusEl = $("#book-edit-series-status");
   const seriesIndexEl = $("#book-edit-series-index");
 
@@ -145,12 +140,7 @@ export async function initBookEdit() {
     !authorsStatusEl ||
     !authorAddSelectEl ||
     !authorAddBtnEl ||
-    !authorCreateFormEl ||
-    !authorNewEl ||
-    !authorCreateBtnEl ||
-    !authorCreateStatusEl ||
     !seriesSelectEl ||
-    !seriesNewEl ||
     !seriesStatusEl ||
     !seriesIndexEl ||
     !shelvesStatusEl ||
@@ -201,7 +191,6 @@ export async function initBookEdit() {
     publishedDateEl,
     seriesIndexEl,
     seriesSelectEl,
-    seriesNewEl,
   };
 
   const state = {
@@ -354,12 +343,7 @@ export async function initBookEdit() {
     authorsSelectedEl,
     authorAddSelectEl,
     authorAddBtnEl,
-    authorCreateFormEl,
-    authorNewEl,
-    authorCreateBtnEl,
-    authorCreateStatusEl,
     seriesSelectEl,
-    seriesNewEl,
     seriesIndexEl,
     headerTitleEl,
     headerAuthorsEl,
@@ -398,7 +382,7 @@ export async function initBookEdit() {
     setSaved(false);
 
     const built = buildBookPatchPayload({
-      dom: { ...dom, seriesSelectEl, seriesNewEl },
+      dom: { ...dom, seriesSelectEl },
       selectedAuthors: state.selectedAuthors,
       identifiers: state.identifiers,
       catalogTags: state.catalogTags,
@@ -426,7 +410,6 @@ export async function initBookEdit() {
       if (updated.series && updated.series.id) {
         state.allSeries = uniqueById([...state.allSeries, updated.series]);
       }
-      seriesNewEl.value = "";
       setSaved(true);
       setText(saveStatusEl, "");
       await refreshBook();

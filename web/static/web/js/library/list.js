@@ -1,4 +1,4 @@
-import { extractApiErrorMessage, fetchJSON, patchJSON } from "../api.js";
+import { fetchJSON } from "../api.js";
 import { canManageLibrary } from "../auth.js";
 import {
   $,
@@ -28,12 +28,6 @@ const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 30, 40, 50];
 const VIEWS = new Set(["books", "authors", "series", "author"]);
 const TAB_VIEWS = new Set(["books", "authors", "series"]);
-
-function safeContextSaveError(error) {
-  const body = error && error.body && typeof error.body === "object" ? error.body : null;
-  if (!body) return "Failed to save changes.";
-  return extractApiErrorMessage({ body }).slice(0, 240) || "Failed to save changes.";
-}
 
 function compactSubtitle(title, subtitle) {
   const cleanSubtitle = subtitle ? String(subtitle).trim() : "";
@@ -221,9 +215,10 @@ export async function initLibraryBrowse() {
   const qInput = $("#q");
   const pageSizeSelect = $("#library-page-size");
   const tagFilterEl = $("#library-tag-filter-options");
+  const axisCreateEl = $("#library-axis-create");
   const viewTabs = Array.from(document.querySelectorAll("[data-view]"));
 
-  if (!statusEl || !filterSummaryEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect || !tagFilterEl) return;
+  if (!statusEl || !filterSummaryEl || !rangeEl || !resultsEl || !nextBtn || !prevBtn || !form || !qInput || !pageSizeSelect || !tagFilterEl || !axisCreateEl) return;
 
   const state = {
     view: "books",
@@ -238,11 +233,6 @@ export async function initLibraryBrowse() {
     seriesName: "",
     seriesSummary: "",
     contextKey: "",
-    contextEditing: false,
-    contextDraftName: "",
-    contextDraftProse: "",
-    contextStatus: "",
-    contextError: "",
     count: 0,
     resultLength: 0,
     hasNext: false,
@@ -328,97 +318,25 @@ export async function initLibraryBrowse() {
   function renderFilterSummary(filter) {
     return renderLibraryContext({
       filter,
-      canEdit: allowContextEdit,
-      editing: state.contextEditing,
-      editName: state.contextDraftName,
-      editProse: state.contextDraftProse,
-      status: state.contextStatus,
-      error: state.contextError,
+      editHref: allowContextEdit
+        ? `/library/${filter.kind === "author" ? "authors" : "series"}/${encodeURIComponent(filter.id)}/edit/`
+        : "",
     });
   }
 
   function clearContextUiState() {
-    state.contextEditing = false;
-    state.contextDraftName = "";
-    state.contextDraftProse = "";
-    state.contextStatus = "";
-    state.contextError = "";
     state.contextKey = "";
   }
 
-  function beginContextEdit() {
-    const filter = activeFilter();
-    if (!filter || !allowContextEdit) return;
-    state.contextEditing = true;
-    state.contextDraftName = filter.name;
-    state.contextDraftProse = filter.prose || "";
-    state.contextStatus = "";
-    state.contextError = "";
-    syncControls();
-  }
-
-  function replaceCurrentLocation() {
-    pushLocation(locationParamsForState(), { replace: true });
-  }
-
-  async function saveActiveContext() {
-    const filter = activeFilter();
-    if (!filter || !allowContextEdit) return;
-
-    const nameInput = filterSummaryEl.querySelector('[name="library-context-name"]');
-    const proseInput = filterSummaryEl.querySelector('[name="library-context-prose"]');
-    if (!(nameInput instanceof HTMLInputElement) || !(proseInput instanceof HTMLTextAreaElement)) return;
-
-    const name = nameInput.value.trim();
-    const prose = proseInput.value.trim();
-    state.contextDraftName = name;
-    state.contextDraftProse = prose;
-    const body =
-      filter.kind === "author"
-        ? { name, biography: prose }
-        : { name, summary: prose };
-
-    state.contextStatus = "Saving...";
-    state.contextError = "";
-    syncControls();
-
-    try {
-      const payload = await patchJSON(
-        `/api/v1/library/${filter.kind === "author" ? "authors" : "series"}/${encodeURIComponent(filter.id)}/`,
-        body
-      );
-      if (filter.kind === "author") {
-        state.authorName = payload && payload.name ? String(payload.name) : name;
-        state.authorBiography = payload && payload.biography ? String(payload.biography) : "";
-      } else {
-        state.seriesName = payload && payload.name ? String(payload.name) : name;
-        state.seriesSummary = payload && payload.summary ? String(payload.summary) : "";
-      }
-      state.contextEditing = false;
-      state.contextDraftName = "";
-      state.contextDraftProse = "";
-      state.contextStatus = "Saved.";
-      state.contextError = "";
-      replaceCurrentLocation();
-      syncControls();
-      window.setTimeout(() => {
-        if (state.contextStatus === "Saved.") {
-          state.contextStatus = "";
-          syncControls();
-        }
-      }, 5000);
-    } catch (e) {
-      state.contextEditing = true;
-      state.contextStatus = "";
-      state.contextError = safeContextSaveError(e);
-      syncControls();
-    }
-  }
 
   function syncControls() {
     syncBreadcrumbs();
     qInput.value = state.q;
     qInput.placeholder = librarySearchPlaceholder(state.view, state.seriesId);
+    const createKind = state.view === "authors" ? "authors" : state.view === "series" && !state.seriesId ? "series" : "";
+    axisCreateEl.href = createKind ? `/library/${createKind}/new/` : "#";
+    axisCreateEl.textContent = createKind ? `Create ${createKind === "authors" ? "Author" : "Series"}` : "";
+    axisCreateEl.classList.toggle("is-hidden", !allowContextEdit || !createKind);
     pageSizeSelect.value = String(state.pageSize);
     rangeEl.textContent = rangeText(state);
     prevBtn.disabled = !state.hasPrevious;
@@ -665,22 +583,6 @@ export async function initLibraryBrowse() {
     const proseToggle = source.closest('[data-action="toggle-library-prose"]');
     if (proseToggle && filterSummaryEl.contains(proseToggle)) {
       toggleProseBlock(proseToggle, filterSummaryEl);
-      return;
-    }
-
-    if (source.closest('[data-action="edit-library-context"]')) {
-      beginContextEdit();
-      return;
-    }
-
-    if (source.closest('[data-action="cancel-library-context-edit"]')) {
-      clearContextUiState();
-      syncControls();
-      return;
-    }
-
-    if (source.closest('[data-action="save-library-context"]')) {
-      await saveActiveContext();
       return;
     }
 

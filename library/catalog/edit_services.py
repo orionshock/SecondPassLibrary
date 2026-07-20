@@ -5,6 +5,7 @@ from django.db import transaction
 
 from library.imports.normalization import normalize_identifier
 from library.catalog.tag_services import replace_book_catalog_tags
+from library.catalog.names import normalize_catalog_entity_name
 from library.models import Author, Book, BookAuthor, BookIdentifier, BookSeries, Series
 
 
@@ -37,7 +38,11 @@ def update_book_metadata(
         series_name = series["name"]
         series = Series.objects.filter(name__iexact=series_name).order_by("id").first()
         if series is None:
-            series = Series.objects.create(name=series_name)
+            series = Series.objects.create(
+                name=series_name,
+                sort_name=series_name,
+                normalized_name=normalize_catalog_entity_name(series_name),
+            )
 
     existing_link = BookSeries.objects.filter(book=book).first()
     target_series = series if series_supplied else (existing_link.series if existing_link else None)

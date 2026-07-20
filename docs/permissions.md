@@ -54,6 +54,9 @@ change designated Public group name/description.
 Librarian may:
 
 - import Books and edit Book metadata, files, Catalog Tags, and covers;
+- create, edit, and safely delete unattached catalog Authors and Series through
+  session-authenticated management surfaces; attached entities require future
+  reassignment or merge work and cannot be deleted;
 - assign/remove Books from visible Library Groups through the supported group
   services;
 - update custom-group descriptions;

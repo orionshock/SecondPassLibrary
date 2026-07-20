@@ -70,6 +70,18 @@ class LibraryBearerCatalogMutationBoundaryTests(LibraryBearerApiTestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_privileged_bearer_cannot_create_or_delete_series(self):
+        headers = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+        created = self.bearer.post(
+            "/api/v1/library/series/", {"name": "Bearer Series"}, format="json", **headers
+        )
+        deleted = self.bearer.delete(
+            f"/api/v1/library/series/{self.first_series.id}/", **headers
+        )
+
+        self.assertEqual(created.status_code, 403)
+        self.assertEqual(deleted.status_code, 403)
+
     def test_cover_and_import_mutations_remain_session_only(self):
         headers = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
         cover_url = f"/api/v1/library/books/{self.visible_one.id}/cover/"

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Count
 from rest_framework import serializers, status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from accounts.roles import is_librarian
@@ -23,15 +26,25 @@ from library.catalog.serializers import (
     AuthorAxisUpdateSerializer,
     CatalogTagAxisSerializer,
     SeriesAxisSerializer,
+    SeriesCreateSerializer,
     SeriesAxisUpdateSerializer,
 )
-from library.catalog.axis_services import create_author, update_author, update_series
+from library.catalog.axis_services import (
+    CatalogEntityInUseError,
+    create_author,
+    create_series,
+    delete_author,
+    delete_series,
+    update_author,
+    update_series,
+)
 from library.catalog.filters import apply_catalog_tag_filter
 from library.catalog.preview_books import (
     attach_author_preview_books,
     attach_series_preview_books,
     include_preview_books,
 )
+from library.models import Author, Series
 from library.queries import visible_books_for_user
 
 
@@ -44,6 +57,16 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
 
     def axis_queryset(self):
         raise NotImplementedError
+
+    def is_catalog_manager_session(self) -> bool:
+        session_manager = isinstance(
+            self.request.successful_authenticator, SessionAuthentication
+        ) and is_librarian(self.request.user)
+        if not session_manager:
+            return False
+        return self.request.method not in SAFE_METHODS or self.request.query_params.get(
+            "management"
+        ) == "true"
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -111,8 +134,11 @@ class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
 
 class AuthorAxisMixin(_BaseAxisMixin):
     serializer_class = AuthorAxisSerializer
+    search_normalized_name = True
 
     def axis_queryset(self):
+        if self.is_catalog_manager_session():
+            return Author.objects.annotate(book_count=Count("book_authors__book", distinct=True))
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_authors_from_books(visible_books)
 
@@ -133,6 +159,7 @@ class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
             author = create_author(
                 name=serializer.validated_data["name"],
                 sort_name=serializer.validated_data.get("sort_name", ""),
+                biography=serializer.validated_data.get("biography", ""),
             )
         except DjangoValidationError as exc:
             raise serializers.ValidationError(
@@ -149,11 +176,27 @@ class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):
     def update_axis(self, instance, data):
         update_author(author=instance, fields=data)
 
+    def delete(self, request, *args, **kwargs):
+        if not is_librarian(request.user):
+            raise PermissionDenied("Not allowed.")
+        author = self.get_object()
+        try:
+            delete_author(author=author)
+        except CatalogEntityInUseError as exc:
+            return Response(
+                {"error": {"code": exc.code, "message": str(exc)}},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SeriesAxisMixin(_BaseAxisMixin):
     serializer_class = SeriesAxisSerializer
+    search_normalized_name = True
 
     def axis_queryset(self):
+        if self.is_catalog_manager_session():
+            return Series.objects.annotate(book_count=Count("book_series__book", distinct=True))
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_series_from_books(visible_books)
 
@@ -165,7 +208,20 @@ class SeriesAxisMixin(_BaseAxisMixin):
 
 
 class SeriesListView(SeriesAxisMixin, _BaseAxisListView):
-    pass
+    def post(self, request, *args, **kwargs):
+        if not is_librarian(request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer = SeriesCreateSerializer(data=request.data or {})
+        serializer.is_valid(raise_exception=True)
+        try:
+            series = create_series(**serializer.validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            ) from exc
+        series.book_count = 0
+        response_serializer = SeriesAxisSerializer(series, context=self.get_serializer_context())
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
@@ -173,6 +229,19 @@ class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
 
     def update_axis(self, instance, data):
         update_series(series=instance, fields=data)
+
+    def delete(self, request, *args, **kwargs):
+        if not is_librarian(request.user):
+            raise PermissionDenied("Not allowed.")
+        series = self.get_object()
+        try:
+            delete_series(series=series)
+        except CatalogEntityInUseError as exc:
+            return Response(
+                {"error": {"code": exc.code, "message": str(exc)}},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CatalogTagAxisMixin(_BaseAxisMixin):

@@ -17,6 +17,64 @@ def preview_titles(row):
 
 
 class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
+    def test_manager_can_create_and_retrieve_unattached_series(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        created = self.client.post(
+            "/api/v1/library/series/",
+            data={"name": "New Series", "sort_name": "Series, New", "summary": "Summary"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(
+            set(created.json()), {"id", "name", "sort_name", "summary", "book_count"}
+        )
+        series = Series.objects.get(pk=created.json()["id"])
+        self.assertEqual(series.normalized_name, "new series")
+        detail = self.client.get(
+            f"/api/v1/library/series/{series.id}/", {"management": "true"}
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["book_count"], 0)
+
+    def test_duplicate_normalized_series_names_are_allowed(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        for name in ("Shared Name", "  shared   name "):
+            response = self.client.post(
+                "/api/v1/library/series/",
+                data={"name": name},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            Series.objects.filter(normalized_name="shared name").count(), 2
+        )
+
+    def test_reader_cannot_create_or_delete_series(self):
+        created = self.client.post(
+            "/api/v1/library/series/",
+            data={"name": "Forbidden"},
+            content_type="application/json",
+        )
+        deleted = self.client.delete(f"/api/v1/library/series/{self.first_series.id}/")
+        self.assertEqual(created.status_code, 403)
+        self.assertEqual(deleted.status_code, 403)
+
+    def test_safe_delete_series(self):
+        unattached = Series.objects.create(
+            name="Disposable", sort_name="Disposable", normalized_name="disposable"
+        )
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        deleted = self.client.delete(f"/api/v1/library/series/{unattached.id}/")
+        blocked = self.client.delete(f"/api/v1/library/series/{self.first_series.id}/")
+
+        self.assertEqual(deleted.status_code, 204)
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(blocked.json()["error"]["code"], "SERIES_IN_USE")
     def test_list_includes_only_series_with_visible_books(self):
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
         create_catalog_book(
@@ -143,6 +201,7 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.first_series.refresh_from_db()
         self.assertEqual(self.first_series.name, "Updated Series Name")
         self.assertEqual(self.first_series.summary, "Updated series summary.")
+        self.assertEqual(self.first_series.normalized_name, "updated series name")
         self.assertEqual(response.json()["name"], "Updated Series Name")
         self.assertEqual(response.json()["summary"], "Updated series summary.")
 

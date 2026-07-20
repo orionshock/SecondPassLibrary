@@ -117,9 +117,7 @@ class ProductUiDisplaySitesJsContractsTests(ProductUiTestCase):
         author_actions_js = Path(
             "web/static/web/js/book_edit/author_series_actions.js"
         ).read_text(encoding="utf-8")
-        self.assertIn('fetchJSONWithOptions("/api/v1/library/authors/"', author_actions_js)
-        self.assertIn('method: "POST"', author_actions_js)
-        self.assertIn("state.selectedAuthors, author", author_actions_js)
+        self.assertNotIn("/api/v1/library/authors/", author_actions_js)
         self.assertLess(
             book_edit_authors_js.index("li.appendChild(btn)"),
             book_edit_authors_js.index("li.appendChild(document.createTextNode(name))"),

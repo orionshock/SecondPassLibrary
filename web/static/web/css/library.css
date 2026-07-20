@@ -607,6 +607,8 @@
 .book-edit-relations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; max-width: 900px; }
 .book-edit-relation { min-width: 0; padding-top: 4px; border-top: 1px solid var(--border); }
 .book-edit-relation h3, .book-edit-metadata-section h3 { margin: 10px 0 14px; }
+.book-edit-relation__heading { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.book-edit-relation__heading h3 { margin-right: auto; }
 .book-edit-relation__controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
 .book-edit-relation__controls select { min-width: min(280px, 100%); }
 .book-edit-relation__controls input { max-width: 280px; }
@@ -669,3 +671,26 @@
   text-align: left;
 }
 .ident-actions { white-space: nowrap; }
+
+/* Author and Series management */
+.catalog-management-header { gap: 12px; flex-wrap: wrap; }
+.catalog-management-header .search { flex: 1 1 360px; }
+.catalog-management-list { display: grid; gap: 8px; margin: 14px 0; }
+.catalog-management-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.catalog-management-row__title { display: inline-block; margin-bottom: 4px; font-weight: 700; }
+.catalog-entity-form { display: grid; gap: 8px; max-width: 720px; margin: 18px 0 28px; }
+.catalog-entity-form input,
+.catalog-entity-form textarea { width: 100%; box-sizing: border-box; }
+.catalog-entity-facts { display: grid; gap: 8px; margin: 18px 0; }
+.catalog-entity-facts div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
+.catalog-entity-facts dt { color: var(--muted); }
+.catalog-entity-facts dd { margin: 0; }
+.catalog-entity-prose { max-width: 78ch; white-space: pre-wrap; }

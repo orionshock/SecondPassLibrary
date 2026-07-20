@@ -44,7 +44,7 @@ class LibraryProseJavaScriptTests:
                 prose: "Mathematician and writer.",
                 proseLabel: "Biography",
               },
-              canEdit: true,
+              editHref: "/library/authors/author-1/edit/",
             });
             const seriesHtml = renderLibraryContext({
               filter: {
@@ -65,17 +65,17 @@ class LibraryProseJavaScriptTests:
         series_html = result["seriesHtml"]
         assert "Author: <strong>Ada Lovelace</strong>" in author_html
         assert "Mathematician and writer." in author_html
-        assert 'data-action="edit-library-context"' in author_html
+        assert 'href="/library/authors/author-1/edit/"' in author_html
         assert 'id="library-author-prose-author-1"' in author_html
         assert "Biography" not in author_html
         assert "Series: <strong>Example Series</strong>" in series_html
         assert "A compact summary." in series_html
-        assert 'data-action="edit-library-context"' not in series_html
+        assert ">Edit</a>" not in series_html
         assert 'id="library-series-prose-series-1"' in series_html
         assert "Description" not in author_html
         assert "Description" not in series_html
 
-    def test_empty_missing_prose_and_edit_controls_contract(self):
+    def test_empty_missing_prose_and_no_inline_edit_controls_contract(self):
         result = run_node_json(
             """
             import {
@@ -100,7 +100,7 @@ class LibraryProseJavaScriptTests:
               status: "Saved.",
               error: "Could not save.",
             });
-            const editing = renderLibraryContext({
+            const linked = renderLibraryContext({
               filter: {
                 kind: "series",
                 id: "series-2",
@@ -109,13 +109,11 @@ class LibraryProseJavaScriptTests:
                 prose: "Original summary.",
                 proseLabel: "Summary",
               },
-              editing: true,
-              editName: "Edited Series",
-              editProse: "Edited summary.",
+              editHref: "/library/series/series-2/edit/",
               status: "Saving...",
             });
 
-            process.stdout.write(JSON.stringify({ emptyBlock, missingContext, editing }));
+            process.stdout.write(JSON.stringify({ emptyBlock, missingContext, linked }));
             """
         )
 
@@ -123,15 +121,9 @@ class LibraryProseJavaScriptTests:
         assert 'class="library-context__prose"' not in result["missingContext"]
         assert "Saved." in result["missingContext"]
         assert "Could not save." in result["missingContext"]
-        assert 'name="library-context-name"' in result["editing"]
-        assert 'value="Edited Series"' in result["editing"]
-        assert 'name="library-context-prose"' in result["editing"]
-        assert ">Summary</span>" in result["editing"]
-        assert "Edited summary." in result["editing"]
-        assert 'data-action="save-library-context"' in result["editing"]
-        assert 'data-action="cancel-library-context-edit"' in result["editing"]
-        assert 'data-action="clear-library-filter"' not in result["editing"]
-        assert ">Clear</button>" not in result["editing"]
+        assert 'href="/library/series/series-2/edit/"' in result["linked"]
+        assert 'name="library-context-name"' not in result["linked"]
+        assert 'data-action="save-library-context"' not in result["linked"]
 
     def test_prose_markup_escapes_malicious_values(self):
         result = run_node_json(
@@ -147,7 +139,7 @@ class LibraryProseJavaScriptTests:
                 prose: "<script>alert(3)</script>",
                 proseLabel: "Bio <b>label</b>",
               },
-              canEdit: true,
+              editHref: "javascript:alert(1)",
               status: "<em>Saved</em>",
               error: "<iframe src=x></iframe>",
             });

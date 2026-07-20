@@ -85,16 +85,25 @@ class SeriesAxisSerializer(PreviewBooksAxisMixin, serializers.ModelSerializer):
 
 class AuthorAxisUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
+    sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     biography = serializers.CharField(required=False, allow_blank=True)
 
 
 class AuthorCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    biography = serializers.CharField(required=False, allow_blank=True)
 
 
 class SeriesAxisUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
+    sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    summary = serializers.CharField(required=False, allow_blank=True)
+
+
+class SeriesCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     summary = serializers.CharField(required=False, allow_blank=True)
 
 

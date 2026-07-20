@@ -205,7 +205,7 @@ Shelves details:
 
 Explicitly session-only or bearer-denied surfaces:
 
-- Library mutations: Book metadata/tag PATCH, Author POST, Author/Series PATCH, cover
+- Library mutations: Book metadata/tag PATCH, Author/Series POST/PATCH/DELETE, cover
   upload/clear, Library import upload, group create/update/delete, group book
   assignment mutation, and group membership list/mutation.
 - Account/user management: managed users, user choices, password changes, web

@@ -72,6 +72,22 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["title"], "Hidden Dresden")
 
+    def test_privileged_bearer_cannot_see_unattached_catalog_entities(self):
+        self.use_manager_bearer()
+        author = Author.objects.create(
+            name="Unattached", sort_name="Unattached", normalized_name="unattached"
+        )
+        series = Series.objects.create(
+            name="Unattached", sort_name="Unattached", normalized_name="unattached"
+        )
+
+        self.assertEqual(
+            self.bearer_get(f"/api/v1/library/authors/{author.id}/").status_code, 404
+        )
+        self.assertEqual(
+            self.bearer_get(f"/api/v1/library/series/{series.id}/").status_code, 404
+        )
+
     def test_filters_counts_and_pagination_remain_visibility_scoped(self):
         books = self.bearer_get(
             "/api/v1/library/books/",
