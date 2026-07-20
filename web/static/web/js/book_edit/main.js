@@ -63,8 +63,6 @@ export async function initBookEdit() {
   const rootEl = $("#book-edit");
   const statusEl = $("#book-edit-status");
   const errorEl = $("#book-edit-error");
-  const savedEl = $("#book-edit-saved");
-  const saveStatusEl = $("#book-edit-save-status");
   const formEl = $("#book-edit-form");
   const saveBtn = $("#book-edit-save");
 
@@ -121,8 +119,6 @@ export async function initBookEdit() {
     !rootEl ||
     !statusEl ||
     !errorEl ||
-    !savedEl ||
-    !saveStatusEl ||
     !formEl ||
     !saveBtn ||
     !titleEl ||
@@ -156,14 +152,8 @@ export async function initBookEdit() {
     visible(errorEl, !!text);
   }
 
-  function setSaved(on) {
-    visible(savedEl, !!on);
-  }
-
   function setSaving(on) {
     saveBtn.disabled = !!on;
-    if (on) setText(saveStatusEl, "Saving...");
-    else setText(saveStatusEl, "");
   }
 
   const bookId = rootEl.dataset ? rootEl.dataset.bookId : "";
@@ -263,7 +253,6 @@ export async function initBookEdit() {
 
   setStatus(statusEl, "Loading...", false);
   setError("");
-  setSaved(false);
   visible(rootEl, false);
   visible(headerEl, false);
 
@@ -366,7 +355,7 @@ export async function initBookEdit() {
     refreshIdentifiers,
     state,
     setError,
-    markDirty: () => setSaved(false),
+    markDirty: () => undefined,
   });
   bindCatalogTagActions({
     state,
@@ -374,12 +363,11 @@ export async function initBookEdit() {
     inputEl: catalogTagInputEl,
     addBtnEl: catalogTagAddEl,
     rerender: () => renderCatalogTags({ state, selectedEl: catalogTagsEl, optionsEl: catalogTagOptionsEl }),
-    markDirty: () => setSaved(false),
+    markDirty: () => undefined,
   });
 
   async function saveBook() {
     setError("");
-    setSaved(false);
 
     const built = buildBookPatchPayload({
       dom: { ...dom, seriesSelectEl },
@@ -410,8 +398,6 @@ export async function initBookEdit() {
       if (updated.series && updated.series.id) {
         state.allSeries = uniqueById([...state.allSeries, updated.series]);
       }
-      setSaved(true);
-      setText(saveStatusEl, "");
       await refreshBook();
       refreshIdentifiers();
     } catch (e) {

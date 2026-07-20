@@ -160,6 +160,29 @@ class ProductUiLibraryTests(ProductUiTestCase):
         ]:
             self.assertIn(f'id="{field_id}"', authors_panel)
 
+        self.assertNotIn('<h2 class="card__title">', template)
+        self.assertNotIn('id="book-edit-saved"', template)
+        self.assertNotIn('id="book-edit-save-status"', template)
+        self.assertIn("book-edit-catalog-tags-row", catalog_panel)
+        self.assertIn('class="book-edit-catalog-tag-controls"', catalog_panel)
+        self.assertGreater(
+            authors_panel.index('class="book-edit-relation__links"'),
+            authors_panel.index('id="book-edit-author-add-select"'),
+        )
+        self.assertGreater(
+            authors_panel.rindex('class="book-edit-relation__links"'),
+            authors_panel.index('id="book-edit-series-index"'),
+        )
+        self.assertIn('id="book-edit-groups-add-select"', template)
+        self.assertNotIn('id="book-edit-groups-add-select" style="width: 100%;"', template)
+        css = product_ui_css_text()
+        self.assertIn('body[data-page="book-edit"] { overflow-y: scroll; }', css)
+        self.assertIn("grid-template-rows: auto auto", css)
+        self.assertIn("grid-row: 1 / span 2", css)
+        self.assertIn("height: 0; overflow: visible", css)
+        self.assertIn(".book-edit { grid-column: 2; grid-row: 2", css)
+        self.assertIn("#book-edit-groups-add-select", css)
+
         self.assertNotIn("This is the human-facing book identity.", template)
         self.assertNotIn("This is the catalog/facet metadata bucket.", template)
         self.assertNotIn("This deserves to stay together", template)

@@ -11,7 +11,6 @@
 {% block content %}
   <div id="book-edit-status" class="muted">Loading...</div>
   <div id="book-edit-error" class="error is-hidden"></div>
-  <div id="book-edit-saved" class="pill is-hidden" style="margin-top: 10px;">Saved.</div>
 
   <div class="book-edit-layout">
   <section id="book-edit-header" class="book-edit-hero is-hidden" data-book-id="{{ book_id|escape }}" aria-labelledby="book-edit-header-title">
@@ -48,13 +47,10 @@
       </div>
       <div class="book-edit__save-actions">
         <button id="book-edit-save" class="button" type="submit" form="book-edit-form">Save</button>
-        <span id="book-edit-save-status" class="muted"></span>
       </div>
     </div>
 
     <div id="tab-book-details" class="tab-panel" role="tabpanel" aria-labelledby="book-edit-tab-details" aria-hidden="false" data-tab-panel="book-details">
-      <h2 class="card__title">Book Details</h2>
-
       <form id="book-edit-form">
         {% csrf_token %}
 
@@ -74,8 +70,6 @@
     </div>
 
     <div id="tab-catalog" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="book-edit-tab-catalog" aria-hidden="true" data-tab-panel="catalog">
-      <h2 class="card__title">Catalog</h2>
-
       <div class="kv">
 
           <div class="kv__k"><label for="book-edit-publisher">Publisher</label></div>
@@ -87,11 +81,11 @@
           <div class="kv__k"><label for="book-edit-published-date">Published date</label></div>
           <div class="kv__v"><input id="book-edit-published-date" type="text" inputmode="numeric" placeholder="YYYY, YYYY-MM, or YYYY-MM-DD" style="width: 100%;" /></div>
 
-          <div class="kv__k"><label for="book-edit-catalog-tag-input">Catalog Tags</label></div>
-          <div class="kv__v">
+          <div class="kv__k book-edit-catalog-tags-row"><label for="book-edit-catalog-tag-input">Catalog Tags</label></div>
+          <div class="kv__v book-edit-catalog-tags-row">
             <div id="book-edit-catalog-tags-status" class="muted" aria-live="polite"></div>
             <div id="book-edit-catalog-tags" class="muted"></div>
-            <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <div class="book-edit-catalog-tag-controls">
               <input id="book-edit-catalog-tag-input" type="text" list="book-edit-catalog-tag-options" maxlength="255" autocomplete="off" placeholder="Search or create tag..." />
               <datalist id="book-edit-catalog-tag-options"></datalist>
               <button id="book-edit-catalog-tag-add" class="button" type="button">Add tag</button>
@@ -102,14 +96,10 @@
     </div>
 
     <div id="tab-authors" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="book-edit-tab-authors" aria-hidden="true" data-tab-panel="authors">
-      <h2 class="card__title">Authors &amp; Series</h2>
-
       <div class="book-edit-relations">
         <section class="book-edit-relation" aria-labelledby="book-edit-authors-heading">
           <div class="book-edit-relation__heading">
             <h3 id="book-edit-authors-heading">Authors</h3>
-            <a class="button button--secondary" href="/library/?view=authors">Manage Authors</a>
-            <a class="button button--secondary" href="/library/authors/new/">Create Author</a>
           </div>
           <div id="book-edit-authors-selected" class="muted">Loading...</div>
 
@@ -119,13 +109,15 @@
             <button id="book-edit-author-add-btn" class="button" type="button">Add</button>
             <span id="book-edit-authors-status" class="muted"></span>
           </div>
+          <div class="book-edit-relation__links">
+            <a class="button button--secondary" href="/library/?view=authors">Manage Authors</a>
+            <a class="button button--secondary" href="/library/authors/new/">Create Author</a>
+          </div>
         </section>
 
         <section class="book-edit-relation" aria-labelledby="book-edit-series-heading">
           <div class="book-edit-relation__heading">
             <h3 id="book-edit-series-heading">Series</h3>
-            <a class="button button--secondary" href="/library/?view=series">Manage Series</a>
-            <a class="button button--secondary" href="/library/series/new/">Create Series</a>
           </div>
           <div class="book-edit-relation__controls">
             <label for="book-edit-series-select" class="muted">Assigned series</label>
@@ -136,6 +128,10 @@
             <label for="book-edit-series-index" class="muted">Series index</label>
             <input id="book-edit-series-index" type="number" min="0" step="0.1" />
           </div>
+          <div class="book-edit-relation__links">
+            <a class="button button--secondary" href="/library/?view=series">Manage Series</a>
+            <a class="button button--secondary" href="/library/series/new/">Create Series</a>
+          </div>
         </section>
       </div>
 
@@ -144,8 +140,6 @@
 
     {% if advanced_library_groups_enabled %}
     <div id="tab-groups" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="book-edit-tab-groups" aria-hidden="true" data-tab-panel="groups">
-      <h2 class="card__title">Library Groups</h2>
-
       <div id="book-edit-groups-status" class="muted">Loading...</div>
       <div id="book-edit-groups" class="muted"></div>
 
@@ -153,7 +147,7 @@
         {% csrf_token %}
         <div class="kv">
           <div class="kv__k"><label for="book-edit-groups-add-select">Add to group</label></div>
-          <div class="kv__v"><select id="book-edit-groups-add-select" style="width: 100%;"></select></div>
+          <div class="kv__v"><select id="book-edit-groups-add-select"></select></div>
         </div>
         <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
           <button id="book-edit-groups-add-btn" class="button" type="submit">Add</button>
@@ -164,14 +158,11 @@
     {% endif %}
 
     <div id="tab-shelves" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="book-edit-tab-shelves" aria-hidden="true" data-tab-panel="shelves">
-      <h2 class="card__title">Shelves</h2>
       <div id="book-edit-shelves-status" class="muted">Loading...</div>
       <div id="book-edit-shelves" class="muted"></div>
     </div>
 
     <div id="tab-idents" class="tab-panel is-hidden" role="tabpanel" aria-labelledby="book-edit-tab-idents" aria-hidden="true" data-tab-panel="idents">
-      <h2 class="card__title">Identifiers &amp; File Info</h2>
-
       <div class="book-edit-metadata-grid">
         <section class="book-edit-metadata-section" aria-labelledby="book-edit-identifiers-heading">
           <h3 id="book-edit-identifiers-heading">Identifiers</h3>

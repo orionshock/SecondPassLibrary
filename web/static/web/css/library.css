@@ -573,16 +573,20 @@
   align-items: center;
   flex-wrap: wrap;
 }
+body[data-page="book-edit"] { overflow-y: scroll; }
 .book-edit-layout {
   display: grid;
   grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-rows: auto auto;
   column-gap: clamp(24px, 4vw, 48px);
   align-items: start;
+  align-content: start;
+  min-height: 570px;
   padding: 18px 0 34px;
   border-bottom: 1px solid var(--border);
 }
 .book-edit-hero { display: contents; }
-.book-edit-hero__cover-column { grid-column: 1; grid-row: 1 / span 2; min-width: 0; }
+.book-edit-hero__cover-column { grid-column: 1; grid-row: 1 / span 2; min-width: 0; height: 0; overflow: visible; }
 .book-edit-hero__cover-wrap {
   position: relative;
   width: 100%;
@@ -606,7 +610,7 @@
 .edit-header__cover .book__cover-ph { height: auto; aspect-ratio: 2 / 3; }
 .book-edit-hero__cover-actions { display: grid; gap: 8px; width: 100%; max-width: 260px; margin-top: 10px; }
 .book-edit-hero__cover-button { box-sizing: border-box; width: 100%; text-align: center; }
-.book-edit-hero__main { grid-column: 2; min-width: 0; padding-top: 4px; }
+.book-edit-hero__main { grid-column: 2; grid-row: 1; min-width: 0; padding-top: 4px; }
 .book-edit-hero__mode {
   margin-bottom: 8px;
   color: var(--muted);
@@ -623,19 +627,23 @@
   overflow-wrap: anywhere;
 }
 .edit-header__meta { display: grid; gap: 8px; font-size: 1.05rem; }
-.book-edit { grid-column: 2; min-width: 0; padding-top: 22px; }
-.book-edit__toolbar { display: flex; gap: 12px; align-items: start; justify-content: space-between; flex-wrap: wrap; }
+.book-edit { grid-column: 2; grid-row: 2; min-width: 0; padding-top: 22px; }
+.book-edit__toolbar { display: flex; min-height: 49px; gap: 12px; align-items: start; justify-content: space-between; flex-wrap: wrap; }
 .book-edit__toolbar .tabs { flex: 1 1 560px; }
 .book-edit__save-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
 .book-edit .tab-panel { max-width: 920px; }
 .book-edit-relations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; max-width: 900px; }
-.book-edit-relation { min-width: 0; padding-top: 4px; border-top: 1px solid var(--border); }
+.book-edit-relation { min-width: 0; padding-top: 4px; }
 .book-edit-relation h3, .book-edit-metadata-section h3 { margin: 10px 0 14px; }
 .book-edit-relation__heading { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .book-edit-relation__heading h3 { margin-right: auto; }
 .book-edit-relation__controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
 .book-edit-relation__controls select { min-width: min(280px, 100%); }
 .book-edit-relation__controls input { max-width: 280px; }
+.book-edit-relation__links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+.book-edit-catalog-tags-row { margin-top: 18px; }
+.book-edit-catalog-tag-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+#book-edit-groups-add-select { width: min(100%, 420px); }
 .selected-author-list {
   display: grid;
   gap: 9px;
@@ -652,6 +660,7 @@
 .selected-author-list__item .icon-button { flex: 0 0 auto; }
 .book-edit-metadata-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .book-edit-metadata-section { min-width: 0; border-top: 1px solid var(--border); }
+.book-edit-metadata-section:first-child { border-top: 0; }
 .book-edit-metadata-note { margin-top: 12px; max-width: 52ch; }
 .book-cover-modal {
   width: min(620px, calc(100% - 32px));
@@ -666,10 +675,11 @@
 .book-cover-modal__heading { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
 .book-cover-modal__heading h2 { margin: 0; }
 @media (max-width: 720px) {
-  .book-edit-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 10px; }
+  .book-edit-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; gap: 24px; min-height: 0; padding-top: 10px; }
   .book-edit-hero__cover-column,
   .book-edit-hero__main,
   .book-edit { grid-column: 1; grid-row: auto; }
+  .book-edit-hero__cover-column { height: auto; }
   .book-edit-hero__cover-wrap { width: min(68vw, 260px); margin: 0 auto; }
   .book-edit-hero__main { padding-top: 0; }
   .edit-header__title { max-width: none; font-size: clamp(2rem, 11vw, 3rem); }

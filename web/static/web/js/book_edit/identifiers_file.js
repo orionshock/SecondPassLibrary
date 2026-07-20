@@ -20,7 +20,6 @@ export function renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSerie
 
 export function renderFileInfo({ book, fileInfoEl }) {
   clear(fileInfoEl);
-  fileInfoEl.appendChild(el("h3", "card__title", "File info"));
   const file = book && book.file ? book.file : null;
   if (!file) {
     fileInfoEl.appendChild(el("div", "muted", "No stored file."));
