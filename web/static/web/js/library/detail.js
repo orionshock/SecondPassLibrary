@@ -13,6 +13,7 @@ import { renderShelfMetadata } from "../shelves/shared.js";
 import { mountCovers } from "../ui/covers.js";
 import { renderGroupBadge } from "../ui/groups.js";
 import { setStatus } from "../ui/status.js";
+import { productUiPath } from "../ui/paths.js";
 import { initTabs } from "../ui/tabs.js";
 import { bookDetailContextFromSearch, libraryContextHref } from "./navigation.js";
 
@@ -79,8 +80,8 @@ function bookDisplayTitle(book) {
 function syncBookBreadcrumbs({ title, context = null }) {
   if (context && context.kind === "author") {
     setBreadcrumbs([
-      { label: "Library", href: "/library/" },
-      { label: "Authors", href: "/library/?view=authors" },
+      { label: "Library", href: productUiPath("/library/") },
+      { label: "Authors", href: productUiPath("/library/?view=authors") },
       { label: context.name || "Author", href: libraryContextHref(context) },
       { label: title || "Book", current: true },
     ]);
@@ -88,8 +89,8 @@ function syncBookBreadcrumbs({ title, context = null }) {
   }
   if (context && context.kind === "series") {
     setBreadcrumbs([
-      { label: "Library", href: "/library/" },
-      { label: "Series", href: "/library/?view=series" },
+      { label: "Library", href: productUiPath("/library/") },
+      { label: "Series", href: productUiPath("/library/?view=series") },
       { label: context.name || "Series", href: libraryContextHref(context) },
       { label: title || "Book", current: true },
     ]);
@@ -97,8 +98,8 @@ function syncBookBreadcrumbs({ title, context = null }) {
   }
 
   setBreadcrumbs([
-    { label: "Library", href: "/library/" },
-    { label: "Books", href: "/library/?view=books" },
+    { label: "Library", href: productUiPath("/library/") },
+    { label: "Books", href: productUiPath("/library/?view=books") },
     { label: title || "Book", current: true },
   ]);
 }
@@ -355,7 +356,7 @@ export async function initBookDetail() {
   const canManage = canManageLibrary(me);
   if (canManage && editWrapEl && editLinkEl) {
     visible(editWrapEl, true);
-    editLinkEl.setAttribute("href", `/library/books/${encodeURIComponent(String(bookId))}/edit/`);
+    editLinkEl.setAttribute("href", productUiPath(`/library/books/${encodeURIComponent(String(bookId))}/edit/`));
   }
 
   setStatus(statusEl, "Loading...", false);

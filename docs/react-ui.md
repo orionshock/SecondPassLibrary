@@ -1,6 +1,8 @@
 # React Product UI
 
-The new Product UI lives in `web/react`. The existing server-rendered Django UI remains functional during the migration; moving it under `/legacy` is a later, separate slice.
+The new Product UI lives in `web/react`. The existing server-rendered Django UI remains functional at its original routes and is also mounted under `/legacy` during the migration. Its templates and static files remain in `web`; a physical move to `web/legacy` is deferred.
+
+The legacy mount applies only to Product UI routes. REST APIs remain under `/api/v1/`, and `/static/`, `/media/`, `/admin/`, and `/api-auth/` are not duplicated below `/legacy`. Primary navigation and server-side Product UI redirects preserve the legacy prefix. Some page-specific templates and JavaScript still construct unprefixed Product UI links; converting those links should be handled in focused page-migration slices rather than as a broad routing rewrite.
 
 ## Development
 

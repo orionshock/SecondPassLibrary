@@ -8,6 +8,7 @@ import {
 import { canManageLibrary } from "../auth.js";
 import { $, loadMeAndInitShell, visible } from "../layout.js";
 import { setStatus } from "../ui/status.js";
+import { productUiPath } from "../ui/paths.js";
 
 function config(root) {
   return {
@@ -38,7 +39,7 @@ function safeError(error, fallback) {
 function renderBookRow(book) {
   const row = document.createElement("a");
   row.className = "catalog-entity-book-preview";
-  row.href = `/library/books/${encodeURIComponent(String(book.id))}/`;
+  row.href = productUiPath(`/library/books/${encodeURIComponent(String(book.id))}/`);
   const cover = document.createElement("span");
   cover.className = "catalog-entity-book-preview__cover";
   const coverUrl = String(book.cover_url || "");
@@ -167,7 +168,7 @@ export async function initCatalogEntityForm() {
         }
       );
       const singular = cfg.kind === "authors" ? "author" : "series";
-      window.location.assign(`/library/?view=${singular}&${singular}=${encodeURIComponent(String(entity.id))}`);
+      window.location.assign(productUiPath(`/library/?view=${singular}&${singular}=${encodeURIComponent(String(entity.id))}`));
     } catch (error) {
       setStatus(formStatus, safeError(error, `${cfg.label} could not be saved.`), true);
     }
@@ -185,7 +186,7 @@ export async function initCatalogEntityForm() {
           method: "DELETE",
           headers: { Accept: "application/json", ...(csrf ? { "X-CSRFToken": csrf } : {}) },
         });
-        window.location.assign(`/library/?view=${cfg.kind}`);
+        window.location.assign(productUiPath(`/library/?view=${cfg.kind}`));
       } catch (error) {
         setStatus(deleteStatus, safeError(error, `${cfg.label} could not be deleted.`), true);
       }

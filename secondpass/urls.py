@@ -50,6 +50,8 @@ urlpatterns = [
         favicon,
         name="favicon",
     ),
+    # Legacy Product UI transition mount. Keep before the unprefixed catch-all.
+    path("legacy/", include(("web.urls", "web"), namespace="legacy")),
     # Product UI (Django templates; capability-driven client-side nav)
     path("", include(("web.urls", "web"), namespace="web")),
     path("api-auth/login/", web_views.login, name="login"),

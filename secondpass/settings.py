@@ -161,6 +161,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.server_identity",
+                "web.context_processors.product_ui_mount",
             ],
         },
     },

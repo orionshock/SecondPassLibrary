@@ -27,6 +27,7 @@ class ForcePasswordChangeMiddleware:
             or path.startswith("/api/")
             or path.startswith("/api-auth/")
             or path.startswith("/profile/password/")
+            or path.startswith("/legacy/profile/password/")
         ):
             return self.get_response(request)
 
@@ -43,6 +44,11 @@ class ForcePasswordChangeMiddleware:
             getattr(profile, "must_change_password", False)
             and user_supports_local_password(user)
         ):
-            return redirect("/profile/password/")
+            password_path = (
+                "/legacy/profile/password/"
+                if path.startswith("/legacy/")
+                else "/profile/password/"
+            )
+            return redirect(password_path)
 
         return self.get_response(request)

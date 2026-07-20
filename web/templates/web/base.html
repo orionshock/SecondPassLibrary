@@ -10,26 +10,26 @@
     <link rel="stylesheet" href="{% static 'web/app.css' %}" />
     <script type="module" src="{% static 'web/js/main.js' %}"></script>
   </head>
-  <body data-page="{% block page_id %}{% endblock %}" data-advanced-library-groups="{% if advanced_library_groups_enabled %}true{% else %}false{% endif %}">
+  <body data-page="{% block page_id %}{% endblock %}" data-product-ui-prefix="{{ product_ui_prefix }}" data-advanced-library-groups="{% if advanced_library_groups_enabled %}true{% else %}false{% endif %}">
     <header class="topbar">
       <div class="container topbar__inner">
-        <a class="brand" href="/dashboard/">
+        <a class="brand" href="{{ product_ui_prefix }}/dashboard/">
           <img class="brand__icon" src="{% static 'web/favicon.png' %}" alt="" aria-hidden="true" />
           <span>{{ server_name }}</span>
         </a>
         <nav class="nav" aria-label="Primary">
-          <a class="nav__item" href="/reading/sessions/" data-nav="marginalia">My Marginalia</a>
-          <a class="nav__item" href="/library/" data-nav="library">Library</a>
-          <a class="nav__item" href="/shelves/" data-nav="shelves">Shelves</a>
+          <a class="nav__item" href="{{ product_ui_prefix }}/reading/sessions/" data-nav="marginalia">My Marginalia</a>
+          <a class="nav__item" href="{{ product_ui_prefix }}/library/" data-nav="library">Library</a>
+          <a class="nav__item" href="{{ product_ui_prefix }}/shelves/" data-nav="shelves">Shelves</a>
           {% if advanced_library_groups_enabled %}
-          <a class="nav__item is-hidden" href="/groups/" data-nav="groups">Groups</a>
+          <a class="nav__item is-hidden" href="{{ product_ui_prefix }}/groups/" data-nav="groups">Groups</a>
           {% endif %}
-          <a class="nav__item is-hidden" href="/imports/" data-nav="imports">Imports</a>
-          <a class="nav__item is-hidden" href="/users/" data-nav="users">Users</a>
-          <a class="nav__item is-hidden" href="/server/" data-nav="server-settings">Server Settings</a>
+          <a class="nav__item is-hidden" href="{{ product_ui_prefix }}/imports/" data-nav="imports">Imports</a>
+          <a class="nav__item is-hidden" href="{{ product_ui_prefix }}/users/" data-nav="users">Users</a>
+          <a class="nav__item is-hidden" href="{{ product_ui_prefix }}/server/" data-nav="server-settings">Server Settings</a>
         </nav>
         <div class="userbox">
-          <a class="userbox__name" href="/profile/" data-ui="username">Loading...</a>
+          <a class="userbox__name" href="{{ product_ui_prefix }}/profile/" data-ui="username">Loading...</a>
           <form class="userbox__logoutform" action="/api-auth/logout/" method="post">
             {% csrf_token %}
             <button class="linklike" type="submit">Logout</button>

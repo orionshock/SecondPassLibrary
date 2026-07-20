@@ -10,13 +10,13 @@ export function pathWithParams(base, params) {
 export function libraryContextHref(context) {
   if (!context) return "";
   if (context.kind === "author" && context.id) {
-    return pathWithParams("/library/", {
+    return pathWithParams(productUiPath("/library/"), {
       view: "author",
       author: context.id,
     });
   }
   if (context.kind === "series" && context.id) {
-    return pathWithParams("/library/", {
+    return pathWithParams(productUiPath("/library/"), {
       view: "series",
       series: context.id,
     });
@@ -26,7 +26,7 @@ export function libraryContextHref(context) {
 
 export function libraryBookDetailHref(bookId, context = null) {
   if (!bookId) return "";
-  const base = `/library/books/${encodeURIComponent(String(bookId))}/`;
+  const base = productUiPath(`/library/books/${encodeURIComponent(String(bookId))}/`);
   if (context && (context.kind === "author" || context.kind === "series")) {
     const key = context.kind;
     return pathWithParams(base, {
@@ -103,3 +103,4 @@ export function bookDetailContextFromSearch(search) {
   }
   return null;
 }
+import { productUiPath } from "../ui/paths.js";

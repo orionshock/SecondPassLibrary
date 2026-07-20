@@ -29,6 +29,7 @@ import { mountCovers } from "../ui/covers.js";
 import { setBreadcrumbs } from "../ui/breadcrumbs.js";
 import { bindCatalogTagActions, renderCatalogTags } from "./catalog_tags.js";
 import { initBookCoverEditor } from "../library/cover_editor.js";
+import { productUiPath } from "../ui/paths.js";
 
 function bookDisplayTitle(book) {
   return book && book.title ? String(book.title) : "Untitled book";
@@ -44,9 +45,9 @@ function safeBookEditError(error, fallback) {
 
 function syncBookEditBreadcrumbs({ bookId, title }) {
   setBreadcrumbs([
-    { label: "Library", href: "/library/" },
-    { label: "Books", href: "/library/?view=books" },
-    { label: title || "Book", href: `/library/books/${encodeURIComponent(String(bookId))}/` },
+    { label: "Library", href: productUiPath("/library/") },
+    { label: "Books", href: productUiPath("/library/?view=books") },
+    { label: title || "Book", href: productUiPath(`/library/books/${encodeURIComponent(String(bookId))}/`) },
     { label: "Edit", current: true },
   ]);
 }

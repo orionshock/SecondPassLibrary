@@ -12,6 +12,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from accounts import client_api
 from accounts.bootstrap import (
@@ -39,6 +40,11 @@ def _can_view_book(*, user, book: Book) -> bool:
     return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
 
 
+def _product_url_name(request: HttpRequest, name: str) -> str:
+    namespace = "legacy" if request.resolver_match.namespace == "legacy" else "web"
+    return f"{namespace}:{name}"
+
+
 def product_login_required(
     view_func: Callable[..., HttpResponse],
 ) -> Callable[..., HttpResponse]:
@@ -47,7 +53,7 @@ def product_login_required(
     @wraps(view_func)
     def wrapped(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         if not has_active_owner():
-            return redirect("web:setup")
+            return redirect(_product_url_name(request, "setup"))
         return login_view(request, *args, **kwargs)
 
     return wrapped
@@ -55,8 +61,8 @@ def product_login_required(
 
 def index(request: HttpRequest) -> HttpResponse:
     if not has_active_owner():
-        return redirect("web:setup")
-    return redirect("/dashboard/")
+        return redirect(_product_url_name(request, "setup"))
+    return redirect(_product_url_name(request, "dashboard"))
 
 
 def login(request: HttpRequest) -> HttpResponse:
@@ -251,7 +257,7 @@ def _require_catalog_manager(request: HttpRequest) -> None:
 
 @product_login_required
 def catalog_entity_list(request: HttpRequest, kind: str) -> HttpResponse:
-    return redirect(f"/library/?view={kind}")
+    return redirect(f'{reverse(_product_url_name(request, "library"))}?view={kind}')
 
 
 @product_login_required
@@ -264,7 +270,8 @@ def catalog_entity_new(request: HttpRequest, kind: str) -> HttpResponse:
 def catalog_entity_detail(request: HttpRequest, kind: str, entity_id: str) -> HttpResponse:
     entity_uuid = _uuid_or_404(entity_id)
     singular = "author" if kind == "authors" else "series"
-    return redirect(f"/library/?view={singular}&{singular}={entity_uuid}")
+    library_url = reverse(_product_url_name(request, "library"))
+    return redirect(f"{library_url}?view={singular}&{singular}={entity_uuid}")
 
 
 @product_login_required

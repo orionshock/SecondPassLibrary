@@ -22,6 +22,7 @@ import {
   librarySearchPlaceholder,
   preservedLibraryParams,
 } from "./navigation.js";
+import { productUiPath } from "../ui/paths.js";
 import { renderLibraryContext, toggleProseBlock } from "./prose.js";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -277,7 +278,7 @@ export async function initLibraryBrowse() {
   function syncBreadcrumbs() {
     if (state.view === "authors") {
       setBreadcrumbs([
-        { label: "Library", href: "/library/" },
+        { label: "Library", href: productUiPath("/library/") },
         { label: "Authors", current: true },
       ]);
       return;
@@ -285,7 +286,7 @@ export async function initLibraryBrowse() {
 
     if (state.view === "series" && !state.seriesId) {
       setBreadcrumbs([
-        { label: "Library", href: "/library/" },
+        { label: "Library", href: productUiPath("/library/") },
         { label: "Series", current: true },
       ]);
       return;
@@ -293,8 +294,8 @@ export async function initLibraryBrowse() {
 
     if (state.view === "author" && state.authorId) {
       setBreadcrumbs([
-        { label: "Library", href: "/library/" },
-        { label: "Authors", href: "/library/?view=authors" },
+        { label: "Library", href: productUiPath("/library/") },
+        { label: "Authors", href: productUiPath("/library/?view=authors") },
         { label: state.authorName || state.authorId, current: true },
       ]);
       return;
@@ -302,15 +303,15 @@ export async function initLibraryBrowse() {
 
     if (state.view === "series" && state.seriesId) {
       setBreadcrumbs([
-        { label: "Library", href: "/library/" },
-        { label: "Series", href: "/library/?view=series" },
+        { label: "Library", href: productUiPath("/library/") },
+        { label: "Series", href: productUiPath("/library/?view=series") },
         { label: state.seriesName || state.seriesId, current: true },
       ]);
       return;
     }
 
     setBreadcrumbs([
-      { label: "Library", href: "/library/" },
+      { label: "Library", href: productUiPath("/library/") },
       { label: "Books", current: true },
     ]);
   }
@@ -319,7 +320,7 @@ export async function initLibraryBrowse() {
     return renderLibraryContext({
       filter,
       editHref: allowContextEdit
-        ? `/library/${filter.kind === "author" ? "authors" : "series"}/${encodeURIComponent(filter.id)}/edit/`
+        ? productUiPath(`/library/${filter.kind === "author" ? "authors" : "series"}/${encodeURIComponent(filter.id)}/edit/`)
         : "",
     });
   }
@@ -334,7 +335,7 @@ export async function initLibraryBrowse() {
     qInput.value = state.q;
     qInput.placeholder = librarySearchPlaceholder(state.view, state.seriesId);
     const createKind = state.view === "authors" ? "authors" : state.view === "series" && !state.seriesId ? "series" : "";
-    axisCreateEl.href = createKind ? `/library/${createKind}/new/` : "#";
+    axisCreateEl.href = createKind ? productUiPath(`/library/${createKind}/new/`) : "#";
     axisCreateEl.textContent = createKind ? `Create ${createKind === "authors" ? "Author" : "Series"}` : "";
     axisCreateEl.classList.toggle("is-hidden", !allowContextEdit || !createKind);
     pageSizeSelect.value = String(state.pageSize);

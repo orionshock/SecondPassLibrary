@@ -4,11 +4,13 @@
 {% block title %}{% if entity_id %}Edit{% else %}Create{% endif %} {{ entity_label }} - {{ server_name }}{% endblock %}
 
 {% block breadcrumbs %}
+  {% with library_href=product_ui_prefix|add:"/library/" %}
   {% if entity_kind == "authors" %}
-    {% include "web/partials/breadcrumbs.html" with grandparent_href="/library/" grandparent_label="Library" parent_href="/library/?view=authors" parent_label="Authors" current_label=entity_label only %}
+    {% include "web/partials/breadcrumbs.html" with grandparent_href=library_href grandparent_label="Library" parent_href=library_href|add:"?view=authors" parent_label="Authors" current_label=entity_label only %}
   {% else %}
-    {% include "web/partials/breadcrumbs.html" with grandparent_href="/library/" grandparent_label="Library" parent_href="/library/?view=series" parent_label="Series" current_label=entity_label only %}
+    {% include "web/partials/breadcrumbs.html" with grandparent_href=library_href grandparent_label="Library" parent_href=library_href|add:"?view=series" parent_label="Series" current_label=entity_label only %}
   {% endif %}
+  {% endwith %}
 {% endblock %}
 
 {% block content %}
@@ -28,9 +30,9 @@
         <div id="catalog-entity-form-status" class="muted" role="status" aria-live="polite"></div>
         <div class="form-actions catalog-entity-form__actions">
           {% if entity_kind == "authors" %}
-            <a class="button button--secondary" href="/library/?view={% if entity_id %}author&amp;author={{ entity_id }}{% else %}authors{% endif %}">Cancel</a>
+            <a class="button button--secondary" href="{{ product_ui_prefix }}/library/?view={% if entity_id %}author&amp;author={{ entity_id }}{% else %}authors{% endif %}">Cancel</a>
           {% else %}
-            <a class="button button--secondary" href="/library/?view=series{% if entity_id %}&amp;series={{ entity_id }}{% endif %}">Cancel</a>
+            <a class="button button--secondary" href="{{ product_ui_prefix }}/library/?view=series{% if entity_id %}&amp;series={{ entity_id }}{% endif %}">Cancel</a>
           {% endif %}
           <button id="catalog-entity-save" class="button" type="submit">Save</button>
         </div>
