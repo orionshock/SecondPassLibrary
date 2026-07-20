@@ -1,6 +1,6 @@
 import { clear, el, fillSchemeOptions } from "./shared.js";
 
-export function renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl }) {
+export function renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerDownloadEl }) {
   const title = book && book.title ? String(book.title) : "Book";
   headerTitleEl.textContent = title;
 
@@ -11,21 +11,11 @@ export function renderHeader({ book, headerTitleEl, headerAuthorsEl, headerSerie
   const seriesIdx = book && book.series && book.series.series_index != null ? String(book.series.series_index) : "";
   headerSeriesEl.textContent = seriesName ? `Series: ${seriesName}${seriesIdx ? ` ${seriesIdx}` : ""}` : "Series: (none)";
 
-  clear(headerFileEl);
   const file = book && book.file ? book.file : null;
-  if (!file) {
-    headerFileEl.appendChild(el("span", "pill", "No file"));
-    return;
-  }
-  const fmt = file.format ? String(file.format).toUpperCase() : "EPUB";
-  const downloadUrl = file.download_url ? String(file.download_url) : "";
-  if (downloadUrl) {
-    const a = el("a", "pill", `Download ${fmt}`);
-    a.setAttribute("href", downloadUrl);
-    headerFileEl.appendChild(a);
-  } else {
-    headerFileEl.appendChild(el("span", "pill", fmt));
-  }
+  const downloadUrl = file && file.download_url ? String(file.download_url) : "";
+  if (downloadUrl) headerDownloadEl.setAttribute("href", downloadUrl);
+  else headerDownloadEl.removeAttribute("href");
+  headerDownloadEl.classList.toggle("is-hidden", !downloadUrl);
 }
 
 export function renderFileInfo({ book, fileInfoEl }) {

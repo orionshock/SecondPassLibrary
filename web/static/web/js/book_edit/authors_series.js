@@ -1,5 +1,11 @@
 import { clear, el } from "./shared.js";
 
+function compareAuthors(a, b) {
+  const aSort = String((a && a.sort_name) || (a && a.name) || "");
+  const bSort = String((b && b.sort_name) || (b && b.name) || "");
+  return aSort.localeCompare(bSort) || String((a && a.name) || "").localeCompare(String((b && b.name) || ""));
+}
+
 export function renderSelectedAuthors({ selectedAuthors, authorsSelectedEl }) {
   clear(authorsSelectedEl);
   if (!selectedAuthors.length) {
@@ -7,22 +13,22 @@ export function renderSelectedAuthors({ selectedAuthors, authorsSelectedEl }) {
     return;
   }
   const ul = document.createElement("ul");
-  for (const a of selectedAuthors) {
+  ul.className = "selected-author-list";
+  for (const a of selectedAuthors.slice().sort(compareAuthors)) {
     const id = a && a.id != null ? String(a.id) : "";
     const name = a && a.name ? String(a.name) : id;
     const li = document.createElement("li");
-    li.appendChild(document.createTextNode(name + " "));
-    const muted = el("span", "muted");
-    const code = document.createElement("code");
-    code.textContent = id;
-    muted.appendChild(code);
-    li.appendChild(muted);
-    li.appendChild(document.createTextNode(" "));
-    const btn = el("button", "linklike", "Remove");
+    li.className = "selected-author-list__item";
+    const btn = el("button", "icon-button icon-button--danger");
     btn.type = "button";
-    btn.style.marginLeft = "8px";
     btn.setAttribute("data-remove-author-id", id);
+    btn.setAttribute("aria-label", `Remove ${name}`);
+    btn.setAttribute("title", `Remove ${name}`);
+    const icon = el("span", "material-symbols-outlined", "remove_circle");
+    icon.setAttribute("aria-hidden", "true");
+    btn.appendChild(icon);
     li.appendChild(btn);
+    li.appendChild(document.createTextNode(name));
     ul.appendChild(li);
   }
   authorsSelectedEl.appendChild(ul);
@@ -33,7 +39,7 @@ export function syncAuthorSelectOptions({ allAuthors, selectedAuthors, authorAdd
   const currentIds = new Set(selectedAuthors.map((a) => String(a.id)));
   const items = allAuthors
     .slice()
-    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+    .sort(compareAuthors)
     .filter((a) => a && a.id && !currentIds.has(String(a.id)))
     .slice(0, 500);
   if (!items.length) {
@@ -71,4 +77,3 @@ export function syncSeriesSelectOptions({ allSeries, seriesSelectEl, selectedId 
   }
   seriesSelectEl.value = selectedId || "";
 }
-

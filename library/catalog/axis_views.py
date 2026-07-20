@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
@@ -17,12 +19,13 @@ from library.catalog.axes import (
 )
 from library.catalog.serializers import (
     AuthorAxisSerializer,
+    AuthorCreateSerializer,
     AuthorAxisUpdateSerializer,
     CatalogTagAxisSerializer,
     SeriesAxisSerializer,
     SeriesAxisUpdateSerializer,
 )
-from library.catalog.axis_services import update_author, update_series
+from library.catalog.axis_services import create_author, update_author, update_series
 from library.catalog.filters import apply_catalog_tag_filter
 from library.catalog.preview_books import (
     attach_author_preview_books,
@@ -121,7 +124,21 @@ class AuthorAxisMixin(_BaseAxisMixin):
 
 
 class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
-    pass
+    def post(self, request, *args, **kwargs):
+        if not is_librarian(request.user):
+            raise PermissionDenied("Not allowed.")
+        serializer = AuthorCreateSerializer(data=request.data or {})
+        serializer.is_valid(raise_exception=True)
+        try:
+            author = create_author(name=serializer.validated_data["name"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            ) from exc
+        return Response(
+            {"id": str(author.id), "name": author.name, "sort_name": author.sort_name},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):

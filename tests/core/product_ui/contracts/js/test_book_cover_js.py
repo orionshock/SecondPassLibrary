@@ -28,7 +28,7 @@ class BookCoverProductUiContractTests:
         assert 'id="book-edit-cover-editor"' in edit_template
         assert 'id="book-edit-cover-modal"' in edit_template
         assert 'id="book-edit-cover-change"' in edit_template
-        assert 'aria-label="Change book cover"' in edit_template
+        assert '>Change Cover</button>' in edit_template
         assert 'from "../library/cover_editor.js"' in edit_main
         assert "const canManage = canManageLibrary(me)" in edit_main
         assert "visible(root, true)" in editor
@@ -100,15 +100,14 @@ class BookCoverProductUiContractTests:
             encoding="utf-8"
         )
 
-        hero = template.split('id="book-edit-header"', 1)[1].split(
-            'id="book-edit-status"', 1
-        )[0]
+        hero = template.split('id="book-edit-header"', 1)[1].split("</section>", 1)[0]
         identifiers = template.split('id="tab-idents"', 1)[1].split(
             'id="book-edit-cover-modal"', 1
         )[0]
         assert 'class="book-edit-hero' in hero
         assert 'id="book-edit-cover-current"' in hero
         assert 'id="book-edit-cover-change"' in hero
+        assert 'id="book-edit-cover-download"' in hero
         assert 'id="book-edit-cover-' not in identifiers
         assert 'id="book-edit-identifiers"' in identifiers
         assert 'id="book-edit-file-info"' in identifiers

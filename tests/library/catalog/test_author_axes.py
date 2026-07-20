@@ -17,6 +17,35 @@ def preview_titles(row):
 
 
 class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
+    def test_librarian_can_create_author(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.post(
+            "/api/v1/library/authors/",
+            data={"name": "New Writer"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        author = Author.objects.get(name="New Writer")
+        self.assertEqual(author.sort_name, "New Writer")
+        self.assertEqual(response.json(), {
+            "id": str(author.id),
+            "name": "New Writer",
+            "sort_name": "New Writer",
+        })
+
+    def test_reader_cannot_create_author(self):
+        response = self.client.post(
+            "/api/v1/library/authors/",
+            data={"name": "Forbidden Writer"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Author.objects.filter(name="Forbidden Writer").exists())
+
     def test_list_includes_only_authors_with_visible_books(self):
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
         create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)

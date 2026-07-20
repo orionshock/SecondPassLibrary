@@ -9,11 +9,19 @@
 {% endblock %}
 
 {% block content %}
+  <div id="book-edit-status" class="muted">Loading...</div>
+  <div id="book-edit-error" class="error is-hidden"></div>
+  <div id="book-edit-saved" class="pill is-hidden" style="margin-top: 10px;">Saved.</div>
+
+  <div class="book-edit-layout">
   <section id="book-edit-header" class="book-edit-hero is-hidden" data-book-id="{{ book_id|escape }}" aria-labelledby="book-edit-header-title">
     <div class="book-edit-hero__cover-column">
       <div class="book-edit-hero__cover-wrap">
         <div id="book-edit-cover-current" class="edit-header__cover" aria-hidden="true">Cover</div>
-        <button id="book-edit-cover-change" class="book-edit-hero__cover-action" type="button" aria-label="Change book cover">Change</button>
+      </div>
+      <div class="book-edit-hero__cover-actions">
+        <button id="book-edit-cover-change" class="button book-edit-hero__cover-button" type="button">Change Cover</button>
+        <a id="book-edit-cover-download" class="button button--secondary book-edit-hero__cover-button is-hidden" href="#">Download EPUB</a>
       </div>
     </div>
     <div class="book-edit-hero__main">
@@ -23,16 +31,11 @@
         <div id="book-edit-header-authors" class="muted"></div>
         <div id="book-edit-header-series" class="muted"></div>
       </div>
-      <div id="book-edit-header-file" class="edit-header__badges"></div>
     </div>
   </section>
 
-  <div id="book-edit-status" class="muted">Loading...</div>
-  <div id="book-edit-error" class="error is-hidden"></div>
-  <div id="book-edit-saved" class="pill is-hidden" style="margin-top: 10px;">Saved.</div>
-
   <section id="book-edit" class="book-edit is-hidden" data-book-id="{{ book_id|escape }}">
-    <div class="book-edit__tabs-row">
+    <div class="book-edit__toolbar">
       <div class="tabs" role="tablist" aria-label="Book edit tabs">
         <button id="book-edit-tab-details" class="tab-button is-active" type="button" role="tab" aria-controls="tab-book-details" aria-selected="true" data-tab="book-details">Book Details</button>
         <button id="book-edit-tab-catalog" class="tab-button" type="button" role="tab" aria-controls="tab-catalog" aria-selected="false" data-tab="catalog">Catalog</button>
@@ -112,6 +115,12 @@
             <button id="book-edit-author-add-btn" class="button" type="button">Add</button>
             <span id="book-edit-authors-status" class="muted"></span>
           </div>
+          <form id="book-edit-author-create" class="book-edit-relation__controls">
+            <label for="book-edit-author-new" class="muted">New author</label>
+            <input id="book-edit-author-new" type="text" maxlength="255" autocomplete="off" />
+            <button id="book-edit-author-create-btn" class="button" type="submit">Create</button>
+            <span id="book-edit-author-create-status" class="muted" role="status" aria-live="polite"></span>
+          </form>
         </section>
 
         <section class="book-edit-relation" aria-labelledby="book-edit-series-heading">
@@ -175,7 +184,7 @@
         <section class="book-edit-metadata-section" aria-labelledby="book-edit-file-heading">
           <h3 id="book-edit-file-heading">File</h3>
           <div id="book-edit-file-info" class="muted"></div>
-          <div class="muted book-edit-metadata-note">The stored EPUB file is not edited here. Import another file as a separate book.</div>
+          <div class="muted book-edit-metadata-note">File cannot be edited.</div>
         </section>
       </div>
     </div>
@@ -209,4 +218,5 @@
       </section>
     </dialog>
   </section>
+  </div>
 {% endblock %}

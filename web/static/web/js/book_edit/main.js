@@ -59,7 +59,7 @@ export async function initBookEdit() {
   const headerTitleEl = $("#book-edit-header-title");
   const headerAuthorsEl = $("#book-edit-header-authors");
   const headerSeriesEl = $("#book-edit-header-series");
-  const headerFileEl = $("#book-edit-header-file");
+  const headerDownloadEl = $("#book-edit-cover-download");
   const headerCoverEl = headerEl ? headerEl.querySelector(".edit-header__cover") : null;
 
   const rootEl = $("#book-edit");
@@ -86,6 +86,10 @@ export async function initBookEdit() {
   const authorsStatusEl = $("#book-edit-authors-status");
   const authorAddSelectEl = $("#book-edit-author-add-select");
   const authorAddBtnEl = $("#book-edit-author-add-btn");
+  const authorCreateFormEl = $("#book-edit-author-create");
+  const authorNewEl = $("#book-edit-author-new");
+  const authorCreateBtnEl = $("#book-edit-author-create-btn");
+  const authorCreateStatusEl = $("#book-edit-author-create-status");
 
   const seriesSelectEl = $("#book-edit-series-select");
   const seriesNewEl = $("#book-edit-series-new");
@@ -119,7 +123,7 @@ export async function initBookEdit() {
     !headerTitleEl ||
     !headerAuthorsEl ||
     !headerSeriesEl ||
-    !headerFileEl ||
+    !headerDownloadEl ||
     !headerCoverEl ||
     !rootEl ||
     !statusEl ||
@@ -143,6 +147,10 @@ export async function initBookEdit() {
     !authorsStatusEl ||
     !authorAddSelectEl ||
     !authorAddBtnEl ||
+    !authorCreateFormEl ||
+    !authorNewEl ||
+    !authorCreateBtnEl ||
+    !authorCreateStatusEl ||
     !seriesSelectEl ||
     !seriesNewEl ||
     !seriesStatusEl ||
@@ -246,7 +254,7 @@ export async function initBookEdit() {
 
     applyBookToMetadataForm({ book: state.book, dom, selectedAuthors: state.selectedAuthors });
 
-    renderHeader({ book: state.book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerFileEl });
+    renderHeader({ book: state.book, headerTitleEl, headerAuthorsEl, headerSeriesEl, headerDownloadEl });
     syncBookEditBreadcrumbs({ bookId, title: bookDisplayTitle(state.book) });
 
     const titleText = state.book && state.book.title ? String(state.book.title) : "";
@@ -290,6 +298,12 @@ export async function initBookEdit() {
   setStatus(authorsStatusEl, "Loading...", false);
   try {
     state.allAuthors = uniqueById(await fetchAllPaginatedResults("/api/v1/library/authors/"));
+    const authorsById = new Map(state.allAuthors.map((author) => [String(author.id), author]));
+    state.selectedAuthors = state.selectedAuthors.map((author) => ({
+      ...author,
+      ...(authorsById.get(String(author.id)) || {}),
+    }));
+    renderSelectedAuthors({ selectedAuthors: state.selectedAuthors, authorsSelectedEl });
     setStatus(authorsStatusEl, "", false);
   } catch (e) {
     console.error("Failed to load authors", e);
@@ -341,13 +355,16 @@ export async function initBookEdit() {
     authorsSelectedEl,
     authorAddSelectEl,
     authorAddBtnEl,
+    authorCreateFormEl,
+    authorNewEl,
+    authorCreateBtnEl,
+    authorCreateStatusEl,
     seriesSelectEl,
     seriesNewEl,
     seriesIndexEl,
     headerTitleEl,
     headerAuthorsEl,
     headerSeriesEl,
-    headerFileEl,
   });
   if (groupsFeatureEnabled) {
     bindGroupActions({

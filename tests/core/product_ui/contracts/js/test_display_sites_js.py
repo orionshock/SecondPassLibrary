@@ -102,6 +102,28 @@ class ProductUiDisplaySitesJsContractsTests(ProductUiTestCase):
         self.assertNotIn('<span class="pill">Member</span>', groups_shared_js)
         self.assertNotIn('<span class="pill">Curator</span>', groups_shared_js)
         self.assertIn("remove_circle", book_edit_groups_js)
+        book_edit_authors_js = Path("web/static/web/js/book_edit/authors_series.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("remove_circle", book_edit_authors_js)
+        self.assertIn('"icon-button icon-button--danger"', book_edit_authors_js)
+        self.assertNotIn("code.textContent = id", book_edit_authors_js)
+        self.assertIn("selectedAuthors.slice().sort(compareAuthors)", book_edit_authors_js)
+        self.assertIn("a.sort_name", book_edit_authors_js)
+        self.assertIn('ul.className = "selected-author-list"', book_edit_authors_js)
+        self.assertIn('li.className = "selected-author-list__item"', book_edit_authors_js)
+        self.assertIn(".selected-author-list", product_ui_css_text())
+        self.assertIn("list-style: none", product_ui_css_text())
+        author_actions_js = Path(
+            "web/static/web/js/book_edit/author_series_actions.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('fetchJSONWithOptions("/api/v1/library/authors/"', author_actions_js)
+        self.assertIn('method: "POST"', author_actions_js)
+        self.assertIn("state.selectedAuthors, author", author_actions_js)
+        self.assertLess(
+            book_edit_authors_js.index("li.appendChild(btn)"),
+            book_edit_authors_js.index("li.appendChild(document.createTextNode(name))"),
+        )
         self.assertIn('aria-label", "Remove from group"', book_edit_groups_js)
         self.assertIn("remove_circle", user_memberships_js)
         self.assertIn('aria-label="Remove membership"', user_memberships_js)

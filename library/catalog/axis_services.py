@@ -3,6 +3,13 @@ from __future__ import annotations
 from library.models import Author, Series
 
 
+def create_author(*, name: str) -> Author:
+    author = Author(name=name, sort_name=name)
+    author.full_clean()
+    author.save()
+    return author
+
+
 def update_author(*, author: Author, fields: dict) -> Author:
     if not fields:
         return author
