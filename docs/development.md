@@ -297,10 +297,11 @@ session auth with CSRF.
 The active Product UI is the Vite React workspace under `web/react`. Django
 serves the authenticated React shell at `/`; ordinary development should use
 the Vite server on port 5174. Retired Django
-Product UI code is parked under `web/legacy` and is not routed or tested.
+Product UI code is parked under `reference/legacy_product_ui` and is outside the
+Django application. It is not imported, discovered, routed, or tested.
 
-Django continues to render `/setup/`, `/login/`, `/logout/`, DRF `/api-auth/`
-internals, and the optional `/admin/` service hatch. The old Reader Client
+Django continues to render `/setup/`, `/login/`, `/logout/`, and the optional
+`/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client
 authorization webpage is retired pending a React replacement.
 
 ## Error-handling checks
@@ -325,12 +326,11 @@ Second Pass Library currently uses Django/DRF built-in authentication for local 
 
 - **Django session authentication** (browser-based development and the DRF browsable API)
 - **Client API bearer token authentication** on selected reader-client endpoints
-- **DRF browsable API login/logout** at `/api-auth/login/` and `/api-auth/logout/`
 - **Django admin authentication** at `/admin/` (a service hatch; not the product UI)
 
 Practical notes:
 
-- Use `/api-auth/login/` to authenticate in the browsable API.
+- Use `/login/` for Product UI session authentication. APIs return JSON rather than DRF browsable pages.
 - Use `/admin/` to access the Django admin only when
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is set. The local production helper sets
   this for operator testing only when the variable is unset and respects an

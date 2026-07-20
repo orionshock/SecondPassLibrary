@@ -219,6 +219,9 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = USERDATA_DIR / "media"
 
 REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
@@ -284,10 +287,10 @@ CSRF_COOKIE_SECURE = _SECURE_COOKIES
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True
-# Product UI JavaScript reads the CSRF cookie to send X-CSRFToken.
+# Same-origin React code reads the CSRF cookie to send X-CSRFToken.
 CSRF_COOKIE_HTTPONLY = False
 
-# Product UI pages reuse DRF's built-in login views.
+# Retained Django session-auth pages.
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"

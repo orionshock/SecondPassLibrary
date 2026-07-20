@@ -12,7 +12,9 @@ export default defineConfig(({ command }) => ({
       "/api": djangoTarget,
       "/media": djangoTarget,
       "/admin": djangoTarget,
-      "/api-auth": djangoTarget,
+      "/login": djangoTarget,
+      "/logout": djangoTarget,
+      "/setup": djangoTarget,
     },
   },
 }));

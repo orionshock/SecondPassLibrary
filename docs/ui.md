@@ -1,6 +1,6 @@
 # Retired Django Product UI Reference
 
-This document describes the retired server-rendered Product UI parked under `web/legacy`. It is historical reference, not an active route or supported interface. Current Product UI work belongs under `web/react`; see [React Product UI](react-ui.md).
+This document describes the retired server-rendered Product UI parked under `reference/legacy_product_ui`. It is historical reference, not an active route or supported interface. Current Product UI work belongs under `web/react`; see [React Product UI](react-ui.md).
 
 This document defines the current browser Product UI contract. Exact API
 routes, parameters, and response fields belong in `docs/api.md`; bearer-client

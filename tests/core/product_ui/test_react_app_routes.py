@@ -59,16 +59,18 @@ class ReactRootRouteContractTests(TestCase):
     def test_service_routes_are_not_captured_by_react(self):
         self.assertIs(resolve("/").func, react_app)
         self.assertIsNot(resolve("/api/v1/health/").func, react_app)
-        self.assertIsNot(resolve("/api-auth/login/").func, react_app)
         self.assertIsNot(resolve("/media/covers/missing.png").func, react_app)
+        for path in (
+            "/app/",
+            "/legacy/",
+            "/client-api/authorize/",
+            "/api-auth/login/",
+        ):
+            with self.subTest(path=path), self.assertRaises(Resolver404):
+                resolve(path)
         with self.assertRaises(Resolver404):
             resolve("/static/web/app.css")
         self.assertEqual(self.client.get("/api/v1/health/").status_code, 200)
-
-    def test_legacy_product_ui_routes_now_belong_to_react(self):
-        for path in ("/dashboard/", "/library/", "/groups/", "/shelves/", "/users/", "/imports/", "/server/"):
-            with self.subTest(path=path):
-                self.assertIs(resolve(path).func, react_app)
 
     def test_react_static_prefix_is_discoverable(self):
         with TemporaryDirectory() as directory:

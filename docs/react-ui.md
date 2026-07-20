@@ -1,10 +1,10 @@
 # React Product UI
 
-The Product UI lives in `web/react`. Retired Django Product UI templates, static assets, views, and routes are parked under `web/legacy` for reference only and are not mounted. Old Product UI tests are not maintained.
+The Product UI lives in `web/react`. Retired Django Product UI templates, static assets, views, and routes are isolated under `reference/legacy_product_ui` for reference only. They are outside the Django application and must not be imported, discovered, or mounted. Old Product UI tests are not maintained as executable tests.
 
 ## Development
 
-Run Django on port 8000 and the Product UI Vite server on port 5174. Port 5173 remains available for the standalone Reading Client. From `web/react`, run `npm install` and `npm run dev`. Vite proxies `/api`, `/media`, `/admin`, and `/api-auth` to Django, so the app uses Django session authentication through same-origin-style URLs.
+Run Django on port 8000 and the Product UI Vite server on port 5174. Port 5173 remains available for the standalone Reading Client. From `web/react`, run `npm install` and `npm run dev`. Vite proxies `/api`, `/media`, `/admin`, `/login`, `/logout`, and `/setup` to Django, so the app uses Django session authentication through same-origin-style URLs.
 
 Vite is the primary development surface. Django serves the authenticated React shell at `/` and intended Product UI deep links when a local build exists. Before bootstrap, these routes redirect to `/setup/`; afterward unauthenticated requests redirect to `/login/`.
 
@@ -12,7 +12,7 @@ Vite is the primary development surface. Django serves the authenticated React s
 
 The current local build and root-shell integration may be used for smoke checks. Docker and production React build integration are explicitly deferred.
 
-First-time setup, `/login/`, `/logout/`, DRF `/api-auth/` internals, and the Django `/admin/` service hatch remain Django-rendered. The old Reader Client authorization webpage is retired; its backend API/token logic remains for later React work. Dashboard, library/catalog, books, groups, shelves, users and password flows, imports, and Product UI server settings are React scope.
+First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch are the only retained Django-rendered application surfaces. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client authorization webpage is retired; its backend API/token logic remains for later React work. Dashboard, library/catalog, books, groups, shelves, users and password flows, imports, and Product UI server settings are React scope.
 
 ## Server boundary
 

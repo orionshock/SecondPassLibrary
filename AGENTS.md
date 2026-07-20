@@ -22,11 +22,11 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 ## Product and security boundaries
 
 - Keep REST/JSON APIs under `/api/v1/`. Never expose filesystem paths, storage identities, secrets, or authentication internals.
-- The Product UI is React under `web/react`. The retired Django Product UI is parked under `web/legacy` for reference and is not an active or supported route surface.
+- The Product UI is React under `web/react`. Retired Django Product UI source is parked under `reference/legacy_product_ui` and must never be imported, discovered, routed, or tested as runtime code.
 - Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
 - React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
 - Vite is the primary Product UI development surface and proxies same-origin-style requests to Django. Production and Docker React integration are deferred.
-- React owns `/` and intended Product UI deep links after setup and login. First-time setup, `/login/`, `/logout/`, DRF auth internals, and Django Admin remain Django-rendered surfaces. Do not add separate Product UI mount points or Django-rendered Reader Client authorization pages.
+- React owns `/` and intended Product UI deep links after setup and login. Only first-time setup, `/login/`, `/logout/`, and Django Admin remain Django-rendered application surfaces. Do not add separate Product UI mounts, DRF browsable pages, or Django-rendered Reader Client authorization pages.
 - Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
 - Django Admin is a technical service hatch, not the Product UI.
 - Preserve user ownership and scoping for reading data.
