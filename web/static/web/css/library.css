@@ -673,24 +673,49 @@
 .ident-actions { white-space: nowrap; }
 
 /* Author and Series management */
-.catalog-management-header { gap: 12px; flex-wrap: wrap; }
-.catalog-management-header .search { flex: 1 1 360px; }
-.catalog-management-list { display: grid; gap: 8px; margin: 14px 0; }
-.catalog-management-row {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+.catalog-entity-form-panel {
+  width: min(100%, 680px);
+  box-sizing: border-box;
+  margin: 18px 0 28px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
 }
-.catalog-management-row__title { display: inline-block; margin-bottom: 4px; font-weight: 700; }
-.catalog-entity-form { display: grid; gap: 8px; max-width: 720px; margin: 18px 0 28px; }
+.catalog-entity-form { display: grid; gap: 8px; }
 .catalog-entity-form input,
 .catalog-entity-form textarea { width: 100%; box-sizing: border-box; }
-.catalog-entity-facts { display: grid; gap: 8px; margin: 18px 0; }
-.catalog-entity-facts div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
-.catalog-entity-facts dt { color: var(--muted); }
-.catalog-entity-facts dd { margin: 0; }
-.catalog-entity-prose { max-width: 78ch; white-space: pre-wrap; }
+.catalog-entity-form__actions { justify-content: flex-end; margin-top: 8px; }
+.catalog-entity-duplicate { padding: 8px 10px; font-size: 13px; }
+.catalog-entity-delete { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.catalog-entity-delete summary { cursor: pointer; }
+.catalog-entity-attached { margin-top: 28px; }
+.catalog-entity-book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  max-width: 920px;
+}
+.catalog-entity-book-preview {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.catalog-entity-book-preview:hover .catalog-entity-book-preview__title,
+.catalog-entity-book-preview:focus-visible .catalog-entity-book-preview__title { text-decoration: underline; }
+.catalog-entity-book-preview__cover {
+  display: flex;
+  aspect-ratio: 2 / 3;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 12px;
+}
+.catalog-entity-book-preview__cover img { width: 100%; height: 100%; object-fit: cover; }
+.catalog-entity-book-preview__title { overflow-wrap: anywhere; font-size: 13px; line-height: 1.3; }

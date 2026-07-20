@@ -150,12 +150,12 @@ filter rail rather than a fourth axis.
 Library axis, ordering, filter, pagination, and selected-tab state remain in
 the URL. List rows use the shared Book row and metadata treatment.
 
-Catalog managers have canonical Author and Series management routes under
-`/library/authors/` and `/library/series/`, with create, detail, and edit pages.
-These session-only surfaces include unattached entities, duplicate-name
-advisories, attached Books, and safe deletion for unattached records. The
-existing Library axes remain browse/detail-in-context surfaces; their Create
-and Edit actions link to the canonical management pages.
+The Library Author and Series axes remain the browse and detail surfaces.
+Dedicated `/library/authors/new/`, `/library/authors/<id>/edit/`,
+`/library/series/new/`, and `/library/series/<id>/edit/` lifecycle pages include
+unattached entities, duplicate-name advisories, compact attached-Book previews,
+and safe deletion for unattached records. Axis Create and Edit actions link to
+these lifecycle pages.
 
 ### Book Detail
 

@@ -251,8 +251,7 @@ def _require_catalog_manager(request: HttpRequest) -> None:
 
 @product_login_required
 def catalog_entity_list(request: HttpRequest, kind: str) -> HttpResponse:
-    _require_catalog_manager(request)
-    return render(request, "web/library/catalog_entity_list.html", _catalog_entity_context(kind))
+    return redirect(f"/library/?view={kind}")
 
 
 @product_login_required
@@ -263,13 +262,9 @@ def catalog_entity_new(request: HttpRequest, kind: str) -> HttpResponse:
 
 @product_login_required
 def catalog_entity_detail(request: HttpRequest, kind: str, entity_id: str) -> HttpResponse:
-    _require_catalog_manager(request)
     entity_uuid = _uuid_or_404(entity_id)
-    return render(
-        request,
-        "web/library/catalog_entity_detail.html",
-        _catalog_entity_context(kind, str(entity_uuid)),
-    )
+    singular = "author" if kind == "authors" else "series"
+    return redirect(f"/library/?view={singular}&{singular}={entity_uuid}")
 
 
 @product_login_required

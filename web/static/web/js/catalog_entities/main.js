@@ -35,89 +35,33 @@ function safeError(error, fallback) {
   return String(extractApiErrorMessage(error) || fallback).slice(0, 240);
 }
 
-function renderEntityRow(entity, { kind, label }) {
-  const row = document.createElement("article");
-  row.className = "catalog-management-row";
-  const main = document.createElement("div");
-  const link = document.createElement("a");
-  link.href = `/library/${kind}/${encodeURIComponent(String(entity.id))}/`;
-  link.textContent = String(entity.name || `Untitled ${label}`);
-  link.className = "catalog-management-row__title";
-  main.appendChild(link);
-  const meta = document.createElement("div");
-  meta.className = "muted";
-  meta.textContent = `${Number(entity.book_count || 0)} Books · Sort: ${String(entity.sort_name || entity.name || "")}`;
-  main.appendChild(meta);
-  const edit = document.createElement("a");
-  edit.className = "button button--secondary";
-  edit.href = `/library/${kind}/${encodeURIComponent(String(entity.id))}/edit/`;
-  edit.textContent = "Edit";
-  row.append(main, edit);
-  return row;
-}
-
 function renderBookRow(book) {
-  const row = document.createElement("div");
-  row.className = "catalog-management-row";
-  const link = document.createElement("a");
-  link.href = `/library/books/${encodeURIComponent(String(book.id))}/`;
-  link.textContent = String(book.title || "Untitled book");
-  row.appendChild(link);
+  const row = document.createElement("a");
+  row.className = "catalog-entity-book-preview";
+  row.href = `/library/books/${encodeURIComponent(String(book.id))}/`;
+  const cover = document.createElement("span");
+  cover.className = "catalog-entity-book-preview__cover";
+  const coverUrl = String(book.cover_url || "");
+  if (coverUrl) {
+    const image = document.createElement("img");
+    image.src = coverUrl;
+    image.alt = "";
+    image.loading = "lazy";
+    cover.appendChild(image);
+  } else {
+    cover.textContent = "Cover";
+    cover.setAttribute("aria-hidden", "true");
+  }
+  const title = document.createElement("span");
+  title.className = "catalog-entity-book-preview__title";
+  title.textContent = String(book.title || "Untitled book");
+  row.append(cover, title);
   return row;
 }
 
 async function requireManager() {
   const me = await loadMeAndInitShell();
   if (!canManageLibrary(me)) throw new Error("Not allowed.");
-}
-
-export async function initCatalogEntityList() {
-  await requireManager();
-  const root = $("#catalog-entity-list");
-  if (!root) return;
-  const cfg = config(root);
-  const form = $("#catalog-entity-search");
-  const input = $("#catalog-entity-q");
-  const status = $("#catalog-entity-status");
-  const results = $("#catalog-entity-results");
-  const previous = $("#catalog-entity-prev");
-  const next = $("#catalog-entity-next");
-  const range = $("#catalog-entity-range");
-  if (!form || !input || !status || !results || !previous || !next || !range) return;
-  let page = 1;
-  let hasNext = false;
-  let hasPrevious = false;
-
-  async function load() {
-    const url = new URL(managementApiUrl(cfg.kind));
-    const query = input.value.trim();
-    if (query) url.searchParams.set("q", query);
-    url.searchParams.set("page", String(page));
-    setStatus(status, "Loading...", false);
-    results.replaceChildren();
-    try {
-      const payload = await fetchJSON(url.toString());
-      const rows = Array.isArray(payload.results) ? payload.results : [];
-      for (const entity of rows) results.appendChild(renderEntityRow(entity, cfg));
-      hasNext = !!payload.next;
-      hasPrevious = !!payload.previous;
-      previous.disabled = !hasPrevious;
-      next.disabled = !hasNext;
-      range.textContent = `${Number(payload.count || rows.length)} ${cfg.label}s`;
-      setStatus(status, rows.length ? "" : `No ${cfg.label.toLowerCase()}s.`, false);
-    } catch (error) {
-      setStatus(status, safeError(error, `Failed to load ${cfg.label.toLowerCase()}s.`), true);
-    }
-  }
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    page = 1;
-    load();
-  });
-  previous.addEventListener("click", () => { if (hasPrevious) { page -= 1; load(); } });
-  next.addEventListener("click", () => { if (hasNext) { page += 1; load(); } });
-  await load();
 }
 
 async function loadAttachedBooks(cfg) {
@@ -127,35 +71,6 @@ async function loadAttachedBooks(cfg) {
   if (cfg.kind === "series") url.searchParams.set("ordering", "series_index");
   const payload = await fetchJSON(url.toString());
   return Array.isArray(payload.results) ? payload.results : [];
-}
-
-export async function initCatalogEntityDetail() {
-  await requireManager();
-  const root = $("#catalog-entity-detail");
-  if (!root) return;
-  const cfg = config(root);
-  const status = $("#catalog-entity-status");
-  const content = $("#catalog-entity-detail-content");
-  const name = $("#catalog-entity-name");
-  const sortName = $("#catalog-entity-sort-name");
-  const prose = $("#catalog-entity-prose");
-  const books = $("#catalog-entity-books");
-  if (!status || !content || !name || !sortName || !prose || !books) return;
-  try {
-    const [entity, attached] = await Promise.all([
-      fetchJSON(managementApiUrl(cfg.kind, cfg.id)),
-      loadAttachedBooks(cfg),
-    ]);
-    name.textContent = String(entity.name || cfg.label);
-    sortName.textContent = String(entity.sort_name || entity.name || "");
-    prose.textContent = String(cfg.kind === "authors" ? entity.biography || "" : entity.summary || "");
-    for (const book of attached) books.appendChild(renderBookRow(book));
-    if (!attached.length) books.textContent = "No attached Books.";
-    visible(content, true);
-    setStatus(status, "", false);
-  } catch (error) {
-    setStatus(status, safeError(error, `Failed to load ${cfg.label.toLowerCase()}.`), true);
-  }
 }
 
 export async function initCatalogEntityForm() {
@@ -231,7 +146,8 @@ export async function initCatalogEntityForm() {
           body: JSON.stringify(payload),
         }
       );
-      window.location.assign(`/library/${cfg.kind}/${encodeURIComponent(String(entity.id))}/`);
+      const singular = cfg.kind === "authors" ? "author" : "series";
+      window.location.assign(`/library/?view=${singular}&${singular}=${encodeURIComponent(String(entity.id))}`);
     } catch (error) {
       setStatus(formStatus, safeError(error, `${cfg.label} could not be saved.`), true);
     }
@@ -246,7 +162,7 @@ export async function initCatalogEntityForm() {
           method: "DELETE",
           headers: { Accept: "application/json", ...(csrf ? { "X-CSRFToken": csrf } : {}) },
         });
-        window.location.assign(`/library/${cfg.kind}/`);
+        window.location.assign(`/library/?view=${cfg.kind}`);
       } catch (error) {
         setStatus(deleteStatus, safeError(error, `${cfg.label} could not be deleted.`), true);
       }
