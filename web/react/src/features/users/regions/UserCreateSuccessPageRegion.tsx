@@ -1,0 +1,24 @@
+import type { CreateUserResult } from "@second-pass/spl-api";
+import { Link } from "react-router-dom";
+
+import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
+import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
+import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
+
+export function UserCreateSuccessPageRegion({ result }: { result: CreateUserResult }) {
+  const displayName = [result.user.firstName, result.user.lastName].filter(Boolean).join(" ") || result.user.username;
+  return <section className="user-create-result" aria-live="polite">
+    <h2>User created</h2>
+    <dl className="user-create-result__details">
+      <div><dt>Username</dt><dd>{result.user.username}</dd></div>
+      <div><dt><label htmlFor="created-user-temporary-password">Temporary password</label></dt><dd><input id="created-user-temporary-password" className="user-create-password" type="text" readOnly value={result.temporaryPassword} /><p className="user-create-password-warning">Copy it now. It will not be shown again.</p></dd></div>
+    </dl>
+    <div className="form-action-row">
+      <ActionFeedbackComponent state={{ pending: false, message: "User created." }} />
+      <div className="form-actions">
+        <Link className="button button--secondary" to="/users">Back to Users</Link>
+        <Link className="button" to={`/users/${encodeURIComponent(result.user.id)}/edit`} state={breadcrumbNavigationState(usersEditBreadcrumbTrail(displayName))}>Edit user</Link>
+      </div>
+    </div>
+  </section>;
+}

@@ -6,6 +6,7 @@ import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { UsersEditPlaceholderOrchestrator } from "../features/users/UsersEditPlaceholderOrchestrator";
+import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
 import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 export const sectionRoutes = [
@@ -51,6 +52,7 @@ export const appRoutes = [
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },
       { path: "users", element: <UsersListOrchestrator /> },
+      { path: "users/new", element: <UserCreateOrchestrator /> },
       { path: "users/:profileId/edit", element: <UsersEditPlaceholderOrchestrator /> },
       { path: "*", element: <NotFoundPageRegion /> },
     ],

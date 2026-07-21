@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { listUsers } from "@second-pass/spl-api";
+import { ApiError, createUser, listUsers } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 describe("users SDK", () => {
@@ -55,5 +55,36 @@ describe("users SDK", () => {
     const error = new Error("denied");
     const client: ApiClient = { request: async <T>() => Promise.reject(error) as Promise<T> };
     await expect(listUsers({}, client)).rejects.toBe(error);
+  });
+
+  it("creates an active-by-default user without sending activity and maps the one-time password", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const response = {
+      user: {
+        profile_id: "new-id", username: "new-reader", first_name: "New", last_name: "Reader",
+        email: "new@example.test", role: "reader", is_owner: false, is_active: true,
+        date_joined: "2026-07-20T00:00:00Z", last_login: null, must_change_password: true, groups: [],
+      },
+      temporary_password: "temporary-secret",
+      message: "Show this password now.",
+    };
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => { calls.push({ path, init }); return response as T; } };
+
+    const result = await createUser({ username: " new-reader ", email: " new@example.test ", firstName: " New ", lastName: " Reader ", role: "reader" }, client);
+
+    expect(calls[0]?.path).toBe("/api/v1/accounts/users/");
+    expect(calls[0]?.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      username: "new-reader", email: "new@example.test", first_name: "New", last_name: "Reader", role: "reader",
+    });
+    expect(JSON.parse(String(calls[0]?.init?.body))).not.toHaveProperty("is_active");
+    expect(result.temporaryPassword).toBe("temporary-secret");
+    expect(result.user).toMatchObject({ id: "new-id", isActive: true, mustChangePassword: true });
+  });
+
+  it("preserves create validation errors from the shared client boundary", async () => {
+    const error = new ApiError("Invalid user.", 400, { fields: { username: ["Already exists."] } });
+    const client: ApiClient = { request: async <T>() => Promise.reject(error) as Promise<T> };
+    await expect(createUser({ username: "duplicate", email: "", firstName: "", lastName: "", role: "reader" }, client)).rejects.toBe(error);
   });
 });

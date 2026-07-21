@@ -27,7 +27,11 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export { getServerInfo, type ServerInfo } from "./server";
 export {
+  createUser,
   listUsers,
+  type CreateUserInput,
+  type CreateUserResult,
+  type CreateUserRole,
   type ManagedUser,
   type ManagedUserGroup,
   type UserOrdering,

@@ -207,6 +207,7 @@ Response shape:
 
 Notes:
 
+- Owner may create `manager`, `librarian`, or `reader`. Manager may create only `librarian` or `reader`; other callers are denied. Owner is not a creatable managed role.
 - The temporary password is never stored except via Django's normal password hash.
 - The password is not emailed and is not shown by any list/detail endpoint after creation.
 - Newly-created managed users are marked `must_change_password=true` (force change on first login).

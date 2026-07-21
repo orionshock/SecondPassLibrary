@@ -4,14 +4,20 @@ export interface UserRoleIdentity {
 }
 
 const roleLabels: Record<string, string> = {
+  owner: "Owner",
   manager: "Manager",
   librarian: "Librarian",
+  curator: "Curator",
   reader: "Reader",
 };
 
 export function displayUserRole(user: UserRoleIdentity): string {
   if (user.isOwner) return "Owner";
-  return roleLabels[user.role] ?? titleCase(user.role || "reader");
+  return displayUserRoleName(user.role);
+}
+
+export function displayUserRoleName(role: string): string {
+  return roleLabels[role] ?? titleCase(role || "reader");
 }
 
 function titleCase(value: string): string {

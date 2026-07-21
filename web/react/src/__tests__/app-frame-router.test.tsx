@@ -26,6 +26,7 @@ describe("app frame and router", () => {
   it("defines placeholder and not-found routes", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves", "/imports", "/server"]);
     expect(appRoutes[0].children.some((route) => route.path === "users")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/:profileId/edit")).toBe(true);
     expect(renderToStaticMarkup(<PlaceholderPageRegion title="Library" />)).toContain("Library");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");

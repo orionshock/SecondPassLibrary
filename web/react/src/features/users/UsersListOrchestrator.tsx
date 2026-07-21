@@ -1,15 +1,17 @@
 import { listUsers, type ManagedUser, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext, useSearchParams } from "react-router-dom";
+import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, PageHeader } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { UsersFiltersPageRegion } from "./regions/UsersFiltersPageRegion";
 import { UsersListPageRegion } from "./regions/UsersListPageRegion";
+import { creatableUserRoles } from "./userCreateRoles";
 import "./Users.css";
-import { usersListBreadcrumbFallback } from "./usersBreadcrumbs";
+import { usersCreateBreadcrumbFallback, usersListBreadcrumbFallback } from "./usersBreadcrumbs";
 import { usersListSdkQuery, usersListSearchParams, usersListStateFromSearchParams, withUsersListChange } from "./usersListQuery";
 
 interface UsersLoadState {
@@ -30,6 +32,7 @@ export function UsersListOrchestrator() {
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [retry, setRetry] = useState(0);
   const [loadState, setLoadState] = useState<UsersLoadState>({ loading: true });
+  const canCreateUsers = creatableUserRoles(currentUser).length > 0;
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
 
@@ -47,7 +50,9 @@ export function UsersListOrchestrator() {
   }
 
   return <div className="page-stack users-page">
-    <PageHeader title="Users" actions={<Button type="button" disabled title="User creation is coming in a later slice.">Create User</Button>} />
+    <PageHeader title="Users" actions={canCreateUsers
+      ? <Link className="button" to="/users/new" state={breadcrumbNavigationState(usersCreateBreadcrumbFallback)}>Create User</Link>
+      : <Button type="button" disabled>Create User</Button>} />
     <UsersFiltersPageRegion
       search={searchDraft}
       role={queryState.role}

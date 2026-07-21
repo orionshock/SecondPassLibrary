@@ -2,6 +2,7 @@ import { apiClient, type ApiClient } from "./client";
 import { toPage, type ApiPage, type Page } from "./pagination";
 
 export type UserRoleFilter = "owner" | "manager" | "librarian" | "reader" | "curator";
+export type CreateUserRole = "manager" | "librarian" | "reader";
 export type UserStatusFilter = "true" | "false";
 export type UserOrdering =
   | "username" | "-username"
@@ -40,6 +41,20 @@ export interface ManagedUser {
   groups: ManagedUserGroup[];
 }
 
+export interface CreateUserInput {
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: CreateUserRole;
+}
+
+export interface CreateUserResult {
+  user: ManagedUser;
+  temporaryPassword: string;
+  message: string;
+}
+
 interface ManagedUserResponse {
   profile_id: string;
   username: string;
@@ -60,6 +75,12 @@ interface ManagedUserResponse {
   }>;
 }
 
+interface CreateUserResponse {
+  user: ManagedUserResponse;
+  temporary_password: string;
+  message: string;
+}
+
 export async function listUsers(query: UsersListQuery = {}, client: ApiClient = apiClient): Promise<Page<ManagedUser>> {
   const parameters = new URLSearchParams();
   const search = query.q?.trim();
@@ -74,6 +95,25 @@ export async function listUsers(query: UsersListQuery = {}, client: ApiClient = 
     `/api/v1/accounts/users/${queryString ? `?${queryString}` : ""}`,
   );
   return toPage(response, mapManagedUser);
+}
+
+export async function createUser(input: CreateUserInput, client: ApiClient = apiClient): Promise<CreateUserResult> {
+  const response = await client.request<CreateUserResponse>("/api/v1/accounts/users/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: input.username.trim(),
+      email: input.email.trim(),
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+      role: input.role,
+    }),
+  });
+  return {
+    user: mapManagedUser(response.user),
+    temporaryPassword: response.temporary_password,
+    message: response.message,
+  };
 }
 
 function mapManagedUser(response: ManagedUserResponse): ManagedUser {

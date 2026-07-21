@@ -22,6 +22,9 @@ This is the running list of cross-page presentation and interaction rules that a
 - The API intentionally exposes `role` and `is_owner` separately. UI role displays resolve `is_owner` first and show `Owner`; they do not show a redundant separate Owner row.
 - Use the shared user-role presentation helper so role precedence stays consistent across Profile and future user surfaces.
 - The Users list uses the same effective-role rule, so Owner is displayed as the user's role rather than as a second status.
+- Users surfaces display role names as `Owner`, `Manager`, `Librarian`, `Curator`, and `Reader`.
+- Owner may create Manager, Librarian, or Reader accounts. Manager may create only Librarian or Reader accounts; lower roles cannot create users.
+- React user creation does not expose activity state. New users are active by default and receive a generated one-time temporary password that must not be persisted in frontend storage.
 
 ## Server-driven lists
 

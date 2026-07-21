@@ -1,6 +1,10 @@
 import { appendBreadcrumbTrail, type BreadcrumbItem } from "../../app/navigation/breadcrumbs";
 
 export const usersListBreadcrumbFallback: readonly BreadcrumbItem[] = [];
+export const usersCreateBreadcrumbFallback: readonly BreadcrumbItem[] = [
+  { label: "Users", to: "/users" },
+  { label: "New" },
+];
 export const usersEditBreadcrumbFallback: readonly BreadcrumbItem[] = [
   { label: "Users", to: "/users" },
   { label: "Edit user" },
