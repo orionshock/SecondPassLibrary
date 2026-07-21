@@ -98,7 +98,8 @@ Client API (JSON):
 capabilities, or route manifests. Reader clients should use authenticated
 `GET /api/v1/accounts/me/` as refreshable context after pairing; `/me` includes
 `advanced_library_groups_enabled` for group browsing UI and `banner_text` for
-the single server banner.
+the single server banner. Capability flags in `/me` are sparse and appear only
+when true; clients must treat omitted flags as false.
 
 Product UI (React):
 

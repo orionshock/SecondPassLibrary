@@ -22,7 +22,7 @@ class CurrentUserSerializer(serializers.Serializer):
         id = serializers.UUIDField()
         name = serializers.CharField()
         is_public_group = serializers.BooleanField()
-        is_curator = serializers.BooleanField()
+        is_curator = serializers.BooleanField(required=False)
 
     username = serializers.CharField()
     email = serializers.EmailField(allow_blank=True)
@@ -30,9 +30,10 @@ class CurrentUserSerializer(serializers.Serializer):
     last_name = serializers.CharField(allow_blank=True)
     profile_id = serializers.UUIDField()
     role = serializers.CharField()
-    must_change_password = serializers.BooleanField()
-    is_owner = serializers.BooleanField()
-    advanced_library_groups_enabled = serializers.BooleanField()
+    must_change_password = serializers.BooleanField(required=False)
+    is_owner = serializers.BooleanField(required=False)
+    advanced_library_groups_enabled = serializers.BooleanField(required=False)
+    can_access_django_admin = serializers.BooleanField(required=False)
     banner_text = serializers.CharField(allow_blank=True)
     groups = GroupSummarySerializer(many=True)
 

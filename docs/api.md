@@ -230,7 +230,7 @@ Each `groups[]` item includes:
 
 - `id`, `name`
 - `is_public_group`
-- `is_curator`
+- `is_curator: true` only for curator memberships; omitted otherwise
 
 Example `groups[]` item:
 
@@ -243,7 +243,9 @@ Example `groups[]` item:
 }
 ```
 
-`/accounts/me/` global `role` and `is_owner` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list.
+`/accounts/me/` uses sparse true-only capability flags. `is_owner`, `must_change_password`, `advanced_library_groups_enabled`, `can_access_django_admin`, and `groups[].is_curator` are present only when true and omitted otherwise. First-party SDKs normalize missing flags to stable `false` booleans for application code.
+
+Global `role` and `is_owner` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list. `can_access_django_admin` is included only for an Owner when Django Admin is enabled; it exposes neither raw settings nor an admin route manifest.
 
 Additional identity fields:
 
@@ -272,9 +274,6 @@ Example response:
   "last_name": "Incididunt",
   "profile_id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
   "role": "reader",
-  "must_change_password": false,
-  "is_owner": false,
-  "advanced_library_groups_enabled": false,
   "banner_text": "",
   "groups": [
     {

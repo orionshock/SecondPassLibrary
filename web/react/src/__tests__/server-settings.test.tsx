@@ -9,6 +9,7 @@ import { LibraryGroupsPageRegion } from "../features/server-settings/regions/Lib
 import { PublicLibraryPageRegion } from "../features/server-settings/regions/PublicLibraryPageRegion";
 import { canAccessServerSettings, serverSettingsBreadcrumbFallback } from "../features/server-settings/ServerSettingsOrchestrator";
 import { confirmEnableAdvancedGroups } from "../features/server-settings/serverSettingsConfirmations";
+import { DjangoAdminActionComponent } from "../features/server-settings/DjangoAdminActionComponent";
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams } from "../features/server-settings/serverSettingsTabs";
 
 const settings: ServerSettings = {
@@ -60,5 +61,10 @@ describe("Server Settings", () => {
     expect(cancelled).toHaveBeenCalledWith(expect.stringContaining("Service Hatch"));
     expect(canAccessServerSettings(true)).toBe(true);
     expect(canAccessServerSettings(false)).toBe(false);
+  });
+
+  it("renders the Django Admin action only when capability allows it", () => {
+    expect(renderToStaticMarkup(<DjangoAdminActionComponent enabled />)).toContain('href="/admin/"');
+    expect(renderToStaticMarkup(<DjangoAdminActionComponent enabled={false} />)).toBe("");
   });
 });

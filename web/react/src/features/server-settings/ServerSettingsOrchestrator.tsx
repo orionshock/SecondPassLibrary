@@ -19,6 +19,7 @@ import { ActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { GeneralSettingsPageRegion } from "./regions/GeneralSettingsPageRegion";
 import { LibraryGroupsPageRegion } from "./regions/LibraryGroupsPageRegion";
 import { PublicLibraryPageRegion } from "./regions/PublicLibraryPageRegion";
+import { DjangoAdminActionComponent } from "./DjangoAdminActionComponent";
 import { confirmEnableAdvancedGroups } from "./serverSettingsConfirmations";
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams, serverSettingsTabs } from "./serverSettingsTabs";
 import "./ServerSettings.css";
@@ -140,7 +141,7 @@ export function ServerSettingsOrchestrator() {
   </ActionRowComponent>;
 
   return <div className="page-stack server-settings-page">
-    <PageHeader title="Server Settings" />
+    <PageHeader title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />} />
     <div className="server-settings-tabs">
       <div className="server-settings-tab-list" role="tablist" aria-label="Server settings sections">
         {serverSettingsTabs.map(({ id, label }) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => selectTab(id)}>{label}</button>)}

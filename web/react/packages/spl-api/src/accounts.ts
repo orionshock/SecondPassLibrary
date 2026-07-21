@@ -7,15 +7,16 @@ interface CurrentUserResponse {
   last_name: string;
   profile_id: string;
   role: string;
-  must_change_password: boolean;
-  is_owner: boolean;
-  advanced_library_groups_enabled: boolean;
+  must_change_password?: true;
+  is_owner?: true;
+  advanced_library_groups_enabled?: true;
+  can_access_django_admin?: true;
   banner_text: string;
   groups: Array<{
     id: string;
     name: string;
     is_public_group: boolean;
-    is_curator: boolean;
+    is_curator?: true;
   }>;
 }
 
@@ -29,6 +30,7 @@ export interface CurrentUser {
   mustChangePassword: boolean;
   isOwner: boolean;
   advancedLibraryGroupsEnabled: boolean;
+  canAccessDjangoAdmin: boolean;
   bannerText: string;
   groups: Array<{
     id: string;
@@ -95,15 +97,16 @@ function mapCurrentUser(response: CurrentUserResponse): CurrentUser {
     lastName: response.last_name,
     profileId: response.profile_id,
     role: response.role,
-    mustChangePassword: response.must_change_password,
-    isOwner: response.is_owner,
-    advancedLibraryGroupsEnabled: response.advanced_library_groups_enabled,
+    mustChangePassword: Boolean(response.must_change_password),
+    isOwner: Boolean(response.is_owner),
+    advancedLibraryGroupsEnabled: Boolean(response.advanced_library_groups_enabled),
+    canAccessDjangoAdmin: Boolean(response.can_access_django_admin),
     bannerText: response.banner_text,
     groups: response.groups.map((group) => ({
       id: group.id,
       name: group.name,
       isPublicGroup: group.is_public_group,
-      isCurator: group.is_curator,
+      isCurator: Boolean(group.is_curator),
     })),
   };
 }
