@@ -72,7 +72,9 @@ describe("User create workflow", () => {
       message: "Show this password now.",
     };
     const markup = renderToStaticMarkup(<MemoryRouter><UserCreateSuccessPageRegion result={result} /></MemoryRouter>);
-    expect(markup).toContain("Temporary password");
+    expect(markup).toContain("Temporary credentials");
+    expect(markup).toContain("Username: new-reader");
+    expect(markup).toContain("Password: one-time-secret");
     expect(markup).toContain("one-time-secret");
     expect(markup).toContain("It will not be shown again");
     expect(markup).toContain('readOnly=""');

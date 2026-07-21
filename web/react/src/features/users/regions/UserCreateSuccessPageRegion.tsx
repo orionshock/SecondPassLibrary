@@ -12,7 +12,7 @@ export function UserCreateSuccessPageRegion({ result }: { result: CreateUserResu
     <h2>User created</h2>
     <dl className="user-create-result__details">
       <div><dt>Username</dt><dd>{result.user.username}</dd></div>
-      <div><dt><label htmlFor="created-user-temporary-password">Temporary password</label></dt><dd><TemporaryPasswordResultComponent id="created-user-temporary-password" password={result.temporaryPassword} /></dd></div>
+      <div><dt><label htmlFor="created-user-temporary-password">Temporary credentials</label></dt><dd><TemporaryPasswordResultComponent id="created-user-temporary-password" username={result.user.username} password={result.temporaryPassword} /></dd></div>
     </dl>
     <div className="form-action-row">
       <ActionFeedbackComponent state={{ pending: false, message: "User created." }} />

@@ -63,3 +63,8 @@ This is the running list of cross-page presentation and interaction rules that a
 - Form and workflow action rows are right-aligned unless a page-specific interaction explicitly calls for another placement.
 - Put secondary or canceling actions before the default/desirable primary action so the primary action is farthest right.
 - Put success, error, or other action status immediately left of the buttons and right-align it toward the controls. Reserve the feedback area where practical so status changes do not cause large layout jumps.
+- Successful action feedback clears itself after roughly five seconds. Errors remain visible until the user retries, cancels, or otherwise clears that workflow state.
+
+## Page headings
+
+- Product page titles use the restrained legacy Product UI scale rather than oversized landing-page typography. Keep titles on one line at normal desktop widths and allow wrapping only when the viewport requires it.

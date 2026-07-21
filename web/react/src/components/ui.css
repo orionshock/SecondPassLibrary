@@ -74,6 +74,13 @@ button:disabled {
   margin: 0;
 }
 
+.page-header h1 {
+  max-width: none;
+  font-size: 1.375rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .page-description {
   max-width: 44rem;
   margin-top: 0.45rem !important;
@@ -181,8 +188,11 @@ button:disabled {
 }
 
 .action-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   min-width: 0;
-  min-height: 1.5rem;
+  min-height: 2.4rem;
   justify-self: end;
   text-align: right;
 }
@@ -229,14 +239,17 @@ button:disabled {
   gap: 0.5rem;
 }
 
-.temporary-password-result input {
+.temporary-password-result textarea {
   width: 100%;
+  min-height: 4.6rem;
   padding: 0.7rem 0.8rem;
   border: 1px solid rgb(251 113 133 / 50%);
   border-radius: 0.625rem;
   color: var(--text);
   background: rgb(251 113 133 / 8%);
   font: inherit;
+  line-height: 1.45;
+  resize: none;
   user-select: all;
 }
 
@@ -258,6 +271,10 @@ button:disabled {
     align-items: flex-start;
     flex-direction: column;
     padding: 0.9rem 0;
+  }
+
+  .page-header h1 {
+    white-space: normal;
   }
 
   .key-value-list > div,

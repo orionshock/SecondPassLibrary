@@ -53,7 +53,8 @@ describe("User Edit", () => {
     const result: ManagedPasswordResetResult = { username: "reader", temporaryPassword: "one-time", message: "show once" };
     const markup = renderToStaticMarkup(<MemoryRouter><UserPasswordPageRegion mustChangePassword canManage requirementState={{ pending: false }} resetState={{ pending: false, message: "Password reset." }} resetResult={result} onRequirementChange={vi.fn()} onReset={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain('readOnly=""');
-    expect(markup).toContain('value="one-time"');
+    expect(markup).toContain("Username: reader");
+    expect(markup).toContain("Password: one-time");
     expect(markup.indexOf("one-time")).toBeLessThan(markup.indexOf("It will not be shown again"));
     expect(markup).toContain("Require password change on next login");
   });

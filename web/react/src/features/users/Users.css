@@ -255,11 +255,32 @@
   font: inherit;
 }
 
-.user-password-setting,
 .user-password-reset,
 .user-membership-add {
   display: grid;
   gap: 0.75rem;
+}
+
+.user-password-requirement-row,
+.user-password-reset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-password-requirement-row {
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, max-content);
+  width: min(100%, 46rem);
+}
+
+.user-password-requirement-row .action-feedback {
+  width: 100%;
+}
+
+.user-password-reset-row .form-action-row {
+  min-height: 0;
+  padding: 0;
 }
 
 .temporary-password-field {
@@ -368,7 +389,9 @@
   }
 
   .temporary-password-field,
-  .user-membership-row {
+  .user-membership-row,
+  .user-password-requirement-row,
+  .user-password-reset-row {
     grid-template-columns: 1fr;
   }
 
