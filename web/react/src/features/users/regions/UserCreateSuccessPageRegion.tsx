@@ -7,7 +7,6 @@ import { TemporaryPasswordResultComponent } from "../../../shared/TemporaryPassw
 import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
 
 export function UserCreateSuccessPageRegion({ result }: { result: CreateUserResult }) {
-  const displayName = [result.user.firstName, result.user.lastName].filter(Boolean).join(" ") || result.user.username;
   return <section className="user-create-result" aria-live="polite">
     <h2>User created</h2>
     <dl className="user-create-result__details">
@@ -18,7 +17,7 @@ export function UserCreateSuccessPageRegion({ result }: { result: CreateUserResu
       <ActionFeedbackComponent state={{ pending: false, message: "User created." }} />
       <div className="form-actions">
         <Link className="button button--secondary" to="/users">Back to Users</Link>
-        <Link className="button" to={`/users/${encodeURIComponent(result.user.id)}/edit`} state={breadcrumbNavigationState(usersEditBreadcrumbTrail(displayName))}>Edit user</Link>
+        <Link className="button" to={`/users/${encodeURIComponent(result.user.id)}/edit`} state={breadcrumbNavigationState(usersEditBreadcrumbTrail(result.user.username))}>Edit user</Link>
       </div>
     </div>
   </section>;

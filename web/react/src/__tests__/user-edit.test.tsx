@@ -9,7 +9,7 @@ import { UserPasswordPageRegion } from "../features/users/regions/UserPasswordPa
 import { shouldShowManagedGroupMemberships } from "../features/users/UserEditOrchestrator";
 import { userEditDraftFromUser, userEditDraftReducer } from "../features/users/userEditForm";
 import { editableUserRoles } from "../features/users/userCreateRoles";
-import { usersEditBreadcrumbFallbackFor } from "../features/users/usersBreadcrumbs";
+import { usersEditBreadcrumbFallbackFor, usersEditBreadcrumbTrail } from "../features/users/usersBreadcrumbs";
 import { confirmGroupMembershipRemoval, confirmManagedPasswordReset } from "../features/users/userEditConfirmations";
 
 const target: ManagedUser = {
@@ -23,6 +23,7 @@ const manager: CurrentUser = { ...owner, username: "manager", profileId: "manage
 describe("User Edit", () => {
   it("uses canonical identity breadcrumbs and permission-aware capitalized roles", () => {
     expect(usersEditBreadcrumbFallbackFor("reader")).toEqual([{ label: "Users", to: "/users" }, { label: "@reader" }, { label: "Edit" }]);
+    expect(usersEditBreadcrumbTrail("reader")).toEqual(usersEditBreadcrumbFallbackFor("reader"));
     expect(editableUserRoles(owner, target)).toEqual(["manager", "librarian", "reader"]);
     expect(editableUserRoles(manager, target)).toEqual(["librarian", "reader"]);
     expect(editableUserRoles(manager, { ...target, role: "manager" })).toEqual([]);
