@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type CurrentUser, type ManagedPasswordResetResult, type ManagedUser } from "@second-pass/spl-api";
 import { UserDetailsPageRegion } from "../features/users/regions/UserDetailsPageRegion";
-import { UserGroupMembershipsPageRegion } from "../features/users/regions/UserGroupMembershipsPageRegion";
+import { canRemoveMembership, curatorValueForGroup, UserGroupMembershipsPageRegion } from "../features/users/regions/UserGroupMembershipsPageRegion";
 import { UserPasswordPageRegion } from "../features/users/regions/UserPasswordPageRegion";
 import { shouldShowManagedGroupMemberships } from "../features/users/UserEditOrchestrator";
 import { userEditDraftFromUser, userEditDraftReducer } from "../features/users/userEditForm";
@@ -60,14 +60,43 @@ describe("User Edit", () => {
     expect(markup).toContain("Require password change on next login");
   });
 
-  it("keeps add controls separate and makes Public membership non-destructive/non-curatable", () => {
+  it("renders removable Public membership with its public badge and curator help", () => {
     expect(confirmGroupMembershipRemoval("Book Club", vi.fn(() => false))).toBe(false);
     const markup = renderToStaticMarkup(<MemoryRouter><UserGroupMembershipsPageRegion memberships={target.groups} assignableGroups={[{ id: "new", name: "New Group", isPublicGroup: false }]} state={{ pending: false }} onAdd={vi.fn()} onRemove={vi.fn()} onCuratorChange={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain("Public Group");
-    expect(markup).not.toContain('aria-label="Remove Common Room"');
+    expect(markup).toContain('class="badge badge--success"');
+    expect(markup).toContain(">public</span>");
+    expect(markup).toContain("Only Librarians/Managers may Curate the Public Group");
+    expect(markup).toContain('aria-label="Remove Common Room"');
     expect(markup).toContain('aria-label="Remove Book Club"');
     expect(markup).toContain('class="user-membership-add"');
     expect(markup).toContain("Add to group");
+  });
+
+  it("disables sole Public removal but keeps a sole custom membership removable", () => {
+    const publicGroup = target.groups[0]!;
+    const customGroup = target.groups[1]!;
+    const render = (membership: typeof publicGroup) => renderToStaticMarkup(<MemoryRouter><UserGroupMembershipsPageRegion memberships={[membership]} assignableGroups={[]} state={{ pending: false }} onAdd={vi.fn()} onRemove={vi.fn()} onCuratorChange={vi.fn()} /></MemoryRouter>);
+
+    const publicMarkup = render(publicGroup);
+    expect(canRemoveMembership(publicGroup, 1)).toBe(false);
+    expect(publicMarkup).toContain('disabled=""');
+    expect(publicMarkup).not.toContain("Fallback while sole group");
+    expect(publicMarkup).not.toContain("Available to everyone");
+    expect(publicMarkup).not.toContain('type="checkbox"');
+    expect(canRemoveMembership(customGroup, 1)).toBe(true);
+    expect(render(customGroup)).toContain('aria-label="Remove Book Club"');
+  });
+
+  it("allows Public in Add-to-group and suppresses curator assignment", () => {
+    const publicGroup = { id: "public", name: "Common Room", isPublicGroup: true } as const;
+    const markup = renderToStaticMarkup(<MemoryRouter><UserGroupMembershipsPageRegion memberships={[]} assignableGroups={[publicGroup]} state={{ pending: false }} onAdd={vi.fn()} onRemove={vi.fn()} onCuratorChange={vi.fn()} /></MemoryRouter>);
+
+    expect(markup).toContain('<option value="public" selected="">Common Room</option>');
+    expect(markup).toContain("Public membership cannot be curator.");
+    expect(markup).not.toContain("Grant curator access");
+    expect(curatorValueForGroup(publicGroup, true)).toBe(false);
+    expect(curatorValueForGroup({ ...publicGroup, isPublicGroup: false }, true)).toBe(true);
   });
 
   it("shows group management only in advanced mode for a manageable target", () => {

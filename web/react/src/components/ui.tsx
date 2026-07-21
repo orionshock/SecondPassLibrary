@@ -71,7 +71,7 @@ export function ErrorPanel({ children }: { children: ReactNode }) {
   return <div className="error-panel" role="alert">{children}</div>;
 }
 
-export function Badge({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "accent" }) {
+export function Badge({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "accent" | "success" }) {
   return <span className={`badge badge--${tone}`}>{children}</span>;
 }
 

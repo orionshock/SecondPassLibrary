@@ -868,7 +868,8 @@ Group list/detail payloads support the reusable `include_preview_books=true` opt
 
 Public restrictions:
 
-- Public cannot have curator assignments (`is_curator=true` is invalid).
+- Public cannot have curator assignments. Membership POST/PATCH with
+  `is_curator=true` returns `400` with an `is_curator` field error.
 - Public is default/fallback, not mandatory: membership may be removed when another group remains; removing a user's final membership restores Public.
 - Public is not universal access; Public group visibility follows normal
   LibraryGroup membership rules.

@@ -145,6 +145,60 @@ button:disabled {
   color: var(--text);
 }
 
+.badge--success {
+  border-color: rgb(74 222 128 / 65%);
+  color: #bbf7d0;
+  background: rgb(74 222 128 / 10%);
+}
+
+.badge .material-icon {
+  margin-right: 0.3rem;
+  vertical-align: -0.12rem;
+}
+
+.help-popover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.help-popover__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.help-popover__content {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: none;
+  width: max-content;
+  max-width: min(18rem, 75vw);
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 30%);
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.help-popover:hover .help-popover__content,
+.help-popover:focus-within .help-popover__content,
+.help-popover[data-open="true"] .help-popover__content {
+  display: block;
+}
+
 .form-grid {
   display: grid;
   width: min(100%, 44rem);

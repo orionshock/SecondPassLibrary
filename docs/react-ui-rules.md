@@ -49,7 +49,8 @@ This is the running list of cross-page presentation and interaction rules that a
 - Profile may revoke connected client sessions and log out other web sessions. It never displays bearer tokens.
 - Client pairing approval is React-only at `/profile/client-pairing`; `/client-api/authorize/` does not exist.
 - Generated temporary passwords use a selectable read-only input with the one-time warning immediately below it. They remain only in transient React state.
-- Advanced group membership editing uses distinct membership rows and a separate Add-to-group form. Public membership has no remove or curator control; simple mode omits unsupported custom-group controls.
+- Advanced group membership editing uses distinct membership rows and a separate Add-to-group form. Public membership is removable when another group remains; the backend owns last-group fallback repair. Public has no curator checkbox and uses the shared help component with `Only Librarians/Managers may Curate the Public Group`. Simple mode omits unsupported custom-group controls.
+- Use the shared `HelpPopoverComponent` for short contextual help. It must remain server-blind, keyboard accessible, labelled and described for assistive technology, and expose the same content on hover, focus, and click without a native `title` tooltip.
 
 ## Breadcrumbs
 

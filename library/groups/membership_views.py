@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from django.http import Http404
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
@@ -65,12 +66,15 @@ class LibraryGroupMembershipListView(GenericAPIView):
         profile = UserProfile.objects.select_related("user").get(
             pk=serializer.validated_data["user_id"]
         )
-        membership = add_user_to_group(
-            user=profile.user,
-            group=group,
-            is_curator=serializer.validated_data.get("is_curator", False),
-            actor=request.user,
-        )
+        try:
+            membership = add_user_to_group(
+                user=profile.user,
+                group=group,
+                is_curator=serializer.validated_data.get("is_curator", False),
+                actor=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise _membership_validation_error(exc) from exc
         if "role" in serializer.validated_data:
             _update_user_role(profile, serializer.validated_data["role"])
         membership.refresh_from_db()
@@ -119,11 +123,14 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         if "is_curator" in serializer.validated_data:
-            set_group_membership_curator(
-                membership=membership,
-                is_curator=serializer.validated_data["is_curator"],
-                actor=request.user,
-            )
+            try:
+                set_group_membership_curator(
+                    membership=membership,
+                    is_curator=serializer.validated_data["is_curator"],
+                    actor=request.user,
+                )
+            except DjangoValidationError as exc:
+                raise _membership_validation_error(exc) from exc
         if "role" in serializer.validated_data:
             _update_user_role(membership.user.profile, serializer.validated_data["role"])
         membership.refresh_from_db()
@@ -148,3 +155,8 @@ def _update_user_role(profile: UserProfile, role: str) -> None:
     if profile.role != role:
         profile.role = role
         profile.save(update_fields=["role", "updated_at"])
+
+
+def _membership_validation_error(exc: DjangoValidationError) -> ValidationError:
+    detail = exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+    return ValidationError(detail=detail)
