@@ -25,6 +25,7 @@ This is the running list of cross-page presentation and interaction rules that a
 - Users surfaces display role names as `Owner`, `Manager`, `Librarian`, `Curator`, and `Reader`.
 - Owner may create Manager, Librarian, or Reader accounts. Manager may create only Librarian or Reader accounts; lower roles cannot create users.
 - React user creation does not expose activity state. New users are active by default and receive a generated one-time temporary password that must not be persisted in frontend storage.
+- Managed User Edit uses `Active` and `Inactive` labels rather than exposing boolean values. There is no separate User Detail/View page.
 
 ## Server-driven lists
 
@@ -39,6 +40,8 @@ This is the running list of cross-page presentation and interaction rules that a
 - Profile displays group membership and curator/Public status, but does not mutate memberships.
 - Profile may revoke connected client sessions and log out other web sessions. It never displays bearer tokens.
 - Client pairing approval is React-only at `/profile/client-pairing`; `/client-api/authorize/` does not exist.
+- Generated temporary passwords use a selectable read-only input with the one-time warning immediately below it. They remain only in transient React state.
+- Advanced group membership editing uses distinct membership rows and a separate Add-to-group form. Public membership has no remove or curator control; simple mode omits unsupported custom-group controls.
 
 ## Breadcrumbs
 

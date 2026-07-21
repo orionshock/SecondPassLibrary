@@ -16,3 +16,11 @@ export function usersEditBreadcrumbTrail(name: string): BreadcrumbItem[] {
     { label: "Edit" },
   );
 }
+
+export function usersEditBreadcrumbFallbackFor(username?: string): readonly BreadcrumbItem[] {
+  return [
+    { label: "Users", to: "/users" },
+    { label: username ? `@${username}` : "User" },
+    { label: "Edit" },
+  ];
+}

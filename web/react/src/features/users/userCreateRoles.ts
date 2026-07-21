@@ -1,4 +1,4 @@
-import type { CreateUserRole } from "@second-pass/spl-api";
+import type { CreateUserRole, ManagedUser, ManagedUserRole } from "@second-pass/spl-api";
 
 import { displayUserRoleName, type UserRoleIdentity } from "../../domain/users/presentation";
 
@@ -12,4 +12,11 @@ export function creatableUserRoles(user: UserRoleIdentity): readonly CreateUserR
 
 export function createUserRoleLabel(role: CreateUserRole): string {
   return displayUserRoleName(role);
+}
+
+export function editableUserRoles(operator: UserRoleIdentity, target: ManagedUser): readonly ManagedUserRole[] {
+  if (target.isOwner) return [];
+  if (operator.isOwner) return ownerRoles;
+  if (operator.role !== "manager" || target.role === "manager") return [];
+  return managerRoles;
 }

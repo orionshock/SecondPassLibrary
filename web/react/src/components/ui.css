@@ -224,6 +224,27 @@ button:disabled {
   color: var(--success);
 }
 
+.temporary-password-result {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.temporary-password-result input {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgb(251 113 133 / 50%);
+  border-radius: 0.625rem;
+  color: var(--text);
+  background: rgb(251 113 133 / 8%);
+  font: inherit;
+  user-select: all;
+}
+
+.temporary-password-result p {
+  margin: 0;
+  color: #fecdd3;
+}
+
 .breadcrumbs {
   display: flex;
   align-items: center;

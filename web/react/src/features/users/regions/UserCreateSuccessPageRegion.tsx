@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
+import { TemporaryPasswordResultComponent } from "../../../shared/TemporaryPasswordResultComponent";
 import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
 
 export function UserCreateSuccessPageRegion({ result }: { result: CreateUserResult }) {
@@ -11,7 +12,7 @@ export function UserCreateSuccessPageRegion({ result }: { result: CreateUserResu
     <h2>User created</h2>
     <dl className="user-create-result__details">
       <div><dt>Username</dt><dd>{result.user.username}</dd></div>
-      <div><dt><label htmlFor="created-user-temporary-password">Temporary password</label></dt><dd><input id="created-user-temporary-password" className="user-create-password" type="text" readOnly value={result.temporaryPassword} /><p className="user-create-password-warning">Copy it now. It will not be shown again.</p></dd></div>
+      <div><dt><label htmlFor="created-user-temporary-password">Temporary password</label></dt><dd><TemporaryPasswordResultComponent id="created-user-temporary-password" password={result.temporaryPassword} /></dd></div>
     </dl>
     <div className="form-action-row">
       <ActionFeedbackComponent state={{ pending: false, message: "User created." }} />

@@ -5,7 +5,7 @@ import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrat
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
-import { UsersEditPlaceholderOrchestrator } from "../features/users/UsersEditPlaceholderOrchestrator";
+import { UserEditOrchestrator } from "../features/users/UserEditOrchestrator";
 import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
 import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
@@ -53,7 +53,7 @@ export const appRoutes = [
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },
       { path: "users", element: <UsersListOrchestrator /> },
       { path: "users/new", element: <UserCreateOrchestrator /> },
-      { path: "users/:profileId/edit", element: <UsersEditPlaceholderOrchestrator /> },
+      { path: "users/:profileId/edit", element: <UserEditOrchestrator /> },
       { path: "*", element: <NotFoundPageRegion /> },
     ],
   },
