@@ -5,13 +5,14 @@ import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrat
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
+import { UsersEditPlaceholderOrchestrator } from "../features/users/UsersEditPlaceholderOrchestrator";
+import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
   { path: "library", title: "Library" },
   { path: "groups", title: "Groups" },
   { path: "shelves", title: "Shelves" },
-  { path: "users", title: "Users" },
   { path: "imports", title: "Imports" },
   { path: "server", title: "Server Settings" },
 ] as const;
@@ -49,6 +50,8 @@ export const appRoutes = [
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },
+      { path: "users", element: <UsersListOrchestrator /> },
+      { path: "users/:profileId/edit", element: <UsersEditPlaceholderOrchestrator /> },
       { path: "*", element: <NotFoundPageRegion /> },
     ],
   },

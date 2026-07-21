@@ -20,6 +20,7 @@ const navigation = [
   { to: "/groups", label: "Groups" },
   { to: "/shelves", label: "Shelves" },
   { to: "/imports", label: "Import" },
+  { to: "/users", label: "Users" },
   { to: "/server", label: "Server Settings" },
 ] as const;
 

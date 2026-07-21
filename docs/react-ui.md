@@ -12,7 +12,7 @@ There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or o
 
 The React shell bootstraps the authenticated user through `getCurrentUser()` and server identity through `getServerInfo()` from `@second-pass/spl-api`. Server identity comes from `/.well-known/secondpass`. Components do not make raw `fetch()` calls. The shell provides loading, login-required, retryable error, server identity/banner, user identity, and logout states. `/logout/` remains a Django endpoint.
 
-Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Users, Import, and Server Settings (`/server`) remain placeholder routes. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. The pairing page accepts `?code=...`, immediately looks up a supplied code, and otherwise presents code entry before approval. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
+Dashboard (`/`) is a styled placeholder. My Marginalia, Library, Groups, Shelves, Import, and Server Settings (`/server`) remain placeholder routes. Users (`/users`) is the first server-driven React list: its search, role/status filters, ordering, page, and page size live in the URL, while the API owns filtering, sorting, and pagination. User creation and editing are not implemented yet; edit links lead to an explicit React placeholder. Profile (`/profile`) owns profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. The pairing page accepts `?code=...`, immediately looks up a supplied code, and otherwise presents code entry before approval. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
 
 ## Deferred production integration
 
@@ -44,6 +44,8 @@ The SDK public index exports domain operations, app-facing types, and errors—n
 Within the SDK, `accounts.ts` owns current-user/profile/password mapping while `accountSessions.ts` owns web-session and connected-client operations and metadata mapping.
 
 Profile at `/profile` is the first real React feature page. It displays current identity and group/curator status, edits supported self-profile fields, logs out other web sessions, and lists/revokes connected clients. The App orchestrator forces `must_change_password` users through the dedicated password route until refreshed current-user state clears the requirement. All operations use `@second-pass/spl-api`. Dashboard at `/` is a styled shell placeholder only; it has no metrics or dashboard-specific API calls yet.
+
+Users list behavior is owned by `UsersListOrchestrator`; its PageRegions render filters and paginated results, while row Components remain presentational. The shared pager consumes stable page metadata and callbacks without knowing server URLs. `@second-pass/spl-api/users.ts` adapts managed-user wire payloads and query names to app-facing objects.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 

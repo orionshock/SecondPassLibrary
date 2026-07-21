@@ -21,6 +21,14 @@ This is the running list of cross-page presentation and interaction rules that a
 - Owner is presented as the highest user role, above Manager.
 - The API intentionally exposes `role` and `is_owner` separately. UI role displays resolve `is_owner` first and show `Owner`; they do not show a redundant separate Owner row.
 - Use the shared user-role presentation helper so role precedence stays consistent across Profile and future user surfaces.
+- The Users list uses the same effective-role rule, so Owner is displayed as the user's role rather than as a second status.
+
+## Server-driven lists
+
+- List Orchestrators own URL query state and send it through `@second-pass/spl-api`; the server owns filtering, sorting, and pagination.
+- Search, filters, ordering, page, and page size must survive Back/Forward navigation. Query-shape changes reset the page, while pager navigation changes only the page.
+- Row Components render the returned page. They do not re-filter or re-sort server results.
+- Promote paging controls only when their inputs are stable page metadata and callbacks; shared pagers must remain server-blind.
 
 ## Account management
 

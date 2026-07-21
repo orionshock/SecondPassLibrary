@@ -1,0 +1,35 @@
+.pager-component {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pager-component__size,
+.pager-component__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pager-component select {
+  padding: 0.45rem 1.8rem 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  color: var(--text);
+  background: var(--surface-raised);
+  font: inherit;
+}
+
+@media (max-width: 42rem) {
+  .pager-component {
+    grid-template-columns: 1fr;
+  }
+
+  .pager-component__actions {
+    justify-content: flex-end;
+  }
+}

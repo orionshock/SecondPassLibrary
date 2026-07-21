@@ -26,3 +26,12 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export { getServerInfo, type ServerInfo } from "./server";
+export {
+  listUsers,
+  type ManagedUser,
+  type ManagedUserGroup,
+  type UserOrdering,
+  type UserRoleFilter,
+  type UsersListQuery,
+  type UserStatusFilter,
+} from "./users";
