@@ -34,6 +34,13 @@ This is the running list of cross-page presentation and interaction rules that a
 - Row Components render the returned page. They do not re-filter or re-sort server results.
 - Promote paging controls only when their inputs are stable page metadata and callbacks; shared pagers must remain server-blind.
 
+## Server settings
+
+- Server Settings is Owner-only. Public Library identity is managed there and not through normal Group editing.
+- `/server` uses the `?tab=general`, `?tab=public-library`, and `?tab=library-groups` states. Editing is inline; tabs do not create separate routes.
+- Enabling advanced groups is shown only in Library Groups edit mode and requires deliberate confirmation. The normal React UI does not offer a disable action; disabling is a Django Admin Service Hatch recovery operation.
+- Do not expose an Admin/Service Hatch link unless active server capability data says it is available.
+
 ## Account management
 
 - A user with `must_change_password` may use only the React `/profile/password` workflow (and Django logout) until a successful change refreshes current-user state.

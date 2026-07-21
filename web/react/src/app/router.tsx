@@ -5,6 +5,7 @@ import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrat
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
+import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
 import { UserEditOrchestrator } from "../features/users/UserEditOrchestrator";
 import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
 import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
@@ -15,7 +16,6 @@ export const sectionRoutes = [
   { path: "groups", title: "Groups" },
   { path: "shelves", title: "Shelves" },
   { path: "imports", title: "Imports" },
-  { path: "server", title: "Server Settings" },
 ] as const;
 
 export function PlaceholderPageRegion({ title }: { title: string }) {
@@ -54,6 +54,7 @@ export const appRoutes = [
       { path: "users", element: <UsersListOrchestrator /> },
       { path: "users/new", element: <UserCreateOrchestrator /> },
       { path: "users/:profileId/edit", element: <UserEditOrchestrator /> },
+      { path: "server", element: <ServerSettingsOrchestrator /> },
       { path: "*", element: <NotFoundPageRegion /> },
     ],
   },

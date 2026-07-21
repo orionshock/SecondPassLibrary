@@ -53,6 +53,9 @@ export function App() {
       onCurrentUserChange={(user) => {
         setState((current) => current.status === "ready" ? { ...current, user } : current);
       }}
+      onServerInfoChange={(server) => {
+        setState((current) => current.status === "ready" ? { ...current, server } : current);
+      }}
     />
   );
 }
@@ -62,6 +65,7 @@ export function AppBootstrapView({
   loginPath,
   onRetry,
   onCurrentUserChange,
+  onServerInfoChange,
   currentPath,
   onRefreshCurrentUser,
 }: {
@@ -69,6 +73,7 @@ export function AppBootstrapView({
   loginPath: string;
   onRetry: () => void;
   onCurrentUserChange: (user: CurrentUser) => void;
+  onServerInfoChange?: (server: ServerInfo) => void;
   currentPath?: string;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {
@@ -112,6 +117,7 @@ export function AppBootstrapView({
       user={state.user}
       server={state.server}
       onCurrentUserChange={onCurrentUserChange}
+      onServerInfoChange={onServerInfoChange}
       onRefreshCurrentUser={onRefreshCurrentUser}
     />
   );

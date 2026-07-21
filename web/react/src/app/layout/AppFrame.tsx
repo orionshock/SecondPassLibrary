@@ -8,7 +8,9 @@ import "./AppFrame.css";
 
 export interface AppOutletContext {
   currentUser: CurrentUser;
+  serverInfo: ServerInfo;
   onCurrentUserChange: (user: CurrentUser) => void;
+  onServerInfoChange: (server: ServerInfo) => void;
   refreshCurrentUser: () => Promise<CurrentUser>;
   setBreadcrumbs: (pathname: string, items: readonly BreadcrumbItem[]) => void;
 }
@@ -21,18 +23,20 @@ const navigation = [
   { to: "/shelves", label: "Shelves" },
   { to: "/imports", label: "Import" },
   { to: "/users", label: "Users" },
-  { to: "/server", label: "Server Settings" },
+  { to: "/server", label: "Server Settings", ownerOnly: true },
 ] as const;
 
 export function AppFrame({
   user,
   server,
   onCurrentUserChange,
+  onServerInfoChange = () => undefined,
   onRefreshCurrentUser = async () => user,
 }: {
   user: CurrentUser;
   server: ServerInfo;
   onCurrentUserChange: (user: CurrentUser) => void;
+  onServerInfoChange?: (server: ServerInfo) => void;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {
   const location = useLocation();
@@ -51,7 +55,7 @@ export function AppFrame({
         </Link>
 
         <nav className="primary-nav" aria-label="Product UI">
-          {navigation.map(({ to, label }) => (
+          {navigation.filter((item) => !("ownerOnly" in item) || !item.ownerOnly || user.isOwner).map(({ to, label }) => (
             <NavLink key={to} to={to} end={to === "/"}>{label}</NavLink>
           ))}
         </nav>
@@ -67,7 +71,7 @@ export function AppFrame({
       <BreadcrumbsComponent items={breadcrumbs} />
 
       <main className="app-content">
-        <Outlet context={{ currentUser: user, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, setBreadcrumbs } satisfies AppOutletContext} />
+        <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, onServerInfoChange, refreshCurrentUser: onRefreshCurrentUser, setBreadcrumbs } satisfies AppOutletContext} />
       </main>
 
       <footer className="app-footer">

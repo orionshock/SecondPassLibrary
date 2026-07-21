@@ -164,7 +164,9 @@ button:disabled {
   font-weight: 600;
 }
 
-.form-field input {
+.form-field input,
+.form-field select,
+.form-field textarea {
   width: 100%;
   padding: 0.6rem 0.7rem;
   border: 1px solid rgb(255 255 255 / 18%);
@@ -172,6 +174,11 @@ button:disabled {
   color: var(--text);
   background: var(--surface-raised);
   font: inherit;
+}
+
+.form-field textarea {
+  line-height: 1.45;
+  resize: vertical;
 }
 
 .form-field .field-error {

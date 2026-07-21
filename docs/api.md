@@ -966,6 +966,7 @@ Reading payload notes:
 - Owner server settings: `GET/PATCH /api/v1/server/settings/`
   - `server_name`
   - `server_description`
+  - `server_banner_message`
   - `public_group_name`
   - `public_group_description`
   - `advanced_library_groups_enabled`

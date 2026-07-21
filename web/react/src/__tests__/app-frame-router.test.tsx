@@ -23,11 +23,17 @@ describe("app frame and router", () => {
     expect(markup).toMatch(/aria-current="page" class="active" href="\/library"/);
     expect(markup).toContain('href="/profile"');
   });
+  it("hides Owner-only Server Settings navigation from non-Owners", () => {
+    const manager = { ...user, isOwner: false };
+    const markup = renderToStaticMarkup(<MemoryRouter><AppFrame user={manager} server={server} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
+    expect(markup).not.toContain('href="/server"');
+  });
   it("defines placeholder and not-found routes", () => {
-    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves", "/imports", "/server"]);
+    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves", "/imports"]);
     expect(appRoutes[0].children.some((route) => route.path === "users")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/:profileId/edit")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
     expect(renderToStaticMarkup(<PlaceholderPageRegion title="Library" />)).toContain("Library");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
   });

@@ -27,6 +27,18 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export { getServerInfo, type ServerInfo } from "./server";
 export {
+  enableAdvancedGroups,
+  getServerSettings,
+  updateGeneralSettings,
+  updatePublicLibrarySettings,
+  type GeneralServerSettings,
+  type LibraryGroupsSettings,
+  type PublicLibrarySettings,
+  type ServerSettings,
+  type UpdateGeneralSettingsInput,
+  type UpdatePublicLibrarySettingsInput,
+} from "./serverSettings";
+export {
   addUserGroupMembership,
   createUser,
   getManagedUser,
