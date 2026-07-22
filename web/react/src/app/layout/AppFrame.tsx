@@ -1,4 +1,10 @@
-import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
+import {
+  canSeeImports,
+  canSeeServerSettings,
+  canSeeUsers,
+  type CurrentUser,
+  type ServerInfo,
+} from "@second-pass/spl-api";
 import { useCallback, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
@@ -19,11 +25,11 @@ const navigation = [
   { to: "/", label: "Dashboard" },
   { to: "/reading", label: "My Marginalia" },
   { to: "/library", label: "Library" },
-  { to: "/groups", label: "Groups" },
+  { to: "/groups", label: "Groups", visible: (user: CurrentUser) => user.advancedLibraryGroupsEnabled },
   { to: "/shelves", label: "Shelves" },
-  { to: "/imports", label: "Import" },
-  { to: "/users", label: "Users" },
-  { to: "/server", label: "Server Settings", ownerOnly: true },
+  { to: "/imports", label: "Imports", visible: canSeeImports },
+  { to: "/users", label: "Users", visible: canSeeUsers },
+  { to: "/server", label: "Server Settings", visible: canSeeServerSettings },
 ] as const;
 
 export function AppFrame({
@@ -55,7 +61,7 @@ export function AppFrame({
         </Link>
 
         <nav className="primary-nav" aria-label="Product UI">
-          {navigation.filter((item) => !("ownerOnly" in item) || !item.ownerOnly || user.isOwner).map(({ to, label }) => (
+          {navigation.filter((item) => !("visible" in item) || item.visible(user)).map(({ to, label }) => (
             <NavLink key={to} to={to} end={to === "/"}>{label}</NavLink>
           ))}
         </nav>

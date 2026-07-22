@@ -7,8 +7,12 @@ import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 
-const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [] };
+const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", version: "0.1.0-dev", release: "Early Access", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
+
+function navMarkup(overrides: Partial<CurrentUser> = {}): string {
+  return renderToStaticMarkup(<MemoryRouter initialEntries={["/library"]}><AppFrame user={{ ...user, ...overrides }} server={server} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
+}
 
 describe("app frame and router", () => {
   it("renders the dashboard placeholder inside the frame", () => {
@@ -17,16 +21,44 @@ describe("app frame and router", () => {
     expect(markup).toContain("Dashboard preview");
     expect(markup).toContain("Family Library");
   });
-  it("renders navigation with active state", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/library"]}><AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
-    for (const label of ["Dashboard", "My Marginalia", "Library", "Groups", "Shelves", "Import", "Users", "Server Settings"]) expect(markup).toContain(label);
+  it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
+    const markup = navMarkup({ advancedLibraryGroupsEnabled: true });
+    for (const path of ["/reading", "/library", "/groups", "/shelves", "/imports", "/users", "/server", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
     expect(markup).toMatch(/aria-current="page" class="active" href="\/library"/);
-    expect(markup).toContain('href="/profile"');
   });
-  it("hides Owner-only Server Settings navigation from non-Owners", () => {
-    const manager = { ...user, isOwner: false };
-    const markup = renderToStaticMarkup(<MemoryRouter><AppFrame user={manager} server={server} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
+
+  it("shows Manager navigation without Server Settings and gates Groups by mode", () => {
+    const manager = { isOwner: false, isManager: true };
+    const simpleMarkup = navMarkup(manager);
+    expect(simpleMarkup).toContain('href="/imports"');
+    expect(simpleMarkup).toContain('href="/users"');
+    expect(simpleMarkup).not.toContain('href="/server"');
+    expect(simpleMarkup).not.toContain('href="/groups"');
+    expect(navMarkup({ ...manager, advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
+  });
+
+  it("shows Imports but not Users or Server Settings to Librarians", () => {
+    const markup = navMarkup({ isOwner: false, isLibrarian: true });
+    expect(markup).toContain('href="/imports"');
+    expect(markup).not.toContain('href="/users"');
     expect(markup).not.toContain('href="/server"');
+  });
+
+  it("shows only general branches to Readers and allows Groups only in advanced mode", () => {
+    const reader = { isOwner: false, isReader: true };
+    const markup = navMarkup(reader);
+    for (const path of ["/reading", "/library", "/shelves", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
+    for (const path of ["/groups", "/imports", "/users", "/server"]) expect(markup).not.toContain(`href="${path}"`);
+    expect(navMarkup({ ...reader, advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
+  });
+
+  it("hides Groups in simple mode for every role", () => {
+    for (const facts of [
+      { isOwner: true },
+      { isOwner: false, isManager: true },
+      { isOwner: false, isLibrarian: true },
+      { isOwner: false, isReader: true },
+    ]) expect(navMarkup({ ...facts, advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
   });
   it("defines placeholder and not-found routes", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves"]);

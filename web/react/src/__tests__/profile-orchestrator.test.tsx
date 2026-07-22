@@ -9,6 +9,7 @@ import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 const user: CurrentUser = {
   username: "ada", email: "ada@example.test", firstName: "Ada", lastName: "Lovelace",
   profileId: "profile-id", role: "manager", mustChangePassword: false, isOwner: true,
+  isManager: false, isLibrarian: false, isReader: false,
   advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [],
 };
 const server: ServerInfo = { name: "Analytical Library", description: "", version: "0.1.0-dev", release: "Early Access", releaseDate: "2026-07-20", apiBaseUrl: "unused" };

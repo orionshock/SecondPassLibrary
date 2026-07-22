@@ -29,6 +29,9 @@ export interface CurrentUser {
   role: string;
   mustChangePassword: boolean;
   isOwner: boolean;
+  isManager: boolean;
+  isLibrarian: boolean;
+  isReader: boolean;
   advancedLibraryGroupsEnabled: boolean;
   canAccessDjangoAdmin: boolean;
   bannerText: string;
@@ -38,6 +41,31 @@ export interface CurrentUser {
     isPublicGroup: boolean;
     isCurator: boolean;
   }>;
+}
+
+export type CurrentUserRoleFacts = Pick<
+  CurrentUser,
+  "isOwner" | "isManager" | "isLibrarian" | "isReader"
+>;
+
+export function isAtLeastLibrarian(user: CurrentUserRoleFacts): boolean {
+  return user.isOwner || user.isManager || user.isLibrarian;
+}
+
+export function isAtLeastManager(user: CurrentUserRoleFacts): boolean {
+  return user.isOwner || user.isManager;
+}
+
+export function canSeeImports(user: CurrentUserRoleFacts): boolean {
+  return isAtLeastLibrarian(user);
+}
+
+export function canSeeUsers(user: CurrentUserRoleFacts): boolean {
+  return isAtLeastManager(user);
+}
+
+export function canSeeServerSettings(user: CurrentUserRoleFacts): boolean {
+  return user.isOwner;
 }
 
 export interface UpdateCurrentUserInput {
@@ -90,6 +118,7 @@ export async function changeCurrentUserPassword(
 }
 
 function mapCurrentUser(response: CurrentUserResponse): CurrentUser {
+  const isOwner = Boolean(response.is_owner);
   return {
     username: response.username,
     email: response.email,
@@ -98,7 +127,10 @@ function mapCurrentUser(response: CurrentUserResponse): CurrentUser {
     profileId: response.profile_id,
     role: response.role,
     mustChangePassword: Boolean(response.must_change_password),
-    isOwner: Boolean(response.is_owner),
+    isOwner,
+    isManager: !isOwner && response.role === "manager",
+    isLibrarian: !isOwner && response.role === "librarian",
+    isReader: !isOwner && response.role === "reader",
     advancedLibraryGroupsEnabled: Boolean(response.advanced_library_groups_enabled),
     canAccessDjangoAdmin: Boolean(response.can_access_django_admin),
     bannerText: response.banner_text,

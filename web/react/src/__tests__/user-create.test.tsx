@@ -13,9 +13,9 @@ import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 const owner: CurrentUser = {
   username: "owner", email: "", firstName: "", lastName: "", profileId: "owner-id", role: "manager",
-  mustChangePassword: false, isOwner: true, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [],
+  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [],
 };
-const manager: CurrentUser = { ...owner, username: "manager", profileId: "manager-id", isOwner: false };
+const manager: CurrentUser = { ...owner, username: "manager", profileId: "manager-id", isOwner: false, isManager: true };
 const server: ServerInfo = { name: "Library", description: "", version: "dev", release: "", releaseDate: "", apiBaseUrl: "unused" };
 
 function renderForm(user: CurrentUser, error?: Error): string {

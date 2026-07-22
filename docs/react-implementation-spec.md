@@ -77,10 +77,10 @@ Use this precedence when sources disagree:
 - Keep the low-emphasis footer with product identity and version. On narrow
   screens it may stack.
 
-Current mismatch: `AppFrame` always exposes Groups, Imports, and Users except
-for the existing Owner-only Server Settings check. Correct this as each branch
-becomes real, using SDK-normalized capabilities rather than duplicated role
-logic.
+Implemented foundation: `AppFrame` derives navigation visibility from stable
+SDK role facts. Groups follows advanced-group mode; Imports is Librarian+;
+Users is Manager+; and Server Settings is Owner-only. Route-level authorization
+remains authoritative.
 
 ### Surfaces, rows, and actions
 

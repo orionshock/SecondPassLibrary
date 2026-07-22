@@ -18,11 +18,26 @@ This is the running list of cross-page presentation and interaction rules that a
 
 ## User identity and roles
 
+- Product UI permissions are derived from stable SDK role facts, not invented
+  generic capability fields. `CurrentUser` exposes mutually exclusive
+  `isOwner`, `isManager`, `isLibrarian`, and `isReader` facts from the existing
+  `is_owner` and `role` wire fields. Presentation helpers such as
+  `isAtLeastLibrarian`, `isAtLeastManager`, `canSeeImports`, `canSeeUsers`, and
+  `canSeeServerSettings` may compose those facts; they do not create backend
+  authority.
 - Owner is presented as the highest user role, above Manager.
 - The API intentionally exposes `role` and `is_owner` separately. UI role displays resolve `is_owner` first and show `Owner`; they do not show a redundant separate Owner row.
 - Use the shared user-role presentation helper so role precedence stays consistent across Profile and future user surfaces.
 - The Users list uses the same effective-role rule, so Owner is displayed as the user's role rather than as a second status.
 - Users surfaces display role names as `Owner`, `Manager`, `Librarian`, `Curator`, and `Reader`.
+- Primary navigation shows My Marginalia, Library, and Shelves to every
+  authenticated user; Imports to Librarian+; Users to Manager+; and Server
+  Settings to Owner. Groups is visible to every authenticated role only when
+  advanced Library Groups are enabled.
+- Simple mode hides the Groups branch, custom-group controls, and advanced
+  relationship tabs. It does not mean groups cease to exist: the designated
+  Public group remains a real access and shelf-ownership scope, and Shelves may
+  still present Public group ownership where the API returns it.
 - Owner may create Manager, Librarian, or Reader accounts. Manager may create only Librarian or Reader accounts; lower roles cannot create users.
 - React user creation does not expose activity state. New users are active by default and receive a generated one-time temporary password that must not be persisted in frontend storage.
 - Managed User Edit uses `Active` and `Inactive` labels rather than exposing boolean values. There is no separate User Detail/View page.

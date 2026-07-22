@@ -1,4 +1,4 @@
-import { ApiError, uploadLibraryImport, type LibraryImportResult } from "@second-pass/spl-api";
+import { ApiError, canSeeImports, uploadLibraryImport, type LibraryImportResult } from "@second-pass/spl-api";
 import { useRef, useState, type FormEvent } from "react";
 import { useOutletContext } from "react-router-dom";
 
@@ -20,7 +20,7 @@ export function ImportsOrchestrator() {
   const [result, setResult] = useState<LibraryImportResult>();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  if (!canAccessLibraryImports(currentUser)) return <div className="imports-state"><ErrorPanel>You do not have permission to import library files.</ErrorPanel></div>;
+  if (!canSeeImports(currentUser)) return <div className="imports-state"><ErrorPanel>You do not have permission to import library files.</ErrorPanel></div>;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,10 +41,6 @@ export function ImportsOrchestrator() {
     <ImportUploadPageRegion state={state} inputRef={inputRef} onFileChange={(value) => { setFile(value); setState(idleMutationState); }} onSubmit={(event) => void submit(event)} />
     <ImportResultPageRegion result={result} />
   </div>;
-}
-
-export function canAccessLibraryImports(user: { isOwner: boolean; role: string }): boolean {
-  return user.isOwner || user.role === "manager" || user.role === "librarian";
 }
 
 export function uploadSelectedLibraryFile(

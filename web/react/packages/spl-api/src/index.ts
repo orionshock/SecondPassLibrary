@@ -1,9 +1,15 @@
 export {
   changeCurrentUserPassword,
+  canSeeImports,
+  canSeeServerSettings,
+  canSeeUsers,
   getCurrentUser,
+  isAtLeastLibrarian,
+  isAtLeastManager,
   updateCurrentUser,
   type ChangeCurrentUserPasswordInput,
   type CurrentUser,
+  type CurrentUserRoleFacts,
   type UpdateCurrentUserInput,
 } from "./accounts";
 export {

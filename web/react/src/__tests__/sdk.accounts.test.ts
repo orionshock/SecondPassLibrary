@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { changeCurrentUserPassword, getCurrentUser, updateCurrentUser } from "../../packages/spl-api/src/accounts";
+import {
+  canSeeImports,
+  canSeeServerSettings,
+  canSeeUsers,
+  changeCurrentUserPassword,
+  getCurrentUser,
+  isAtLeastLibrarian,
+  isAtLeastManager,
+  updateCurrentUser,
+  type CurrentUserRoleFacts,
+} from "../../packages/spl-api/src/accounts";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 describe("getCurrentUser", () => {
@@ -32,6 +42,9 @@ describe("getCurrentUser", () => {
       role: "reader",
       mustChangePassword: true,
       isOwner: true,
+      isManager: false,
+      isLibrarian: false,
+      isReader: false,
       advancedLibraryGroupsEnabled: true,
       canAccessDjangoAdmin: true,
       bannerText: "Welcome",
@@ -50,10 +63,29 @@ describe("getCurrentUser", () => {
     const user = await getCurrentUser(client);
 
     expect(user.isOwner).toBe(false);
+    expect(user.isManager).toBe(false);
+    expect(user.isLibrarian).toBe(false);
+    expect(user.isReader).toBe(true);
     expect(user.mustChangePassword).toBe(false);
     expect(user.advancedLibraryGroupsEnabled).toBe(false);
     expect(user.canAccessDjangoAdmin).toBe(false);
     expect(user.groups[0]?.isCurator).toBe(false);
+  });
+
+  it("maps each non-Owner role to one stable role fact without new wire fields", async () => {
+    for (const role of ["manager", "librarian", "reader"] as const) {
+      const response = {
+        username: role, email: "", first_name: "", last_name: "",
+        profile_id: `${role}-id`, role, banner_text: "", groups: [],
+      };
+      const client: ApiClient = { request: async <T>() => response as T };
+
+      const user = await getCurrentUser(client);
+
+      expect([user.isManager, user.isLibrarian, user.isReader]).toEqual([
+        role === "manager", role === "librarian", role === "reader",
+      ]);
+    }
   });
 
   it("adapts safe self-profile updates to the server request shape", async () => {
@@ -100,6 +132,30 @@ describe("getCurrentUser", () => {
     expect(calls[0]?.init?.method).toBe("POST");
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
       current_password: "old", new_password: "new-password", confirm_password: "new-password",
+    });
+  });
+});
+
+describe("current-user role helpers", () => {
+  const roles: Record<string, CurrentUserRoleFacts> = {
+    owner: { isOwner: true, isManager: false, isLibrarian: false, isReader: false },
+    manager: { isOwner: false, isManager: true, isLibrarian: false, isReader: false },
+    librarian: { isOwner: false, isManager: false, isLibrarian: true, isReader: false },
+    reader: { isOwner: false, isManager: false, isLibrarian: false, isReader: true },
+  };
+
+  it("derives presentation visibility from stable role facts", () => {
+    expect(Object.fromEntries(Object.entries(roles).map(([name, user]) => [name, {
+      librarian: isAtLeastLibrarian(user),
+      manager: isAtLeastManager(user),
+      imports: canSeeImports(user),
+      users: canSeeUsers(user),
+      server: canSeeServerSettings(user),
+    }]))).toEqual({
+      owner: { librarian: true, manager: true, imports: true, users: true, server: true },
+      manager: { librarian: true, manager: true, imports: true, users: true, server: false },
+      librarian: { librarian: true, manager: false, imports: true, users: false, server: false },
+      reader: { librarian: false, manager: false, imports: false, users: false, server: false },
     });
   });
 });

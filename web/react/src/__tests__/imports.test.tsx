@@ -2,15 +2,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError, type CurrentUser, type LibraryImportResult, type ServerInfo } from "@second-pass/spl-api";
+import { ApiError, canSeeImports, type CurrentUser, type LibraryImportResult, type ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
-import { canAccessLibraryImports, clearImportFileInput, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
+import { clearImportFileInput, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
 import { ImportResultPageRegion } from "../features/imports/regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "../features/imports/regions/ImportUploadPageRegion";
 
 const owner: CurrentUser = {
   username: "owner", email: "", firstName: "", lastName: "", profileId: "owner", role: "manager",
-  mustChangePassword: false, isOwner: true, advancedLibraryGroupsEnabled: false,
+  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false,
   canAccessDjangoAdmin: false, bannerText: "", groups: [],
 };
 const server: ServerInfo = { name: "SPL", description: "", version: "dev", release: "Dev", releaseDate: "", apiBaseUrl: "" };
@@ -25,12 +25,12 @@ function renderRoute(user: CurrentUser) {
 
 describe("Imports", () => {
   it("allows Librarian, Manager, and Owner while presenting Readers a bounded forbidden state", () => {
-    expect(canAccessLibraryImports(owner)).toBe(true);
-    expect(canAccessLibraryImports({ isOwner: false, role: "manager" })).toBe(true);
-    expect(canAccessLibraryImports({ isOwner: false, role: "librarian" })).toBe(true);
-    expect(canAccessLibraryImports({ isOwner: false, role: "reader" })).toBe(false);
+    expect(canSeeImports(owner)).toBe(true);
+    expect(canSeeImports({ isOwner: false, isManager: true, isLibrarian: false, isReader: false })).toBe(true);
+    expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: true, isReader: false })).toBe(true);
+    expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: false, isReader: true })).toBe(false);
     expect(renderRoute(owner)).toContain('accept=".epub,.zip"');
-    expect(renderRoute({ ...owner, isOwner: false, role: "reader" })).toContain("do not have permission");
+    expect(renderRoute({ ...owner, isOwner: false, isReader: true, role: "reader" })).toContain("do not have permission");
   });
 
   it("renders a native pending upload form with action feedback placement", () => {
