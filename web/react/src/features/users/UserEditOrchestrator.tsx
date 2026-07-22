@@ -142,7 +142,7 @@ export function UserEditOrchestrator() {
       onRequirementChange={(value) => void changePasswordRequirement(value)}
       onReset={() => void resetPassword()}
     />
-    {shouldShowManagedGroupMemberships(currentUser.advancedLibraryGroupsEnabled, canManageTarget) ? <UserGroupMembershipsPageRegion
+    {shouldShowManagedGroupMemberships(currentUser.advancedLibraryGroupsEnabled, currentUser) ? <UserGroupMembershipsPageRegion
       memberships={user.groups}
       assignableGroups={load.assignableGroups}
       state={membershipState}
@@ -153,6 +153,9 @@ export function UserEditOrchestrator() {
   </div>;
 }
 
-export function shouldShowManagedGroupMemberships(advancedGroupsEnabled: boolean, canManageTarget: boolean): boolean {
-  return advancedGroupsEnabled && canManageTarget;
+export function shouldShowManagedGroupMemberships(
+  advancedGroupsEnabled: boolean,
+  operator: { isOwner: boolean; role: string },
+): boolean {
+  return advancedGroupsEnabled && (operator.isOwner || operator.role === "manager");
 }

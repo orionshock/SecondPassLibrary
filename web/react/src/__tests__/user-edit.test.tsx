@@ -99,9 +99,10 @@ describe("User Edit", () => {
     expect(curatorValueForGroup({ ...publicGroup, isPublicGroup: false }, true)).toBe(true);
   });
 
-  it("shows group management only in advanced mode for a manageable target", () => {
-    expect(shouldShowManagedGroupMemberships(true, true)).toBe(true);
-    expect(shouldShowManagedGroupMemberships(false, true)).toBe(false);
-    expect(shouldShowManagedGroupMemberships(true, false)).toBe(false);
+  it("shows advanced group management to Managers regardless of target account-edit authority", () => {
+    expect(shouldShowManagedGroupMemberships(true, manager)).toBe(true);
+    expect(shouldShowManagedGroupMemberships(true, owner)).toBe(true);
+    expect(shouldShowManagedGroupMemberships(false, manager)).toBe(false);
+    expect(shouldShowManagedGroupMemberships(true, { isOwner: false, role: "librarian" })).toBe(false);
   });
 });
