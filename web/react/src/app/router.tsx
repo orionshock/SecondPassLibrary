@@ -1,6 +1,8 @@
+import { canSeeImports, canSeeServerSettings, canSeeUsers } from "@second-pass/spl-api";
 import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
+import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
@@ -48,14 +50,14 @@ export const appRoutes = [
         path,
         element: <PlaceholderPageRegion title={title} />,
       })),
-      { path: "imports", element: <ImportsOrchestrator /> },
+      { path: "imports", element: <RoleRouteGuardComponent canAccess={canSeeImports}><ImportsOrchestrator /></RoleRouteGuardComponent> },
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },
-      { path: "users", element: <UsersListOrchestrator /> },
-      { path: "users/new", element: <UserCreateOrchestrator /> },
-      { path: "users/:profileId/edit", element: <UserEditOrchestrator /> },
-      { path: "server", element: <ServerSettingsOrchestrator /> },
+      { path: "users", element: <RoleRouteGuardComponent canAccess={canSeeUsers}><UsersListOrchestrator /></RoleRouteGuardComponent> },
+      { path: "users/new", element: <RoleRouteGuardComponent canAccess={canSeeUsers}><UserCreateOrchestrator /></RoleRouteGuardComponent> },
+      { path: "users/:profileId/edit", element: <RoleRouteGuardComponent canAccess={canSeeUsers}><UserEditOrchestrator /></RoleRouteGuardComponent> },
+      { path: "server", element: <RoleRouteGuardComponent canAccess={canSeeServerSettings}><ServerSettingsOrchestrator /></RoleRouteGuardComponent> },
       { path: "*", element: <NotFoundPageRegion /> },
     ],
   },

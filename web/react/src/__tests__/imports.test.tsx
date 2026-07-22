@@ -7,6 +7,7 @@ import { AppFrame } from "../app/layout/AppFrame";
 import { clearImportFileInput, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
 import { ImportResultPageRegion } from "../features/imports/regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "../features/imports/regions/ImportUploadPageRegion";
+import { LocalValidationError } from "../shared/feedback/mutationState";
 
 const owner: CurrentUser = {
   username: "owner", email: "", firstName: "", lastName: "", profileId: "owner", role: "manager",
@@ -24,7 +25,7 @@ function renderRoute(user: CurrentUser) {
 }
 
 describe("Imports", () => {
-  it("allows Librarian, Manager, and Owner while presenting Readers a bounded forbidden state", () => {
+  it("allows Librarian, Manager, and Owner while rejecting Reader access", () => {
     expect(canSeeImports(owner)).toBe(true);
     expect(canSeeImports({ isOwner: false, isManager: true, isLibrarian: false, isReader: false })).toBe(true);
     expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: true, isReader: false })).toBe(true);
@@ -44,13 +45,16 @@ describe("Imports", () => {
 
   it("blocks an empty selection before upload and clears the native input after success", async () => {
     const upload = vi.fn<(file: File) => Promise<LibraryImportResult>>();
-    await expect(uploadSelectedLibraryFile(undefined, upload)).rejects.toMatchObject({ fields: { file: ["Choose a file to import."] } });
+    const missingFile = uploadSelectedLibraryFile(undefined, upload).catch((error: unknown) => error);
+    await expect(missingFile).resolves.toBeInstanceOf(LocalValidationError);
+    await expect(missingFile).resolves.not.toBeInstanceOf(ApiError);
+    await expect(missingFile).resolves.toMatchObject({ fields: { file: ["Choose a file to import."] } });
     expect(upload).not.toHaveBeenCalled();
     const input = { value: "C:\\fakepath\\book.epub" };
     clearImportFileInput(input);
     expect(input.value).toBe("");
     const errorMarkup = renderToStaticMarkup(<ImportUploadPageRegion
-      state={{ pending: false, error: new ApiError("Choose a file to import.", 400, { fields: { file: ["Choose a file to import."] } }) }}
+      state={{ pending: false, error: new LocalValidationError("Choose a file to import.", { file: ["Choose a file to import."] }) }}
       inputRef={{ current: null }} onFileChange={vi.fn()} onSubmit={vi.fn()}
     />);
     expect(errorMarkup).toContain('class="field-error"');

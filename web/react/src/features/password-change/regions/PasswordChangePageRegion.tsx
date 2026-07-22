@@ -37,6 +37,5 @@ function PasswordField({ id, label, field, value, state, onChange, autoComplete 
   onChange: (field: keyof PasswordDraft, value: string) => void;
   autoComplete: string;
 }) {
-  const wireField = field === "currentPassword" ? "current_password" : field === "newPassword" ? "new_password" : "confirm_password";
-  return <FormField label={label} htmlFor={id} error={fieldError(state.error, wireField)}><input id={id} type="password" required value={value} autoComplete={autoComplete} onChange={(event) => onChange(field, event.target.value)} /></FormField>;
+  return <FormField label={label} htmlFor={id} error={fieldError(state.error, field)}><input id={id} type="password" required value={value} autoComplete={autoComplete} onChange={(event) => onChange(field, event.target.value)} /></FormField>;
 }

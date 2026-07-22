@@ -21,6 +21,11 @@ describe("ProfileDetailsPageRegion", () => {
     expect(markup).toContain("Save profile");
   });
 
+  it("consumes profile field errors through app-facing names", () => {
+    const markup = renderToStaticMarkup(<ProfileDetailsPageRegion user={user} state={{ pending: false, error: new ApiError("Check profile", 400, { fields: { firstName: ["Enter a first name."] } }) }} onSave={vi.fn()} onClearStatus={vi.fn()} />);
+    expect(markup).toContain("Enter a first name.");
+  });
+
   it("resets unsaved profile edits", () => {
     const saved = profileDraftFromUser(user);
     const edited = profileDraftReducer(saved, { type: "change", field: "email", value: "unsaved@example.test" });

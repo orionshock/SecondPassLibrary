@@ -37,6 +37,6 @@ describe("apiErrorFromPayload", () => {
       detail: "Invalid password.",
     });
 
-    expect(error.fields).toEqual({ current_password: ["Current password is incorrect."] });
+    expect(error.fields).toEqual({ currentPassword: ["Current password is incorrect."] });
   });
 });

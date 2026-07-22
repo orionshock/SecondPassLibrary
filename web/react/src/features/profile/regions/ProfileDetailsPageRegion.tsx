@@ -31,8 +31,8 @@ export function ProfileDetailsPageRegion({ user, state, onSave, onClearStatus }:
       {!editing ? <div className="profile-edit-actions"><ActionFeedbackComponent state={state} /><Button type="button" onClick={edit}>Edit</Button></div> : null}
     </div>
     {editing ? <form className="form-grid profile-details-form" onSubmit={submit}>
-      <FormField label="First Name" htmlFor="profile-first-name" error={fieldError(state.error, "first_name")}><input id="profile-first-name" value={draft.firstName} autoComplete="given-name" onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })} /></FormField>
-      <FormField label="Last Name" htmlFor="profile-last-name" error={fieldError(state.error, "last_name")}><input id="profile-last-name" value={draft.lastName} autoComplete="family-name" onChange={(event) => dispatch({ type: "change", field: "lastName", value: event.target.value })} /></FormField>
+      <FormField label="First Name" htmlFor="profile-first-name" error={fieldError(state.error, "firstName")}><input id="profile-first-name" value={draft.firstName} autoComplete="given-name" onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })} /></FormField>
+      <FormField label="Last Name" htmlFor="profile-last-name" error={fieldError(state.error, "lastName")}><input id="profile-last-name" value={draft.lastName} autoComplete="family-name" onChange={(event) => dispatch({ type: "change", field: "lastName", value: event.target.value })} /></FormField>
       <FormField label="Email" htmlFor="profile-email" error={fieldError(state.error, "email")}><input id="profile-email" type="email" value={draft.email} autoComplete="email" onChange={(event) => dispatch({ type: "change", field: "email", value: event.target.value })} /></FormField>
       <SaveCancelActionRowComponent state={state} submitLabel="Save profile" pendingLabel="Saving..." onCancel={cancel} />
     </form> : <KeyValueList items={[

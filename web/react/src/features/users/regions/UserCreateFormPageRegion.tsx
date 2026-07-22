@@ -22,10 +22,10 @@ export function UserCreateFormPageRegion({ draft, roles, state, onChange, onSubm
     <FormField label="Email" htmlFor="user-create-email" error={fieldError(state.error, "email")}>
       <input id="user-create-email" type="email" autoComplete="email" value={draft.email} onChange={(event) => onChange("email", event.target.value)} />
     </FormField>
-    <FormField label="First name" htmlFor="user-create-first-name" error={fieldError(state.error, "first_name")}>
+    <FormField label="First name" htmlFor="user-create-first-name" error={fieldError(state.error, "firstName")}>
       <input id="user-create-first-name" autoComplete="given-name" value={draft.firstName} onChange={(event) => onChange("firstName", event.target.value)} />
     </FormField>
-    <FormField label="Last name" htmlFor="user-create-last-name" error={fieldError(state.error, "last_name")}>
+    <FormField label="Last name" htmlFor="user-create-last-name" error={fieldError(state.error, "lastName")}>
       <input id="user-create-last-name" autoComplete="family-name" value={draft.lastName} onChange={(event) => onChange("lastName", event.target.value)} />
     </FormField>
     <FormField label="Role" htmlFor="user-create-role" error={fieldError(state.error, "role")}>

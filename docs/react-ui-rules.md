@@ -49,6 +49,14 @@ This is the running list of cross-page presentation and interaction rules that a
 - Row Components render the returned page. They do not re-filter or re-sort server results.
 - Promote paging controls only when their inputs are stable page metadata and callbacks; shared pagers must remain server-blind.
 
+## Server and validation boundaries
+
+- React forms consume app-facing camelCase field-error names. Wire field names are normalized inside `@second-pass/spl-api` and never appear in PageRegion field lookups.
+- Client-only validation uses the shared local validation error with an action message and optional app-facing field errors. It does not construct `ApiError`, because no HTTP request occurred.
+- Values returned by an API payload may be rendered as ordinary escaped React text. Never render API strings as raw HTML. Boundary checks protect communication and wire-name mechanics; they do not impose additional payload distrust or client-side redaction.
+- PageRegions and Components may import stable SDK types, but SDK operations belong in App or feature Orchestrators.
+- When current role facts clearly cannot access Users, Imports, or Server Settings, the route falls back to Dashboard before mounting the feature Orchestrator. Backend authorization remains authoritative for allowed roles and unexpected permission failures remain visible.
+
 ## Server settings
 
 - Server Settings is Owner-only. Public Library identity is managed there and not through normal Group editing.

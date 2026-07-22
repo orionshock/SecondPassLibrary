@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ServerSettings } from "@second-pass/spl-api";
+import { ApiError, type ServerSettings } from "@second-pass/spl-api";
 import { appRoutes, sectionRoutes } from "../app/router";
 import { GeneralSettingsPageRegion } from "../features/server-settings/regions/GeneralSettingsPageRegion";
 import { LibraryGroupsPageRegion } from "../features/server-settings/regions/LibraryGroupsPageRegion";
@@ -43,6 +43,12 @@ describe("Server Settings", () => {
     expect(edit).toContain("Public group name");
     expect(edit).toContain("Public group description");
     expect(edit).toContain('id="server-settings-public-library-form"');
+  });
+
+  it("consumes settings field errors through app-facing names", () => {
+    const error = new ApiError("Invalid settings.", 400, { fields: { publicGroupName: ["Choose another name."] } });
+    const edit = renderToStaticMarkup(<PublicLibraryPageRegion settings={settings.publicLibrary} draft={settings.publicLibrary} editing state={{ pending: false, error }} onChange={vi.fn()} onSubmit={vi.fn()} />);
+    expect(edit).toContain("Choose another name.");
   });
 
   it("shows Enable only for disabled settings in edit mode and never renders Disable", () => {

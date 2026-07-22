@@ -61,12 +61,16 @@ function normalizeFieldErrors(value: unknown): Record<string, string[]> | undefi
   const fields: Record<string, string[]> = {};
   for (const [field, messages] of Object.entries(value)) {
     if (Array.isArray(messages)) {
-      fields[field] = messages.filter((message): message is string => typeof message === "string");
+      fields[toAppFieldName(field)] = messages.filter((message): message is string => typeof message === "string");
     } else if (typeof messages === "string") {
-      fields[field] = [messages];
+      fields[toAppFieldName(field)] = [messages];
     }
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
+}
+
+function toAppFieldName(field: string): string {
+  return field.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

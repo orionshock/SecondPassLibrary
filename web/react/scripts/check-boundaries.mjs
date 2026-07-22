@@ -17,6 +17,11 @@ scan(appSource, (file, source) => {
   check(file, source, /\/api\/v1(?:\/|\b)/, "raw API path");
   check(file, source, /\/\.well-known(?:\/|\b)/, "raw well-known path");
   check(file, source, /csrftoken|X-CSRFToken/i, "CSRF implementation detail");
+  check(file, source, /fieldError\([^)]*,\s*["'][a-z]+_[a-z_]+["']\s*\)/, "wire field name in React field error lookup");
+  check(file, source, /fields\s*:\s*\{\s*[a-z]+_[a-z_]+\s*:/, "wire field name in React field error construction");
+  if (/(?:PageRegion|Component)\.tsx$/.test(file)) {
+    check(file, source, /import\s+(?!type\b)\{[^}]*\}\s+from\s+["']@second-pass\/spl-api["']/, "SDK operation import in presentational file");
+  }
 });
 
 scan(sharedComponents, (file, source) => {

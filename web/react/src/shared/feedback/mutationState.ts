@@ -4,6 +4,16 @@ export interface MutationState {
   error?: Error;
 }
 
+export class LocalValidationError extends Error {
+  readonly fields?: Record<string, string[]>;
+
+  constructor(message: string, fields?: Record<string, string[]>) {
+    super(message);
+    this.name = "LocalValidationError";
+    this.fields = fields;
+  }
+}
+
 export const idleMutationState: MutationState = { pending: false };
 
 export function normalizeMutationError(error: unknown): Error {

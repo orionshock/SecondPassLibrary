@@ -24,6 +24,8 @@ First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch 
 
 `web/react/packages/spl-api` is the first-party, framework-light TypeScript server communication package. It owns `fetch`, credentials, JSON parsing, structured error normalization, pagination types, server response mapping, and domain calls. React routes, components, and hooks consume its stable app-facing objects; they do not scatter raw `fetch()` calls or API URLs.
 
+SDK errors expose operation fields with app-facing camelCase names. Wire field names remain inside the SDK. Local form validation uses the React shared validation error rather than manufacturing an HTTP `ApiError`. Text returned in API payloads may be rendered normally through React's escaped text rendering; never inject API strings as raw HTML. The source boundary check enforces communication and field-name hygiene, not distrust of returned payload values.
+
 The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not add GraphQL or a generated API client.
 
 ## Application layers and naming
@@ -39,7 +41,7 @@ The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not ad
 
 React CSS follows the same ownership boundaries: `styles/base.css` contains only global tokens/reset/typography, AppFrame owns shell CSS, shared UI and icons own their component CSS, and feature branches import their own layout CSS. All Vitest files live centrally under `src/__tests__` and are named by subject.
 
-The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, and React imports in the SDK. Vite proxy declarations are development transport configuration, not an application communication layer.
+The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, React imports in the SDK, obvious wire field-error lookups in React, and runtime SDK operation imports in presentational PageRegions/Components. Type-only imports of stable SDK app-facing models are allowed there. Vite proxy declarations are development transport configuration, not an application communication layer.
 
 Within the SDK, `accounts.ts` owns current-user/profile/password mapping while `accountSessions.ts` owns web-session and connected-client operations and metadata mapping.
 

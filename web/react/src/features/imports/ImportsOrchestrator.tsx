@@ -1,11 +1,11 @@
-import { ApiError, canSeeImports, uploadLibraryImport, type LibraryImportResult } from "@second-pass/spl-api";
+import { canSeeImports, uploadLibraryImport, type LibraryImportResult } from "@second-pass/spl-api";
 import { useRef, useState, type FormEvent } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel, PageHeader } from "../../components/ui";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ImportResultPageRegion } from "./regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "./regions/ImportUploadPageRegion";
 import "./Imports.css";
@@ -47,7 +47,7 @@ export function uploadSelectedLibraryFile(
   file: File | undefined,
   upload: (file: File) => Promise<LibraryImportResult> = uploadLibraryImport,
 ): Promise<LibraryImportResult> {
-  if (!file) return Promise.reject(new ApiError("Choose a file to import.", 400, { fields: { file: ["Choose a file to import."] } }));
+  if (!file) return Promise.reject(new LocalValidationError("Choose a file to import.", { file: ["Choose a file to import."] }));
   return upload(file);
 }
 
