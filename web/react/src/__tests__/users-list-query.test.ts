@@ -13,7 +13,9 @@ describe("Users list URL state", () => {
   it("uses page size 20 for an unparameterized Users request without adding it to the URL", () => {
     const state = usersListStateFromSearchParams(new URLSearchParams(), true);
     expect(usersListSdkQuery(state).pageSize).toBe(20);
+    expect(usersListSdkQuery(state).ordering).toBe("role");
     expect(usersListSearchParams(state).has("page_size")).toBe(false);
+    expect(usersListSearchParams(state).has("ordering")).toBe(false);
   });
 
   it("reads URL-backed filters, ordering, page, and page size for the SDK", () => {

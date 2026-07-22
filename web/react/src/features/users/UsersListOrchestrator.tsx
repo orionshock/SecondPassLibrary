@@ -57,13 +57,11 @@ export function UsersListOrchestrator() {
       search={searchDraft}
       role={queryState.role}
       isActive={queryState.isActive}
-      ordering={queryState.ordering}
       advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onRoleChange={(role) => changeQuery({ role })}
       onStatusChange={(isActive) => changeQuery({ isActive })}
-      onOrderingChange={(ordering) => changeQuery({ ordering })}
     />
     <UsersListPageRegion
       page={loadState.page}

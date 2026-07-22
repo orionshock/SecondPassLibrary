@@ -125,6 +125,38 @@
   border-radius: 0 0.6rem 0.6rem 0;
 }
 
+.users-identity {
+  min-width: 18rem;
+  overflow-wrap: anywhere;
+}
+
+.users-identity__primary,
+.users-role-status__content,
+.users-heading-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.users-identity__primary > .material-icon {
+  color: var(--muted);
+}
+
+.users-identity__dot {
+  color: var(--muted);
+}
+
+.users-identity__email {
+  margin-top: 0.2rem;
+  padding-left: 1.35rem;
+  font-size: 0.82rem;
+}
+
+.users-role-status {
+  min-width: 7rem;
+}
+
 .users-row--inactive td {
   border-color: rgb(251 113 133 / 60%);
   background: rgb(251 113 133 / 8%);
@@ -146,8 +178,7 @@
   font-size: 0.9rem;
 }
 
-.users-status-pill,
-.users-password-flag {
+.users-status-pill {
   display: inline-flex;
   padding: 0.12rem 0.5rem;
   border: 1px solid var(--border);
@@ -156,21 +187,10 @@
   white-space: nowrap;
 }
 
-.users-status-pill--active {
-  border-color: rgb(74 222 128 / 45%);
-  color: #bbf7d0;
-  background: rgb(74 222 128 / 9%);
-}
-
-.users-status-pill--inactive,
-.users-password-flag {
+.users-status-pill--inactive {
   border-color: rgb(251 113 133 / 65%);
   color: #fecdd3;
   background: rgb(251 113 133 / 12%);
-}
-
-.users-password-flag {
-  margin-left: 0.45rem;
 }
 
 .users-last-login {
@@ -186,11 +206,21 @@
 
 .users-memberships__content {
   display: grid;
-  align-content: center;
-  gap: 0.2rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.3rem 0.6rem;
 }
 
-.users-row-actions {
+.users-memberships__stack {
+  display: flex;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.users-row-actions,
+.users-actions-heading {
   text-align: right;
 }
 
@@ -408,5 +438,9 @@
 
   .user-membership-curator {
     text-align: left;
+  }
+
+  .users-memberships__content {
+    grid-template-columns: 1fr;
   }
 }

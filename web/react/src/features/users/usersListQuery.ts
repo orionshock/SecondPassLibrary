@@ -32,7 +32,7 @@ export function usersListStateFromSearchParams(parameters: URLSearchParams, adva
   const rawStatus = parameters.get("is_active");
   const isActive = rawStatus === "true" || rawStatus === "false" ? rawStatus : undefined;
   const rawOrdering = parameters.get("ordering") as UserOrdering | null;
-  const ordering = rawOrdering && orderings.has(rawOrdering) ? rawOrdering : "username";
+  const ordering = rawOrdering && orderings.has(rawOrdering) ? rawOrdering : "role";
   const page = positiveInteger(parameters.get("page"), 1);
   const rawPageSize = parameters.get("page_size");
   const requestedPageSize = positiveInteger(rawPageSize, defaultPageSize);
@@ -67,7 +67,7 @@ export function usersListSearchParams(state: UsersListUrlState): URLSearchParams
   if (state.q) parameters.set("q", state.q);
   if (state.role) parameters.set("role", state.role);
   if (state.isActive) parameters.set("is_active", state.isActive);
-  if (state.ordering !== "username") parameters.set("ordering", state.ordering);
+  if (state.ordering !== "role") parameters.set("ordering", state.ordering);
   if (state.page > 1) parameters.set("page", String(state.page));
   if (state.pageSizeExplicit || state.pageSize !== defaultPageSize) parameters.set("page_size", String(state.pageSize));
   return parameters;

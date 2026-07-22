@@ -30,14 +30,11 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
     {pager()}
     {page.items.length === 0 ? <p className="users-empty muted">No users match these filters.</p> : <div className="users-table-wrap"><table className="users-table">
       <thead><tr>
-        <SortableHeading label="Username" sortKey="username" ordering={ordering} onOrderingChange={onOrderingChange} />
-        <SortableHeading label="Name" sortKey="name" ordering={ordering} onOrderingChange={onOrderingChange} />
-        <th>Email</th>
-        <SortableHeading label="Role" sortKey="role" ordering={ordering} onOrderingChange={onOrderingChange} />
-        <SortableHeading label="Status" sortKey="is_active" ordering={ordering} onOrderingChange={onOrderingChange} />
+        <th><div className="users-heading-group"><SortableControl label="Name" sortKey="name" ordering={ordering} onOrderingChange={onOrderingChange} /><SortableControl label="Username" sortKey="username" ordering={ordering} onOrderingChange={onOrderingChange} /><span>Email</span></div></th>
+        <th><div className="users-heading-group"><SortableControl label="Role" sortKey="role" ordering={ordering} onOrderingChange={onOrderingChange} /><SortableControl label="Status" sortKey="is_active" ordering={ordering} onOrderingChange={onOrderingChange} /></div></th>
         <th>Last login</th>
         {advancedGroupsEnabled ? <th>Groups / Curates</th> : null}
-        <th aria-label="Actions" />
+        <th className="users-actions-heading">Actions</th>
       </tr></thead>
       <tbody>{page.items.map((user) => <UserRowComponent key={user.id} user={user} showGroups={advancedGroupsEnabled} />)}</tbody>
     </table></div>}
@@ -45,7 +42,7 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
   </section>;
 }
 
-function SortableHeading({ label, sortKey, ordering, onOrderingChange }: {
+function SortableControl({ label, sortKey, ordering, onOrderingChange }: {
   label: string;
   sortKey: "username" | "name" | "role" | "is_active";
   ordering: UserOrdering;
@@ -53,9 +50,7 @@ function SortableHeading({ label, sortKey, ordering, onOrderingChange }: {
 }) {
   const active = ordering.replace(/^-/, "") === sortKey;
   const descending = active && ordering.startsWith("-");
-  return <th aria-sort={active ? (descending ? "descending" : "ascending") : "none"}>
-    <button className="users-sort" type="button" onClick={() => onOrderingChange(nextUserOrdering(ordering, sortKey))}>
-      {label}<MaterialIcon name={active ? (descending ? "arrow_downward" : "arrow_upward") : "unfold_more"} />
-    </button>
-  </th>;
+  return <button className="users-sort" type="button" aria-label={`Sort by ${label}${active ? `, currently ${descending ? "descending" : "ascending"}` : ""}`} onClick={() => onOrderingChange(nextUserOrdering(ordering, sortKey))}>
+    {label}<MaterialIcon name={active ? (descending ? "arrow_downward" : "arrow_upward") : "unfold_more"} />
+  </button>;
 }
