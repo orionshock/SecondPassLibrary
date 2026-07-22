@@ -61,7 +61,7 @@ describe("Imports", () => {
     const items = Array.from({ length: 55 }, (_, index) => ({
       status: index === 54 ? "failed" as const : "imported" as const,
       sourceLabel: `safe-${index}.epub`, safeMessage: index === 54 ? "Invalid EPUB package." : "", bookId: `uuid-${index}`,
-      ...(index === 0 ? { title: "Human title", author: "Human author", series: "Human series" } : {}),
+      ...(index === 0 ? { title: "Human title", authors: ["First Author", "Second Author"], series: "Human series", seriesIndex: "1.00" } : {}),
     }));
     const result: LibraryImportResult = {
       sourceType: "zip", sourceLabel: "batch.zip",
@@ -70,12 +70,22 @@ describe("Imports", () => {
     const markup = renderToStaticMarkup(<ImportResultPageRegion result={result} />);
     expect(markup).toContain("imported: 54");
     expect(markup).toContain("Human title");
-    expect(markup).toContain("Human author");
-    expect(markup).toContain("Human series");
+    expect(markup).toContain("First Author, Second Author");
+    expect(markup).toContain("Human series 1.00");
+    expect(markup).not.toContain("safe-0.epub");
     expect(markup).not.toContain("uuid-0");
     expect(markup).toContain("safe-54.epub");
     expect(markup).toContain("Invalid EPUB package.");
     expect((markup.match(/class="import-result-item /g) ?? [])).toHaveLength(55);
+  });
+
+  it("falls back to the safe source label when a successful summary is absent", () => {
+    const result: LibraryImportResult = {
+      sourceType: "epub", sourceLabel: "fallback.epub",
+      counts: { imported: 1, duplicate: 0, conflict: 0, failed: 0, skipped: 0 },
+      items: [{ status: "imported", sourceLabel: "fallback.epub", safeMessage: "Imported." }],
+    };
+    expect(renderToStaticMarkup(<ImportResultPageRegion result={result} />)).toContain("fallback.epub");
   });
 
   it("uses no breadcrumb on the base Imports route", () => {

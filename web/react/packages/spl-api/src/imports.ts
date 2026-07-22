@@ -16,8 +16,9 @@ export interface LibraryImportItem {
   safeMessage: string;
   bookId?: string;
   title?: string;
-  author?: string;
+  authors?: string[];
   series?: string;
+  seriesIndex?: string;
 }
 
 export interface LibraryImportResult {
@@ -37,8 +38,9 @@ interface LibraryImportResponse {
     safe_message: string;
     book_id?: string;
     title?: string;
-    author?: string;
+    authors?: string[];
     series?: string;
+    series_index?: string;
   }>;
 }
 
@@ -56,8 +58,9 @@ export async function uploadLibraryImport(file: File, client: ApiClient = apiCli
       safeMessage: item.safe_message,
       ...(item.book_id ? { bookId: item.book_id } : {}),
       ...(item.title ? { title: item.title } : {}),
-      ...(item.author ? { author: item.author } : {}),
+      ...(item.authors ? { authors: [...item.authors] } : {}),
       ...(item.series ? { series: item.series } : {}),
+      ...(item.series_index ? { seriesIndex: item.series_index } : {}),
     })),
   };
 }

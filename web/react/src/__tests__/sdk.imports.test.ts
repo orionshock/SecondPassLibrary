@@ -10,7 +10,7 @@ describe("imports SDK", () => {
       status: index === 0 ? "imported" as const : "duplicate" as const,
       source_label: `book-${index}.epub`, safe_message: index === 0 ? "Imported." : "Already exists.",
       book_id: `internal-${index}`,
-      ...(index === 0 ? { title: "Readable title", author: "Author Name", series: "Series Name" } : {}),
+      ...(index === 0 ? { title: "Readable title", authors: ["First Author", "Second Author"], series: "Series Name", series_index: "1.00" } : {}),
     }));
     const response = {
       source_type: "zip", source_label: "library.zip",
@@ -31,7 +31,7 @@ describe("imports SDK", () => {
     expect(result.items).toHaveLength(55);
     expect(result.items[0]).toEqual({
       status: "imported", sourceLabel: "book-0.epub", safeMessage: "Imported.", bookId: "internal-0",
-      title: "Readable title", author: "Author Name", series: "Series Name",
+      title: "Readable title", authors: ["First Author", "Second Author"], series: "Series Name", seriesIndex: "1.00",
     });
   });
 

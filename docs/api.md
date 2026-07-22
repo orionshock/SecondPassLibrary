@@ -778,6 +778,14 @@ Library imports are synchronous and session-authenticated for Librarian+ users.
 per-item results. Import history is not stored and there are no list/detail
 import-history endpoints. Client API bearer tokens are rejected.
 
+Each item contains `status`, `source_label`, and bounded `safe_message`. When
+an item is associated with a Book (including imported, duplicate, and conflict
+results), it also contains the existing `book_id`, `title`, an ordered `authors`
+array of display-name strings, and optional `series` and decimal-string
+`series_index` fields. Failed or skipped items without a Book omit those Book
+summary fields. These summaries do not include checksums, storage identities,
+filesystem paths, or archive internals.
+
 See `docs/imports.md` for details.
 
 ## Groups (LibraryGroups)
