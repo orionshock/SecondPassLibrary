@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
+import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
@@ -15,7 +16,6 @@ export const sectionRoutes = [
   { path: "library", title: "Library" },
   { path: "groups", title: "Groups" },
   { path: "shelves", title: "Shelves" },
-  { path: "imports", title: "Imports" },
 ] as const;
 
 export function PlaceholderPageRegion({ title }: { title: string }) {
@@ -48,6 +48,7 @@ export const appRoutes = [
         path,
         element: <PlaceholderPageRegion title={title} />,
       })),
+      { path: "imports", element: <ImportsOrchestrator /> },
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },

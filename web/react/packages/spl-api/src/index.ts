@@ -25,6 +25,13 @@ export {
   type ApiErrorKind,
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
+export {
+  uploadLibraryImport,
+  type ImportItemStatus,
+  type LibraryImportCounts,
+  type LibraryImportItem,
+  type LibraryImportResult,
+} from "./imports";
 export { getServerInfo, type ServerInfo } from "./server";
 export {
   enableAdvancedGroups,

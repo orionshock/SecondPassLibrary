@@ -29,7 +29,8 @@ describe("app frame and router", () => {
     expect(markup).not.toContain('href="/server"');
   });
   it("defines placeholder and not-found routes", () => {
-    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves", "/imports"]);
+    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves"]);
+    expect(appRoutes[0].children.some((route) => route.path === "imports")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/:profileId/edit")).toBe(true);

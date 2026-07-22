@@ -77,3 +77,8 @@ This is the running list of cross-page presentation and interaction rules that a
 ## Page headings
 
 - Product page titles use the restrained legacy Product UI scale rather than oversized landing-page typography. Keep titles on one line at normal desktop widths and allow wrapping only when the viewport requires it.
+
+## Operational results
+
+- Successful operational rows prefer human-facing names and metadata over UUIDs, hashes, storage identities, or filesystem details. When richer safe metadata is unavailable, use the backend-provided safe source label.
+- Failure and conflict rows should include the bounded safe source label, status, and actionable safe message supplied by the API. Never render raw uploads, unsafe archive paths, tracebacks, or internal storage details.
