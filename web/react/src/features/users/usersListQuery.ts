@@ -7,6 +7,7 @@ export interface UsersListUrlState {
   ordering: UserOrdering;
   page: number;
   pageSize: number;
+  pageSizeExplicit: boolean;
 }
 
 export const userRoleFilters: ReadonlyArray<{ value?: UserRoleFilter; label: string }> = [
@@ -23,6 +24,7 @@ const orderings = new Set<UserOrdering>([
 ]);
 const roles = new Set<UserRoleFilter>(["owner", "manager", "librarian", "reader", "curator"]);
 const pageSizes = new Set([20, 50, 100, 200]);
+const defaultPageSize = 20;
 
 export function usersListStateFromSearchParams(parameters: URLSearchParams, advancedGroupsEnabled: boolean): UsersListUrlState {
   const rawRole = parameters.get("role") as UserRoleFilter | null;
@@ -32,7 +34,9 @@ export function usersListStateFromSearchParams(parameters: URLSearchParams, adva
   const rawOrdering = parameters.get("ordering") as UserOrdering | null;
   const ordering = rawOrdering && orderings.has(rawOrdering) ? rawOrdering : "username";
   const page = positiveInteger(parameters.get("page"), 1);
-  const requestedPageSize = positiveInteger(parameters.get("page_size"), 50);
+  const rawPageSize = parameters.get("page_size");
+  const requestedPageSize = positiveInteger(rawPageSize, defaultPageSize);
+  const pageSize = pageSizes.has(requestedPageSize) ? requestedPageSize : defaultPageSize;
 
   return {
     q: (parameters.get("q") ?? "").trim(),
@@ -40,7 +44,8 @@ export function usersListStateFromSearchParams(parameters: URLSearchParams, adva
     isActive,
     ordering,
     page,
-    pageSize: pageSizes.has(requestedPageSize) ? requestedPageSize : 50,
+    pageSize,
+    pageSizeExplicit: rawPageSize !== null && pageSizes.has(requestedPageSize),
   };
 }
 
@@ -49,7 +54,12 @@ export function withUsersListChange(
   changes: Partial<UsersListUrlState>,
   resetPage = true,
 ): UsersListUrlState {
-  return { ...current, ...changes, page: resetPage ? 1 : changes.page ?? current.page };
+  return {
+    ...current,
+    ...changes,
+    page: resetPage ? 1 : changes.page ?? current.page,
+    pageSizeExplicit: changes.pageSize === undefined ? current.pageSizeExplicit : true,
+  };
 }
 
 export function usersListSearchParams(state: UsersListUrlState): URLSearchParams {
@@ -59,7 +69,7 @@ export function usersListSearchParams(state: UsersListUrlState): URLSearchParams
   if (state.isActive) parameters.set("is_active", state.isActive);
   if (state.ordering !== "username") parameters.set("ordering", state.ordering);
   if (state.page > 1) parameters.set("page", String(state.page));
-  if (state.pageSize !== 50) parameters.set("page_size", String(state.pageSize));
+  if (state.pageSizeExplicit || state.pageSize !== defaultPageSize) parameters.set("page_size", String(state.pageSize));
   return parameters;
 }
 

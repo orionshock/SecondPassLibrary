@@ -36,8 +36,15 @@ describe("Users list regions", () => {
     expect(markup).toContain("Owner");
     expect(markup).toContain("users-row--inactive");
     expect(markup).toContain("users-status-pill--inactive");
+    expect(markup).toContain('<td class="users-memberships"><div class="users-memberships__content">');
+    expect(markup).not.toContain('<td class="users-memberships" style="display:grid">');
     expect(markup).toContain("Curates: Editors");
     expect(markup).toContain('href="/users/owner-id/edit"');
+  });
+
+  it("shows page size 20 as the selected default", () => {
+    const markup = renderList({ items: [owner], count: 1, next: null, previous: null });
+    expect(markup).toContain('<option value="20" selected="">20</option>');
   });
 
   it("renders bounded loading, empty, and retryable error states", () => {
