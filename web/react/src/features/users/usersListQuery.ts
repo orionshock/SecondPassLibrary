@@ -19,6 +19,11 @@ export const userRoleFilters: ReadonlyArray<{ value?: UserRoleFilter; label: str
   { value: "owner", label: "Owner" },
 ];
 
+export function visibleUserRoleFilters(advancedGroupsEnabled: boolean, operatorIsOwner: boolean) {
+  return userRoleFilters.filter(({ value }) =>
+    (value !== "curator" || advancedGroupsEnabled) && (value !== "owner" || operatorIsOwner));
+}
+
 const orderings = new Set<UserOrdering>([
   "username", "-username", "name", "-name", "role", "-role", "is_active", "-is_active",
 ]);
@@ -26,9 +31,10 @@ const roles = new Set<UserRoleFilter>(["owner", "manager", "librarian", "reader"
 const pageSizes = new Set([20, 50, 100, 200]);
 const defaultPageSize = 20;
 
-export function usersListStateFromSearchParams(parameters: URLSearchParams, advancedGroupsEnabled: boolean): UsersListUrlState {
+export function usersListStateFromSearchParams(parameters: URLSearchParams, advancedGroupsEnabled: boolean, operatorIsOwner: boolean): UsersListUrlState {
   const rawRole = parameters.get("role") as UserRoleFilter | null;
-  const role = rawRole && roles.has(rawRole) && (rawRole !== "curator" || advancedGroupsEnabled) ? rawRole : undefined;
+  const visibleRoles = new Set(visibleUserRoleFilters(advancedGroupsEnabled, operatorIsOwner).flatMap(({ value }) => value ? [value] : []));
+  const role = rawRole && roles.has(rawRole) && visibleRoles.has(rawRole) ? rawRole : undefined;
   const rawStatus = parameters.get("is_active");
   const isActive = rawStatus === "true" || rawStatus === "false" ? rawStatus : undefined;
   const rawOrdering = parameters.get("ordering") as UserOrdering | null;

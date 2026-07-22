@@ -80,9 +80,10 @@ describe("Users list regions", () => {
   });
 
   it("renders role filters in product order and hides Curator in simple mode", () => {
-    const renderFilters = (advancedGroupsEnabled: boolean) => renderToStaticMarkup(<UsersFiltersPageRegion
+    const renderFilters = (advancedGroupsEnabled: boolean, operatorIsOwner = true) => renderToStaticMarkup(<UsersFiltersPageRegion
       search=""
       advancedGroupsEnabled={advancedGroupsEnabled}
+      operatorIsOwner={operatorIsOwner}
       onSearchChange={vi.fn()}
       onSearch={vi.fn()}
       onRoleChange={vi.fn()}
@@ -93,6 +94,9 @@ describe("Users list regions", () => {
     labels.slice(1).forEach((label, index) => expect(advanced.indexOf(labels[index]!)).toBeLessThan(advanced.indexOf(label)));
     expect(renderFilters(false)).not.toContain("Curator");
     expect(advanced).not.toContain('aria-label="Ordering"');
+    const manager = renderFilters(true, false);
+    expect(manager).not.toContain(">Owner</button>");
+    expect(manager).toContain(">Manager</button>");
   });
 
   it("uses no breadcrumb on the base Users route", () => {

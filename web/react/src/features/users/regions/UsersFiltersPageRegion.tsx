@@ -2,20 +2,21 @@ import type { UserRoleFilter, UserStatusFilter } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
 import { Button } from "../../../components/ui";
-import { userRoleFilters } from "../usersListQuery";
+import { visibleUserRoleFilters } from "../usersListQuery";
 
-export function UsersFiltersPageRegion({ search, role, isActive, advancedGroupsEnabled, onSearchChange, onSearch, onRoleChange, onStatusChange }: {
+export function UsersFiltersPageRegion({ search, role, isActive, advancedGroupsEnabled, operatorIsOwner, onSearchChange, onSearch, onRoleChange, onStatusChange }: {
   search: string;
   role?: UserRoleFilter;
   isActive?: UserStatusFilter;
   advancedGroupsEnabled: boolean;
+  operatorIsOwner: boolean;
   onSearchChange: (value: string) => void;
   onSearch: () => void;
   onRoleChange: (role?: UserRoleFilter) => void;
   onStatusChange: (status?: UserStatusFilter) => void;
 }) {
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onSearch(); }
-  const filters = userRoleFilters.filter(({ value }) => value !== "curator" || advancedGroupsEnabled);
+  const filters = visibleUserRoleFilters(advancedGroupsEnabled, operatorIsOwner);
 
   return <section className="users-controls" aria-label="User filters">
     <form className="users-search" role="search" onSubmit={submit}>

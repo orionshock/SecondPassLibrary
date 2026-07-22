@@ -26,8 +26,8 @@ export function UsersListOrchestrator() {
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
   const queryState = useMemo(
-    () => usersListStateFromSearchParams(new URLSearchParams(queryKey), currentUser.advancedLibraryGroupsEnabled),
-    [currentUser.advancedLibraryGroupsEnabled, queryKey],
+    () => usersListStateFromSearchParams(new URLSearchParams(queryKey), currentUser.advancedLibraryGroupsEnabled, currentUser.isOwner),
+    [currentUser.advancedLibraryGroupsEnabled, currentUser.isOwner, queryKey],
   );
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [retry, setRetry] = useState(0);
@@ -35,6 +35,13 @@ export function UsersListOrchestrator() {
   const canCreateUsers = creatableUserRoles(currentUser).length > 0;
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
+
+  useEffect(() => {
+    if (!searchParameters.has("role") || queryState.role) return;
+    const normalized = new URLSearchParams(searchParameters);
+    normalized.delete("role");
+    setSearchParameters(normalized, { replace: true });
+  }, [queryState.role, searchParameters, setSearchParameters]);
 
   useEffect(() => {
     let active = true;
@@ -58,6 +65,7 @@ export function UsersListOrchestrator() {
       role={queryState.role}
       isActive={queryState.isActive}
       advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
+      operatorIsOwner={currentUser.isOwner}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onRoleChange={(role) => changeQuery({ role })}
