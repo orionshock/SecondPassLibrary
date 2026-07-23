@@ -76,7 +76,10 @@ List endpoints are paginated by default using page-number pagination.
 Query params:
 
 - `page` (1-based)
-- `page_size` (optional; default `50`, max `200`)
+- `page_size` (optional; default `20`, max `200`)
+
+Endpoint-specific defaults may be smaller. Reading Session lists default to
+`10`; explicit positive page sizes remain supported up to the normal maximum.
 
 Response shape:
 
@@ -455,20 +458,19 @@ Book list, broad-search, and group-scoped Book results share one compact row
 shape:
 
 - `id`, `title`, `sort_title`, and `subtitle`
-- `authors`, `series`, and compact Catalog Tag field `tags`
+- `authors`, `series`, and `catalog_tags`
 - `language` and `publisher`
 - `published_year`, `published_month`, `published_day`, and
   `published_date_precision`
 - `cover_url` and top-level `file_format`
 
-Compact rows do not include `catalog_tags`, `file`, `groups`, `identifiers`,
-checksums, download URLs, or storage/source fields.
+Compact rows do not include `file`, `groups`, `identifiers`, descriptions,
+checksums, file sizes, download URLs, or storage/source fields.
 
 Book detail, Book metadata PATCH/PUT responses, and cover replacement/clear
 responses share the detail shape. It includes normal Book metadata plus
-`identifiers`, detail/write Catalog Tag field `catalog_tags`, visibility-scoped
-`groups`, and `file`. It does not repeat compact-row `tags` or top-level
-`file_format`.
+`identifiers`, `catalog_tags`, visibility-scoped `groups`, and `file`. It does
+not include top-level `file_format`.
 
 `file` is `null` when no stored file is available. Otherwise it contains only:
 
@@ -635,6 +637,8 @@ relationships are mutated only through Book PATCH `catalog_tags`.
 
 Tag endpoints are count/filter facets. They do not accept
 `include_preview_books` and do not return `preview_books`.
+Clients that need every Catalog Tag for a facet rail should request a large
+numeric `page_size` (up to `200`) and follow `next` until it is `null`.
 
 Book, Author, and Series list endpoints accept the compact query parameter
 `tag=<slug>`, which filters by Catalog Tag slug. Books are
@@ -744,8 +748,8 @@ Book write and media notes:
 - `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
 - `subtitle` may be patched to an empty string.
 - `identifiers[]` response items include `id`, `scheme`, and `value`.
-- Items in compact `tags[]` and detail `catalog_tags[]` contain `id`, `name`,
-  and generated `slug`; see the canonical response shapes above.
+- Items in compact and detail `catalog_tags[]` contain `id`, `name`, and
+  generated `slug`; see the canonical response shapes above.
 - Book PATCH accepts `identifiers` as a complete replacement list of
   `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
   preserves existing rows; `identifiers: []` clears them.
@@ -900,7 +904,7 @@ and Product UI workflow. The designated Public group cannot be deleted.
 - Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
 - Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
 - Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
-- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active sessions only). Summary list/detail payloads include `book_id`, `can_open`, and compact `book`, not the legacy `book_title` field. When `?book=<book_id>` is present and the book is visible, list responses include `context.book` even if `results` is empty.
+- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated with default page size `10`; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active sessions only). Summary list/detail payloads include `book_id`, `can_open`, and compact `book`, not the legacy `book_title` field. When `?book=<book_id>` is present and the book is visible, list responses include `context.book` even if `results` is empty.
 - Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`; omits inaccessible-book sessions from continue-reading results)
 - Batch activity summary: `POST /api/v1/reading/books/activity-summary/` with `{"books": ["<book_id>"]}` returns per-visible-book current-user session counts and active/latest session ids. This endpoint is read-only in meaning but uses POST for practical batch request size.
 - Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)

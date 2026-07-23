@@ -57,11 +57,9 @@ collapsed whitespace, and casefolding. `BookCatalogTag` explicitly relates a
 tag to a Book, and an unused tag is removed when its final relationship is
 deleted.
 
-The API deliberately uses different names by context:
-
-- compact Book rows expose `tags`
-- Book Detail and Book metadata writes use `catalog_tags`
-- `tag=<slug>` is the compact query parameter for filtering by Catalog Tag slug
+The API uses `catalog_tags` for compact Book rows, Book Detail, and Book
+metadata writes. `tag=<slug>` is the compact query parameter for filtering by
+Catalog Tag slug.
 
 Book PATCH treats `catalog_tags` as a complete replacement when supplied.
 Omitting it preserves current relationships; `[]` clears them. Tag list and

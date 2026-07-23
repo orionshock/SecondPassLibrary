@@ -59,6 +59,32 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
             {s["id"] for s in response_data_list(r_active)},
         )
 
+    def test_session_list_defaults_to_ten_and_accepts_explicit_twenty(self):
+        for index in range(24):
+            ReadingSession.objects.create(
+                user=self.user,
+                book=self.book,
+                name=f"Historical {index}",
+                status=ReadingSession.STATUS_COMPLETED,
+                is_active=False,
+            )
+
+        default = assert_response(
+            self.client.get(f"/api/v1/reading/sessions/?book={self.book.id}")
+        )
+        explicit = assert_response(
+            self.client.get(
+                f"/api/v1/reading/sessions/?book={self.book.id}&page_size=20"
+            )
+        )
+
+        self.assertEqual(default.status_code, status.HTTP_200_OK)
+        self.assertEqual(default.json()["count"], 25)
+        self.assertEqual(len(response_data_list(default)), 10)
+        self.assertEqual(explicit.status_code, status.HTTP_200_OK)
+        self.assertEqual(explicit.json()["count"], 25)
+        self.assertEqual(len(response_data_list(explicit)), 20)
+
     def test_filtered_book_session_count_uses_full_current_user_filtered_set(self):
         self.session_visible.status = ReadingSession.STATUS_ACTIVE
         self.session_visible.is_active = True

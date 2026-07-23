@@ -148,12 +148,12 @@ Exact Library routes, query parameters, and response schemas are owned by
   `is_public_group`). It contains no membership or user data. In simple mode,
   only Public/Common Room can appear. Reader clients may use that API context;
   the Product UI itself hides the Book Detail Groups tab in simple mode.
-- Book list, broad-search, and group-scoped Book rows use compact `tags` and
-  top-level `file_format`; they omit `catalog_tags`, `identifiers`, `groups`,
-  and the detail `file` object.
+- Book list, broad-search, and group-scoped Book rows use `catalog_tags` and
+  top-level `file_format`; they omit `identifiers`, `groups`, and the detail
+  `file` object.
 - Book detail uses `catalog_tags`, `identifiers`, visibility-scoped `groups`,
-  and the singular `file` object. It does not repeat compact-row `tags` or
-  top-level `file_format`. When no stored file exists, `file` is `null`.
+  and the singular `file` object. It does not include top-level `file_format`.
+  When no stored file exists, `file` is `null`.
 - Author, Series, Group, and Shelf list/detail payloads may opt into
   `preview_books` with `include_preview_books=true`; preview items contain only
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author

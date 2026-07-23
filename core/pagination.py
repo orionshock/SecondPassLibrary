@@ -4,7 +4,7 @@ from rest_framework.pagination import PageNumberPagination
 
 
 class DefaultPageNumberPagination(PageNumberPagination):
-    page_size = 50
+    page_size = 20
     page_query_param = "page"
     page_size_query_param = "page_size"
     max_page_size = 200
@@ -33,4 +33,3 @@ class DefaultPageNumberPagination(PageNumberPagination):
             return self.page_size
 
         return min(value, self.max_page_size or value)
-

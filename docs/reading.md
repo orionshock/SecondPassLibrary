@@ -62,7 +62,7 @@ POST /api/v1/reading/books/<book_id>/open/                    (recommended boots
 GET  /api/v1/reading/books/<book_id>/active-session/
 POST /api/v1/reading/books/activity-summary/
 POST /api/v1/reading/books/<book_id>/start-over/          (optional body: {"name": "Second pass"})
-GET  /api/v1/reading/sessions/                            (paginated)
+GET  /api/v1/reading/sessions/                            (paginated; default page size 10)
 GET  /api/v1/reading/sessions/recent/                     (compact recent list; active sessions only; default limit 10, max 50)
 GET  /api/v1/reading/sessions/<session_id>/
 PATCH /api/v1/reading/sessions/<session_id>/              (only while active: {"name": "...", "notes": "..."})

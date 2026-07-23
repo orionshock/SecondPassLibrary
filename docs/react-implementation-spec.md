@@ -458,6 +458,9 @@ mutation, Catalog Tags, Author/Series lifecycle, groups, and shelf relationship
 reads/mutations. Add a `library.ts` SDK module (split later only if it becomes
 unwieldy) with compact/detail Book shapes, list queries, broad search,
 Authors/Series/Tags, cover operations, and mapping for partial published dates.
+Compact Book wire responses use `catalog_tags`; the SDK maps that field to its
+stable app-facing camelCase name. A complete Catalog Tag rail requests up to
+200 rows per page and follows the paginated response's `next` links.
 
 Do not add group summaries to compact Book rows. That is a stale legacy
 expectation, not a backend gap.

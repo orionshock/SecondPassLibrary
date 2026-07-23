@@ -16,6 +16,7 @@ from library.queries import visible_books_for_user
 
 from ..models import Annotation, ReadingSession
 from ..profile.validation import CURRENT_READING_PROFILE_VERSION
+from .pagination import ReadingSessionPagination
 from .queries import (
     apply_session_filters,
     build_activity_summary,
@@ -86,6 +87,7 @@ class ReadingSessionViewSet(
         ClientBearerAuthentication,
     ]
     permission_classes = [IsAuthenticated]
+    pagination_class = ReadingSessionPagination
 
     def _book_filter_from_request(self) -> Book | None:
         request = cast(Request, self.request)

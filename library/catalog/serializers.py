@@ -184,9 +184,9 @@ class BookPreviewSerializer(serializers.ModelSerializer):
 
 class BookListSerializer(serializers.ModelSerializer):
     authors = serializers.SerializerMethodField(read_only=True)
+    catalog_tags = serializers.SerializerMethodField(read_only=True)
     cover_url = serializers.SerializerMethodField(read_only=True)
     series = serializers.SerializerMethodField(read_only=True)
-    tags = serializers.SerializerMethodField(read_only=True)
 
     def get_authors(self, obj: Book) -> list[dict]:
         authors = [link.author for link in obj.book_authors.all()]
@@ -201,7 +201,7 @@ class BookListSerializer(serializers.ModelSerializer):
             return None
         return BookSeriesSummarySerializer(link).data
 
-    def get_tags(self, obj: Book) -> list[dict]:
+    def get_catalog_tags(self, obj: Book) -> list[dict]:
         tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]
         return CatalogTagSummarySerializer(tags, many=True).data
 
@@ -214,7 +214,7 @@ class BookListSerializer(serializers.ModelSerializer):
             "subtitle",
             "authors",
             "series",
-            "tags",
+            "catalog_tags",
             "language",
             "publisher",
             "published_year",
@@ -229,7 +229,6 @@ class BookListSerializer(serializers.ModelSerializer):
 
 class BookDetailSerializer(BookListSerializer):
     identifiers = BookIdentifierSerializer(many=True, read_only=True)
-    catalog_tags = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
     groups = serializers.SerializerMethodField(read_only=True)
 
@@ -237,10 +236,6 @@ class BookDetailSerializer(BookListSerializer):
         if not obj.book_file:
             return None
         return BookFileSerializer(obj, context=self.context).data
-
-    def get_catalog_tags(self, obj: Book) -> list[dict]:
-        tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]
-        return CatalogTagSummarySerializer(tags, many=True).data
 
     def get_groups(self, obj: Book) -> list[dict]:
         return BookGroupSummarySerializer(
