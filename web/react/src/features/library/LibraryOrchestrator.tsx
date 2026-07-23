@@ -1,26 +1,41 @@
 import {
   ApiError,
   listAllCatalogTags,
+  listAuthors,
   listBooks,
+  listSeries,
   type CatalogTag,
   type CompactBook,
+  type LibraryAuthor,
+  type LibraryAxisQuery,
   type LibraryBooksQuery,
+  type LibrarySeries,
   type Page,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { PageHeader } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { libraryBooksSdkQuery, libraryPath, librarySearchParams, libraryStateFromSearchParams, withLibraryChange } from "./libraryQuery";
+import {
+  libraryAxisSdkQuery,
+  libraryBooksSdkQuery,
+  libraryPath,
+  librarySearchParams,
+  libraryStateFromSearchParams,
+  withLibraryChange,
+  withLibraryView,
+} from "./libraryQuery";
+import { AuthorListPageRegion } from "./regions/AuthorListPageRegion";
 import { BookListPageRegion } from "./regions/BookListPageRegion";
 import { CatalogTagRailPageRegion } from "./regions/CatalogTagRailPageRegion";
-import { LibraryBooksControlsPageRegion } from "./regions/LibraryBooksControlsPageRegion";
+import { LibraryAxesPageRegion } from "./regions/LibraryAxesPageRegion";
+import { LibraryAxisControlsPageRegion } from "./regions/LibraryAxisControlsPageRegion";
+import { SeriesListPageRegion } from "./regions/SeriesListPageRegion";
 import "./Library.css";
 
-interface BooksLoadState {
-  page?: Page<CompactBook>;
+interface LoadState<Item> {
+  page?: Page<Item>;
   loading: boolean;
   error?: Error;
 }
@@ -40,12 +55,14 @@ export function LibraryOrchestrator() {
   const queryState = useMemo(() => libraryStateFromSearchParams(new URLSearchParams(queryKey)), [queryKey]);
   const canonicalQuery = librarySearchParams(queryState).toString();
   const [searchDraft, setSearchDraft] = useState(queryState.q);
-  const [bookRetry, setBookRetry] = useState(0);
+  const [listRetry, setListRetry] = useState(0);
   const [tagRetry, setTagRetry] = useState(0);
-  const [books, setBooks] = useState<BooksLoadState>({ loading: true });
-  const [tags, setTags] = useState<TagsLoadState>({ loading: true });
+  const [books, setBooks] = useState<LoadState<CompactBook>>({ loading: true });
+  const [authors, setAuthors] = useState<LoadState<LibraryAuthor>>({ loading: true });
+  const [series, setSeries] = useState<LoadState<LibrarySeries>>({ loading: true });
+  const [tags, setTags] = useState<TagsLoadState>({ loading: false });
 
-  useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
+  useEffect(() => setSearchDraft(queryState.q), [queryState.q, queryState.view]);
 
   useEffect(() => {
     if (queryKey === canonicalQuery) return;
@@ -53,43 +70,85 @@ export function LibraryOrchestrator() {
   }, [canonicalQuery, queryKey, setSearchParameters]);
 
   useEffect(() => {
+    if (queryState.view !== "books" || tags.tags) return;
     let active = true;
-    setTags((current) => ({ tags: current.tags, loading: true }));
+    setTags({ loading: true });
     listAllCatalogTags()
       .then((loadedTags) => { if (active) setTags({ tags: loadedTags, loading: false }); })
-      .catch((error: unknown) => { if (active) setTags((current) => ({ tags: current.tags, loading: false, error: normalizeMutationError(error) })); });
+      .catch((error: unknown) => { if (active) setTags({ loading: false, error: normalizeMutationError(error) }); });
     return () => { active = false; };
-  }, [tagRetry]);
+  }, [queryState.view, tagRetry, tags.tags]);
 
   useEffect(() => {
-    if (!queryState.tag || !tags.tags || tags.tags.some(({ slug }) => slug === queryState.tag)) return;
+    if (queryState.view !== "books" || !queryState.tag || !tags.tags || tags.tags.some(({ slug }) => slug === queryState.tag)) return;
     changeQuery({ tag: undefined });
-  }, [queryState.tag, tags.tags]);
+  }, [queryState.tag, queryState.view, tags.tags]);
 
   useEffect(() => {
     if (queryKey !== canonicalQuery) return;
     let active = true;
-    setBooks((current) => ({ page: current.page, loading: true }));
-    loadBooksWithPageRecovery(libraryBooksSdkQuery(queryState))
-      .then(({ page, correctedPage }) => {
-        if (!active) return;
-        if (correctedPage !== queryState.page) {
-          setSearchParameters(librarySearchParams(withLibraryChange(queryState, { page: correctedPage }, false)), { replace: true });
-          return;
-        }
-        setBooks({ page, loading: false });
-      })
-      .catch((error: unknown) => { if (active) setBooks((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
+
+    if (queryState.view === "books") {
+      setBooks((current) => ({ page: current.page, loading: true }));
+      loadLibraryPageWithRecovery(libraryBooksSdkQuery(queryState), listBooks)
+        .then(({ page, correctedPage }) => {
+          if (!active) return;
+          if (replaceCorrectedPage(correctedPage)) return;
+          setBooks({ page, loading: false });
+        })
+        .catch((error: unknown) => { if (active) setBooks((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
+    } else if (queryState.view === "authors") {
+      setAuthors((current) => ({ page: current.page, loading: true }));
+      loadLibraryPageWithRecovery(libraryAxisSdkQuery(queryState), listAuthors)
+        .then(({ page, correctedPage }) => {
+          if (!active) return;
+          if (replaceCorrectedPage(correctedPage)) return;
+          setAuthors({ page, loading: false });
+        })
+        .catch((error: unknown) => { if (active) setAuthors((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
+    } else {
+      setSeries((current) => ({ page: current.page, loading: true }));
+      loadLibraryPageWithRecovery(libraryAxisSdkQuery(queryState), listSeries)
+        .then(({ page, correctedPage }) => {
+          if (!active) return;
+          if (replaceCorrectedPage(correctedPage)) return;
+          setSeries({ page, loading: false });
+        })
+        .catch((error: unknown) => { if (active) setSeries((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
+    }
+
+    function replaceCorrectedPage(correctedPage: number): boolean {
+      if (correctedPage === queryState.page) return false;
+      setSearchParameters(librarySearchParams(withLibraryChange(queryState, { page: correctedPage }, false)), { replace: true });
+      return true;
+    }
+
     return () => { active = false; };
-  }, [bookRetry, canonicalQuery, queryKey, queryState.ordering, queryState.page, queryState.pageSize, queryState.q, queryState.tag, setSearchParameters]);
+  }, [listRetry, canonicalQuery, queryKey, queryState.ordering, queryState.page, queryState.pageSize, queryState.q, queryState.tag, queryState.view, setSearchParameters]);
 
   function changeQuery(changes: Parameters<typeof withLibraryChange>[1], resetPage = true) {
     setSearchParameters(librarySearchParams(withLibraryChange(queryState, changes, resetPage)));
   }
 
+  const currentLibraryPath = libraryPath(queryState);
+  const commonListProps = {
+    pageNumber: queryState.page,
+    pageSize: queryState.pageSize,
+    libraryPath: currentLibraryPath,
+    onPageChange: (page: number) => changeQuery({ page }, false),
+    onPageSizeChange: (pageSize: number) => changeQuery({ pageSize }),
+    onRetry: () => setListRetry((value) => value + 1),
+  };
+
   return <div className="page-stack library-page">
-    <PageHeader title="Library" />
-    <LibraryBooksControlsPageRegion
+    <LibraryAxesPageRegion
+      activeView={queryState.view}
+      onViewChange={(view) => {
+        if (view !== queryState.view) setSearchParameters(librarySearchParams(withLibraryView(queryState, view)));
+      }}
+    />
+    <LibraryAxisControlsPageRegion
+      view={queryState.view}
       search={searchDraft}
       ordering={queryState.ordering}
       onSearchChange={setSearchDraft}
@@ -98,6 +157,7 @@ export function LibraryOrchestrator() {
     />
     <div className="library-browser">
       <CatalogTagRailPageRegion
+        enabled={queryState.view === "books"}
         tags={tags.tags}
         activeTag={queryState.tag}
         loading={tags.loading}
@@ -105,25 +165,17 @@ export function LibraryOrchestrator() {
         onTagChange={(tag) => changeQuery({ tag })}
         onRetry={() => setTagRetry((value) => value + 1)}
       />
-      <BookListPageRegion
-        page={books.page}
-        pageNumber={queryState.page}
-        pageSize={queryState.pageSize}
-        loading={books.loading}
-        error={books.error}
-        libraryPath={libraryPath(queryState)}
-        onPageChange={(page) => changeQuery({ page }, false)}
-        onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
-        onRetry={() => setBookRetry((value) => value + 1)}
-      />
+      {queryState.view === "books" ? <BookListPageRegion page={books.page} loading={books.loading} error={books.error} {...commonListProps} /> : null}
+      {queryState.view === "authors" ? <AuthorListPageRegion page={authors.page} loading={authors.loading} error={authors.error} searching={Boolean(queryState.q)} {...commonListProps} /> : null}
+      {queryState.view === "series" ? <SeriesListPageRegion page={series.page} loading={series.loading} error={series.error} searching={Boolean(queryState.q)} {...commonListProps} /> : null}
     </div>
   </div>;
 }
 
-export async function loadBooksWithPageRecovery(
-  query: LibraryBooksQuery,
-  request: (query: LibraryBooksQuery) => Promise<Page<CompactBook>> = listBooks,
-): Promise<{ page: Page<CompactBook>; correctedPage: number }> {
+export async function loadLibraryPageWithRecovery<Item, Query extends { page?: number; pageSize?: number }>(
+  query: Query,
+  request: (query: Query) => Promise<Page<Item>>,
+): Promise<{ page: Page<Item>; correctedPage: number }> {
   const requestedPage = query.page ?? 1;
   try {
     return { page: await request(query), correctedPage: requestedPage };
@@ -134,4 +186,11 @@ export async function loadBooksWithPageRecovery(
     if (maxPage === 1) return { page: firstPage, correctedPage: 1 };
     return { page: await request({ ...query, page: maxPage }), correctedPage: maxPage };
   }
+}
+
+export function loadBooksWithPageRecovery(
+  query: LibraryBooksQuery,
+  request: (query: LibraryBooksQuery) => Promise<Page<CompactBook>> = listBooks,
+) {
+  return loadLibraryPageWithRecovery(query, request);
 }

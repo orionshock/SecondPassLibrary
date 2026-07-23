@@ -1,11 +1,18 @@
+import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CatalogTag, CompactBook, Page } from "@second-pass/spl-api";
+import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page } from "@second-pass/spl-api";
+import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
 import { BookRowComponent } from "../features/library/components/BookRowComponent";
+import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
+import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
 import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/regions/CatalogTagRailPageRegion";
+import { LibraryAxesPageRegion } from "../features/library/regions/LibraryAxesPageRegion";
+import { LibraryAxisControlsPageRegion } from "../features/library/regions/LibraryAxisControlsPageRegion";
+import { SeriesListPageRegion } from "../features/library/regions/SeriesListPageRegion";
 
 const book: CompactBook = {
   id: "book/id", title: "Visible Title", sortTitle: "Visible Title", subtitle: "HIDDEN SUBTITLE",
@@ -56,5 +63,69 @@ describe("Library Books components", () => {
     expect(failed).toContain("Retry tags");
     expect(catalogTagSelection("fantasy", "fantasy")).toBeUndefined();
     expect(catalogTagSelection("mystery", "fantasy")).toBe("fantasy");
+  });
+
+  it("keeps all real axis controls and context-sensitive controls in the stable shell", () => {
+    const onViewChange = vi.fn();
+    const axes = renderToStaticMarkup(<LibraryAxesPageRegion activeView="authors" onViewChange={onViewChange} />);
+    for (const label of ["Library", "Books", "Authors", "Series"]) expect(axes).toContain(label);
+    expect(axes).toMatch(/aria-current="page"[^>]*>Authors/);
+    const controls = renderToStaticMarkup(<LibraryAxisControlsPageRegion view="series" search="" ordering="name" onSearchChange={vi.fn()} onSearch={vi.fn()} onOrderingChange={vi.fn()} />);
+    expect(controls).toContain('placeholder="Series name..."');
+    expect(controls).toContain("Name A-Z");
+    const inactiveTags = renderToStaticMarkup(<CatalogTagRailPageRegion enabled={false} loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
+    expect(inactiveTags).toContain("Catalog Tags");
+    expect(inactiveTags).toContain("Available when browsing Books.");
+    expect(inactiveTags).not.toContain("All tags");
+
+    const axisRegion = LibraryAxesPageRegion({ activeView: "books", onViewChange }) as ReactElement<{ children: ReactElement[] }>;
+    const nav = axisRegion.props.children[1] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
+    nav.props.children[1]!.props.onClick();
+    expect(onViewChange).toHaveBeenCalledWith("authors");
+  });
+});
+
+describe("Library Author and Series components", () => {
+  const author: LibraryAuthor = {
+    id: "author-1", name: "Visible Author", sortName: "Author, Visible", biography: "HIDDEN BIOGRAPHY", bookCount: 1,
+    previewBooks: [{ id: "book/id", title: "Preview Book", coverUrl: null }],
+  };
+  const series: LibrarySeries = {
+    id: "series-1", name: "Visible Series", sortName: "Visible Series", summary: "HIDDEN SUMMARY", bookCount: 3,
+    previewBooks: [{ id: "book-2", title: "Covered Book", coverUrl: "/cover.jpg" }],
+  };
+
+  it("renders compact rows, pluralized counts, bounded previews, fallbacks, and placeholder links", () => {
+    const authorMarkup = renderToStaticMarkup(<MemoryRouter><AuthorRowComponent author={author} libraryPath="/library?view=authors" /></MemoryRouter>);
+    expect(authorMarkup).toContain("Visible Author");
+    expect(authorMarkup).toContain("1 Book");
+    expect(authorMarkup).not.toContain("HIDDEN BIOGRAPHY");
+    expect(authorMarkup).toContain("No cover available for Preview Book");
+    expect(authorMarkup).toContain('href="/library/books/book%2Fid"');
+
+    const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" /></MemoryRouter>);
+    expect(seriesMarkup).toContain("Visible Series");
+    expect(seriesMarkup).toContain("3 Books");
+    expect(seriesMarkup).not.toContain("HIDDEN SUMMARY");
+    expect(seriesMarkup).toContain('loading="lazy"');
+    expect(seriesMarkup).toContain('href="/library/books/book-2"');
+  });
+
+  it("renders axis loading, retryable error, search-aware empty, and standard pagers", () => {
+    const common = { pageNumber: 1, pageSize: 20, libraryPath: "/library", onPageChange: vi.fn(), onPageSizeChange: vi.fn(), onRetry: vi.fn() };
+    const authorLoading = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion loading={true} searching={false} {...common} /></MemoryRouter>);
+    const authorError = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion loading={false} error={new Error("Authors unavailable")} searching={false} {...common} /></MemoryRouter>);
+    const authorEmpty = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={true} {...common} /></MemoryRouter>);
+    expect(authorLoading).toContain("Loading authors");
+    expect(authorError).toContain("Authors unavailable");
+    expect(authorEmpty).toContain("No authors match this search.");
+
+    const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion page={{ items: [series], count: 51, next: "next", previous: null }} loading={false} searching={false} {...common} /></MemoryRouter>);
+    for (const size of [20, 30, 40, 50]) expect(seriesMarkup).toContain(`<option value="${size}"`);
+    expect(seriesMarkup).toContain("Showing 1-20 of 51");
+    const seriesError = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion loading={false} error={new Error("Series unavailable")} searching={false} {...common} /></MemoryRouter>);
+    const seriesEmpty = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={true} {...common} /></MemoryRouter>);
+    expect(seriesError).toContain("Series unavailable");
+    expect(seriesEmpty).toContain("No series match this search.");
   });
 });

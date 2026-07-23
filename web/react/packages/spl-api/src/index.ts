@@ -33,15 +33,22 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   listAllCatalogTags,
+  listAuthors,
   listBooks,
   listCatalogTags,
+  listSeries,
   type BookAuthorSummary,
   type BookOrdering,
+  type BookPreview,
   type BookSeriesSummary,
   type CatalogTag,
   type CatalogTagSummary,
   type CompactBook,
+  type LibraryAuthor,
+  type LibraryAxisOrdering,
+  type LibraryAxisQuery,
   type LibraryBooksQuery,
+  type LibrarySeries,
 } from "./library";
 export {
   uploadLibraryImport,

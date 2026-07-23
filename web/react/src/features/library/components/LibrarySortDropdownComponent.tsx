@@ -1,7 +1,7 @@
 import { useEffect, useId, useReducer, useRef, type KeyboardEvent } from "react";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { libraryOrderingOptions, type LibraryBookUiOrdering } from "../libraryQuery";
+import type { LibraryOrderingOption, LibraryUiOrdering } from "../libraryQuery";
 
 type SortMenuAction = "toggle" | "close";
 
@@ -13,15 +13,17 @@ export function librarySortMenuStateForKey(open: boolean, key: string): boolean 
   return key === "Escape" ? false : open;
 }
 
-export function LibrarySortDropdownComponent({ ordering, onOrderingChange }: {
-  ordering: LibraryBookUiOrdering;
-  onOrderingChange: (ordering: LibraryBookUiOrdering) => void;
+export function LibrarySortDropdownComponent({ ordering, options, itemLabel, onOrderingChange }: {
+  ordering: LibraryUiOrdering;
+  options: readonly LibraryOrderingOption[];
+  itemLabel: string;
+  onOrderingChange: (ordering: LibraryUiOrdering) => void;
 }) {
   const [open, dispatch] = useReducer(librarySortMenuReducer, false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
-  const activeChoice = sortChoice(ordering);
+  const activeChoice = options.find(({ value }) => value === ordering) ?? options[0]!;
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +58,7 @@ export function LibrarySortDropdownComponent({ ordering, onOrderingChange }: {
       ref={buttonRef}
       type="button"
       className="library-sort-button"
-      aria-label={`Sort books, current: ${activeChoice.label}`}
+      aria-label={`Sort ${itemLabel}, current: ${activeChoice.label}`}
       aria-haspopup="menu"
       aria-expanded={open}
       aria-controls={open ? menuId : undefined}
@@ -69,6 +71,8 @@ export function LibrarySortDropdownComponent({ ordering, onOrderingChange }: {
     {open ? <LibrarySortMenuComponent
       id={menuId}
       ordering={ordering}
+      options={options}
+      itemLabel={itemLabel}
       onSelect={(value) => {
         if (value !== ordering) onOrderingChange(value);
         closeAndRestoreFocus();
@@ -77,13 +81,15 @@ export function LibrarySortDropdownComponent({ ordering, onOrderingChange }: {
   </div>;
 }
 
-export function LibrarySortMenuComponent({ id, ordering, onSelect }: {
+export function LibrarySortMenuComponent({ id, ordering, options, itemLabel, onSelect }: {
   id?: string;
-  ordering: LibraryBookUiOrdering;
-  onSelect: (ordering: LibraryBookUiOrdering) => void;
+  ordering: LibraryUiOrdering;
+  options: readonly LibraryOrderingOption[];
+  itemLabel: string;
+  onSelect: (ordering: LibraryUiOrdering) => void;
 }) {
-  return <div id={id} className="library-sort-menu" role="menu" aria-label="Sort books">
-    {libraryOrderingOptions.map((choice) => {
+  return <div id={id} className="library-sort-menu" role="menu" aria-label={`Sort ${itemLabel}`}>
+    {options.map((choice) => {
       const active = choice.value === ordering;
       return <button
         key={choice.value}
@@ -93,21 +99,10 @@ export function LibrarySortMenuComponent({ id, ordering, onSelect }: {
         className={active ? "active" : ""}
         onClick={() => onSelect(choice.value)}
       >
-        <MaterialIcon name={sortIcon(choice.value)} />
+        <MaterialIcon name={choice.icon} />
         <span>{choice.label}</span>
         {active ? <MaterialIcon name="check" className="library-sort-menu__check" /> : null}
       </button>;
     })}
   </div>;
-}
-
-function sortChoice(ordering: LibraryBookUiOrdering) {
-  const choice = libraryOrderingOptions.find(({ value }) => value === ordering)!;
-  return { ...choice, icon: sortIcon(ordering) };
-}
-
-function sortIcon(ordering: LibraryBookUiOrdering): string {
-  if (ordering.includes("author")) return "person";
-  if (ordering.includes("series")) return "auto_stories";
-  return "sort_by_alpha";
 }

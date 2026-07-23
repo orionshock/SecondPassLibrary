@@ -10,9 +10,10 @@ permissions, API contracts, and privacy rules in `docs/` take precedence where
 the parked UI is stale.
 
 The React shell, Profile, password change, client pairing, Users,
-library Imports, Server Settings, and the Library Books browse axis are
-substantially rebuilt. Dashboard is a placeholder, while My Marginalia, Library
-Authors/Series and detail workflows, Groups, and Shelves remain to be rebuilt.
+library Imports, Server Settings, and the top-level Library Books, Authors, and
+Series browse axes are substantially rebuilt. Dashboard is a placeholder, while
+My Marginalia, selected Library contexts and detail workflows, Groups, and
+Shelves remain to be rebuilt.
 Library's compact Book row, cover, metadata, Catalog Tag rail, axis state, and
 detail conventions are also consumed by Groups and Shelves.
 
@@ -311,8 +312,8 @@ apply, unmatched download, safe errors, and absence of raw IDs/locators.
 
 ### Shared Library state
 
-`/library` will have three axes and one Catalog Tag facet rail. The current
-slice implements Books only and intentionally shows no inert axis controls:
+`/library` has three functional top-level browse axes and one stable Catalog Tag
+rail. Selected Author and Series contexts remain pending:
 
 - `view=books` (safe default), `view=authors`, `view=author&author=<id>`,
   `view=series`, or `view=series&series=<id>`;
@@ -320,6 +321,10 @@ slice implements Books only and intentionally shows no inert axis controls:
 - default page size 20; omit default axis/page/order/page size when practical;
 - invalid/missing selected Author or Series IDs fall back safely without
   retaining conflicting `author` and `series` parameters.
+
+Changing the top-level axis clears `q`, `tag`, ordering, and page while retaining
+page size. Catalog Tag filtering currently applies only to Books; the rail stays
+in place as an inactive shell element on Authors and Series.
 
 The selected Author/Series detail is in context inside Library, not a separate
 read-only lifecycle page. Links to Books carry explicit author/series breadcrumb
@@ -330,8 +335,8 @@ direct-load fallback.
 
 #### Layout and rows
 
-- Header contains `Library`, Search, and no create action for Books. Axis tabs
-  arrive when another axis is implemented.
+- Header contains `Library`, Search, and no create action for Books. Functional
+  Books, Authors, and Series tabs keep the page shell stable.
 - Desktop uses a 150–190px Catalog Tag rail and flexible result column. Below
   720px the tag rail becomes a closed disclosure above results.
 - Tag rail loads all paginated tag facets, begins with `All tags`, displays
@@ -363,11 +368,12 @@ direct-load fallback.
 
 ### Authors axis
 
-- `view=authors` lists compact Author cards with name, visible `book_count`,
-  optional biography excerpt, and a bounded cover preview strip from
-  `include_preview_books=true`.
-- Search placeholder is `Author name…`; supported ordering is name or descending
-  Book count. Tag filtering reduces both results and visible counts.
+- `view=authors` lists compact Author cards with name, visible `book_count`, and
+  a bounded cover preview strip from `include_preview_books=true`. Biography
+  prose is reserved for the selected Author context.
+- Search placeholder is `Author name…`; supported ordering is name or Book
+  count in either direction. Top-level Author browsing does not apply
+  Catalog Tag filtering in the current slice.
 - Selecting a card moves to `view=author&author=<id>` and shows a restrained
   context header with full safe biography, Book count, Edit action for
   Librarian+, and the selected Author's paginated Books below.
@@ -379,11 +385,11 @@ direct-load fallback.
 
 ### Series axis
 
-- Mirror Authors with Series name, visible `book_count`, summary excerpt, and
-  bounded cover previews.
-- Search placeholder is `Series name…`; ordering is name or descending Book
-  count. Selected Series Books use `series_index` ordering by default and show
-  series indices compactly.
+- Mirror Authors with Series name, visible `book_count`, and bounded cover
+  previews. Summary prose is reserved for the selected Series context.
+- Search placeholder is `Series name…`; ordering is name or Book
+  count in either direction. Selected Series Books use `series_index` ordering
+  by default and show series indices compactly.
 - `Create Series` and Edit are Librarian+ only. Empty and URL-state behavior
   mirrors Authors.
 
@@ -687,8 +693,9 @@ have materially different contracts.
 
 1. **Library browse foundation (complete):** initial `library.ts`, URL-state
    parser, Book cover/metadata/row, Catalog Tag rail, Books axis, shared pager.
-2. **Author and Series axes:** controlled axis tabs, previews, selected in-context details, then
-   lifecycle create/edit/delete pages.
+2. **Author and Series axes (top-level browse complete):** controlled axis tabs
+   and previews are built; selected in-context details and lifecycle
+   create/edit/delete pages remain.
 3. **Book Detail:** hero, Shelves/Groups/Metadata tabs, download, contextual
    breadcrumbs.
 4. **Book Edit:** two-column workspace, URL tabs, metadata draft, assignment
@@ -704,12 +711,9 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Implement `/library` Books axis only, including `library.ts` compact Book/Tag
-queries, URL-backed Books search/order/tag/page state, `BookCoverComponent`,
-`BookMetadataComponent`, `BookRowComponent`, Catalog Tag rail, empty/error
-states, and the shared pager. Do not include Book Detail, mutation, Authors, or
-Series in the first slice, but design the row and state contracts so those axes
-can consume them next.
+Implement selected Author and Series contexts inside `/library`, reusing the
+completed top-level axes and preview contracts. Keep lifecycle mutations and
+Book Detail as separate later slices.
 
 ## Focused test strategy
 

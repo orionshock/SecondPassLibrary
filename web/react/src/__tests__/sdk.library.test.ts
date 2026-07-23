@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { listAllCatalogTags, listBooks, listCatalogTags } from "@second-pass/spl-api";
+import { listAllCatalogTags, listAuthors, listBooks, listCatalogTags, listSeries } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -68,5 +68,36 @@ describe("Library SDK", () => {
       "/api/v1/library/tags/?ordering=name&page_size=200",
       "/api/v1/library/tags/?ordering=name&page=2&page_size=200",
     ]);
+  });
+
+  it("serializes Author and Series axis queries, including every supported ordering", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+    for (const ordering of ["name", "-name", "book_count", "-book_count"] as const) {
+      await listAuthors({ q: " Ada ", tag: "history", ordering, includePreviewBooks: true, page: 2, pageSize: 30 }, client);
+    }
+    await listSeries({ q: " Saga ", ordering: "-book_count", includePreviewBooks: true, page: 3, pageSize: 40 }, client);
+    expect(calls).toEqual([
+      ...["name", "-name", "book_count", "-book_count"].map((ordering) => `/api/v1/library/authors/?q=Ada&tag=history&ordering=${ordering}&include_preview_books=true&page=2&page_size=30`),
+      "/api/v1/library/series/?q=Saga&ordering=-book_count&include_preview_books=true&page=3&page_size=40",
+    ]);
+  });
+
+  it("maps axis summaries and keeps absent previews absent", async () => {
+    const responses = [
+      { id: "author-1", name: "Ada", sort_name: "Ada", biography: "Not for the row", book_count: 2, preview_books: [{ id: "book-1", title: "One", cover_url: null, extra: "hidden" }], normalized_name: "hidden" },
+      { id: "series-1", name: "Saga", sort_name: "Saga", summary: "Not for the row", book_count: 1 },
+    ];
+    const client: ApiClient = { request: async <T>() => ({ count: 1, next: null, previous: null, results: [responses.shift()] }) as T };
+    const author = (await listAuthors({}, client)).items[0]!;
+    const series = (await listSeries({}, client)).items[0]!;
+    expect(author).toEqual({ id: "author-1", name: "Ada", sortName: "Ada", biography: "Not for the row", bookCount: 2, previewBooks: [{ id: "book-1", title: "One", coverUrl: null }] });
+    expect(author.previewBooks?.[0]).not.toHaveProperty("extra");
+    expect(author).not.toHaveProperty("normalizedName");
+    expect(series).toEqual({ id: "series-1", name: "Saga", sortName: "Saga", summary: "Not for the row", bookCount: 1 });
+    expect(series).not.toHaveProperty("previewBooks");
   });
 });

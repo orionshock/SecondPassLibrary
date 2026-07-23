@@ -50,3 +50,23 @@
   color: #8192a6;
   font-size: 0.9rem;
 }
+
+.book-cover-preview-strip-component {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.book-cover-preview-strip-component .book-cover-component {
+  width: 2.65rem;
+}
+
+.book-cover-preview-strip-component a {
+  border-radius: 0.4rem;
+}
+
+.book-cover-preview-strip-component a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

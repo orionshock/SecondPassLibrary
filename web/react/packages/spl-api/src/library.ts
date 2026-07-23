@@ -16,6 +16,41 @@ export interface LibraryBooksQuery {
   pageSize?: number;
 }
 
+export type LibraryAxisOrdering = "name" | "-name" | "book_count" | "-book_count";
+
+export interface LibraryAxisQuery {
+  q?: string;
+  tag?: string;
+  ordering?: LibraryAxisOrdering;
+  includePreviewBooks?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface BookPreview {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+}
+
+export interface LibraryAuthor {
+  id: string;
+  name: string;
+  sortName: string;
+  biography: string;
+  bookCount: number;
+  previewBooks?: BookPreview[];
+}
+
+export interface LibrarySeries {
+  id: string;
+  name: string;
+  sortName: string;
+  summary: string;
+  bookCount: number;
+  previewBooks?: BookPreview[];
+}
+
 export interface BookAuthorSummary {
   id: string;
   name: string;
@@ -81,6 +116,30 @@ interface CatalogTagResponse {
   book_count: number;
 }
 
+interface BookPreviewResponse {
+  id: string;
+  title: string;
+  cover_url: string | null;
+}
+
+interface LibraryAuthorResponse {
+  id: string;
+  name: string;
+  sort_name: string;
+  biography: string;
+  book_count: number;
+  preview_books?: BookPreviewResponse[];
+}
+
+interface LibrarySeriesResponse {
+  id: string;
+  name: string;
+  sort_name: string;
+  summary: string;
+  book_count: number;
+  preview_books?: BookPreviewResponse[];
+}
+
 export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient = apiClient): Promise<Page<CompactBook>> {
   const parameters = new URLSearchParams();
   const search = query.q?.trim();
@@ -93,6 +152,14 @@ export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient
     await client.request<ApiPage<CompactBookResponse>>(withQuery("/api/v1/library/books/", parameters)),
     mapCompactBook,
   );
+}
+
+export async function listAuthors(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibraryAuthor>> {
+  return listLibraryAxis("/api/v1/library/authors/", query, mapLibraryAuthor, client);
+}
+
+export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibrarySeries>> {
+  return listLibraryAxis("/api/v1/library/series/", query, mapLibrarySeries, client);
 }
 
 export async function listCatalogTags(
@@ -125,6 +192,23 @@ function withQuery(path: string, parameters: URLSearchParams): string {
   return `${path}${query ? `?${query}` : ""}`;
 }
 
+async function listLibraryAxis<Response, Item>(
+  path: string,
+  query: LibraryAxisQuery,
+  mapper: (response: Response) => Item,
+  client: ApiClient,
+): Promise<Page<Item>> {
+  const parameters = new URLSearchParams();
+  const search = query.q?.trim();
+  if (search) parameters.set("q", search);
+  if (query.tag) parameters.set("tag", query.tag);
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
+}
+
 export function mapCompactBook(response: CompactBookResponse): CompactBook {
   return {
     id: response.id,
@@ -152,4 +236,30 @@ export function mapCompactBook(response: CompactBookResponse): CompactBook {
 
 function mapCatalogTag(response: CatalogTagResponse): CatalogTag {
   return { id: response.id, name: response.name, slug: response.slug, bookCount: response.book_count };
+}
+
+function mapBookPreview(response: BookPreviewResponse): BookPreview {
+  return { id: response.id, title: response.title, coverUrl: response.cover_url };
+}
+
+export function mapLibraryAuthor(response: LibraryAuthorResponse): LibraryAuthor {
+  return {
+    id: response.id,
+    name: response.name,
+    sortName: response.sort_name,
+    biography: response.biography,
+    bookCount: response.book_count,
+    ...(response.preview_books === undefined ? {} : { previewBooks: response.preview_books.map(mapBookPreview) }),
+  };
+}
+
+export function mapLibrarySeries(response: LibrarySeriesResponse): LibrarySeries {
+  return {
+    id: response.id,
+    name: response.name,
+    sortName: response.sort_name,
+    summary: response.summary,
+    bookCount: response.book_count,
+    ...(response.preview_books === undefined ? {} : { previewBooks: response.preview_books.map(mapBookPreview) }),
+  };
 }
