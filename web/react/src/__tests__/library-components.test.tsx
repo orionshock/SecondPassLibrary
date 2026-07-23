@@ -44,10 +44,11 @@ describe("Library Books components", () => {
   });
 
   it("renders viewer-scoped Catalog Tag counts, All tags, and independent failure", () => {
-    const tags: CatalogTag[] = [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 12 }];
+    const tags: CatalogTag[] = [{ id: "tag", name: "Fantasy and Extremely Long Adventures", slug: "fantasy", bookCount: 12 }];
     const markup = renderToStaticMarkup(<CatalogTagRailPageRegion tags={tags} activeTag="fantasy" loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(markup).toContain("All tags");
-    expect(markup).toContain("Fantasy");
+    expect(markup).toContain("Fantasy and Extremely Long Adventures");
+    expect(markup).toContain('class="catalog-tag-rail__name" title="Fantasy and Extremely Long Adventures"');
     expect(markup).toContain(">12</span>");
     expect(markup).toContain('aria-pressed="true"');
     const failed = renderToStaticMarkup(<CatalogTagRailPageRegion loading={false} error={new Error("Tags unavailable")} onTagChange={vi.fn()} onRetry={vi.fn()} />);

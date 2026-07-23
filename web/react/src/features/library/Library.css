@@ -147,29 +147,29 @@
 .catalog-tag-rail h2 {
   margin: 0;
   padding: 0.65rem 0.65rem 0.25rem;
-  color: #c8d7e9;
+  color: #c2c9d2;
   font-size: 0.82rem;
 }
 
 .catalog-tag-rail__content {
   display: grid;
-  gap: 0.05rem;
-  padding: 0.2rem 0.4rem 0.5rem;
+  gap: 0.08rem;
+  padding: 0.2rem 0.45rem 0.55rem;
 }
 
 .catalog-tag-rail__content > button {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 0.32rem 0.4rem;
+  padding: 0.42rem 0.45rem;
   border: 1px solid transparent;
   border-radius: 0.35rem;
-  color: #acd9f4;
+  color: #b8c0ca;
   background: transparent;
-  font-size: 0.79rem;
-  line-height: 1.3;
+  font-size: 0.8rem;
+  line-height: 1.25;
   text-align: left;
 }
 
@@ -185,9 +185,18 @@
   background: rgb(125 211 252 / 8%);
 }
 
+.catalog-tag-rail__name {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .catalog-tag-rail__count {
   min-width: 1.5rem;
-  color: var(--muted);
+  flex: 0 0 auto;
+  color: #aab3bf;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }

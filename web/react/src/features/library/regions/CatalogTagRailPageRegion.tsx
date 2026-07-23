@@ -19,7 +19,7 @@ export function CatalogTagRailPageRegion({ tags, activeTag, loading, error, onTa
     {tags?.map((tag) => {
       const active = activeTag === tag.slug;
       return <button key={tag.id} type="button" className={active ? "active" : ""} aria-pressed={active} onClick={() => onTagChange(catalogTagSelection(activeTag, tag.slug))}>
-        <span>{tag.name}</span><span className="catalog-tag-rail__count">{tag.bookCount}</span>
+        <span className="catalog-tag-rail__name" title={tag.name}>{tag.name}</span><span className="catalog-tag-rail__count">{tag.bookCount}</span>
       </button>;
     })}
   </div>;
