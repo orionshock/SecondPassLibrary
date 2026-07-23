@@ -13,12 +13,12 @@ export type LibraryBookUiOrdering = Extract<BookOrdering,
   "title" | "-title" | "author" | "-author" | "series" | "-series">;
 
 export const libraryOrderingOptions: ReadonlyArray<{ value: LibraryBookUiOrdering; label: string }> = [
-  { value: "title", label: "Title (A-Z)" },
-  { value: "-title", label: "Title (Z-A)" },
-  { value: "author", label: "Author (A-Z)" },
-  { value: "-author", label: "Author (Z-A)" },
-  { value: "series", label: "Series (A-Z)" },
-  { value: "-series", label: "Series (Z-A)" },
+  { value: "title", label: "Title A-Z" },
+  { value: "-title", label: "Title Z-A" },
+  { value: "author", label: "Author A-Z" },
+  { value: "-author", label: "Author Z-A" },
+  { value: "series", label: "Series A-Z" },
+  { value: "-series", label: "Series Z-A" },
 ];
 
 const orderings = new Set(libraryOrderingOptions.map(({ value }) => value));

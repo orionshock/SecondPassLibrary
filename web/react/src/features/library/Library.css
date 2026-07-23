@@ -32,8 +32,7 @@
   width: 100%;
 }
 
-.library-search input,
-.library-ordering select {
+.library-search input {
   min-height: 2.25rem;
   padding: 0.42rem 0.65rem;
   border: 1px solid rgb(255 255 255 / 18%);
@@ -52,16 +51,82 @@
   border-radius: 0.55rem;
 }
 
-.library-ordering {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--muted);
-  font-size: 0.82rem;
+.library-sort-dropdown {
+  position: relative;
+  flex: 0 0 auto;
 }
 
-.library-ordering select {
-  width: 9.75rem;
+.library-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 0.55rem;
+  color: #cbd8e7;
+  background: var(--surface-raised);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.library-sort-button .material-icon {
+  color: #93a9bf;
+  font-size: 1rem;
+}
+
+.library-sort-button .library-sort-button__chevron {
+  margin-left: 0.05rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.library-sort-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  width: 11.5rem;
+  padding: 0.3rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.55rem;
+  background: var(--surface-raised);
+  box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 38%);
+}
+
+.library-sort-menu > button {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) 1rem;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.38rem 0.45rem;
+  border-color: transparent;
+  border-radius: 0.35rem;
+  color: #c3d0df;
+  background: transparent;
+  font-size: 0.79rem;
+  text-align: left;
+}
+
+.library-sort-menu > button:hover,
+.library-sort-menu > button:focus-visible,
+.library-sort-menu > button.active {
+  border-color: var(--border);
+  background: rgb(125 211 252 / 8%);
+}
+
+.library-sort-menu > button.active {
+  color: var(--text);
+}
+
+.library-sort-menu .material-icon {
+  color: #8fa5bb;
+  font-size: 0.95rem;
+}
+
+.library-sort-menu .library-sort-menu__check {
+  color: var(--link);
 }
 
 .library-browser {
@@ -282,12 +347,7 @@
 }
 
 @media (max-width: 32rem) {
-  .library-ordering {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .library-ordering select {
-    width: 100%;
+  .library-sort-dropdown {
+    justify-self: end;
   }
 }

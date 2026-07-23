@@ -1,7 +1,8 @@
 import type { FormEvent } from "react";
 
 import { Button } from "../../../components/ui";
-import { libraryOrderingOptions, type LibraryBookUiOrdering } from "../libraryQuery";
+import { LibrarySortDropdownComponent } from "../components/LibrarySortDropdownComponent";
+import type { LibraryBookUiOrdering } from "../libraryQuery";
 
 export function LibraryBooksControlsPageRegion({ search, ordering, onSearchChange, onSearch, onOrderingChange }: {
   search: string;
@@ -18,10 +19,6 @@ export function LibraryBooksControlsPageRegion({ search, ordering, onSearchChang
       <input id="library-search" value={search} placeholder="Book title…" onChange={(event) => onSearchChange(event.target.value)} />
       <Button type="submit">Search</Button>
     </form>
-    <label className="library-ordering">Order
-      <select aria-label="Book ordering" value={ordering} onChange={(event) => onOrderingChange(event.target.value as LibraryBookUiOrdering)}>
-        {libraryOrderingOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-      </select>
-    </label>
+    <LibrarySortDropdownComponent ordering={ordering} onOrderingChange={onOrderingChange} />
   </section>;
 }
