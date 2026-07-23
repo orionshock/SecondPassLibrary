@@ -656,6 +656,12 @@ Book list ordering:
   Authors, Series, identifiers, tags, publisher, subtitle, and description do
   not participate in Book-axis text search; use their dedicated axes or filters.
 
+- Book lists accept `author=<author_uuid>` and `series=<series_uuid>`. Malformed
+  UUIDs return `400`. A well-formed UUID that is missing, deleted, or has no
+  caller-visible matching Books returns the normal empty paginated response;
+  the response does not reveal whether the catalog entity exists. These filters
+  compose with `tag`, `q`, `ordering`, `page`, and `page_size`.
+
 - `GET /api/v1/library/books/?ordering=title` orders by title A-Z and is the default for general book browsing and author-filtered book browsing.
 - `GET /api/v1/library/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
 - `GET /api/v1/library/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.

@@ -364,6 +364,10 @@ direct-load fallback.
 - `tag`, selected Author/Series, ordering, search, page, and page size compose
   in one server query. Empty copy distinguishes whole Library from selected
   Author, Series, Tag, or search context.
+- Well-formed selected Author/Series UUIDs that are missing, deleted, or have no
+  caller-visible matching Books produce the same empty paginated Book response.
+  React must not infer entity existence from that empty list or expose a
+  visibility distinction.
 - Render a visible range and shared pager. Correct an out-of-range page to the
   last valid page without an infinite request loop.
 

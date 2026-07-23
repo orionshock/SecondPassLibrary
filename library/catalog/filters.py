@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, QuerySet
 from rest_framework.exceptions import ValidationError
 
@@ -48,5 +49,5 @@ def _pk_param(query_params, name: str, model) -> object | None:
         return None
     try:
         return model._meta.pk.to_python(raw)
-    except ValueError as exc:
+    except (DjangoValidationError, ValueError) as exc:
         raise ValidationError({name: "Invalid id."}) from exc
