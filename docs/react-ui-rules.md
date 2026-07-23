@@ -48,6 +48,9 @@ This is the running list of cross-page presentation and interaction rules that a
 - Search, filters, ordering, page, and page size must survive Back/Forward navigation. Query-shape changes reset the page, while pager navigation changes only the page.
 - Row Components render the returned page. They do not re-filter or re-sort server results.
 - Promote paging controls only when their inputs are stable page metadata and callbacks; shared pagers must remain server-blind.
+- Product list pagers offer 20/30/40/50 by default. A feature with an established different contract supplies its own sizes explicitly.
+- Library Books search is title/sort-title search through the Book list endpoint. Broad Library search is reserved for picker and Add Books workflows.
+- Product language and app-facing fields use Catalog Tags. Compact Book wire `catalog_tags` is normalized to `catalogTags` by the SDK; row Components never inspect wire names.
 
 ## Server and validation boundaries
 

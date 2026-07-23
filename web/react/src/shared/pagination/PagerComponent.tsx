@@ -9,11 +9,12 @@ export interface PagerComponentProps {
   itemLabel: string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  pageSizes?: readonly number[];
 }
 
-const pageSizes = [20, 50, 100, 200] as const;
+const defaultPageSizes = [20, 30, 40, 50] as const;
 
-export function PagerComponent({ page, pageSize, count, hasPrevious, hasNext, itemLabel, onPageChange, onPageSizeChange }: PagerComponentProps) {
+export function PagerComponent({ page, pageSize, count, hasPrevious, hasNext, itemLabel, onPageChange, onPageSizeChange, pageSizes = defaultPageSizes }: PagerComponentProps) {
   const start = count === 0 ? 0 : ((page - 1) * pageSize) + 1;
   const end = Math.min(count, start + pageSize - 1);
 

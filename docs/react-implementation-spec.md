@@ -10,11 +10,11 @@ permissions, API contracts, and privacy rules in `docs/` take precedence where
 the parked UI is stale.
 
 The React shell, Profile, password change, client pairing, Users,
-library Imports, and Server Settings are substantially rebuilt. Dashboard is a
-placeholder, while My Marginalia, Library, Groups, and Shelves remain to be
-rebuilt. Library should be the next implementation family because its compact
-Book row, cover, metadata, Catalog Tag rail, axis state, and detail conventions
-are also consumed by Groups and Shelves.
+library Imports, Server Settings, and the Library Books browse axis are
+substantially rebuilt. Dashboard is a placeholder, while My Marginalia, Library
+Authors/Series and detail workflows, Groups, and Shelves remain to be rebuilt.
+Library's compact Book row, cover, metadata, Catalog Tag rail, axis state, and
+detail conventions are also consumed by Groups and Shelves.
 
 The desired product remains a compact, dark, server-oriented application:
 restrained headings, bounded content, rounded bordered rows, muted metadata,
@@ -161,8 +161,8 @@ remains authoritative.
 | App shell | all Product routes | Rebuilt | Capability/mode-aware nav needs tightening. |
 | Dashboard | `/` | Still to rebuild | Current React route is a styled placeholder. Retire legacy `/dashboard/`; `/` is canonical. |
 | My Marginalia | `/reading` and children below | Still to rebuild | Current `/reading` is a placeholder. |
-| Library browse | `/library` | Still to rebuild | Books/Authors/Series are URL-backed axes. |
-| Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Still to rebuild | Preserve contextual breadcrumbs and advanced-only Groups tabs. |
+| Library browse | `/library` | Books rebuilt | Books ordering/search/tag/page state is URL-backed. Authors/Series remain pending. |
+| Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Still to rebuild | The detail route currently renders a bounded no-fetch placeholder with contextual breadcrumbs. |
 | Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Still to rebuild | Detail remains selected Author in `/library`; no separate detail page is needed. |
 | Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Still to rebuild | Same model as Authors. |
 | Groups | `/groups`, `/groups/new`, `/groups/:groupId`, `/groups/:groupId/edit` | Still to rebuild | Entire branch hidden/unavailable in simple mode. |
@@ -311,7 +311,8 @@ apply, unmatched download, safe errors, and absence of raw IDs/locators.
 
 ### Shared Library state
 
-`/library` has three axes and one Catalog Tag facet rail:
+`/library` will have three axes and one Catalog Tag facet rail. The current
+slice implements Books only and intentionally shows no inert axis controls:
 
 - `view=books` (safe default), `view=authors`, `view=author&author=<id>`,
   `view=series`, or `view=series&series=<id>`;
@@ -329,16 +330,18 @@ direct-load fallback.
 
 #### Layout and rows
 
-- Header contains `Library`, axis tabs, Search, and no create action for Books.
+- Header contains `Library`, Search, and no create action for Books. Axis tabs
+  arrive when another axis is implemented.
 - Desktop uses a 150–190px Catalog Tag rail and flexible result column. Below
   720px the tag rail becomes a closed disclosure above results.
 - Tag rail loads all paginated tag facets, begins with `All tags`, displays
   viewer-scoped `book_count`, toggles the active slug, and degrades independently
   if tags fail.
-- Book rows use a 52px-class cover, linked title, optional subtitle, canonical
-  icon metadata (authors, series/index, publisher), compact tag pills, and
-  optional language/published-date/file-format metadata when useful. Metadata
-  wraps naturally and remains plain text.
+- The first-slice Book rows use a 52px-class cover, linked title, canonical icon
+  metadata (authors, series/index, publisher), and up to six compact Catalog Tag
+  pills followed by `+N`. Subtitle, language, published date, and file format
+  remain in the app-facing compact object but are not displayed. Metadata wraps
+  naturally and remains plain text.
 - Compact Book API rows intentionally do not include group assignments.
   Do not preserve the parked JavaScript's attempted group-badge rendering and
   do not add a per-row detail request.
@@ -455,9 +458,9 @@ direct-load fallback.
 
 Existing APIs are sufficient for browse, detail, metadata writes, cover
 mutation, Catalog Tags, Author/Series lifecycle, groups, and shelf relationship
-reads/mutations. Add a `library.ts` SDK module (split later only if it becomes
-unwieldy) with compact/detail Book shapes, list queries, broad search,
-Authors/Series/Tags, cover operations, and mapping for partial published dates.
+reads/mutations. The initial `library.ts` SDK module owns compact Book list and
+Catalog Tag list/all-page operations. Extend it with detail, broad search,
+Authors/Series, and cover operations only when those workflows are implemented.
 Compact Book wire responses use `catalog_tags`; the SDK maps that field to its
 stable app-facing camelCase name. A complete Catalog Tag rail requests up to
 200 rows per page and follows the paginated response's `next` links.
@@ -658,13 +661,13 @@ backend behavior gap blocks Library, Groups, or Shelves.
 | --- | --- | --- |
 | `PageHeader`, `Surface`, `Button`, `FormField`, `ErrorPanel`, `Badge`, `KeyValueList` | Already exists | Continue, but avoid wrapping every tab in `Surface`. |
 | `ActionRowComponent`, `ActionFeedbackComponent` | Already exists | All mutation forms. |
-| `PagerComponent` | Already exists | Server-driven Library, Group, Shelf, and Marginalia lists. Add dual-placement composition without duplicate state. |
+| `PagerComponent` | Already exists | Server-driven Library, Group, Shelf, and Marginalia lists. Defaults to 20/30/40/50 and accepts deliberate caller-specific sizes. |
 | `MaterialIcon`, `RemoveIconButton`, `HelpPopoverComponent` | Already exists | Canonical icons, compact destructive actions, contextual help. |
 | `TabListComponent` | Promote soon | Book Detail/Edit, Library axes, Group View/Edit, Shelf scopes/Edit, Marginalia views. It should be server-blind and controlled. |
-| `BookCoverComponent` | Build with Library | Safe image/fallback, sizes, lazy loading, decorative/labelled variants. |
-| `BookMetadataComponent` | Build with Library | Canonical icon metadata shared by Library, Groups, Shelves, Marginalia. |
-| `BookRowComponent` | Build with Library | Compact cover/title/metadata/tag composition with slots for feature actions. Do not make it know APIs or permissions. |
-| `CatalogTagRailComponent` | Build with Library | Facet disclosure, counts, selection. Domain-specific; keep under Library until a second real consumer appears. |
+| `BookCoverComponent` | Built with Library | Shared safe image/fallback and lazy-loading cover box. |
+| `BookMetadataComponent` | Built with Library | Shared canonical icon metadata for Library and future Groups/Shelves/Marginalia use. |
+| `BookRowComponent` | Built under Library | Compact cover/title/metadata/tag composition with no API or permission knowledge. |
+| `CatalogTagRailPageRegion` | Built under Library | Library-owned facet disclosure, counts, selection, and independent failure state. |
 | `CoverPreviewStripComponent` | Build with Library | Authors, Series, Groups, Shelves, Dashboard. Likely shared once two consumers land. |
 | `SearchFilterToolbarComponent` | Wait | Toolbars differ substantially; reuse small controls/state helpers first. |
 | `ModalDialogComponent` | Build with Book Edit | Cover modal establishes accessible dialog behavior; promote when another modal uses it. |
@@ -682,9 +685,9 @@ have materially different contracts.
 
 ## Suggested implementation order
 
-1. **Library browse foundation:** `library.ts`, URL-state parser, controlled
-   tabs, Book cover/metadata/row, Catalog Tag rail, Books axis, shared pager.
-2. **Author and Series axes:** previews, selected in-context details, then
+1. **Library browse foundation (complete):** initial `library.ts`, URL-state
+   parser, Book cover/metadata/row, Catalog Tag rail, Books axis, shared pager.
+2. **Author and Series axes:** controlled axis tabs, previews, selected in-context details, then
    lifecycle create/edit/delete pages.
 3. **Book Detail:** hero, Shelves/Groups/Metadata tabs, download, contextual
    breadcrumbs.

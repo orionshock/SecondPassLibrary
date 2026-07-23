@@ -1,0 +1,38 @@
+import type { CompactBook, Page } from "@second-pass/spl-api";
+
+import { Button, ErrorPanel } from "../../../components/ui";
+import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { BookRowComponent } from "../components/BookRowComponent";
+
+export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
+  page?: Page<CompactBook>;
+  pageNumber: number;
+  pageSize: number;
+  loading: boolean;
+  error?: Error;
+  libraryPath: string;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  onRetry: () => void;
+}) {
+  if (!page && loading) return <section className="book-list-state" aria-live="polite" aria-busy="true">Loading books...</section>;
+  if (!page && error) return <section className="book-list-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
+  if (!page) return null;
+
+  return <section className={`book-list-region${loading ? " book-list-region--loading" : ""}`} aria-label="Books" aria-busy={loading}>
+    {error ? <div className="book-list-region__inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
+    {page.items.length === 0
+      ? <p className="book-list-state muted">No books match this search and Catalog Tag.</p>
+      : <div className="book-list-region__rows">{page.items.map((book) => <BookRowComponent key={book.id} book={book} libraryPath={libraryPath} />)}</div>}
+    <PagerComponent
+      page={pageNumber}
+      pageSize={pageSize}
+      count={page.count}
+      hasPrevious={Boolean(page.previous)}
+      hasNext={Boolean(page.next)}
+      itemLabel="Books"
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+    />
+  </section>;
+}

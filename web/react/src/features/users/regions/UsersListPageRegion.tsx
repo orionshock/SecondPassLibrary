@@ -23,7 +23,7 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
   if (!page && error) return <div className="users-results-state"><ErrorPanel>{error.message}</ErrorPanel><div className="users-results-actions"><Button type="button" onClick={onRetry}>Retry</Button></div></div>;
   if (!page) return null;
 
-  const pager = () => <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Users" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />;
+  const pager = () => <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Users" pageSizes={[20, 50, 100, 200]} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />;
 
   return <section className={`users-results${loading ? " users-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="users-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}

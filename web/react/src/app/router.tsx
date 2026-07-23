@@ -5,6 +5,8 @@ import { App } from "./App";
 import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
+import { BookDetailPlaceholderOrchestrator } from "../features/library/BookDetailPlaceholderOrchestrator";
+import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
@@ -15,7 +17,6 @@ import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
-  { path: "library", title: "Library" },
   { path: "groups", title: "Groups" },
   { path: "shelves", title: "Shelves" },
 ] as const;
@@ -50,6 +51,8 @@ export const appRoutes = [
         path,
         element: <PlaceholderPageRegion title={title} />,
       })),
+      { path: "library", element: <LibraryOrchestrator /> },
+      { path: "library/books/:bookId", element: <BookDetailPlaceholderOrchestrator /> },
       { path: "imports", element: <RoleRouteGuardComponent canAccess={canSeeImports}><ImportsOrchestrator /></RoleRouteGuardComponent> },
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },

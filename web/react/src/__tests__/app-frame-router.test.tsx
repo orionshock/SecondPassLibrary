@@ -61,13 +61,15 @@ describe("app frame and router", () => {
     ]) expect(navMarkup({ ...facts, advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
   });
   it("defines placeholder and not-found routes", () => {
-    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/library", "/groups", "/shelves"]);
+    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/groups", "/shelves"]);
+    expect(appRoutes[0].children.some((route) => route.path === "library")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "imports")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/:profileId/edit")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
-    expect(renderToStaticMarkup(<PlaceholderPageRegion title="Library" />)).toContain("Library");
+    expect(renderToStaticMarkup(<PlaceholderPageRegion title="Shelves" />)).toContain("Shelves");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
   });
 });
