@@ -38,6 +38,20 @@ describe("Library SDK", () => {
     }
   });
 
+  it("serializes selected Author and Series Book filters with the existing query controls", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+    await listBooks({ authorId: "author-id", tag: "fantasy", q: " Book ", ordering: "-title", page: 2, pageSize: 30 }, client);
+    await listBooks({ seriesId: "series-id", tag: "history", q: " Saga ", ordering: "series_index", page: 3, pageSize: 40 }, client);
+    expect(calls).toEqual([
+      "/api/v1/library/books/?q=Book&tag=fantasy&author=author-id&ordering=-title&page=2&page_size=30",
+      "/api/v1/library/books/?q=Saga&tag=history&series=series-id&ordering=series_index&page=3&page_size=40",
+    ]);
+  });
+
   it("maps a Catalog Tag page and viewer-scoped book count", async () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {

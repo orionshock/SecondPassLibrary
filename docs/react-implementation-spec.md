@@ -10,9 +10,9 @@ permissions, API contracts, and privacy rules in `docs/` take precedence where
 the parked UI is stale.
 
 The React shell, Profile, password change, client pairing, Users,
-library Imports, Server Settings, and the top-level Library Books, Authors, and
-Series browse axes are substantially rebuilt. Dashboard is a placeholder, while
-My Marginalia, selected Library contexts and detail workflows, Groups, and
+library Imports, Server Settings, and the Library Books, Authors, Series, and
+selected Author/Series browse contexts are substantially rebuilt. Dashboard is
+a placeholder, while My Marginalia, Library detail workflows, Groups, and
 Shelves remain to be rebuilt.
 Library's compact Book row, cover, metadata, Catalog Tag rail, axis state, and
 detail conventions are also consumed by Groups and Shelves.
@@ -162,7 +162,7 @@ remains authoritative.
 | App shell | all Product routes | Rebuilt | Capability/mode-aware nav needs tightening. |
 | Dashboard | `/` | Still to rebuild | Current React route is a styled placeholder. Retire legacy `/dashboard/`; `/` is canonical. |
 | My Marginalia | `/reading` and children below | Still to rebuild | Current `/reading` is a placeholder. |
-| Library browse | `/library` | Books rebuilt | Books ordering/search/tag/page state is URL-backed. Authors/Series remain pending. |
+| Library browse | `/library` | Top-level and selected browse rebuilt | Books/Authors/Series and selected Author/Series Book contexts share URL-backed ordering/search/tag/page state. |
 | Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Still to rebuild | The detail route currently renders a bounded no-fetch placeholder with contextual breadcrumbs. |
 | Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Still to rebuild | Detail remains selected Author in `/library`; no separate detail page is needed. |
 | Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Still to rebuild | Same model as Authors. |
@@ -312,11 +312,12 @@ apply, unmatched download, safe errors, and absence of raw IDs/locators.
 
 ### Shared Library state
 
-`/library` has three functional top-level browse axes and one stable Catalog Tag
-rail. Selected Author and Series contexts remain pending:
+`/library` has three functional top-level browse axes, selected Author and Series
+Book contexts, and one stable Catalog Tag rail:
 
-- `view=books` (safe default), `view=authors`, `view=author&author=<id>`,
-  `view=series`, or `view=series&series=<id>`;
+- `view=books` (safe default), `view=authors`, or `view=series`, with selected
+  contexts represented by `view=authors&author=<id>` and
+  `view=series&series=<id>`;
 - `q`, `tag=<slug>`, `ordering`, `page`, and `page_size`;
 - default page size 20; omit default axis/page/order/page size when practical;
 - invalid/missing selected Author or Series IDs fall back safely without
@@ -327,10 +328,11 @@ retains page size. Catalog Tag filtering applies to Books, Authors, and Series.
 Rail counts always represent viewer-visible Books; they do not become Author or
 Series counts when those axes are active.
 
-The selected Author/Series detail is in context inside Library, not a separate
-read-only lifecycle page. Links to Books carry explicit author/series breadcrumb
-context through Router location state; query parameters may remain as a safe
-direct-load fallback.
+The first selected Author/Series browse context is in Library, not a separate
+read-only lifecycle page. It reuses compact Book rows and does not fetch entity
+metadata: row navigation state supplies an optional safe name, while a
+direct load uses a generic heading. Links to Books carry explicit author/series
+breadcrumb context through Router location state.
 
 ### Books axis
 
@@ -375,14 +377,14 @@ direct-load fallback.
 
 - `view=authors` lists compact Author cards with name, visible `book_count`, and
   a bounded cover preview strip from `include_preview_books=true`. Biography
-  prose is reserved for the selected Author context.
+  prose is reserved for a later lifecycle/detail slice.
 - Search placeholder is `Author name…`; supported ordering is name or Book
   count in either direction. Catalog Tag filtering reduces the axis to Authors
   with visible Books carrying the selected tag and adjusts each visible count
   through the backend's axis contract.
-- Selecting a card moves to `view=author&author=<id>` and shows a restrained
-  context header with full safe biography, Book count, Edit action for
-  Librarian+, and the selected Author's paginated Books below.
+- Selecting an Author name moves to `view=authors&author=<id>` and shows a
+  restrained context header plus the selected Author's paginated compact Books.
+  Biography and lifecycle actions remain pending.
 - Axis header exposes `Create Author` only for Librarian+. Create/Edit links use
   canonical lifecycle routes; Book preview/title links carry Author context.
 - Empty states distinguish no Authors, no search matches, and an Author with no
@@ -392,12 +394,15 @@ direct-load fallback.
 ### Series axis
 
 - Mirror Authors with Series name, visible `book_count`, and bounded cover
-  previews. Summary prose is reserved for the selected Series context.
+  previews. Summary prose is reserved for a later lifecycle/detail slice.
 - Search placeholder is `Series name…`; ordering is name or Book
   count in either direction. Selected Series Books use `series_index` ordering
   by default and show series indices compactly.
 - `Create Series` and Edit are Librarian+ only. Empty and URL-state behavior
   mirrors Authors.
+- Selecting a Series name moves to `view=series&series=<id>` and shows a
+  restrained context header plus the selected Series' paginated compact Books.
+  Summary and lifecycle actions remain pending.
 
 ### Author and Series create/edit
 
@@ -699,9 +704,9 @@ have materially different contracts.
 
 1. **Library browse foundation (complete):** initial `library.ts`, URL-state
    parser, Book cover/metadata/row, Catalog Tag rail, Books axis, shared pager.
-2. **Author and Series axes (top-level browse complete):** controlled axis tabs
-   and previews are built; selected in-context details and lifecycle
-   create/edit/delete pages remain.
+2. **Author and Series browse (complete):** controlled axis tabs, previews, and
+   selected in-context compact Book lists are built; lifecycle create/edit/delete
+   pages remain.
 3. **Book Detail:** hero, Shelves/Groups/Metadata tabs, download, contextual
    breadcrumbs.
 4. **Book Edit:** two-column workspace, URL tabs, metadata draft, assignment
@@ -717,9 +722,8 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Implement selected Author and Series contexts inside `/library`, reusing the
-completed top-level axes and preview contracts. Keep lifecycle mutations and
-Book Detail as separate later slices.
+Implement Book Detail as a separate slice. Keep Author/Series lifecycle mutations
+separate from contextual Library browsing.
 
 ## Focused test strategy
 

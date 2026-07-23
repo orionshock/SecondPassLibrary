@@ -4,7 +4,7 @@ import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { AuthorRowComponent } from "../components/AuthorRowComponent";
 
-export function AuthorListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
+export function AuthorListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, contextPathFor, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<LibraryAuthor>;
   pageNumber: number;
   pageSize: number;
@@ -13,6 +13,7 @@ export function AuthorListPageRegion({ page, pageNumber, pageSize, loading, erro
   searching: boolean;
   tagged: boolean;
   libraryPath: string;
+  contextPathFor: (author: LibraryAuthor) => string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
@@ -24,7 +25,7 @@ export function AuthorListPageRegion({ page, pageNumber, pageSize, loading, erro
     {error ? <div className="library-list-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0
       ? <p className="library-list-state muted">{authorEmptyCopy(searching, tagged)}</p>
-      : <div className="library-axis-list-region__rows">{page.items.map((author) => <AuthorRowComponent key={author.id} author={author} libraryPath={libraryPath} />)}</div>}
+      : <div className="library-axis-list-region__rows">{page.items.map((author) => <AuthorRowComponent key={author.id} author={author} libraryPath={libraryPath} contextPath={contextPathFor(author)} />)}</div>}
     <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Authors" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
 }

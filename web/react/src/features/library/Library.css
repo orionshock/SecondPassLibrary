@@ -167,6 +167,42 @@
   gap: 1rem;
 }
 
+.library-results-column {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.selected-library-context-region {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.selected-library-context-region h2,
+.selected-library-context-region p {
+  margin: 0;
+}
+
+.selected-library-context-region h2 {
+  font-size: 1rem;
+}
+
+.selected-library-context-region p {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+}
+
+.selected-library-context-region .button {
+  flex: 0 0 auto;
+  padding: 0.38rem 0.6rem;
+}
+
 .catalog-tag-rail {
   overflow: hidden;
   border: 1px solid var(--border);
@@ -387,6 +423,10 @@
   text-overflow: ellipsis;
 }
 
+.library-axis-row-component h2 a {
+  color: inherit;
+}
+
 .library-axis-row-component__identity > span {
   color: #a9b8c9;
   font-size: 0.79rem;
@@ -468,6 +508,11 @@
 
   .book-cover-preview-strip-component {
     justify-content: flex-start;
+  }
+
+  .selected-library-context-region {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

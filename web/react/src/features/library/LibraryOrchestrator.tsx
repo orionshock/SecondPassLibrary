@@ -13,7 +13,7 @@ import {
   type Page,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
@@ -21,17 +21,21 @@ import {
   libraryAxisSdkQuery,
   libraryBooksSdkQuery,
   libraryPath,
+  libraryRequestView,
   librarySearchParams,
   libraryStateFromSearchParams,
   withLibraryChange,
+  withLibrarySelectedContext,
   withLibraryView,
 } from "./libraryQuery";
+import { readSelectedLibraryContextDisplay } from "./libraryPresentation";
 import { AuthorListPageRegion } from "./regions/AuthorListPageRegion";
 import { BookListPageRegion } from "./regions/BookListPageRegion";
 import { CatalogTagRailPageRegion } from "./regions/CatalogTagRailPageRegion";
 import { LibraryAxesPageRegion } from "./regions/LibraryAxesPageRegion";
 import { LibraryAxisControlsPageRegion } from "./regions/LibraryAxisControlsPageRegion";
 import { SeriesListPageRegion } from "./regions/SeriesListPageRegion";
+import { SelectedLibraryContextPageRegion } from "./regions/SelectedLibraryContextPageRegion";
 import "./Library.css";
 
 interface LoadState<Item> {
@@ -50,9 +54,16 @@ export const libraryBreadcrumbFallback = [] as const;
 
 export function LibraryOrchestrator() {
   usePageBreadcrumbs(libraryBreadcrumbFallback);
+  const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
   const queryState = useMemo(() => libraryStateFromSearchParams(new URLSearchParams(queryKey)), [queryKey]);
+  const selectedContextKind = queryState.authorId ? "author" : queryState.seriesId ? "series" : undefined;
+  const requestView = libraryRequestView(queryState);
+  const selectedContextDisplay = useMemo(
+    () => readSelectedLibraryContextDisplay(location.state, queryState),
+    [location.state, queryState],
+  );
   const canonicalQuery = librarySearchParams(queryState).toString();
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [listRetry, setListRetry] = useState(0);
@@ -62,12 +73,12 @@ export function LibraryOrchestrator() {
   const [series, setSeries] = useState<LoadState<LibrarySeries>>({ loading: true });
   const [tags, setTags] = useState<TagsLoadState>({ loading: false });
 
-  useEffect(() => setSearchDraft(queryState.q), [queryState.q, queryState.view]);
+  useEffect(() => setSearchDraft(queryState.q), [queryState.authorId, queryState.q, queryState.seriesId, queryState.view]);
 
   useEffect(() => {
     if (queryKey === canonicalQuery) return;
-    setSearchParameters(new URLSearchParams(canonicalQuery), { replace: true });
-  }, [canonicalQuery, queryKey, setSearchParameters]);
+    setSearchParameters(new URLSearchParams(canonicalQuery), { replace: true, state: selectedContextDisplay ? location.state : null });
+  }, [canonicalQuery, location.state, queryKey, selectedContextDisplay, setSearchParameters]);
 
   useEffect(() => {
     if (tags.tags) return;
@@ -88,7 +99,7 @@ export function LibraryOrchestrator() {
     if (queryKey !== canonicalQuery) return;
     let active = true;
 
-    if (queryState.view === "books") {
+    if (requestView === "books") {
       setBooks((current) => ({ page: current.page, loading: true }));
       loadLibraryPageWithRecovery(libraryBooksSdkQuery(queryState), listBooks)
         .then(({ page, correctedPage }) => {
@@ -97,7 +108,7 @@ export function LibraryOrchestrator() {
           setBooks({ page, loading: false });
         })
         .catch((error: unknown) => { if (active) setBooks((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
-    } else if (queryState.view === "authors") {
+    } else if (requestView === "authors") {
       setAuthors((current) => ({ page: current.page, loading: true }));
       loadLibraryPageWithRecovery(libraryAxisSdkQuery(queryState), listAuthors)
         .then(({ page, correctedPage }) => {
@@ -119,18 +130,20 @@ export function LibraryOrchestrator() {
 
     function replaceCorrectedPage(correctedPage: number): boolean {
       if (correctedPage === queryState.page) return false;
-      setSearchParameters(librarySearchParams(withLibraryChange(queryState, { page: correctedPage }, false)), { replace: true });
+      setSearchParameters(librarySearchParams(withLibraryChange(queryState, { page: correctedPage }, false)), { replace: true, state: selectedContextDisplay ? location.state : null });
       return true;
     }
 
     return () => { active = false; };
-  }, [listRetry, canonicalQuery, queryKey, queryState.ordering, queryState.page, queryState.pageSize, queryState.q, queryState.tag, queryState.view, setSearchParameters]);
+  }, [listRetry, canonicalQuery, location.state, queryKey, queryState.authorId, queryState.ordering, queryState.page, queryState.pageSize, queryState.q, queryState.seriesId, queryState.tag, requestView, selectedContextDisplay, setSearchParameters]);
 
   function changeQuery(changes: Parameters<typeof withLibraryChange>[1], resetPage = true) {
-    setSearchParameters(librarySearchParams(withLibraryChange(queryState, changes, resetPage)));
+    setSearchParameters(librarySearchParams(withLibraryChange(queryState, changes, resetPage)), { state: selectedContextDisplay ? location.state : null });
   }
 
   const currentLibraryPath = libraryPath(queryState);
+  const owningAxisState = selectedContextKind ? withLibrarySelectedContext(queryState, undefined) : queryState;
+  const owningAxisPath = libraryPath(owningAxisState);
   const commonListProps = {
     pageNumber: queryState.page,
     pageSize: queryState.pageSize,
@@ -144,11 +157,12 @@ export function LibraryOrchestrator() {
     <LibraryAxesPageRegion
       activeView={queryState.view}
       onViewChange={(view) => {
-        if (view !== queryState.view) setSearchParameters(librarySearchParams(withLibraryView(queryState, view)));
+        if (view !== queryState.view) setSearchParameters(librarySearchParams(withLibraryView(queryState, view)), { state: null });
       }}
     />
     <LibraryAxisControlsPageRegion
       view={queryState.view}
+      selectedContext={selectedContextKind}
       search={searchDraft}
       ordering={queryState.ordering}
       onSearchChange={setSearchDraft}
@@ -164,9 +178,45 @@ export function LibraryOrchestrator() {
         onTagChange={(tag) => changeQuery({ tag })}
         onRetry={() => setTagRetry((value) => value + 1)}
       />
-      {queryState.view === "books" ? <BookListPageRegion page={books.page} loading={books.loading} error={books.error} searching={Boolean(queryState.q)} tagged={Boolean(queryState.tag)} {...commonListProps} /> : null}
-      {queryState.view === "authors" ? <AuthorListPageRegion page={authors.page} loading={authors.loading} error={authors.error} searching={Boolean(queryState.q)} tagged={Boolean(queryState.tag)} {...commonListProps} /> : null}
-      {queryState.view === "series" ? <SeriesListPageRegion page={series.page} loading={series.loading} error={series.error} searching={Boolean(queryState.q)} tagged={Boolean(queryState.tag)} {...commonListProps} /> : null}
+      <div className="library-results-column">
+        {selectedContextKind ? <SelectedLibraryContextPageRegion
+          kind={selectedContextKind}
+          name={selectedContextDisplay?.name}
+          bookCount={selectedContextDisplay?.bookCount}
+          onBack={() => setSearchParameters(librarySearchParams(owningAxisState), { state: null })}
+        /> : null}
+        {queryState.view === "books" || selectedContextKind ? <BookListPageRegion
+          page={books.page}
+          loading={books.loading}
+          error={books.error}
+          searching={Boolean(queryState.q)}
+          tagged={Boolean(queryState.tag)}
+          selectedContext={selectedContextKind ? {
+            kind: selectedContextKind,
+            label: selectedContextDisplay?.name ?? (selectedContextKind === "author" ? "Author Books" : "Series Books"),
+          } : undefined}
+          parentLibraryPath={selectedContextKind ? owningAxisPath : undefined}
+          {...commonListProps}
+        /> : null}
+        {queryState.view === "authors" && !selectedContextKind ? <AuthorListPageRegion
+          page={authors.page}
+          loading={authors.loading}
+          error={authors.error}
+          searching={Boolean(queryState.q)}
+          tagged={Boolean(queryState.tag)}
+          contextPathFor={(author) => libraryPath(withLibrarySelectedContext(queryState, { kind: "author", id: author.id }))}
+          {...commonListProps}
+        /> : null}
+        {queryState.view === "series" && !selectedContextKind ? <SeriesListPageRegion
+          page={series.page}
+          loading={series.loading}
+          error={series.error}
+          searching={Boolean(queryState.q)}
+          tagged={Boolean(queryState.tag)}
+          contextPathFor={(item) => libraryPath(withLibrarySelectedContext(queryState, { kind: "series", id: item.id }))}
+          {...commonListProps}
+        /> : null}
+      </div>
     </div>
   </div>;
 }

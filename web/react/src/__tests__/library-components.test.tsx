@@ -7,12 +7,15 @@ import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page } from
 import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
 import { BookRowComponent } from "../features/library/components/BookRowComponent";
 import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
+import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
+import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
 import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/regions/CatalogTagRailPageRegion";
 import { LibraryAxesPageRegion } from "../features/library/regions/LibraryAxesPageRegion";
 import { LibraryAxisControlsPageRegion } from "../features/library/regions/LibraryAxisControlsPageRegion";
 import { SeriesListPageRegion } from "../features/library/regions/SeriesListPageRegion";
+import { SelectedLibraryContextPageRegion } from "../features/library/regions/SelectedLibraryContextPageRegion";
 
 const book: CompactBook = {
   id: "book/id", title: "Visible Title", sortTitle: "Visible Title", subtitle: "HIDDEN SUBTITLE",
@@ -109,23 +112,60 @@ describe("Library Author and Series components", () => {
   };
 
   it("renders compact rows, pluralized counts, bounded previews, fallbacks, and placeholder links", () => {
-    const authorMarkup = renderToStaticMarkup(<MemoryRouter><AuthorRowComponent author={author} libraryPath="/library?view=authors" /></MemoryRouter>);
+    const authorMarkup = renderToStaticMarkup(<MemoryRouter><AuthorRowComponent author={author} libraryPath="/library?view=authors" contextPath="/library?view=authors&author=author-1" /></MemoryRouter>);
     expect(authorMarkup).toContain("Visible Author");
     expect(authorMarkup).toContain("1 Book");
     expect(authorMarkup).not.toContain("HIDDEN BIOGRAPHY");
     expect(authorMarkup).toContain("No cover available for Preview Book");
     expect(authorMarkup).toContain('href="/library/books/book%2Fid"');
+    expect(authorMarkup).toContain('href="/library?view=authors&amp;author=author-1"');
 
-    const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" /></MemoryRouter>);
+    const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" contextPath="/library?view=series&series=series-1" /></MemoryRouter>);
     expect(seriesMarkup).toContain("Visible Series");
     expect(seriesMarkup).toContain("3 Books");
     expect(seriesMarkup).not.toContain("HIDDEN SUMMARY");
     expect(seriesMarkup).toContain('loading="lazy"');
     expect(seriesMarkup).toContain('href="/library/books/book-2"');
+    expect(seriesMarkup).toContain('href="/library?view=series&amp;series=series-1"');
+    expect((authorMarkup.match(/<a /g) ?? []).length).toBe(2);
+    expect((seriesMarkup.match(/<a /g) ?? []).length).toBe(2);
+  });
+
+  it("renders named and direct-load selected context headers with bounded back actions", () => {
+    const named = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="author" name="Visible Author" bookCount={1} onBack={vi.fn()} />);
+    expect(named).toContain("Books by Visible Author");
+    expect(named).toContain("1 Book");
+    expect(named).toContain("Back to Authors");
+    const direct = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="series" onBack={vi.fn()} />);
+    expect(direct).toContain("Series Books");
+    expect(direct).toContain("Back to Series");
+  });
+
+  it("uses Book controls and selected-context sort choices", () => {
+    const authorControls = renderToStaticMarkup(<LibraryAxisControlsPageRegion view="authors" selectedContext="author" search="" ordering="title" onSearchChange={vi.fn()} onSearch={vi.fn()} onOrderingChange={vi.fn()} />);
+    expect(authorControls).toContain('placeholder="Book title..."');
+    expect(authorControls).toContain("Title A-Z");
+    const seriesControls = renderToStaticMarkup(<LibraryAxisControlsPageRegion view="series" selectedContext="series" search="" ordering="series_index" onSearchChange={vi.fn()} onSearch={vi.fn()} onOrderingChange={vi.fn()} />);
+    expect(seriesControls).toContain("Series Order");
+  });
+
+  it("keeps selected-context empty copy anti-leakage-safe and accepts matching navigation display state", () => {
+    const empty = renderToStaticMarkup(<MemoryRouter><BookListPageRegion
+      page={{ items: [], count: 0, next: null, previous: null }} pageNumber={1} pageSize={20} loading={false}
+      searching={false} tagged={false} selectedContext={{ kind: "author", label: "Author Books" }} libraryPath="/library"
+      onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    /></MemoryRouter>);
+    expect(empty).toContain("No books found for this author.");
+    expect(empty).not.toContain("does not exist");
+
+    const id = "11111111-1111-4111-8111-111111111111";
+    const query = libraryStateFromSearchParams(new URLSearchParams(`view=authors&author=${id}`));
+    expect(readSelectedLibraryContextDisplay({ librarySelectedContext: { kind: "author", id, name: "Visible Author", bookCount: 2 } }, query)).toEqual({ kind: "author", id, name: "Visible Author", bookCount: 2 });
+    expect(readSelectedLibraryContextDisplay({ librarySelectedContext: { kind: "author", id: "other", name: "Hidden" } }, query)).toBeUndefined();
   });
 
   it("renders axis loading, retryable error, search-aware empty, and standard pagers", () => {
-    const common = { pageNumber: 1, pageSize: 20, libraryPath: "/library", tagged: false, onPageChange: vi.fn(), onPageSizeChange: vi.fn(), onRetry: vi.fn() };
+    const common = { pageNumber: 1, pageSize: 20, libraryPath: "/library", contextPathFor: () => "/library", tagged: false, onPageChange: vi.fn(), onPageSizeChange: vi.fn(), onRetry: vi.fn() };
     const authorLoading = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion loading={true} searching={false} {...common} /></MemoryRouter>);
     const authorError = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion loading={false} error={new Error("Authors unavailable")} searching={false} {...common} /></MemoryRouter>);
     const authorEmpty = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={true} {...common} /></MemoryRouter>);

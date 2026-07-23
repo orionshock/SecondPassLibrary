@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 
 import { Button } from "../../../components/ui";
 import { LibrarySortDropdownComponent } from "../components/LibrarySortDropdownComponent";
-import { libraryOrderingOptions, type LibraryUiOrdering, type LibraryView } from "../libraryQuery";
+import { libraryOrderingOptions, type LibrarySelectedContextKind, type LibraryUiOrdering, type LibraryView } from "../libraryQuery";
 
 const labels = {
   books: { region: "Book controls", item: "books", placeholder: "Book title..." },
@@ -10,15 +10,16 @@ const labels = {
   series: { region: "Series controls", item: "series", placeholder: "Series name..." },
 } as const;
 
-export function LibraryAxisControlsPageRegion({ view, search, ordering, onSearchChange, onSearch, onOrderingChange }: {
+export function LibraryAxisControlsPageRegion({ view, selectedContext, search, ordering, onSearchChange, onSearch, onOrderingChange }: {
   view: LibraryView;
+  selectedContext?: LibrarySelectedContextKind;
   search: string;
   ordering: LibraryUiOrdering;
   onSearchChange: (value: string) => void;
   onSearch: () => void;
   onOrderingChange: (ordering: LibraryUiOrdering) => void;
 }) {
-  const copy = labels[view];
+  const copy = selectedContext ? labels.books : labels[view];
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onSearch(); }
 
   return <section className="library-controls" aria-label={copy.region}>
@@ -29,7 +30,7 @@ export function LibraryAxisControlsPageRegion({ view, search, ordering, onSearch
     </form>
     <LibrarySortDropdownComponent
       ordering={ordering}
-      options={libraryOrderingOptions(view)}
+      options={libraryOrderingOptions(view, selectedContext)}
       itemLabel={copy.item}
       onOrderingChange={onOrderingChange}
     />

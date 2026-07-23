@@ -4,7 +4,7 @@ import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { BookRowComponent } from "../components/BookRowComponent";
 
-export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, searching = false, tagged = false, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
+export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, searching = false, tagged = false, selectedContext, libraryPath, parentLibraryPath, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<CompactBook>;
   pageNumber: number;
   pageSize: number;
@@ -12,7 +12,9 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
   error?: Error;
   searching?: boolean;
   tagged?: boolean;
+  selectedContext?: { kind: "author" | "series"; label: string };
   libraryPath: string;
+  parentLibraryPath?: string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
@@ -24,8 +26,8 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
   return <section className={`book-list-region${loading ? " book-list-region--loading" : ""}`} aria-label="Books" aria-busy={loading}>
     {error ? <div className="book-list-region__inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0
-      ? <p className="book-list-state muted">{bookEmptyCopy(searching, tagged)}</p>
-      : <div className="book-list-region__rows">{page.items.map((book) => <BookRowComponent key={book.id} book={book} libraryPath={libraryPath} />)}</div>}
+      ? <p className="book-list-state muted">{bookEmptyCopy(searching, tagged, selectedContext?.kind)}</p>
+      : <div className="book-list-region__rows">{page.items.map((book) => <BookRowComponent key={book.id} book={book} libraryPath={libraryPath} contextLabel={selectedContext?.label} parentLibraryPath={parentLibraryPath} />)}</div>}
     <PagerComponent
       page={pageNumber}
       pageSize={pageSize}
@@ -39,7 +41,14 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
   </section>;
 }
 
-export function bookEmptyCopy(searching: boolean, tagged: boolean): string {
+export function bookEmptyCopy(searching: boolean, tagged: boolean, selectedContext?: "author" | "series"): string {
+  if (selectedContext) {
+    const entity = selectedContext === "author" ? "author" : "series";
+    if (searching && tagged) return `No books match this search for this ${entity} within this Catalog Tag.`;
+    if (searching) return `No books match this search for this ${entity}.`;
+    if (tagged) return `No books found for this ${entity} within this Catalog Tag.`;
+    return `No books found for this ${entity}.`;
+  }
   if (searching && tagged) return "No books match this search within this Catalog Tag.";
   if (searching) return "No books match this search.";
   if (tagged) return "No books for this Catalog Tag.";

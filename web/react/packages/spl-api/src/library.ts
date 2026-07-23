@@ -11,6 +11,8 @@ export type BookOrdering =
 export interface LibraryBooksQuery {
   q?: string;
   tag?: string;
+  authorId?: string;
+  seriesId?: string;
   ordering?: BookOrdering;
   page?: number;
   pageSize?: number;
@@ -145,6 +147,8 @@ export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient
   const search = query.q?.trim();
   if (search) parameters.set("q", search);
   if (query.tag) parameters.set("tag", query.tag);
+  if (query.authorId) parameters.set("author", query.authorId);
+  if (query.seriesId) parameters.set("series", query.seriesId);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));

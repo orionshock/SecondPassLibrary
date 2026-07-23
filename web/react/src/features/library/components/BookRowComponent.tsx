@@ -6,10 +6,16 @@ import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { BookMetadataComponent } from "../../../shared/books/BookMetadataComponent";
 import { bookAuthorNames, bookSeriesLabel, visibleCatalogTags } from "../libraryPresentation";
 
-export function BookRowComponent({ book, libraryPath }: { book: CompactBook; libraryPath: string }) {
+export function BookRowComponent({ book, libraryPath, contextLabel, parentLibraryPath = libraryPath }: {
+  book: CompactBook;
+  libraryPath: string;
+  contextLabel?: string;
+  parentLibraryPath?: string;
+}) {
   const detailPath = `/library/books/${encodeURIComponent(book.id)}`;
   const navigationState = breadcrumbNavigationState([
-    { label: "Library", to: libraryPath },
+    { label: "Library", to: parentLibraryPath },
+    ...(contextLabel ? [{ label: contextLabel, to: libraryPath }] : []),
     { label: book.title },
   ]);
   const { tags, hiddenCount } = visibleCatalogTags(book);
