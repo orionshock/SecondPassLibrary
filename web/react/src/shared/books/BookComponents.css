@@ -54,12 +54,13 @@
 .book-cover-preview-strip-component {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.4rem;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .book-cover-preview-strip-component .book-cover-component {
-  width: 2.65rem;
+  width: 2.5rem;
 }
 
 .book-cover-preview-strip-component a {
