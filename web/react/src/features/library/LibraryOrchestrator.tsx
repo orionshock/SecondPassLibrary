@@ -70,19 +70,19 @@ export function LibraryOrchestrator() {
   }, [canonicalQuery, queryKey, setSearchParameters]);
 
   useEffect(() => {
-    if (queryState.view !== "books" || tags.tags) return;
+    if (tags.tags) return;
     let active = true;
     setTags({ loading: true });
     listAllCatalogTags()
       .then((loadedTags) => { if (active) setTags({ tags: loadedTags, loading: false }); })
       .catch((error: unknown) => { if (active) setTags({ loading: false, error: normalizeMutationError(error) }); });
     return () => { active = false; };
-  }, [queryState.view, tagRetry, tags.tags]);
+  }, [tagRetry, tags.tags]);
 
   useEffect(() => {
-    if (queryState.view !== "books" || !queryState.tag || !tags.tags || tags.tags.some(({ slug }) => slug === queryState.tag)) return;
+    if (!unknownCatalogTag(queryState.tag, tags.tags)) return;
     changeQuery({ tag: undefined });
-  }, [queryState.tag, queryState.view, tags.tags]);
+  }, [queryState.tag, tags.tags]);
 
   useEffect(() => {
     if (queryKey !== canonicalQuery) return;
@@ -157,7 +157,6 @@ export function LibraryOrchestrator() {
     />
     <div className="library-browser">
       <CatalogTagRailPageRegion
-        enabled={queryState.view === "books"}
         tags={tags.tags}
         activeTag={queryState.tag}
         loading={tags.loading}
@@ -165,9 +164,9 @@ export function LibraryOrchestrator() {
         onTagChange={(tag) => changeQuery({ tag })}
         onRetry={() => setTagRetry((value) => value + 1)}
       />
-      {queryState.view === "books" ? <BookListPageRegion page={books.page} loading={books.loading} error={books.error} {...commonListProps} /> : null}
-      {queryState.view === "authors" ? <AuthorListPageRegion page={authors.page} loading={authors.loading} error={authors.error} searching={Boolean(queryState.q)} {...commonListProps} /> : null}
-      {queryState.view === "series" ? <SeriesListPageRegion page={series.page} loading={series.loading} error={series.error} searching={Boolean(queryState.q)} {...commonListProps} /> : null}
+      {queryState.view === "books" ? <BookListPageRegion page={books.page} loading={books.loading} error={books.error} searching={Boolean(queryState.q)} tagged={Boolean(queryState.tag)} {...commonListProps} /> : null}
+      {queryState.view === "authors" ? <AuthorListPageRegion page={authors.page} loading={authors.loading} error={authors.error} searching={Boolean(queryState.q)} tagged={Boolean(queryState.tag)} {...commonListProps} /> : null}
+      {queryState.view === "series" ? <SeriesListPageRegion page={series.page} loading={series.loading} error={series.error} searching={Boolean(queryState.q)} tagged={Boolean(queryState.tag)} {...commonListProps} /> : null}
     </div>
   </div>;
 }
@@ -193,4 +192,8 @@ export function loadBooksWithPageRecovery(
   request: (query: LibraryBooksQuery) => Promise<Page<CompactBook>> = listBooks,
 ) {
   return loadLibraryPageWithRecovery(query, request);
+}
+
+export function unknownCatalogTag(activeTag: string | undefined, tags: readonly CatalogTag[] | undefined): boolean {
+  return Boolean(activeTag && tags && !tags.some(({ slug }) => slug === activeTag));
 }

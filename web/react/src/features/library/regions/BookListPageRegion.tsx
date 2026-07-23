@@ -4,12 +4,14 @@ import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { BookRowComponent } from "../components/BookRowComponent";
 
-export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
+export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, searching = false, tagged = false, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<CompactBook>;
   pageNumber: number;
   pageSize: number;
   loading: boolean;
   error?: Error;
+  searching?: boolean;
+  tagged?: boolean;
   libraryPath: string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -22,7 +24,7 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
   return <section className={`book-list-region${loading ? " book-list-region--loading" : ""}`} aria-label="Books" aria-busy={loading}>
     {error ? <div className="book-list-region__inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0
-      ? <p className="book-list-state muted">No books match this search and Catalog Tag.</p>
+      ? <p className="book-list-state muted">{bookEmptyCopy(searching, tagged)}</p>
       : <div className="book-list-region__rows">{page.items.map((book) => <BookRowComponent key={book.id} book={book} libraryPath={libraryPath} />)}</div>}
     <PagerComponent
       page={pageNumber}
@@ -35,4 +37,11 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
       onPageSizeChange={onPageSizeChange}
     />
   </section>;
+}
+
+export function bookEmptyCopy(searching: boolean, tagged: boolean): string {
+  if (searching && tagged) return "No books match this search within this Catalog Tag.";
+  if (searching) return "No books match this search.";
+  if (tagged) return "No books for this Catalog Tag.";
+  return "No books.";
 }

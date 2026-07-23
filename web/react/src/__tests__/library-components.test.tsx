@@ -23,9 +23,10 @@ const book: CompactBook = {
   publishedDatePrecision: "day", coverUrl: null, fileFormat: "HIDDEN FORMAT",
 };
 
-function renderList(page?: Page<CompactBook>, options: { loading?: boolean; error?: Error } = {}) {
+function renderList(page?: Page<CompactBook>, options: { loading?: boolean; error?: Error; searching?: boolean; tagged?: boolean } = {}) {
   return renderToStaticMarkup(<MemoryRouter><BookListPageRegion
     page={page} pageNumber={1} pageSize={20} loading={options.loading ?? false} error={options.error}
+    searching={options.searching} tagged={options.tagged}
     libraryPath="/library?q=visible" onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
   /></MemoryRouter>);
 }
@@ -43,7 +44,11 @@ describe("Library Books components", () => {
   it("renders loading, retryable error, empty, and standard pager states", () => {
     expect(renderList(undefined, { loading: true })).toContain("Loading books");
     expect(renderList(undefined, { error: new Error("Books unavailable") })).toContain("Retry");
-    expect(renderList({ items: [], count: 0, next: null, previous: null })).toContain("No books match");
+    const emptyPage = { items: [], count: 0, next: null, previous: null };
+    expect(renderList(emptyPage)).toContain("No books.");
+    expect(renderList(emptyPage, { searching: true })).toContain("No books match this search.");
+    expect(renderList(emptyPage, { tagged: true })).toContain("No books for this Catalog Tag.");
+    expect(renderList(emptyPage, { searching: true, tagged: true })).toContain("No books match this search within this Catalog Tag.");
     const markup = renderList({ items: [book], count: 65, next: "next", previous: null });
     for (const size of [20, 30, 40, 50]) expect(markup).toContain(`<option value="${size}"`);
     expect(markup).not.toContain('<option value="100"');
@@ -73,15 +78,23 @@ describe("Library Books components", () => {
     const controls = renderToStaticMarkup(<LibraryAxisControlsPageRegion view="series" search="" ordering="name" onSearchChange={vi.fn()} onSearch={vi.fn()} onOrderingChange={vi.fn()} />);
     expect(controls).toContain('placeholder="Series name..."');
     expect(controls).toContain("Name A-Z");
-    const inactiveTags = renderToStaticMarkup(<CatalogTagRailPageRegion enabled={false} loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
-    expect(inactiveTags).toContain("Catalog Tags");
-    expect(inactiveTags).toContain("Available when browsing Books.");
-    expect(inactiveTags).not.toContain("All tags");
+    const activeTags = renderToStaticMarkup(<CatalogTagRailPageRegion tags={[{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 4 }]} activeTag="fantasy" loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
+    expect(activeTags).toContain("All tags");
+    expect(activeTags).toContain('aria-pressed="true"');
 
     const axisRegion = LibraryAxesPageRegion({ activeView: "books", onViewChange }) as ReactElement<{ children: ReactElement[] }>;
     const nav = axisRegion.props.children[1] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
     nav.props.children[1]!.props.onClick();
     expect(onViewChange).toHaveBeenCalledWith("authors");
+  });
+
+  it("lets All tags clear the active tag on every Library axis", () => {
+    const onTagChange = vi.fn();
+    const rail = CatalogTagRailPageRegion({ tags: [], activeTag: "fantasy", loading: false, onTagChange, onRetry: vi.fn() }) as ReactElement<{ children: ReactElement[] }>;
+    const desktop = rail.props.children[1] as ReactElement<{ children: ReactElement<{ children: ReactElement[] }> }>;
+    const allTags = desktop.props.children.props.children[0] as ReactElement<{ onClick: () => void }>;
+    allTags.props.onClick();
+    expect(onTagChange).toHaveBeenCalledWith(undefined);
   });
 });
 
@@ -112,13 +125,17 @@ describe("Library Author and Series components", () => {
   });
 
   it("renders axis loading, retryable error, search-aware empty, and standard pagers", () => {
-    const common = { pageNumber: 1, pageSize: 20, libraryPath: "/library", onPageChange: vi.fn(), onPageSizeChange: vi.fn(), onRetry: vi.fn() };
+    const common = { pageNumber: 1, pageSize: 20, libraryPath: "/library", tagged: false, onPageChange: vi.fn(), onPageSizeChange: vi.fn(), onRetry: vi.fn() };
     const authorLoading = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion loading={true} searching={false} {...common} /></MemoryRouter>);
     const authorError = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion loading={false} error={new Error("Authors unavailable")} searching={false} {...common} /></MemoryRouter>);
     const authorEmpty = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={true} {...common} /></MemoryRouter>);
     expect(authorLoading).toContain("Loading authors");
     expect(authorError).toContain("Authors unavailable");
     expect(authorEmpty).toContain("No authors match this search.");
+    const taggedAuthorEmpty = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={false} {...common} tagged /></MemoryRouter>);
+    const searchedTaggedAuthorEmpty = renderToStaticMarkup(<MemoryRouter><AuthorListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching {...common} tagged /></MemoryRouter>);
+    expect(taggedAuthorEmpty).toContain("No authors for this Catalog Tag.");
+    expect(searchedTaggedAuthorEmpty).toContain("No authors match this search within this Catalog Tag.");
 
     const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion page={{ items: [series], count: 51, next: "next", previous: null }} loading={false} searching={false} {...common} /></MemoryRouter>);
     for (const size of [20, 30, 40, 50]) expect(seriesMarkup).toContain(`<option value="${size}"`);
@@ -127,5 +144,13 @@ describe("Library Author and Series components", () => {
     const seriesEmpty = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={true} {...common} /></MemoryRouter>);
     expect(seriesError).toContain("Series unavailable");
     expect(seriesEmpty).toContain("No series match this search.");
+    const taggedSeriesEmpty = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching={false} {...common} tagged /></MemoryRouter>);
+    const searchedTaggedSeriesEmpty = renderToStaticMarkup(<MemoryRouter><SeriesListPageRegion page={{ items: [], count: 0, next: null, previous: null }} loading={false} searching {...common} tagged /></MemoryRouter>);
+    expect(taggedSeriesEmpty).toContain("No series for this Catalog Tag.");
+    expect(searchedTaggedSeriesEmpty).toContain("No series match this search within this Catalog Tag.");
+
+    const failedTags = renderToStaticMarkup(<CatalogTagRailPageRegion loading={false} error={new Error("Tags unavailable")} onTagChange={vi.fn()} onRetry={vi.fn()} />);
+    expect(failedTags).toContain("Tags unavailable");
+    expect(authorLoading).toContain("Loading authors");
   });
 });

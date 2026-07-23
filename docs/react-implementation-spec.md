@@ -322,9 +322,10 @@ rail. Selected Author and Series contexts remain pending:
 - invalid/missing selected Author or Series IDs fall back safely without
   retaining conflicting `author` and `series` parameters.
 
-Changing the top-level axis clears `q`, `tag`, ordering, and page while retaining
-page size. Catalog Tag filtering currently applies only to Books; the rail stays
-in place as an inactive shell element on Authors and Series.
+Changing the top-level axis preserves `tag`, clears `q`, ordering, and page, and
+retains page size. Catalog Tag filtering applies to Books, Authors, and Series.
+Rail counts always represent viewer-visible Books; they do not become Author or
+Series counts when those axes are active.
 
 The selected Author/Series detail is in context inside Library, not a separate
 read-only lifecycle page. Links to Books carry explicit author/series breadcrumb
@@ -372,8 +373,9 @@ direct-load fallback.
   a bounded cover preview strip from `include_preview_books=true`. Biography
   prose is reserved for the selected Author context.
 - Search placeholder is `Author name…`; supported ordering is name or Book
-  count in either direction. Top-level Author browsing does not apply
-  Catalog Tag filtering in the current slice.
+  count in either direction. Catalog Tag filtering reduces the axis to Authors
+  with visible Books carrying the selected tag and adjusts each visible count
+  through the backend's axis contract.
 - Selecting a card moves to `view=author&author=<id>` and shows a restrained
   context header with full safe biography, Book count, Edit action for
   Librarian+, and the selected Author's paginated Books below.

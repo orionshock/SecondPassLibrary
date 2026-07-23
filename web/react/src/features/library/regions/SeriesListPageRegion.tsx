@@ -4,13 +4,14 @@ import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { SeriesRowComponent } from "../components/SeriesRowComponent";
 
-export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, error, searching, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
+export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<LibrarySeries>;
   pageNumber: number;
   pageSize: number;
   loading: boolean;
   error?: Error;
   searching: boolean;
+  tagged: boolean;
   libraryPath: string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -22,8 +23,15 @@ export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, erro
   return <section className={`library-axis-list-region${loading ? " library-axis-list-region--loading" : ""}`} aria-label="Series" aria-busy={loading}>
     {error ? <div className="library-list-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0
-      ? <p className="library-list-state muted">{searching ? "No series match this search." : "No series."}</p>
+      ? <p className="library-list-state muted">{seriesEmptyCopy(searching, tagged)}</p>
       : <div className="library-axis-list-region__rows">{page.items.map((series) => <SeriesRowComponent key={series.id} series={series} libraryPath={libraryPath} />)}</div>}
     <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Series" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
+}
+
+export function seriesEmptyCopy(searching: boolean, tagged: boolean): string {
+  if (searching && tagged) return "No series match this search within this Catalog Tag.";
+  if (searching) return "No series match this search.";
+  if (tagged) return "No series for this Catalog Tag.";
+  return "No series.";
 }

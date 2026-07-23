@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError, type CompactBook, type LibraryAxisQuery, type LibraryBooksQuery, type Page } from "@second-pass/spl-api";
 import { appRoutes, sectionRoutes } from "../app/router";
-import { libraryBreadcrumbFallback, loadBooksWithPageRecovery, loadLibraryPageWithRecovery } from "../features/library/LibraryOrchestrator";
+import { libraryBreadcrumbFallback, loadBooksWithPageRecovery, loadLibraryPageWithRecovery, unknownCatalogTag } from "../features/library/LibraryOrchestrator";
 
 const page = (count: number): Page<CompactBook> => ({ items: [], count, next: null, previous: null });
 
@@ -45,5 +45,11 @@ describe("Library Orchestrator contracts", () => {
       expect(result.correctedPage).toBe(expectedLastPage);
       expect(calls).toEqual([8, 1, expectedLastPage]);
     }
+  });
+
+  it("clears an unknown active Catalog Tag only after the full tag list succeeds", () => {
+    expect(unknownCatalogTag("missing", undefined)).toBe(false);
+    expect(unknownCatalogTag("missing", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(true);
+    expect(unknownCatalogTag("fantasy", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(false);
   });
 });

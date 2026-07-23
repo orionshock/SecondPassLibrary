@@ -79,10 +79,10 @@ describe("Library SDK", () => {
     for (const ordering of ["name", "-name", "book_count", "-book_count"] as const) {
       await listAuthors({ q: " Ada ", tag: "history", ordering, includePreviewBooks: true, page: 2, pageSize: 30 }, client);
     }
-    await listSeries({ q: " Saga ", ordering: "-book_count", includePreviewBooks: true, page: 3, pageSize: 40 }, client);
+    await listSeries({ q: " Saga ", tag: "fantasy", ordering: "-book_count", includePreviewBooks: true, page: 3, pageSize: 40 }, client);
     expect(calls).toEqual([
       ...["name", "-name", "book_count", "-book_count"].map((ordering) => `/api/v1/library/authors/?q=Ada&tag=history&ordering=${ordering}&include_preview_books=true&page=2&page_size=30`),
-      "/api/v1/library/series/?q=Saga&ordering=-book_count&include_preview_books=true&page=3&page_size=40",
+      "/api/v1/library/series/?q=Saga&tag=fantasy&ordering=-book_count&include_preview_books=true&page=3&page_size=40",
     ]);
   });
 

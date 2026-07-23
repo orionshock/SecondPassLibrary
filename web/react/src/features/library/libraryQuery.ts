@@ -48,7 +48,7 @@ export function libraryStateFromSearchParams(parameters: URLSearchParams): Libra
   const allowedOrderings = view === "books" ? bookOrderings : axisOrderings;
   const defaultOrdering = libraryDefaultOrdering(view);
   const rawPageSize = positiveInteger(parameters.get("page_size"), 20);
-  const tag = view === "books" ? (parameters.get("tag") ?? "").trim() : "";
+  const tag = (parameters.get("tag") ?? "").trim();
   return {
     view,
     ...(tag ? { tag } : {}),
@@ -62,7 +62,7 @@ export function libraryStateFromSearchParams(parameters: URLSearchParams): Libra
 export function librarySearchParams(state: LibraryUrlState): URLSearchParams {
   const parameters = new URLSearchParams();
   if (state.view !== "books") parameters.set("view", state.view);
-  if (state.view === "books" && state.tag) parameters.set("tag", state.tag);
+  if (state.tag) parameters.set("tag", state.tag);
   if (state.ordering !== libraryDefaultOrdering(state.view)) parameters.set("ordering", state.ordering);
   if (state.page > 1) parameters.set("page", String(state.page));
   if (state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));
@@ -86,6 +86,7 @@ export function withLibraryChange(
 export function withLibraryView(current: LibraryUrlState, view: LibraryView): LibraryUrlState {
   return {
     view,
+    ...(current.tag ? { tag: current.tag } : {}),
     ordering: libraryDefaultOrdering(view),
     page: 1,
     pageSize: current.pageSize,
@@ -114,6 +115,7 @@ export function libraryBooksSdkQuery(state: LibraryUrlState): LibraryBooksQuery 
 export function libraryAxisSdkQuery(state: LibraryUrlState): LibraryAxisQuery {
   return {
     ...(state.q ? { q: state.q } : {}),
+    ...(state.tag ? { tag: state.tag } : {}),
     ordering: state.ordering as LibraryAxisOrdering,
     includePreviewBooks: true,
     page: state.page,

@@ -2,8 +2,7 @@ import type { CatalogTag } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/ui";
 
-export function CatalogTagRailPageRegion({ enabled = true, tags, activeTag, loading, error, onTagChange, onRetry }: {
-  enabled?: boolean;
+export function CatalogTagRailPageRegion({ tags, activeTag, loading, error, onTagChange, onRetry }: {
   tags?: CatalogTag[];
   activeTag?: string;
   loading: boolean;
@@ -11,11 +10,6 @@ export function CatalogTagRailPageRegion({ enabled = true, tags, activeTag, load
   onTagChange: (tag?: string) => void;
   onRetry: () => void;
 }) {
-  if (!enabled) return <aside className="catalog-tag-rail catalog-tag-rail--inactive" aria-label="Catalog Tags">
-    <h2>Catalog Tags</h2>
-    <p>Available when browsing Books.</p>
-  </aside>;
-
   const content = <div className="catalog-tag-rail__content">
     <button type="button" className={!activeTag ? "active" : ""} aria-pressed={!activeTag} onClick={() => onTagChange(undefined)}>
       <span>All tags</span>

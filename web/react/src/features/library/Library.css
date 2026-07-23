@@ -244,25 +244,6 @@
   display: none;
 }
 
-.catalog-tag-rail--inactive {
-  overflow: visible;
-  border-color: transparent;
-  background: transparent;
-}
-
-.catalog-tag-rail--inactive h2 {
-  padding: 0.3rem 0.4rem 0.1rem;
-  color: #aeb7c2;
-}
-
-.catalog-tag-rail--inactive p {
-  margin: 0;
-  padding: 0.15rem 0.4rem 0.35rem;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
 .book-list-region {
   min-width: 0;
 }
@@ -478,13 +459,6 @@
     font-weight: 600;
   }
 
-  .catalog-tag-rail--inactive h2 {
-    display: block;
-  }
-
-  .catalog-tag-rail--inactive {
-    border-color: transparent;
-  }
 }
 
 @media (max-width: 38rem) {
