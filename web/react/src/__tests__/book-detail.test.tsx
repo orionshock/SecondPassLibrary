@@ -8,6 +8,7 @@ import { resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
   bookBrowseDetailBreadcrumbs,
   bookDetailBreadcrumbFallback,
+  bookEditBreadcrumbTrail,
   bookIdentifierLabel,
   bookSeriesDisplay,
   formatBookFileSize,
@@ -81,6 +82,11 @@ describe("Book Detail presentation", () => {
     expect(hero).toContain("This book’s EPUB file is unavailable.");
     expect(hero).not.toContain("Download EPUB");
   });
+
+  it("exposes Book Edit only when the orchestrator grants Librarian-level access", () => {
+    expect(render(<BookDetailHeroPageRegion book={book} />)).not.toContain("/edit");
+    expect(render(<BookDetailHeroPageRegion book={book} canEdit editNavigationState={{ safe: true }} />)).toContain(`/library/books/${book.id}/edit`);
+  });
 });
 
 describe("Book Detail navigation", () => {
@@ -93,6 +99,10 @@ describe("Book Detail navigation", () => {
     ]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=authors&author=id", contextLabel: "Jim Butcher", parentLibraryPath: "/library?view=authors" }).map(({ label }) => label)).toEqual(["Library", "Jim Butcher", "Battle Ground"]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=series&series=id", contextLabel: "Dresden Files", parentLibraryPath: "/library?view=series" }).map(({ label }) => label)).toEqual(["Library", "Dresden Files", "Battle Ground"]);
+    expect(bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback("Old title"), book.id, "New title")).toEqual([
+      { label: "Library", to: "/library" }, { label: "Books", to: "/library" },
+      { label: "New title", to: `/library/books/${book.id}` }, { label: "Edit" },
+    ]);
   });
 
   it("falls back safely when incoming breadcrumb state is invalid or stale", () => {

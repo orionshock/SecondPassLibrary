@@ -1,3 +1,4 @@
+import { isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -64,6 +65,7 @@ describe("app frame and router", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/groups", "/shelves"]);
     expect(appRoutes[0].children.some((route) => route.path === "library")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId/edit")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "imports")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
@@ -71,5 +73,13 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
     expect(renderToStaticMarkup(<PlaceholderPageRegion title="Shelves" />)).toContain("Shelves");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
+  });
+
+  it("guards direct Book Edit access with the Librarian-level role contract", () => {
+    const route = appRoutes[0].children.find((candidate) => candidate.path === "library/books/:bookId/edit");
+    expect(isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)).toBe(true);
+    if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) return;
+    expect(route.element.props.canAccess({ ...user, isOwner: false, isReader: true })).toBe(false);
+    expect(route.element.props.canAccess({ ...user, isOwner: false, isLibrarian: true })).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getBook, listAllCatalogTags, listAuthors, listBooks, listCatalogTags, listSeries } from "@second-pass/spl-api";
+import { ApiError, getBook, listAllAuthorsForManagement, listAllCatalogTags, listAllSeriesForManagement, listAuthors, listBooks, listCatalogTags, listSeries, updateBook } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -15,6 +15,49 @@ const compactWireBook = {
 };
 
 describe("Library SDK", () => {
+  it("PATCHes only mapped Book Edit fields, preserves explicit clears, and maps operation field errors", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return {
+        id: "book", title: "Saved", sort_title: "", subtitle: "", authors: [], series: null,
+        language: "", publisher: "", published_year: null, published_month: null, published_day: null,
+        published_date_precision: "", cover_url: null, description: "", identifiers: [], catalog_tags: [], file: null, groups: [],
+      } as T;
+    } };
+    await updateBook("book/id", {
+      title: "Saved", sortTitle: "", publishedYear: null, authorIds: [], seriesId: null,
+      seriesIndex: null, catalogTagNames: [],
+      ...({ identifiers: [{ id: "forbidden" }], groups: ["forbidden"], checksum: "forbidden", storage: "forbidden" } as object),
+    }, client);
+    expect(calls[0]?.path).toBe("/api/v1/library/books/book%2Fid/");
+    expect(calls[0]?.init?.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      title: "Saved", sort_title: "", published_year: null, authors: [], series: null, series_index: null, catalog_tags: [],
+    });
+
+    const failing: ApiClient = { request: async () => { throw new ApiError("Invalid.", 400, { fields: { authors: ["Bad Author"], series: ["Bad Series"], catalogTags: ["Bad Tag"] } }); } };
+    await expect(updateBook("book", { title: "Book" }, failing)).rejects.toMatchObject({
+      fields: { authorIds: ["Bad Author"], seriesId: ["Bad Series"], catalogTagNames: ["Bad Tag"] },
+    });
+  });
+
+  it("loads every managed Author and Series picker page with the management contract", async () => {
+    const calls: string[] = [];
+    const responses = [
+      { count: 2, next: "/api/v1/library/authors/?management=true&ordering=name&page=2&page_size=200", previous: null, results: [{ id: "a1", name: "A", sort_name: "A", biography: "", book_count: 1 }] },
+      { count: 2, next: null, previous: "previous", results: [{ id: "a2", name: "B", sort_name: "B", biography: "", book_count: 0 }] },
+      { count: 1, next: null, previous: null, results: [{ id: "s1", name: "S", sort_name: "S", summary: "", book_count: 1 }] },
+    ];
+    const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return responses.shift() as T; } };
+    await expect(listAllAuthorsForManagement(client)).resolves.toHaveLength(2);
+    await expect(listAllSeriesForManagement(client)).resolves.toHaveLength(1);
+    expect(calls).toEqual([
+      "/api/v1/library/authors/?management=true&ordering=name&page_size=200",
+      "/api/v1/library/authors/?management=true&ordering=name&page=2&page_size=200",
+      "/api/v1/library/series/?management=true&ordering=name&page_size=200",
+    ]);
+  });
   it("maps the explicit Book Detail contract without admitting storage or provenance fields", async () => {
     const calls: string[] = [];
     const wireBook = {

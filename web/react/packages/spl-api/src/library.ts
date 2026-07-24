@@ -1,4 +1,5 @@
 import { apiClient, type ApiClient } from "./client";
+import { ApiError } from "./errors";
 import { toPage, type ApiPage, type Page } from "./pagination";
 
 export type BookOrdering =
@@ -25,8 +26,26 @@ export interface LibraryAxisQuery {
   tag?: string;
   ordering?: LibraryAxisOrdering;
   includePreviewBooks?: boolean;
+  management?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+export interface UpdateBookInput {
+  title?: string;
+  sortTitle?: string;
+  subtitle?: string;
+  description?: string;
+  publisher?: string;
+  language?: string;
+  publishedYear?: number | null;
+  publishedMonth?: number | null;
+  publishedDay?: number | null;
+  publishedDatePrecision?: "" | "year" | "month" | "day";
+  authorIds?: string[];
+  seriesId?: string | null;
+  seriesIndex?: string | null;
+  catalogTagNames?: string[];
 }
 
 export interface BookPreview {
@@ -227,12 +246,50 @@ export async function getBook(bookId: string, client: ApiClient = apiClient): Pr
   return mapBookDetail(response);
 }
 
+export async function updateBook(bookId: string, input: UpdateBookInput, client: ApiClient = apiClient): Promise<BookDetail> {
+  const payload: Record<string, unknown> = {};
+  const fields: Array<[keyof UpdateBookInput, string]> = [
+    ["title", "title"], ["sortTitle", "sort_title"], ["subtitle", "subtitle"],
+    ["description", "description"], ["publisher", "publisher"], ["language", "language"],
+    ["publishedYear", "published_year"], ["publishedMonth", "published_month"],
+    ["publishedDay", "published_day"], ["publishedDatePrecision", "published_date_precision"],
+    ["authorIds", "authors"], ["seriesId", "series"], ["seriesIndex", "series_index"],
+    ["catalogTagNames", "catalog_tags"],
+  ];
+  for (const [appField, wireField] of fields) {
+    if (input[appField] !== undefined) payload[wireField] = input[appField];
+  }
+  try {
+    return mapBookDetail(await client.request<BookDetailResponse>(
+      `/api/v1/library/books/${encodeURIComponent(bookId)}/`,
+      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+    ));
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || !error.fields) throw error;
+    const aliases: Record<string, string> = {
+      authors: "authorIds", series: "seriesId", catalogTags: "catalogTagNames",
+    };
+    throw new ApiError(error.message, error.status, {
+      code: error.code,
+      fields: Object.fromEntries(Object.entries(error.fields).map(([field, messages]) => [aliases[field] ?? field, messages])),
+    });
+  }
+}
+
 export async function listAuthors(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibraryAuthor>> {
   return listLibraryAxis("/api/v1/library/authors/", query, mapLibraryAuthor, client);
 }
 
 export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibrarySeries>> {
   return listLibraryAxis("/api/v1/library/series/", query, mapLibrarySeries, client);
+}
+
+export function listAllAuthorsForManagement(client: ApiClient = apiClient): Promise<LibraryAuthor[]> {
+  return listAllLibraryAxis("/api/v1/library/authors/", mapLibraryAuthor, client);
+}
+
+export function listAllSeriesForManagement(client: ApiClient = apiClient): Promise<LibrarySeries[]> {
+  return listAllLibraryAxis("/api/v1/library/series/", mapLibrarySeries, client);
 }
 
 export async function listCatalogTags(
@@ -277,9 +334,25 @@ async function listLibraryAxis<Response, Item>(
   if (query.tag) parameters.set("tag", query.tag);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.management) parameters.set("management", "true");
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
+}
+
+async function listAllLibraryAxis<Response, Item>(
+  path: string,
+  mapper: (response: Response) => Item,
+  client: ApiClient,
+): Promise<Item[]> {
+  const items: Item[] = [];
+  let next: string | null = `${path}?management=true&ordering=name&page_size=200`;
+  while (next) {
+    const page: ApiPage<Response> = await client.request<ApiPage<Response>>(next);
+    items.push(...page.results.map(mapper));
+    next = page.next;
+  }
+  return items;
 }
 
 export function mapCompactBook(response: CompactBookResponse): CompactBook {

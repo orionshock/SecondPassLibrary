@@ -432,43 +432,29 @@ breadcrumb context through Router location state.
   Book, not a separate asset record. `file: null` is an exceptional repair state
   shown as an unavailable EPUB; it is not presented as an optional file. A
   checksum is rendered only in the secondary Metadata tab's File panel.
-- Real shelf loading, shelf and group relationship actions, Edit, Reader/Open,
+- Real shelf loading, shelf and group relationship actions, Reader/Open,
   deletion, and cover mutation remain out of this read-only slice.
 - Cover replace/clear is not available on Detail.
 
 ### Book Edit (`/library/books/:bookId/edit`)
 
 - Librarian, Manager, and Owner may access; API remains authoritative.
-- Preserve the polished two-column workspace: fixed-width cover/cover actions
-  on the left and identity plus tabbed edit workspace on the right. Collapse to
-  one column below roughly 720px.
-- Cover actions: `Change Cover` opens an accessible native/dialog-style modal;
-  Download EPUB sits beneath the cover. Modal accepts JPEG/PNG/WebP, previews
-  selection, exposes Replace, conditional Clear, Cancel/Close, and bounded
-  feedback. Do not mix cover mutation into Book PATCH.
-- Tabs and query values are exactly:
-  - `tab=book` — title, subtitle, description;
-  - `tab=catalog` — publisher, language, partial published date, Catalog Tags;
-  - `tab=authors-series` — assignment only;
-  - `tab=groups` — advanced mode only;
-  - `tab=shelves`;
-  - `tab=identifiers-file`.
-- Save applies Book metadata, Catalog Tags, Author IDs, Series ID/index, and
-  identifiers through Book PATCH. Keep unsaved draft state while switching
-  tabs; warn before leaving with dirty metadata if the router supports a
-  reliable blocker.
+- The implemented first slice uses a polished two-column workspace: a
+  fixed-width read-only cover on the left and identity plus tabbed editing on
+  the right, collapsing to one column on narrow screens.
+- Its three real local tabs are Book (title, sort title, subtitle, description),
+  Catalog (publisher, language, precision-aware publication date, Catalog
+  Tags), and Authors & Series (existing-entity assignment only).
+- Save sends one explicit transactional PATCH for those edited domains, then
+  replaces the draft and dirty baseline from the returned Book Detail while
+  remaining on Edit. Dirty cancel/browser unload asks for confirmation.
 - Catalog Tags use existing suggestions plus typed creation through Book PATCH;
   there is no standalone Tag lifecycle UI.
 - Authors & Series assigns/removes existing Authors, assigns one existing
-  Series, and edits Book-specific series index. Provide links to Manage/Create
-  canonical pages; no inline quick-create.
-- Groups displays current assignments and add/remove operations. Removing the
-  final assignment relies on backend Public fallback. Entire tab is absent in
-  simple mode.
-- Shelves lists shelves containing the Book with view/edit context and remove
-  controls only where `can_edit` and `matched_item_id` permit. Confirm removal.
-- Identifiers & File Info uses a responsive identifier editor plus read-only
-  file format/size/download availability. Never expose storage keys or paths.
+  Series, and edits Book-specific series index. There is no inline lifecycle
+  creation.
+- Identifiers, cover mutation, groups, shelves, file fields/actions, deletion,
+  and Reader/Open are deliberately deferred and have no placeholder tabs.
 
 ### Library API, SDK, and tests
 

@@ -1,4 +1,4 @@
-import { canSeeImports, canSeeServerSettings, canSeeUsers } from "@second-pass/spl-api";
+import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian } from "@second-pass/spl-api";
 import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
@@ -6,6 +6,7 @@ import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
 import { BookDetailOrchestrator } from "../features/library/BookDetailOrchestrator";
+import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
 import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
@@ -53,6 +54,7 @@ export const appRoutes = [
       })),
       { path: "library", element: <LibraryOrchestrator /> },
       { path: "library/books/:bookId", element: <BookDetailOrchestrator /> },
+      { path: "library/books/:bookId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><BookEditOrchestrator /></RoleRouteGuardComponent> },
       { path: "imports", element: <RoleRouteGuardComponent canAccess={canSeeImports}><ImportsOrchestrator /></RoleRouteGuardComponent> },
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },

@@ -5,7 +5,7 @@ import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { selectedLibraryContextNavigationState } from "../libraryPresentation";
 import { bookSeriesDisplay, formatBookPublishedDate } from "../bookDetailPresentation";
 
-export function BookDetailHeroPageRegion({ book }: { book: BookDetail }) {
+export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigationState }: { book: BookDetail; canEdit?: boolean; editNavigationState?: unknown }) {
   const publishedDate = formatBookPublishedDate(book);
   const facts = [book.publisher, book.language, publishedDate].filter(Boolean);
 
@@ -38,8 +38,9 @@ export function BookDetailHeroPageRegion({ book }: { book: BookDetail }) {
         {book.catalogTags.map((tag) => <span key={tag.id}>{tag.name}</span>)}
       </div> : null}
       {book.description ? <p className="book-detail-hero-region__description">{book.description}</p> : null}
-      {book.file?.downloadUrl || !book.file ? <div className="book-detail-hero-region__actions">
+      {book.file?.downloadUrl || !book.file || canEdit ? <div className="book-detail-hero-region__actions">
         {book.file?.downloadUrl ? <a className="button" href={book.file.downloadUrl}>Download EPUB</a> : null}
+        {canEdit ? <Link className="button button--secondary" to={`/library/books/${encodeURIComponent(book.id)}/edit`} state={editNavigationState}>Edit Book</Link> : null}
         {!book.file ? <p className="book-detail-hero-region__repair-state">This book’s EPUB file is unavailable.</p> : null}
       </div> : null}
     </div>

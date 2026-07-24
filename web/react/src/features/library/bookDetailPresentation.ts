@@ -63,6 +63,12 @@ export function bookDetailBreadcrumbFallback(title = "Book"): BreadcrumbItem[] {
   ];
 }
 
+export function bookEditBreadcrumbTrail(detailTrail: readonly BreadcrumbItem[], bookId: string, title: string): BreadcrumbItem[] {
+  const withoutEdit = detailTrail.at(-1)?.label === "Edit" ? detailTrail.slice(0, -1) : [...detailTrail];
+  const parent = withoutEdit.length > 0 ? withoutEdit.slice(0, -1) : bookDetailBreadcrumbFallback(title).slice(0, -1);
+  return [...parent, { label: title, to: `/library/books/${encodeURIComponent(bookId)}` }, { label: "Edit" }];
+}
+
 export function bookBrowseDetailBreadcrumbs({
   title,
   libraryPath,
