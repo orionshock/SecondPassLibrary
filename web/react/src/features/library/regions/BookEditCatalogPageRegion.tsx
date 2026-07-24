@@ -47,7 +47,7 @@ export function BookEditCatalogPageRegion({ draft, error, tags, tagsLoading, tag
     <div className="book-edit-tags">
       <span className="book-edit-field-label">Catalog Tags</span>
       <div className="book-edit-tag-list">{draft.catalogTagNames.map((name) => <span className="book-edit-tag" key={name}>{name}<button type="button" aria-label={`Remove ${name}`} onClick={() => onChange("catalogTagNames", draft.catalogTagNames.filter((value) => value !== name))}><MaterialIcon name="close" /></button></span>)}</div>
-      <div className="book-edit-inline-control">
+      <div className="book-edit-inline-control book-edit-tag-add">
         <input aria-label="Catalog Tag name" list={tagsError || tagsLoading ? undefined : "book-edit-tag-options"} value={tagName} onChange={(event) => setTagName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} />
         <Button type="button" onClick={addTag}>Add tag</Button>
       </div>
