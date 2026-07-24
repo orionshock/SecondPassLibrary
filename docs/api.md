@@ -750,9 +750,29 @@ Book write and media notes:
 
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; EPUB content is delivered through authenticated app/API endpoints.
+- Book PATCH/PUT accepts only `title`, `sort_title`, `subtitle`, `description`,
+  `publisher`, `language`, `published_year`, `published_month`,
+  `published_day`, `published_date_precision`, `authors`, `series`,
+  `series_index`, `identifiers`, and `catalog_tags`. Unknown or read-only fields
+  return structured `400` field errors instead of being ignored. In particular,
+  cover, file, checksum, group, storage/source, and timestamp fields are not
+  writable through this endpoint.
+- `sort_title` is writable and may be blank. PATCH and PUT both retain partial
+  update semantics: omitted writable fields preserve their current values.
 - Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
-- `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
+- Duplicate Author ids are deduplicated server-side while preserving the first
+  occurrence order. An empty list clears all Author relationships.
+- `series_index` accepts only values greater than zero with at most one decimal
+  place (for example `5` or `5.1`). Book list/detail responses serialize a
+  present index with one decimal place (`5.0`, `5.1`). Null clears the index;
+  omission preserves it. A non-null index without a target Series is a field
+  validation error. Clearing `series` removes the BookSeries relationship.
 - `subtitle` may be patched to an empty string.
+- Publication dates are validated against their declared precision. Year
+  precision requires only a year; month precision requires year/month and no
+  day; day precision requires all components. Month/day values must form a real
+  Python calendar date, so impossible dates such as `2025-02-31` are rejected.
+  Blank precision retains the established no-precision behavior.
 - `identifiers[]` response items include `id`, `scheme`, and `value`.
 - Items in compact and detail `catalog_tags[]` contain `id`, `name`, and
   generated `slug`; see the canonical response shapes above.
@@ -761,8 +781,10 @@ Book write and media notes:
   preserves existing rows; `identifiers: []` clears them.
 - Book PATCH accepts `catalog_tags` as a complete replacement list of names.
   Omitting it preserves current tags; `catalog_tags: []` clears them.
-- Metadata, authors, BookSeries relationship data, identifiers, and Catalog Tags are updated
-  transactionally through the single Book detail PATCH endpoint.
+- Scalar metadata, Authors, BookSeries relationship data, identifiers, and
+  Catalog Tags are updated atomically through the single Book detail PATCH/PUT
+  endpoint. Validation failure in any supplied field rolls back the complete
+  update.
 
 Book cover mutation is deliberately separate from metadata PATCH:
 

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
+
 from django.urls import reverse
 from rest_framework import serializers
 
@@ -120,7 +123,7 @@ class BookSeriesSummarySerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series.id")
     name = serializers.CharField(source="series.name")
     sort_name = serializers.CharField(source="series.sort_name")
-    series_index = serializers.DecimalField(max_digits=8, decimal_places=2, allow_null=True)
+    series_index = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
 
 
 class BookIdentifierSerializer(serializers.ModelSerializer):
@@ -267,8 +270,20 @@ class BookDetailSerializer(BookListSerializer):
         read_only_fields = fields
 
 
-class BookUpdateSerializer(serializers.Serializer):
+class RejectUnknownFieldsMixin:
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            unknown = set(data) - set(self.fields)
+            if unknown:
+                raise serializers.ValidationError(
+                    {field: ["Unknown field."] for field in sorted(unknown)}
+                )
+        return super().to_internal_value(data)
+
+
+class BookUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     title = serializers.CharField(max_length=512, required=False)
+    sort_title = serializers.CharField(max_length=512, required=False, allow_blank=True)
     subtitle = serializers.CharField(max_length=512, required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
     publisher = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -283,10 +298,11 @@ class BookUpdateSerializer(serializers.Serializer):
     authors = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), many=True, required=False)
     series = SeriesReferenceField(required=False, allow_null=True)
     series_index = serializers.DecimalField(
-        max_digits=8,
-        decimal_places=2,
+        max_digits=7,
+        decimal_places=1,
         required=False,
         allow_null=True,
+        min_value=Decimal("0.1"),
     )
     identifiers = BookIdentifierWriteSerializer(many=True, required=False)
     catalog_tags = serializers.ListField(
@@ -294,3 +310,82 @@ class BookUpdateSerializer(serializers.Serializer):
         required=False,
         allow_empty=True,
     )
+
+    def validate_authors(self, authors):
+        seen = set()
+        unique = []
+        for author in authors:
+            if author.pk in seen:
+                continue
+            seen.add(author.pk)
+            unique.append(author)
+        return unique
+
+    def validate(self, attrs):
+        self._validate_series_index(attrs)
+        self._validate_publication_date(attrs)
+        return attrs
+
+    def _validate_series_index(self, attrs) -> None:
+        if attrs.get("series_index") is None:
+            return
+        book = self.context.get("book")
+        existing_link = getattr(book, "book_series", None) if book is not None else None
+        target_series = (
+            attrs["series"]
+            if "series" in attrs
+            else (existing_link.series if existing_link is not None else None)
+        )
+        if target_series is None:
+            raise serializers.ValidationError(
+                {"series_index": "Series index requires an assigned series."}
+            )
+
+    def _validate_publication_date(self, attrs) -> None:
+        book = self.context.get("book")
+
+        def target(field):
+            if field in attrs:
+                return attrs[field]
+            return getattr(book, field, None) if book is not None else None
+
+        precision = target("published_date_precision") or ""
+        year = target("published_year")
+        month = target("published_month")
+        day = target("published_day")
+        errors = {}
+
+        if precision == Book.DATE_PRECISION_YEAR:
+            if year is None:
+                errors["published_year"] = "Year precision requires a year."
+            if month is not None:
+                errors["published_month"] = "Year precision does not allow a month."
+            if day is not None:
+                errors["published_day"] = "Year precision does not allow a day."
+        elif precision == Book.DATE_PRECISION_MONTH:
+            if year is None:
+                errors["published_year"] = "Month precision requires a year."
+            if month is None:
+                errors["published_month"] = "Month precision requires a month."
+            if day is not None:
+                errors["published_day"] = "Month precision does not allow a day."
+            if not errors:
+                try:
+                    date(year, month, 1)
+                except ValueError:
+                    errors["published_month"] = "Enter a valid calendar month."
+        elif precision == Book.DATE_PRECISION_DAY:
+            if year is None:
+                errors["published_year"] = "Day precision requires a year."
+            if month is None:
+                errors["published_month"] = "Day precision requires a month."
+            if day is None:
+                errors["published_day"] = "Day precision requires a day."
+            if not errors:
+                try:
+                    date(year, month, day)
+                except ValueError:
+                    errors["published_day"] = "Enter a valid calendar date."
+
+        if errors:
+            raise serializers.ValidationError(errors)

@@ -80,7 +80,11 @@ class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
         if not is_librarian(request.user):
             raise PermissionDenied("Not allowed.")
         book = self.get_object()
-        serializer = BookUpdateSerializer(data=request.data or {}, partial=True)
+        serializer = BookUpdateSerializer(
+            data=request.data or {},
+            partial=True,
+            context={"book": book},
+        )
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
         authors = data.pop("authors", None)
