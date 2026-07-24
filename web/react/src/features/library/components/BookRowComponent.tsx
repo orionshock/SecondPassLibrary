@@ -5,6 +5,7 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { BookMetadataComponent } from "../../../shared/books/BookMetadataComponent";
 import { bookAuthorNames, bookSeriesLabel, visibleCatalogTags } from "../libraryPresentation";
+import { bookBrowseDetailBreadcrumbs } from "../bookDetailPresentation";
 
 export function BookRowComponent({ book, libraryPath, contextLabel, parentLibraryPath = libraryPath }: {
   book: CompactBook;
@@ -13,11 +14,12 @@ export function BookRowComponent({ book, libraryPath, contextLabel, parentLibrar
   parentLibraryPath?: string;
 }) {
   const detailPath = `/library/books/${encodeURIComponent(book.id)}`;
-  const navigationState = breadcrumbNavigationState([
-    { label: "Library", to: parentLibraryPath },
-    ...(contextLabel ? [{ label: contextLabel, to: libraryPath }] : []),
-    { label: book.title },
-  ]);
+  const navigationState = breadcrumbNavigationState(bookBrowseDetailBreadcrumbs({
+    title: book.title,
+    libraryPath,
+    contextLabel,
+    parentLibraryPath,
+  }));
   const { tags, hiddenCount } = visibleCatalogTags(book);
 
   return <article className="book-row-component">

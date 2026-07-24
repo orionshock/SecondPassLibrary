@@ -32,12 +32,17 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  getBook,
   listAllCatalogTags,
   listAuthors,
   listBooks,
   listCatalogTags,
   listSeries,
   type BookAuthorSummary,
+  type BookDetail,
+  type BookFileDetail,
+  type BookGroupSummary,
+  type BookIdentifier,
   type BookOrdering,
   type BookPreview,
   type BookSeriesSummary,

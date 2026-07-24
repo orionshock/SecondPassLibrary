@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { listAllCatalogTags, listAuthors, listBooks, listCatalogTags, listSeries } from "@second-pass/spl-api";
+import { getBook, listAllCatalogTags, listAuthors, listBooks, listCatalogTags, listSeries } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -15,6 +15,55 @@ const compactWireBook = {
 };
 
 describe("Library SDK", () => {
+  it("maps the explicit Book Detail contract without admitting storage or provenance fields", async () => {
+    const calls: string[] = [];
+    const wireBook = {
+      id: "book-1", title: "The Book", sort_title: "Book, The", subtitle: "A subtitle",
+      authors: [{ id: "author-1", name: "Ada Author", normalized_name: "hidden" }],
+      series: { id: "series-1", name: "A Series", sort_name: "Series, A", series_index: "2.00", summary: "hidden" },
+      language: "en", publisher: "A Press", published_year: 2020, published_month: 3, published_day: null,
+      published_date_precision: "month", cover_url: "/media/cover.jpg", description: "Description",
+      identifiers: [{ id: "identifier-1", scheme: "isbn_13", value: "978123", normalized_value: "hidden" }],
+      catalog_tags: [{ id: "tag-1", name: "Fantasy", slug: "fantasy", normalized_name: "hidden" }],
+      file: { format: "epub", file_size: 1536, checksum: "checksum", download_url: "http://127.0.0.1:8000/api/v1/library/books/book-1/download/?source=detail", storage_path: "hidden", source_filename: "hidden.epub" },
+      groups: [{ id: "group-1", name: "Readers", description: "Visible", is_public_group: false, memberships: ["hidden"] }],
+      source_filename: "hidden.epub", import_source: "hidden", book_file: "hidden/path.epub",
+    };
+    const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return wireBook as T; } };
+
+    const book = await getBook("book/id", client);
+
+    expect(calls).toEqual(["/api/v1/library/books/book%2Fid/"]);
+    expect(book).toEqual({
+      id: "book-1", title: "The Book", sortTitle: "Book, The", subtitle: "A subtitle",
+      authors: [{ id: "author-1", name: "Ada Author" }],
+      series: { id: "series-1", name: "A Series", sortName: "Series, A", seriesIndex: "2.00" },
+      language: "en", publisher: "A Press", publishedYear: 2020, publishedMonth: 3, publishedDay: null,
+      publishedDatePrecision: "month", coverUrl: "/media/cover.jpg", description: "Description",
+      identifiers: [{ id: "identifier-1", scheme: "isbn_13", value: "978123" }],
+      catalogTags: [{ id: "tag-1", name: "Fantasy", slug: "fantasy" }],
+      file: { format: "epub", fileSize: 1536, checksum: "checksum", downloadUrl: "/api/v1/library/books/book-1/download/?source=detail" },
+      groups: [{ id: "group-1", name: "Readers", description: "Visible", isPublicGroup: false }],
+    });
+    for (const field of ["sourceFilename", "importSource", "bookFile", "storagePath"]) expect(book).not.toHaveProperty(field);
+    expect(book.authors[0]).not.toHaveProperty("normalizedName");
+    expect(book.identifiers[0]).not.toHaveProperty("normalizedValue");
+    expect(book.file).not.toHaveProperty("storagePath");
+  });
+
+  it("preserves null series/file projections and blank detail strings", async () => {
+    const client: ApiClient = { request: async <T>() => ({
+      id: "book", title: "Book", sort_title: "", subtitle: "", authors: [], series: null,
+      language: "", publisher: "", published_year: null, published_month: null, published_day: null,
+      published_date_precision: "", cover_url: null, description: "", identifiers: [], catalog_tags: [],
+      file: null, groups: [],
+    }) as T };
+    await expect(getBook("book", client)).resolves.toMatchObject({
+      sortTitle: "", subtitle: "", series: null, publishedYear: null, coverUrl: null,
+      description: "", file: null,
+    });
+  });
+
   it("maps Books-axis queries and compact wire fields", async () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {

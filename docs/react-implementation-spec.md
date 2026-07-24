@@ -12,8 +12,8 @@ the parked UI is stale.
 The React shell, Profile, password change, client pairing, Users,
 library Imports, Server Settings, and the Library Books, Authors, Series, and
 selected Author/Series browse contexts are substantially rebuilt. Dashboard is
-a placeholder, while My Marginalia, Library detail workflows, Groups, and
-Shelves remain to be rebuilt.
+a placeholder, while My Marginalia, Book Edit, Groups, and Shelves remain to be
+rebuilt.
 Library's compact Book row, cover, metadata, Catalog Tag rail, axis state, and
 detail conventions are also consumed by Groups and Shelves.
 
@@ -163,7 +163,7 @@ remains authoritative.
 | Dashboard | `/` | Still to rebuild | Current React route is a styled placeholder. Retire legacy `/dashboard/`; `/` is canonical. |
 | My Marginalia | `/reading` and children below | Still to rebuild | Current `/reading` is a placeholder. |
 | Library browse | `/library` | Top-level and selected browse rebuilt | Books/Authors/Series and selected Author/Series Book contexts share URL-backed ordering/search/tag/page state. |
-| Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Still to rebuild | The detail route currently renders a bounded no-fetch placeholder with contextual breadcrumbs. |
+| Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Detail rebuilt; Edit pending | Detail is read-only metadata plus safe EPUB download and contextual breadcrumbs. |
 | Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Still to rebuild | Detail remains selected Author in `/library`; no separate detail page is needed. |
 | Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Still to rebuild | Same model as Authors. |
 | Groups | `/groups`, `/groups/new`, `/groups/:groupId`, `/groups/:groupId/edit` | Still to rebuild | Entire branch hidden/unavailable in simple mode. |
@@ -421,20 +421,18 @@ breadcrumb context through Router location state.
 
 - All authenticated users with Book visibility may access. Inaccessible Books
   produce bounded not-found.
-- Hero uses a large cover column and Book identity column: large title,
-  subtitle/authors/series/publisher metadata, clamped description with
-  Show more/less, authenticated Download action from `file.download_url`, and
-  Librarian+ Edit action.
-- Tabs are URL-backed with `tab=shelves`, optional `tab=groups`, and
-  `tab=metadata`; Shelves is the default. Invalid or hidden Groups falls back to
-  Shelves. Groups appears only in advanced mode.
-- Shelves: read-only visible shelves containing the Book via `?book=<id>`, with
-  ownership/visibility badges and canonical Shelf links.
-- Groups: read-only visible group badges/links from Book detail `groups`.
-- Metadata: two-column responsive group of normal metadata, Catalog Tag pills,
-  file facts, and identifiers. Download is the only file action. A checksum may
-  exist in the API for integrity, but do not foreground or expose it unless a
-  deliberate operator requirement is approved.
+- The implemented hero uses a large cover column and Book identity column:
+  title, subtitle, linked authors and Series/index, publisher, language,
+  precision-aware publication date, Catalog Tags, escaped plain-text
+  description, and authenticated Download EPUB from `file.download_url`.
+- The responsive metadata section shows bibliographic facts, identifiers, safe
+  file format/size facts, and read-only visible groups only in advanced mode.
+- The nested `file` response is a projection of canonical EPUB fields stored on
+  Book, not a separate asset record. `file: null` is an exceptional repair state
+  shown as an unavailable EPUB; it is not presented as an optional file. A
+  checksum may exist in the API for integrity but is not rendered.
+- Shelves/Groups tabs, shelf and group relationship actions, Edit, Reader/Open,
+  deletion, and cover mutation remain out of this read-only slice.
 - Cover replace/clear is not available on Detail.
 
 ### Book Edit (`/library/books/:bookId/edit`)
@@ -707,8 +705,8 @@ have materially different contracts.
 2. **Author and Series browse (complete):** controlled axis tabs, previews, and
    selected in-context compact Book lists are built; lifecycle create/edit/delete
    pages remain.
-3. **Book Detail:** hero, Shelves/Groups/Metadata tabs, download, contextual
-   breadcrumbs.
+3. **Book Detail (complete):** read-only hero, metadata, safe EPUB download,
+   repair-state handling, and contextual breadcrumbs.
 4. **Book Edit:** two-column workspace, URL tabs, metadata draft, assignment
    tabs, identifiers, then cover dialog as a separate mutation boundary.
 5. **Shelves:** SDK, scoped list/create/view/edit. This reuses Book rows and
@@ -722,8 +720,8 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Implement Book Detail as a separate slice. Keep Author/Series lifecycle mutations
-separate from contextual Library browsing.
+Implement Book Edit as a separate mutation boundary. Keep Author/Series
+lifecycle mutations separate from contextual Library browsing.
 
 ## Focused test strategy
 

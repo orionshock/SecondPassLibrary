@@ -93,6 +93,47 @@ export interface CompactBook {
   fileFormat: string;
 }
 
+export interface BookIdentifier {
+  id: string;
+  scheme: string;
+  value: string;
+}
+
+export interface BookGroupSummary {
+  id: string;
+  name: string;
+  description: string;
+  isPublicGroup: boolean;
+}
+
+export interface BookFileDetail {
+  format: string;
+  fileSize: number | null;
+  checksum: string | null;
+  downloadUrl: string;
+}
+
+export interface BookDetail {
+  id: string;
+  title: string;
+  sortTitle: string;
+  subtitle: string;
+  authors: BookAuthorSummary[];
+  series: BookSeriesSummary | null;
+  language: string;
+  publisher: string;
+  publishedYear: number | null;
+  publishedMonth: number | null;
+  publishedDay: number | null;
+  publishedDatePrecision: string;
+  coverUrl: string | null;
+  description: string;
+  identifiers: BookIdentifier[];
+  catalogTags: CatalogTagSummary[];
+  file: BookFileDetail | null;
+  groups: BookGroupSummary[];
+}
+
 interface CompactBookResponse {
   id: string;
   title: string;
@@ -109,6 +150,27 @@ interface CompactBookResponse {
   published_date_precision: string;
   cover_url: string | null;
   file_format: string;
+}
+
+interface BookDetailResponse {
+  id: string;
+  title: string;
+  sort_title: string;
+  subtitle: string;
+  authors: Array<{ id: string; name: string }>;
+  series: { id: string; name: string; sort_name: string; series_index: string | null } | null;
+  language: string;
+  publisher: string;
+  published_year: number | null;
+  published_month: number | null;
+  published_day: number | null;
+  published_date_precision: string;
+  cover_url: string | null;
+  description: string;
+  identifiers: Array<{ id: string; scheme: string; value: string }>;
+  catalog_tags: Array<{ id: string; name: string; slug: string }>;
+  file: { format: string; file_size: number | null; checksum: string | null; download_url: string } | null;
+  groups: Array<{ id: string; name: string; description: string; is_public_group: boolean }>;
 }
 
 interface CatalogTagResponse {
@@ -156,6 +218,13 @@ export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient
     await client.request<ApiPage<CompactBookResponse>>(withQuery("/api/v1/library/books/", parameters)),
     mapCompactBook,
   );
+}
+
+export async function getBook(bookId: string, client: ApiClient = apiClient): Promise<BookDetail> {
+  const response = await client.request<BookDetailResponse>(
+    `/api/v1/library/books/${encodeURIComponent(bookId)}/`,
+  );
+  return mapBookDetail(response);
 }
 
 export async function listAuthors(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibraryAuthor>> {
@@ -236,6 +305,53 @@ export function mapCompactBook(response: CompactBookResponse): CompactBook {
     coverUrl: response.cover_url,
     fileFormat: response.file_format,
   };
+}
+
+export function mapBookDetail(response: BookDetailResponse): BookDetail {
+  return {
+    id: response.id,
+    title: response.title,
+    sortTitle: response.sort_title,
+    subtitle: response.subtitle,
+    authors: response.authors.map(({ id, name }) => ({ id, name })),
+    series: response.series ? {
+      id: response.series.id,
+      name: response.series.name,
+      sortName: response.series.sort_name,
+      seriesIndex: response.series.series_index,
+    } : null,
+    language: response.language,
+    publisher: response.publisher,
+    publishedYear: response.published_year,
+    publishedMonth: response.published_month,
+    publishedDay: response.published_day,
+    publishedDatePrecision: response.published_date_precision,
+    coverUrl: response.cover_url,
+    description: response.description,
+    identifiers: response.identifiers.map(({ id, scheme, value }) => ({ id, scheme, value })),
+    catalogTags: response.catalog_tags.map(({ id, name, slug }) => ({ id, name, slug })),
+    file: response.file ? {
+      format: response.file.format,
+      fileSize: response.file.file_size,
+      checksum: response.file.checksum,
+      downloadUrl: sameOriginUrl(response.file.download_url),
+    } : null,
+    groups: response.groups.map(({ id, name, description, is_public_group }) => ({
+      id,
+      name,
+      description,
+      isPublicGroup: is_public_group,
+    })),
+  };
+}
+
+function sameOriginUrl(value: string): string {
+  try {
+    const url = new URL(value, "http://second-pass.invalid");
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return value;
+  }
 }
 
 function mapCatalogTag(response: CatalogTagResponse): CatalogTag {
