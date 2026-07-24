@@ -425,13 +425,14 @@ breadcrumb context through Router location state.
   title, subtitle, linked authors and Series/index, publisher, language,
   precision-aware publication date, Catalog Tags, escaped plain-text
   description, and authenticated Download EPUB from `file.download_url`.
-- The responsive metadata section shows bibliographic facts, identifiers, safe
-  file format/size facts, and read-only visible groups only in advanced mode.
+- Lightweight local tabs below the hero provide an honest no-fetch Shelves
+  placeholder, read-only visible Groups only in advanced mode, and Metadata
+  containing publication, identifier, and safe file format/size facts.
 - The nested `file` response is a projection of canonical EPUB fields stored on
   Book, not a separate asset record. `file: null` is an exceptional repair state
   shown as an unavailable EPUB; it is not presented as an optional file. A
-  checksum may exist in the API for integrity but is not rendered.
-- Shelves/Groups tabs, shelf and group relationship actions, Edit, Reader/Open,
+  checksum is rendered only in the secondary Metadata tab's File panel.
+- Real shelf loading, shelf and group relationship actions, Edit, Reader/Open,
   deletion, and cover mutation remain out of this read-only slice.
 - Cover replace/clear is not available on Detail.
 

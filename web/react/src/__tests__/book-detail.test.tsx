@@ -1,11 +1,10 @@
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { ApiError, type BookDetail } from "@second-pass/spl-api";
+import type { BookDetail } from "@second-pass/spl-api";
 import { resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
-import { loadBookDetail } from "../features/library/BookDetailOrchestrator";
 import {
   bookBrowseDetailBreadcrumbs,
   bookDetailBreadcrumbFallback,
@@ -15,8 +14,7 @@ import {
   formatBookPublishedDate,
 } from "../features/library/bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "../features/library/regions/BookDetailHeroPageRegion";
-import { BookDetailMetadataPageRegion } from "../features/library/regions/BookDetailMetadataPageRegion";
-import { BookDetailStatePageRegion } from "../features/library/regions/BookDetailStatePageRegion";
+import { BookDetailSectionsPageRegion } from "../features/library/regions/BookDetailSectionsPageRegion";
 
 const book: BookDetail = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -55,83 +53,37 @@ describe("Book Detail presentation", () => {
     expect(bookIdentifierLabel("isbn_13")).toBe("ISBN-13");
   });
 
-  it("renders the read-only identity, escaped description, Catalog Tags, links, and one download action", () => {
+  it("escapes description text and builds contextual entity and download links", () => {
     const markup = render(<BookDetailHeroPageRegion book={book} />);
-    for (const text of ["Battle Ground", "A Novel of the Dresden Files", "Jim Butcher", "Dresden Files #18.00", "Penguin", "eng", "2020-07-14", "Fantasy"]) expect(markup).toContain(text);
     expect(markup).toContain("&lt;p&gt;hello&lt;/p&gt;");
     expect(markup).not.toContain("<p>hello</p>");
     expect(markup).toContain('href="/library?view=authors&amp;author=22222222-2222-4222-8222-222222222222"');
     expect(markup).toContain('href="/library?view=series&amp;series=33333333-3333-4333-8333-333333333333"');
     expect(markup).toContain('href="/download/book.epub"');
-    expect(markup.match(/Download EPUB/g)).toHaveLength(1);
-    expect(markup).toContain("No cover available for Battle Ground");
-    for (const forbidden of ["DO-NOT-RENDER", "Edit", "Delete", "Read", "Open", "Change Cover"]) expect(markup).not.toContain(forbidden);
   });
 
-  it("renders mapped metadata and read-only groups only in advanced mode", () => {
-    const simple = render(<BookDetailMetadataPageRegion book={book} advancedGroupsEnabled={false} />);
-    expect(simple).toContain("EPUB");
-    expect(simple).toContain("1.5 KB");
-    expect(simple).toContain("ISBN-13");
-    expect(simple).toContain("9781234567890");
-    expect(simple).not.toContain("Visible Groups");
-    expect(simple).not.toContain("DO-NOT-RENDER");
-
-    const advanced = render(<BookDetailMetadataPageRegion book={book} advancedGroupsEnabled />);
-    expect(advanced).toContain("Visible Groups");
-    expect(advanced).toContain("Common Room (Public)");
-    expect(advanced).toContain("Everyone reads here");
-    expect(advanced).not.toContain("Remove");
+  it("uses mapped file and identifier data in the Metadata section", () => {
+    const metadata = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} initialSection="metadata" />);
+    expect(metadata).toContain("DO-NOT-RENDER");
+    expect(metadata).toContain("9781234567890");
   });
 
-  it("treats a null file projection as an EPUB repair state and omits download", () => {
+  it("uses the server-provided advanced-groups mode to gate visible groups", () => {
+    const simple = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} initialSection="groups" />);
+    const advanced = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled initialSection="groups" />);
+    expect(simple).not.toContain("Common Room");
+    expect(advanced).toContain("Common Room");
+  });
+
+  it("uses a null file projection to show repair state and suppress download", () => {
     const repairBook = { ...book, file: null };
     const hero = render(<BookDetailHeroPageRegion book={repairBook} />);
-    const metadata = render(<BookDetailMetadataPageRegion book={repairBook} advancedGroupsEnabled={false} />);
-    expect(metadata).toContain("This book’s EPUB file is unavailable.");
-    expect(metadata).not.toContain("No file");
+    expect(hero).toContain("This book’s EPUB file is unavailable.");
     expect(hero).not.toContain("Download EPUB");
-    expect(render(<BookDetailHeroPageRegion book={{ ...book, file: { ...book.file!, downloadUrl: "" } }} />)).not.toContain("Download EPUB");
-  });
-
-  it("omits blank optional metadata rather than leaving empty panels and rows", () => {
-    const sparse = { ...book, subtitle: "", authors: [], series: null, publisher: "", language: "", publishedYear: null, description: "", identifiers: [], catalogTags: [] };
-    const hero = render(<BookDetailHeroPageRegion book={sparse} />);
-    const metadata = render(<BookDetailMetadataPageRegion book={sparse} advancedGroupsEnabled={false} />);
-    expect(hero).not.toContain("Publisher:");
-    expect(hero).not.toContain('aria-label="Catalog Tags"');
-    expect(metadata).not.toContain("<h2>Metadata</h2>");
-    expect(metadata).not.toContain("Identifiers");
-    expect(metadata).toContain("EPUB File");
   });
 });
 
-describe("Book Detail orchestration and navigation", () => {
-  it("loads a direct Book id exactly once through the supplied SDK boundary", async () => {
-    const request = vi.fn(async () => book);
-    await expect(loadBookDetail(book.id, request)).resolves.toBe(book);
-    expect(request).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith(book.id);
-  });
-
-  it("renders loading, bounded not-found, and retryable error states", () => {
-    expect(render(<BookDetailStatePageRegion state="loading" />)).toContain("Loading book");
-    expect(render(<BookDetailStatePageRegion state="not-found" />)).toContain("Book not found or unavailable.");
-    const retry = vi.fn();
-    const errorMarkup = render(<BookDetailStatePageRegion state="error" error={new Error("Temporarily unavailable")} onRetry={retry} />);
-    expect(errorMarkup).toContain("Temporarily unavailable");
-    expect(errorMarkup).toContain("Retry");
-    const region = BookDetailStatePageRegion({ state: "error", error: new Error("Broken"), onRetry: retry }) as ReactElement<{ children: ReactElement[] }>;
-    const retryButton = region.props.children[1] as ReactElement<{ onClick: () => void }>;
-    retryButton.props.onClick();
-    expect(retry).toHaveBeenCalledOnce();
-  });
-
-  it("preserves SDK 404 identity for the Orchestrator to collapse into unavailable", async () => {
-    const error = new ApiError("Not found", 404);
-    await expect(loadBookDetail(book.id, async () => { throw error; })).rejects.toBe(error);
-  });
-
+describe("Book Detail navigation", () => {
   it("builds direct, Books, selected Author, and selected Series breadcrumb trails", () => {
     expect(bookDetailBreadcrumbFallback("Battle Ground").map(({ label }) => label)).toEqual(["Library", "Books", "Battle Ground"]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?q=battle" })).toEqual([

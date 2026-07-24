@@ -7,7 +7,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { bookDetailBreadcrumbFallback } from "./bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
-import { BookDetailMetadataPageRegion } from "./regions/BookDetailMetadataPageRegion";
+import { BookDetailSectionsPageRegion } from "./regions/BookDetailSectionsPageRegion";
 import { BookDetailStatePageRegion } from "./regions/BookDetailStatePageRegion";
 import "./BookDetail.css";
 
@@ -36,7 +36,7 @@ export function BookDetailOrchestrator() {
     }
     let active = true;
     setLoad({ status: "loading" });
-    loadBookDetail(bookId)
+    getBook(bookId)
       .then((loadedBook) => { if (active) setLoad({ status: "ready", book: loadedBook }); })
       .catch((error: unknown) => {
         if (!active) return;
@@ -52,13 +52,6 @@ export function BookDetailOrchestrator() {
 
   return <article className="page-stack book-detail-page">
     <BookDetailHeroPageRegion book={load.book} />
-    <BookDetailMetadataPageRegion book={load.book} advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled} />
+    <BookDetailSectionsPageRegion book={load.book} advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled} />
   </article>;
-}
-
-export function loadBookDetail(
-  bookId: string,
-  request: (id: string) => Promise<BookDetail> = getBook,
-): Promise<BookDetail> {
-  return request(bookId);
 }

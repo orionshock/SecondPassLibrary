@@ -38,8 +38,9 @@ export function BookDetailHeroPageRegion({ book }: { book: BookDetail }) {
         {book.catalogTags.map((tag) => <span key={tag.id}>{tag.name}</span>)}
       </div> : null}
       {book.description ? <p className="book-detail-hero-region__description">{book.description}</p> : null}
-      {book.file?.downloadUrl ? <div className="book-detail-hero-region__actions">
-        <a className="button" href={book.file.downloadUrl}>Download EPUB</a>
+      {book.file?.downloadUrl || !book.file ? <div className="book-detail-hero-region__actions">
+        {book.file?.downloadUrl ? <a className="button" href={book.file.downloadUrl}>Download EPUB</a> : null}
+        {!book.file ? <p className="book-detail-hero-region__repair-state">This book’s EPUB file is unavailable.</p> : null}
       </div> : null}
     </div>
   </section>;
