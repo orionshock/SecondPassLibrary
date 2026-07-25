@@ -33,6 +33,8 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   getBook,
+  clearBookCover,
+  replaceBookCover,
   getAuthor,
   getSeries,
   createAuthor,

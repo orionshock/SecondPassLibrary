@@ -455,8 +455,13 @@ breadcrumb context through Router location state.
   creation.
 - Identifier response ids are not sent in writes; one page-level Save owns the
   replacement alongside the other edited domains.
-- Cover mutation, groups, shelves, file fields/actions, deletion, and
-  Reader/Open are deliberately deferred and have no placeholder tabs.
+- Cover replace/clear is implemented as an immediate operation below the
+  read-only cover. It is independent from metadata Save, keeps backend image
+  validation authoritative, and updates only the displayed cover from the
+  returned Book Detail without resetting the metadata draft or baseline. Local
+  image preview remains deferred.
+- Groups, shelves, file fields/actions, deletion, and Reader/Open are
+  deliberately deferred and have no placeholder tabs.
 
 ### Library API, SDK, and tests
 
@@ -696,8 +701,9 @@ have materially different contracts.
    deferred.
 3. **Book Detail (complete):** read-only hero, metadata, safe EPUB download,
    repair-state handling, and contextual breadcrumbs.
-4. **Book Edit (core complete):** the four-tab bibliographic, relationship, and
-   identifier editor is built; cover remains a separate future boundary.
+4. **Book Edit (current scope complete):** the four-tab bibliographic,
+   relationship, and identifier editor plus independent cover replace/clear are
+   built. File/EPUB editing remains deferred.
 5. **Shelves:** SDK, scoped list/create/view/edit. This reuses Book rows and
    broad Library search.
 6. **Groups:** SDK, list/create/view/edit. This reuses Book rows, shelf previews,

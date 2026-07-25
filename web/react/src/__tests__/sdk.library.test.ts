@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, createAuthor, createSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
+import { ApiError, clearBookCover, createAuthor, createSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, replaceBookCover, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -81,7 +81,7 @@ describe("Library SDK", () => {
         scheme: "doi", value: "10.1000/example",
         ...({ id: "forbidden", key: "forbidden", normalizedValue: "forbidden", randomField: "forbidden" } as object),
       }], catalogTagNames: [],
-      ...({ groups: ["forbidden"], checksum: "forbidden", storage: "forbidden" } as object),
+      ...({ groups: ["forbidden"], checksum: "forbidden", storage: "forbidden", cover: "forbidden", coverUrl: "forbidden" } as object),
     }, client);
     await updateBook("book", { title: "Unchanged", identifiers: undefined }, client);
     await updateBook("book", { title: "Cleared", identifiers: [] }, client);
@@ -98,6 +98,40 @@ describe("Library SDK", () => {
     await expect(updateBook("book", { title: "Book" }, failing)).rejects.toMatchObject({
       fields: { authorIds: ["Bad Author"], seriesId: ["Bad Series"], catalogTagNames: ["Bad Tag"] },
     });
+  });
+
+  it("uses the dedicated multipart and DELETE Book cover contracts", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const wireBook = {
+      id: "book", title: "Book", sort_title: "Book", subtitle: "", authors: [], series: null,
+      language: "", publisher: "", published_year: null, published_month: null, published_day: null,
+      published_date_precision: "", cover_url: "/media/new-cover.jpg", description: "",
+      identifiers: [], catalog_tags: [], file: null, groups: [],
+    };
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return wireBook as T;
+    } };
+    const file = new File(["cover"], "cover.jpg", { type: "image/jpeg" });
+
+    await expect(replaceBookCover("book/id", file, client)).resolves.toMatchObject({
+      id: "book", sortTitle: "Book", coverUrl: "/media/new-cover.jpg",
+    });
+    await expect(clearBookCover("book/id", client)).resolves.toMatchObject({ id: "book" });
+
+    expect(calls.map(({ path, init }) => [path, init?.method])).toEqual([
+      ["/api/v1/library/books/book%2Fid/cover/", "POST"],
+      ["/api/v1/library/books/book%2Fid/cover/", "DELETE"],
+    ]);
+    const replaceInit = calls[0]!.init!;
+    expect(replaceInit.headers).toBeUndefined();
+    expect([...((replaceInit.body as FormData).entries())]).toEqual([["cover", file]]);
+    expect(calls[1]!.init?.body).toBeUndefined();
+
+    const error = new ApiError("Invalid cover.", 400, { fields: { cover: ["Choose another image."] } });
+    const failing: ApiClient = { request: async () => { throw error; } };
+    await expect(replaceBookCover("book", file, failing)).rejects.toBe(error);
+    expect(error.fields).toEqual({ cover: ["Choose another image."] });
   });
 
   it("loads every Author and Series picker page through the role-scoped contract", async () => {

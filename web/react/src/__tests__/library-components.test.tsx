@@ -4,10 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page } from "@second-pass/spl-api";
+import { BookCoverEditorComponent } from "../features/library/components/BookCoverEditorComponent";
 import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
 import { BookRowComponent } from "../features/library/components/BookRowComponent";
 import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
 import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
+import { confirmBookCoverClear } from "../features/library/bookCoverMutation";
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
@@ -36,6 +38,36 @@ function renderList(page?: Page<CompactBook>, options: { loading?: boolean; erro
 }
 
 describe("Library Books components", () => {
+  it("keeps Book Edit cover controls server-blind and explicitly confirms clear", () => {
+    const withoutSelection = renderToStaticMarkup(<BookCoverEditorComponent
+      coverUrl="/media/cover.jpg"
+      inputResetKey={0}
+      state={{ pending: false }}
+      onFileChange={vi.fn()}
+      onReplace={vi.fn()}
+      onClear={vi.fn()}
+    />);
+    expect(withoutSelection).toContain('accept="image/jpeg,image/png,image/webp"');
+    expect(withoutSelection).toMatch(/<button[^>]*type="button"[^>]*disabled=""[^>]*>Replace cover/);
+    expect(withoutSelection).toContain(">Clear cover</button>");
+
+    const noCover = renderToStaticMarkup(<BookCoverEditorComponent
+      coverUrl={null}
+      selectedFile={new File(["cover"], "cover.jpg")}
+      inputResetKey={0}
+      state={{ pending: false }}
+      onFileChange={vi.fn()}
+      onReplace={vi.fn()}
+      onClear={vi.fn()}
+    />);
+    expect(noCover).not.toContain(">Clear cover</button>");
+    expect(noCover).not.toMatch(/>Replace cover<\/button>.*disabled/);
+
+    const confirm = vi.fn(() => true);
+    expect(confirmBookCoverClear(confirm)).toBe(true);
+    expect(confirm).toHaveBeenCalledOnce();
+  });
+
   it("renders only the accepted compact row presentation with canonical metadata icons", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><BookRowComponent book={book} libraryPath="/library?q=visible" /></MemoryRouter>);
     for (const value of ["Visible Title", "Visible Author", "Visible Series 3.00", "Visible Publisher", "Tag 0", "+2"]) expect(markup).toContain(value);

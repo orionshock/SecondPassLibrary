@@ -1,9 +1,11 @@
 import {
   ApiError,
+  clearBookCover,
   getBook,
   listAllAuthors,
   listAllCatalogTags,
   listAllSeries,
+  replaceBookCover,
   updateBook,
   type BookDetail,
   type CatalogTag,
@@ -20,6 +22,7 @@ import { BookCoverComponent } from "../../shared/books/BookCoverComponent";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { SaveCancelActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail } from "./bookDetailPresentation";
+import { bookDetailWithUpdatedCover } from "./bookCoverMutation";
 import {
   bookEditDraftFromBook,
   bookEditDraftsEqual,
@@ -33,6 +36,7 @@ import { BookEditBookPageRegion } from "./regions/BookEditBookPageRegion";
 import { BookEditCatalogPageRegion } from "./regions/BookEditCatalogPageRegion";
 import { BookEditIdentifiersPageRegion } from "./regions/BookEditIdentifiersPageRegion";
 import { BookEditTabsPageRegion, type BookEditTab } from "./regions/BookEditTabsPageRegion";
+import { BookCoverEditorComponent } from "./components/BookCoverEditorComponent";
 import "./BookEdit.css";
 
 type BookLoad = { status: "loading" } | { status: "ready"; book: BookDetail } | { status: "not-found" } | { status: "error"; error: Error };
@@ -54,6 +58,10 @@ export function BookEditOrchestrator() {
   const [baseline, setBaseline] = useState<BookEditDraft>();
   const [tab, setTab] = useState<BookEditTab>("book");
   const [mutation, setMutation] = useState<MutationState>(idleMutationState);
+  const [coverMutation, setCoverMutation] = useState<MutationState>(idleMutationState);
+  const [coverPendingAction, setCoverPendingAction] = useState<"replace" | "clear">();
+  const [selectedCoverFile, setSelectedCoverFile] = useState<File>();
+  const [coverInputResetKey, setCoverInputResetKey] = useState(0);
   const allowNavigation = useRef(false);
   const book = load.status === "ready" ? load.book : undefined;
   const dirty = Boolean(draft && baseline && !bookEditDraftsEqual(draft, baseline));
@@ -77,6 +85,10 @@ export function BookEditOrchestrator() {
     if (!bookId) { setLoad({ status: "not-found" }); return; }
     let active = true;
     setLoad({ status: "loading" });
+    setCoverMutation(idleMutationState);
+    setCoverPendingAction(undefined);
+    setSelectedCoverFile(undefined);
+    setCoverInputResetKey((value) => value + 1);
     getBook(bookId).then((value) => {
       if (!active) return;
       const next = bookEditDraftFromBook(value);
@@ -95,6 +107,49 @@ export function BookEditOrchestrator() {
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {
     setDraft((current) => current ? { ...current, [field]: value } : current);
     setMutation(idleMutationState);
+  }
+
+  function selectCoverFile(file: File | undefined) {
+    setSelectedCoverFile(file);
+    setCoverMutation(idleMutationState);
+  }
+
+  async function replaceCover(file: File) {
+    if (!bookId || mutation.pending || coverMutation.pending) return;
+    setCoverPendingAction("replace");
+    setCoverMutation({ pending: true });
+    try {
+      const updated = await replaceBookCover(bookId, file);
+      setLoad((current) => current.status === "ready" && current.book.id === updated.id
+        ? { status: "ready", book: bookDetailWithUpdatedCover(current.book, updated) }
+        : current);
+      setSelectedCoverFile(undefined);
+      setCoverInputResetKey((value) => value + 1);
+      setCoverMutation({ pending: false, message: "Cover replaced." });
+    } catch (error: unknown) {
+      setCoverMutation({ pending: false, error: normalizeMutationError(error) });
+    } finally {
+      setCoverPendingAction(undefined);
+    }
+  }
+
+  async function clearCover() {
+    if (!bookId || mutation.pending || coverMutation.pending) return;
+    setCoverPendingAction("clear");
+    setCoverMutation({ pending: true });
+    try {
+      const updated = await clearBookCover(bookId);
+      setLoad((current) => current.status === "ready" && current.book.id === updated.id
+        ? { status: "ready", book: bookDetailWithUpdatedCover(current.book, updated) }
+        : current);
+      setSelectedCoverFile(undefined);
+      setCoverInputResetKey((value) => value + 1);
+      setCoverMutation({ pending: false, message: "Cover cleared." });
+    } catch (error: unknown) {
+      setCoverMutation({ pending: false, error: normalizeMutationError(error) });
+    } finally {
+      setCoverPendingAction(undefined);
+    }
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -133,7 +188,20 @@ export function BookEditOrchestrator() {
   const readyBook = load.book;
 
   return <form className="book-edit-page" onSubmit={save}>
-    <aside className="book-edit-cover"><BookCoverComponent coverUrl={readyBook.coverUrl} title={readyBook.title} /></aside>
+    <aside className="book-edit-cover">
+      <BookCoverComponent coverUrl={readyBook.coverUrl} title={readyBook.title} />
+      <BookCoverEditorComponent
+        coverUrl={readyBook.coverUrl}
+        selectedFile={selectedCoverFile}
+        inputResetKey={coverInputResetKey}
+        state={coverMutation}
+        pendingAction={coverPendingAction}
+        disabled={mutation.pending}
+        onFileChange={selectCoverFile}
+        onReplace={replaceCover}
+        onClear={clearCover}
+      />
+    </aside>
     <main className="book-edit-content">
       <p className="eyebrow">Editing Book</p>
       <h1>{draft.title || readyBook.title}</h1>

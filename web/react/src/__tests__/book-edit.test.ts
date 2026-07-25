@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BookDetail, BookIdentifierScheme } from "@second-pass/spl-api";
 import { LocalValidationError } from "../shared/feedback/mutationState";
+import { bookDetailWithUpdatedCover } from "../features/library/bookCoverMutation";
 import { bookEditDraftFromBook, bookEditDraftsEqual, bookEditInputFromDraft, validateBookEditDraft } from "../features/library/bookEditDraft";
 
 const book: BookDetail = {
@@ -67,5 +68,24 @@ describe("Book Edit draft contract", () => {
       { ...baseline, identifiers: baseline.identifiers.map((identifier) => ({ ...identifier, key: "replacement-key" })) },
     )).toBe(true);
     expect(bookEditInputFromDraft({ ...baseline, identifiers: [] }).identifiers).toEqual([]);
+  });
+
+  it("applies a cover mutation result without replacing metadata or its draft baseline", () => {
+    const baseline = bookEditDraftFromBook(book);
+    const dirtyDraft = { ...baseline, title: "Unsaved title" };
+    const returned = {
+      ...book,
+      title: "Stale server title",
+      authors: [],
+      identifiers: [],
+      coverUrl: "/media/new-cover.jpg",
+    };
+
+    expect(bookDetailWithUpdatedCover(book, returned)).toEqual({
+      ...book,
+      coverUrl: "/media/new-cover.jpg",
+    });
+    expect(dirtyDraft.title).toBe("Unsaved title");
+    expect(baseline.title).toBe("Book");
   });
 });

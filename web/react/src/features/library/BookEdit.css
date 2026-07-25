@@ -16,6 +16,17 @@
 
 .book-edit-cover .book-cover-component { width: 100%; border: 0; border-radius: 0.45rem; }
 .book-edit-cover img { object-fit: contain; }
+.book-cover-editor { display: grid; gap: 0.45rem; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--border); }
+.book-cover-editor__file { display: grid; gap: 0.35rem; color: var(--muted); font-size: 0.78rem; font-weight: 600; }
+.book-cover-editor__file input { width: 100%; min-width: 0; color: var(--muted); font-size: 0.72rem; }
+.book-cover-editor__file input::file-selector-button { margin-right: 0.4rem; padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 0.45rem; color: var(--text); background: rgb(255 255 255 / 6%); cursor: pointer; }
+.book-cover-editor__file input:disabled::file-selector-button { cursor: not-allowed; }
+.book-cover-editor__selection { min-height: 1rem; margin: 0; overflow: hidden; color: var(--muted); font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+.book-cover-editor__actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.book-cover-editor__actions .button { flex: 1 1 auto; padding: 0.42rem 0.55rem; font-size: 0.76rem; }
+.book-cover-editor__feedback { min-height: 1.1rem; color: var(--muted); font-size: 0.74rem; line-height: 1.35; }
+.book-cover-editor__feedback p { margin: 0; overflow-wrap: anywhere; }
+.book-cover-editor__feedback [role="alert"] { color: #fecdd3; }
 .book-edit-content { min-width: 0; }
 .book-edit-content > .eyebrow { margin: 0 0 0.65rem; }
 .book-edit-content > h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); }

@@ -303,6 +303,29 @@ export async function updateBook(bookId: string, input: UpdateBookInput, client:
   }
 }
 
+export async function replaceBookCover(
+  bookId: string,
+  file: File,
+  client: ApiClient = apiClient,
+): Promise<BookDetail> {
+  const body = new FormData();
+  body.append("cover", file);
+  return mapBookDetail(await client.request<BookDetailResponse>(
+    `/api/v1/library/books/${encodeURIComponent(bookId)}/cover/`,
+    { method: "POST", body },
+  ));
+}
+
+export async function clearBookCover(
+  bookId: string,
+  client: ApiClient = apiClient,
+): Promise<BookDetail> {
+  return mapBookDetail(await client.request<BookDetailResponse>(
+    `/api/v1/library/books/${encodeURIComponent(bookId)}/cover/`,
+    { method: "DELETE" },
+  ));
+}
+
 export async function listAuthors(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibraryAuthor>> {
   return listLibraryAxis("/api/v1/library/authors/", query, mapLibraryAuthor, client);
 }
