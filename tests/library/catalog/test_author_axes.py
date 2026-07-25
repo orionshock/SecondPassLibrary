@@ -75,21 +75,65 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
         self.assertEqual(set(normalized), {"deliberate duplicate"})
 
-    def test_manager_can_list_and_retrieve_unattached_author(self):
+    def test_manager_default_reads_include_full_catalog_and_total_counts(self):
         unattached = Author.objects.create(
             name="Unattached", sort_name="Unattached", normalized_name="unattached"
+        )
+        hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
+        create_catalog_book(
+            "Hidden Only Book",
+            author=hidden_only,
+            group=self.hidden,
+            tag=self.fantasy,
         )
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
-        listed = self.client.get("/api/v1/library/authors/", {"management": "true"})
-        detail = self.client.get(
-            f"/api/v1/library/authors/{unattached.id}/", {"management": "true"}
-        )
+        listed = self.client.get("/api/v1/library/authors/")
+        detail = self.client.get(f"/api/v1/library/authors/{unattached.id}/")
 
         self.assertIn("Unattached", response_names(listed))
+        self.assertIn("Hidden Only", response_names(listed))
+        self.assertEqual(response_book_counts(listed)["Alpha Author"], 3)
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.json()["book_count"], 0)
+
+    def test_manager_tag_search_ordering_and_previews_use_full_book_scope(self):
+        hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
+        create_catalog_book(
+            "Hidden Only Book",
+            author=hidden_only,
+            group=self.hidden,
+            tag=self.fantasy,
+        )
+        hidden_prolific = Author.objects.create(
+            name="Hidden Prolific", sort_name="Hidden Prolific"
+        )
+        for title in ("Hidden Prolific One", "Hidden Prolific Two"):
+            create_catalog_book(
+                title,
+                author=hidden_prolific,
+                group=self.hidden,
+                tag=self.fantasy,
+            )
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        filtered = self.client.get(
+            "/api/v1/library/authors/",
+            {"tag": self.fantasy.slug, "q": "hidden", "ordering": "-book_count"},
+        )
+        previews = self.client.get(
+            "/api/v1/library/authors/",
+            {"q": "alpha", "include_preview_books": "true"},
+        )
+
+        self.assertEqual(response_names(filtered), ["Hidden Prolific", "Hidden Only"])
+        self.assertEqual(
+            response_book_counts(filtered),
+            {"Hidden Prolific": 2, "Hidden Only": 1},
+        )
+        self.assertIn("Hidden Dresden", preview_titles(previews.json()["results"][0]))
 
     def test_safe_delete_author(self):
         unattached = Author.objects.create(
@@ -141,6 +185,7 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertFalse(Author.objects.filter(name="Forbidden Writer").exists())
 
     def test_list_includes_only_authors_with_visible_books(self):
+        Author.objects.create(name="Unattached", sort_name="Unattached")
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
         create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
 
@@ -288,12 +333,14 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
 
     def test_detail_with_no_visible_books_returns_404(self):
+        unattached = Author.objects.create(name="Unattached", sort_name="Unattached")
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
         create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
 
-        response = self.client.get(f"/api/v1/library/authors/{hidden_only.id}/")
-
-        self.assertEqual(response.status_code, 404)
+        for author in (unattached, hidden_only):
+            with self.subTest(author=author.name):
+                response = self.client.get(f"/api/v1/library/authors/{author.id}/")
+                self.assertEqual(response.status_code, 404)
 
     def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
         hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")

@@ -17,7 +17,7 @@ def preview_titles(row):
 
 
 class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
-    def test_manager_can_create_and_retrieve_unattached_series(self):
+    def test_manager_can_create_and_retrieve_unattached_series_by_default(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
         created = self.client.post(
@@ -32,11 +32,58 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
         series = Series.objects.get(pk=created.json()["id"])
         self.assertEqual(series.normalized_name, "new series")
-        detail = self.client.get(
-            f"/api/v1/library/series/{series.id}/", {"management": "true"}
-        )
+        detail = self.client.get(f"/api/v1/library/series/{series.id}/")
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.json()["book_count"], 0)
+
+    def test_manager_default_reads_include_hidden_series_and_total_counts(self):
+        hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
+        create_catalog_book(
+            "Hidden Series Book",
+            author=self.alpha,
+            series=hidden_only,
+            group=self.hidden,
+            tag=self.fantasy,
+        )
+        hidden_prolific = Series.objects.create(
+            name="Hidden Prolific Series", sort_name="Hidden Prolific Series"
+        )
+        for index, title in enumerate(("Hidden Series One", "Hidden Series Two"), start=1):
+            create_catalog_book(
+                title,
+                author=self.alpha,
+                series=hidden_prolific,
+                series_index=str(index),
+                group=self.hidden,
+                tag=self.fantasy,
+            )
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        listed = self.client.get("/api/v1/library/series/")
+        detail = self.client.get(f"/api/v1/library/series/{hidden_only.id}/")
+        filtered = self.client.get(
+            "/api/v1/library/series/",
+            {"tag": self.fantasy.slug, "q": "hidden", "ordering": "-book_count"},
+        )
+        previews = self.client.get(
+            "/api/v1/library/series/",
+            {"q": "second", "include_preview_books": "true"},
+        )
+
+        self.assertIn("Hidden Series", response_names(listed))
+        self.assertEqual(response_book_counts(listed)["Second Series"], 2)
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["book_count"], 1)
+        self.assertEqual(
+            response_names(filtered),
+            ["Hidden Prolific Series", "Hidden Series"],
+        )
+        self.assertEqual(
+            response_book_counts(filtered),
+            {"Hidden Prolific Series": 2, "Hidden Series": 1},
+        )
+        self.assertIn("Hidden Dresden", preview_titles(previews.json()["results"][0]))
 
     def test_duplicate_normalized_series_names_are_allowed(self):
         self.client.logout()
@@ -76,6 +123,7 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(blocked.status_code, 409)
         self.assertEqual(blocked.json()["error"]["code"], "SERIES_IN_USE")
     def test_list_includes_only_series_with_visible_books(self):
+        Series.objects.create(name="Unattached", sort_name="Unattached")
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
         create_catalog_book(
             "Hidden Series Book",
@@ -224,6 +272,7 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
 
     def test_detail_with_no_visible_books_returns_404(self):
+        unattached = Series.objects.create(name="Unattached", sort_name="Unattached")
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
         create_catalog_book(
             "Hidden Series Book",
@@ -232,9 +281,10 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             group=self.hidden,
         )
 
-        response = self.client.get(f"/api/v1/library/series/{hidden_only.id}/")
-
-        self.assertEqual(response.status_code, 404)
+        for series in (unattached, hidden_only):
+            with self.subTest(series=series.name):
+                response = self.client.get(f"/api/v1/library/series/{series.id}/")
+                self.assertEqual(response.status_code, 404)
 
     def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")

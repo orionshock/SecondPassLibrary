@@ -573,10 +573,13 @@ Author/Series payload notes:
   `sort_name` and `biography`, while Series accepts optional `sort_name` and
   `summary`. PATCH accepts the same entity fields. Blank sort names default to
   the display name. Client bearer credentials remain read-only.
-- Management Product UI reads add `management=true`. For a Librarian+ session,
-  this returns catalog-global Authors/Series including unattached entities and
-  total Book counts. Reader sessions, bearer clients, and ordinary reads remain
-  visibility-scoped; `management=true` does not broaden them.
+- Author and Series reads are role-scoped without a special query mode.
+  Reader sessions and bearer clients receive entities derived from Books visible
+  to that caller, so unattached entities are excluded and `book_count` counts
+  visible matching Books. Librarian+ sessions receive the full catalog by
+  default, including unattached and hidden-only entities, with total attached
+  Book counts. Catalog Tag filtering narrows the caller's Book scope before
+  deriving entities and counts.
 - Names maintain an indexed, non-unique normalized value using Unicode NFKC,
   collapsed whitespace, trim, and case-folding while preserving punctuation.
   Normalized matches are advisory and do not block duplicate creation.
@@ -592,18 +595,20 @@ Author/Series payload notes:
   `biography`, and `book_count`, initially zero). Creation does not assign a
   Book. Client bearer credentials are rejected even for privileged accounts.
 - Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH `name` and the respective prose field on the detail endpoint; readers remain read-only.
-- Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
+- Author and Series payloads include role-scoped `book_count` (read-only):
+  total attached Books for Librarian+ sessions and visible matching Books for
+  Reader sessions and bearer clients.
 - Author and Series list/detail payloads may opt into `preview_books` with
   `include_preview_books=true`; preview items are visibility-scoped and use
   the reusable preview shape described below. Tags do not currently attach
   preview books.
 - Author list ordering:
   - `GET /api/v1/library/authors/?ordering=name` orders by author name A-Z and is the default.
-  - `GET /api/v1/library/authors/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
+  - `GET /api/v1/library/authors/?ordering=-book_count` orders by highest role-scoped `book_count` first, then name/id fallback.
   - Invalid ordering values return `400`.
 - Series list ordering:
   - `GET /api/v1/library/series/?ordering=name` orders by series name A-Z and is the default.
-  - `GET /api/v1/library/series/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
+  - `GET /api/v1/library/series/?ordering=-book_count` orders by highest role-scoped `book_count` first, then name/id fallback.
   - Invalid ordering values return `400`.
 
 Catalog Tag browse endpoints:

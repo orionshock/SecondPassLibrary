@@ -408,8 +408,8 @@ breadcrumb context through Router location state.
 
 - Bounded form fields: name, sort name, and Biography (Author) or Summary
   (Series). Save feedback belongs beside Cancel/Save.
-- Load catalog-global entities with `management=true` for duplicate-name
-  advisory. Normalized duplicate names warn but do not block saving.
+- Load catalog-global entities through the normal Author/Series endpoints for a
+  Librarian+ session. Normalized duplicate names warn but do not block saving.
 - Edit renders compact attached-Book previews. An attached entity cannot be
   deleted; explain count and bounded 409 result. An unattached entity requires
   typed-name plus final confirmation in a collapsed danger zone.
@@ -647,7 +647,7 @@ Setup, login, logout, and gated Admin remain Django surfaces.
 | Marginalia export | File endpoints sufficient; selection inventory awkward | None | SDK may aggregate paginated Sessions; consider a focused grouped selection-summary read endpoint before implementation. |
 | Library browse | Sufficient | None | Add `library.ts` compact list/query mapping. Do not add group data to compact rows. |
 | Book Detail/Edit | Sufficient | None | Add detail/PATCH/download metadata/cover/group/shelf adapters. SDK should expose safe file facts while React chooses not to foreground checksum. |
-| Authors/Series | Sufficient | None | Add ordinary and `management=true` list/detail/lifecycle functions. |
+| Authors/Series | Sufficient | Browse/list SDK implemented | Add lifecycle detail/create/update functions; normal Librarian+ session reads are catalog-wide. |
 | Catalog Tags | Sufficient | None | Add read facets; mutate relationships only through Book PATCH. |
 | Groups | Sufficient | User-edit contains narrow membership calls | Add full `groups.ts`; move/reuse API operations rather than duplicating URLs. |
 | Shelves | Sufficient | None | Add `shelves.ts` lifecycle, list scopes, items, reorder, previews. |

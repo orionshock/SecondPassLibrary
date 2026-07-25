@@ -81,12 +81,13 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
             name="Unattached", sort_name="Unattached", normalized_name="unattached"
         )
 
-        self.assertEqual(
-            self.bearer_get(f"/api/v1/library/authors/{author.id}/").status_code, 404
-        )
-        self.assertEqual(
-            self.bearer_get(f"/api/v1/library/series/{series.id}/").status_code, 404
-        )
+        authors = self.bearer_get("/api/v1/library/authors/")
+        series_list = self.bearer_get("/api/v1/library/series/")
+
+        self.assertNotIn("Unattached", [row["name"] for row in authors.json()["results"]])
+        self.assertNotIn("Unattached", [row["name"] for row in series_list.json()["results"]])
+        self.assertEqual(self.bearer_get(f"/api/v1/library/authors/{author.id}/").status_code, 404)
+        self.assertEqual(self.bearer_get(f"/api/v1/library/series/{series.id}/").status_code, 404)
 
     def test_filters_counts_and_pagination_remain_visibility_scoped(self):
         books = self.bearer_get(

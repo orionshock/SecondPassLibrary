@@ -26,7 +26,6 @@ export interface LibraryAxisQuery {
   tag?: string;
   ordering?: LibraryAxisOrdering;
   includePreviewBooks?: boolean;
-  management?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -284,11 +283,11 @@ export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient
   return listLibraryAxis("/api/v1/library/series/", query, mapLibrarySeries, client);
 }
 
-export function listAllAuthorsForManagement(client: ApiClient = apiClient): Promise<LibraryAuthor[]> {
+export function listAllAuthors(client: ApiClient = apiClient): Promise<LibraryAuthor[]> {
   return listAllLibraryAxis("/api/v1/library/authors/", mapLibraryAuthor, client);
 }
 
-export function listAllSeriesForManagement(client: ApiClient = apiClient): Promise<LibrarySeries[]> {
+export function listAllSeries(client: ApiClient = apiClient): Promise<LibrarySeries[]> {
   return listAllLibraryAxis("/api/v1/library/series/", mapLibrarySeries, client);
 }
 
@@ -334,7 +333,6 @@ async function listLibraryAxis<Response, Item>(
   if (query.tag) parameters.set("tag", query.tag);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
-  if (query.management) parameters.set("management", "true");
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
@@ -346,7 +344,7 @@ async function listAllLibraryAxis<Response, Item>(
   client: ApiClient,
 ): Promise<Item[]> {
   const items: Item[] = [];
-  let next: string | null = `${path}?management=true&ordering=name&page_size=200`;
+  let next: string | null = `${path}?ordering=name&page_size=200`;
   while (next) {
     const page: ApiPage<Response> = await client.request<ApiPage<Response>>(next);
     items.push(...page.results.map(mapper));

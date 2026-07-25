@@ -1,9 +1,9 @@
 import {
   ApiError,
   getBook,
-  listAllAuthorsForManagement,
+  listAllAuthors,
   listAllCatalogTags,
-  listAllSeriesForManagement,
+  listAllSeries,
   updateBook,
   type BookDetail,
   type CatalogTag,
@@ -87,8 +87,8 @@ export function BookEditOrchestrator() {
     return () => { active = false; };
   }, [bookId, bookRetry]);
 
-  useEffect(() => loadPicker(listAllAuthorsForManagement, setAuthors), [authorRetry]);
-  useEffect(() => loadPicker(listAllSeriesForManagement, setSeries), [seriesRetry]);
+  useEffect(() => loadPicker(listAllAuthors, setAuthors), [authorRetry]);
+  useEffect(() => loadPicker(listAllSeries, setSeries), [seriesRetry]);
   useEffect(() => loadPicker(listAllCatalogTags, setTags), [tagRetry]);
 
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {

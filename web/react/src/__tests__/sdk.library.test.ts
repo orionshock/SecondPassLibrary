@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, getBook, listAllAuthorsForManagement, listAllCatalogTags, listAllSeriesForManagement, listAuthors, listBooks, listCatalogTags, listSeries, updateBook } from "@second-pass/spl-api";
+import { ApiError, getBook, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, updateBook } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -42,20 +42,20 @@ describe("Library SDK", () => {
     });
   });
 
-  it("loads every managed Author and Series picker page with the management contract", async () => {
+  it("loads every Author and Series picker page through the role-scoped contract", async () => {
     const calls: string[] = [];
     const responses = [
-      { count: 2, next: "/api/v1/library/authors/?management=true&ordering=name&page=2&page_size=200", previous: null, results: [{ id: "a1", name: "A", sort_name: "A", biography: "", book_count: 1 }] },
+      { count: 2, next: "/api/v1/library/authors/?ordering=name&page=2&page_size=200", previous: null, results: [{ id: "a1", name: "A", sort_name: "A", biography: "", book_count: 1 }] },
       { count: 2, next: null, previous: "previous", results: [{ id: "a2", name: "B", sort_name: "B", biography: "", book_count: 0 }] },
       { count: 1, next: null, previous: null, results: [{ id: "s1", name: "S", sort_name: "S", summary: "", book_count: 1 }] },
     ];
     const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return responses.shift() as T; } };
-    await expect(listAllAuthorsForManagement(client)).resolves.toHaveLength(2);
-    await expect(listAllSeriesForManagement(client)).resolves.toHaveLength(1);
+    await expect(listAllAuthors(client)).resolves.toHaveLength(2);
+    await expect(listAllSeries(client)).resolves.toHaveLength(1);
     expect(calls).toEqual([
-      "/api/v1/library/authors/?management=true&ordering=name&page_size=200",
-      "/api/v1/library/authors/?management=true&ordering=name&page=2&page_size=200",
-      "/api/v1/library/series/?management=true&ordering=name&page_size=200",
+      "/api/v1/library/authors/?ordering=name&page_size=200",
+      "/api/v1/library/authors/?ordering=name&page=2&page_size=200",
+      "/api/v1/library/series/?ordering=name&page_size=200",
     ]);
   });
   it("maps the explicit Book Detail contract without admitting storage or provenance fields", async () => {

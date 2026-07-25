@@ -6,7 +6,6 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from accounts.roles import is_librarian
@@ -58,15 +57,13 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
     def axis_queryset(self):
         raise NotImplementedError
 
-    def is_catalog_manager_session(self) -> bool:
-        session_manager = isinstance(
+    def has_catalog_wide_scope(self) -> bool:
+        return isinstance(
             self.request.successful_authenticator, SessionAuthentication
         ) and is_librarian(self.request.user)
-        if not session_manager:
-            return False
-        return self.request.method not in SAFE_METHODS or self.request.query_params.get(
-            "management"
-        ) == "true"
+
+    def has_catalog_tag_filter(self) -> bool:
+        return bool((self.request.query_params.get("tag") or "").strip())
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -137,7 +134,7 @@ class AuthorAxisMixin(_BaseAxisMixin):
     search_normalized_name = True
 
     def axis_queryset(self):
-        if self.is_catalog_manager_session():
+        if self.has_catalog_wide_scope() and not self.has_catalog_tag_filter():
             return Author.objects.annotate(book_count=Count("book_authors__book", distinct=True))
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_authors_from_books(visible_books)
@@ -195,7 +192,7 @@ class SeriesAxisMixin(_BaseAxisMixin):
     search_normalized_name = True
 
     def axis_queryset(self):
-        if self.is_catalog_manager_session():
+        if self.has_catalog_wide_scope() and not self.has_catalog_tag_filter():
             return Series.objects.annotate(book_count=Count("book_series__book", distinct=True))
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_series_from_books(visible_books)
