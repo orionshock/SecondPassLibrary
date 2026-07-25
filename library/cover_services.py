@@ -3,6 +3,8 @@ from __future__ import annotations
 from functools import partial
 import hashlib
 import logging
+from pathlib import PurePath
+import re
 
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -16,6 +18,8 @@ from library.models import Book
 
 
 logger = logging.getLogger(__name__)
+
+_LONG_HEX_RE = re.compile(r"[0-9a-fA-F]{32,}")
 
 COVER_VALIDATION_MESSAGE = (
     "Upload a valid JPEG, PNG, or WebP image no larger than 10 MiB "
@@ -64,7 +68,14 @@ def replace_book_cover(
             locked.cover_file.name = stored_name
             locked.save(update_fields=["cover_file", "updated_at"])
             if old_name and old_name != stored_name:
-                transaction.on_commit(partial(_delete_unreferenced_cover, old_name))
+                transaction.on_commit(
+                    partial(
+                        _cleanup_old_cover,
+                        name=old_name,
+                        book_id=str(locked.pk),
+                        operation="replace",
+                    )
+                )
             if log_success:
                 transaction.on_commit(
                     partial(
@@ -93,7 +104,14 @@ def clear_book_cover(*, book: Book, actor=None) -> Book:
 
         locked.cover_file = ""
         locked.save(update_fields=["cover_file", "updated_at"])
-        transaction.on_commit(partial(_delete_unreferenced_cover, old_name))
+        transaction.on_commit(
+            partial(
+                _cleanup_old_cover,
+                name=old_name,
+                book_id=str(locked.pk),
+                operation="clear",
+            )
+        )
         transaction.on_commit(
             partial(
                 _log_cover_change,
@@ -114,10 +132,43 @@ def set_book_cover_from_bytes(*, book: Book, data: bytes, source: str = "") -> B
     return book
 
 
-def _delete_unreferenced_cover(name: str) -> None:
-    if Book.objects.filter(cover_file=name).exists():
-        return
-    Book._meta.get_field("cover_file").storage.delete(name)
+def _cleanup_old_cover(*, name: str, book_id: str, operation: str) -> None:
+    referenced: bool | None = None
+    try:
+        referenced = Book.objects.filter(cover_file=name).exists()
+        if referenced:
+            logger.info(
+                "Book cover cleanup skipped: book_id=%s operation=%s "
+                "reason=still-referenced",
+                book_id,
+                operation,
+            )
+            return
+        Book._meta.get_field("cover_file").storage.delete(name)
+    except Exception as exc:
+        logger.warning(
+            "Book cover cleanup failed: book_id=%s operation=%s "
+            "still_referenced=%s error=%s message=%s",
+            book_id,
+            operation,
+            "unknown" if referenced is None else str(referenced).lower(),
+            type(exc).__name__,
+            _safe_cleanup_error_message(exc, cover_name=name),
+        )
+
+
+def _safe_cleanup_error_message(exc: Exception, *, cover_name: str) -> str:
+    message = getattr(exc, "strerror", None) or str(exc) or "No error message."
+    message = " ".join(str(message).split())
+    secrets = {cover_name, PurePath(cover_name).name}
+    for secret in secrets:
+        if secret:
+            message = message.replace(secret, "[redacted]")
+    message = " ".join(
+        "[redacted]" if "/" in token or "\\" in token else token
+        for token in message.split()
+    )
+    return _LONG_HEX_RE.sub("[redacted]", message)[:160]
 
 
 def _book_label(book: Book) -> str:
