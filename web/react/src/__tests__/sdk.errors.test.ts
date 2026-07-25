@@ -39,4 +39,23 @@ describe("apiErrorFromPayload", () => {
 
     expect(error.fields).toEqual({ currentPassword: ["Current password is incorrect."] });
   });
+
+  it("preserves flat and nested identifier field errors", () => {
+    const nested = apiErrorFromPayload(400, {
+      identifiers: [
+        { scheme: ["Choose a valid scheme."], value: ["Enter a value."] },
+      ],
+    });
+    const section = apiErrorFromPayload(400, {
+      identifiers: ["Duplicate identifiers are not allowed."],
+    });
+
+    expect(nested.fields).toEqual({
+      "identifiers.0.scheme": ["Choose a valid scheme."],
+      "identifiers.0.value": ["Enter a value."],
+    });
+    expect(section.fields).toEqual({
+      identifiers: ["Duplicate identifiers are not allowed."],
+    });
+  });
 });

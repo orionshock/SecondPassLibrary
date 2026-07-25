@@ -65,7 +65,7 @@ describe("Library SDK", () => {
     });
   });
 
-  it("PATCHes only mapped Book Edit fields, preserves explicit clears, and maps operation field errors", async () => {
+  it("PATCHes only mapped Book Edit fields, including exact identifier replacements", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
       calls.push({ path, init });
@@ -77,14 +77,22 @@ describe("Library SDK", () => {
     } };
     await updateBook("book/id", {
       title: "Saved", sortTitle: "", publishedYear: null, authorIds: [], seriesId: null,
-      seriesIndex: null, catalogTagNames: [],
-      ...({ identifiers: [{ id: "forbidden" }], groups: ["forbidden"], checksum: "forbidden", storage: "forbidden" } as object),
+      seriesIndex: null, identifiers: [{
+        scheme: "doi", value: "10.1000/example",
+        ...({ id: "forbidden", key: "forbidden", normalizedValue: "forbidden", randomField: "forbidden" } as object),
+      }], catalogTagNames: [],
+      ...({ groups: ["forbidden"], checksum: "forbidden", storage: "forbidden" } as object),
     }, client);
+    await updateBook("book", { title: "Unchanged", identifiers: undefined }, client);
+    await updateBook("book", { title: "Cleared", identifiers: [] }, client);
     expect(calls[0]?.path).toBe("/api/v1/library/books/book%2Fid/");
     expect(calls[0]?.init?.method).toBe("PATCH");
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
-      title: "Saved", sort_title: "", published_year: null, authors: [], series: null, series_index: null, catalog_tags: [],
+      title: "Saved", sort_title: "", published_year: null, authors: [], series: null, series_index: null,
+      identifiers: [{ scheme: "doi", value: "10.1000/example" }], catalog_tags: [],
     });
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ title: "Unchanged" });
+    expect(JSON.parse(String(calls[2]?.init?.body))).toEqual({ title: "Cleared", identifiers: [] });
 
     const failing: ApiClient = { request: async () => { throw new ApiError("Invalid.", 400, { fields: { authors: ["Bad Author"], series: ["Bad Series"], catalogTags: ["Bad Tag"] } }); } };
     await expect(updateBook("book", { title: "Book" }, failing)).rejects.toMatchObject({

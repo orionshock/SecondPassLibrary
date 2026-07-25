@@ -144,7 +144,7 @@ class BookIdentifierSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class BookIdentifierWriteSerializer(serializers.Serializer):
+class BookIdentifierWriteSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     scheme = serializers.ChoiceField(choices=BookIdentifier.SCHEME_CHOICES)
     value = serializers.CharField(max_length=512)
 

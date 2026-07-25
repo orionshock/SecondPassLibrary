@@ -784,7 +784,14 @@ Book write and media notes:
   generated `slug`; see the canonical response shapes above.
 - Book PATCH accepts `identifiers` as a complete replacement list of
   `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
-  preserves existing rows; `identifiers: []` clears them.
+  preserves existing rows; `identifiers: []` clears them. Identifier row ids
+  are response-only and are not accepted in write objects. Unknown nested
+  identifier fields are rejected rather than ignored.
+- Identifier PATCH schemes are the canonical values `isbn_10`, `isbn_13`,
+  `asin`, `doi`, `oclc`, `lccn`, `openlibrary`, `calibre`, `epub_uid`,
+  `publisher`, `uri`, `uuid`, and `other`. Scheme aliases recognized while
+  importing EPUB metadata are normalization inputs for import only; they are
+  not Book PATCH values.
 - Book PATCH accepts `catalog_tags` as a complete replacement list of names.
   Omitting it preserves current tags; `catalog_tags: []` clears them.
 - Scalar metadata, Authors, BookSeries relationship data, identifiers, and

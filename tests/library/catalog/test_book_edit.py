@@ -424,6 +424,66 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
             "10.1000/edit",
         )
 
+    def test_patch_rejects_unknown_nested_identifier_fields_without_partial_changes(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={
+                "title": "Must roll back",
+                "identifiers": [
+                    {
+                        "scheme": "doi",
+                        "value": "10.1000/example",
+                        "random_field": "ignored",
+                    }
+                ],
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"identifiers": [{"random_field": ["Unknown field."]}]},
+        )
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.title, "Visible One")
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
+
+    def test_identifier_owned_by_another_book_rolls_back_scalar_changes(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        normalized = normalize_identifier(scheme="doi", value="10.1000/claimed")
+        assert normalized is not None
+        BookIdentifier.objects.create(
+            book=self.visible_two,
+            scheme=normalized.scheme,
+            value=normalized.value,
+            normalized_value=normalized.normalized_value,
+        )
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={
+                "title": "Must roll back",
+                "identifiers": [
+                    {"scheme": "doi", "value": "https://doi.org/10.1000/CLAIMED"}
+                ],
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"identifiers": ["An identifier already belongs to another book."]},
+        )
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.title, "Visible One")
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
+
     def test_patch_empty_identifiers_clears_them(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
@@ -437,6 +497,20 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["identifiers"], [])
         self.assertFalse(BookIdentifier.objects.filter(book=self.visible_one).exists())
+
+    def test_patch_omitted_identifiers_preserves_them(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"description": "Identifiers stay"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["identifiers"][0]["id"], str(self.identifier.id))
+        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
 
     def test_invalid_identifier_rolls_back_entire_book_edit(self):
         self.client.logout()

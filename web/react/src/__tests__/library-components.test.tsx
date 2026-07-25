@@ -164,7 +164,7 @@ describe("Library Author and Series components", () => {
       draft={{
         title: "Book", sortTitle: "", subtitle: "", description: "", publisher: "", language: "",
         publishedDatePrecision: "", publishedYear: "", publishedMonth: "", publishedDay: "",
-        catalogTagNames: [], authorIds: [author.id], seriesId: series.id, seriesIndex: "1.0",
+        catalogTagNames: [], authorIds: [author.id], seriesId: series.id, seriesIndex: "1.0", identifiers: [],
       }}
       authors={[author]}
       series={[series]}

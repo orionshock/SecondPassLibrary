@@ -60,13 +60,28 @@ function normalizeFieldErrors(value: unknown): Record<string, string[]> | undefi
 
   const fields: Record<string, string[]> = {};
   for (const [field, messages] of Object.entries(value)) {
-    if (Array.isArray(messages)) {
-      fields[toAppFieldName(field)] = messages.filter((message): message is string => typeof message === "string");
-    } else if (typeof messages === "string") {
-      fields[toAppFieldName(field)] = [messages];
-    }
+    collectFieldErrors(fields, toAppFieldName(field), messages);
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
+}
+
+function collectFieldErrors(fields: Record<string, string[]>, path: string, value: unknown): void {
+  if (typeof value === "string") {
+    fields[path] = [...(fields[path] ?? []), value];
+    return;
+  }
+  if (Array.isArray(value)) {
+    const messages = value.filter((item): item is string => typeof item === "string");
+    if (messages.length) fields[path] = [...(fields[path] ?? []), ...messages];
+    value.forEach((item, index) => {
+      if (typeof item !== "string") collectFieldErrors(fields, `${path}.${index}`, item);
+    });
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [field, messages] of Object.entries(value)) {
+    collectFieldErrors(fields, `${path}.${toAppFieldName(field)}`, messages);
+  }
 }
 
 function toAppFieldName(field: string): string {

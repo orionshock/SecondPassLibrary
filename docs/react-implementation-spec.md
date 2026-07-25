@@ -10,10 +10,9 @@ permissions, API contracts, and privacy rules in `docs/` take precedence where
 the parked UI is stale.
 
 The React shell, Profile, password change, client pairing, Users,
-library Imports, Server Settings, and the Library Books, Authors, Series, and
-selected Author/Series browse contexts are substantially rebuilt. Dashboard is
-a placeholder, while My Marginalia, Book Edit, Groups, and Shelves remain to be
-rebuilt.
+library Imports, Server Settings, and the Library browse, Book Detail/Edit, and
+Author/Series lifecycle slices are substantially rebuilt. Dashboard is a
+placeholder, while My Marginalia, Groups, and Shelves remain to be rebuilt.
 Library's compact Book row, cover, metadata, Catalog Tag rail, axis state, and
 detail conventions are also consumed by Groups and Shelves.
 
@@ -442,9 +441,10 @@ breadcrumb context through Router location state.
 - The implemented first slice uses a polished two-column workspace: a
   fixed-width read-only cover on the left and identity plus tabbed editing on
   the right, collapsing to one column on narrow screens.
-- Its three real local tabs are Book (title, sort title, subtitle, description),
+- Its four real local tabs are Book (title, sort title, subtitle, description),
   Catalog (publisher, language, precision-aware publication date, Catalog
-  Tags), and Authors & Series (existing-entity assignment only).
+  Tags), Authors & Series (existing-entity assignment only), and Identifiers
+  (complete scheme/value replacement through the Book PATCH).
 - Save sends one explicit transactional PATCH for those edited domains, then
   replaces the draft and dirty baseline from the returned Book Detail while
   remaining on Edit. Dirty cancel/browser unload asks for confirmation.
@@ -453,8 +453,10 @@ breadcrumb context through Router location state.
 - Authors & Series assigns/removes existing Authors, assigns one existing
   Series, and edits Book-specific series index. There is no inline lifecycle
   creation.
-- Identifiers, cover mutation, groups, shelves, file fields/actions, deletion,
-  and Reader/Open are deliberately deferred and have no placeholder tabs.
+- Identifier response ids are not sent in writes; one page-level Save owns the
+  replacement alongside the other edited domains.
+- Cover mutation, groups, shelves, file fields/actions, deletion, and
+  Reader/Open are deliberately deferred and have no placeholder tabs.
 
 ### Library API, SDK, and tests
 
@@ -694,8 +696,8 @@ have materially different contracts.
    deferred.
 3. **Book Detail (complete):** read-only hero, metadata, safe EPUB download,
    repair-state handling, and contextual breadcrumbs.
-4. **Book Edit (core complete):** the three-tab bibliographic and relationship
-   editor is built; identifiers and cover remain separate future boundaries.
+4. **Book Edit (core complete):** the four-tab bibliographic, relationship, and
+   identifier editor is built; cover remains a separate future boundary.
 5. **Shelves:** SDK, scoped list/create/view/edit. This reuses Book rows and
    broad Library search.
 6. **Groups:** SDK, list/create/view/edit. This reuses Book rows, shelf previews,
@@ -707,8 +709,8 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Continue with Shelves or Groups while keeping deferred Delete, identifiers, and
-cover work as separate mutation boundaries.
+Continue with Shelves or Groups while keeping deferred Delete and cover work as
+separate mutation boundaries.
 
 ## Focused test strategy
 

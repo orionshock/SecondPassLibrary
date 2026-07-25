@@ -74,6 +74,10 @@
 .book-edit-series-fields .form-field { grid-template-columns: minmax(6.5rem, 7.5rem) minmax(0, 1fr); }
 .book-edit-series-fields input, .book-edit-series-fields select { padding-block: 0.5rem; }
 .book-edit-assigned-series-link { justify-self: end; font-size: 0.8rem; }
+.book-edit-identifiers { gap: 0.75rem; }
+.book-edit-identifier-row { display: grid; grid-template-columns: minmax(9rem, 0.7fr) minmax(12rem, 1.4fr) auto; gap: 0.65rem; align-items: start; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+.book-edit-identifier-row .form-field { grid-template-columns: minmax(0, 1fr); gap: 0.3rem; }
+.book-edit-identifier-row .icon-button { margin-top: 1.45rem; }
 .book-edit-content > .form-action-row { min-height: 3.6rem; margin-top: 0.75rem; padding: 0.55rem 0 0; border-top: 1px solid var(--border); }
 .book-edit-content > .form-action-row .action-feedback { min-height: 2.5rem; }
 .book-edit-content > .form-action-row .error-panel { max-width: min(34rem, 100%); }
@@ -87,5 +91,8 @@
   .book-edit-panel .form-field, .book-edit-tags, .book-edit-relationships { grid-template-columns: minmax(0, 1fr); }
   .book-edit-tags > :not(.book-edit-field-label) { grid-column: 1; }
   .book-edit-series-fields .form-field { grid-template-columns: minmax(0, 1fr); }
+  .book-edit-identifier-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .book-edit-identifier-row .form-field { grid-column: 1; }
+  .book-edit-identifier-row .icon-button { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin-top: 0; }
   .book-edit-author-list li { grid-template-columns: minmax(0, 1fr) auto; }
 }

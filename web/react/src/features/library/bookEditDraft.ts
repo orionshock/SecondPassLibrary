@@ -1,8 +1,21 @@
-import type { BookDetail, UpdateBookInput } from "@second-pass/spl-api";
+import {
+  bookIdentifierSchemes,
+  type BookDetail,
+  type BookIdentifierScheme,
+  type UpdateBookInput,
+} from "@second-pass/spl-api";
 
 import { LocalValidationError } from "../../shared/feedback/mutationState";
 
 export type PublicationPrecision = "" | "year" | "month" | "day";
+
+export interface BookIdentifierDraft {
+  key: string;
+  scheme: BookIdentifierScheme;
+  value: string;
+}
+
+export const bookIdentifierSchemeOptions: readonly BookIdentifierScheme[] = bookIdentifierSchemes;
 
 export interface BookEditDraft {
   title: string;
@@ -18,6 +31,7 @@ export interface BookEditDraft {
   authorIds: string[];
   seriesId: string | null;
   seriesIndex: string;
+  identifiers: BookIdentifierDraft[];
   catalogTagNames: string[];
 }
 
@@ -36,6 +50,11 @@ export function bookEditDraftFromBook(book: BookDetail): BookEditDraft {
     authorIds: book.authors.map(({ id }) => id),
     seriesId: book.series?.id ?? null,
     seriesIndex: book.series?.seriesIndex ?? "",
+    identifiers: book.identifiers.map(({ id, scheme, value }) => ({
+      key: id,
+      scheme: isBookIdentifierScheme(scheme) ? scheme : "other",
+      value,
+    })),
     catalogTagNames: book.catalogTags.map(({ name }) => name),
   };
 }
@@ -47,6 +66,10 @@ export function normalizeBookEditDraft(draft: BookEditDraft): BookEditDraft {
     title: draft.title.trim(),
     authorIds: unique(draft.authorIds),
     seriesIndex: draft.seriesId ? draft.seriesIndex.trim() : "",
+    identifiers: draft.identifiers.map((identifier) => ({
+      ...identifier,
+      value: identifier.value.trim(),
+    })),
     catalogTagNames: uniqueNames(draft.catalogTagNames),
     publishedYear: precision ? draft.publishedYear.trim() : "",
     publishedMonth: precision === "month" || precision === "day" ? draft.publishedMonth.trim() : "",
@@ -70,6 +93,7 @@ export function bookEditInputFromDraft(value: BookEditDraft): UpdateBookInput {
     authorIds: draft.authorIds,
     seriesId: draft.seriesId,
     seriesIndex: draft.seriesId && draft.seriesIndex ? draft.seriesIndex : null,
+    identifiers: draft.identifiers.map(({ scheme, value }) => ({ scheme, value })),
     catalogTagNames: draft.catalogTagNames,
   };
 }
@@ -101,15 +125,47 @@ export function validateBookEditDraft(value: BookEditDraft): void {
   if (draft.seriesIndex && (!/^\d+(?:\.\d)?$/.test(draft.seriesIndex) || Number(draft.seriesIndex) <= 0)) {
     errors.seriesIndex = ["Enter a positive value with at most one decimal place."];
   }
+  const identifierKeys = new Set<string>();
+  draft.identifiers.forEach((identifier, index) => {
+    if (!isBookIdentifierScheme(identifier.scheme)) {
+      errors[`identifiers.${index}.scheme`] = ["Choose a valid identifier scheme."];
+    }
+    if (!identifier.value) {
+      errors[`identifiers.${index}.value`] = ["Enter an identifier value."];
+    } else if (identifier.value.length > 512) {
+      errors[`identifiers.${index}.value`] = ["Use 512 characters or fewer."];
+    }
+    const duplicateKey = `${identifier.scheme}\u0000${collapseIdentifierValue(identifier.value).toLowerCase()}`;
+    if (identifier.value && identifierKeys.has(duplicateKey)) {
+      errors[`identifiers.${index}.value`] = ["This identifier is already in the draft."];
+    }
+    identifierKeys.add(duplicateKey);
+  });
   if (Object.keys(errors).length) throw new LocalValidationError("Check the highlighted fields.", errors);
 }
 
 export function bookEditDraftsEqual(left: BookEditDraft, right: BookEditDraft): boolean {
-  return JSON.stringify(normalizeBookEditDraft(left)) === JSON.stringify(normalizeBookEditDraft(right));
+  return JSON.stringify(comparableBookEditDraft(left)) === JSON.stringify(comparableBookEditDraft(right));
+}
+
+function comparableBookEditDraft(value: BookEditDraft) {
+  const draft = normalizeBookEditDraft(value);
+  return {
+    ...draft,
+    identifiers: draft.identifiers.map(({ scheme, value }) => ({ scheme, value })),
+  };
 }
 
 function isPublicationPrecision(value: string): value is PublicationPrecision {
   return value === "" || value === "year" || value === "month" || value === "day";
+}
+
+function isBookIdentifierScheme(value: string): value is BookIdentifierScheme {
+  return (bookIdentifierSchemes as readonly string[]).includes(value);
+}
+
+function collapseIdentifierValue(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
 }
 
 function unique(values: string[]): string[] {

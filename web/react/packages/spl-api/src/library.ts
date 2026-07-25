@@ -42,6 +42,18 @@ export interface SeriesMutationInput {
   summary: string;
 }
 
+export const bookIdentifierSchemes = [
+  "isbn_10", "isbn_13", "asin", "doi", "oclc", "lccn", "openlibrary",
+  "calibre", "epub_uid", "publisher", "uri", "uuid", "other",
+] as const;
+
+export type BookIdentifierScheme = typeof bookIdentifierSchemes[number];
+
+export interface BookIdentifierInput {
+  scheme: BookIdentifierScheme;
+  value: string;
+}
+
 export interface UpdateBookInput {
   title?: string;
   sortTitle?: string;
@@ -56,6 +68,7 @@ export interface UpdateBookInput {
   authorIds?: string[];
   seriesId?: string | null;
   seriesIndex?: string | null;
+  identifiers?: BookIdentifierInput[];
   catalogTagNames?: string[];
 }
 
@@ -269,6 +282,9 @@ export async function updateBook(bookId: string, input: UpdateBookInput, client:
   ];
   for (const [appField, wireField] of fields) {
     if (input[appField] !== undefined) payload[wireField] = input[appField];
+  }
+  if (input.identifiers !== undefined) {
+    payload.identifiers = input.identifiers.map(({ scheme, value }) => ({ scheme, value }));
   }
   try {
     return mapBookDetail(await client.request<BookDetailResponse>(

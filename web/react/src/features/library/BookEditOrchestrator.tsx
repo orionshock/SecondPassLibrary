@@ -31,6 +31,7 @@ import { BookDetailStatePageRegion } from "./regions/BookDetailStatePageRegion";
 import { BookEditAuthorsSeriesPageRegion } from "./regions/BookEditAuthorsSeriesPageRegion";
 import { BookEditBookPageRegion } from "./regions/BookEditBookPageRegion";
 import { BookEditCatalogPageRegion } from "./regions/BookEditCatalogPageRegion";
+import { BookEditIdentifiersPageRegion } from "./regions/BookEditIdentifiersPageRegion";
 import { BookEditTabsPageRegion, type BookEditTab } from "./regions/BookEditTabsPageRegion";
 import "./BookEdit.css";
 
@@ -142,6 +143,7 @@ export function BookEditOrchestrator() {
       {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}
       {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={tags.items} tagsLoading={tags.loading} tagsError={tags.error} onRetryTags={() => setTagRetry((value) => value + 1)} onChange={change} /> : null}
       {tab === "authors-series" ? <BookEditAuthorsSeriesPageRegion draft={draft} error={mutation.error} authors={authors.items} series={series.items} authorsLoading={authors.loading} seriesLoading={series.loading} authorsError={authors.error} seriesError={series.error} returnTo={location.pathname} onRetryAuthors={() => setAuthorRetry((value) => value + 1)} onRetrySeries={() => setSeriesRetry((value) => value + 1)} onChange={change} /> : null}
+      {tab === "identifiers" ? <BookEditIdentifiersPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}
       <SaveCancelActionRowComponent state={mutation} submitLabel="Save Book" pendingLabel="Saving..." onCancel={cancel} />
     </main>
   </form>;

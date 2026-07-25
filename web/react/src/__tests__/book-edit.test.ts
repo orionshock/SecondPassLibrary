@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { BookDetail } from "@second-pass/spl-api";
+import type { BookDetail, BookIdentifierScheme } from "@second-pass/spl-api";
 import { LocalValidationError } from "../shared/feedback/mutationState";
 import { bookEditDraftFromBook, bookEditDraftsEqual, bookEditInputFromDraft, validateBookEditDraft } from "../features/library/bookEditDraft";
 
@@ -10,17 +10,23 @@ const book: BookDetail = {
   series: { id: "s1", name: "Series", sortName: "Series", seriesIndex: "2.0" },
   publisher: "Press", language: "eng", publishedYear: 2025, publishedMonth: 2, publishedDay: 28,
   publishedDatePrecision: "day", coverUrl: null, catalogTags: [{ id: "t1", name: "Fantasy", slug: "fantasy" }],
-  identifiers: [], file: null, groups: [],
+  identifiers: [{ id: "identifier-1", scheme: "isbn_13", value: "978123" }], file: null, groups: [],
 };
 
 describe("Book Edit draft contract", () => {
   it("initializes ordered relationship and date state and builds the explicit replacement payload", () => {
     const draft = bookEditDraftFromBook(book);
-    expect(draft).toMatchObject({ authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.0", publishedYear: "2025", publishedMonth: "2", publishedDay: "28", catalogTagNames: ["Fantasy"] });
+    expect(draft).toMatchObject({
+      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.0",
+      publishedYear: "2025", publishedMonth: "2", publishedDay: "28",
+      identifiers: [{ key: "identifier-1", scheme: "isbn_13", value: "978123" }],
+      catalogTagNames: ["Fantasy"],
+    });
     expect(bookEditInputFromDraft(draft)).toEqual({
       title: "Book", sortTitle: "Book, The", subtitle: "Sub", description: "Text", publisher: "Press", language: "eng",
       publishedDatePrecision: "day", publishedYear: 2025, publishedMonth: 2, publishedDay: 28,
-      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.0", catalogTagNames: ["Fantasy"],
+      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.0",
+      identifiers: [{ scheme: "isbn_13", value: "978123" }], catalogTagNames: ["Fantasy"],
     });
     expect(bookEditDraftsEqual(draft, { ...draft, title: " Book ", catalogTagNames: ["Fantasy", "fantasy"] })).toBe(true);
   });
@@ -37,7 +43,29 @@ describe("Book Edit draft contract", () => {
       { ...bookEditDraftFromBook(book), seriesIndex: "1.55" },
       { ...bookEditDraftFromBook(book), seriesId: null, seriesIndex: "1.0" },
       { ...bookEditDraftFromBook(book), authorIds: ["a1", "a1"] },
+      { ...bookEditDraftFromBook(book), identifiers: [{ key: "blank", scheme: "doi" as const, value: " " }] },
+      { ...bookEditDraftFromBook(book), identifiers: [{ key: "long", scheme: "doi" as const, value: "x".repeat(513) }] },
+      { ...bookEditDraftFromBook(book), identifiers: [{ key: "bad", scheme: "not-a-scheme" as BookIdentifierScheme, value: "value" }] },
+      { ...bookEditDraftFromBook(book), identifiers: [
+        { key: "one", scheme: "doi" as const, value: "Example Value" },
+        { key: "two", scheme: "doi" as const, value: " example   value " },
+      ] },
     ];
     for (const draft of cases) expect(() => validateBookEditDraft(draft)).toThrow(LocalValidationError);
+  });
+
+  it("treats identifier add/remove and values as draft state, not server row identity", () => {
+    const baseline = bookEditDraftFromBook(book);
+    const added = {
+      ...baseline,
+      identifiers: [...baseline.identifiers, { key: "new-1", scheme: "doi" as const, value: "10.1000/example" }],
+    };
+    expect(bookEditDraftsEqual(baseline, added)).toBe(false);
+    expect(bookEditDraftsEqual(baseline, { ...baseline, identifiers: [...baseline.identifiers] })).toBe(true);
+    expect(bookEditDraftsEqual(
+      baseline,
+      { ...baseline, identifiers: baseline.identifiers.map((identifier) => ({ ...identifier, key: "replacement-key" })) },
+    )).toBe(true);
+    expect(bookEditInputFromDraft({ ...baseline, identifiers: [] }).identifiers).toEqual([]);
   });
 });
