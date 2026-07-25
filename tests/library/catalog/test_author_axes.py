@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.test import TestCase
 
 from accounts.models import UserProfile
@@ -75,6 +78,102 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
         self.assertEqual(set(normalized), {"deliberate duplicate"})
 
+    def test_create_and_patch_reject_unknown_fields(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        created = self.client.post(
+            "/api/v1/library/authors/",
+            data={"name": "Rejected Writer", "book_count": 4, "random_field": True},
+            content_type="application/json",
+        )
+        patched = self.client.patch(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"name": "Should Not Persist", "groups": []},
+            content_type="application/json",
+        )
+
+        self.assertEqual(created.status_code, 400)
+        self.assertEqual(
+            created.json(),
+            {"book_count": ["Unknown field."], "random_field": ["Unknown field."]},
+        )
+        self.assertFalse(Author.objects.filter(name="Rejected Writer").exists())
+        self.assertEqual(patched.status_code, 400)
+        self.assertEqual(patched.json(), {"groups": ["Unknown field."]})
+        self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.name, "Alpha Author")
+
+    def test_patch_sort_name_controls_ordering(self):
+        first = Author.objects.create(name="Lifecycle Alpha", sort_name="Lifecycle Alpha")
+        second = Author.objects.create(name="Lifecycle Beta", sort_name="Lifecycle Beta")
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/authors/{first.id}/",
+            data={"sort_name": "Zulu Lifecycle"},
+            content_type="application/json",
+        )
+        ordered = self.client.get(
+            "/api/v1/library/authors/", {"q": "lifecycle", "ordering": "name"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["sort_name"], "Zulu Lifecycle")
+        self.assertEqual(response_names(ordered), [second.name, first.name])
+
+    def test_patch_blank_sort_name_defaults_to_name_and_omission_preserves_it(self):
+        self.alpha.sort_name = "Preserved Sort"
+        self.alpha.save(update_fields=["sort_name", "updated_at"])
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        renamed = self.client.patch(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"name": "Renamed Author"},
+            content_type="application/json",
+        )
+        blanked = self.client.patch(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"sort_name": ""},
+            content_type="application/json",
+        )
+
+        self.assertEqual(renamed.json()["sort_name"], "Preserved Sort")
+        self.assertEqual(blanked.json()["sort_name"], "Renamed Author")
+        self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.sort_name, "Renamed Author")
+
+    def test_put_is_not_supported(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.put(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"name": "Replacement"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_patch_model_validation_error_is_structured(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        with patch(
+            "library.catalog.axis_views.update_author",
+            side_effect=DjangoValidationError({"name": ["Rejected by model."]}),
+        ):
+            response = self.client.patch(
+                f"/api/v1/library/authors/{self.alpha.id}/",
+                data={"name": "Valid Serializer Input"},
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"name": ["Rejected by model."]})
+
     def test_manager_default_reads_include_full_catalog_and_total_counts(self):
         unattached = Author.objects.create(
             name="Unattached", sort_name="Unattached", normalized_name="unattached"
@@ -148,6 +247,7 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(deleted.status_code, 204)
         self.assertEqual(blocked.status_code, 409)
         self.assertEqual(blocked.json()["error"]["code"], "AUTHOR_IN_USE")
+        self.assertTrue(BookAuthor.objects.filter(author=self.alpha).exists())
 
     def test_blank_and_overlong_author_names_are_rejected(self):
         self.client.logout()

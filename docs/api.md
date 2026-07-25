@@ -569,10 +569,11 @@ display-only `/media/covers/` namespace; cover mutation remains session-only.
 Author/Series payload notes:
 
 - Author and Series POST/PATCH/DELETE are Django-session-only Librarian+ catalog
-  management operations. POST accepts required `name`; Author accepts optional
-  `sort_name` and `biography`, while Series accepts optional `sort_name` and
-  `summary`. PATCH accepts the same entity fields. Blank sort names default to
-  the display name. Client bearer credentials remain read-only.
+  operations. Author writes accept exactly `name`, `sort_name`, and `biography`;
+  Series writes accept exactly `name`, `sort_name`, and `summary`. POST requires
+  `name`; PATCH is partial and preserves omitted fields. Unknown fields return a
+  structured `400` keyed by the rejected field. PUT is unsupported and returns
+  `405`. Client bearer credentials remain read-only.
 - Author and Series reads are role-scoped without a special query mode.
   Reader sessions and bearer clients receive entities derived from Books visible
   to that caller, so unattached entities are excluded and `book_count` counts
@@ -583,18 +584,18 @@ Author/Series payload notes:
 - Names maintain an indexed, non-unique normalized value using Unicode NFKC,
   collapsed whitespace, trim, and case-folding while preserving punctuation.
   Normalized matches are advisory and do not block duplicate creation.
+- `sort_name` is writable and drives `ordering=name` when nonblank, with `name`
+  as the fallback. Submitting a blank sort name stores the current display name;
+  omitting it from PATCH preserves the existing value.
 - DELETE returns `204` for an unattached entity. Attached Authors and Series are
   not detached automatically and return bounded `409 AUTHOR_IN_USE` or
-  `409 SERIES_IN_USE` errors.
-- Author POST accepts required `name` and optional `sort_name`/`biography`;
-  blank or overlong values return normal structured validation errors. When
-  `sort_name` is omitted or blank, it defaults to `name`.
+  `409 SERIES_IN_USE` errors. React's first lifecycle slice does not expose
+  deletion.
 - Author display names are not unique in the current catalog model, so POST
   deliberately creates a new Author when the same display name already exists.
   The response uses the normal Author axis shape (`id`, `name`, `sort_name`,
   `biography`, and `book_count`, initially zero). Creation does not assign a
   Book. Client bearer credentials are rejected even for privileged accounts.
-- Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH `name` and the respective prose field on the detail endpoint; readers remain read-only.
 - Author and Series payloads include role-scoped `book_count` (read-only):
   total attached Books for Librarian+ sessions and visible matching Books for
   Reader sessions and bearer clients.

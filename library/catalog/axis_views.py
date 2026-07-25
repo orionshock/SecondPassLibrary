@@ -125,7 +125,12 @@ class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
         instance = self.get_object()
         serializer = self.update_serializer_class(data=request.data or {}, partial=True)
         serializer.is_valid(raise_exception=True)
-        self.update_axis(instance, serializer.validated_data)
+        try:
+            self.update_axis(instance, serializer.validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            ) from exc
         refreshed = self.get_queryset().get(pk=instance.pk)
         return Response(self.get_serializer(refreshed).data)
 

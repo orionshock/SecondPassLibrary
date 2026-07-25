@@ -21,6 +21,17 @@ def book_cover_url(obj: Book, request=None) -> str | None:
     return request.build_absolute_uri(url) if request is not None else url
 
 
+class RejectUnknownFieldsMixin:
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            unknown = set(data) - set(self.fields)
+            if unknown:
+                raise serializers.ValidationError(
+                    {field: ["Unknown field."] for field in sorted(unknown)}
+                )
+        return super().to_internal_value(data)
+
+
 class AuthorSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Author
@@ -86,25 +97,25 @@ class SeriesAxisSerializer(PreviewBooksAxisMixin, serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AuthorAxisUpdateSerializer(serializers.Serializer):
+class AuthorAxisUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     biography = serializers.CharField(required=False, allow_blank=True)
 
 
-class AuthorCreateSerializer(serializers.Serializer):
+class AuthorCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     biography = serializers.CharField(required=False, allow_blank=True)
 
 
-class SeriesAxisUpdateSerializer(serializers.Serializer):
+class SeriesAxisUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     summary = serializers.CharField(required=False, allow_blank=True)
 
 
-class SeriesCreateSerializer(serializers.Serializer):
+class SeriesCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     summary = serializers.CharField(required=False, allow_blank=True)
@@ -268,17 +279,6 @@ class BookDetailSerializer(BookListSerializer):
         ]
         read_only_fields = fields
         read_only_fields = fields
-
-
-class RejectUnknownFieldsMixin:
-    def to_internal_value(self, data):
-        if isinstance(data, dict):
-            unknown = set(data) - set(self.fields)
-            if unknown:
-                raise serializers.ValidationError(
-                    {field: ["Unknown field."] for field in sorted(unknown)}
-                )
-        return super().to_internal_value(data)
 
 
 class BookUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):

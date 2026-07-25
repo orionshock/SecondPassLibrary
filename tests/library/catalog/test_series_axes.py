@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.test import TestCase
 
-from library.models import Series
+from library.models import BookSeries, Series
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
     assert_axis_detail_ignores_list_params,
@@ -99,6 +99,85 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             Series.objects.filter(normalized_name="shared name").count(), 2
         )
 
+    def test_create_and_patch_reject_unknown_fields(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        created = self.client.post(
+            "/api/v1/library/series/",
+            data={"name": "Rejected Series", "preview_books": [], "random_field": True},
+            content_type="application/json",
+        )
+        patched = self.client.patch(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"name": "Should Not Persist", "books": []},
+            content_type="application/json",
+        )
+
+        self.assertEqual(created.status_code, 400)
+        self.assertEqual(
+            created.json(),
+            {"preview_books": ["Unknown field."], "random_field": ["Unknown field."]},
+        )
+        self.assertFalse(Series.objects.filter(name="Rejected Series").exists())
+        self.assertEqual(patched.status_code, 400)
+        self.assertEqual(patched.json(), {"books": ["Unknown field."]})
+        self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.name, "First Series")
+
+    def test_patch_sort_name_controls_ordering(self):
+        first = Series.objects.create(name="Lifecycle Alpha", sort_name="Lifecycle Alpha")
+        second = Series.objects.create(name="Lifecycle Beta", sort_name="Lifecycle Beta")
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/series/{first.id}/",
+            data={"sort_name": "Zulu Lifecycle"},
+            content_type="application/json",
+        )
+        ordered = self.client.get(
+            "/api/v1/library/series/", {"q": "lifecycle", "ordering": "name"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["sort_name"], "Zulu Lifecycle")
+        self.assertEqual(response_names(ordered), [second.name, first.name])
+
+    def test_patch_blank_sort_name_defaults_to_name_and_omission_preserves_it(self):
+        self.first_series.sort_name = "Preserved Sort"
+        self.first_series.save(update_fields=["sort_name", "updated_at"])
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        renamed = self.client.patch(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"name": "Renamed Series"},
+            content_type="application/json",
+        )
+        blanked = self.client.patch(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"sort_name": ""},
+            content_type="application/json",
+        )
+
+        self.assertEqual(renamed.json()["sort_name"], "Preserved Sort")
+        self.assertEqual(blanked.json()["sort_name"], "Renamed Series")
+        self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.sort_name, "Renamed Series")
+
+    def test_put_is_not_supported(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.put(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"name": "Replacement"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 405)
+
     def test_reader_cannot_create_or_delete_series(self):
         created = self.client.post(
             "/api/v1/library/series/",
@@ -122,6 +201,8 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(deleted.status_code, 204)
         self.assertEqual(blocked.status_code, 409)
         self.assertEqual(blocked.json()["error"]["code"], "SERIES_IN_USE")
+        self.assertTrue(BookSeries.objects.filter(series=self.first_series).exists())
+
     def test_list_includes_only_series_with_visible_books(self):
         Series.objects.create(name="Unattached", sort_name="Unattached")
         hidden_only = Series.objects.create(name="Hidden Series", sort_name="Hidden Series")
