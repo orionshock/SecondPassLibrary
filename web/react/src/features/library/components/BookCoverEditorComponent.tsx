@@ -33,18 +33,8 @@ export function BookCoverEditorComponent({
   const [confirmingClear, setConfirmingClear] = useState(false);
   const changeButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const wasPending = useRef(false);
   const controlsDisabled = disabled || state.pending;
   const error = fieldError(state.error, "cover") ?? state.error?.message;
-
-  useEffect(() => {
-    if (wasPending.current && !state.pending && state.message) {
-      setOpen(false);
-      setConfirmingClear(false);
-      changeButton.current?.focus();
-    }
-    wasPending.current = state.pending;
-  }, [state.message, state.pending]);
 
   useEffect(() => {
     if (open) closeButton.current?.focus();
@@ -73,9 +63,6 @@ export function BookCoverEditorComponent({
     <Button ref={changeButton} type="button" className="button--secondary book-cover-editor__trigger" disabled={controlsDisabled} onClick={() => setOpen(true)}>
       Change Cover
     </Button>
-    <div className="book-cover-editor__feedback" aria-live="polite">
-      {!open && state.message ? <p>{state.message}</p> : null}
-    </div>
     {open ? <div className="book-cover-dialog-backdrop">
       <div className="book-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="book-cover-dialog-title" onKeyDown={handleDialogKeyDown}>
         <header className="book-cover-dialog__header">
@@ -91,6 +78,7 @@ export function BookCoverEditorComponent({
             </label>
             <p className="book-cover-editor__selection">{selectedFile ? selectedFile.name : "No image selected."}</p>
             {error ? <p className="book-cover-dialog__error" role="alert">{error}</p> : null}
+            {state.message ? <p className="book-cover-dialog__success" role="status">{state.message}</p> : null}
             {confirmingClear ? <div className="book-cover-dialog__confirmation">
               <span>Clear the current cover?</span>
               <Button type="button" className="button--danger" disabled={controlsDisabled} onClick={onClear}>{pendingAction === "clear" ? "Clearing..." : "Confirm Clear Cover"}</Button>

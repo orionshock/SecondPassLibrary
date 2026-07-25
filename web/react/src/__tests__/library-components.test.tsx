@@ -103,9 +103,13 @@ describe("Library Books components", () => {
     expect(activeTags).toContain('aria-pressed="true"');
 
     const axisRegion = LibraryAxesPageRegion({ activeView: "books", onViewChange }) as ReactElement<{ children: ReactElement[] }>;
-    const nav = axisRegion.props.children[1] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
+    const axisBar = axisRegion.props.children[1] as ReactElement<{ children: ReactElement[] }>;
+    const nav = axisBar.props.children[0] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
     nav.props.children[1]!.props.onClick();
     expect(onViewChange).toHaveBeenCalledWith("authors");
+
+    const managedAuthors = renderToStaticMarkup(<MemoryRouter><LibraryAxesPageRegion activeView="authors" canManageCatalog onViewChange={vi.fn()} /></MemoryRouter>);
+    expect(managedAuthors).toContain('href="/library/authors/new"');
   });
 
   it("lets All tags clear the active tag on every Library axis", () => {
@@ -147,12 +151,10 @@ describe("Library Author and Series components", () => {
     expect((authorMarkup.match(/<a /g) ?? []).length).toBe(2);
     expect((seriesMarkup.match(/<a /g) ?? []).length).toBe(2);
 
-    const editableAuthor = renderToStaticMarkup(<MemoryRouter><AuthorRowComponent author={author} libraryPath="/library?view=authors" contextPath="/library?view=authors&author=author-1" canEdit /></MemoryRouter>);
-    const editableSeries = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" contextPath="/library?view=series&series=series-1" canEdit /></MemoryRouter>);
-    expect(editableAuthor).toContain('href="/library/authors/author-1/edit"');
-    expect(editableSeries).toContain('href="/library/series/series-1/edit"');
-    expect(editableAuthor).not.toContain("Delete");
-    expect(editableSeries).not.toContain("Delete");
+    expect(authorMarkup).not.toContain('href="/library/authors/author-1/edit"');
+    expect(seriesMarkup).not.toContain('href="/library/series/series-1/edit"');
+    expect(authorMarkup).not.toContain("Delete");
+    expect(seriesMarkup).not.toContain("Delete");
   });
 
   it("renders named and direct-load selected context headers with bounded back actions", () => {

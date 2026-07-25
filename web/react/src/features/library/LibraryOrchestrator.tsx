@@ -212,7 +212,6 @@ export function LibraryOrchestrator() {
           error={authors.error}
           searching={Boolean(queryState.q)}
           tagged={Boolean(queryState.tag)}
-          canEdit={canEditCatalog}
           contextPathFor={(author) => libraryPath(withLibrarySelectedContext(queryState, { kind: "author", id: author.id }))}
           {...commonListProps}
         /> : null}
@@ -222,7 +221,6 @@ export function LibraryOrchestrator() {
           error={series.error}
           searching={Boolean(queryState.q)}
           tagged={Boolean(queryState.tag)}
-          canEdit={canEditCatalog}
           contextPathFor={(item) => libraryPath(withLibrarySelectedContext(queryState, { kind: "series", id: item.id }))}
           {...commonListProps}
         /> : null}

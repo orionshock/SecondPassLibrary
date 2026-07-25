@@ -16,22 +16,25 @@ export function LibraryAxesPageRegion({ activeView, canManageCatalog = false, on
 }) {
   const lifecycleKind = activeView === "authors" ? "author" : activeView === "series" ? "series" : undefined;
   return <div className="library-heading">
-    <PageHeader title="Library" actions={canManageCatalog && lifecycleKind ? <Link
-      className="button button--secondary"
-      to={libraryEntityNewPath(lifecycleKind)}
-      state={libraryEntityNavigationState({
-        breadcrumbs: libraryEntityBreadcrumbs(lifecycleKind, "new"),
-        returnTo: libraryEntityAxisPath(lifecycleKind),
-      })}
-    >New {lifecycleKind === "author" ? "Author" : "Series"}</Link> : undefined} />
-    <nav className="library-axes" aria-label="Library views">
-      {axes.map(({ view, label }) => <button
-        key={view}
-        type="button"
-        className={activeView === view ? "active" : ""}
-        aria-current={activeView === view ? "page" : undefined}
-        onClick={() => onViewChange(view)}
-      >{label}</button>)}
-    </nav>
+    <PageHeader title="Library" />
+    <div className="library-axis-bar">
+      <nav className="library-axes" aria-label="Library views">
+        {axes.map(({ view, label }) => <button
+          key={view}
+          type="button"
+          className={activeView === view ? "active" : ""}
+          aria-current={activeView === view ? "page" : undefined}
+          onClick={() => onViewChange(view)}
+        >{label}</button>)}
+      </nav>
+      {canManageCatalog && lifecycleKind ? <Link
+        className="button button--secondary library-axis-create-action"
+        to={libraryEntityNewPath(lifecycleKind)}
+        state={libraryEntityNavigationState({
+          breadcrumbs: libraryEntityBreadcrumbs(lifecycleKind, "new"),
+          returnTo: libraryEntityAxisPath(lifecycleKind),
+        })}
+      >New {lifecycleKind === "author" ? "Author" : "Series"}</Link> : null}
+    </div>
   </div>;
 }
