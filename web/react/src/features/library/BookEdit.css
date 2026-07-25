@@ -57,9 +57,13 @@
 .book-edit-relationships { grid-template-columns: minmax(0, 1.15fr) minmax(15rem, 0.85fr); gap: clamp(1.25rem, 3vw, 2.25rem); }
 .book-edit-relationship-group { min-width: 0; }
 .book-edit-relationships h2 { margin: 0 0 0.75rem; font-size: 1rem; }
+.book-edit-relationship-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; margin-bottom: 0.75rem; }
+.book-edit-relationship-heading h2 { margin: 0; }
+.book-edit-relationship-heading .button { padding: 0.3rem 0.55rem; font-size: 0.75rem; }
 .book-edit-author-list { display: grid; gap: 0.45rem; margin: 0 0 0.75rem; padding: 0; list-style: none; }
 .book-edit-author-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.65rem; align-items: center; min-height: 2.55rem; padding: 0.35rem 0.45rem 0.35rem 0.65rem; border: 1px solid var(--border); border-radius: 0.55rem; background: rgb(255 255 255 / 2%); }
 .book-edit-author-list li > span { min-width: 0; overflow-wrap: anywhere; }
+.book-edit-author-list li > a { min-width: 0; overflow-wrap: anywhere; }
 .book-edit-author-actions { display: flex; gap: 0.22rem; }
 .book-edit-author-actions .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; padding: 0; border-radius: 0.45rem; }
 .book-edit-author-actions .material-icon { font-size: 1rem; }
@@ -69,6 +73,7 @@
 .book-edit-series-fields { display: grid; align-content: start; gap: 0.65rem; }
 .book-edit-series-fields .form-field { grid-template-columns: minmax(6.5rem, 7.5rem) minmax(0, 1fr); }
 .book-edit-series-fields input, .book-edit-series-fields select { padding-block: 0.5rem; }
+.book-edit-assigned-series-link { justify-self: end; font-size: 0.8rem; }
 .book-edit-content > .form-action-row { min-height: 3.6rem; margin-top: 0.75rem; padding: 0.55rem 0 0; border-top: 1px solid var(--border); }
 .book-edit-content > .form-action-row .action-feedback { min-height: 2.5rem; }
 .book-edit-content > .form-action-row .error-panel { max-width: min(34rem, 100%); }

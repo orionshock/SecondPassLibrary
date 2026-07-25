@@ -33,6 +33,12 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   getBook,
+  getAuthor,
+  getSeries,
+  createAuthor,
+  createSeries,
+  updateAuthor,
+  updateSeries,
   updateBook,
   listAllCatalogTags,
   listAllAuthors,
@@ -42,6 +48,7 @@ export {
   listCatalogTags,
   listSeries,
   type BookAuthorSummary,
+  type AuthorMutationInput,
   type BookDetail,
   type BookFileDetail,
   type BookGroupSummary,
@@ -57,6 +64,7 @@ export {
   type LibraryAxisQuery,
   type LibraryBooksQuery,
   type LibrarySeries,
+  type SeriesMutationInput,
   type UpdateBookInput,
 } from "./library";
 export {

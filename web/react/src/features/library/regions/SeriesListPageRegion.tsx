@@ -4,7 +4,7 @@ import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { SeriesRowComponent } from "../components/SeriesRowComponent";
 
-export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, contextPathFor, onPageChange, onPageSizeChange, onRetry }: {
+export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, contextPathFor, canEdit = false, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<LibrarySeries>;
   pageNumber: number;
   pageSize: number;
@@ -14,6 +14,7 @@ export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, erro
   tagged: boolean;
   libraryPath: string;
   contextPathFor: (series: LibrarySeries) => string;
+  canEdit?: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
@@ -25,7 +26,7 @@ export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, erro
     {error ? <div className="library-list-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0
       ? <p className="library-list-state muted">{seriesEmptyCopy(searching, tagged)}</p>
-      : <div className="library-axis-list-region__rows">{page.items.map((series) => <SeriesRowComponent key={series.id} series={series} libraryPath={libraryPath} contextPath={contextPathFor(series)} />)}</div>}
+      : <div className="library-axis-list-region__rows">{page.items.map((series) => <SeriesRowComponent key={series.id} series={series} libraryPath={libraryPath} contextPath={contextPathFor(series)} canEdit={canEdit} />)}</div>}
     <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Series" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
 }

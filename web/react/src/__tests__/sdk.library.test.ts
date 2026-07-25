@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, getBook, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, updateBook } from "@second-pass/spl-api";
+import { ApiError, createAuthor, createSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -15,6 +15,56 @@ const compactWireBook = {
 };
 
 describe("Library SDK", () => {
+  it("maps Author lifecycle detail/create/update contracts without admitting extra fields", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return { id: "author", name: "Ada", sort_name: "Author, Ada", biography: "Bio", book_count: 2, normalized_name: "hidden", preview_books: undefined } as T;
+    } };
+    const input = { name: "Ada", sortName: "Author, Ada", biography: "Bio", ...({ normalizedName: "hidden", bookCount: 99, groups: [] } as object) };
+
+    await expect(getAuthor("author/id", client)).resolves.toMatchObject({ id: "author", sortName: "Author, Ada", biography: "Bio" });
+    await createAuthor(input, client);
+    await updateAuthor("author/id", input, client);
+
+    expect(calls.map(({ path }) => path)).toEqual([
+      "/api/v1/library/authors/author%2Fid/",
+      "/api/v1/library/authors/",
+      "/api/v1/library/authors/author%2Fid/",
+    ]);
+    expect(calls.slice(1).map(({ init }) => [init?.method, JSON.parse(String(init?.body))])).toEqual([
+      ["POST", { name: "Ada", sort_name: "Author, Ada", biography: "Bio" }],
+      ["PATCH", { name: "Ada", sort_name: "Author, Ada", biography: "Bio" }],
+    ]);
+  });
+
+  it("maps Series lifecycle contracts and operation field errors", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return { id: "series", name: "Saga", sort_name: "Saga", summary: "Summary", book_count: 1 } as T;
+    } };
+    const input = { name: "Saga", sortName: "Saga", summary: "Summary", ...({ books: [], previewBooks: [] } as object) };
+
+    await expect(getSeries("series/id", client)).resolves.toMatchObject({ id: "series", sortName: "Saga", summary: "Summary" });
+    await createSeries(input, client);
+    await updateSeries("series/id", input, client);
+    expect(calls.map(({ path }) => path)).toEqual([
+      "/api/v1/library/series/series%2Fid/",
+      "/api/v1/library/series/",
+      "/api/v1/library/series/series%2Fid/",
+    ]);
+    expect(calls.slice(1).map(({ init }) => [init?.method, JSON.parse(String(init?.body))])).toEqual([
+      ["POST", { name: "Saga", sort_name: "Saga", summary: "Summary" }],
+      ["PATCH", { name: "Saga", sort_name: "Saga", summary: "Summary" }],
+    ]);
+
+    const failing: ApiClient = { request: async () => { throw new ApiError("Invalid.", 400, { fields: { sort_name: ["Invalid sort name."] } }); } };
+    await expect(updateSeries("series", input, failing)).rejects.toMatchObject({
+      fields: { sortName: ["Invalid sort name."] },
+    });
+  });
+
   it("PATCHes only mapped Book Edit fields, preserves explicit clears, and maps operation field errors", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {

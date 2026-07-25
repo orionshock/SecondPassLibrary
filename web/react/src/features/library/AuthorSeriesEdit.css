@@ -1,0 +1,46 @@
+.author-series-edit-page {
+  width: min(100%, 46rem);
+  margin-inline: auto;
+}
+
+.author-series-edit-form {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+.author-series-edit-form .form-field {
+  grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+}
+
+.author-series-edit-form textarea {
+  min-height: 12rem;
+  resize: vertical;
+}
+
+.author-series-edit-form .form-action-row {
+  min-height: 3.5rem;
+  margin-top: 0.35rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+.author-series-edit-state {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 46rem);
+  margin-inline: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+@media (max-width: 38rem) {
+  .author-series-edit-form .form-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

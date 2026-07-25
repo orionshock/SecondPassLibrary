@@ -11,6 +11,7 @@ import { readSelectedLibraryContextDisplay } from "../features/library/libraryPr
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
+import { BookEditAuthorsSeriesPageRegion } from "../features/library/regions/BookEditAuthorsSeriesPageRegion";
 import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/regions/CatalogTagRailPageRegion";
 import { LibraryAxesPageRegion } from "../features/library/regions/LibraryAxesPageRegion";
 import { LibraryAxisControlsPageRegion } from "../features/library/regions/LibraryAxisControlsPageRegion";
@@ -129,6 +130,13 @@ describe("Library Author and Series components", () => {
     expect(seriesMarkup).toContain('href="/library?view=series&amp;series=series-1"');
     expect((authorMarkup.match(/<a /g) ?? []).length).toBe(2);
     expect((seriesMarkup.match(/<a /g) ?? []).length).toBe(2);
+
+    const editableAuthor = renderToStaticMarkup(<MemoryRouter><AuthorRowComponent author={author} libraryPath="/library?view=authors" contextPath="/library?view=authors&author=author-1" canEdit /></MemoryRouter>);
+    const editableSeries = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" contextPath="/library?view=series&series=series-1" canEdit /></MemoryRouter>);
+    expect(editableAuthor).toContain('href="/library/authors/author-1/edit"');
+    expect(editableSeries).toContain('href="/library/series/series-1/edit"');
+    expect(editableAuthor).not.toContain("Delete");
+    expect(editableSeries).not.toContain("Delete");
   });
 
   it("renders named and direct-load selected context headers with bounded back actions", () => {
@@ -139,6 +147,8 @@ describe("Library Author and Series components", () => {
     const direct = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="series" onBack={vi.fn()} />);
     expect(direct).toContain("Series Books");
     expect(direct).toContain("Back to Series");
+    const editable = renderToStaticMarkup(<MemoryRouter><SelectedLibraryContextPageRegion kind="author" entityId="author-1" name="Visible Author" canEdit returnTo="/library?view=authors&author=author-1" onBack={vi.fn()} /></MemoryRouter>);
+    expect(editable).toContain('href="/library/authors/author-1/edit"');
   });
 
   it("uses Book controls and selected-context sort choices", () => {
@@ -147,6 +157,30 @@ describe("Library Author and Series components", () => {
     expect(authorControls).toContain("Title A-Z");
     const seriesControls = renderToStaticMarkup(<LibraryAxisControlsPageRegion view="series" selectedContext="series" search="" ordering="series_index" onSearchChange={vi.fn()} onSearch={vi.fn()} onOrderingChange={vi.fn()} />);
     expect(seriesControls).toContain("Series Order");
+  });
+
+  it("links Book Edit relationship management to lifecycle routes without inline forms", () => {
+    const markup = renderToStaticMarkup(<MemoryRouter><BookEditAuthorsSeriesPageRegion
+      draft={{
+        title: "Book", sortTitle: "", subtitle: "", description: "", publisher: "", language: "",
+        publishedDatePrecision: "", publishedYear: "", publishedMonth: "", publishedDay: "",
+        catalogTagNames: [], authorIds: [author.id], seriesId: series.id, seriesIndex: "1.0",
+      }}
+      authors={[author]}
+      series={[series]}
+      authorsLoading={false}
+      seriesLoading={false}
+      returnTo="/library/books/book/edit"
+      onRetryAuthors={vi.fn()}
+      onRetrySeries={vi.fn()}
+      onChange={vi.fn()}
+    /></MemoryRouter>);
+    for (const path of [
+      "/library/authors/new",
+      "/library/authors/author-1/edit",
+      "/library/series/new",
+      "/library/series/series-1/edit",
+    ]) expect(markup).toContain(`href="${path}"`);
   });
 
   it("keeps selected-context empty copy anti-leakage-safe and accepts matching navigation display state", () => {

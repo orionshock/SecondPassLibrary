@@ -7,6 +7,7 @@ import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrat
 import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
 import { BookDetailOrchestrator } from "../features/library/BookDetailOrchestrator";
 import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
+import { AuthorSeriesEditOrchestrator } from "../features/library/AuthorSeriesEditOrchestrator";
 import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
@@ -55,6 +56,10 @@ export const appRoutes = [
       { path: "library", element: <LibraryOrchestrator /> },
       { path: "library/books/:bookId", element: <BookDetailOrchestrator /> },
       { path: "library/books/:bookId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><BookEditOrchestrator /></RoleRouteGuardComponent> },
+      { path: "library/authors/new", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="author" mode="new" /></RoleRouteGuardComponent> },
+      { path: "library/authors/:authorId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="author" mode="edit" /></RoleRouteGuardComponent> },
+      { path: "library/series/new", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="series" mode="new" /></RoleRouteGuardComponent> },
+      { path: "library/series/:seriesId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="series" mode="edit" /></RoleRouteGuardComponent> },
       { path: "imports", element: <RoleRouteGuardComponent canAccess={canSeeImports}><ImportsOrchestrator /></RoleRouteGuardComponent> },
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },

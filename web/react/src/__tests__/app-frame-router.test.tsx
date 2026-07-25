@@ -66,6 +66,12 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "library")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId/edit")).toBe(true);
+    for (const path of [
+      "library/authors/new",
+      "library/authors/:authorId/edit",
+      "library/series/new",
+      "library/series/:seriesId/edit",
+    ]) expect(appRoutes[0].children.some((route) => route.path === path)).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "imports")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
@@ -81,5 +87,21 @@ describe("app frame and router", () => {
     if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) return;
     expect(route.element.props.canAccess({ ...user, isOwner: false, isReader: true })).toBe(false);
     expect(route.element.props.canAccess({ ...user, isOwner: false, isLibrarian: true })).toBe(true);
+  });
+
+  it("guards Author and Series lifecycle routes with the Librarian-level role contract", () => {
+    const paths = [
+      "library/authors/new",
+      "library/authors/:authorId/edit",
+      "library/series/new",
+      "library/series/:seriesId/edit",
+    ];
+    for (const path of paths) {
+      const route = appRoutes[0].children.find((candidate) => candidate.path === path);
+      expect(isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)).toBe(true);
+      if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) continue;
+      expect(route.element.props.canAccess({ ...user, isOwner: false, isReader: true })).toBe(false);
+      expect(route.element.props.canAccess({ ...user, isOwner: false, isLibrarian: true })).toBe(true);
+    }
   });
 });

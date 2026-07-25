@@ -163,9 +163,9 @@ remains authoritative.
 | Dashboard | `/` | Still to rebuild | Current React route is a styled placeholder. Retire legacy `/dashboard/`; `/` is canonical. |
 | My Marginalia | `/reading` and children below | Still to rebuild | Current `/reading` is a placeholder. |
 | Library browse | `/library` | Top-level and selected browse rebuilt | Books/Authors/Series and selected Author/Series Book contexts share URL-backed ordering/search/tag/page state. |
-| Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Detail rebuilt; Edit pending | Detail is read-only metadata plus safe EPUB download and contextual breadcrumbs. |
-| Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Still to rebuild | Detail remains selected Author in `/library`; no separate detail page is needed. |
-| Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Still to rebuild | Same model as Authors. |
+| Book Detail/Edit | `/library/books/:bookId`, `/library/books/:bookId/edit` | Core slices rebuilt | Detail is read-only metadata plus safe EPUB download; Edit owns core bibliographic fields and relationships. |
+| Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Create/Edit rebuilt | Detail remains selected Author in `/library`; Delete remains deferred. |
+| Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Create/Edit rebuilt | Same model as Authors; Delete remains deferred. |
 | Groups | `/groups`, `/groups/new`, `/groups/:groupId`, `/groups/:groupId/edit` | Still to rebuild | Entire branch hidden/unavailable in simple mode. |
 | Shelves | `/shelves`, `/shelves/new`, `/shelves/:shelfId`, `/shelves/:shelfId/edit` | Still to rebuild | Available in simple and advanced modes. |
 | Library Imports | `/imports` | Rebuilt | Synchronous EPUB/ZIP upload; parked result cap is intentionally retired. |
@@ -384,7 +384,8 @@ breadcrumb context through Router location state.
   through the backend's axis contract.
 - Selecting an Author name moves to `view=authors&author=<id>` and shows a
   restrained context header plus the selected Author's paginated compact Books.
-  Biography and lifecycle actions remain pending.
+  Biography remains off browse rows; Librarian+ lifecycle actions use the
+  canonical create/edit routes.
 - Axis header exposes `Create Author` only for Librarian+. Create/Edit links use
   canonical lifecycle routes; Book preview/title links carry Author context.
 - Empty states distinguish no Authors, no search matches, and an Author with no
@@ -402,19 +403,18 @@ breadcrumb context through Router location state.
   mirrors Authors.
 - Selecting a Series name moves to `view=series&series=<id>` and shows a
   restrained context header plus the selected Series' paginated compact Books.
-  Summary and lifecycle actions remain pending.
+  Summary remains off browse rows; Librarian+ lifecycle actions use the
+  canonical create/edit routes.
 
 ### Author and Series create/edit
 
 - Bounded form fields: name, sort name, and Biography (Author) or Summary
   (Series). Save feedback belongs beside Cancel/Save.
-- Load catalog-global entities through the normal Author/Series endpoints for a
-  Librarian+ session. Normalized duplicate names warn but do not block saving.
-- Edit renders compact attached-Book previews. An attached entity cannot be
-  deleted; explain count and bounded 409 result. An unattached entity requires
-  typed-name plus final confirmation in a collapsed danger zone.
-- After create/update, navigate to the selected in-context Author/Series axis.
-  After delete, navigate to its list axis.
+- Edit loads the entity through the normal role-scoped detail endpoint. Duplicate
+  names are legal and do not block saving.
+- Create replaces to the returned entity's Edit route. Edit stays in place and
+  replaces its draft/baseline from the response. Dirty navigation confirms.
+- Delete and its attached-Book conflict workflow remain deferred.
 - Do not add quick-create inside Book Edit and do not merge/reassign entities.
 
 ### Book Detail (`/library/books/:bookId`)
@@ -647,7 +647,7 @@ Setup, login, logout, and gated Admin remain Django surfaces.
 | Marginalia export | File endpoints sufficient; selection inventory awkward | None | SDK may aggregate paginated Sessions; consider a focused grouped selection-summary read endpoint before implementation. |
 | Library browse | Sufficient | None | Add `library.ts` compact list/query mapping. Do not add group data to compact rows. |
 | Book Detail/Edit | Sufficient | None | Add detail/PATCH/download metadata/cover/group/shelf adapters. SDK should expose safe file facts while React chooses not to foreground checksum. |
-| Authors/Series | Sufficient | Browse/list SDK implemented | Add lifecycle detail/create/update functions; normal Librarian+ session reads are catalog-wide. |
+| Authors/Series | Sufficient | Browse plus lifecycle detail/create/update implemented | Delete remains deliberately deferred; normal Librarian+ session reads are catalog-wide. |
 | Catalog Tags | Sufficient | None | Add read facets; mutate relationships only through Book PATCH. |
 | Groups | Sufficient | User-edit contains narrow membership calls | Add full `groups.ts`; move/reuse API operations rather than duplicating URLs. |
 | Shelves | Sufficient | None | Add `shelves.ts` lifecycle, list scopes, items, reorder, previews. |
@@ -689,13 +689,13 @@ have materially different contracts.
 
 1. **Library browse foundation (complete):** initial `library.ts`, URL-state
    parser, Book cover/metadata/row, Catalog Tag rail, Books axis, shared pager.
-2. **Author and Series browse (complete):** controlled axis tabs, previews, and
-   selected in-context compact Book lists are built; lifecycle create/edit/delete
-   pages remain.
+2. **Author and Series browse/lifecycle (complete for current scope):** controlled
+   axes, selected contexts, and Librarian+ create/edit are built; Delete remains
+   deferred.
 3. **Book Detail (complete):** read-only hero, metadata, safe EPUB download,
    repair-state handling, and contextual breadcrumbs.
-4. **Book Edit:** two-column workspace, URL tabs, metadata draft, assignment
-   tabs, identifiers, then cover dialog as a separate mutation boundary.
+4. **Book Edit (core complete):** the three-tab bibliographic and relationship
+   editor is built; identifiers and cover remain separate future boundaries.
 5. **Shelves:** SDK, scoped list/create/view/edit. This reuses Book rows and
    broad Library search.
 6. **Groups:** SDK, list/create/view/edit. This reuses Book rows, shelf previews,
@@ -707,8 +707,8 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Implement Book Edit as a separate mutation boundary. Keep Author/Series
-lifecycle mutations separate from contextual Library browsing.
+Continue with Shelves or Groups while keeping deferred Delete, identifiers, and
+cover work as separate mutation boundaries.
 
 ## Focused test strategy
 

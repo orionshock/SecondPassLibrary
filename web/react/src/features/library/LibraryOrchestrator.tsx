@@ -1,5 +1,6 @@
 import {
   ApiError,
+  isAtLeastLibrarian,
   listAllCatalogTags,
   listAuthors,
   listBooks,
@@ -13,8 +14,9 @@ import {
   type Page,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 
+import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import {
@@ -54,6 +56,7 @@ export const libraryBreadcrumbFallback = [] as const;
 
 export function LibraryOrchestrator() {
   usePageBreadcrumbs(libraryBreadcrumbFallback);
+  const { currentUser } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
@@ -142,6 +145,7 @@ export function LibraryOrchestrator() {
   }
 
   const currentLibraryPath = libraryPath(queryState);
+  const canEditCatalog = isAtLeastLibrarian(currentUser);
   const owningAxisState = selectedContextKind ? withLibrarySelectedContext(queryState, undefined) : queryState;
   const owningAxisPath = libraryPath(owningAxisState);
   const commonListProps = {
@@ -156,6 +160,7 @@ export function LibraryOrchestrator() {
   return <div className="page-stack library-page">
     <LibraryAxesPageRegion
       activeView={queryState.view}
+      canManageCatalog={canEditCatalog}
       onViewChange={(view) => {
         if (view !== queryState.view) setSearchParameters(librarySearchParams(withLibraryView(queryState, view)), { state: null });
       }}
@@ -181,8 +186,11 @@ export function LibraryOrchestrator() {
       <div className="library-results-column">
         {selectedContextKind ? <SelectedLibraryContextPageRegion
           kind={selectedContextKind}
+          entityId={queryState.authorId ?? queryState.seriesId}
           name={selectedContextDisplay?.name}
           bookCount={selectedContextDisplay?.bookCount}
+          canEdit={canEditCatalog}
+          returnTo={currentLibraryPath}
           onBack={() => setSearchParameters(librarySearchParams(owningAxisState), { state: null })}
         /> : null}
         {queryState.view === "books" || selectedContextKind ? <BookListPageRegion
@@ -204,6 +212,7 @@ export function LibraryOrchestrator() {
           error={authors.error}
           searching={Boolean(queryState.q)}
           tagged={Boolean(queryState.tag)}
+          canEdit={canEditCatalog}
           contextPathFor={(author) => libraryPath(withLibrarySelectedContext(queryState, { kind: "author", id: author.id }))}
           {...commonListProps}
         /> : null}
@@ -213,6 +222,7 @@ export function LibraryOrchestrator() {
           error={series.error}
           searching={Boolean(queryState.q)}
           tagged={Boolean(queryState.tag)}
+          canEdit={canEditCatalog}
           contextPathFor={(item) => libraryPath(withLibrarySelectedContext(queryState, { kind: "series", id: item.id }))}
           {...commonListProps}
         /> : null}

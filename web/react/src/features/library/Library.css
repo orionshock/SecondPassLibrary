@@ -203,6 +203,12 @@
   padding: 0.38rem 0.6rem;
 }
 
+.selected-library-context-region__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .catalog-tag-rail {
   overflow: hidden;
   border: 1px solid var(--border);
@@ -412,6 +418,30 @@
   display: grid;
   gap: 0.25rem;
   min-width: 0;
+}
+
+.library-axis-row-component__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.library-axis-row-component__heading h2 {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.library-axis-row-component__edit {
+  display: inline-flex;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.library-axis-row-component__edit .material-icon {
+  font-size: 0.95rem;
 }
 
 .library-axis-row-component h2 {

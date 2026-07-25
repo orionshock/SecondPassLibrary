@@ -30,6 +30,18 @@ export interface LibraryAxisQuery {
   pageSize?: number;
 }
 
+export interface AuthorMutationInput {
+  name: string;
+  sortName: string;
+  biography: string;
+}
+
+export interface SeriesMutationInput {
+  name: string;
+  sortName: string;
+  summary: string;
+}
+
 export interface UpdateBookInput {
   title?: string;
   sortTitle?: string;
@@ -283,6 +295,58 @@ export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient
   return listLibraryAxis("/api/v1/library/series/", query, mapLibrarySeries, client);
 }
 
+export async function getAuthor(authorId: string, client: ApiClient = apiClient): Promise<LibraryAuthor> {
+  return mapLibraryAuthor(await client.request<LibraryAuthorResponse>(
+    `/api/v1/library/authors/${encodeURIComponent(authorId)}/`,
+  ));
+}
+
+export async function createAuthor(input: AuthorMutationInput, client: ApiClient = apiClient): Promise<LibraryAuthor> {
+  return mutateLibraryAxis(
+    "/api/v1/library/authors/",
+    "POST",
+    { name: input.name, sort_name: input.sortName, biography: input.biography },
+    mapLibraryAuthor,
+    client,
+  );
+}
+
+export async function updateAuthor(authorId: string, input: AuthorMutationInput, client: ApiClient = apiClient): Promise<LibraryAuthor> {
+  return mutateLibraryAxis(
+    `/api/v1/library/authors/${encodeURIComponent(authorId)}/`,
+    "PATCH",
+    { name: input.name, sort_name: input.sortName, biography: input.biography },
+    mapLibraryAuthor,
+    client,
+  );
+}
+
+export async function getSeries(seriesId: string, client: ApiClient = apiClient): Promise<LibrarySeries> {
+  return mapLibrarySeries(await client.request<LibrarySeriesResponse>(
+    `/api/v1/library/series/${encodeURIComponent(seriesId)}/`,
+  ));
+}
+
+export async function createSeries(input: SeriesMutationInput, client: ApiClient = apiClient): Promise<LibrarySeries> {
+  return mutateLibraryAxis(
+    "/api/v1/library/series/",
+    "POST",
+    { name: input.name, sort_name: input.sortName, summary: input.summary },
+    mapLibrarySeries,
+    client,
+  );
+}
+
+export async function updateSeries(seriesId: string, input: SeriesMutationInput, client: ApiClient = apiClient): Promise<LibrarySeries> {
+  return mutateLibraryAxis(
+    `/api/v1/library/series/${encodeURIComponent(seriesId)}/`,
+    "PATCH",
+    { name: input.name, sort_name: input.sortName, summary: input.summary },
+    mapLibrarySeries,
+    client,
+  );
+}
+
 export function listAllAuthors(client: ApiClient = apiClient): Promise<LibraryAuthor[]> {
   return listAllLibraryAxis("/api/v1/library/authors/", mapLibraryAuthor, client);
 }
@@ -351,6 +415,34 @@ async function listAllLibraryAxis<Response, Item>(
     next = page.next;
   }
   return items;
+}
+
+async function mutateLibraryAxis<Response, Item>(
+  path: string,
+  method: "POST" | "PATCH",
+  payload: Record<string, string>,
+  mapper: (response: Response) => Item,
+  client: ApiClient,
+): Promise<Item> {
+  try {
+    const response = await client.request<Response>(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return mapper(response);
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || !error.fields) throw error;
+    throw new ApiError(error.message, error.status, {
+      code: error.code,
+      fields: Object.fromEntries(
+        Object.entries(error.fields).map(([field, messages]) => [
+          field === "sort_name" ? "sortName" : field,
+          messages,
+        ]),
+      ),
+    });
+  }
 }
 
 export function mapCompactBook(response: CompactBookResponse): CompactBook {
