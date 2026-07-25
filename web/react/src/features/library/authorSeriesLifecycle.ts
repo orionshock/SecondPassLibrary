@@ -16,10 +16,17 @@ export function libraryEntityEditPath(kind: LibraryEntityKind, id: string): stri
   return `/library/${axis}/${encodeURIComponent(id)}/edit`;
 }
 
+export function libraryEntityContextPath(kind: LibraryEntityKind, id: string): string {
+  const view = kind === "author" ? "authors" : "series";
+  const context = kind === "author" ? "author" : "series";
+  return `/library?view=${view}&${context}=${encodeURIComponent(id)}`;
+}
+
 export function libraryEntityBreadcrumbs(
   kind: LibraryEntityKind,
   mode: LibraryEntityEditMode,
   name?: string,
+  entityId?: string,
   axisPath = libraryEntityAxisPath(kind),
 ): BreadcrumbItem[] {
   const axis = kind === "author" ? "Authors" : "Series";
@@ -29,7 +36,7 @@ export function libraryEntityBreadcrumbs(
   return [
     { label: "Library", to: "/library" },
     { label: axis, to: axisPath },
-    { label: name?.trim() || titleKind(kind) },
+    { label: name?.trim() || titleKind(kind), ...(entityId ? { to: libraryEntityContextPath(kind, entityId) } : {}) },
     { label: "Edit" },
   ];
 }

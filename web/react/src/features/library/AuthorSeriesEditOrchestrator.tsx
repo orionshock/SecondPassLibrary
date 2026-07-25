@@ -65,8 +65,8 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
   ));
   const breadcrumbs = useMemo(
-    () => libraryEntityBreadcrumbs(kind, mode, entity?.name),
-    [entity?.name, kind, mode],
+    () => libraryEntityBreadcrumbs(kind, mode, entity?.name, entityId),
+    [entity?.name, entityId, kind, mode],
   );
   usePageBreadcrumbs(breadcrumbs);
 
@@ -145,7 +145,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         navigate(target, {
           replace: true,
           state: libraryEntityNavigationState({
-            breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", saved.name),
+            breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", saved.name, saved.id),
             returnTo: readLibraryEntityReturnTo(location.state) ?? libraryEntityAxisPath(kind),
             successMessage: message,
           }),
@@ -155,7 +155,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         navigate(location.pathname, {
           replace: true,
           state: libraryEntityNavigationState({
-            breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", saved.name),
+            breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", saved.name, saved.id),
             returnTo: readLibraryEntityReturnTo(location.state),
           }),
         });

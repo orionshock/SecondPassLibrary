@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type CompactBook, type LibraryAxisQuery, type LibraryBooksQuery, type Page } from "@second-pass/spl-api";
 import { appRoutes, sectionRoutes } from "../app/router";
-import { libraryBreadcrumbFallback, loadBooksWithPageRecovery, loadLibraryPageWithRecovery, unknownCatalogTag } from "../features/library/LibraryOrchestrator";
+import { libraryBreadcrumbFallback, loadBooksWithPageRecovery, loadLibraryPageWithRecovery, loadSelectedLibraryContextDetails, unknownCatalogTag } from "../features/library/LibraryOrchestrator";
 
 const page = (count: number): Page<CompactBook> => ({ items: [], count, next: null, previous: null });
 
@@ -51,5 +51,19 @@ describe("Library Orchestrator contracts", () => {
     expect(unknownCatalogTag("missing", undefined)).toBe(false);
     expect(unknownCatalogTag("missing", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(true);
     expect(unknownCatalogTag("fantasy", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(false);
+  });
+
+  it("loads role-scoped selected Author and Series details through their existing SDK boundaries", async () => {
+    const author = vi.fn(async (id: string) => ({ id, name: "Author Name", sortName: "Name, Author", biography: "Biography", bookCount: 2 }));
+    const series = vi.fn(async (id: string) => ({ id, name: "Series Name", sortName: "Series Name", summary: "Summary", bookCount: 3 }));
+
+    await expect(loadSelectedLibraryContextDetails("author", "author-id", { author, series })).resolves.toEqual({
+      kind: "author", id: "author-id", name: "Author Name", bookCount: 2, blurb: "Biography",
+    });
+    await expect(loadSelectedLibraryContextDetails("series", "series-id", { author, series })).resolves.toEqual({
+      kind: "series", id: "series-id", name: "Series Name", bookCount: 3, blurb: "Summary",
+    });
+    expect(author).toHaveBeenCalledWith("author-id");
+    expect(series).toHaveBeenCalledWith("series-id");
   });
 });

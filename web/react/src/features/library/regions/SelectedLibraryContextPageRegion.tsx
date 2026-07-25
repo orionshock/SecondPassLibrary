@@ -1,37 +1,45 @@
-import { Button } from "../../../components/ui";
 import { Link } from "react-router-dom";
+import { Button, ErrorPanel } from "../../../components/ui";
 import { libraryEntityBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState } from "../authorSeriesLifecycle";
+import { ClampedLibraryTextComponent } from "../components/ClampedLibraryTextComponent";
 import type { LibrarySelectedContextKind } from "../libraryQuery";
 
-export function SelectedLibraryContextPageRegion({ kind, entityId, name, bookCount, canEdit = false, returnTo, onBack }: {
+export function SelectedLibraryContextPageRegion({ kind, entityId, name, blurb, bookCount, loading = false, unavailable = false, error, canEdit = false, returnTo, onRetry }: {
   kind: LibrarySelectedContextKind;
   entityId?: string;
   name?: string;
+  blurb?: string;
   bookCount?: number;
+  loading?: boolean;
+  unavailable?: boolean;
+  error?: Error;
   canEdit?: boolean;
   returnTo?: string;
-  onBack: () => void;
+  onRetry?: () => void;
 }) {
-  const owningAxis = kind === "author" ? "Authors" : "Series";
-  const title = name
-    ? kind === "author" ? `Books by ${name}` : `Books in ${name}`
-    : kind === "author" ? "Author Books" : "Series Books";
+  const entityLabel = kind === "author" ? "Author" : "Series";
+  const title = unavailable ? `${entityLabel} unavailable` : name || entityLabel;
 
   return <header className="selected-library-context-region">
-    <div>
-      <h2>{title}</h2>
-      {bookCount !== undefined ? <p className="muted">{bookCount} {bookCount === 1 ? "Book" : "Books"}</p> : null}
+    <div className="selected-library-context-region__identity">
+      <div className="selected-library-context-region__title">
+        <h2>{title}</h2>
+        {bookCount !== undefined ? <span className="muted">({bookCount} {bookCount === 1 ? "Book" : "Books"})</span> : null}
+      </div>
+      {blurb && !unavailable ? <ClampedLibraryTextComponent text={blurb} /> : null}
+      {loading ? <p className="muted" aria-live="polite">Loading details...</p> : null}
+      {unavailable ? <p className="muted">Selected context not found or unavailable.</p> : null}
+      {error ? <div className="selected-library-context-region__error"><ErrorPanel>{error.message}</ErrorPanel>{onRetry ? <Button type="button" onClick={onRetry}>Retry</Button> : null}</div> : null}
     </div>
     <div className="selected-library-context-region__actions">
-      {canEdit && entityId ? <Link
+      {canEdit && entityId && !unavailable ? <Link
         className="button button--secondary"
         to={libraryEntityEditPath(kind, entityId)}
         state={libraryEntityNavigationState({
-          breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", name),
+          breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", name, entityId),
           returnTo,
         })}
       >Edit</Link> : null}
-      <Button type="button" onClick={onBack}>Back to {owningAxis}</Button>
     </div>
   </header>;
 }

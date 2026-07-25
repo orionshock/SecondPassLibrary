@@ -70,7 +70,7 @@ export function BookEditAuthorsSeriesPageRegion({ draft, error, authors, series,
         {draft.seriesId && series.find(({ id }) => id === draft.seriesId) ? <Link
           className="book-edit-assigned-series-link"
           to={libraryEntityEditPath("series", draft.seriesId)}
-          state={libraryEntityNavigationState({ breadcrumbs: libraryEntityBreadcrumbs("series", "edit", series.find(({ id }) => id === draft.seriesId)?.name), returnTo })}
+          state={libraryEntityNavigationState({ breadcrumbs: libraryEntityBreadcrumbs("series", "edit", series.find(({ id }) => id === draft.seriesId)?.name, draft.seriesId), returnTo })}
         >Edit assigned Series</Link> : null}
       </>}
     </div>

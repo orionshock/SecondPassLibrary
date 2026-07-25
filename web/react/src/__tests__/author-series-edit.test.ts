@@ -11,6 +11,8 @@ import {
   validateAuthorSeriesEditDraft,
 } from "../features/library/authorSeriesEditDraft";
 import {
+  libraryEntityBreadcrumbs,
+  libraryEntityContextPath,
   libraryEntityEditPath,
   libraryEntityNavigationState,
   readLibraryEntityReturnTo,
@@ -44,6 +46,11 @@ describe("Author and Series lifecycle draft contract", () => {
 
   it("encodes lifecycle paths and accepts only safe internal return destinations", () => {
     expect(libraryEntityEditPath("author", "author/id")).toBe("/library/authors/author%2Fid/edit");
+    expect(libraryEntityContextPath("author", "author/id")).toBe("/library?view=authors&author=author%2Fid");
+    expect(libraryEntityBreadcrumbs("author", "edit", "Ada", "author/id")[2]).toEqual({
+      label: "Ada",
+      to: "/library?view=authors&author=author%2Fid",
+    });
     const safe = libraryEntityNavigationState({ breadcrumbs: [{ label: "Author" }], returnTo: "/library?view=authors" });
     const unsafe = libraryEntityNavigationState({ breadcrumbs: [{ label: "Author" }], returnTo: "https://example.com" });
     expect(readLibraryEntityReturnTo(safe)).toBe("/library?view=authors");

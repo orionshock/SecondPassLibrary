@@ -1,5 +1,7 @@
 import {
   ApiError,
+  getAuthor,
+  getSeries,
   isAtLeastLibrarian,
   listAllCatalogTags,
   listAuthors,
@@ -52,6 +54,21 @@ interface TagsLoadState {
   error?: Error;
 }
 
+export interface SelectedLibraryContextDetails {
+  kind: "author" | "series";
+  id: string;
+  name: string;
+  bookCount: number;
+  blurb: string;
+}
+
+type SelectedContextDetailsLoad =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; details: SelectedLibraryContextDetails }
+  | { status: "unavailable" }
+  | { status: "error"; error: Error };
+
 export const libraryBreadcrumbFallback = [] as const;
 
 export function LibraryOrchestrator() {
@@ -72,10 +89,12 @@ export function LibraryOrchestrator() {
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [listRetry, setListRetry] = useState(0);
   const [tagRetry, setTagRetry] = useState(0);
+  const [contextRetry, setContextRetry] = useState(0);
   const [books, setBooks] = useState<LoadState<CompactBook>>({ loading: true });
   const [authors, setAuthors] = useState<LoadState<LibraryAuthor>>({ loading: true });
   const [series, setSeries] = useState<LoadState<LibrarySeries>>({ loading: true });
   const [tags, setTags] = useState<TagsLoadState>({ loading: false });
+  const [contextDetails, setContextDetails] = useState<SelectedContextDetailsLoad>({ status: "idle" });
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.authorId, queryState.q, queryState.seriesId, queryState.view]);
 
@@ -93,6 +112,25 @@ export function LibraryOrchestrator() {
       .catch((error: unknown) => { if (active) setTags({ loading: false, error: normalizeMutationError(error) }); });
     return () => { active = false; };
   }, [tagRetry, tags.tags]);
+
+  useEffect(() => {
+    const id = queryState.authorId ?? queryState.seriesId;
+    if (!selectedContextKind || !id) {
+      setContextDetails({ status: "idle" });
+      return;
+    }
+    let active = true;
+    setContextDetails({ status: "loading" });
+    loadSelectedLibraryContextDetails(selectedContextKind, id)
+      .then((details) => { if (active) setContextDetails({ status: "ready", details }); })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setContextDetails(error instanceof ApiError && error.status === 404
+          ? { status: "unavailable" }
+          : { status: "error", error: normalizeMutationError(error) });
+      });
+    return () => { active = false; };
+  }, [contextRetry, queryState.authorId, queryState.seriesId, selectedContextKind]);
 
   useEffect(() => {
     if (!unknownCatalogTag(queryState.tag, tags.tags)) return;
@@ -147,6 +185,7 @@ export function LibraryOrchestrator() {
 
   const currentLibraryPath = libraryPath(queryState);
   const canEditCatalog = isAtLeastLibrarian(currentUser);
+  const selectedContextName = contextDetails.status === "ready" ? contextDetails.details.name : selectedContextDisplay?.name;
   const owningAxisState = selectedContextKind ? withLibrarySelectedContext(queryState, undefined) : queryState;
   const owningAxisPath = libraryPath(owningAxisState);
   const commonListProps = {
@@ -186,11 +225,15 @@ export function LibraryOrchestrator() {
         {selectedContextKind ? <SelectedLibraryContextPageRegion
           kind={selectedContextKind}
           entityId={queryState.authorId ?? queryState.seriesId}
-          name={selectedContextDisplay?.name}
-          bookCount={selectedContextDisplay?.bookCount}
+          name={selectedContextName}
+          blurb={contextDetails.status === "ready" ? contextDetails.details.blurb : undefined}
+          bookCount={contextDetails.status === "ready" ? contextDetails.details.bookCount : selectedContextDisplay?.bookCount}
+          loading={contextDetails.status === "loading"}
+          unavailable={contextDetails.status === "unavailable"}
+          error={contextDetails.status === "error" ? contextDetails.error : undefined}
           canEdit={canEditCatalog}
           returnTo={currentLibraryPath}
-          onBack={() => setSearchParameters(librarySearchParams(owningAxisState), { state: null })}
+          onRetry={() => setContextRetry((value) => value + 1)}
         /> : null}
         {queryState.view === "books" || selectedContextKind ? <BookListPageRegion
           page={books.page}
@@ -200,7 +243,7 @@ export function LibraryOrchestrator() {
           tagged={Boolean(queryState.tag)}
           selectedContext={selectedContextKind ? {
             kind: selectedContextKind,
-            label: selectedContextDisplay?.name ?? (selectedContextKind === "author" ? "Author Books" : "Series Books"),
+            label: selectedContextName ?? (selectedContextKind === "author" ? "Author Books" : "Series Books"),
           } : undefined}
           parentLibraryPath={selectedContextKind ? owningAxisPath : undefined}
           {...commonListProps}
@@ -253,4 +296,20 @@ export function loadBooksWithPageRecovery(
 
 export function unknownCatalogTag(activeTag: string | undefined, tags: readonly CatalogTag[] | undefined): boolean {
   return Boolean(activeTag && tags && !tags.some(({ slug }) => slug === activeTag));
+}
+
+export async function loadSelectedLibraryContextDetails(
+  kind: "author" | "series",
+  id: string,
+  requests: {
+    author: typeof getAuthor;
+    series: typeof getSeries;
+  } = { author: getAuthor, series: getSeries },
+): Promise<SelectedLibraryContextDetails> {
+  if (kind === "author") {
+    const author = await requests.author(id);
+    return { kind, id: author.id, name: author.name, bookCount: author.bookCount, blurb: author.biography };
+  }
+  const series = await requests.series(id);
+  return { kind, id: series.id, name: series.name, bookCount: series.bookCount, blurb: series.summary };
 }

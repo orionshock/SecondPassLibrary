@@ -330,9 +330,12 @@ Rail counts always represent viewer-visible Books; they do not become Author or
 Series counts when those axes are active.
 
 The first selected Author/Series browse context is in Library, not a separate
-read-only lifecycle page. It reuses compact Book rows and does not fetch entity
-metadata: row navigation state supplies an optional safe name, while a
-direct load uses a generic heading. Links to Books carry explicit author/series
+read-only lifecycle page. It reuses compact Book rows and independently fetches
+the role-scoped Author or Series detail so direct loads show the entity name and
+a short, expandable plain-text biography or summary. Router state may supply an
+optimistic name while that read is pending. A missing or unavailable entity is
+reported without distinguishing those cases and does not break the Library
+shell or filtered Book request. Links to Books carry explicit author/series
 breadcrumb context through Router location state.
 
 ### Books axis

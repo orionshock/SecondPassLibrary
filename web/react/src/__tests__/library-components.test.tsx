@@ -163,16 +163,22 @@ describe("Library Author and Series components", () => {
     expect(seriesMarkup).not.toContain("Delete");
   });
 
-  it("renders named and direct-load selected context headers with bounded back actions", () => {
-    const named = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="author" name="Visible Author" bookCount={1} onBack={vi.fn()} />);
-    expect(named).toContain("Books by Visible Author");
+  it("renders escaped selected context detail without redundant back actions", () => {
+    const biography = `<p>${"Visible biography ".repeat(20)}</p>`;
+    const named = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="author" name="Visible Author" blurb={biography} bookCount={1} />);
+    expect(named).toContain("Visible Author");
     expect(named).toContain("1 Book");
-    expect(named).toContain("Back to Authors");
-    const direct = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="series" onBack={vi.fn()} />);
-    expect(direct).toContain("Series Books");
-    expect(direct).toContain("Back to Series");
-    const editable = renderToStaticMarkup(<MemoryRouter><SelectedLibraryContextPageRegion kind="author" entityId="author-1" name="Visible Author" canEdit returnTo="/library?view=authors&author=author-1" onBack={vi.fn()} /></MemoryRouter>);
+    expect(named).toContain("&lt;p&gt;");
+    expect(named).toContain("Show more");
+    expect(named).not.toContain("Books by");
+    expect(named).not.toContain("Back to Authors");
+    const unavailable = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="series" name="Stale Series" unavailable />);
+    expect(unavailable).toContain("Series unavailable");
+    expect(unavailable).not.toContain("Stale Series");
+    expect(unavailable).not.toContain("Back to Series");
+    const editable = renderToStaticMarkup(<MemoryRouter><SelectedLibraryContextPageRegion kind="author" entityId="author-1" name="Visible Author" canEdit returnTo="/library?view=authors&author=author-1" /></MemoryRouter>);
     expect(editable).toContain('href="/library/authors/author-1/edit"');
+    expect(named).not.toContain('href="/library/authors/author-1/edit"');
   });
 
   it("uses Book controls and selected-context sort choices", () => {

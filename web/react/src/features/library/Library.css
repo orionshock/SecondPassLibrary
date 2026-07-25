@@ -212,6 +212,23 @@
   font-size: 1rem;
 }
 
+.selected-library-context-region__identity {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.selected-library-context-region__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.selected-library-context-region__title > span {
+  font-size: 0.78rem;
+}
+
 .selected-library-context-region p {
   margin-top: 0.15rem;
   font-size: 0.78rem;
@@ -226,6 +243,40 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.selected-library-context-region__error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.selected-library-context-region__error .error-panel {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.selected-library-context-region__error .button {
+  margin: 0;
+}
+
+.clamped-library-text-component {
+  max-width: 52rem;
+}
+
+.clamped-library-text-component__text {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.clamped-library-text-component__toggle {
+  display: inline;
+  padding: 0;
+  border: 0;
+  color: var(--link);
+  background: transparent;
+  font-size: 0.75rem;
 }
 
 .catalog-tag-rail {
