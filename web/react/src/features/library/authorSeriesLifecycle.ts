@@ -31,11 +31,11 @@ export function libraryEntityBreadcrumbs(
 ): BreadcrumbItem[] {
   const axis = kind === "author" ? "Authors" : "Series";
   if (mode === "new") {
-    return [{ label: "Library", to: "/library" }, { label: axis, to: axisPath }, { label: `New ${titleKind(kind)}` }];
+    return [{ label: "Library", to: "/library", resetTrail: true }, { label: axis, to: axisPath, resetTrail: true }, { label: `New ${titleKind(kind)}` }];
   }
   return [
-    { label: "Library", to: "/library" },
-    { label: axis, to: axisPath },
+    { label: "Library", to: "/library", resetTrail: true },
+    { label: axis, to: axisPath, resetTrail: true },
     { label: name?.trim() || titleKind(kind), ...(entityId ? { to: libraryEntityContextPath(kind, entityId) } : {}) },
     { label: "Edit" },
   ];

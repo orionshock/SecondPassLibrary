@@ -1,6 +1,7 @@
 export interface BreadcrumbItem {
   label: string;
   to?: string;
+  resetTrail?: boolean;
 }
 
 export interface BreadcrumbLocationState {
@@ -19,9 +20,18 @@ export function appendBreadcrumbTrail(parent: readonly BreadcrumbItem[], item: B
 
 export function breadcrumbNavigationState(trail: readonly BreadcrumbItem[]): BreadcrumbLocationState {
   return {
-    breadcrumbTrail: trail.map(({ label, to }) => ({ label, ...(to ? { to } : {}) })),
+    breadcrumbTrail: trail.map(({ label, to, resetTrail }) => ({
+      label,
+      ...(to ? { to } : {}),
+      ...(resetTrail ? { resetTrail: true } : {}),
+    })),
     breadcrumbContextId: runtimeBreadcrumbContextId,
   };
+}
+
+export function breadcrumbLinkState(items: readonly BreadcrumbItem[], index: number): BreadcrumbLocationState | undefined {
+  if (items[index]?.resetTrail) return undefined;
+  return breadcrumbNavigationState(items.slice(0, index + 1).map(({ label, to }) => ({ label, ...(to ? { to } : {}) })));
 }
 
 export function readIncomingBreadcrumbTrail(state: unknown): BreadcrumbItem[] | undefined {
@@ -43,16 +53,22 @@ export function resolveBreadcrumbTrail(
   suppress = false,
 ): BreadcrumbItem[] {
   if (suppress) return [];
-  return readIncomingBreadcrumbTrail(state) ?? fallback.map(({ label, to }) => ({ label, ...(to ? { to } : {}) }));
+  return readIncomingBreadcrumbTrail(state) ?? fallback.map(({ label, to, resetTrail }) => ({
+    label,
+    ...(to ? { to } : {}),
+    ...(resetTrail ? { resetTrail: true } : {}),
+  }));
 }
 
 function readBreadcrumbItem(value: unknown): BreadcrumbItem | undefined {
   if (!isRecord(value) || typeof value.label !== "string") return undefined;
   const label = value.label.trim();
   if (!label || label.length > maximumLabelLength) return undefined;
-  if (value.to === undefined) return { label };
+  if (value.resetTrail !== undefined && value.resetTrail !== true) return undefined;
+  const resetTrail = value.resetTrail === true;
+  if (value.to === undefined) return { label, ...(resetTrail ? { resetTrail: true } : {}) };
   if (typeof value.to !== "string" || !isInternalPath(value.to)) return undefined;
-  return { label, to: value.to };
+  return { label, to: value.to, ...(resetTrail ? { resetTrail: true } : {}) };
 }
 
 function isInternalPath(value: string): boolean {

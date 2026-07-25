@@ -22,7 +22,7 @@ const manager: CurrentUser = { ...owner, username: "manager", profileId: "manage
 
 describe("User Edit", () => {
   it("uses canonical identity breadcrumbs and permission-aware capitalized roles", () => {
-    expect(usersEditBreadcrumbFallbackFor("reader")).toEqual([{ label: "Users", to: "/users" }, { label: "@reader" }, { label: "Edit" }]);
+    expect(usersEditBreadcrumbFallbackFor("reader")).toEqual([{ label: "Users", to: "/users", resetTrail: true }, { label: "@reader" }, { label: "Edit" }]);
     expect(usersEditBreadcrumbTrail("reader")).toEqual(usersEditBreadcrumbFallbackFor("reader"));
     expect(editableUserRoles(owner, target)).toEqual(["manager", "librarian", "reader"]);
     expect(editableUserRoles(manager, target)).toEqual(["librarian", "reader"]);

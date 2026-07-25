@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { BreadcrumbsComponent } from "../app/navigation/BreadcrumbsComponent";
 import {
   appendBreadcrumbTrail,
+  breadcrumbLinkState,
   breadcrumbNavigationState,
   readIncomingBreadcrumbTrail,
   resolveBreadcrumbTrail,
@@ -46,6 +47,21 @@ describe("contextual breadcrumbs", () => {
     );
     const state = breadcrumbNavigationState(contextual);
     expect(resolveBreadcrumbTrail(state, passwordBreadcrumbFallback)).toEqual(contextual);
+  });
+
+  it("preserves breadcrumb context by default and resets only explicit branch links", () => {
+    const trail: BreadcrumbItem[] = [
+      { label: "Library", to: "/library", resetTrail: true },
+      { label: "Dresden Files", to: "/library?view=series&series=id" },
+      { label: "Storm Front", to: "/library/books/id" },
+      { label: "Edit" },
+    ];
+    expect(breadcrumbLinkState(trail, 0)).toBeUndefined();
+    expect(resolveBreadcrumbTrail(breadcrumbLinkState(trail, 2), [])).toEqual([
+      { label: "Library", to: "/library" },
+      { label: "Dresden Files", to: "/library?view=series&series=id" },
+      { label: "Storm Front", to: "/library/books/id" },
+    ]);
   });
 
   it("falls back when incoming location state is malformed", () => {

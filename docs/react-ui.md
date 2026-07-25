@@ -73,7 +73,7 @@ Cross-page product semantics that are not API shapes are tracked in [React Produ
 
 Breadcrumbs prefer explicit navigation context carried in React Router location state. A link to a child workflow builds a structured text/internal-URL trail; it never carries HTML. Context is marked for the current app runtime so a refresh cannot replay stale history state. On direct entry, refresh, external navigation, or malformed state, the destination Orchestrator supplies its canonical fallback. Breadcrumbs do not inspect browser history and are not defined solely as static route metadata.
 
-`AppFrame` owns the consistent breadcrumb position and visual separators. Orchestrators register the resolved trail for their pathname; base branch routes such as `/profile` and `/users` do not render breadcrumbs, and top-level navigation starts a new branch without carrying stale context. Child workflows retain their canonical hierarchy. The forced password-change workflow suppresses breadcrumbs so it does not offer navigation away from the required action.
+`AppFrame` owns the consistent breadcrumb position and visual separators. Orchestrators register the resolved trail for their pathname. Breadcrumb links preserve the validated trail through the destination by default; canonical branch/base ancestors explicitly reset it. Base branch routes such as `/profile` and `/users` do not render breadcrumbs, and top-level navigation starts a new branch without carrying stale context. Context is never inferred from browser history. Child workflows retain their canonical hierarchy. The forced password-change workflow suppresses breadcrumbs so it does not offer navigation away from the required action.
 
 ## Shell and UI conventions
 

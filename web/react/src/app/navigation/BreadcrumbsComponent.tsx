@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import type { BreadcrumbItem } from "./breadcrumbs";
+import { breadcrumbLinkState, type BreadcrumbItem } from "./breadcrumbs";
 
 export function BreadcrumbsComponent({ items }: { items: readonly BreadcrumbItem[] }) {
   if (items.length === 0) return null;
@@ -10,7 +10,7 @@ export function BreadcrumbsComponent({ items }: { items: readonly BreadcrumbItem
       {items.map((item, index) => {
         const current = index === items.length - 1;
         return <li key={`${index}:${item.label}`}>
-          {!current && item.to ? <Link to={item.to}>{item.label}</Link> : <span aria-current={current ? "page" : undefined}>{item.label}</span>}
+          {!current && item.to ? <Link to={item.to} state={breadcrumbLinkState(items, index)}>{item.label}</Link> : <span aria-current={current ? "page" : undefined}>{item.label}</span>}
         </li>;
       })}
     </ol>

@@ -57,8 +57,8 @@ export function bookIdentifierLabel(scheme: string): string {
 
 export function bookDetailBreadcrumbFallback(title = "Book"): BreadcrumbItem[] {
   return [
-    { label: "Library", to: "/library" },
-    { label: "Books", to: "/library" },
+    { label: "Library", to: "/library", resetTrail: true },
+    { label: "Books", to: "/library", resetTrail: true },
     { label: title },
   ];
 }
@@ -82,14 +82,14 @@ export function bookBrowseDetailBreadcrumbs({
 }): BreadcrumbItem[] {
   if (contextLabel) {
     return [
-      { label: "Library", to: parentLibraryPath },
+      { label: "Library", to: parentLibraryPath, resetTrail: true },
       { label: contextLabel, to: libraryPath },
       { label: title },
     ];
   }
   return [
-    { label: "Library", to: "/library" },
-    { label: "Books", to: libraryPath },
+    { label: "Library", to: "/library", resetTrail: true },
+    { label: "Books", to: libraryPath, resetTrail: true },
     { label: title },
   ];
 }

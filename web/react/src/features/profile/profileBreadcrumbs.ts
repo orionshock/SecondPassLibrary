@@ -2,7 +2,7 @@ import { appendBreadcrumbTrail, type BreadcrumbItem } from "../../app/navigation
 
 export const profileBreadcrumbFallback: readonly BreadcrumbItem[] = [];
 
-const profileParentTrail: readonly BreadcrumbItem[] = [{ label: "Profile", to: "/profile" }];
+const profileParentTrail: readonly BreadcrumbItem[] = [{ label: "Profile", to: "/profile", resetTrail: true }];
 
 export const passwordBreadcrumbFallback: readonly BreadcrumbItem[] = appendBreadcrumbTrail(
   profileParentTrail,

@@ -84,6 +84,7 @@ This is the running list of cross-page presentation and interaction rules that a
 - Child links may carry a structured trail of labels and internal URLs in React Router location state. Breadcrumb data never contains raw HTML, and separators belong to AppFrame CSS rather than the data.
 - Do not infer context from browser history, persist or replay a history trail, or rely only on static route metadata.
 - AppFrame renders breadcrumbs; branch Orchestrators own fallback trails and outgoing child context. Top-level navigation starts a new branch.
+- Breadcrumb links preserve the validated trail through the destination by default. Canonical branch/base ancestors are explicit reset points; do not infer breadcrumb context from browser history.
 - Base branch routes such as `/profile` and `/users` do not render breadcrumbs. Breadcrumbs begin when navigation enters a child or contextual workflow.
 - Direct loads and refreshes use the canonical fallback. Forced password change suppresses breadcrumbs.
 

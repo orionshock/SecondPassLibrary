@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import type { BookDetail } from "@second-pass/spl-api";
-import { resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
+import { breadcrumbLinkState, resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
   bookBrowseDetailBreadcrumbs,
   bookDetailBreadcrumbFallback,
@@ -93,15 +93,33 @@ describe("Book Detail navigation", () => {
   it("builds direct, Books, selected Author, and selected Series breadcrumb trails", () => {
     expect(bookDetailBreadcrumbFallback("Battle Ground").map(({ label }) => label)).toEqual(["Library", "Books", "Battle Ground"]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?q=battle" })).toEqual([
-      { label: "Library", to: "/library" },
-      { label: "Books", to: "/library?q=battle" },
+      { label: "Library", to: "/library", resetTrail: true },
+      { label: "Books", to: "/library?q=battle", resetTrail: true },
       { label: "Battle Ground" },
     ]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=authors&author=id", contextLabel: "Jim Butcher", parentLibraryPath: "/library?view=authors" }).map(({ label }) => label)).toEqual(["Library", "Jim Butcher", "Battle Ground"]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=series&series=id", contextLabel: "Dresden Files", parentLibraryPath: "/library?view=series" }).map(({ label }) => label)).toEqual(["Library", "Dresden Files", "Battle Ground"]);
     expect(bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback("Old title"), book.id, "New title")).toEqual([
-      { label: "Library", to: "/library" }, { label: "Books", to: "/library" },
+      { label: "Library", to: "/library", resetTrail: true }, { label: "Books", to: "/library", resetTrail: true },
       { label: "New title", to: `/library/books/${book.id}` }, { label: "Edit" },
+    ]);
+  });
+
+  it("preserves selected browse context when following the Book ancestor from Edit", () => {
+    const editTrail = bookEditBreadcrumbTrail(
+      bookBrowseDetailBreadcrumbs({
+        title: "Storm Front",
+        libraryPath: "/library?view=series&series=series-id",
+        contextLabel: "Dresden Files",
+        parentLibraryPath: "/library?view=series",
+      }),
+      book.id,
+      "Storm Front",
+    );
+    expect(resolveBreadcrumbTrail(breadcrumbLinkState(editTrail, editTrail.length - 2), [])).toEqual([
+      { label: "Library", to: "/library?view=series" },
+      { label: "Dresden Files", to: "/library?view=series&series=series-id" },
+      { label: "Storm Front", to: `/library/books/${book.id}` },
     ]);
   });
 
