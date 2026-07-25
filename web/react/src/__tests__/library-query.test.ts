@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  libraryAxisBasePath,
   libraryAxisSdkQuery,
   libraryBooksSdkQuery,
   libraryPath,
@@ -9,7 +10,6 @@ import {
   libraryStateFromSearchParams,
   withLibraryChange,
   withLibrarySelectedContext,
-  withLibraryView,
 } from "../features/library/libraryQuery";
 
 const authorId = "11111111-1111-4111-8111-111111111111";
@@ -59,13 +59,30 @@ describe("Library URL state", () => {
     expect(libraryStateFromSearchParams(new URLSearchParams(`view=series&series=${seriesId}&ordering=name`)).ordering).toBe("series_index");
   });
 
-  it("resets query changes, changes only page for paging, and resets axes while preserving page size", () => {
+  it("resets query changes and changes only page for paging", () => {
     const current = libraryStateFromSearchParams(new URLSearchParams("tag=old&ordering=-title&page=4&page_size=30&q=old"));
     for (const changes of [{ q: "new" }, { tag: "new" }, { ordering: "author" as const }, { pageSize: 40 }]) {
       expect(withLibraryChange(current, changes).page).toBe(1);
     }
     expect(withLibraryChange(current, { page: 2 }, false)).toEqual({ ...current, page: 2 });
-    expect(withLibraryView(current, "authors")).toEqual({ view: "authors", tag: "old", ordering: "name", page: 1, pageSize: 30, q: "" });
+  });
+
+  it("builds every canonical axis base while preserving only non-default page size", () => {
+    const filteredBooks = libraryStateFromSearchParams(new URLSearchParams("tag=old&ordering=-title&page=4&q=old"));
+    expect(libraryAxisBasePath(filteredBooks, "books")).toBe("/library");
+
+    const selectedAuthor = libraryStateFromSearchParams(new URLSearchParams(`view=authors&author=${authorId}&tag=old&ordering=-series&page=4&page_size=30&q=old`));
+    expect(libraryAxisBasePath(selectedAuthor, "books")).toBe("/library?page_size=30");
+    expect(libraryAxisBasePath(selectedAuthor, "authors")).toBe("/library?view=authors&page_size=30");
+
+    const filteredAuthors = libraryStateFromSearchParams(new URLSearchParams(`view=authors&author=${authorId}&tag=old&ordering=-title&page=4&q=old`));
+    expect(libraryAxisBasePath(filteredAuthors, "authors")).toBe("/library?view=authors");
+
+    const selectedSeries = libraryStateFromSearchParams(new URLSearchParams(`view=series&series=${seriesId}&tag=old&ordering=-title&page=4&page_size=40&q=old`));
+    expect(libraryAxisBasePath(selectedSeries, "series")).toBe("/library?view=series&page_size=40");
+
+    const filteredSeries = libraryStateFromSearchParams(new URLSearchParams("view=series&tag=old&ordering=-book_count&page=4&q=old"));
+    expect(libraryAxisBasePath(filteredSeries, "series")).toBe("/library?view=series");
   });
 
   it("enters and clears selected contexts while preserving only tag and page size", () => {
@@ -73,7 +90,7 @@ describe("Library URL state", () => {
     const selected = withLibrarySelectedContext(current, { kind: "author", id: authorId });
     expect(selected).toEqual({ view: "authors", authorId, tag: "fantasy", ordering: "title", page: 1, pageSize: 30, q: "" });
     expect(withLibrarySelectedContext(selected, undefined)).toEqual({ view: "authors", tag: "fantasy", ordering: "name", page: 1, pageSize: 30, q: "" });
-    expect(withLibraryView(selected, "series")).toEqual({ view: "series", tag: "fantasy", ordering: "name", page: 1, pageSize: 30, q: "" });
+    expect(libraryAxisBasePath(selected, "series")).toBe("/library?view=series&page_size=30");
   });
 
   it("composes selected context Book SDK filters with tag, search, ordering, and paging", () => {

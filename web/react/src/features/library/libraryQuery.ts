@@ -114,15 +114,14 @@ export function withLibraryChange(
   return { ...current, ...changes, page: resetPage ? 1 : changes.page ?? current.page };
 }
 
-export function withLibraryView(current: LibraryUrlState, view: LibraryView): LibraryUrlState {
-  return {
+export function libraryAxisBasePath(current: LibraryUrlState, view: LibraryView): string {
+  return libraryPath({
     view,
-    ...(current.tag ? { tag: current.tag } : {}),
     ordering: libraryDefaultOrdering(view),
     page: 1,
     pageSize: current.pageSize,
     q: "",
-  };
+  });
 }
 
 export function withLibrarySelectedContext(

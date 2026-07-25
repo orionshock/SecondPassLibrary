@@ -108,6 +108,12 @@ describe("Library Books components", () => {
     nav.props.children[1]!.props.onClick();
     expect(onViewChange).toHaveBeenCalledWith("authors");
 
+    const activeAuthors = LibraryAxesPageRegion({ activeView: "authors", onViewChange }) as ReactElement<{ children: ReactElement[] }>;
+    const activeAxisBar = activeAuthors.props.children[1] as ReactElement<{ children: ReactElement[] }>;
+    const activeNav = activeAxisBar.props.children[0] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
+    activeNav.props.children[1]!.props.onClick();
+    expect(onViewChange).toHaveBeenLastCalledWith("authors");
+
     const managedAuthors = renderToStaticMarkup(<MemoryRouter><LibraryAxesPageRegion activeView="authors" canManageCatalog onViewChange={vi.fn()} /></MemoryRouter>);
     expect(managedAuthors).toContain('href="/library/authors/new"');
   });

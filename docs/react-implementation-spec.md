@@ -322,8 +322,10 @@ Book contexts, and one stable Catalog Tag rail:
 - invalid/missing selected Author or Series IDs fall back safely without
   retaining conflicting `author` and `series` parameters.
 
-Changing the top-level axis preserves `tag`, clears `q`, ordering, and page, and
-retains page size. Catalog Tag filtering applies to Books, Authors, and Series.
+Every top-level axis button navigates to that axis's canonical base, even when
+the axis is already active. It clears selected context, `tag`, `q`, ordering,
+and page while retaining non-default page size. Catalog Tag filtering applies
+to Books, Authors, and Series.
 Rail counts always represent viewer-visible Books; they do not become Author or
 Series counts when those axes are active.
 

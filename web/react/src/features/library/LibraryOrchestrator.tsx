@@ -14,12 +14,13 @@ import {
   type Page,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import {
+  libraryAxisBasePath,
   libraryAxisSdkQuery,
   libraryBooksSdkQuery,
   libraryPath,
@@ -28,7 +29,6 @@ import {
   libraryStateFromSearchParams,
   withLibraryChange,
   withLibrarySelectedContext,
-  withLibraryView,
 } from "./libraryQuery";
 import { readSelectedLibraryContextDisplay } from "./libraryPresentation";
 import { AuthorListPageRegion } from "./regions/AuthorListPageRegion";
@@ -58,6 +58,7 @@ export function LibraryOrchestrator() {
   usePageBreadcrumbs(libraryBreadcrumbFallback);
   const { currentUser } = useOutletContext<AppOutletContext>();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
   const queryState = useMemo(() => libraryStateFromSearchParams(new URLSearchParams(queryKey)), [queryKey]);
@@ -161,9 +162,7 @@ export function LibraryOrchestrator() {
     <LibraryAxesPageRegion
       activeView={queryState.view}
       canManageCatalog={canEditCatalog}
-      onViewChange={(view) => {
-        if (view !== queryState.view) setSearchParameters(librarySearchParams(withLibraryView(queryState, view)), { state: null });
-      }}
+      onViewChange={(view) => navigate(libraryAxisBasePath(queryState, view), { state: null })}
     />
     <LibraryAxisControlsPageRegion
       view={queryState.view}
