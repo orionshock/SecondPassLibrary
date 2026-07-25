@@ -192,6 +192,7 @@ export function BookEditOrchestrator() {
       <BookCoverComponent coverUrl={readyBook.coverUrl} title={readyBook.title} />
       <BookCoverEditorComponent
         coverUrl={readyBook.coverUrl}
+        title={readyBook.title}
         selectedFile={selectedCoverFile}
         inputResetKey={coverInputResetKey}
         state={coverMutation}

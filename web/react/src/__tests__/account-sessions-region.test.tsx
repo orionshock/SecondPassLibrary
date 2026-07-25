@@ -11,7 +11,7 @@ describe("AccountSessionsPageRegion", () => {
   it("renders connected client metadata and the standard revoke control", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><AccountSessionsPageRegion sessions={[{ id: "one", name: "Phone", clientType: "reader", createdAt: "created", updatedAt: "updated" }]} loading={false} clientState={{ pending: false }} webState={{ pending: false }} clientPairingLinkState={breadcrumbNavigationState(clientPairingBreadcrumbFallback)} onLogoutOthers={vi.fn()} onRevokeSession={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain("Phone");
-    expect(markup).toContain("remove_circle");
+    expect(markup).toContain(">delete</span>");
     expect(markup).toContain("Connect a Device/App");
   });
 

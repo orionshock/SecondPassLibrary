@@ -9,7 +9,6 @@ import { AuthorRowComponent } from "../features/library/components/AuthorRowComp
 import { BookRowComponent } from "../features/library/components/BookRowComponent";
 import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
 import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
-import { confirmBookCoverClear } from "../features/library/bookCoverMutation";
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
@@ -38,34 +37,19 @@ function renderList(page?: Page<CompactBook>, options: { loading?: boolean; erro
 }
 
 describe("Library Books components", () => {
-  it("keeps Book Edit cover controls server-blind and explicitly confirms clear", () => {
-    const withoutSelection = renderToStaticMarkup(<BookCoverEditorComponent
+  it("keeps Book Edit cover mutation behind one bounded editor trigger", () => {
+    const markup = renderToStaticMarkup(<BookCoverEditorComponent
       coverUrl="/media/cover.jpg"
+      title="Book"
       inputResetKey={0}
       state={{ pending: false }}
       onFileChange={vi.fn()}
       onReplace={vi.fn()}
       onClear={vi.fn()}
     />);
-    expect(withoutSelection).toContain('accept="image/jpeg,image/png,image/webp"');
-    expect(withoutSelection).toMatch(/<button[^>]*type="button"[^>]*disabled=""[^>]*>Replace cover/);
-    expect(withoutSelection).toContain(">Clear cover</button>");
-
-    const noCover = renderToStaticMarkup(<BookCoverEditorComponent
-      coverUrl={null}
-      selectedFile={new File(["cover"], "cover.jpg")}
-      inputResetKey={0}
-      state={{ pending: false }}
-      onFileChange={vi.fn()}
-      onReplace={vi.fn()}
-      onClear={vi.fn()}
-    />);
-    expect(noCover).not.toContain(">Clear cover</button>");
-    expect(noCover).not.toMatch(/>Replace cover<\/button>.*disabled/);
-
-    const confirm = vi.fn(() => true);
-    expect(confirmBookCoverClear(confirm)).toBe(true);
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(markup).toContain("Change Cover");
+    expect(markup).not.toContain('type="file"');
+    expect(markup).not.toContain("Clear Cover");
   });
 
   it("renders only the accepted compact row presentation with canonical metadata icons", () => {
@@ -209,10 +193,10 @@ describe("Library Author and Series components", () => {
     /></MemoryRouter>);
     for (const path of [
       "/library/authors/new",
-      "/library/authors/author-1/edit",
       "/library/series/new",
       "/library/series/series-1/edit",
     ]) expect(markup).toContain(`href="${path}"`);
+    expect(markup).not.toContain('href="/library/authors/author-1/edit"');
   });
 
   it("keeps selected-context empty copy anti-leakage-safe and accepts matching navigation display state", () => {

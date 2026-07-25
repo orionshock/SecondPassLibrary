@@ -455,8 +455,9 @@ breadcrumb context through Router location state.
   creation.
 - Identifier response ids are not sent in writes; one page-level Save owns the
   replacement alongside the other edited domains.
-- Cover replace/clear is implemented as an immediate operation below the
-  read-only cover. It is independent from metadata Save, keeps backend image
+- Cover replace/clear is implemented as an immediate operation behind one
+  Change Cover control and a bounded dialog. Clear confirmation stays inside
+  the dialog. It is independent from metadata Save, keeps backend image
   validation authoritative, and updates only the displayed cover from the
   returned Book Detail without resetting the metadata draft or baseline. Local
   image preview remains deferred.

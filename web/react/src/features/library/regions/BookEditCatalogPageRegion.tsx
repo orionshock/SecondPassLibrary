@@ -1,8 +1,9 @@
 import { useState } from "react";
 
 import type { CatalogTag } from "@second-pass/spl-api";
+import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Button, FormField } from "../../../components/ui";
+import { FormField } from "../../../components/ui";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import type { BookEditDraft, PublicationPrecision } from "../bookEditDraft";
 
@@ -49,7 +50,7 @@ export function BookEditCatalogPageRegion({ draft, error, tags, tagsLoading, tag
       <div className="book-edit-tag-list">{draft.catalogTagNames.map((name) => <span className="book-edit-tag" key={name}>{name}<button type="button" aria-label={`Remove ${name}`} onClick={() => onChange("catalogTagNames", draft.catalogTagNames.filter((value) => value !== name))}><MaterialIcon name="close" /></button></span>)}</div>
       <div className="book-edit-inline-control book-edit-tag-add">
         <input aria-label="Catalog Tag name" list={tagsError || tagsLoading ? undefined : "book-edit-tag-options"} value={tagName} onChange={(event) => setTagName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} />
-        <Button type="button" onClick={addTag}>Add tag</Button>
+        <AddIconButton type="button" label="Add Catalog Tag" onClick={addTag} />
       </div>
       {tagsLoading ? <span className="book-edit-picker-status">Loading tag suggestions...</span> : !tagsError ? <datalist id="book-edit-tag-options">{tags.map((tag) => <option key={tag.id} value={tag.name} />)}</datalist> : <div className="book-edit-picker-error"><span>Tag suggestions unavailable; typed names still work.</span><button type="button" onClick={onRetryTags}>Retry</button></div>}
       {fieldError(error, "catalogTagNames") ? <span className="field-error">{fieldError(error, "catalogTagNames")}</span> : null}

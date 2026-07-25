@@ -31,6 +31,12 @@ button:disabled {
   background: transparent;
 }
 
+.button--danger {
+  border-color: rgb(251 113 133 / 60%);
+  color: #fecdd3;
+  background: rgb(251 113 133 / 10%);
+}
+
 .icon-button {
   padding: 4px 8px;
   border: 1px solid var(--border);
@@ -53,6 +59,18 @@ button:disabled {
 .icon-button--danger:hover {
   color: rgb(254 205 211);
   background: rgb(251 113 133 / 18%);
+}
+
+.icon-button--success {
+  border-color: rgb(74 222 128 / 65%);
+  color: #bbf7d0;
+  background: rgb(74 222 128 / 10%);
+}
+
+.icon-button--success:hover {
+  border-color: rgb(74 222 128 / 85%);
+  color: #dcfce7;
+  background: rgb(74 222 128 / 18%);
 }
 
 .page-stack {

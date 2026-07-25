@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import "./ui.css";
 
@@ -34,16 +34,19 @@ export function Surface({ title, children }: { title?: string; children: ReactNo
   );
 }
 
-export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button className={`button ${className}`.trim()} {...props} />;
-}
+export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function Button(
+  { className = "", ...props },
+  ref,
+) {
+  return <button ref={ref} className={`button ${className}`.trim()} {...props} />;
+});
 
 export function IconButton({
   className = "",
   tone = "default",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "default" | "danger" }) {
-  const toneClass = tone === "danger" ? " icon-button--danger" : "";
+}: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "default" | "danger" | "success" }) {
+  const toneClass = tone === "danger" ? " icon-button--danger" : tone === "success" ? " icon-button--success" : "";
   return <button className={`icon-button${toneClass} ${className}`.trim()} {...props} />;
 }
 

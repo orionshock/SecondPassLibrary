@@ -9,6 +9,6 @@ describe("RemoveIconButton", () => {
 
     expect(markup).toContain("icon-button--danger");
     expect(markup).toContain('aria-label="Remove reader"');
-    expect(markup).toContain("remove_circle");
+    expect(markup).toContain(">delete</span>");
   });
 });
