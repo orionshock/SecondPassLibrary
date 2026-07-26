@@ -13,6 +13,8 @@ import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
 import { BookEditAuthorsSeriesPageRegion } from "../features/library/regions/BookEditAuthorsSeriesPageRegion";
+import { BookEditGroupsPageRegion } from "../features/library/regions/BookEditGroupsPageRegion";
+import { BookEditTabsPageRegion } from "../features/library/regions/BookEditTabsPageRegion";
 import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/regions/CatalogTagRailPageRegion";
 import { LibraryAxesPageRegion } from "../features/library/regions/LibraryAxesPageRegion";
 import { LibraryAxisControlsPageRegion } from "../features/library/regions/LibraryAxisControlsPageRegion";
@@ -37,6 +39,30 @@ function renderList(page?: Page<CompactBook>, options: { loading?: boolean; erro
 }
 
 describe("Library Books components", () => {
+  it("keeps advanced Book group assignment controls immediate and protects sole Public", () => {
+    const publicGroup = { id: "public", name: "Common Room", description: "Public", isPublicGroup: true };
+    const simpleTabs = renderToStaticMarkup(<BookEditTabsPageRegion active="book" onChange={vi.fn()} />);
+    const advancedTabs = renderToStaticMarkup(<BookEditTabsPageRegion active="groups" showGroups onChange={vi.fn()} />);
+    expect(simpleTabs).not.toContain("Library Groups");
+    expect(advancedTabs).toContain("Library Groups");
+
+    const solePublic = renderToStaticMarkup(<BookEditGroupsPageRegion
+      currentGroups={[publicGroup]}
+      availableGroups={[publicGroup, { id: "custom", name: "Readers", description: "", isPublicGroup: false }]}
+      loading={false}
+      mutation={{ pending: false }}
+      disabled={false}
+      onRetry={vi.fn()}
+      onSelectionChange={vi.fn()}
+      onAdd={vi.fn()}
+      onRemove={vi.fn()}
+    />);
+    expect(solePublic).toContain("Common Room");
+    expect(solePublic).not.toContain("Remove Common Room");
+    expect(solePublic).toContain("Readers");
+    expect(solePublic).toContain('aria-label="Add group"');
+  });
+
   it("keeps Book Edit cover mutation behind one bounded editor trigger", () => {
     const markup = renderToStaticMarkup(<BookCoverEditorComponent
       coverUrl="/media/cover.jpg"

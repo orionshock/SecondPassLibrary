@@ -446,7 +446,7 @@ breadcrumb context through Router location state.
 - The implemented first slice uses a polished two-column workspace: a
   fixed-width read-only cover on the left and identity plus tabbed editing on
   the right, collapsing to one column on narrow screens.
-- Its four real local tabs are Book (title, sort title, subtitle, description),
+- Its core local tabs are Book (title, sort title, subtitle, description),
   Catalog (publisher, language, precision-aware publication date, Catalog
   Tags), Authors & Series (existing-entity assignment only), and Identifiers
   (complete scheme/value replacement through the Book PATCH).
@@ -466,8 +466,15 @@ breadcrumb context through Router location state.
   validation authoritative, and updates only the displayed cover from the
   returned Book Detail without resetting the metadata draft or baseline. Local
   image preview remains deferred.
-- Groups, shelves, file fields/actions, deletion, and Reader/Open are
-  deliberately deferred and have no placeholder tabs.
+- Advanced-mode Librarian+ sessions also receive a Library Groups tab. It uses
+  a paginated all-groups picker and immediate assignment POST/DELETE calls,
+  then refreshes Book Detail and merges only `groups` so metadata draft and
+  baseline state are preserved. It is hidden in simple mode and does not grant
+  global Book Edit to Reader curators. Removal requires confirmation because
+  group-owned shelf relationships may be affected; backend Public fallback
+  remains authoritative.
+- Shelves, file fields/actions, deletion, and Reader/Open are deliberately
+  deferred and have no placeholder tabs.
 
 ### Library API, SDK, and tests
 
@@ -707,9 +714,9 @@ have materially different contracts.
    deferred.
 3. **Book Detail (complete):** read-only hero, metadata, safe EPUB download,
    repair-state handling, and contextual breadcrumbs.
-4. **Book Edit (current scope complete):** the four-tab bibliographic,
-   relationship, and identifier editor plus independent cover replace/clear are
-   built. File/EPUB editing remains deferred.
+4. **Book Edit (current scope complete):** bibliographic, relationship,
+   identifier, advanced-mode Library Group assignment, and independent cover
+   replace/clear workflows are built. File/EPUB editing remains deferred.
 5. **Shelves:** SDK, scoped list/create/view/edit. This reuses Book rows and
    broad Library search.
 6. **Groups:** SDK, list/create/view/edit. This reuses Book rows, shelf previews,

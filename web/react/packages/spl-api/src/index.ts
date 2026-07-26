@@ -32,6 +32,15 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  addBookToGroup,
+  listAllLibraryGroups,
+  listGroups,
+  removeBookFromGroup,
+  type BookGroupAssignment,
+  type LibraryGroup,
+  type LibraryGroupsQuery,
+} from "./groups";
+export {
   getBook,
   clearBookCover,
   replaceBookCover,

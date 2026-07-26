@@ -8,14 +8,15 @@ export function ActionRowComponent({ state, children }: { state: MutationState; 
   return <div className="form-action-row"><ActionFeedbackComponent state={state} /><div className="form-actions">{children}</div></div>;
 }
 
-export function SaveCancelActionRowComponent({ state, submitLabel, pendingLabel, onCancel }: {
+export function SaveCancelActionRowComponent({ state, submitLabel, pendingLabel, disabled = false, onCancel }: {
   state: MutationState;
   submitLabel: string;
   pendingLabel: string;
+  disabled?: boolean;
   onCancel: () => void;
 }) {
   return <ActionRowComponent state={state}>
-    <Button type="button" className="button--secondary" disabled={state.pending} onClick={onCancel}>Cancel</Button>
-    <Button type="submit" disabled={state.pending}>{state.pending ? pendingLabel : submitLabel}</Button>
+    <Button type="button" className="button--secondary" disabled={state.pending || disabled} onClick={onCancel}>Cancel</Button>
+    <Button type="submit" disabled={state.pending || disabled}>{state.pending ? pendingLabel : submitLabel}</Button>
   </ActionRowComponent>;
 }

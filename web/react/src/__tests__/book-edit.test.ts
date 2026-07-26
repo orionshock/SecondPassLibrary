@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { BookDetail, BookIdentifierScheme } from "@second-pass/spl-api";
+import type { BookDetail, BookIdentifierScheme, CurrentUser } from "@second-pass/spl-api";
 import { LocalValidationError } from "../shared/feedback/mutationState";
 import { bookDetailWithUpdatedCover } from "../features/library/bookCoverMutation";
+import { bookDetailWithUpdatedGroups, canEditBookGroups } from "../features/library/bookGroupMutation";
 import { bookEditDraftFromBook, bookEditDraftsEqual, bookEditInputFromDraft, validateBookEditDraft } from "../features/library/bookEditDraft";
 
 const book: BookDetail = {
@@ -85,6 +86,22 @@ describe("Book Edit draft contract", () => {
       ...book,
       coverUrl: "/media/new-cover.jpg",
     });
+    expect(dirtyDraft.title).toBe("Unsaved title");
+    expect(baseline.title).toBe("Book");
+  });
+
+  it("limits group editing to advanced-mode catalog managers and merges only refreshed groups", () => {
+    const librarian = {
+      role: "librarian", isLibrarian: true, advancedLibraryGroupsEnabled: true,
+    } as CurrentUser;
+    expect(canEditBookGroups(librarian)).toBe(true);
+    expect(canEditBookGroups({ ...librarian, advancedLibraryGroupsEnabled: false })).toBe(false);
+    expect(canEditBookGroups({ ...librarian, role: "reader", isLibrarian: false, isReader: true })).toBe(false);
+
+    const baseline = bookEditDraftFromBook(book);
+    const dirtyDraft = { ...baseline, title: "Unsaved title" };
+    const refreshed = { ...book, title: "Stale server title", groups: [{ id: "g1", name: "Readers", description: "", isPublicGroup: false }] };
+    expect(bookDetailWithUpdatedGroups(book, refreshed)).toEqual({ ...book, groups: refreshed.groups });
     expect(dirtyDraft.title).toBe("Unsaved title");
     expect(baseline.title).toBe("Book");
   });
