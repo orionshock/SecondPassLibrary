@@ -1,5 +1,11 @@
-import { ApiError, getBook, isAtLeastLibrarian, type BookDetail } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
+import {
+  ApiError,
+  getBook,
+  isAtLeastLibrarian,
+  listAllShelvesForBook,
+  type BookDetail,
+} from "@second-pass/spl-api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
@@ -8,7 +14,10 @@ import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/nav
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail } from "./bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
-import { BookDetailSectionsPageRegion } from "./regions/BookDetailSectionsPageRegion";
+import {
+  BookDetailSectionsPageRegion,
+  type BookShelvesState,
+} from "./regions/BookDetailSectionsPageRegion";
 import { BookDetailStatePageRegion } from "./regions/BookDetailStatePageRegion";
 import "./BookDetail.css";
 
@@ -24,6 +33,9 @@ export function BookDetailOrchestrator() {
   const location = useLocation();
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<BookDetailLoadState>({ status: "loading" });
+  const [shelvesLoad, setShelvesLoad] = useState<BookShelvesState>({ status: "idle" });
+  const shelvesRequestActive = useRef(false);
+  const shelvesBookId = useRef<string | undefined>(bookId);
   const book = load.status === "ready" ? load.book : undefined;
   const breadcrumbFallback = useMemo(
     () => bookDetailBreadcrumbFallback(book?.title ?? "Book"),
@@ -32,6 +44,9 @@ export function BookDetailOrchestrator() {
   usePageBreadcrumbs(breadcrumbFallback);
 
   useEffect(() => {
+    shelvesBookId.current = bookId;
+    shelvesRequestActive.current = false;
+    setShelvesLoad({ status: "idle" });
     if (!bookId) {
       setLoad({ status: "not-found" });
       return;
@@ -45,8 +60,30 @@ export function BookDetailOrchestrator() {
         if (error instanceof ApiError && error.status === 404) setLoad({ status: "not-found" });
         else setLoad({ status: "error", error: normalizeMutationError(error) });
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      if (shelvesBookId.current === bookId) shelvesBookId.current = undefined;
+    };
   }, [bookId, retry]);
+
+  const loadShelves = useCallback(() => {
+    if (!bookId || shelvesRequestActive.current || shelvesLoad.status === "ready") return;
+    const requestedBookId = bookId;
+    shelvesRequestActive.current = true;
+    setShelvesLoad({ status: "loading" });
+    listAllShelvesForBook(requestedBookId)
+      .then((shelves) => {
+        if (shelvesBookId.current === requestedBookId) setShelvesLoad({ status: "ready", shelves });
+      })
+      .catch((error: unknown) => {
+        if (shelvesBookId.current === requestedBookId) {
+          setShelvesLoad({ status: "error", error: normalizeMutationError(error) });
+        }
+      })
+      .finally(() => {
+        if (shelvesBookId.current === requestedBookId) shelvesRequestActive.current = false;
+      });
+  }, [bookId, shelvesLoad.status]);
 
   if (load.status === "loading") return <div className="page-stack book-detail-page"><BookDetailStatePageRegion state="loading" /></div>;
   if (load.status === "not-found") return <div className="page-stack book-detail-page"><BookDetailStatePageRegion state="not-found" /></div>;
@@ -58,6 +95,12 @@ export function BookDetailOrchestrator() {
       canEdit={isAtLeastLibrarian(currentUser)}
       editNavigationState={breadcrumbNavigationState(bookEditBreadcrumbTrail(resolveBreadcrumbTrail(location.state, breadcrumbFallback), load.book.id, load.book.title))}
     />
-    <BookDetailSectionsPageRegion book={load.book} advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled} />
+    <BookDetailSectionsPageRegion
+      book={load.book}
+      advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
+      shelvesState={shelvesLoad}
+      onLoadShelves={loadShelves}
+      onRetryShelves={loadShelves}
+    />
   </article>;
 }

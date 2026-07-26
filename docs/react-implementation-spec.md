@@ -429,14 +429,16 @@ breadcrumb context through Router location state.
   title, subtitle, linked authors and Series/index, publisher, language,
   precision-aware publication date, Catalog Tags, escaped plain-text
   description, and authenticated Download EPUB from `file.download_url`.
-- Lightweight local tabs below the hero provide an honest no-fetch Shelves
-  placeholder, read-only visible Groups only in advanced mode, and Metadata
-  containing publication, identifier, and safe file format/size facts.
+- Lightweight local tabs below the hero provide a lazily loaded read-only list
+  of visible shelves containing the Book, read-only visible Groups only in
+  advanced mode, and Metadata containing publication, identifier, and safe file
+  format/size facts. Shelf rows show ownership/visibility and viewer-visible
+  item counts; names stay plain text until a React shelf detail route exists.
 - The nested `file` response is a projection of canonical EPUB fields stored on
   Book, not a separate asset record. `file: null` is an exceptional repair state
   shown as an unavailable EPUB; it is not presented as an optional file. A
   checksum is rendered only in the secondary Metadata tab's File panel.
-- Real shelf loading, shelf and group relationship actions, Reader/Open,
+- Shelf and group relationship actions, the full Shelves branch, Reader/Open,
   deletion, and cover mutation remain out of this read-only slice.
 - Cover replace/clear is not available on Detail.
 

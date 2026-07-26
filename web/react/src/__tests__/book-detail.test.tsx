@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
-import type { BookDetail } from "@second-pass/spl-api";
+import type { BookDetail, ShelfSummary } from "@second-pass/spl-api";
 import { breadcrumbLinkState, resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
   bookBrowseDetailBreadcrumbs,
@@ -15,7 +15,10 @@ import {
   formatBookPublishedDate,
 } from "../features/library/bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "../features/library/regions/BookDetailHeroPageRegion";
-import { BookDetailSectionsPageRegion } from "../features/library/regions/BookDetailSectionsPageRegion";
+import {
+  BookDetailSectionsPageRegion,
+  shouldLoadBookShelves,
+} from "../features/library/regions/BookDetailSectionsPageRegion";
 
 const book: BookDetail = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -37,6 +40,19 @@ const book: BookDetail = {
   file: { format: "epub", fileSize: 1536, checksum: "DO-NOT-RENDER", downloadUrl: "/download/book.epub" },
   groups: [{ id: "group", name: "Common Room", description: "Everyone reads here", isPublicGroup: true }],
 };
+
+const shelves: ShelfSummary[] = [
+  {
+    id: "personal-shelf", name: "Current Favorites", description: "", ownerType: "user",
+    ownerUser: { profileId: "reader-profile", username: "reader" }, ownerGroup: null,
+    visibility: "listed", itemCount: 12, matchedItemId: "item", canEdit: true,
+  },
+  {
+    id: "public-shelf", name: "Sci-Fi Stack", description: "", ownerType: "group",
+    ownerUser: null, ownerGroup: { id: "public", name: "Common Room", isPublicGroup: true },
+    visibility: "private", itemCount: 10, matchedItemId: null, canEdit: false,
+  },
+];
 
 function render(element: ReactElement): string {
   return renderToStaticMarkup(<MemoryRouter>{element}</MemoryRouter>);
@@ -74,6 +90,29 @@ describe("Book Detail presentation", () => {
     const advanced = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled initialSection="groups" />);
     expect(simple).not.toContain("Common Room");
     expect(advanced).toContain("Common Room");
+  });
+
+  it("renders read-only server-scoped shelf facts without shelf navigation", () => {
+    const markup = render(<BookDetailSectionsPageRegion
+      book={book}
+      advancedGroupsEnabled
+      shelvesState={{ status: "ready", shelves }}
+    />);
+    expect(markup).toContain("Current Favorites");
+    expect(markup).toContain("@reader");
+    expect(markup).toContain("12 items");
+    expect(markup).toContain("Sci-Fi Stack");
+    expect(markup).toContain("Common Room");
+    expect(markup).not.toContain('href="/shelves/');
+  });
+
+  it("loads shelves only on first activation and requires explicit retry after an error", () => {
+    expect(shouldLoadBookShelves("shelves", { status: "idle" })).toBe(true);
+    expect(shouldLoadBookShelves("groups", { status: "idle" })).toBe(false);
+    expect(shouldLoadBookShelves("shelves", { status: "loading" })).toBe(false);
+    expect(shouldLoadBookShelves("shelves", { status: "ready", shelves: [] })).toBe(false);
+    expect(shouldLoadBookShelves("shelves", { status: "error", error: new Error("failed") })).toBe(false);
+    expect(shouldLoadBookShelves("shelves", { status: "error", error: new Error("failed") }, "retry")).toBe(true);
   });
 
   it("uses a null file projection to show repair state and suppress download", () => {

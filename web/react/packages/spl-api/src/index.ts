@@ -41,6 +41,17 @@ export {
   type LibraryGroupsQuery,
 } from "./groups";
 export {
+  listAllShelvesForBook,
+  listShelves,
+  type ShelfOrdering,
+  type ShelfOwnerGroup,
+  type ShelfOwnerType,
+  type ShelfOwnerUser,
+  type ShelfSummary,
+  type ShelvesQuery,
+  type ShelfVisibility,
+} from "./shelves";
+export {
   getBook,
   clearBookCover,
   replaceBookCover,

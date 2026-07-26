@@ -206,6 +206,56 @@
   display: inline-flex;
 }
 
+.book-detail-sections-region__shelves {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-detail-sections-region__shelves > li {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.book-detail-sections-region__shelves strong {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.book-detail-sections-region__shelf-facts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0;
+  color: var(--muted);
+  font-size: 0.77rem;
+}
+
+.book-detail-sections-region__shelf-facts > * + *::before {
+  margin-inline: 0.45rem;
+  color: var(--muted);
+  content: "·";
+}
+
+.book-detail-sections-region__shelf-facts .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.book-detail-sections-region__shelves-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .book-detail-state-region {
   display: flex;
   align-items: flex-start;
