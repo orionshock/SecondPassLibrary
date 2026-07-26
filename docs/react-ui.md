@@ -78,8 +78,14 @@ tabs. Books reuse the shared compact Book row with contextual Group
 breadcrumbs; Members expose only username and curator state. Custom Group
 metadata editing at `/groups/:groupId/edit` is operation-specific: Manager/Owner
 may edit name and description, while Librarian and the exact custom-group
-curator may edit description. Public metadata remains owned by Server Settings.
-Book assignment, member mutation, Delete, and Group Shelves remain deferred.
+curator may edit description. Authorized Group curators and Librarian+ sessions
+also receive immediate Books and Add Books tabs in Group Edit. Candidate search
+uses Library search with `exclude_group`; add/remove operations remain independent
+from metadata Save. Removal is confirmed because it also removes the Book from
+Group-owned Shelves. A cleanup-conflict response leaves the assigned row intact
+and is shown as a persistent section-local error. Public metadata remains owned
+by Server Settings, while Librarian+ may curate Public Books. Member mutation,
+Delete, and Group Shelves remain deferred.
 Simple mode guards all Group routes before their Orchestrators issue API reads.
 
 `ShelvesListOrchestrator` owns `/shelves` in both simple and advanced modes.

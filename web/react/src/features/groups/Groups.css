@@ -133,6 +133,54 @@
 
 .group-lifecycle-page { max-width: 56rem; }
 
+.group-edit-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding-block: 0.7rem;
+  border-block: 1px solid var(--border);
+}
+
+.group-edit-tabs [aria-current="page"] {
+  border-color: var(--focus);
+  background: var(--surface-raised);
+}
+
+.group-books-edit-region,
+.group-book-candidates-region { min-width: 0; }
+
+.group-edit-book-search {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
+.group-edit-book-search input { min-width: 0; }
+
+.group-books-edit-region > .pager-component,
+.group-book-candidates > .pager-component {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.group-edit-section-state {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.group-edit-section-feedback {
+  min-height: 1.4rem;
+  margin: 0;
+  color: var(--success);
+}
+
 .group-metadata-form {
   display: grid;
   gap: 0.9rem;
@@ -222,5 +270,6 @@
 
 @media (max-width: 520px) {
   .groups-controls form,
-  .group-books-controls form { grid-template-columns: 1fr; }
+  .group-books-controls form,
+  .group-edit-book-search { grid-template-columns: 1fr; }
 }

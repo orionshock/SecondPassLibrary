@@ -22,3 +22,14 @@ export function groupMetadataAuthority(
     ? "description"
     : "none";
 }
+
+export function canMutateGroupBooks(
+  user: CurrentUser,
+  group: Pick<LibraryGroup, "id" | "isPublicGroup">,
+): boolean {
+  if (!user.advancedLibraryGroupsEnabled) return false;
+  if (isAtLeastLibrarian(user)) return true;
+  return !group.isPublicGroup && user.groups.some(
+    ({ id, isCurator }) => id === group.id && isCurator,
+  );
+}

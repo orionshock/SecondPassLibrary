@@ -222,7 +222,7 @@ describe("Library SDK", () => {
     }
   });
 
-  it("uses broad Library search with Shelf exclusion for personal Shelf candidates", async () => {
+  it("uses broad Library search with Shelf and Group candidate exclusions", async () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {
       calls.push(path);
@@ -230,10 +230,13 @@ describe("Library SDK", () => {
     } };
 
     await expect(searchLibraryBooks({
-      q: " Book ", excludeShelfId: "shelf/id", ordering: "title", page: 2, pageSize: 30,
+      q: " Book ", excludeShelfId: "shelf/id", excludeGroupId: "group/id",
+      ordering: "title", page: 2, pageSize: 30,
     }, client)).resolves.toMatchObject({ items: [{ id: "book-1", title: "The Book" }] });
+    await searchLibraryBooks({ q: " Book ", excludeShelfId: "shelf/id" }, client);
     expect(calls).toEqual([
-      "/api/v1/library/search?q=Book&exclude_shelf=shelf%2Fid&ordering=title&page=2&page_size=30",
+      "/api/v1/library/search?q=Book&exclude_shelf=shelf%2Fid&exclude_group=group%2Fid&ordering=title&page=2&page_size=30",
+      "/api/v1/library/search?q=Book&exclude_shelf=shelf%2Fid",
     ]);
   });
 

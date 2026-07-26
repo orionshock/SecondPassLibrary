@@ -23,6 +23,7 @@ export interface LibraryBooksQuery {
 export interface LibraryBookSearchQuery {
   q: string;
   excludeShelfId?: string;
+  excludeGroupId?: string;
   ordering?: BookOrdering;
   page?: number;
   pageSize?: number;
@@ -260,6 +261,7 @@ export async function searchLibraryBooks(
 ): Promise<Page<CompactBook>> {
   const parameters = new URLSearchParams({ q: query.q.trim() });
   if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
+  if (query.excludeGroupId) parameters.set("exclude_group", query.excludeGroupId);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));

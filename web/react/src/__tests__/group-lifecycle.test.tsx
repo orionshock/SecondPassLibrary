@@ -9,7 +9,9 @@ import {
   updateGroupInputFromDraft,
   validateGroupDraft,
 } from "../features/groups/groupDraft";
+import { confirmGroupBookRemoval } from "../features/groups/groupBookMutation";
 import {
+  canMutateGroupBooks,
   canCreateGroupMetadata,
   groupMetadataAuthority,
 } from "../features/groups/groupMetadataAuthority";
@@ -19,6 +21,10 @@ import {
   groupNewBreadcrumbs,
 } from "../features/groups/groupsBreadcrumbs";
 import { GroupMetadataFormPageRegion } from "../features/groups/regions/GroupMetadataFormPageRegion";
+import { GroupBookCandidatesPageRegion } from "../features/groups/regions/GroupBookCandidatesPageRegion";
+import { GroupBooksEditPageRegion } from "../features/groups/regions/GroupBooksEditPageRegion";
+import { GroupEditTabsPageRegion } from "../features/groups/regions/GroupEditTabsPageRegion";
+import { MemoryRouter } from "react-router-dom";
 
 const baseUser: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "profile",
@@ -51,6 +57,14 @@ describe("Group metadata lifecycle contracts", () => {
     expect(groupMetadataAuthority(baseUser, customGroup)).toBe("none");
     expect(groupMetadataAuthority(manager, publicGroup)).toBe("none");
     expect(groupMetadataAuthority({ ...manager, advancedLibraryGroupsEnabled: false }, customGroup)).toBe("none");
+    expect(canMutateGroupBooks(manager, customGroup)).toBe(true);
+    expect(canMutateGroupBooks(owner, customGroup)).toBe(true);
+    expect(canMutateGroupBooks(librarian, customGroup)).toBe(true);
+    expect(canMutateGroupBooks(curator, customGroup)).toBe(true);
+    expect(canMutateGroupBooks(baseUser, customGroup)).toBe(false);
+    expect(canMutateGroupBooks(librarian, publicGroup)).toBe(true);
+    expect(canMutateGroupBooks(curator, publicGroup)).toBe(false);
+    expect(canMutateGroupBooks({ ...manager, advancedLibraryGroupsEnabled: false }, customGroup)).toBe(false);
   });
 
   it("normalizes dirty comparison and mutation inputs while allowing duplicate names", () => {
@@ -97,5 +111,58 @@ describe("Group metadata lifecycle contracts", () => {
       { label: "Readers", to: "/groups/group%2Fid" },
       { label: "Edit" },
     ]);
+  });
+
+  it("shows Book mutation tabs only with exact curation authority", () => {
+    const editable = renderToStaticMarkup(<GroupEditTabsPageRegion
+      activeTab="details"
+      canMutateBooks
+      onTabChange={vi.fn()}
+    />);
+    const readOnly = renderToStaticMarkup(<GroupEditTabsPageRegion
+      activeTab="details"
+      canMutateBooks={false}
+      onTabChange={vi.fn()}
+    />);
+    expect(editable).toContain("Books");
+    expect(editable).toContain("Add Books");
+    expect(readOnly).not.toContain("Books");
+  });
+
+  it("keeps assigned rows visible with persistent removal errors and exposes explicit candidate actions", () => {
+    const book = {
+      id: "book", title: "Visible Book", sortTitle: "Visible Book", subtitle: "", authors: [],
+      series: null, catalogTags: [], language: "", publisher: "", publishedYear: null,
+      publishedMonth: null, publishedDay: null, publishedDatePrecision: "", coverUrl: null,
+      fileFormat: "epub",
+    };
+    const page = { items: [book], count: 1, next: null, previous: null };
+    const assigned = renderToStaticMarkup(<MemoryRouter><GroupBooksEditPageRegion
+      groupId="group" groupName="Readers" page={page} pageNumber={1} pageSize={20}
+      loading={false} error={new Error("Group shelf cleanup failed.")} onRemove={vi.fn()}
+      onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    /></MemoryRouter>);
+    const candidates = renderToStaticMarkup(<MemoryRouter><GroupBookCandidatesPageRegion
+      groupId="group" groupName="Readers" search="Visible" page={page} pageNumber={1} pageSize={20}
+      loading={false} onSearchChange={vi.fn()} onSearch={vi.fn()} onAdd={vi.fn()}
+      onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    /></MemoryRouter>);
+    const blankCandidates = renderToStaticMarkup(<MemoryRouter><GroupBookCandidatesPageRegion
+      groupId="group" groupName="Readers" search="" pageNumber={1} pageSize={20}
+      loading={false} onSearchChange={vi.fn()} onSearch={vi.fn()} onAdd={vi.fn()}
+      onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    /></MemoryRouter>);
+
+    expect(assigned).toContain("Group shelf cleanup failed.");
+    expect(assigned).toContain("Visible Book");
+    expect(assigned).toContain('aria-label="Remove Visible Book from group"');
+    expect(candidates).toContain(">Add<");
+    expect(blankCandidates).not.toContain("Visible Book");
+  });
+
+  it("confirms the Group-owned Shelf impact before Book removal", () => {
+    const deny = vi.fn(() => false);
+    expect(confirmGroupBookRemoval(deny)).toBe(false);
+    expect(deny).toHaveBeenCalledWith(expect.stringMatching(/also be removed from shelves owned by this group/i));
   });
 });
