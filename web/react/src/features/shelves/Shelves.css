@@ -1,0 +1,158 @@
+.shelves-page {
+  width: min(100%, 70rem);
+  margin-inline: auto;
+}
+
+.shelves-list-page,
+.shelf-detail-page { min-width: 0; }
+
+.shelves-list-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.shelf-scopes-region {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.shelf-scopes-region [aria-current="page"] {
+  border-color: var(--focus);
+  background: var(--surface-raised);
+}
+
+.shelves-ordering,
+.shelf-items-controls label {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 10rem;
+}
+
+.shelves-results--loading,
+.shelf-results--loading { opacity: 0.65; }
+
+.shelves-list-rows,
+.shelf-book-rows {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.shelf-row-component {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.9fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 5.1rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: rgb(18 25 34 / 82%);
+}
+
+.shelf-row-component:hover,
+.shelf-row-component:focus-within {
+  border-color: color-mix(in srgb, var(--focus), transparent 55%);
+  background: var(--surface-raised);
+}
+
+.shelf-row-component__identity { min-width: 0; }
+
+.shelf-row-component__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.shelf-row-component h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.shelf-row-component h2 a { color: #72d1fa; }
+
+.shelf-row-component p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.3rem 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.shelf-row-component__facts,
+.shelf-detail-header__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.shelf-row-component .book-cover-preview-strip-component { justify-content: flex-end; }
+
+.shelves-results > .pager-component,
+.shelf-items-results > .pager-component {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.shelves-state,
+.shelf-detail-state {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.shelves-state .button,
+.shelf-detail-state .button,
+.shelves-inline-error .button { margin-top: 0.55rem; }
+
+.shelves-inline-error { margin-bottom: 0.7rem; }
+
+.shelf-detail-header {
+  display: grid;
+  gap: 0.45rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.shelf-detail-header__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shelf-detail-header h1,
+.shelf-detail-header p { margin: 0; }
+
+.shelf-detail-header p {
+  max-width: 60rem;
+  white-space: pre-wrap;
+}
+
+.shelf-items-region { margin-top: 0.8rem; }
+
+.shelf-items-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.7rem;
+}
+
+@media (max-width: 760px) {
+  .shelves-list-toolbar { align-items: stretch; flex-wrap: wrap; }
+  .shelves-ordering { flex: 1 1 12rem; }
+  .shelf-row-component { grid-template-columns: 1fr; }
+  .shelf-row-component .book-cover-preview-strip-component { justify-content: flex-start; }
+}

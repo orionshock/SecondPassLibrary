@@ -1,9 +1,12 @@
 import { apiClient, type ApiClient } from "./client";
+import { mapCompactBook, type BookPreview, type CompactBook } from "./library";
 import { toPage, type ApiPage, type Page } from "./pagination";
 
 export type ShelfOwnerType = "user" | "group";
 export type ShelfVisibility = "private" | "listed";
 export type ShelfOrdering = "name" | "-item_count";
+export type ShelfScope = "personal" | "shared" | "group";
+export type ShelfItemOrdering = "position" | "title" | "author";
 
 export interface ShelfOwnerUser {
   profileId: string;
@@ -27,13 +30,31 @@ export interface ShelfSummary {
   itemCount: number;
   matchedItemId?: string | null;
   canEdit: boolean;
+  previewBooks?: BookPreview[];
 }
 
 export interface ShelvesQuery {
+  scope?: ShelfScope;
+  ownerGroupId?: string;
   bookId?: string;
   ordering?: ShelfOrdering;
+  includePreviewBooks?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+export interface ShelfItemsQuery {
+  ordering?: ShelfItemOrdering;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ShelfItem {
+  id: string;
+  shelfId: string;
+  book: CompactBook;
+  position: number;
+  addedBy: ShelfOwnerUser | null;
 }
 
 interface ShelfOwnerUserResponse {
@@ -58,6 +79,39 @@ interface ShelfSummaryResponse {
   item_count: number;
   matched_item_id?: string | null;
   can_edit: boolean;
+  preview_books?: BookPreviewResponse[];
+}
+
+interface BookPreviewResponse {
+  id: string;
+  title: string;
+  cover_url: string | null;
+}
+
+interface CompactBookResponse {
+  id: string;
+  title: string;
+  sort_title: string;
+  subtitle: string;
+  authors: Array<{ id: string; name: string }>;
+  series: { id: string; name: string; sort_name: string; series_index: string | null } | null;
+  catalog_tags: Array<{ id: string; name: string; slug: string }>;
+  language: string;
+  publisher: string;
+  published_year: number | null;
+  published_month: number | null;
+  published_day: number | null;
+  published_date_precision: string;
+  cover_url: string | null;
+  file_format: string;
+}
+
+interface ShelfItemResponse {
+  id: string;
+  shelf: string;
+  book: CompactBookResponse;
+  position: number;
+  added_by: ShelfOwnerUserResponse | null;
 }
 
 export async function listShelves(
@@ -65,14 +119,48 @@ export async function listShelves(
   client: ApiClient = apiClient,
 ): Promise<Page<ShelfSummary>> {
   const parameters = new URLSearchParams();
+  if (query.scope) parameters.set("scope", query.scope);
+  if (query.ownerGroupId) parameters.set("owner_group", query.ownerGroupId);
   if (query.bookId) parameters.set("book", query.bookId);
   if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
   return toPage(
     await client.request<ApiPage<ShelfSummaryResponse>>(`/api/v1/shelves/${suffix}`),
     mapShelfSummary,
+  );
+}
+
+export async function getShelf(
+  shelfId: string,
+  query: { includePreviewBooks?: boolean } = {},
+  client: ApiClient = apiClient,
+): Promise<ShelfSummary> {
+  const parameters = new URLSearchParams();
+  if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  return mapShelfSummary(await client.request<ShelfSummaryResponse>(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/${suffix}`,
+  ));
+}
+
+export async function listShelfItems(
+  shelfId: string,
+  query: ShelfItemsQuery = {},
+  client: ApiClient = apiClient,
+): Promise<Page<ShelfItem>> {
+  const parameters = new URLSearchParams();
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  return toPage(
+    await client.request<ApiPage<ShelfItemResponse>>(
+      `/api/v1/shelves/${encodeURIComponent(shelfId)}/items/${suffix}`,
+    ),
+    mapShelfItem,
   );
 }
 
@@ -116,5 +204,25 @@ function mapShelfSummary(response: ShelfSummaryResponse): ShelfSummary {
     itemCount: response.item_count,
     ...(response.matched_item_id !== undefined ? { matchedItemId: response.matched_item_id } : {}),
     canEdit: response.can_edit,
+    ...(response.preview_books === undefined ? {} : {
+      previewBooks: response.preview_books.map(({ id, title, cover_url }) => ({
+        id,
+        title,
+        coverUrl: cover_url,
+      })),
+    }),
+  };
+}
+
+function mapShelfItem(response: ShelfItemResponse): ShelfItem {
+  return {
+    id: response.id,
+    shelfId: response.shelf,
+    book: mapCompactBook(response.book),
+    position: response.position,
+    addedBy: response.added_by ? {
+      profileId: response.added_by.profile_id,
+      username: response.added_by.username,
+    } : null,
   };
 }

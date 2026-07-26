@@ -12,8 +12,8 @@ the parked UI is stale.
 The React shell, Profile, password change, client pairing, Users,
 library Imports, Server Settings, and the Library browse, Book Detail/Edit, and
 Author/Series lifecycle slices are substantially rebuilt. Dashboard is a
-placeholder, while My Marginalia and Shelves remain to be rebuilt. Groups now
-has its first read-only list/detail slice.
+placeholder, while My Marginalia remains to be rebuilt. Groups and Shelves now
+have their first read-only list/detail slices.
 Library's compact Book row, cover, metadata, Catalog Tag rail, axis state, and
 detail conventions are also consumed by Groups and Shelves.
 
@@ -167,7 +167,7 @@ remains authoritative.
 | Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Create/Edit rebuilt | Detail remains selected Author in `/library`; Delete remains deferred. |
 | Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Create/Edit rebuilt | Same model as Authors; Delete remains deferred. |
 | Groups | `/groups`, `/groups/:groupId` | Read-only list/detail implemented | Entire branch hidden/unavailable in simple mode; lifecycle routes remain deferred. |
-| Shelves | `/shelves`, `/shelves/new`, `/shelves/:shelfId`, `/shelves/:shelfId/edit` | Still to rebuild | Available in simple and advanced modes. |
+| Shelves | `/shelves`, `/shelves/:shelfId` | Read-only list/detail implemented | Available in simple and advanced modes; lifecycle and item mutations remain deferred. |
 | Library Imports | `/imports` | Rebuilt | Synchronous EPUB/ZIP upload; parked result cap is intentionally retired. |
 | Users | `/users`, `/users/new`, `/users/:profileId/edit` | Rebuilt | No separate User Detail route. |
 | Profile | `/profile` | Rebuilt | Self profile, memberships, sessions, clients. |
@@ -575,6 +575,9 @@ authoritative 403/404 handling.
 
 ### Shelf list (`/shelves`)
 
+- The first read-only slice is implemented with the three scoped lists,
+  server-provided ownership/visibility/count facts, bounded previews, ordering,
+  pagination, and recovery. Create/Edit affordances remain deferred.
 - Explicit URL-backed scopes: `scope=personal` (default), `shared`, and `group`.
   Do not expose API `all` as a Product tab.
 - Header has scope tabs and a separate right-aligned `New shelf` action.
@@ -601,6 +604,9 @@ authoritative 403/404 handling.
 
 ### Shelf View (`/shelves/:shelfId`)
 
+- The first read-only detail is implemented with a server-driven header and
+  paginated visible Books using the shared compact Book row. Mutations remain
+  deferred.
 - Header shows name, subtle ownership/visibility summary, and Edit when
   `can_edit`. Description is restrained prose, not a heavy card.
 - Items use canonical Book rows, optional safe Catalog Tags, and Book Detail
@@ -672,7 +678,7 @@ Setup, login, logout, and gated Admin remain Django surfaces.
 | Authors/Series | Sufficient | Browse plus lifecycle detail/create/update implemented | Delete remains deliberately deferred; normal Librarian+ session reads are catalog-wide. |
 | Catalog Tags | Sufficient | Read facets and Book PATCH mapping implemented | Relationships remain mutated only through Book PATCH. |
 | Groups | Sufficient | Read-only list/detail/Books/Members plus Book Edit assignment operations implemented | Extend `groups.ts` later for lifecycle and member mutation; reuse existing operations rather than duplicating URLs. |
-| Shelves | Sufficient | Book Detail read-only filter/all-page subset implemented | Extend `shelves.ts` with lifecycle, list scopes, items, reorder, and previews for the full branch. |
+| Shelves | Sufficient | Scoped read-only list/detail/items plus Book Detail all-page reads implemented | Extend `shelves.ts` later with lifecycle and item mutation/reorder operations. |
 | Users/Profile/Imports/Server | Sufficient and implemented | Existing modules | No audit-driven server changes. |
 
 Potential response-shape improvement, not a blocker: Marginalia selective export
@@ -723,8 +729,9 @@ have materially different contracts.
 5. **Groups (read-only list/detail complete):** SDK list/detail/Books/Members,
    shared Book rows, badges, tabs, and pagers are built. Lifecycle, member
    mutation, Book assignment, and Group Shelves remain later slices.
-6. **Shelves:** extend the existing read-only SDK subset with scoped
-   list/create/view/edit. This reuses Book rows and broad Library search.
+6. **Shelves (read-only list/detail complete):** scoped list/detail and visible
+   item reads reuse preview strips, compact Book rows, and pagers. Lifecycle and
+   item mutations remain later slices.
 7. **Dashboard:** recent Sessions plus action cards after destination routes
    exist.
 8. **My Marginalia:** browse/detail, export, then preview/apply import. Resolve
@@ -732,7 +739,7 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Continue with Groups, then Shelves. Keep deferred entity deletion,
+Continue with deferred Groups/Shelves lifecycle slices. Keep entity deletion,
 EPUB/file editing, shelf mutation from Book surfaces, and Reader/Open integration
 as separate future boundaries.
 

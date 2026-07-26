@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  shelfDetailPath,
+  shelfDetailSearchParams,
+  shelfDetailStateFromSearchParams,
+  shelfItemsSdkQuery,
+  shelvesListPath,
+  shelvesListSdkQuery,
+  shelvesListSearchParams,
+  shelvesListStateFromSearchParams,
+  withShelfDetailChange,
+  withShelvesListChange,
+} from "../features/shelves/shelvesQuery";
+
+describe("Shelves URL state", () => {
+  it("uses Personal defaults and canonical list query ordering", () => {
+    const defaults = shelvesListStateFromSearchParams(new URLSearchParams());
+    expect(shelvesListPath(defaults)).toBe("/shelves");
+    expect(shelvesListSdkQuery(defaults)).toEqual({
+      scope: "personal", ordering: "name", includePreviewBooks: true, page: 1, pageSize: 20,
+    });
+
+    const state = shelvesListStateFromSearchParams(new URLSearchParams(
+      "page_size=40&page=3&ordering=-item_count&scope=group",
+    ));
+    expect(shelvesListSearchParams(state).toString()).toBe("scope=group&ordering=-item_count&page=3&page_size=40");
+    expect(shelvesListPath(state)).toBe("/shelves?scope=group&ordering=-item_count&page=3&page_size=40");
+    expect(shelvesListStateFromSearchParams(new URLSearchParams("scope=all&ordering=bad&page=0&page_size=99"))).toEqual(defaults);
+  });
+
+  it("serializes supported scopes and resets list pages only for filter changes", () => {
+    const current = shelvesListStateFromSearchParams(new URLSearchParams("scope=shared&page=4&page_size=40"));
+    expect(shelvesListPath(current)).toBe("/shelves?scope=shared&page=4&page_size=40");
+    expect(withShelvesListChange(current, { scope: "group" }).page).toBe(1);
+    expect(withShelvesListChange(current, { ordering: "-item_count" }).page).toBe(1);
+    expect(withShelvesListChange(current, { pageSize: 30 }).page).toBe(1);
+    expect(withShelvesListChange(current, { page: 2 }, false).page).toBe(2);
+  });
+
+  it("normalizes Shelf detail ordering and omits defaults", () => {
+    const defaults = shelfDetailStateFromSearchParams(new URLSearchParams());
+    expect(shelfDetailPath("shelf/id", defaults)).toBe("/shelves/shelf%2Fid");
+    expect(shelfItemsSdkQuery(defaults)).toEqual({ ordering: "position", page: 1, pageSize: 20 });
+
+    const state = shelfDetailStateFromSearchParams(new URLSearchParams("page_size=30&page=2&ordering=author"));
+    expect(shelfDetailSearchParams(state).toString()).toBe("ordering=author&page=2&page_size=30");
+    expect(shelfDetailPath("shelf/id", state)).toBe("/shelves/shelf%2Fid?ordering=author&page=2&page_size=30");
+    expect(withShelfDetailChange(state, { ordering: "title" }).page).toBe(1);
+    expect(withShelfDetailChange(state, { pageSize: 40 }).page).toBe(1);
+    expect(withShelfDetailChange(state, { page: 4 }, false).page).toBe(4);
+    expect(shelfDetailStateFromSearchParams(new URLSearchParams("ordering=bad&page=-1&page_size=10"))).toEqual(defaults);
+  });
+});

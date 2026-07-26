@@ -47,13 +47,19 @@ export {
   type LibraryGroupsQuery,
 } from "./groups";
 export {
+  getShelf,
   listAllShelvesForBook,
+  listShelfItems,
   listShelves,
+  type ShelfItem,
+  type ShelfItemOrdering,
+  type ShelfItemsQuery,
   type ShelfOrdering,
   type ShelfOwnerGroup,
   type ShelfOwnerType,
   type ShelfOwnerUser,
   type ShelfSummary,
+  type ShelfScope,
   type ShelvesQuery,
   type ShelfVisibility,
 } from "./shelves";

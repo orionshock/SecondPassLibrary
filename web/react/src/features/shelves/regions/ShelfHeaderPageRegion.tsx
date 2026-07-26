@@ -1,0 +1,28 @@
+import type { ShelfSummary } from "@second-pass/spl-api";
+
+import { Badge, Button, ErrorPanel } from "../../../components/ui";
+import { shelfOwnerLabel } from "../components/ShelfRowComponent";
+
+export function ShelfHeaderPageRegion({ shelf, loading, error, onRetry }: {
+  shelf?: ShelfSummary;
+  loading: boolean;
+  error?: Error;
+  onRetry: () => void;
+}) {
+  if (!shelf && loading) return <section className="shelf-detail-state" aria-live="polite" aria-busy="true">Loading shelf...</section>;
+  if (!shelf && error) return <section className="shelf-detail-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
+  if (!shelf) return null;
+
+  return <header className="shelf-detail-header">
+    <div className="shelf-detail-header__title">
+      <h1>{shelf.name}</h1>
+      {shelf.ownerGroup?.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
+    </div>
+    {shelf.description ? <p>{shelf.description}</p> : null}
+    <div className="shelf-detail-header__facts">
+      <span>{shelfOwnerLabel(shelf)}</span>
+      {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
+      <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
+    </div>
+  </header>;
+}

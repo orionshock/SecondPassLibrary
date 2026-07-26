@@ -62,9 +62,11 @@ describe("app frame and router", () => {
     ]) expect(navMarkup({ ...facts, advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
   });
   it("defines placeholder and not-found routes", () => {
-    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading", "/shelves"]);
+    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading"]);
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "shelves")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "shelves/:shelfId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId/edit")).toBe(true);
@@ -79,7 +81,7 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/:profileId/edit")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
-    expect(renderToStaticMarkup(<PlaceholderPageRegion title="Shelves" />)).toContain("Shelves");
+    expect(renderToStaticMarkup(<PlaceholderPageRegion title="My Marginalia" />)).toContain("My Marginalia");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
   });
 

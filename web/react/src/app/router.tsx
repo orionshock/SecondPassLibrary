@@ -15,13 +15,14 @@ import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
+import { ShelfDetailOrchestrator } from "../features/shelves/ShelfDetailOrchestrator";
+import { ShelvesListOrchestrator } from "../features/shelves/ShelvesListOrchestrator";
 import { UserEditOrchestrator } from "../features/users/UserEditOrchestrator";
 import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
 import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
-  { path: "shelves", title: "Shelves" },
 ] as const;
 
 const advancedGroupsRouteAvailable = (user: CurrentUser) => user.advancedLibraryGroupsEnabled;
@@ -58,6 +59,8 @@ export const appRoutes = [
       })),
       { path: "groups", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuardComponent> },
       { path: "groups/:groupId", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuardComponent> },
+      { path: "shelves", element: <ShelvesListOrchestrator /> },
+      { path: "shelves/:shelfId", element: <ShelfDetailOrchestrator /> },
       { path: "library", element: <LibraryOrchestrator /> },
       { path: "library/books/:bookId", element: <BookDetailOrchestrator /> },
       { path: "library/books/:bookId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><BookEditOrchestrator /></RoleRouteGuardComponent> },
