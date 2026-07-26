@@ -24,23 +24,29 @@ from library.queries import visible_groups_for_user
 from .models import Shelf, ShelfItem
 from .serializers import (
     ShelfCreateSerializer,
+    ShelfEditorItemSerializer,
     ShelfItemCreateSerializer,
     ShelfItemPatchSerializer,
     ShelfItemSerializer,
     ShelfPatchSerializer,
     ShelfSerializer,
 )
-from .services import (
+from .item_queries import (
+    editor_shelf_items,
+    visible_shelf_item_ids,
+    visible_shelf_items_for_user,
+)
+from .item_services import (
     add_book_to_shelf,
-    books_available_to_shelf_editor,
-    create_shelf,
-    delete_shelf,
     move_shelf_item,
     remove_book_from_shelf,
     set_shelf_item_position,
+)
+from .policies import books_available_to_shelf_editor, request_can_edit_shelf
+from .services import (
+    create_shelf,
+    delete_shelf,
     update_shelf,
-    visible_shelf_items_for_user,
-    can_edit_shelf,
 )
 from .querysets import (
     apply_shelf_item_ordering,
@@ -64,17 +70,6 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
                 :PREVIEW_BOOK_LIMIT
             ]
         ]
-
-
-def _request_can_edit_shelf(*, request, shelf: Shelf) -> bool:
-    user = getattr(request, "user", None)
-    if user is None:
-        return False
-    if isinstance(getattr(request, "auth", None), UserClientSession):
-        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
-            return False
-        return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
-    return can_edit_shelf(user=user, shelf=shelf)
 
 
 class ShelfViewSet(
@@ -115,7 +110,7 @@ class ShelfViewSet(
                 raise PermissionDenied("Client API tokens are not allowed for this endpoint/action.")
 
     def _request_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
-        return _request_can_edit_shelf(request=request, shelf=shelf)
+        return request_can_edit_shelf(request=request, shelf=shelf)
 
     def _write_denied_message(self, *, request, items: bool = False) -> str:
         if isinstance(getattr(request, "auth", None), UserClientSession):
@@ -248,6 +243,48 @@ class ShelfViewSet(
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _items_get(self, request, shelf: Shelf) -> Response:
+        item_view = str(request.query_params.get("view") or "").strip().lower()
+        if item_view not in {"", "edit"}:
+            raise serializers.ValidationError(
+                {"view": "Must be edit when supplied."}
+            )
+
+        if item_view == "edit":
+            if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+                raise PermissionDenied(self._write_denied_message(request=request, items=True))
+            parse_ordering_param(
+                request,
+                allowed={"position"},
+                default="position",
+            )
+            qs = editor_shelf_items(shelf=shelf)
+            visible_ids = visible_shelf_item_ids(user=request.user, shelf=shelf)
+            total_count = qs.count()
+            visible_count = len(visible_ids)
+            page = self.paginate_queryset(qs)
+            items = list(page) if page is not None else list(qs)
+            out = ShelfEditorItemSerializer(
+                items,
+                many=True,
+                context={
+                    "request": request,
+                    "visible_item_ids": visible_ids,
+                },
+            )
+            if page is not None:
+                response = self.get_paginated_response(out.data)
+                response.data["visible_item_count"] = visible_count
+                response.data["unavailable_item_count"] = total_count - visible_count
+                return response
+            return Response(
+                {
+                    "count": total_count,
+                    "visible_item_count": visible_count,
+                    "unavailable_item_count": total_count - visible_count,
+                    "results": out.data,
+                }
+            )
+
         qs = visible_shelf_items_for_user(request.user, shelf)
         ordering = parse_ordering_param(
             request,
@@ -305,12 +342,7 @@ class ShelfViewSet(
     def _item_patch(self, request, shelf: Shelf, item: ShelfItem) -> Response:
         if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
             raise PermissionDenied(self._write_denied_message(request=request, items=True))
-        if (
-            shelf.owner_type == Shelf.OWNER_TYPE_USER
-            and not visible_shelf_items_for_user(request.user, shelf)
-            .filter(pk=item.pk)
-            .exists()
-        ):
+        if item.pk not in visible_shelf_item_ids(user=request.user, shelf=shelf):
             raise Http404()
 
         serializer = cast(Any, ShelfItemPatchSerializer(data=request.data or {}))

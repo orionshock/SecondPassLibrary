@@ -334,6 +334,7 @@ Endpoints:
 - `DELETE /api/v1/shelves/<id>/`
 - Items:
   - `GET /api/v1/shelves/<id>/items/` (paginated; books are filtered through access policy)
+  - `GET /api/v1/shelves/<id>/items/?view=edit` (editor inventory; all stored slots with safe unavailable placeholders)
   - `POST /api/v1/shelves/<id>/items/` (add book)
   - `PATCH /api/v1/shelves/<id>/items/<item_id>/` (`{"move": "up|down"}` or `{"position": 0}`)
   - `DELETE /api/v1/shelves/<id>/items/<item_id>/`
@@ -383,6 +384,21 @@ Shelf payload notes:
   identifiers, description, detailed file/download metadata, checksum, and
   storage/source/provenance fields. Shelf item id, shelf id, position, and
   `added_by` remain fields of the Shelf item rather than the nested Book.
+- Normal Shelf item reads return only viewer-visible Books. Their pagination
+  `count` is the visible item count and every result has a compact `book`.
+- `view=edit` is available only when the request context can edit the Shelf.
+  Readable but non-editable Shelves return `403`; unreadable Shelves remain
+  `404`. Its pagination operates over every stored ShelfItem slot, so `count`
+  is the total stored count. The envelope also includes
+  `visible_item_count` and `unavailable_item_count`. Results remain in stored
+  position order; `ordering=title` and `ordering=author` return `400` in this
+  representation. Unknown `view` values return `400`.
+- Visible `view=edit` rows include the ordinary compact `book` and
+  `unavailable: false`. Retained hidden rows contain only ShelfItem identity,
+  shelf identity, zero-based position, `unavailable: true`, `book: null`, and
+  the bounded compact `added_by` value. They expose no hidden Book identity,
+  title, authors, series, cover, tags, identifiers, file, Group, storage,
+  source, or provenance data.
 - Shelf create, Shelf PATCH, item add, and item PATCH reject unknown fields with
   structured `400` field errors. Shelf PATCH accepts only `name`, `description`,
   and `visibility`; `name`, when supplied, is limited to 255 characters.
@@ -403,15 +419,31 @@ Shelf payload notes:
 - Deleting a Shelf returns `204` and cascades only its ShelfItem rows. It does
   not delete Books, EPUB/cover assets, reading sessions, annotations, or Book
   group assignments.
-- Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
-- Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
+- Shelf item positions are stored as contiguous zero-based integers. Item
+  mutations lock the Shelf and its stored item rows before calculating or
+  changing positions. If multiple items are requested at the same position
+  during add/import-style writes, that cluster is canonicalized by book title,
+  then stable IDs, and later items are bumped.
+- `move=up|down` moves a visible item to the nearest visible slot in that
+  direction. Retained unavailable placeholders are locked: the move skips them
+  and leaves their stored positions unchanged. A boundary move remains a
+  successful no-op. PATCH on an unavailable item returns bounded `404`.
+- Patching an existing item with `position` remains a zero-based move-to
+  operation when every stored item is available. When unavailable retained
+  items exist, direct positioning returns `400` under `position` instead of
+  ambiguously moving through locked slots.
+- POST with a non-null `position` is likewise rejected under `position` when
+  unavailable retained items exist. Omitting `position` appends after all
+  stored slots, including unavailable placeholders.
 - Shelf item list ordering:
   - `GET /api/v1/shelves/<id>/items/?ordering=position` orders by stored shelf position and is the default.
   - `GET /api/v1/shelves/<id>/items/?ordering=title` orders the response by contained book title.
   - `GET /api/v1/shelves/<id>/items/?ordering=author` orders the response by contained book primary author name using the same author-name ordering convention as book display.
   - Invalid ordering values return `400`.
   - Title/author ordering is response/view ordering only and does not mutate stored `ShelfItem.position`; move/reorder endpoints continue to operate on stored positions.
-- Product/UI displays may show one-based labels such as `#1`, `#2`, etc.; the current shelf edit UI reorders with `Move up` / `Move down` buttons plus a one-based `Move to` dropdown and has no drag/drop or per-row numeric position input.
+- Product/UI displays may show one-based labels such as `#1`, `#2`, etc. React
+  reorder controls remain deferred; the editor representation supplies the
+  locked placeholder contract needed for a later safe implementation.
 - Client API bearer tokens:
   - may read any shelf the token user can view
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves

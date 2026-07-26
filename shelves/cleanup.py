@@ -9,7 +9,7 @@ from django.db import transaction
 from library.queries import visible_books_for_user
 
 from .models import Shelf, ShelfItem
-from .services import canonicalize_shelf_positions
+from .item_services import canonicalize_shelf_positions
 
 
 logger = logging.getLogger(__name__)

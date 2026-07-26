@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .models import Shelf, ShelfItem
-from .services import canonicalize_shelf_positions
+from .item_services import remove_group_book_from_shelf
 
 
 def remove_book_from_group_owned_shelves(*, book, group) -> None:
@@ -18,6 +18,5 @@ def remove_book_from_group_owned_shelves(*, book, group) -> None:
     if not shelf_ids:
         return
 
-    ShelfItem.objects.filter(shelf_id__in=shelf_ids, book=book).delete()
-    for shelf in Shelf.objects.filter(id__in=shelf_ids):
-        canonicalize_shelf_positions(shelf)
+    for shelf in Shelf.objects.filter(id__in=shelf_ids).order_by("id"):
+        remove_group_book_from_shelf(shelf=shelf, book=book)

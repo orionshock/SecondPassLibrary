@@ -20,6 +20,10 @@ allowed to see the shelf, and every returned item/preview must then pass current
 Book visibility. Caller-owned and visible group-owned shelves can therefore
 have zero visible items without revealing hidden titles or raw item counts.
 
+Personal and group ownership use the same canonical `/api/v1/shelves/`
+resources. Their policy code is separated internally, but ownership does not
+create alternate mutation routes.
+
 ## Visibility and list scopes
 
 The shelf list supports four scopes:
@@ -73,11 +77,11 @@ including ordered Authors, Series/index, Catalog Tags, publisher, cover, and
 file format, while excluding detail, file/download, checksum, and
 storage/source/provenance fields.
 
-Positions remain contiguous. Add, remove, move-up, move-down, move-to-position,
-group-assignment cleanup, and explicit unavailable-item cleanup compact the
-remaining order. Duplicate/colliding requested positions are canonicalized
-deterministically. Product UI may display one-based positions while the stored
-and API position remains zero-based.
+Positions remain contiguous. Item mutations lock the Shelf and its stored item
+rows before changing order. Add, remove, group-assignment cleanup, and explicit
+unavailable-item cleanup compact the remaining order. Duplicate/colliding
+requested positions are canonicalized deterministically. Product UI may display
+one-based positions while the stored and API position remains zero-based.
 
 Deleting a shelf deletes its ShelfItems only. It never deletes Books, stored
 EPUB files, reading sessions, or annotations.
@@ -100,10 +104,21 @@ Later access loss does not delete that stored item automatically. This preserves
 the shelf owner's durable organization until an explicit cleanup decision.
 
 Normal reads hide the unavailable Book and return visibility-scoped counts and
-previews. PATCH/move operations on a retained unavailable item return the
-normal not-found response and do not expose hidden Book data. The shelf owner
-may still DELETE the retained item by its known shelf-item id; deletion reveals
-no Book metadata.
+previews. Editors may explicitly request
+`GET /api/v1/shelves/<id>/items/?view=edit` to receive every stored slot in
+position order. Visible rows contain the compact Book; retained unavailable
+rows contain `book: null`, `unavailable: true`, and only bounded ShelfItem
+metadata. Pagination counts all stored slots and additionally reports visible
+and unavailable counts. Non-editors cannot request this representation.
+
+Unavailable placeholders are locked. PATCH/move operations on one still return
+the normal not-found response. Moving a visible row up or down swaps it with the
+nearest visible row while skipping placeholders and leaving placeholder
+positions fixed. Direct positioning, and explicit-position adds, return a
+structured `position` error while a Shelf contains unavailable rows. A
+positionless add appends after every stored slot. The Shelf owner may still
+DELETE a retained item by its known ShelfItem id; deletion reveals no Book
+metadata.
 
 ## Group-owned shelf item behavior
 

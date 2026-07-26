@@ -77,7 +77,7 @@ class ShelvesBearerItemMutationTests(ShelvesBearerApiTestCase):
                 HTTP_AUTHORIZATION=self._auth,
             ),
         )
-        self.assertEqual(add.status_code, 403)
+        self.assertEqual(add.status_code, 404)
 
     def test_bearer_can_reorder_items_in_own_shelf(self):
         shelf_id = self._create_personal_shelf_as_owner()

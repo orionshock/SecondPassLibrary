@@ -7,7 +7,9 @@ from django.test import TestCase
 from library.groups.book_assignments import add_book_to_group, remove_book_from_group
 from library.models import BookGroupAssignment, LibraryGroup
 from shelves.models import Shelf, ShelfItem
-from shelves.services import add_book_to_shelf, create_shelf, visible_shelf_items_for_user
+from shelves.item_queries import visible_shelf_items_for_user
+from shelves.item_services import add_book_to_shelf
+from shelves.services import create_shelf
 from tests.shelves.service_helpers import ShelfServiceFixtureMixin
 from tests.utils.books import create_file_backed_book
 

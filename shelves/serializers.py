@@ -4,7 +4,6 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from accounts.models import UserClientSession
 from accounts.user_payloads import compact_user_payload
 from library.groups.public_group import is_public_group
 from library.catalog.serializers import (
@@ -14,18 +13,7 @@ from library.catalog.serializers import (
 )
 
 from .models import Shelf, ShelfItem
-from .services import can_edit_shelf
-
-
-def _request_can_edit_shelf(*, request, shelf: Shelf) -> bool:
-    user = getattr(request, "user", None)
-    if user is None:
-        return False
-    if isinstance(getattr(request, "auth", None), UserClientSession):
-        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
-            return False
-        return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
-    return can_edit_shelf(user=user, shelf=shelf)
+from .policies import request_can_edit_shelf
 
 
 class ShelfSerializer(serializers.ModelSerializer):
@@ -59,7 +47,7 @@ class ShelfSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request is None:
             return False
-        return _request_can_edit_shelf(request=request, shelf=obj)
+        return request_can_edit_shelf(request=request, shelf=obj)
 
     def get_preview_books(self, obj: Shelf) -> list[dict[str, Any]]:
         books = getattr(obj, "_preview_books", [])
@@ -154,6 +142,42 @@ class ShelfItemSerializer(serializers.ModelSerializer):
             "added_by",
             "created_at",
             "updated_at",
+        ]
+        read_only_fields = fields
+
+
+class ShelfEditorItemSerializer(serializers.ModelSerializer):
+    book = serializers.SerializerMethodField(read_only=True)
+    unavailable = serializers.SerializerMethodField(read_only=True)
+    added_by = serializers.SerializerMethodField(read_only=True)
+
+    def _is_visible(self, obj: ShelfItem) -> bool:
+        return obj.id in self.context.get("visible_item_ids", set())
+
+    def get_book(self, obj: ShelfItem) -> dict[str, Any] | None:
+        if not self._is_visible(obj):
+            return None
+        return cast(
+            dict[str, Any],
+            BookListSerializer(obj.book, context=self.context).data,
+        )
+
+    def get_unavailable(self, obj: ShelfItem) -> bool:
+        return not self._is_visible(obj)
+
+    def get_added_by(self, obj: ShelfItem) -> dict[str, Any] | None:
+        user = obj.added_by
+        return compact_user_payload(user) if user is not None else None
+
+    class Meta:
+        model = ShelfItem
+        fields = [
+            "id",
+            "shelf",
+            "book",
+            "position",
+            "unavailable",
+            "added_by",
         ]
         read_only_fields = fields
 

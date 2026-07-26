@@ -15,7 +15,7 @@ from library.queries import group_is_visible_to_user, visible_books_for_user
 from library.roles import is_curator
 from shelves.models import Shelf
 from shelves.querysets import visible_shelf_filter
-from shelves.services import can_edit_shelf
+from shelves.policies import can_edit_shelf
 
 
 SEARCH_ORDERINGS = {"title", "-title", "author", "-author", "series", "-series"}

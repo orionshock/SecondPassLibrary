@@ -17,7 +17,7 @@ from core.admin_widgets import (
 from library.models import LibraryGroup
 
 from .models import Shelf, ShelfItem
-from .services import canonicalize_shelf_positions
+from .item_services import canonicalize_shelf_positions
 
 
 class ShelfAdminForm(forms.ModelForm):

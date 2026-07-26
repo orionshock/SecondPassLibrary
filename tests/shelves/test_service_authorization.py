@@ -4,7 +4,8 @@ from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
 from shelves.models import Shelf
-from shelves.services import can_create_shelf, create_shelf
+from shelves.policies import can_create_shelf
+from shelves.services import create_shelf
 from tests.shelves.service_helpers import ShelfServiceFixtureMixin
 
 

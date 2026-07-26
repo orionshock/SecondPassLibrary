@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from shelves.models import Shelf, ShelfItem
-from shelves.services import add_book_to_shelf
+from shelves.item_services import add_book_to_shelf
 from library.models import LibraryGroup
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
