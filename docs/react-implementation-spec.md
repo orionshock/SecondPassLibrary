@@ -434,7 +434,7 @@ breadcrumb context through Router location state.
   of visible shelves containing the Book, read-only visible Groups only in
   advanced mode, and Metadata containing publication, identifier, and safe file
   format/size facts. Shelf rows show ownership/visibility and viewer-visible
-  item counts; names stay plain text until a React shelf detail route exists.
+  item counts; names link to Shelf Detail with contextual breadcrumb state.
 - The nested `file` response is a projection of canonical EPUB fields stored on
   Book, not a separate asset record. `file: null` is an exceptional repair state
   shown as an unavailable EPUB; it is not presented as an optional file. A

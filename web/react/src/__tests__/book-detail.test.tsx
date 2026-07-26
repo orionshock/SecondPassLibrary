@@ -11,6 +11,7 @@ import {
   bookEditBreadcrumbTrail,
   bookIdentifierLabel,
   bookSeriesDisplay,
+  bookShelfBreadcrumbTrail,
   formatBookFileSize,
   formatBookPublishedDate,
 } from "../features/library/bookDetailPresentation";
@@ -89,7 +90,7 @@ describe("Book Detail presentation", () => {
     expect(advanced).toContain("Common Room");
   });
 
-  it("renders read-only server-scoped shelf facts without shelf navigation", () => {
+  it("links read-only server-scoped shelf facts without exposing mutations", () => {
     const markup = render(<BookDetailSectionsPageRegion
       book={book}
       advancedGroupsEnabled
@@ -100,7 +101,10 @@ describe("Book Detail presentation", () => {
     expect(markup).toContain("12 items");
     expect(markup).toContain("Sci-Fi Stack");
     expect(markup).toContain("Common Room");
-    expect(markup).not.toContain('href="/shelves/');
+    expect(markup).toContain('href="/shelves/personal-shelf"');
+    expect(markup).toContain('href="/shelves/public-shelf"');
+    expect(markup).not.toContain("Remove");
+    expect(markup).not.toContain("Edit Shelf");
   });
 
   it("uses a null file projection to show repair state and suppress download", () => {
@@ -147,6 +151,25 @@ describe("Book Detail navigation", () => {
       { label: "Library", to: "/library?view=series" },
       { label: "Dresden Files", to: "/library?view=series&series=series-id" },
       { label: "Storm Front", to: `/library/books/${book.id}` },
+    ]);
+  });
+
+  it("extends the validated Book trail when navigating to a containing Shelf", () => {
+    expect(bookShelfBreadcrumbTrail(
+      bookBrowseDetailBreadcrumbs({
+        title: "Storm Front",
+        libraryPath: "/library?view=series&series=series-id",
+        contextLabel: "Dresden Files",
+        parentLibraryPath: "/library?view=series",
+      }),
+      book.id,
+      "Storm Front",
+      "Favorites",
+    )).toEqual([
+      { label: "Library", to: "/library?view=series", resetTrail: true },
+      { label: "Dresden Files", to: "/library?view=series&series=series-id" },
+      { label: "Storm Front", to: `/library/books/${book.id}` },
+      { label: "Favorites" },
     ]);
   });
 

@@ -1,5 +1,6 @@
 import type { BookDetail, ShelfSummary } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, ErrorPanel } from "../../../components/ui";
@@ -18,6 +19,7 @@ export function BookDetailSectionsPageRegion({
   advancedGroupsEnabled,
   initialSection = "shelves",
   shelvesState = { status: "idle" },
+  shelfNavigationState,
   onLoadShelves,
   onRetryShelves,
 }: {
@@ -25,6 +27,7 @@ export function BookDetailSectionsPageRegion({
   advancedGroupsEnabled: boolean;
   initialSection?: BookDetailSection;
   shelvesState?: BookShelvesState;
+  shelfNavigationState?: (shelfName: string) => unknown;
   onLoadShelves?: () => void;
   onRetryShelves?: () => void;
 }) {
@@ -46,6 +49,7 @@ export function BookDetailSectionsPageRegion({
     activeSection={activeSection}
     onSectionChange={setActiveSection}
     shelvesState={shelvesState}
+    shelfNavigationState={shelfNavigationState}
     onRetryShelves={onRetryShelves}
   />;
 }
@@ -56,6 +60,7 @@ function BookDetailSectionsComponent({
   activeSection,
   onSectionChange,
   shelvesState,
+  shelfNavigationState,
   onRetryShelves,
 }: {
   book: BookDetail;
@@ -63,6 +68,7 @@ function BookDetailSectionsComponent({
   activeSection: BookDetailSection;
   onSectionChange: (section: BookDetailSection) => void;
   shelvesState: BookShelvesState;
+  shelfNavigationState?: (shelfName: string) => unknown;
   onRetryShelves?: () => void;
 }) {
   return <section className="book-detail-sections-region" aria-label="Book relationships and metadata">
@@ -86,14 +92,18 @@ function BookDetailSectionsComponent({
       aria-labelledby={`book-detail-${section.id}-tab`}
       hidden={activeSection !== section.id}
     >
-      {activeSection === section.id && section.id === "shelves" ? <BookDetailShelvesSection state={shelvesState} onRetry={onRetryShelves} /> : null}
+      {activeSection === section.id && section.id === "shelves" ? <BookDetailShelvesSection state={shelvesState} shelfNavigationState={shelfNavigationState} onRetry={onRetryShelves} /> : null}
       {activeSection === section.id && section.id === "groups" ? <BookDetailGroupsSection book={book} /> : null}
       {activeSection === section.id && section.id === "metadata" ? <BookDetailMetadataSection book={book} /> : null}
     </div>)}
   </section>;
 }
 
-function BookDetailShelvesSection({ state, onRetry }: { state: BookShelvesState; onRetry?: () => void }) {
+function BookDetailShelvesSection({ state, shelfNavigationState, onRetry }: {
+  state: BookShelvesState;
+  shelfNavigationState?: (shelfName: string) => unknown;
+  onRetry?: () => void;
+}) {
   if (state.status === "idle" || state.status === "loading") {
     return <p className="muted" aria-busy="true">Loading shelves…</p>;
   }
@@ -107,7 +117,10 @@ function BookDetailShelvesSection({ state, onRetry }: { state: BookShelvesState;
 
   return <ul className="book-detail-sections-region__shelves">
     {state.shelves.map((shelf) => <li key={shelf.id}>
-      <strong>{shelf.name}</strong>
+      <strong><Link
+        to={`/shelves/${encodeURIComponent(shelf.id)}`}
+        state={shelfNavigationState?.(shelf.name)}
+      >{shelf.name}</Link></strong>
       <div className="book-detail-sections-region__shelf-facts">
         {shelf.ownerType === "user" && shelf.visibility === "listed" && shelf.ownerUser
           ? <span>Shared by @{shelf.ownerUser.username}</span>

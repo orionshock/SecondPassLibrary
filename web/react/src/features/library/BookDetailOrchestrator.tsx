@@ -12,7 +12,7 @@ import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail } from "./bookDetailPresentation";
+import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookShelfBreadcrumbTrail } from "./bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
 import {
   BookDetailSectionsPageRegion,
@@ -99,6 +99,12 @@ export function BookDetailOrchestrator() {
       book={load.book}
       advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
       shelvesState={shelvesLoad}
+      shelfNavigationState={(shelfName) => breadcrumbNavigationState(bookShelfBreadcrumbTrail(
+        resolveBreadcrumbTrail(location.state, breadcrumbFallback),
+        load.book.id,
+        load.book.title,
+        shelfName,
+      ))}
       onLoadShelves={loadShelves}
       onRetryShelves={loadShelves}
     />

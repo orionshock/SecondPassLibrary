@@ -69,6 +69,20 @@ export function bookEditBreadcrumbTrail(detailTrail: readonly BreadcrumbItem[], 
   return [...parent, { label: title, to: `/library/books/${encodeURIComponent(bookId)}` }, { label: "Edit" }];
 }
 
+export function bookShelfBreadcrumbTrail(
+  detailTrail: readonly BreadcrumbItem[],
+  bookId: string,
+  bookTitle: string,
+  shelfName: string,
+): BreadcrumbItem[] {
+  const resolvedDetailTrail = detailTrail.length > 0 ? detailTrail : bookDetailBreadcrumbFallback(bookTitle);
+  return [
+    ...resolvedDetailTrail.slice(0, -1),
+    { label: bookTitle, to: `/library/books/${encodeURIComponent(bookId)}` },
+    { label: shelfName },
+  ];
+}
+
 export function bookBrowseDetailBreadcrumbs({
   title,
   libraryPath,
