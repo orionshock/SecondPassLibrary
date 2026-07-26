@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page } from "@second-pass/spl-api";
 import { BookCoverEditorComponent } from "../features/library/components/BookCoverEditorComponent";
 import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
-import { BookRowComponent } from "../features/library/components/BookRowComponent";
+import { CompactBookRowComponent } from "../shared/books/CompactBookRowComponent";
 import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
 import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
@@ -79,7 +79,7 @@ describe("Library Books components", () => {
   });
 
   it("renders only the accepted compact row presentation with canonical metadata icons", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><BookRowComponent book={book} libraryPath="/library?q=visible" /></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent book={book} detailPath="/library/books/book%2Fid" /></MemoryRouter>);
     for (const value of ["Visible Title", "Visible Author", "Visible Series 3.00", "Visible Publisher", "Tag 0", "+2"]) expect(markup).toContain(value);
     for (const hidden of ["HIDDEN SUBTITLE", "1999", "HIDDEN LANGUAGE", "HIDDEN FORMAT", "Groups", "checksum", "identifier"]) expect(markup).not.toContain(hidden);
     for (const icon of ["person", "auto_stories", "apartment"]) expect(markup).toContain(`>${icon}</span>`);

@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   ApiError,
   addBookToGroup,
+  getGroup,
   listAllLibraryGroups,
+  listGroupBooks,
+  listGroupMembers,
   listGroups,
   removeBookFromGroup,
 } from "@second-pass/spl-api";
@@ -31,6 +34,61 @@ describe("Library Groups SDK", () => {
       "/api/v1/library/groups/?ordering=name&page_size=200",
       "/api/v1/library/groups/?ordering=name&page=2&page_size=200",
     ]);
+  });
+
+  it("maps preview reads, compact Group Books, and username-only memberships", async () => {
+    const calls: string[] = [];
+    const compactBook = {
+      id: "book", title: "Book", sort_title: "Book", subtitle: "Hidden subtitle",
+      authors: [{ id: "author", name: "Author" }],
+      series: null, catalog_tags: [], language: "eng", publisher: "Publisher",
+      published_year: null, published_month: null, published_day: null,
+      published_date_precision: "", cover_url: null, file_format: "EPUB",
+    };
+    const responses = [
+      { id: "group/id", name: "Readers", description: "Visible", is_public_group: false, preview_books: [{ id: "preview", title: "Preview", cover_url: "/cover.jpg" }] },
+      { count: 1, next: null, previous: null, results: [compactBook] },
+      { count: 1, next: null, previous: null, results: [{
+        id: "internal-membership", role: "hidden", created_at: "hidden", updated_at: "hidden",
+        user: { profile_id: "profile", username: "reader", email: "hidden" }, is_curator: true,
+      }] },
+    ];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return responses.shift() as T;
+    } };
+
+    await expect(getGroup("group/id", { includePreviewBooks: true }, client)).resolves.toEqual({
+      id: "group/id", name: "Readers", description: "Visible", isPublicGroup: false,
+      previewBooks: [{ id: "preview", title: "Preview", coverUrl: "/cover.jpg" }],
+    });
+    await expect(listGroupBooks("group/id", {
+      q: " book ", tag: "fantasy", ordering: "-author", page: 2, pageSize: 30,
+    }, client)).resolves.toMatchObject({
+      items: [{ id: "book", title: "Book", authors: [{ id: "author", name: "Author" }] }],
+    });
+    const members = await listGroupMembers("group/id", { page: 3, pageSize: 40 }, client);
+    expect(members.items).toEqual([{
+      user: { profileId: "profile", username: "reader" }, isCurator: true,
+    }]);
+    expect(members.items[0]).not.toHaveProperty("id");
+    expect(members.items[0]).not.toHaveProperty("role");
+    expect(members.items[0]).not.toHaveProperty("createdAt");
+    expect(calls).toEqual([
+      "/api/v1/library/groups/group%2Fid/?include_preview_books=true",
+      "/api/v1/library/groups/group%2Fid/books/?q=book&tag=fantasy&ordering=-author&page=2&page_size=30",
+      "/api/v1/library/groups/group%2Fid/memberships/?page=3&page_size=40",
+    ]);
+  });
+
+  it("requests preview Books explicitly for Group list rows", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+    await listGroups({ includePreviewBooks: true }, client);
+    expect(calls).toEqual(["/api/v1/library/groups/?include_preview_books=true"]);
   });
 
   it("uses the exact immediate assignment mutation contracts", async () => {

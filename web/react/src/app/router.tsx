@@ -1,9 +1,11 @@
-import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian } from "@second-pass/spl-api";
+import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian, type CurrentUser } from "@second-pass/spl-api";
 import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
 import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
+import { GroupDetailOrchestrator } from "../features/groups/GroupDetailOrchestrator";
+import { GroupsListOrchestrator } from "../features/groups/GroupsListOrchestrator";
 import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
 import { BookDetailOrchestrator } from "../features/library/BookDetailOrchestrator";
 import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
@@ -19,9 +21,10 @@ import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
-  { path: "groups", title: "Groups" },
   { path: "shelves", title: "Shelves" },
 ] as const;
+
+const advancedGroupsRouteAvailable = (user: CurrentUser) => user.advancedLibraryGroupsEnabled;
 
 export function PlaceholderPageRegion({ title }: { title: string }) {
   return (
@@ -53,6 +56,8 @@ export const appRoutes = [
         path,
         element: <PlaceholderPageRegion title={title} />,
       })),
+      { path: "groups", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuardComponent> },
+      { path: "groups/:groupId", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuardComponent> },
       { path: "library", element: <LibraryOrchestrator /> },
       { path: "library/books/:bookId", element: <BookDetailOrchestrator /> },
       { path: "library/books/:bookId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><BookEditOrchestrator /></RoleRouteGuardComponent> },

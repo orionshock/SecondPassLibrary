@@ -369,66 +369,6 @@
   gap: 0.45rem;
 }
 
-.book-row-component {
-  display: flex;
-  gap: 0.65rem;
-  min-height: 5.25rem;
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.55rem;
-  background: rgb(18 25 34 / 82%);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-
-.book-row-component:hover,
-.book-row-component:focus-within {
-  border-color: color-mix(in srgb, var(--focus), transparent 55%);
-  background: var(--surface-raised);
-}
-
-.book-row-component__cover-link {
-  flex: 0 0 auto;
-}
-
-.book-row-component__body {
-  display: grid;
-  align-content: start;
-  gap: 0.25rem;
-  min-width: 0;
-  padding-top: 0.05rem;
-}
-
-.book-row-component h2 {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.25;
-}
-
-.book-row-component h2 a {
-  color: #72d1fa;
-  font-weight: 700;
-}
-
-.book-row-component__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.book-row-component__tag {
-  padding: 0.04rem 0.38rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: #b8c8da;
-  background: rgb(255 255 255 / 3%);
-  font-size: 0.7rem;
-  line-height: 1.35;
-}
-
-.book-row-component__tag--more {
-  color: var(--text);
-}
-
 .book-list-region > .pager-component {
   margin-top: 0.75rem;
   padding: 0.5rem 0.65rem;

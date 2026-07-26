@@ -1,5 +1,6 @@
 import { apiClient, type ApiClient } from "./client";
 import { ApiError } from "./errors";
+import { mapCompactBook, type BookOrdering, type BookPreview, type CompactBook } from "./library";
 import { toPage, type ApiPage, type Page } from "./pagination";
 
 export interface LibraryGroup {
@@ -7,6 +8,7 @@ export interface LibraryGroup {
   name: string;
   description: string;
   isPublicGroup: boolean;
+  previewBooks?: BookPreview[];
 }
 
 export interface BookGroupAssignment {
@@ -18,8 +20,27 @@ export interface BookGroupAssignment {
 export interface LibraryGroupsQuery {
   q?: string;
   ordering?: "name" | "-name";
+  includePreviewBooks?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+export interface GroupBooksQuery {
+  q?: string;
+  tag?: string;
+  ordering?: BookOrdering;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GroupMembersQuery {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GroupMembership {
+  user: { profileId: string; username: string };
+  isCurator: boolean;
 }
 
 interface LibraryGroupResponse {
@@ -27,6 +48,38 @@ interface LibraryGroupResponse {
   name: string;
   description: string;
   is_public_group: boolean;
+  preview_books?: BookPreviewResponse[];
+}
+
+interface BookPreviewResponse {
+  id: string;
+  title: string;
+  cover_url: string | null;
+}
+
+interface CompactBookResponse {
+  id: string;
+  title: string;
+  sort_title: string;
+  subtitle: string;
+  authors: Array<{ id: string; name: string }>;
+  series: { id: string; name: string; sort_name: string; series_index: string | null } | null;
+  catalog_tags: Array<{ id: string; name: string; slug: string }>;
+  language: string;
+  publisher: string;
+  published_year: number | null;
+  published_month: number | null;
+  published_day: number | null;
+  published_date_precision: string;
+  cover_url: string | null;
+  file_format: string;
+}
+
+interface GroupMembershipResponse {
+  user: { profile_id: string; username: string };
+  is_curator: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface BookGroupAssignmentResponse {
@@ -43,12 +96,64 @@ export async function listGroups(
   const search = query.q?.trim();
   if (search) parameters.set("q", search);
   if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
   return toPage(
     await client.request<ApiPage<LibraryGroupResponse>>(`/api/v1/library/groups/${suffix}`),
     mapLibraryGroup,
+  );
+}
+
+export async function getGroup(
+  groupId: string,
+  query: { includePreviewBooks?: boolean } = {},
+  client: ApiClient = apiClient,
+): Promise<LibraryGroup> {
+  const parameters = new URLSearchParams();
+  if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  return mapLibraryGroup(await client.request<LibraryGroupResponse>(
+    `/api/v1/library/groups/${encodeURIComponent(groupId)}/${suffix}`,
+  ));
+}
+
+export async function listGroupBooks(
+  groupId: string,
+  query: GroupBooksQuery = {},
+  client: ApiClient = apiClient,
+): Promise<Page<CompactBook>> {
+  const parameters = new URLSearchParams();
+  const search = query.q?.trim();
+  if (search) parameters.set("q", search);
+  if (query.tag) parameters.set("tag", query.tag);
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  return toPage(
+    await client.request<ApiPage<CompactBookResponse>>(
+      `/api/v1/library/groups/${encodeURIComponent(groupId)}/books/${suffix}`,
+    ),
+    mapCompactBook,
+  );
+}
+
+export async function listGroupMembers(
+  groupId: string,
+  query: GroupMembersQuery = {},
+  client: ApiClient = apiClient,
+): Promise<Page<GroupMembership>> {
+  const parameters = new URLSearchParams();
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  return toPage(
+    await client.request<ApiPage<GroupMembershipResponse>>(
+      `/api/v1/library/groups/${encodeURIComponent(groupId)}/memberships/${suffix}`,
+    ),
+    mapGroupMembership,
   );
 }
 
@@ -100,6 +205,20 @@ function mapLibraryGroup(response: LibraryGroupResponse): LibraryGroup {
     name: response.name,
     description: response.description,
     isPublicGroup: response.is_public_group,
+    ...(response.preview_books === undefined ? {} : {
+      previewBooks: response.preview_books.map(({ id, title, cover_url }) => ({
+        id,
+        title,
+        coverUrl: cover_url,
+      })),
+    }),
+  };
+}
+
+function mapGroupMembership(response: GroupMembershipResponse): GroupMembership {
+  return {
+    user: { profileId: response.user.profile_id, username: response.user.username },
+    isCurator: response.is_curator,
   };
 }
 

@@ -1,0 +1,202 @@
+.groups-page {
+  width: min(100%, 70rem);
+  margin-inline: auto;
+}
+
+.groups-list-page,
+.group-detail-page {
+  min-width: 0;
+}
+
+.groups-controls,
+.group-books-controls {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.groups-controls form,
+.group-books-controls form {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1 1 34rem;
+}
+
+.groups-controls input,
+.group-books-controls input { min-width: 0; }
+
+.groups-ordering,
+.group-books-controls > label {
+  display: grid;
+  gap: 0.25rem;
+  flex: 0 0 10rem;
+}
+
+.groups-results,
+.group-books-results,
+.group-members-region {
+  min-width: 0;
+}
+
+.groups-results--loading,
+.group-results--loading { opacity: 0.65; }
+
+.groups-list-rows,
+.group-book-rows,
+.group-member-rows {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.group-row-component {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 5.1rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: rgb(18 25 34 / 82%);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.group-row-component:hover,
+.group-row-component:focus-within {
+  border-color: color-mix(in srgb, var(--focus), transparent 55%);
+  background: var(--surface-raised);
+}
+
+.group-row-component__identity { min-width: 0; }
+
+.group-row-component__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.group-row-component h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.group-row-component h2 a { color: #72d1fa; }
+
+.group-row-component p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.group-row-component .book-cover-preview-strip-component { justify-content: flex-end; }
+
+.groups-results > .pager-component,
+.group-books-results > .pager-component,
+.group-members-region > .pager-component {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.groups-state,
+.group-detail-state {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.groups-state .button,
+.group-detail-state .button,
+.groups-inline-error .button { margin-top: 0.55rem; }
+
+.groups-inline-error { margin-bottom: 0.7rem; }
+
+.group-detail-header {
+  display: grid;
+  gap: 0.45rem;
+  padding-bottom: 0.8rem;
+}
+
+.group-detail-header__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.group-detail-header h1 { margin: 0; }
+
+.group-detail-header p {
+  max-width: 60rem;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.group-detail-tabs {
+  display: flex;
+  gap: 0.45rem;
+  padding-block: 0.7rem;
+  border-block: 1px solid var(--border);
+}
+
+.group-detail-tabs [aria-current="page"] {
+  border-color: var(--focus);
+  background: var(--surface-raised);
+}
+
+.group-books-region,
+.group-members-region { margin-top: 0.8rem; }
+
+.group-member-row-component {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.group-member-row-component__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.group-member-row-component__identity .material-icon {
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+@media (max-width: 760px) {
+  .groups-controls,
+  .group-books-controls { align-items: stretch; flex-wrap: wrap; }
+
+  .groups-controls form,
+  .group-books-controls form { flex-basis: 100%; }
+
+  .groups-ordering,
+  .group-books-controls > label { flex: 1 1 12rem; }
+
+  .group-row-component { grid-template-columns: 1fr; }
+
+  .group-row-component .book-cover-preview-strip-component { justify-content: flex-start; }
+}
+
+@media (max-width: 520px) {
+  .groups-controls form,
+  .group-books-controls form { grid-template-columns: 1fr; }
+}

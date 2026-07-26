@@ -1,8 +1,10 @@
 import type { CompactBook, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/ui";
+import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
+import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
-import { BookRowComponent } from "../components/BookRowComponent";
+import { bookBrowseDetailBreadcrumbs } from "../bookDetailPresentation";
 
 export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, searching = false, tagged = false, selectedContext, libraryPath, parentLibraryPath, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<CompactBook>;
@@ -27,7 +29,16 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
     {error ? <div className="book-list-region__inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0
       ? <p className="book-list-state muted">{bookEmptyCopy(searching, tagged, selectedContext?.kind)}</p>
-      : <div className="book-list-region__rows">{page.items.map((book) => <BookRowComponent key={book.id} book={book} libraryPath={libraryPath} contextLabel={selectedContext?.label} parentLibraryPath={parentLibraryPath} />)}</div>}
+      : <div className="book-list-region__rows">{page.items.map((book) => {
+        const detailPath = `/library/books/${encodeURIComponent(book.id)}`;
+        const navigationState = breadcrumbNavigationState(bookBrowseDetailBreadcrumbs({
+          title: book.title,
+          libraryPath,
+          contextLabel: selectedContext?.label,
+          parentLibraryPath: parentLibraryPath ?? libraryPath,
+        }));
+        return <CompactBookRowComponent key={book.id} book={book} detailPath={detailPath} navigationState={navigationState} />;
+      })}</div>}
     <PagerComponent
       page={pageNumber}
       pageSize={pageSize}
