@@ -68,12 +68,40 @@ export interface ShelfItemsQuery {
   pageSize?: number;
 }
 
+export interface ShelfEditorItemsQuery {
+  page?: number;
+  pageSize?: number;
+}
+
 export interface ShelfItem {
   id: string;
   shelfId: string;
   book: CompactBook;
   position: number;
   addedBy: ShelfOwnerUser | null;
+}
+
+export type ShelfEditorItem =
+  | {
+    id: string;
+    shelfId: string;
+    position: number;
+    unavailable: false;
+    book: CompactBook;
+    addedBy: ShelfOwnerUser | null;
+  }
+  | {
+    id: string;
+    shelfId: string;
+    position: number;
+    unavailable: true;
+    book: null;
+    addedBy: ShelfOwnerUser | null;
+  };
+
+export interface ShelfEditorItemsPage extends Page<ShelfEditorItem> {
+  visibleItemCount: number;
+  unavailableItemCount: number;
 }
 
 interface ShelfOwnerUserResponse {
@@ -133,6 +161,20 @@ interface ShelfItemResponse {
   added_by: ShelfOwnerUserResponse | null;
 }
 
+interface ShelfEditorItemResponse {
+  id: string;
+  shelf: string;
+  book: CompactBookResponse | null;
+  position: number;
+  unavailable: boolean;
+  added_by: ShelfOwnerUserResponse | null;
+}
+
+interface ShelfEditorItemsPageResponse extends ApiPage<ShelfEditorItemResponse> {
+  visible_item_count: number;
+  unavailable_item_count: number;
+}
+
 export async function listShelves(
   query: ShelvesQuery = {},
   client: ApiClient = apiClient,
@@ -181,6 +223,24 @@ export async function listShelfItems(
     ),
     mapShelfItem,
   );
+}
+
+export async function listShelfEditorItems(
+  shelfId: string,
+  query: ShelfEditorItemsQuery = {},
+  client: ApiClient = apiClient,
+): Promise<ShelfEditorItemsPage> {
+  const parameters = new URLSearchParams({ view: "edit" });
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const response = await client.request<ShelfEditorItemsPageResponse>(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/items/?${parameters.toString()}`,
+  );
+  return {
+    ...toPage(response, mapShelfEditorItem),
+    visibleItemCount: response.visible_item_count,
+    unavailableItemCount: response.unavailable_item_count,
+  };
 }
 
 export async function listAllShelvesForBook(
@@ -279,6 +339,23 @@ export async function removeShelfItem(
   );
 }
 
+export async function moveShelfItem(
+  shelfId: string,
+  itemId: string,
+  move: "up" | "down",
+  client: ApiClient = apiClient,
+): Promise<ShelfEditorItem> {
+  const response = await client.request<ShelfItemResponse>(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/items/${encodeURIComponent(itemId)}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ move }),
+    },
+  );
+  return mapVisibleShelfEditorItem(response);
+}
+
 function mapShelfSummary(response: ShelfSummaryResponse): ShelfSummary {
   return {
     id: response.id,
@@ -319,6 +396,42 @@ function mapShelfItem(response: ShelfItemResponse): ShelfItem {
       username: response.added_by.username,
     } : null,
   };
+}
+
+function mapShelfEditorItem(response: ShelfEditorItemResponse): ShelfEditorItem {
+  const addedBy = mapShelfOwnerUser(response.added_by);
+  if (response.unavailable || response.book === null) {
+    return {
+      id: response.id,
+      shelfId: response.shelf,
+      position: response.position,
+      unavailable: true,
+      book: null,
+      addedBy,
+    };
+  }
+  return {
+    id: response.id,
+    shelfId: response.shelf,
+    position: response.position,
+    unavailable: false,
+    book: mapCompactBook(response.book),
+    addedBy,
+  };
+}
+
+function mapVisibleShelfEditorItem(response: ShelfItemResponse): ShelfEditorItem {
+  return {
+    ...mapShelfItem(response),
+    unavailable: false,
+  };
+}
+
+function mapShelfOwnerUser(response: ShelfOwnerUserResponse | null): ShelfOwnerUser | null {
+  return response ? {
+    profileId: response.profile_id,
+    username: response.username,
+  } : null;
 }
 
 async function mutateShelf(

@@ -88,13 +88,16 @@ edit, and delete metadata lifecycle is available at `/shelves/new` and
 manageable group ownership is offered only from existing role and exact-curator
 facts. Ownership is create-only, personal visibility is editable, and group
 shelves keep group-controlled visibility. Shelf responses provide the
-authoritative `canEdit` affordance for existing shelves. Shelf Edit adds Books
-and Add Books tabs: add/remove mutations are immediate, append-only on add, and
-independent from metadata Save. Blank Add Books search performs no request;
+  authoritative `canEdit` affordance for existing shelves. Shelf Edit adds Books
+  and Add Books tabs. Books uses the editor inventory: visible Books can move
+  up/down across locked unavailable placeholders, and retained unavailable rows
+  can be removed by ShelfItem identity without exposing Book metadata. Add,
+  remove, and reorder mutations are immediate and independent from metadata Save;
+  adds remain append-only. Blank Add Books search performs no request;
 personal shelves use broad Library search while group shelves use their owning
 Group Books endpoint, both with `exclude_shelf`. Deleting a Shelf removes its
-ShelfItems but never Books or files. Reorder and the Group Detail Shelves tab
-remain deferred.
+  ShelfItems but never Books or files. Drag/drop, move-to-position, and the Group
+  Detail Shelves tab remain deferred.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 

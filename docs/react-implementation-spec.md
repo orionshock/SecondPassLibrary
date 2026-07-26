@@ -623,30 +623,34 @@ authoritative 403/404 handling.
   navigation confirms. Delete is confirmed and removes ShelfItems, never
   Books/files.
 - Books and Add Books are implemented as local URL-backed tabs without
-  contaminating metadata PATCH or ownership. Books renders paginated canonical
-  Book rows and removes immediately without position controls. Add Books loads
+  contaminating metadata PATCH or ownership. Books uses `view=edit`, paginates
+  over all stored slots, renders visible compact Book rows, and renders retained
+  unavailable rows as locked placeholders with no Book identity or metadata.
+  Visible rows move immediately up/down; the backend skips locked placeholders.
+  Both visible and unavailable rows can be removed by ShelfItem id, with
+  unavailable removal confirmed first. Add Books loads
   nothing for blank search, uses `exclude_shelf`, and appends immediately. It
   uses broad Library search for personal shelves and the owning Group Books
   endpoint for group shelves. Successful mutations refresh items, candidates
   where applicable, and summary item count while preserving metadata dirty state.
-- Reorder, move up/down, move-to-position, and retained-hidden placeholders are
-  deferred until the backend exposes an editor-safe retained-item contract.
-- A retained unavailable personal item is not rendered by normal reads. If an
-  operation races with access loss, show bounded not-found and refresh; never
-  reveal hidden Book metadata. The `cleanup_shelves` operator policy has no
-  Product UI control.
+- Move-to-position and drag/drop remain deferred. Direct position is not offered
+  because the backend rejects it while unavailable placeholders exist.
+- Normal Shelf reads still omit retained unavailable personal items. Only the
+  authorized editor representation exposes safe locked slots. If an operation
+  races with access loss, show bounded not-found and refresh; never reveal hidden
+  Book metadata. The `cleanup_shelves` operator policy has no Product UI control.
 
 ### Shelves API, SDK, and tests
 
-Existing API is sufficient. `shelves.ts` owns scope/list/detail/item query types,
-owner summaries, preview Books, `canEdit`, `matchedItemId`, lifecycle calls, and
-immediate item add/remove. Add Books uses `library.ts` broad search or the owning
-Group Books endpoint rather than raw calls.
+`shelves.ts` owns scope/list/detail/item query types, owner summaries, preview
+Books, `canEdit`, `matchedItemId`, the discriminated editor inventory, lifecycle
+calls, and immediate item add/remove/move. Add Books uses `library.ts` broad
+search or the owning Group Books endpoint rather than raw calls.
 
 Tests cover all scope/empty rules, URL state, private/shared/group ownership,
 simple-mode Public shelf creation, curator eligibility, `can_edit` affordances,
 hidden-item non-disclosure, blank search, candidate exclusion, immediate
-add/remove boundaries, delete consequences, and 403/404 refresh paths.
+add/remove/move boundaries, delete consequences, and 403/404 refresh paths.
 
 ## Existing rebuilt surfaces
 

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CurrentUser, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
+import type { CurrentUser, LibraryGroup, ShelfEditorItemsPage, ShelfSummary } from "@second-pass/spl-api";
 import { ShelfRowComponent } from "../features/shelves/components/ShelfRowComponent";
 import {
   createShelfInputFromDraft,
@@ -15,6 +15,7 @@ import {
 } from "../features/shelves/shelfDraft";
 import {
   confirmShelfDelete,
+  confirmUnavailableShelfItemRemoval,
   localManageableShelfGroups,
   shelfEditBreadcrumbs,
   shelfNewBreadcrumbs,
@@ -119,6 +120,8 @@ describe("Shelf lifecycle contracts", () => {
     const confirm = vi.fn(() => true);
     expect(confirmShelfDelete(confirm)).toBe(true);
     expect(confirm).toHaveBeenCalledOnce();
+    expect(confirmUnavailableShelfItemRemoval(confirm)).toBe(true);
+    expect(confirm).toHaveBeenCalledTimes(2);
   });
 
   it("uses server canEdit for lifecycle affordances and keeps item controls out of Details", () => {
@@ -149,19 +152,31 @@ describe("Shelf lifecycle contracts", () => {
     }
   });
 
-  it("exposes immediate add/remove item responsibilities without reorder controls", () => {
+  it("renders editor inventory controls while keeping unavailable rows locked", () => {
     const book = {
-      id: "book", title: "Book", sortTitle: "Book", subtitle: "", authors: [], series: null,
+      id: "book-a", title: "Book A", sortTitle: "Book A", subtitle: "", authors: [], series: null,
       catalogTags: [], language: "", publisher: "", publishedYear: null, publishedMonth: null,
       publishedDay: null, publishedDatePrecision: "" as const, coverUrl: null, fileFormat: "EPUB",
     };
-    const page = { count: 1, next: null, previous: null, items: [{
-      id: "item", shelfId: "shelf", book, position: 0, addedBy: null,
-    }] };
+    const page: ShelfEditorItemsPage = {
+      count: 3,
+      visibleItemCount: 2,
+      unavailableItemCount: 1,
+      next: null,
+      previous: null,
+      items: [
+        { id: "item-a", shelfId: "shelf", book, position: 0, unavailable: false, addedBy: null },
+        { id: "item-hidden", shelfId: "shelf", book: null, position: 1, unavailable: true, addedBy: null },
+        {
+          id: "item-c", shelfId: "shelf", position: 2, unavailable: false, addedBy: null,
+          book: { ...book, id: "book-c", title: "Book C", sortTitle: "Book C" },
+        },
+      ],
+    };
     const tabs = renderToStaticMarkup(<ShelfEditTabsPageRegion activeTab="details" onTabChange={vi.fn()} />);
     const books = renderToStaticMarkup(<MemoryRouter><ShelfEditBooksPageRegion
       shelfId="shelf" shelfName="Favorites" page={page} pageNumber={1} pageSize={20}
-      loading={false} onRemove={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+      loading={false} onMove={vi.fn()} onRemove={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
     /></MemoryRouter>);
     const candidates = renderToStaticMarkup(<MemoryRouter><ShelfEditAddBooksPageRegion
       shelfId="shelf" shelfName="Favorites" search="Book"
@@ -172,10 +187,20 @@ describe("Shelf lifecycle contracts", () => {
 
     expect(tabs).toContain("Books");
     expect(tabs).toContain("Add Books");
-    expect(books).toContain("Remove");
+    expect(books).toContain("Unavailable item");
+    expect(books).toContain('aria-label="Remove unavailable item"');
+    expect(books).not.toContain("hidden_book_id");
+    expect(books).toContain('aria-label="Move Book A up"');
+    expect(books).toContain('aria-label="Move Book A down"');
+    expect(books).toContain('aria-label="Move Book C up"');
+    expect(books).toContain('aria-label="Move Book C down"');
+    expect(books).toMatch(/aria-label="Move Book A up"[^>]*disabled/);
+    expect(books).not.toMatch(/aria-label="Move Book A down"[^>]*disabled/);
+    expect(books).not.toMatch(/aria-label="Move Book C up"[^>]*disabled/);
+    expect(books).toMatch(/aria-label="Move Book C down"[^>]*disabled/);
+    expect(books).toContain("2 visible · 3 total · 1 unavailable");
     expect(candidates).toContain("Add");
-    for (const absent of ["Move up", "Move down", "Position"]) {
-      expect(`${books}${candidates}`).not.toContain(absent);
-    }
+    expect(books).not.toContain("Move to position");
+    expect(books).not.toContain("draggable");
   });
 });

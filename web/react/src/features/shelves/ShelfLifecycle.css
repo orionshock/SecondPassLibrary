@@ -42,10 +42,35 @@
 
 .shelf-edit-book-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.65rem;
 }
+
+.shelf-edit-position,
+.shelf-edit-item-counts {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.shelf-edit-item-counts { margin: 0; }
+
+.shelf-edit-item-actions,
+.shelf-edit-unavailable-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.shelf-edit-unavailable-row {
+  min-height: 3.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.shelf-edit-unavailable-identity { color: var(--muted); }
 
 .shelf-edit-section-state,
 .shelf-edit-inline-error {
@@ -137,6 +162,6 @@
   .shelf-danger-zone { align-items: flex-start; flex-direction: column; }
   .shelf-edit-book-search { grid-template-columns: minmax(0, 1fr) auto; }
   .shelf-edit-book-search label { grid-column: 1 / -1; }
-  .shelf-edit-book-row { grid-template-columns: minmax(0, 1fr); }
-  .shelf-edit-book-row > .button { justify-self: start; }
+  .shelf-edit-book-row { grid-template-columns: auto minmax(0, 1fr); }
+  .shelf-edit-item-actions { grid-column: 2; justify-self: start; }
 }

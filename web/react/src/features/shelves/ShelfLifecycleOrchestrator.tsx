@@ -6,14 +6,16 @@ import {
   getShelf,
   listAllLibraryGroups,
   listGroupBooks,
-  listShelfItems,
+  listShelfEditorItems,
+  moveShelfItem,
   removeShelfItem,
   searchLibraryBooks,
   updateShelf,
   type CompactBook,
   type LibraryGroup,
   type Page,
-  type ShelfItem,
+  type ShelfEditorItem,
+  type ShelfEditorItemsPage,
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -46,6 +48,7 @@ import {
 } from "./shelfDraft";
 import {
   confirmShelfDelete,
+  confirmUnavailableShelfItemRemoval,
   localManageableShelfGroups,
   readShelfLifecycleSuccessMessage,
   shelfDetailNavigationStateFromEdit,
@@ -92,6 +95,7 @@ interface PageLoad<T> {
 
 interface RowMutation {
   pendingId?: string;
+  pendingAction?: "move" | "remove";
   error?: Error;
   message?: string;
 }
@@ -121,7 +125,7 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     [location.search],
   );
   const [searchDraft, setSearchDraft] = useState(editState.q);
-  const [itemsLoad, setItemsLoad] = useState<PageLoad<ShelfItem>>({ loading: false });
+  const [itemsLoad, setItemsLoad] = useState<PageLoad<ShelfEditorItem> & { page?: ShelfEditorItemsPage }>({ loading: false });
   const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<CompactBook>>({ loading: false });
   const [itemMutation, setItemMutation] = useState<RowMutation>({});
   const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
@@ -214,8 +218,7 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     if (mode !== "edit" || load.status !== "ready" || editState.tab !== "books") return;
     let active = true;
     setItemsLoad((current) => ({ ...current, loading: true, error: undefined }));
-    listShelfItems(shelfId, {
-      ordering: "position",
+    listShelfEditorItems(shelfId, {
       page: editState.page,
       pageSize: editState.pageSize,
     }).then((page) => {
@@ -348,10 +351,11 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
       : current);
   }
 
-  async function removeItem(itemId: string) {
-    setItemMutation({ pendingId: itemId });
+  async function removeItem(item: ShelfEditorItem) {
+    if (item.unavailable && !confirmUnavailableShelfItemRemoval()) return;
+    setItemMutation({ pendingId: item.id, pendingAction: "remove" });
     try {
-      await removeShelfItem(shelfId, itemId);
+      await removeShelfItem(shelfId, item.id);
       setItemsVersion((value) => value + 1);
     } catch (error: unknown) {
       setItemMutation({ error: normalizeMutationError(error) });
@@ -359,9 +363,26 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     }
     try {
       await refreshShelfItemCount();
-      setItemMutation({ message: "Book removed from shelf." });
+      setItemMutation({ message: item.unavailable ? "Unavailable item removed." : "Book removed from shelf." });
     } catch {
-      setItemMutation({ error: new Error("Book removed, but the shelf summary could not be refreshed.") });
+      setItemMutation({ error: new Error("Item removed, but the shelf summary could not be refreshed.") });
+    }
+  }
+
+  async function moveItem(itemId: string, move: "up" | "down") {
+    setItemMutation({ pendingId: itemId, pendingAction: "move" });
+    try {
+      await moveShelfItem(shelfId, itemId, move);
+      setItemsVersion((value) => value + 1);
+    } catch (error: unknown) {
+      setItemMutation({ error: normalizeMutationError(error) });
+      return;
+    }
+    try {
+      await refreshShelfItemCount();
+      setItemMutation({ message: "Shelf order updated." });
+    } catch {
+      setItemMutation({ error: new Error("Shelf order changed, but the shelf summary could not be refreshed.") });
     }
   }
 
@@ -432,8 +453,10 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
         loading={itemsLoad.loading}
         error={itemMutation.error ?? itemsLoad.error}
         pendingItemId={itemMutation.pendingId}
+        pendingAction={itemMutation.pendingAction}
         controlsDisabled={mutation.pending || deleteMutation.pending}
-        onRemove={(itemId) => void removeItem(itemId)}
+        onMove={(itemId, move) => void moveItem(itemId, move)}
+        onRemove={(item) => void removeItem(item)}
         onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}
         onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
         onRetry={() => setItemsVersion((value) => value + 1)}

@@ -110,6 +110,15 @@ export function confirmShelfDelete(
   );
 }
 
+export function confirmUnavailableShelfItemRemoval(
+  confirmAction: (message: string) => boolean = window.confirm,
+): boolean {
+  return confirmDangerousAction(
+    "Remove this unavailable item from the shelf? Its retained shelf position will be discarded.",
+    confirmAction,
+  );
+}
+
 function currentGroupAsLibraryGroup(group: CurrentUser["groups"][number]): LibraryGroup {
   return {
     id: group.id,

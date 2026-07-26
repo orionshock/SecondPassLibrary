@@ -7,8 +7,10 @@ import {
   deleteShelf,
   getShelf,
   listAllShelvesForBook,
+  listShelfEditorItems,
   listShelfItems,
   listShelves,
+  moveShelfItem,
   removeShelfItem,
   updateShelf,
 } from "@second-pass/spl-api";
@@ -225,6 +227,64 @@ describe("Shelves SDK", () => {
     await expect(addShelfItem("shelf", { bookId: "book" }, failing)).rejects.toMatchObject({
       fields: { bookId: ["Already on shelf."] },
     });
+  });
+
+  it("maps the editor inventory and immediate move contract without exposing placeholder metadata", async () => {
+    const calls: Array<{ path: string; options?: RequestInit }> = [];
+    const responses = [
+      {
+        count: 2,
+        next: null,
+        previous: null,
+        visible_item_count: 1,
+        unavailable_item_count: 1,
+        results: [
+          {
+            id: "visible-item", shelf: "shelf/id", book: compactBook, position: 0,
+            unavailable: false, added_by: null, created_at: "not-app-facing",
+          },
+          {
+            id: "hidden-item", shelf: "shelf/id", book: null, position: 1,
+            unavailable: true, added_by: { profile_id: "adder", username: "reader" },
+            hidden_book_id: "must-not-escape", title: "must-not-escape",
+          },
+        ],
+      },
+      {
+        id: "visible-item", shelf: "shelf/id", book: compactBook, position: 2,
+        added_by: null,
+      },
+    ];
+    const client: ApiClient = { request: async <T>(path: string, options?: RequestInit) => {
+      calls.push({ path, options });
+      return responses.shift() as T;
+    } };
+
+    const page = await listShelfEditorItems("shelf/id", { page: 2, pageSize: 30 }, client);
+    const moved = await moveShelfItem("shelf/id", "item/id", "down", client);
+
+    expect(calls[0]?.path).toBe("/api/v1/shelves/shelf%2Fid/items/?view=edit&page=2&page_size=30");
+    expect(page.visibleItemCount).toBe(1);
+    expect(page.unavailableItemCount).toBe(1);
+    expect(page.items[0]).toMatchObject({
+      id: "visible-item", unavailable: false, book: { id: "book", title: "Book" },
+    });
+    expect(page.items[1]).toEqual({
+      id: "hidden-item",
+      shelfId: "shelf/id",
+      position: 1,
+      unavailable: true,
+      book: null,
+      addedBy: { profileId: "adder", username: "reader" },
+    });
+    expect(page.items[1]).not.toHaveProperty("hidden_book_id");
+    expect(page.items[1]).not.toHaveProperty("title");
+    expect(calls[1]).toMatchObject({
+      path: "/api/v1/shelves/shelf%2Fid/items/item%2Fid/",
+      options: { method: "PATCH" },
+    });
+    expect(JSON.parse(String(calls[1]?.options?.body))).toEqual({ move: "down" });
+    expect(moved).toMatchObject({ id: "visible-item", unavailable: false, position: 2 });
   });
 
   it("maps group ownership and follows every shelves-for-Book page", async () => {
