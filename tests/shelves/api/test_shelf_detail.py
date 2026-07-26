@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from rest_framework import status
 
+from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import (
     assert_response,
@@ -16,6 +17,51 @@ pytestmark = [pytest.mark.integration]
 
 
 class ShelfDetailEndpointTests(BaseShelvesAPITest):
+    def test_empty_other_user_listed_shelf_detail_matches_list_visibility(self):
+        shelf = Shelf.objects.create(
+            name="Empty Listed",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+
+        for username in ("reader", "librarian", "manager", "owner"):
+            with self.subTest(username=username):
+                self.client.logout()
+                self.client.login(username=username, password="pw")
+                listed_ids = {
+                    row["id"]
+                    for row in response_data_list(
+                        assert_response(self.client.get("/api/v1/shelves/"))
+                    )
+                }
+                self.assertNotIn(str(shelf.id), listed_ids)
+                detail = assert_response(
+                    self.client.get(f"/api/v1/shelves/{shelf.id}/")
+                )
+                self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.client.logout()
+        self.client.login(username="other", password="pw")
+        owner_detail = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/")
+        )
+        self.assertEqual(owner_detail.status_code, status.HTTP_200_OK)
+
+        ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.book_public,
+            position=0,
+            added_by=self.other,
+        )
+        self.client.logout()
+        self.client.login(username="reader", password="pw")
+        visible_detail = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/")
+        )
+        self.assertEqual(visible_detail.status_code, status.HTTP_200_OK)
+
     def test_list_and_detail_visibility_matrix_for_user_owned_shelves(self):
         self.client.login(username="reader", password="pw")
         private = assert_response(
@@ -60,7 +106,7 @@ class ShelfDetailEndpointTests(BaseShelvesAPITest):
         )
         self.assertEqual(owner_detail.status_code, status.HTTP_200_OK)
 
-        for username in ["other", "manager", "owner"]:
+        for username in ["other", "librarian", "manager", "owner"]:
             self.client.logout()
             self.client.login(username=username, password="pw")
             list_resp = assert_response(self.client.get("/api/v1/shelves/"))

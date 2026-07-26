@@ -365,9 +365,12 @@ Shelf payload notes:
 - Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API authorization remains authoritative. Product UI/session-auth requests use normal shelf edit authorization, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
 - Shelves include a read-only integer `item_count` on list/detail payloads. It
   counts only shelf books visible to the current viewer. Other users' listed
-  shelves are omitted from list responses when this viewer-scoped count is
-  zero; owners still see their own empty shelves, and visible group-owned
-  shelves remain visible when empty.
+  shelves are omitted from list responses and return `404` from direct detail
+  when this viewer-scoped count is zero. Shelf owners still see their own empty
+  shelves. Librarian+ roles do not bypass this user-owned shelf rule. Visible
+  group-owned shelves remain readable when empty because their visibility is
+  determined by group scope rather than item count. Session and bearer reads
+  use the same policy.
 - User-owned shelves include `owner_user` as a compact user object with `profile_id` and `username`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.

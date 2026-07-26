@@ -78,6 +78,24 @@ def parse_shelf_list_filters(query_params) -> ShelfListFilters:
     )
 
 
+def filter_readable_shelves(
+    queryset: QuerySet[Shelf], *, user: Any
+) -> QuerySet[Shelf]:
+    """Apply the common list/detail Shelf read policy.
+
+    The queryset must already have the viewer-scoped ``item_count`` annotation.
+    """
+    return (
+        queryset.filter(visible_shelf_filter(user))
+        .filter(
+            Q(owner_type=Shelf.OWNER_TYPE_GROUP)
+            | Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
+            | Q(item_count__gt=0)
+        )
+        .distinct()
+    )
+
+
 def build_visible_shelf_list_queryset(
     *,
     queryset: QuerySet[Shelf],
@@ -85,7 +103,7 @@ def build_visible_shelf_list_queryset(
     query_params,
 ) -> QuerySet[Shelf]:
     filters = parse_shelf_list_filters(query_params)
-    visible_qs = queryset.filter(visible_shelf_filter(user)).distinct()
+    visible_qs = filter_readable_shelves(queryset, user=user)
 
     if filters.scope == "personal":
         visible_qs = visible_qs.filter(
@@ -136,15 +154,6 @@ def build_visible_shelf_list_queryset(
                 ).values("id")[:1]
             )
         )
-
-    # Listed shelves owned by somebody else are useful only when they contain
-    # at least one book visible to this viewer. Personal and group shelf rows
-    # remain visible even when their scoped item count is zero.
-    visible_qs = visible_qs.filter(
-        Q(owner_type=Shelf.OWNER_TYPE_GROUP)
-        | Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
-        | Q(item_count__gt=0)
-    )
 
     return visible_qs
 

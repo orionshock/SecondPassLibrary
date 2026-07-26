@@ -46,7 +46,7 @@ from .querysets import (
     apply_shelf_item_ordering,
     apply_shelf_ordering,
     build_visible_shelf_list_queryset,
-    visible_shelf_filter,
+    filter_readable_shelves,
     with_visible_item_count,
 )
 
@@ -163,7 +163,7 @@ class ShelfViewSet(
             )
             return apply_shelf_ordering(visible_qs, ordering)
 
-        visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
+        visible_qs = filter_readable_shelves(qs, user=user)
         return visible_qs.order_by("name", "id")
 
     def get_object(self):

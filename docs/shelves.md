@@ -17,8 +17,8 @@ Books within the owning group's access context.
 
 Shelf visibility and Book visibility are independent. A viewer must first be
 allowed to see the shelf, and every returned item/preview must then pass current
-Book visibility. A visible shelf can therefore have zero visible items without
-revealing hidden titles or raw item counts.
+Book visibility. Caller-owned and visible group-owned shelves can therefore
+have zero visible items without revealing hidden titles or raw item counts.
 
 ## Visibility and list scopes
 
@@ -37,9 +37,13 @@ Scope filtering never bypasses shelf or Book visibility. In particular:
   Manager and Owner;
 - a listed other-user shelf containing only hidden Books is omitted exactly
   like an empty shared shelf;
+- direct detail for an empty or hidden-only listed other-user shelf returns
+  `404`, matching list discovery; Librarian+ status does not bypass this rule;
 - the owner still sees an empty or hidden-only personal shelf with
   `item_count: 0`;
-- a group member or broad role still sees a visible empty group shelf.
+- a group member or broad role still sees a visible empty group shelf in both
+  list and detail views;
+- session and bearer reads apply the same visibility policy for their user.
 
 Omitted scope and `scope=all` are equivalent and retain the normal paginated
 list envelope. Scope composes with supported group, Book, ordering, preview,

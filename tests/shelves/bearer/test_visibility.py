@@ -205,6 +205,24 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         self.assertNotIn(str(empty_listed.id), shared_by_id)
         self.assertNotIn(str(hidden_only.id), shared_by_id)
 
+        for shelf in (empty_listed, hidden_only):
+            with self.subTest(shelf=shelf.name):
+                detail = assert_response(
+                    self.client.get(
+                        f"/api/v1/shelves/{shelf.id}/",
+                        HTTP_AUTHORIZATION=self._auth,
+                    )
+                )
+                self.assertEqual(detail.status_code, 404)
+
+        personal_detail = assert_response(
+            self.client.get(
+                f"/api/v1/shelves/{personal_shelf_id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        self.assertEqual(personal_detail.status_code, 200)
+
         group_response = assert_response(
             self.client.get(
                 "/api/v1/shelves/?scope=group&include_preview_books=true",
@@ -217,6 +235,13 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
         }
         self.assertEqual(group_by_id[str(group_shelf.id)]["item_count"], 0)
         self.assertEqual(group_by_id[str(group_shelf.id)]["preview_books"], [])
+        group_detail = assert_response(
+            self.client.get(
+                f"/api/v1/shelves/{group_shelf.id}/",
+                HTTP_AUTHORIZATION=self._auth,
+            )
+        )
+        self.assertEqual(group_detail.status_code, 200)
 
     def test_bearer_cannot_read_private_other_users_shelf(self):
         self.client.logout()
