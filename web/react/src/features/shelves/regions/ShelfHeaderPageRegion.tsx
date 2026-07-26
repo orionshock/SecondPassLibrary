@@ -2,7 +2,7 @@ import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel } from "../../../components/ui";
-import { shelfOwnerLabel } from "../components/ShelfRowComponent";
+import { shelfSummaryOwnerLabel } from "../../../shared/shelves/ShelfSummaryRowComponent";
 
 export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {
   shelf?: ShelfSummary;
@@ -23,7 +23,7 @@ export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNav
     </div>
     {shelf.description ? <p>{shelf.description}</p> : null}
     <div className="shelf-detail-header__facts">
-      <span>{shelfOwnerLabel(shelf)}</span>
+      <span>{shelfSummaryOwnerLabel(shelf)}</span>
       {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
       <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
     </div>

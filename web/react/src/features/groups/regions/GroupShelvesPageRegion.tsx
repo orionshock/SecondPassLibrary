@@ -3,7 +3,7 @@ import type { Page, ShelfSummary } from "@second-pass/spl-api";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
-import { GroupShelfRowComponent } from "../components/GroupShelfRowComponent";
+import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { groupShelfBreadcrumbs } from "../groupsBreadcrumbs";
 
 export function GroupShelvesPageRegion({ groupId, groupName, groupPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
@@ -26,7 +26,7 @@ export function GroupShelvesPageRegion({ groupId, groupName, groupPath, page, pa
   return <section className="group-shelves-region" aria-label="Group shelves" aria-busy={loading}>
     {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0 ? <p className="muted">No shelves yet.</p> : <div className="group-shelf-rows">
-      {page.items.map((shelf) => <GroupShelfRowComponent
+      {page.items.map((shelf) => <ShelfSummaryRowComponent
         key={shelf.id}
         shelf={shelf}
         detailPath={`/shelves/${encodeURIComponent(shelf.id)}`}

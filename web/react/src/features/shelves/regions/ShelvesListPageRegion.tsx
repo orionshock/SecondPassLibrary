@@ -5,7 +5,7 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
-import { ShelfRowComponent } from "../components/ShelfRowComponent";
+import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
 import { shelfEditBreadcrumbs, shelfEditPath, shelfNewBreadcrumbs, shelfNewPath } from "../shelfLifecycle";
 import { ShelfScopesPageRegion } from "./ShelfScopesPageRegion";
@@ -64,14 +64,17 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, loading, error,
           href: `/library/books/${encodeURIComponent(book.id)}`,
           navigationState: breadcrumbNavigationState(shelfBookBreadcrumbs(shelf.id, shelf.name, book.title)),
         }));
-        return <ShelfRowComponent
+        return <ShelfSummaryRowComponent
           key={shelf.id}
           shelf={shelf}
           detailPath={detailPath}
           navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
           previewBooks={previewBooks}
-          editPath={shelf.canEdit ? shelfEditPath(shelf.id) : undefined}
-          editNavigationState={shelf.canEdit ? breadcrumbNavigationState(shelfEditBreadcrumbs(shelf.id, shelf.name)) : undefined}
+          actions={shelf.canEdit ? <Link
+            className="shelf-summary-row-component__edit"
+            to={shelfEditPath(shelf.id)}
+            state={breadcrumbNavigationState(shelfEditBreadcrumbs(shelf.id, shelf.name))}
+          >Edit</Link> : undefined}
         />;
       })}
     </div>}
