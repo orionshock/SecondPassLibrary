@@ -1,4 +1,5 @@
 import type { LibraryGroup } from "@second-pass/spl-api";
+import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel } from "../../../components/ui";
 import type { GroupDetailTab } from "../groupsQuery";
@@ -8,6 +9,8 @@ export function GroupHeaderPageRegion({
   loading,
   error,
   isCurator,
+  editPath,
+  editNavigationState,
   activeTab,
   onTabChange,
   onRetry,
@@ -16,6 +19,8 @@ export function GroupHeaderPageRegion({
   loading: boolean;
   error?: Error;
   isCurator: boolean;
+  editPath?: string;
+  editNavigationState?: unknown;
   activeTab: GroupDetailTab;
   onTabChange: (tab: GroupDetailTab) => void;
   onRetry: () => void;
@@ -31,6 +36,7 @@ export function GroupHeaderPageRegion({
         {group.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
         {isCurator ? <Badge tone="accent">Curator</Badge> : null}
       </div>
+      {editPath ? <Link className="button group-detail-header__edit" to={editPath} state={editNavigationState}>Edit</Link> : null}
       {group.description ? <p>{group.description}</p> : null}
     </header>
     <nav className="group-detail-tabs" aria-label="Group sections">

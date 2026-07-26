@@ -26,6 +26,16 @@ export interface LibraryGroupsQuery {
   pageSize?: number;
 }
 
+export interface CreateGroupInput {
+  name: string;
+  description: string;
+}
+
+export interface UpdateGroupInput {
+  name?: string;
+  description?: string;
+}
+
 export interface GroupBooksQuery {
   q?: string;
   tag?: string;
@@ -101,6 +111,40 @@ export async function getGroup(
   return mapLibraryGroup(await client.request<LibraryGroupResponse>(
     `/api/v1/library/groups/${encodeURIComponent(groupId)}/${suffix}`,
   ));
+}
+
+export async function createGroup(
+  input: CreateGroupInput,
+  client: ApiClient = apiClient,
+): Promise<LibraryGroup> {
+  const response = await client.request<LibraryGroupResponse>(
+    "/api/v1/library/groups/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: input.name, description: input.description }),
+    },
+  );
+  return mapLibraryGroup(response);
+}
+
+export async function updateGroup(
+  groupId: string,
+  input: UpdateGroupInput,
+  client: ApiClient = apiClient,
+): Promise<LibraryGroup> {
+  const body: Record<string, string> = {};
+  if (input.name !== undefined) body.name = input.name;
+  if (input.description !== undefined) body.description = input.description;
+  const response = await client.request<LibraryGroupResponse>(
+    `/api/v1/library/groups/${encodeURIComponent(groupId)}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  return mapLibraryGroup(response);
 }
 
 export async function listGroupBooks(

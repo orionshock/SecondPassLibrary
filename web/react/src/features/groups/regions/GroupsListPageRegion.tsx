@@ -1,5 +1,6 @@
 import type { LibraryGroup, Page } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
+import { Link } from "react-router-dom";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
@@ -17,6 +18,8 @@ export function GroupsListPageRegion({
   loading,
   error,
   curatorGroupIds,
+  canCreate,
+  newGroupNavigationState,
   onSearchChange,
   onSearch,
   onOrderingChange,
@@ -32,6 +35,8 @@ export function GroupsListPageRegion({
   loading: boolean;
   error?: Error;
   curatorGroupIds: ReadonlySet<string>;
+  canCreate: boolean;
+  newGroupNavigationState?: unknown;
   onSearchChange: (value: string) => void;
   onSearch: () => void;
   onOrderingChange: (ordering: "name" | "-name") => void;
@@ -45,7 +50,9 @@ export function GroupsListPageRegion({
   }
 
   return <div className="groups-list-page">
-    <PageHeader title="Groups" />
+    <PageHeader title="Groups" actions={canCreate
+      ? <Link className="button" to="/groups/new" state={newGroupNavigationState}>New Group</Link>
+      : undefined} />
     <section className="groups-controls" aria-label="Group filters">
       <form role="search" onSubmit={submit}>
         <label htmlFor="groups-search">Search</label>

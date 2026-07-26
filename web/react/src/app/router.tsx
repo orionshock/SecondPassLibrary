@@ -5,7 +5,10 @@ import { App } from "./App";
 import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { GroupDetailOrchestrator } from "../features/groups/GroupDetailOrchestrator";
+import { GroupCreateOrchestrator } from "../features/groups/GroupCreateOrchestrator";
+import { GroupEditOrchestrator } from "../features/groups/GroupEditOrchestrator";
 import { GroupsListOrchestrator } from "../features/groups/GroupsListOrchestrator";
+import { canCreateGroupMetadata } from "../features/groups/groupMetadataAuthority";
 import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
 import { BookDetailOrchestrator } from "../features/library/BookDetailOrchestrator";
 import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
@@ -60,6 +63,8 @@ export const appRoutes = [
         element: <PlaceholderPageRegion title={title} />,
       })),
       { path: "groups", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuardComponent> },
+      { path: "groups/new", element: <RoleRouteGuardComponent canAccess={canCreateGroupMetadata}><GroupCreateOrchestrator /></RoleRouteGuardComponent> },
+      { path: "groups/:groupId/edit", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupEditOrchestrator /></RoleRouteGuardComponent> },
       { path: "groups/:groupId", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuardComponent> },
       { path: "shelves", element: <ShelvesListOrchestrator /> },
       { path: "shelves/new", element: <ShelfCreateOrchestrator /> },

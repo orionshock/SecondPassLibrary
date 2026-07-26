@@ -129,6 +129,30 @@
   padding-bottom: 0.8rem;
 }
 
+.group-detail-header__edit { justify-self: end; }
+
+.group-lifecycle-page { max-width: 56rem; }
+
+.group-metadata-form {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.group-metadata-form textarea { min-height: 12rem; }
+
+.group-lifecycle-state {
+  max-width: 56rem;
+  margin-inline: auto;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
 .group-detail-header__title {
   display: flex;
   flex-wrap: wrap;

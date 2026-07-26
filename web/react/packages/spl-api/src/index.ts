@@ -33,18 +33,22 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   addBookToGroup,
+  createGroup,
   getGroup,
   listAllLibraryGroups,
   listGroupBooks,
   listGroupMembers,
   listGroups,
   removeBookFromGroup,
+  updateGroup,
   type BookGroupAssignment,
+  type CreateGroupInput,
   type GroupBooksQuery,
   type GroupMembersQuery,
   type GroupMembership,
   type LibraryGroup,
   type LibraryGroupsQuery,
+  type UpdateGroupInput,
 } from "./groups";
 export {
   addShelfItem,

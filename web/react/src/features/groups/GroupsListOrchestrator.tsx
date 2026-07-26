@@ -6,7 +6,9 @@ import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { groupsListBreadcrumbFallback } from "./groupsBreadcrumbs";
+import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
+import { canCreateGroupMetadata } from "./groupMetadataAuthority";
+import { groupNewBreadcrumbs, groupsListBreadcrumbFallback } from "./groupsBreadcrumbs";
 import {
   groupsListSdkQuery,
   groupsListSearchParams,
@@ -91,6 +93,8 @@ export function GroupsListOrchestrator() {
       loading={load.loading}
       error={load.error}
       curatorGroupIds={curatorGroupIds}
+      canCreate={canCreateGroupMetadata(currentUser)}
+      newGroupNavigationState={breadcrumbNavigationState(groupNewBreadcrumbs())}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onOrderingChange={(ordering) => changeQuery({ ordering })}

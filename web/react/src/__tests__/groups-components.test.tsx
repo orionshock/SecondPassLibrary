@@ -8,6 +8,7 @@ import { GroupRowComponent } from "../features/groups/components/GroupRowCompone
 import { GroupBooksPageRegion } from "../features/groups/regions/GroupBooksPageRegion";
 import { GroupHeaderPageRegion } from "../features/groups/regions/GroupHeaderPageRegion";
 import { GroupMembersPageRegion } from "../features/groups/regions/GroupMembersPageRegion";
+import { GroupsListPageRegion } from "../features/groups/regions/GroupsListPageRegion";
 
 const group: LibraryGroup = {
   id: "group", name: "Common Room", description: "<b>Add, edit, and delete books</b>", isPublicGroup: true,
@@ -50,6 +51,38 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain("Members");
     expect(markup).not.toContain("Shelves");
     expect(markup).not.toContain("href=");
+  });
+
+  it("renders metadata lifecycle affordances only when authorized by its orchestrator", () => {
+    const detail = renderToStaticMarkup(<MemoryRouter><GroupHeaderPageRegion
+      group={{ ...group, isPublicGroup: false }}
+      loading={false}
+      isCurator={false}
+      editPath="/groups/group/edit"
+      activeTab="books"
+      onTabChange={vi.fn()}
+      onRetry={vi.fn()}
+    /></MemoryRouter>);
+    expect(detail).toContain('href="/groups/group/edit"');
+
+    const list = (canCreate: boolean) => renderToStaticMarkup(<MemoryRouter><GroupsListPageRegion
+      page={{ items: [], count: 0, next: null, previous: null }}
+      pageNumber={1}
+      pageSize={20}
+      search=""
+      ordering="name"
+      loading={false}
+      curatorGroupIds={new Set<string>()}
+      canCreate={canCreate}
+      onSearchChange={vi.fn()}
+      onSearch={vi.fn()}
+      onOrderingChange={vi.fn()}
+      onPageChange={vi.fn()}
+      onPageSizeChange={vi.fn()}
+      onRetry={vi.fn()}
+    /></MemoryRouter>);
+    expect(list(true)).toContain('href="/groups/new"');
+    expect(list(false)).not.toContain('href="/groups/new"');
   });
 
   it("reuses compact Book rows without assignment controls", () => {

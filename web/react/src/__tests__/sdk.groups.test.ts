@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   ApiError,
   addBookToGroup,
+  createGroup,
   getGroup,
   listAllLibraryGroups,
   listGroupBooks,
   listGroupMembers,
   listGroups,
   removeBookFromGroup,
+  updateGroup,
 } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
@@ -123,5 +125,58 @@ describe("Library Groups SDK", () => {
     await expect(addBookToGroup("group", "book", client)).rejects.toMatchObject({
       fields: { bookId: ["Choose a visible Book."] },
     });
+  });
+
+  it("uses exact Group metadata create and partial-update contracts", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return {
+        id: "group/id", name: "Readers", description: "Updated", is_public_group: false,
+      } as T;
+    } };
+
+    await expect(createGroup({ name: "Readers", description: "Created" }, client)).resolves.toEqual({
+      id: "group/id", name: "Readers", description: "Updated", isPublicGroup: false,
+    });
+    await updateGroup("group/id", { name: "Readers", description: "Updated" }, client);
+    await updateGroup("group/id", { description: "Description only" }, client);
+
+    expect(calls).toEqual([
+      {
+        path: "/api/v1/library/groups/",
+        init: {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Readers", description: "Created" }),
+        },
+      },
+      {
+        path: "/api/v1/library/groups/group%2Fid/",
+        init: {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Readers", description: "Updated" }),
+        },
+      },
+      {
+        path: "/api/v1/library/groups/group%2Fid/",
+        init: {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description: "Description only" }),
+        },
+      },
+    ]);
+  });
+
+  it("preserves Group metadata field errors under app-facing field names", async () => {
+    const error = new ApiError("Invalid.", 400, {
+      fields: { name: ["Name is required."], description: ["Invalid description."] },
+    });
+    const client: ApiClient = { request: async () => { throw error; } };
+
+    await expect(createGroup({ name: "", description: "" }, client)).rejects.toBe(error);
+    await expect(updateGroup("group", { name: "" }, client)).rejects.toBe(error);
   });
 });

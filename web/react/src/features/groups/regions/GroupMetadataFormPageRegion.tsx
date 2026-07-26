@@ -1,0 +1,51 @@
+import type { FormEvent } from "react";
+
+import { FormField } from "../../../components/ui";
+import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
+import { SaveCancelActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import type { GroupDraft } from "../groupDraft";
+
+export function GroupMetadataFormPageRegion({
+  mode,
+  draft,
+  nameEditable,
+  state,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  mode: "new" | "edit";
+  draft: GroupDraft;
+  nameEditable: boolean;
+  state: MutationState;
+  onChange: <K extends keyof GroupDraft>(field: K, value: GroupDraft[K]) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+}) {
+  return <form className="group-metadata-form" onSubmit={onSubmit}>
+    <FormField label="Name" htmlFor="group-name" error={fieldError(state.error, "name")}>
+      <input
+        id="group-name"
+        value={draft.name}
+        maxLength={255}
+        disabled={!nameEditable}
+        autoFocus={nameEditable}
+        onChange={(event) => onChange("name", event.target.value)}
+      />
+    </FormField>
+    <FormField label="Description" htmlFor="group-description" error={fieldError(state.error, "description")}>
+      <textarea
+        id="group-description"
+        value={draft.description}
+        autoFocus={!nameEditable}
+        onChange={(event) => onChange("description", event.target.value)}
+      />
+    </FormField>
+    <SaveCancelActionRowComponent
+      state={state}
+      submitLabel={mode === "new" ? "Create Group" : "Save Group"}
+      pendingLabel="Saving..."
+      onCancel={onCancel}
+    />
+  </form>;
+}

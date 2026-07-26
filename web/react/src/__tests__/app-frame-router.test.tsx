@@ -64,6 +64,8 @@ describe("app frame and router", () => {
   it("defines placeholder and not-found routes", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading"]);
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "groups/new")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId/edit")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "shelves")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "shelves/new")).toBe(true);
@@ -88,13 +90,22 @@ describe("app frame and router", () => {
   });
 
   it("guards Groups routes by the server-driven advanced-groups mode, not role rank", () => {
-    for (const path of ["groups", "groups/:groupId"]) {
+    for (const path of ["groups", "groups/:groupId", "groups/:groupId/edit"]) {
       const route = appRoutes[0].children.find((candidate) => candidate.path === path);
       expect(isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)).toBe(true);
       if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) continue;
       expect(route.element.props.canAccess({ ...user, isOwner: false, isReader: true, advancedLibraryGroupsEnabled: true })).toBe(true);
       expect(route.element.props.canAccess({ ...user, isOwner: true, advancedLibraryGroupsEnabled: false })).toBe(false);
     }
+  });
+
+  it("guards Group creation by advanced mode and Manager authority", () => {
+    const route = appRoutes[0].children.find((candidate) => candidate.path === "groups/new");
+    expect(isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)).toBe(true);
+    if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) return;
+    expect(route.element.props.canAccess({ ...user, isOwner: false, isManager: true, advancedLibraryGroupsEnabled: true })).toBe(true);
+    expect(route.element.props.canAccess({ ...user, isOwner: false, isLibrarian: true, advancedLibraryGroupsEnabled: true })).toBe(false);
+    expect(route.element.props.canAccess({ ...user, isOwner: true, advancedLibraryGroupsEnabled: false })).toBe(false);
   });
 
   it("guards direct Book Edit access with the Librarian-level role contract", () => {
