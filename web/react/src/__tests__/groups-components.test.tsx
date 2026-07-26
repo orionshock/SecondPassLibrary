@@ -10,7 +10,7 @@ import { GroupHeaderPageRegion } from "../features/groups/regions/GroupHeaderPag
 import { GroupMembersPageRegion } from "../features/groups/regions/GroupMembersPageRegion";
 
 const group: LibraryGroup = {
-  id: "group", name: "Common Room", description: "<b>Shared books</b>", isPublicGroup: true,
+  id: "group", name: "Common Room", description: "<b>Add, edit, and delete books</b>", isPublicGroup: true,
 };
 const book: CompactBook = {
   id: "book", title: "Visible Book", sortTitle: "Visible Book", subtitle: "Hidden",
@@ -20,7 +20,7 @@ const book: CompactBook = {
 };
 
 describe("Groups read-only regions", () => {
-  it("renders server-driven Public and curator treatments without mutation affordances or counts", () => {
+  it("renders server-driven Public and curator treatments without mutation controls or counts", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><GroupRowComponent
       group={group}
       detailPath="/groups/group"
@@ -30,8 +30,11 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain('href="/groups/group"');
     expect(markup).toContain("Public");
     expect(markup).toContain("Curator");
-    expect(markup).toContain("&lt;b&gt;Shared books&lt;/b&gt;");
-    for (const absent of ["Books", "Edit", "Delete", "Add"] ) expect(markup).not.toContain(absent);
+    expect(markup).toContain("&lt;b&gt;Add, edit, and delete books&lt;/b&gt;");
+    expect(markup).not.toContain("<form");
+    expect(markup).not.toContain('href="/groups/group/edit"');
+    expect(markup).not.toContain('aria-label="Delete');
+    expect(markup).not.toContain("1 Book");
   });
 
   it("renders only Books and Members detail sections", () => {
@@ -46,7 +49,7 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain("Books");
     expect(markup).toContain("Members");
     expect(markup).not.toContain("Shelves");
-    expect(markup).not.toContain("Edit");
+    expect(markup).not.toContain("href=");
   });
 
   it("reuses compact Book rows without assignment controls", () => {
@@ -88,7 +91,8 @@ describe("Groups read-only regions", () => {
       onPageSizeChange={vi.fn()}
       onRetry={vi.fn()}
     />);
-    expect(list).not.toContain("Remove");
+    expect(list).not.toContain('aria-label="Remove');
+    expect(list).not.toContain("<form");
     expect(list).not.toContain("email");
   });
 });

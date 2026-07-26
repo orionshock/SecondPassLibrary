@@ -7,6 +7,6 @@ describe("ActionFeedbackComponent", () => {
   it("renders stable success feedback", () => {
     const markup = renderToStaticMarkup(<ActionFeedbackComponent state={{ pending: false, message: "Saved." }} />);
     expect(markup).toContain('role="status"');
-    expect(markup).toContain("check_circle");
+    expect(markup).toContain("Saved.");
   });
 });

@@ -41,7 +41,7 @@ The Product UI uses the existing REST/JSON endpoints under `/api/v1/`. Do not ad
 
 React CSS follows the same ownership boundaries: `styles/base.css` contains only global tokens/reset/typography, AppFrame owns shell CSS, shared UI and icons own their component CSS, and feature branches import their own layout CSS. All Vitest files live centrally under `src/__tests__` and are named by subject.
 
-The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, SDK imports in shared UI primitives, React imports in the SDK, obvious wire field-error lookups in React, and runtime SDK operation imports in presentational PageRegions/Components. Type-only imports of stable SDK app-facing models are allowed there. Vite proxy declarations are development transport configuration, not an application communication layer.
+The SDK public index exports domain operations, app-facing types, and errors—not its low-level request client. `npm test` runs a lightweight source check that rejects raw server communication in app source, production feature-to-feature imports, SDK imports in shared UI primitives, React imports in the SDK, wire field-error lookups in React, runtime SDK operation imports in presentational PageRegions/Components, and query construction in presentational files. Type-only imports of stable SDK app-facing models are allowed there. Vite proxy declarations are development transport configuration, not an application communication layer.
 
 Within the SDK, `accounts.ts` owns current-user/profile/password mapping while `accountSessions.ts` owns web-session and connected-client operations and metadata mapping.
 
@@ -82,22 +82,22 @@ Group Shelves; API `scope=all` is not exposed. Rows render only server-provided
 ownership, visibility, viewer-visible item count, description, Public identity,
 and bounded previews. `ShelfDetailOrchestrator` owns `/shelves/:shelfId`, its
 read-only Shelf header, URL-backed item ordering, pagination, bounded recovery,
-and shared compact Book rows with contextual Shelf breadcrumbs. Shelf create,
-edit, and delete metadata lifecycle is available at `/shelves/new` and
+and shared compact Book rows with contextual Shelf breadcrumbs. Separate Shelf
+Create and Edit Orchestrators own metadata lifecycle at `/shelves/new` and
 `/shelves/:shelfId/edit`. All authenticated users can create personal shelves;
 manageable group ownership is offered only from existing role and exact-curator
 facts. Ownership is create-only, personal visibility is editable, and group
 shelves keep group-controlled visibility. Shelf responses provide the
-  authoritative `canEdit` affordance for existing shelves. Shelf Edit adds Books
-  and Add Books tabs. Books uses the editor inventory: visible Books can move
-  up/down across locked unavailable placeholders, and retained unavailable rows
-  can be removed by ShelfItem identity without exposing Book metadata. Add,
-  remove, and reorder mutations are immediate and independent from metadata Save;
-  adds remain append-only. Blank Add Books search performs no request;
+authoritative `canEdit` affordance for existing shelves. Shelf Edit adds Books
+and Add Books tabs. Books uses the editor inventory: visible Books can move
+up/down across locked unavailable placeholders, and retained unavailable rows
+can be removed by ShelfItem identity without exposing Book metadata. Add,
+remove, and reorder mutations are immediate and independent from metadata Save;
+adds remain append-only. Blank Add Books search performs no request;
 personal shelves use broad Library search while group shelves use their owning
 Group Books endpoint, both with `exclude_shelf`. Deleting a Shelf removes its
-  ShelfItems but never Books or files. Drag/drop, move-to-position, and the Group
-  Detail Shelves tab remain deferred.
+ShelfItems but never Books or files. Drag/drop, move-to-position, and the Group
+Detail Shelves tab remain deferred.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 

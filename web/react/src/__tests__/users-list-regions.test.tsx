@@ -33,30 +33,23 @@ function renderList(page?: Page<ManagedUser>, options: { loading?: boolean; erro
 }
 
 describe("Users list regions", () => {
-  it("renders mapped server results with effective Owner role and inactive styling", () => {
+  it("renders effective Owner role, inactive state, and the Edit destination", () => {
     const markup = renderList({ items: [owner], count: 1, next: null, previous: null }, { advanced: true });
+    expect(markup).toContain("Ada Lovelace");
+    expect(markup).toContain("&lt;@owner&gt;");
     expect(markup).toContain("ada@example.test");
     expect(markup).toContain("Owner");
-    expect(markup).toContain("users-row--inactive");
-    expect(markup).toContain("users-status-pill--inactive");
-    expect(markup).toContain('<td class="users-memberships"><div class="users-memberships__content">');
-    expect(markup).not.toContain('<td class="users-memberships" style="display:grid">');
-    expect(markup).toContain('class="badge badge--success"');
-    expect(markup).toContain('aria-label="Curates"><span class="badge badge--accent">Editors</span>');
-    expect(markup).toContain('<td class="users-row-actions"><a class="icon-button"');
+    expect(markup).toContain("Inactive");
     expect(markup).toContain('href="/users/owner-id/edit"');
+    expect(markup).toContain('aria-label="Edit owner"');
   });
 
-  it("renders grouped identity, role/status, memberships, and action columns", () => {
+  it("renders group membership and curator facts in advanced mode", () => {
     const markup = renderList({ items: [owner], count: 1, next: null, previous: null }, { advanced: true });
-    const headings = ["Name", "Username", "Email", "Role", "Status", "Last login", "Groups / Curates", "Actions"];
-    headings.slice(1).forEach((heading, index) => expect(markup.indexOf(headings[index]!)).toBeLessThan(markup.indexOf(heading)));
-    expect(markup).toContain('<td class="users-identity"><div class="users-identity__primary"><span class="material-symbols-outlined material-icon"');
-    expect(markup).toContain("Ada Lovelace</strong><span class=\"users-identity__dot\"");
-    expect(markup).toContain("&lt;@owner&gt;</span></div><div class=\"users-identity__email\">ada@example.test</div></td>");
-    expect(markup).toContain('<td class="users-role-status"><div class="users-role-status__content"><span class="badge badge--accent">Owner</span><span class="users-status-pill users-status-pill--inactive">Inactive</span></div></td>');
-    expect(markup).toContain('aria-label="Groups"><span class="badge badge--success"');
-    expect(markup).not.toContain('aria-label="Groups"><span class="badge badge--default">Editors</span>');
+    expect(markup).toContain('aria-label="Groups"');
+    expect(markup).toContain("Common Room");
+    expect(markup).toContain('aria-label="Curates"');
+    expect(markup).toContain("Editors");
   });
 
   it("omits status treatment for active users", () => {

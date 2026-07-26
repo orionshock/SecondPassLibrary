@@ -58,6 +58,7 @@ This is the running list of cross-page presentation and interaction rules that a
 - Client-only validation uses the shared local validation error with an action message and optional app-facing field errors. It does not construct `ApiError`, because no HTTP request occurred.
 - Values returned by an API payload may be rendered as ordinary escaped React text. Never render API strings as raw HTML. Boundary checks protect communication and wire-name mechanics; they do not impose additional payload distrust or client-side redaction.
 - PageRegions and Components may import stable SDK types, but SDK operations belong in App or feature Orchestrators.
+- Production feature branches do not import one another. Promote genuinely shared code to `app`, `shared`, or `components`; tests may compose subjects across features.
 - When current role facts clearly cannot access Users, Imports, or Server Settings, the route falls back to Dashboard before mounting the feature Orchestrator. Backend authorization remains authoritative for allowed roles and unexpected permission failures remain visible.
 
 ## Server settings

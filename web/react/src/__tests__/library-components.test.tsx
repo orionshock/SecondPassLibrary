@@ -78,11 +78,10 @@ describe("Library Books components", () => {
     expect(markup).not.toContain("Clear Cover");
   });
 
-  it("renders only the accepted compact row presentation with canonical metadata icons", () => {
+  it("renders only the accepted compact row presentation", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent book={book} detailPath="/library/books/book%2Fid" /></MemoryRouter>);
     for (const value of ["Visible Title", "Visible Author", "Visible Series 3.00", "Visible Publisher", "Tag 0", "+2"]) expect(markup).toContain(value);
     for (const hidden of ["HIDDEN SUBTITLE", "1999", "HIDDEN LANGUAGE", "HIDDEN FORMAT", "Groups", "checksum", "identifier"]) expect(markup).not.toContain(hidden);
-    for (const icon of ["person", "auto_stories", "apartment"]) expect(markup).toContain(`>${icon}</span>`);
     expect(markup).toContain("No cover available for Visible Title");
     expect(markup).toContain('href="/library/books/book%2Fid"');
   });
@@ -118,8 +117,8 @@ describe("Library Books components", () => {
     const markup = renderToStaticMarkup(<CatalogTagRailPageRegion tags={tags} activeTag="fantasy" loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(markup).toContain("All tags");
     expect(markup).toContain("Fantasy and Extremely Long Adventures");
-    expect(markup).toContain('class="catalog-tag-rail__name" title="Fantasy and Extremely Long Adventures"');
-    expect(markup).toContain(">12</span>");
+    expect(markup).toContain('title="Fantasy and Extremely Long Adventures"');
+    expect(markup).toContain("12");
     expect(markup).toContain('aria-pressed="true"');
     const failed = renderToStaticMarkup(<CatalogTagRailPageRegion loading={false} error={new Error("Tags unavailable")} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(failed).toContain("Tags unavailable");

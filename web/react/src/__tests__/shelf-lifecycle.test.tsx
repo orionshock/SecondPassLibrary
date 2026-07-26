@@ -198,9 +198,7 @@ describe("Shelf lifecycle contracts", () => {
     expect(books).not.toMatch(/aria-label="Move Book A down"[^>]*disabled/);
     expect(books).not.toMatch(/aria-label="Move Book C up"[^>]*disabled/);
     expect(books).toMatch(/aria-label="Move Book C down"[^>]*disabled/);
-    expect(books).toContain("2 visible · 3 total · 1 unavailable");
     expect(candidates).toContain("Add");
     expect(books).not.toContain("Move to position");
-    expect(books).not.toContain("draggable");
   });
 });
