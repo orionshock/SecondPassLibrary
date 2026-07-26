@@ -102,11 +102,15 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
             raise PermissionDenied(
                 "Public group identity is managed through Server Settings."
             )
-        serializer = LibraryGroupPatchSerializer(data=request.data or {}, partial=True)
+        serializer = LibraryGroupPatchSerializer(
+            group,
+            data=request.data or {},
+            partial=True,
+        )
         serializer.is_valid(raise_exception=True)
-        if "name" in serializer.validated_data and not is_manager(request.user):
+        if serializer.changes_field("name") and not is_manager(request.user):
             raise PermissionDenied("Not allowed to rename this library group.")
-        if "description" in serializer.validated_data and not is_curator(
+        if serializer.changes_field("description") and not is_curator(
             request.user, group
         ):
             raise PermissionDenied("Not allowed to update this library group description.")

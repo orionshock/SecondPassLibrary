@@ -57,3 +57,8 @@ class LibraryGroupPatchSerializer(_RejectUnknownFieldsMixin, serializers.Seriali
         trim_whitespace=True,
     )
     description = serializers.CharField(required=False, allow_blank=True)
+
+    def changes_field(self, field: str) -> bool:
+        if field not in self.validated_data:
+            return False
+        return self.validated_data[field] != getattr(self.instance, field)
