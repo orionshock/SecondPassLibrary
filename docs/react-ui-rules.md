@@ -1,5 +1,7 @@
 # React Product UI Rules
 
+> **Document purpose:** This contains durable cross-page React presentation, interaction, and architectural rules. It is neither a historical migration specification nor a running implementation log; those belong in `docs/react-implementation-spec.md` and `docs/react-ui.md`, respectively.
+
 This is the running list of cross-page presentation and interaction rules that are easy to lose when implementing individual React branches. API storage shapes remain documented in `docs/api.md`; these rules describe Product UI meaning.
 
 ## File responsibilities

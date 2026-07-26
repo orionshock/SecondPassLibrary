@@ -1,5 +1,7 @@
 # React Product UI
 
+> **Document purpose:** This is the running record of the current React Product UI: implemented surfaces, active behavior, architecture, and deferred work. Historical migration guidance belongs in `docs/react-implementation-spec.md`; durable cross-page rules belong in `docs/react-ui-rules.md`.
+
 The Product UI lives in `web/react`. Retired Django Product UI templates, static assets, views, and routes are isolated under `reference/legacy_product_ui` for reference only. They are outside the Django application and must not be imported, discovered, or mounted. Old Product UI tests are not maintained as executable tests.
 
 ## Development

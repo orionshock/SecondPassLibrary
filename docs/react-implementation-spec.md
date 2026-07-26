@@ -1,5 +1,7 @@
 # React Product UI implementation specification
 
+> **Document purpose:** This is a historical migration and product-behavior reference derived from the parked Product UI. It guides reconstruction where still relevant, but it is not the running record of the current React implementation. Current behavior and completed work belong in `docs/react-ui.md`; durable cross-page rules belong in `docs/react-ui-rules.md`.
+
 ## Executive summary
 
 This document translates the parked Product UI under
