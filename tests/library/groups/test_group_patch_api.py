@@ -124,3 +124,57 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("name", response.json())
+
+    def test_patch_rejects_name_over_model_limit_without_persisting_description(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "x" * 256, "description": "Not persisted"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.json())
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.name, "Club")
+        self.assertEqual(self.club.description, "Readers")
+
+    def test_patch_rejects_unknown_fields(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"description": "Not persisted", "books": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("books", response.json())
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.description, "Readers")
+
+    def test_put_is_not_supported(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.put(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "Replacement"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_patch_allows_duplicate_names(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        duplicate = self.hidden.name
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": duplicate}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], duplicate)
+        self.assertEqual(self.club.__class__.objects.filter(name=duplicate).count(), 2)

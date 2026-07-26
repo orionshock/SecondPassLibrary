@@ -45,10 +45,15 @@ class _RejectUnknownFieldsMixin:
 
 
 class LibraryGroupCreateSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
-    name = serializers.CharField(allow_blank=False, trim_whitespace=True)
+    name = serializers.CharField(max_length=255, allow_blank=False, trim_whitespace=True)
     description = serializers.CharField(required=False, allow_blank=True)
 
 
 class LibraryGroupPatchSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
-    name = serializers.CharField(required=False, allow_blank=False, trim_whitespace=True)
+    name = serializers.CharField(
+        required=False,
+        max_length=255,
+        allow_blank=False,
+        trim_whitespace=True,
+    )
     description = serializers.CharField(required=False, allow_blank=True)

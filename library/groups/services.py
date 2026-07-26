@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 def create_library_group(*, name: str, description: str = "", actor=None) -> LibraryGroup:
-    group = LibraryGroup.objects.create(name=_required_name(name), description=description or "")
+    group = LibraryGroup(name=_required_name(name), description=description or "")
+    group.full_clean()
+    group.save()
     group_id = str(group.pk)
     group_name = safe_log_label(group.name, fallback=group_id)
     actor_name = user_log_label(actor)
@@ -56,6 +58,7 @@ def update_library_group(
             group.description = value
             update_fields.append("description")
     if update_fields:
+        group.full_clean()
         group.save(update_fields=[*update_fields, "updated_at"])
         group_id = str(group.pk)
         group_name = safe_log_label(group.name, fallback=group_id)

@@ -75,7 +75,10 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
 
         serializer = LibraryGroupCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
-        group = create_library_group(actor=request.user, **serializer.validated_data)
+        try:
+            group = create_library_group(actor=request.user, **serializer.validated_data)
+        except DjangoValidationError as exc:
+            raise _drf_validation_error(exc) from exc
         out = self.get_serializer(group)
         return Response(out.data, status=status.HTTP_201_CREATED)
 

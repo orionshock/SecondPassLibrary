@@ -858,6 +858,12 @@ feature-state change does not delete or rewrite existing custom-group data.
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 
+Group creation and metadata updates accept only `name` and `description`.
+Create requires `name`; PATCH is partial. Supplied names are trimmed, must be
+nonblank, and may contain at most 255 characters. Descriptions may be blank,
+and duplicate group names are allowed. Unknown fields return structured `400`
+errors. Group metadata uses PATCH; PUT is unsupported and returns `405`.
+
 Group list ordering:
 
 - `GET /api/v1/library/groups/?ordering=name` orders by group name A-Z and is the default.
@@ -878,6 +884,11 @@ pagination envelope. React owns any UI paging state built on this API.
   - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user_id": "<profile_id>", "is_curator": true}`
   - `PATCH /api/v1/library/groups/<group_id>/memberships/<user_id>/` body: `{"is_curator": false}`
   - `DELETE /api/v1/library/groups/<group_id>/memberships/<user_id>/`
+
+Membership POST accepts only `user_id` and `is_curator`; membership PATCH
+accepts only `is_curator`. These endpoints do not accept or change global user
+roles. Global role changes belong to the managed Users API. Unknown membership
+fields, including `role`, return structured `400` errors.
 
 Membership payloads use the generic username-only compact user identity and do
 not expose Django auth user database ids:
