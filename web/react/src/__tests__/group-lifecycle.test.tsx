@@ -9,9 +9,10 @@ import {
   updateGroupInputFromDraft,
   validateGroupDraft,
 } from "../features/groups/groupDraft";
-import { confirmGroupBookRemoval } from "../features/groups/groupBookMutation";
+import { confirmGroupBookRemoval, confirmGroupMemberRemoval } from "../features/groups/groupBookMutation";
 import {
   canMutateGroupBooks,
+  canMutateGroupMembers,
   canCreateGroupMetadata,
   groupMetadataAuthority,
 } from "../features/groups/groupMetadataAuthority";
@@ -24,6 +25,8 @@ import { GroupMetadataFormPageRegion } from "../features/groups/regions/GroupMet
 import { GroupBookCandidatesPageRegion } from "../features/groups/regions/GroupBookCandidatesPageRegion";
 import { GroupBooksEditPageRegion } from "../features/groups/regions/GroupBooksEditPageRegion";
 import { GroupEditTabsPageRegion } from "../features/groups/regions/GroupEditTabsPageRegion";
+import { GroupMemberCandidatesPageRegion } from "../features/groups/regions/GroupMemberCandidatesPageRegion";
+import { GroupMembersEditPageRegion } from "../features/groups/regions/GroupMembersEditPageRegion";
 import { MemoryRouter } from "react-router-dom";
 
 const baseUser: CurrentUser = {
@@ -65,6 +68,10 @@ describe("Group metadata lifecycle contracts", () => {
     expect(canMutateGroupBooks(librarian, publicGroup)).toBe(true);
     expect(canMutateGroupBooks(curator, publicGroup)).toBe(false);
     expect(canMutateGroupBooks({ ...manager, advancedLibraryGroupsEnabled: false }, customGroup)).toBe(false);
+    expect(canMutateGroupMembers(manager)).toBe(true);
+    expect(canMutateGroupMembers(owner)).toBe(true);
+    expect(canMutateGroupMembers(librarian)).toBe(false);
+    expect(canMutateGroupMembers(curator)).toBe(false);
   });
 
   it("normalizes dirty comparison and mutation inputs while allowing duplicate names", () => {
@@ -117,16 +124,20 @@ describe("Group metadata lifecycle contracts", () => {
     const editable = renderToStaticMarkup(<GroupEditTabsPageRegion
       activeTab="details"
       canMutateBooks
+      canMutateMembers
       onTabChange={vi.fn()}
     />);
     const readOnly = renderToStaticMarkup(<GroupEditTabsPageRegion
       activeTab="details"
       canMutateBooks={false}
+      canMutateMembers={false}
       onTabChange={vi.fn()}
     />);
     expect(editable).toContain("Books");
     expect(editable).toContain("Add Books");
+    expect(editable).toContain("Members");
     expect(readOnly).not.toContain("Books");
+    expect(readOnly).not.toContain("Members");
   });
 
   it("keeps assigned rows visible with persistent removal errors and exposes explicit candidate actions", () => {
@@ -164,5 +175,46 @@ describe("Group metadata lifecycle contracts", () => {
     const deny = vi.fn(() => false);
     expect(confirmGroupBookRemoval(deny)).toBe(false);
     expect(deny).toHaveBeenCalledWith(expect.stringMatching(/also be removed from shelves owned by this group/i));
+  });
+
+  it("renders member mutation facts without global role controls", () => {
+    const membership = { user: { profileId: "profile", username: "reader" }, isCurator: true };
+    const page = { items: [membership], count: 1, next: null, previous: null };
+    const custom = renderToStaticMarkup(<GroupMembersEditPageRegion
+      page={page} pageNumber={1} pageSize={20} isPublicGroup={false} loading={false}
+      error={new Error("Membership update failed.")} onToggleCurator={vi.fn()} onRemove={vi.fn()}
+      onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    />);
+    const publicGroupMembers = renderToStaticMarkup(<GroupMembersEditPageRegion
+      page={page} pageNumber={1} pageSize={20} isPublicGroup loading={false}
+      onToggleCurator={vi.fn()} onRemove={vi.fn()} onPageChange={vi.fn()}
+      onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    />);
+    const choices = renderToStaticMarkup(<GroupMemberCandidatesPageRegion
+      search="read" page={{ items: [{ profileId: "new", username: "new-reader" }], count: 1, next: null, previous: null }}
+      pageNumber={1} pageSize={20} loading={false} onSearchChange={vi.fn()} onSearch={vi.fn()}
+      onAdd={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    />);
+    const blank = renderToStaticMarkup(<GroupMemberCandidatesPageRegion
+      search="" pageNumber={1} pageSize={20} loading={false} onSearchChange={vi.fn()}
+      onSearch={vi.fn()} onAdd={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    />);
+
+    expect(custom).toContain("&lt;@reader&gt;");
+    expect(custom).toContain("Curator");
+    expect(custom).toContain("Remove curator");
+    expect(custom).toContain("Membership update failed.");
+    expect(custom).not.toContain("Global role");
+    expect(custom).not.toContain(">Member<");
+    expect(publicGroupMembers).not.toContain("Remove curator");
+    expect(publicGroupMembers).not.toContain("Make curator");
+    expect(choices).toContain("&lt;@new-reader&gt;");
+    expect(blank).not.toContain("new-reader");
+  });
+
+  it("confirms membership removal without implying user deletion", () => {
+    const deny = vi.fn(() => false);
+    expect(confirmGroupMemberRemoval(deny)).toBe(false);
+    expect(deny).toHaveBeenCalledWith("Remove this member from the group?");
   });
 });

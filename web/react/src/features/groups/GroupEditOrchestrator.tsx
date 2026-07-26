@@ -30,7 +30,8 @@ import {
   type GroupDraft,
 } from "./groupDraft";
 import { confirmGroupBookRemoval } from "./groupBookMutation";
-import { canMutateGroupBooks, groupMetadataAuthority } from "./groupMetadataAuthority";
+import { canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority } from "./groupMetadataAuthority";
+import { GroupMembersEditOrchestrator } from "./GroupMembersEditOrchestrator";
 import {
   groupDetailNavigationStateFromEdit,
   groupDetailPath,
@@ -141,6 +142,7 @@ export function GroupEditOrchestrator() {
 
   const metadataAuthority = group ? groupMetadataAuthority(currentUser, group) : "none";
   const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group) : false;
+  const memberMutationAllowed = canMutateGroupMembers(currentUser);
 
   useEffect(() => {
     if (!group || !bookMutationAllowed || activeTab !== "books") return;
@@ -258,13 +260,13 @@ export function GroupEditOrchestrator() {
     return <section className="group-lifecycle-state"><ErrorPanel>{load.error.message}</ErrorPanel><Button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</Button></section>;
   }
 
-  if (metadataAuthority === "none" && !bookMutationAllowed) {
+  if (metadataAuthority === "none" && !bookMutationAllowed && !memberMutationAllowed) {
     return <section className="group-lifecycle-state"><ErrorPanel>This Group is not available for editing.</ErrorPanel><Link to={groupDetailPath(load.group.id)}>Back to Group</Link></section>;
   }
 
   return <div className="page-stack groups-page group-lifecycle-page">
     <PageHeader eyebrow="Editing Group" title={draft.name || load.group.name} />
-    <GroupEditTabsPageRegion activeTab={activeTab} canMutateBooks={bookMutationAllowed} onTabChange={changeTab} />
+    <GroupEditTabsPageRegion activeTab={activeTab} canMutateBooks={bookMutationAllowed} canMutateMembers={memberMutationAllowed} onTabChange={changeTab} />
     {activeTab === "details" && metadataAuthority === "none"
       ? <section className="group-edit-section-state"><ErrorPanel>Group metadata is not editable here.</ErrorPanel></section>
       : null}
@@ -316,5 +318,8 @@ export function GroupEditOrchestrator() {
         onRetry={() => { setCandidateMutation({}); setCandidatesVersion((value) => value + 1); }}
       />
     </> : null}
+    {activeTab === "members" && memberMutationAllowed
+      ? <GroupMembersEditOrchestrator group={load.group} metadataPending={mutation.pending} />
+      : null}
   </div>;
 }

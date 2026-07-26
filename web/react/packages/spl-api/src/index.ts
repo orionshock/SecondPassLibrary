@@ -32,6 +32,7 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  addGroupMember,
   addBookToGroup,
   createGroup,
   getGroup,
@@ -40,8 +41,11 @@ export {
   listGroupMembers,
   listGroups,
   removeBookFromGroup,
+  removeGroupMember,
+  updateGroupMember,
   updateGroup,
   type BookGroupAssignment,
+  type AddGroupMemberInput,
   type CreateGroupInput,
   type GroupBooksQuery,
   type GroupMembersQuery,
@@ -49,6 +53,7 @@ export {
   type LibraryGroup,
   type LibraryGroupsQuery,
   type UpdateGroupInput,
+  type UpdateGroupMemberInput,
 } from "./groups";
 export {
   addShelfItem,
@@ -144,16 +149,13 @@ export {
   type UpdatePublicLibrarySettingsInput,
 } from "./serverSettings";
 export {
-  addUserGroupMembership,
   createUser,
   getManagedUser,
   listAssignableGroupsForUser,
+  listUserChoices,
   listUsers,
-  removeUserGroupMembership,
   resetManagedUserPassword,
   updateManagedUser,
-  updateUserGroupCurator,
-  type AddUserGroupMembershipInput,
   type AssignableGroup,
   type CreateUserInput,
   type CreateUserResult,
@@ -164,6 +166,8 @@ export {
   type ManagedUserRole,
   type UpdateManagedUserInput,
   type UserOrdering,
+  type UserChoice,
+  type UserChoicesQuery,
   type UserRoleFilter,
   type UsersListQuery,
   type UserStatusFilter,

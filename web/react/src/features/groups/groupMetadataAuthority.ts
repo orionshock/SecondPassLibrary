@@ -33,3 +33,7 @@ export function canMutateGroupBooks(
     ({ id, isCurator }) => id === group.id && isCurator,
   );
 }
+
+export function canMutateGroupMembers(user: CurrentUser): boolean {
+  return user.advancedLibraryGroupsEnabled && isAtLeastManager(user);
+}

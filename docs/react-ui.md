@@ -84,8 +84,12 @@ uses Library search with `exclude_group`; add/remove operations remain independe
 from metadata Save. Removal is confirmed because it also removes the Book from
 Group-owned Shelves. A cleanup-conflict response leaves the assigned row intact
 and is shown as a persistent section-local error. Public metadata remains owned
-by Server Settings, while Librarian+ may curate Public Books. Member mutation,
-Delete, and Group Shelves remain deferred.
+by Server Settings, while Librarian+ may curate Public Books. Manager/Owner
+sessions also receive the Group Edit Members tab, with explicit username search,
+immediate add/remove, and custom-Group curator toggles. Membership operations
+never expose or edit global roles and remain independent from metadata Save;
+Public membership does not offer curator assignment. Delete and Group Shelves
+remain deferred.
 Simple mode guards all Group routes before their Orchestrators issue API reads.
 
 `ShelvesListOrchestrator` owns `/shelves` in both simple and advanced modes.

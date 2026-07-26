@@ -77,9 +77,16 @@ export interface AssignableGroup {
   isPublicGroup: boolean;
 }
 
-export interface AddUserGroupMembershipInput {
-  groupId: string;
-  isCurator: boolean;
+export interface UserChoice {
+  profileId: string;
+  username: string;
+}
+
+export interface UserChoicesQuery {
+  q?: string;
+  excludeGroupId?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 interface ManagedUserResponse {
@@ -118,6 +125,11 @@ interface LibraryGroupResponse {
   id: string;
   name: string;
   is_public_group: boolean;
+}
+
+interface UserChoiceResponse {
+  profile_id: string;
+  username: string;
 }
 
 export async function listUsers(query: UsersListQuery = {}, client: ApiClient = apiClient): Promise<Page<ManagedUser>> {
@@ -205,45 +217,25 @@ export async function listAssignableGroupsForUser(
     .map((group) => ({ id: group.id, name: group.name, isPublicGroup: group.is_public_group }));
 }
 
-export async function addUserGroupMembership(
-  profileId: string,
-  input: AddUserGroupMembershipInput,
+export async function listUserChoices(
+  query: UserChoicesQuery = {},
   client: ApiClient = apiClient,
-): Promise<void> {
-  await client.request(`/api/v1/library/groups/${encodeURIComponent(input.groupId)}/memberships/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: profileId, is_curator: input.isCurator }),
-  });
-}
-
-export async function removeUserGroupMembership(
-  profileId: string,
-  groupId: string,
-  client: ApiClient = apiClient,
-): Promise<void> {
-  await client.request(`${membershipPath(groupId, profileId)}`, { method: "DELETE" });
-}
-
-export async function updateUserGroupCurator(
-  profileId: string,
-  groupId: string,
-  isCurator: boolean,
-  client: ApiClient = apiClient,
-): Promise<void> {
-  await client.request(`${membershipPath(groupId, profileId)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ is_curator: isCurator }),
-  });
+): Promise<Page<UserChoice>> {
+  const parameters = new URLSearchParams();
+  const search = query.q?.trim();
+  if (search) parameters.set("q", search);
+  if (query.excludeGroupId) parameters.set("exclude_group", query.excludeGroupId);
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  return toPage(
+    await client.request<ApiPage<UserChoiceResponse>>(`/api/v1/accounts/user-choices/${suffix}`),
+    ({ profile_id, username }) => ({ profileId: profile_id, username }),
+  );
 }
 
 function managedUserPath(profileId: string): string {
   return `/api/v1/accounts/users/${encodeURIComponent(profileId)}/`;
-}
-
-function membershipPath(groupId: string, profileId: string): string {
-  return `/api/v1/library/groups/${encodeURIComponent(groupId)}/memberships/${encodeURIComponent(profileId)}/`;
 }
 
 export function mapManagedUser(response: ManagedUserResponse): ManagedUser {

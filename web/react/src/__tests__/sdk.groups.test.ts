@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ApiError,
   addBookToGroup,
+  addGroupMember,
   createGroup,
   getGroup,
   listAllLibraryGroups,
@@ -10,7 +11,9 @@ import {
   listGroupMembers,
   listGroups,
   removeBookFromGroup,
+  removeGroupMember,
   updateGroup,
+  updateGroupMember,
 } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
@@ -124,6 +127,54 @@ describe("Library Groups SDK", () => {
     } };
     await expect(addBookToGroup("group", "book", client)).rejects.toMatchObject({
       fields: { bookId: ["Choose a visible Book."] },
+    });
+  });
+
+  it("uses canonical Group membership mutation contracts", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return { user: { profile_id: "profile/id", username: "reader" }, is_curator: true } as T;
+    } };
+
+    await expect(addGroupMember("group/id", { userId: "profile/id", isCurator: true }, client)).resolves.toEqual({
+      user: { profileId: "profile/id", username: "reader" }, isCurator: true,
+    });
+    await expect(updateGroupMember("group/id", "profile/id", { isCurator: false }, client)).resolves.toMatchObject({
+      user: { profileId: "profile/id" }, isCurator: true,
+    });
+    await removeGroupMember("group/id", "profile/id", client);
+
+    expect(calls).toEqual([
+      {
+        path: "/api/v1/library/groups/group%2Fid/memberships/",
+        init: {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: "profile/id", is_curator: true }),
+        },
+      },
+      {
+        path: "/api/v1/library/groups/group%2Fid/memberships/profile%2Fid/",
+        init: {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_curator: false }),
+        },
+      },
+      {
+        path: "/api/v1/library/groups/group%2Fid/memberships/profile%2Fid/",
+        init: { method: "DELETE" },
+      },
+    ]);
+  });
+
+  it("maps membership mutation fields without admitting role controls", async () => {
+    const client: ApiClient = { request: async () => {
+      throw new ApiError("Invalid.", 400, {
+        fields: { user_id: ["Choose a user."], is_curator: ["Not allowed."], role: ["Unknown field."] },
+      });
+    } };
+    await expect(addGroupMember("group", { userId: "profile", isCurator: false }, client)).rejects.toMatchObject({
+      fields: { userId: ["Choose a user."], isCurator: ["Not allowed."], role: ["Unknown field."] },
     });
   });
 

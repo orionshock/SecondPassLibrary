@@ -55,6 +55,15 @@ export interface GroupMembership {
   isCurator: boolean;
 }
 
+export interface AddGroupMemberInput {
+  userId: string;
+  isCurator: boolean;
+}
+
+export interface UpdateGroupMemberInput {
+  isCurator: boolean;
+}
+
 interface LibraryGroupResponse {
   id: string;
   name: string;
@@ -186,6 +195,53 @@ export async function listGroupMembers(
   );
 }
 
+export async function addGroupMember(
+  groupId: string,
+  input: AddGroupMemberInput,
+  client: ApiClient = apiClient,
+): Promise<GroupMembership> {
+  try {
+    return mapGroupMembership(await client.request<GroupMembershipResponse>(
+      `/api/v1/library/groups/${encodeURIComponent(groupId)}/memberships/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: input.userId, is_curator: input.isCurator }),
+      },
+    ));
+  } catch (error: unknown) {
+    throw mapMembershipError(error);
+  }
+}
+
+export async function updateGroupMember(
+  groupId: string,
+  profileId: string,
+  input: UpdateGroupMemberInput,
+  client: ApiClient = apiClient,
+): Promise<GroupMembership> {
+  try {
+    return mapGroupMembership(await client.request<GroupMembershipResponse>(
+      membershipPath(groupId, profileId),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_curator: input.isCurator }),
+      },
+    ));
+  } catch (error: unknown) {
+    throw mapMembershipError(error);
+  }
+}
+
+export async function removeGroupMember(
+  groupId: string,
+  profileId: string,
+  client: ApiClient = apiClient,
+): Promise<void> {
+  await client.request<void>(membershipPath(groupId, profileId), { method: "DELETE" });
+}
+
 export async function listAllLibraryGroups(client: ApiClient = apiClient): Promise<LibraryGroup[]> {
   return collectPaginatedResults(
     "/api/v1/library/groups/?ordering=name&page_size=200",
@@ -260,4 +316,19 @@ function mapBookAssignmentError(error: unknown): unknown {
   const fields: Record<string, string[]> = { ...originalFields, bookId: messages };
   delete fields.book_id;
   return new ApiError(error.message, error.status, { code: error.code, fields });
+}
+
+function membershipPath(groupId: string, profileId: string): string {
+  return `/api/v1/library/groups/${encodeURIComponent(groupId)}/memberships/${encodeURIComponent(profileId)}/`;
+}
+
+function mapMembershipError(error: unknown): unknown {
+  if (!(error instanceof ApiError) || !error.fields) return error;
+  const aliases: Record<string, string> = { user_id: "userId", is_curator: "isCurator" };
+  return new ApiError(error.message, error.status, {
+    code: error.code,
+    fields: Object.fromEntries(
+      Object.entries(error.fields).map(([field, messages]) => [aliases[field] ?? field, messages]),
+    ),
+  });
 }

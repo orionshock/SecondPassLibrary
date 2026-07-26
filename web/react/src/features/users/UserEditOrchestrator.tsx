@@ -1,11 +1,11 @@
 import {
-  addUserGroupMembership,
+  addGroupMember,
   getManagedUser,
   listAssignableGroupsForUser,
-  removeUserGroupMembership,
+  removeGroupMember,
   resetManagedUserPassword,
   updateManagedUser,
-  updateUserGroupCurator,
+  updateGroupMember,
   type AssignableGroup,
   type ManagedPasswordResetResult,
   type ManagedUser,
@@ -104,7 +104,7 @@ export function UserEditOrchestrator() {
     } catch (error: unknown) { setResetState({ pending: false, error: normalizeMutationError(error) }); }
   }
 
-  async function runMembershipAction(action: () => Promise<void>, success: string) {
+  async function runMembershipAction(action: () => Promise<unknown>, success: string) {
     setMembershipState({ pending: true });
     try {
       await action();
@@ -115,7 +115,7 @@ export function UserEditOrchestrator() {
 
   function removeMembership(membership: ManagedUserGroup) {
     if (!confirmGroupMembershipRemoval(membership.name)) return;
-    void runMembershipAction(() => removeUserGroupMembership(profileId, membership.id), "Membership removed.");
+    void runMembershipAction(() => removeGroupMember(membership.id, profileId), "Membership removed.");
   }
 
   if (load.loading && !user) return <div className="users-results-state" aria-busy="true">Loading user…</div>;
@@ -146,9 +146,9 @@ export function UserEditOrchestrator() {
       memberships={user.groups}
       assignableGroups={load.assignableGroups}
       state={membershipState}
-      onAdd={(groupId, isCurator) => void runMembershipAction(() => addUserGroupMembership(profileId, { groupId, isCurator }), "Membership added.")}
+      onAdd={(groupId, isCurator) => void runMembershipAction(() => addGroupMember(groupId, { userId: profileId, isCurator }), "Membership added.")}
       onRemove={removeMembership}
-      onCuratorChange={(membership, isCurator) => void runMembershipAction(() => updateUserGroupCurator(profileId, membership.id, isCurator), "Curator access saved.")}
+      onCuratorChange={(membership, isCurator) => void runMembershipAction(() => updateGroupMember(membership.id, profileId, { isCurator }), "Curator access saved.")}
     /> : null}
   </div>;
 }

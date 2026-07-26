@@ -2,15 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   ApiError,
-  addUserGroupMembership,
   createUser,
   getManagedUser,
   listAssignableGroupsForUser,
+  listUserChoices,
   listUsers,
-  removeUserGroupMembership,
   resetManagedUserPassword,
   updateManagedUser,
-  updateUserGroupCurator,
 } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
@@ -121,7 +119,7 @@ describe("users SDK", () => {
     expect(calls).toEqual(["/api/v1/accounts/users/target/reset-password/"]);
   });
 
-  it("adapts group discovery and group-scoped membership mutations", async () => {
+  it("adapts group discovery and paginated user choices", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const user = {
       profile_id: "target", username: "reader", first_name: "", last_name: "", email: "", role: "reader", is_owner: false,
@@ -135,14 +133,12 @@ describe("users SDK", () => {
         { id: "assigned", name: "Assigned", is_public_group: false },
         { id: "available", name: "Available", is_public_group: false },
       ] } as T;
-      return undefined as T;
+      return { count: 1, next: null, previous: null, results: [{ profile_id: "choice", username: "alice", email: "hidden" }] } as T;
     } };
     await expect(listAssignableGroupsForUser("target", client)).resolves.toEqual([{ id: "available", name: "Available", isPublicGroup: false }]);
-    await addUserGroupMembership("target", { groupId: "available", isCurator: true }, client);
-    await updateUserGroupCurator("target", "available", false, client);
-    await removeUserGroupMembership("target", "available", client);
-    expect(JSON.parse(String(calls[2]?.init?.body))).toEqual({ user_id: "target", is_curator: true });
-    expect(calls[3]).toMatchObject({ path: "/api/v1/library/groups/available/memberships/target/", init: { method: "PATCH" } });
-    expect(calls[4]).toMatchObject({ path: "/api/v1/library/groups/available/memberships/target/", init: { method: "DELETE" } });
+    await expect(listUserChoices({ q: " ali ", excludeGroupId: "group/id", page: 2, pageSize: 30 }, client)).resolves.toEqual({
+      items: [{ profileId: "choice", username: "alice" }], count: 1, next: null, previous: null,
+    });
+    expect(calls[2]?.path).toBe("/api/v1/accounts/user-choices/?q=ali&exclude_group=group%2Fid&page=2&page_size=30");
   });
 });
