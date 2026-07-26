@@ -87,6 +87,18 @@ describe("Library Books components", () => {
     expect(markup).toContain('href="/library/books/book%2Fid"');
   });
 
+  it("keeps compact Book rows action-free by default and accepts caller-owned actions", () => {
+    const readOnly = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent book={book} detailPath="/library/books/book" /></MemoryRouter>);
+    const actionable = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent
+      book={book}
+      detailPath="/library/books/book"
+      actions={<button type="button" aria-label="Add Visible Title">Add</button>}
+    /></MemoryRouter>);
+
+    expect(readOnly).not.toContain("Add Visible Title");
+    expect(actionable).toContain('aria-label="Add Visible Title"');
+  });
+
   it("renders loading, retryable error, empty, and standard pager states", () => {
     expect(renderList(undefined, { loading: true })).toContain("Loading books");
     expect(renderList(undefined, { error: new Error("Books unavailable") })).toContain("Retry");

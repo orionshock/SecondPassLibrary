@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import type { ReactNode } from "react";
 
 import { BookCoverComponent } from "./BookCoverComponent";
 import { BookMetadataComponent } from "./BookMetadataComponent";
@@ -17,10 +18,12 @@ export function CompactBookRowComponent({
   book,
   detailPath,
   navigationState,
+  actions,
 }: {
   book: CompactBookRowData;
   detailPath: string;
   navigationState?: unknown;
+  actions?: ReactNode;
 }) {
   const tags = book.catalogTags.slice(0, 6);
   const hiddenCount = Math.max(0, book.catalogTags.length - tags.length);
@@ -44,5 +47,6 @@ export function CompactBookRowComponent({
         {hiddenCount > 0 ? <span className="book-row-component__tag book-row-component__tag--more">+{hiddenCount}</span> : null}
       </div> : null}
     </div>
+    {actions ? <div className="book-row-component__actions">{actions}</div> : null}
   </article>;
 }

@@ -10,7 +10,10 @@ const user: CurrentUser = {
   username: "ada", email: "ada@example.test", firstName: "Ada", lastName: "Lovelace",
   profileId: "profile-id", role: "manager", mustChangePassword: false, isOwner: true,
   isManager: false, isLibrarian: false, isReader: false,
-  advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [],
+  advancedLibraryGroupsEnabled: true, canAccessDjangoAdmin: false, bannerText: "", groups: [
+    { id: "public", name: "Common Room", isPublicGroup: true, isCurator: false },
+    { id: "editors", name: "Editors", isPublicGroup: false, isCurator: true },
+  ],
 };
 const server: ServerInfo = { name: "Analytical Library", description: "", version: "0.1.0-dev", release: "Early Access", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
 
@@ -23,6 +26,10 @@ describe("ProfileOrchestrator", () => {
     expect(markup).toContain("Owner");
     expect(markup).toContain('href="/profile/password"');
     expect(markup).toContain("Device/API sessions");
+    expect(markup).toContain('aria-label="Public group: Common Room"');
+    expect(markup).toContain('aria-label="Group: Editors"');
+    expect(markup).toContain("Curator");
+    expect(markup).not.toContain("Remove Common Room");
     expect(markup).not.toContain('<p class="eyebrow">Profile</p>');
   });
 });

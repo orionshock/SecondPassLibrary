@@ -42,7 +42,7 @@
 
 .shelf-edit-book-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.65rem;
 }
@@ -63,6 +63,7 @@
 }
 
 .shelf-edit-unavailable-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 3.5rem;
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);

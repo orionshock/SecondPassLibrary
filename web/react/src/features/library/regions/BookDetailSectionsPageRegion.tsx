@@ -2,8 +2,8 @@ import type { BookDetail, ShelfSummary } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Badge, ErrorPanel } from "../../../components/ui";
+import { ErrorPanel } from "../../../components/ui";
+import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
 import { BookIdentifierListComponent } from "../components/BookIdentifierListComponent";
 import { formatBookFileSize, formatBookPublishedDate } from "../bookDetailPresentation";
 
@@ -126,10 +126,7 @@ function BookDetailShelvesSection({ state, shelfNavigationState, onRetry }: {
           ? <span>Shared by @{shelf.ownerUser.username}</span>
           : null}
         {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
-        {shelf.ownerType === "group" && shelf.ownerGroup ? <span><Badge tone={shelf.ownerGroup.isPublicGroup ? "success" : "default"}>
-          <MaterialIcon name={shelf.ownerGroup.isPublicGroup ? "public" : "group"} size={15} />
-          {shelf.ownerGroup.name}
-        </Badge></span> : null}
+        {shelf.ownerType === "group" && shelf.ownerGroup ? <GroupBadgeComponent name={shelf.ownerGroup.name} isPublicGroup={shelf.ownerGroup.isPublicGroup} /> : null}
         <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
       </div>
     </li>)}
@@ -140,10 +137,7 @@ function BookDetailGroupsSection({ book }: { book: BookDetail }) {
   if (book.groups.length === 0) return <p className="muted">No visible groups.</p>;
   return <ul className="book-detail-sections-region__groups">
     {book.groups.map((group) => <li key={group.id} title={group.description || undefined}>
-      <Badge tone={group.isPublicGroup ? "success" : "default"}>
-        {group.isPublicGroup ? <MaterialIcon name="public" size={15} /> : null}
-        {group.name}
-      </Badge>
+      <GroupBadgeComponent name={group.name} isPublicGroup={group.isPublicGroup} />
     </li>)}
   </ul>;
 }

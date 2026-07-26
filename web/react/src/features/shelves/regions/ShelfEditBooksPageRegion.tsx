@@ -79,12 +79,12 @@ function VisibleShelfItemRow({ item, shelfId, shelfName, canMoveUp, canMoveDown,
       book={item.book}
       detailPath={`/library/books/${encodeURIComponent(item.book.id)}`}
       navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(shelfId, shelfName, item.book.title))}
+      actions={<>
+        <IconButton type="button" aria-label={`Move ${item.book.title} up`} title="Move up" disabled={disabled || !canMoveUp} onClick={() => onMove(item.id, "up")}><MaterialIcon name="arrow_upward" /></IconButton>
+        <IconButton type="button" aria-label={`Move ${item.book.title} down`} title="Move down" disabled={disabled || !canMoveDown} onClick={() => onMove(item.id, "down")}><MaterialIcon name="arrow_downward" /></IconButton>
+        <RemoveIconButton type="button" label={`Remove ${item.book.title} from shelf`} disabled={disabled} title={removing ? "Removing" : "Remove from shelf"} onClick={() => onRemove(item)} />
+      </>}
     />
-    <div className="shelf-edit-item-actions">
-      <IconButton type="button" aria-label={`Move ${item.book.title} up`} title="Move up" disabled={disabled || !canMoveUp} onClick={() => onMove(item.id, "up")}><MaterialIcon name="arrow_upward" /></IconButton>
-      <IconButton type="button" aria-label={`Move ${item.book.title} down`} title="Move down" disabled={disabled || !canMoveDown} onClick={() => onMove(item.id, "down")}><MaterialIcon name="arrow_downward" /></IconButton>
-      <RemoveIconButton type="button" label={`Remove ${item.book.title} from shelf`} disabled={disabled} title={removing ? "Removing" : "Remove from shelf"} onClick={() => onRemove(item)} />
-    </div>
   </div>;
 }
 

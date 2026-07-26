@@ -91,8 +91,13 @@ This is the running list of cross-page presentation and interaction rules that a
 ## Destructive collection actions
 
 - Use the shared `RemoveIconButton` for remove, revoke, detach, and delete actions presented as compact row/list controls.
-- It owns the Material Symbols `remove_circle` token, danger styling, tooltip, and accessible label. Do not recreate this button with ad hoc icon spans or local styles.
+- It owns the Material Symbols `delete` token, danger styling, tooltip, and accessible label. Do not recreate this button with ad hoc icon spans or local styles.
 - The calling branch still owns confirmation and the actual operation; the shared button remains server-blind.
+
+## Group identity
+
+- Group identity pills use the shared structural `GroupBadgeComponent`. Public/Common Room receives the green Public treatment; ordinary groups receive the neutral group treatment.
+- Curator and membership state remain separate status badges. The group identity component has no permission or mutation behavior.
 
 ## Form actions
 

@@ -2,11 +2,11 @@ import type { AssignableGroup, ManagedUserGroup } from "@second-pass/spl-api";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
-import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { Badge, Button } from "../../../components/ui";
+import { Button } from "../../../components/ui";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
 
 export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, state, onAdd, onRemove, onCuratorChange }: {
   memberships: readonly ManagedUserGroup[];
@@ -35,10 +35,7 @@ export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, 
         return <div className="user-membership-row" key={membership.id}>
           <div className="user-membership-left">
             <RemoveIconButton label={`Remove ${membership.name}`} disabled={!removeEnabled} onClick={() => onRemove(membership)} />
-            <Badge tone={membership.isPublicGroup ? "success" : "default"}>
-              {membership.isPublicGroup ? <MaterialIcon name="public" size={15} /> : null}
-              {membership.name}
-            </Badge>
+            <GroupBadgeComponent name={membership.name} isPublicGroup={membership.isPublicGroup} />
           </div>
           <div className="user-membership-curator">
             {membership.isPublicGroup

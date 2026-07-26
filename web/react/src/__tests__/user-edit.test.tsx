@@ -64,8 +64,8 @@ describe("User Edit", () => {
     expect(confirmGroupMembershipRemoval("Book Club", vi.fn(() => false))).toBe(false);
     const markup = renderToStaticMarkup(<MemoryRouter><UserGroupMembershipsPageRegion memberships={target.groups} assignableGroups={[{ id: "new", name: "New Group", isPublicGroup: false }]} state={{ pending: false }} onAdd={vi.fn()} onRemove={vi.fn()} onCuratorChange={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain("Public Group");
-    expect(markup).toContain('class="badge badge--success"');
-    expect(markup).toContain(">public</span>");
+    expect(markup).toContain('aria-label="Public group: Common Room"');
+    expect(markup).toContain('aria-label="Group: Book Club"');
     expect(markup).toContain("Only Librarians/Managers may Curate the Public Group");
     expect(markup).toContain('aria-label="Remove Common Room"');
     expect(markup).toContain('aria-label="Remove Book Club"');

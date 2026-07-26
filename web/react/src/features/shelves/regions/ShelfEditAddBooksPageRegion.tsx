@@ -42,16 +42,15 @@ export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, search, page, 
     {page ? <div className="shelf-edit-candidates" aria-busy={loading}>
       {error ? <div className="shelf-edit-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
       {page.items.length === 0 ? <p className="muted">No matching books.</p> : <div className="shelf-edit-book-rows">
-        {page.items.map((book) => <div className="shelf-edit-book-row" key={book.id}>
-          <CompactBookRowComponent
+        {page.items.map((book) => <CompactBookRowComponent
+            key={book.id}
             book={book}
             detailPath={`/library/books/${encodeURIComponent(book.id)}`}
             navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(shelfId, shelfName, book.title))}
-          />
-          <Button type="button" disabled={controlsDisabled || Boolean(pendingBookId)} onClick={() => onAdd(book.id)}>
-            {pendingBookId === book.id ? "Adding..." : "Add"}
-          </Button>
-        </div>)}
+            actions={<Button type="button" disabled={controlsDisabled || Boolean(pendingBookId)} onClick={() => onAdd(book.id)}>
+              {pendingBookId === book.id ? "Adding..." : "Add"}
+            </Button>}
+          />)}
       </div>}
       <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
     </div> : null}
