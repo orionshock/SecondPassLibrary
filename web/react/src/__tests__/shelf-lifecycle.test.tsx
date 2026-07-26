@@ -1,9 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { Link, MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, LibraryGroup, ShelfEditorItemsPage, ShelfSummary } from "@second-pass/spl-api";
-import { ShelfSummaryRowComponent } from "../shared/shelves/ShelfSummaryRowComponent";
 import {
   createShelfInputFromDraft,
   emptyShelfDraft,
@@ -133,12 +132,6 @@ describe("Shelf lifecycle contracts", () => {
     /></MemoryRouter>);
     expect(editableHeader).toContain('href="/shelves/shelf/edit"');
     expect(lockedHeader).not.toContain('href="/shelves/shelf/edit"');
-
-    const row = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
-      shelf={personalShelf} detailPath="/shelves/shelf" previewBooks={[]}
-      actions={<Link to="/shelves/shelf/edit">Edit</Link>}
-    /></MemoryRouter>);
-    expect(row).toContain('href="/shelves/shelf/edit"');
 
     const region = renderToStaticMarkup(<ShelfDetailsEditPageRegion
       mode="edit" shelf={groupShelf} draft={shelfDraftFromSummary(groupShelf)}

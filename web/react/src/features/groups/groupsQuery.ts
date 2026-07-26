@@ -128,6 +128,7 @@ export function groupShelvesSdkQuery(groupId: string, state: GroupDetailUrlState
     scope: "group",
     ownerGroupId: groupId,
     ordering: "name",
+    includePreviewBooks: true,
     page: state.page,
     pageSize: state.pageSize,
   };

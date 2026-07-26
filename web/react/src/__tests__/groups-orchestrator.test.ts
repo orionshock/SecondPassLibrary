@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError, type LibraryGroupsQuery, type Page } from "@second-pass/spl-api";
 import { loadPageWithRecovery } from "../app/routing/pageRecovery";
-import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback, groupShelfBreadcrumbs, groupsListBreadcrumbFallback } from "../features/groups/groupsBreadcrumbs";
+import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback, groupShelfBookBreadcrumbs, groupShelfBreadcrumbs, groupsListBreadcrumbFallback } from "../features/groups/groupsBreadcrumbs";
 
 describe("Groups orchestrator contracts", () => {
   it("uses no base breadcrumb and a canonical detail and Book trail", () => {
@@ -21,6 +21,15 @@ describe("Groups orchestrator contracts", () => {
       { label: "Readers", to: "/groups/group%2Fid" },
       { label: "Shelves", to: "/groups/group%2Fid?tab=shelves" },
       { label: "Favorites" },
+    ]);
+    expect(groupShelfBookBreadcrumbs(
+      "group/id", "Readers", "shelf/id", "Favorites", "Book", "/groups/group%2Fid?tab=shelves",
+    )).toEqual([
+      { label: "Groups", to: "/groups", resetTrail: true },
+      { label: "Readers", to: "/groups/group%2Fid" },
+      { label: "Shelves", to: "/groups/group%2Fid?tab=shelves" },
+      { label: "Favorites", to: "/shelves/shelf%2Fid" },
+      { label: "Book" },
     ]);
   });
 

@@ -136,6 +136,7 @@ describe("Groups read-only regions", () => {
       id: "shelf/id", name: "Favorites", description: "Shared picks", ownerType: "group",
       ownerUser: null, ownerGroup: { id: group.id, name: group.name, isPublicGroup: true },
       visibility: "private", itemCount: 3, canEdit: true,
+      previewBooks: [{ id: book.id, title: book.title, coverUrl: book.coverUrl }],
     };
     const props = {
       groupId: group.id, groupName: group.name, groupPath: "/groups/group?tab=shelves",
@@ -148,7 +149,9 @@ describe("Groups read-only regions", () => {
     /></MemoryRouter>);
     expect(markup).toContain('href="/shelves/shelf%2Fid"');
     expect(markup).toContain("Favorites");
-    expect(markup).toContain("3 items");
+    expect(markup).toContain("Shared picks");
+    expect(markup).toContain('aria-label="Open Visible Book"');
+    expect(markup).not.toContain('aria-label="Public group: Common Room"');
     expect(markup).not.toContain('aria-label="Edit');
     expect(markup).not.toContain('aria-label="Delete');
     expect(markup).not.toContain("<form");

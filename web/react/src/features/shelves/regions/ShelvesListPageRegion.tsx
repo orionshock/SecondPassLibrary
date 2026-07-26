@@ -7,7 +7,7 @@ import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPrevie
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
-import { shelfEditBreadcrumbs, shelfEditPath, shelfNewBreadcrumbs, shelfNewPath } from "../shelfLifecycle";
+import { shelfNewBreadcrumbs, shelfNewPath } from "../shelfLifecycle";
 import { ShelfScopesPageRegion } from "./ShelfScopesPageRegion";
 
 export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, ordering, loading, error, onScopeChange, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
@@ -66,15 +66,12 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, loading, error,
         }));
         return <ShelfSummaryRowComponent
           key={shelf.id}
-          shelf={shelf}
+          name={shelf.name}
+          description={shelf.description}
           detailPath={detailPath}
           navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
           previewBooks={previewBooks}
-          actions={shelf.canEdit ? <Link
-            className="shelf-summary-row-component__edit"
-            to={shelfEditPath(shelf.id)}
-            state={breadcrumbNavigationState(shelfEditBreadcrumbs(shelf.id, shelf.name))}
-          >Edit</Link> : undefined}
+          group={scope === "group" ? shelf.ownerGroup ?? undefined : undefined}
         />;
       })}
     </div>}

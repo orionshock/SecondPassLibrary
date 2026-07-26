@@ -103,3 +103,19 @@ export function groupShelfBreadcrumbs(
     { label: shelfName },
   ];
 }
+
+export function groupShelfBookBreadcrumbs(
+  groupId: string,
+  groupName: string,
+  shelfId: string,
+  shelfName: string,
+  bookTitle: string,
+  shelvesPath: string,
+): BreadcrumbItem[] {
+  const trail = groupShelfBreadcrumbs(groupId, groupName, shelfName, shelvesPath);
+  trail[trail.length - 1] = {
+    label: shelfName,
+    to: `/shelves/${encodeURIComponent(shelfId)}`,
+  };
+  return [...trail, { label: bookTitle }];
+}

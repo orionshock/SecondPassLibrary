@@ -20,20 +20,13 @@
 
 .shelf-summary-row-component__identity { min-width: 0; }
 
-.shelf-summary-row-component__title,
-.shelf-summary-row-component__facts {
+.shelf-summary-row-component__title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .shelf-summary-row-component__title { gap: 0.4rem; }
-
-.shelf-summary-row-component__facts {
-  gap: 0.35rem 0.8rem;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
 
 .shelf-summary-row-component h2 {
   margin: 0;

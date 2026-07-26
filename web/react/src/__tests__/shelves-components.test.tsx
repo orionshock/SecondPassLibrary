@@ -3,7 +3,6 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CompactBook, ShelfItem, ShelfSummary } from "@second-pass/spl-api";
-import { ShelfSummaryRowComponent } from "../shared/shelves/ShelfSummaryRowComponent";
 import { ShelfHeaderPageRegion } from "../features/shelves/regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "../features/shelves/regions/ShelfItemsPageRegion";
 import { ShelvesListPageRegion } from "../features/shelves/regions/ShelvesListPageRegion";
@@ -19,6 +18,7 @@ const personalShelf: ShelfSummary = {
   id: "shelf", name: "Favorites", description: "<b>Reader picks</b>", ownerType: "user",
   ownerUser: { profileId: "profile", username: "reader" }, ownerGroup: null,
   visibility: "listed", itemCount: 1, canEdit: false,
+  previewBooks: [{ id: book.id, title: book.title, coverUrl: book.coverUrl }],
 };
 const groupShelf: ShelfSummary = {
   ...personalShelf,
@@ -43,27 +43,12 @@ describe("Shelves read-only regions", () => {
     expect(markup).not.toContain(">All<");
   });
 
-  it("renders ownership, visibility, count, and Public facts from the Shelf response", () => {
-    const personal = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent shelf={personalShelf} detailPath="/shelves/shelf" previewBooks={[]} /></MemoryRouter>);
-    expect(personal).toContain('href="/shelves/shelf"');
-    expect(personal).toContain("Shared by @reader");
-    expect(personal).toContain("Listed");
-    expect(personal).toContain("1 item");
-    expect(personal).toContain("&lt;b&gt;Reader picks&lt;/b&gt;");
-
-    const group = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent shelf={groupShelf} detailPath="/shelves/group-shelf" previewBooks={[]} /></MemoryRouter>);
-    expect(group).toContain("Common Room");
-    expect(group).toContain("Public");
-    expect(group).not.toContain("Private");
-    for (const absent of ["New Shelf", "Edit", "Delete"]) expect(group).not.toContain(absent);
-  });
-
-  it("keeps the Shelves list wired to Shelf Detail links", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><ShelvesListPageRegion
-      page={{ items: [personalShelf], count: 1, next: null, previous: null }}
+  it("renders Shelf list identity, previews, and optional Group treatment without inline Edit", () => {
+    const renderList = (shelf: ShelfSummary, scope: "personal" | "group") => renderToStaticMarkup(<MemoryRouter><ShelvesListPageRegion
+      page={{ items: [shelf], count: 1, next: null, previous: null }}
       pageNumber={1}
       pageSize={20}
-      scope="personal"
+      scope={scope}
       ordering="name"
       loading={false}
       onScopeChange={vi.fn()}
@@ -72,8 +57,16 @@ describe("Shelves read-only regions", () => {
       onPageSizeChange={vi.fn()}
       onRetry={vi.fn()}
     /></MemoryRouter>);
-    expect(markup).toContain('href="/shelves/shelf"');
-    expect(markup).toContain("Favorites");
+    const personal = renderList(personalShelf, "personal");
+    expect(personal).toContain('href="/shelves/shelf"');
+    expect(personal).toContain("Favorites");
+    expect(personal).toContain("&lt;b&gt;Reader picks&lt;/b&gt;");
+    expect(personal).toContain('aria-label="Open Visible Book"');
+    expect(personal).not.toContain('href="/shelves/shelf/edit"');
+
+    const group = renderList(groupShelf, "group");
+    expect(group).toContain('aria-label="Public group: Common Room"');
+    expect(group).not.toContain('href="/shelves/group-shelf/edit"');
   });
 
   it("renders a read-only detail header and compact Book rows", () => {
