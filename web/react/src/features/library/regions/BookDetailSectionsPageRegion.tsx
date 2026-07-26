@@ -13,15 +13,6 @@ export type BookShelvesState =
   | { status: "ready"; shelves: ShelfSummary[] }
   | { status: "error"; error: Error };
 
-export function shouldLoadBookShelves(
-  activeSection: BookDetailSection,
-  state: BookShelvesState,
-  trigger: "activate" | "retry" = "activate",
-): boolean {
-  if (activeSection !== "shelves") return false;
-  return trigger === "retry" ? state.status === "error" : state.status === "idle";
-}
-
 export function BookDetailSectionsPageRegion({
   book,
   advancedGroupsEnabled,
@@ -46,7 +37,7 @@ export function BookDetailSectionsPageRegion({
   ];
 
   useEffect(() => {
-    if (shouldLoadBookShelves(activeSection, shelvesState)) onLoadShelves?.();
+    if (activeSection === "shelves" && shelvesState.status === "idle") onLoadShelves?.();
   }, [activeSection, onLoadShelves, shelvesState]);
 
   return <BookDetailSectionsComponent

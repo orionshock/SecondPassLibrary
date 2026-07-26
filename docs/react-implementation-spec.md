@@ -668,12 +668,12 @@ Setup, login, logout, and gated Admin remain Django surfaces.
 | Marginalia browse/detail | Sufficient | None | Add Sessions, progress, annotations, activity summary operations. |
 | Marginalia import | Sufficient | None | Add preview/unmatched/apply multipart and download operations. |
 | Marginalia export | File endpoints sufficient; selection inventory awkward | None | SDK may aggregate paginated Sessions; consider a focused grouped selection-summary read endpoint before implementation. |
-| Library browse | Sufficient | None | Add `library.ts` compact list/query mapping. Do not add group data to compact rows. |
-| Book Detail/Edit | Sufficient | None | Add detail/PATCH/download metadata/cover/group/shelf adapters. SDK should expose safe file facts while React chooses not to foreground checksum. |
+| Library browse | Sufficient | Implemented in `library.ts` | Compact list/query mapping is built; compact rows intentionally exclude group and detail-only data. |
+| Book Detail/Edit | Sufficient | Detail/PATCH/download/cover/group and shelf-read adapters implemented | Full shelf lifecycle and EPUB/file editing remain deferred. |
 | Authors/Series | Sufficient | Browse plus lifecycle detail/create/update implemented | Delete remains deliberately deferred; normal Librarian+ session reads are catalog-wide. |
-| Catalog Tags | Sufficient | None | Add read facets; mutate relationships only through Book PATCH. |
-| Groups | Sufficient | User-edit contains narrow membership calls | Add full `groups.ts`; move/reuse API operations rather than duplicating URLs. |
-| Shelves | Sufficient | None | Add `shelves.ts` lifecycle, list scopes, items, reorder, previews. |
+| Catalog Tags | Sufficient | Read facets and Book PATCH mapping implemented | Relationships remain mutated only through Book PATCH. |
+| Groups | Sufficient | Book Edit list/assignment subset plus narrow User membership calls | Extend `groups.ts` for the full branch; reuse existing operations rather than duplicating URLs. |
+| Shelves | Sufficient | Book Detail read-only filter/all-page subset implemented | Extend `shelves.ts` with lifecycle, list scopes, items, reorder, and previews for the full branch. |
 | Users/Profile/Imports/Server | Sufficient and implemented | Existing modules | No audit-driven server changes. |
 
 Potential response-shape improvement, not a blocker: Marginalia selective export
@@ -693,9 +693,9 @@ backend behavior gap blocks Library, Groups, or Shelves.
 | `BookMetadataComponent` | Built with Library | Shared canonical icon metadata for Library and future Groups/Shelves/Marginalia use. |
 | `BookRowComponent` | Built under Library | Compact cover/title/metadata/tag composition with no API or permission knowledge. |
 | `CatalogTagRailPageRegion` | Built under Library | Library-owned facet disclosure, counts, selection, and independent failure state. |
-| `CoverPreviewStripComponent` | Build with Library | Authors, Series, Groups, Shelves, Dashboard. Likely shared once two consumers land. |
+| `CoverPreviewStripComponent` | Built with Library | Authors and Series use it now; Groups, Shelves, and Dashboard can reuse it. |
 | `SearchFilterToolbarComponent` | Wait | Toolbars differ substantially; reuse small controls/state helpers first. |
-| `ModalDialogComponent` | Build with Book Edit | Cover modal establishes accessible dialog behavior; promote when another modal uses it. |
+| `ModalDialogComponent` | Wait | Book Edit currently owns a feature-local cover dialog; promote a shared primitive only when another modal needs it. |
 | `DangerZoneComponent` | Promote soon | Group, Shelf, Author, Series deletion with feature-owned copy/confirmation. |
 | `MembershipRowComponent` | Wait | User and Group membership surfaces have opposite context and authority; share badges/help, not the whole row yet. |
 | `ShelfPreviewComponent` | Build with Shelves | Shelf cards and Group shelf tabs; promote after both shapes stabilize. |
@@ -716,14 +716,15 @@ have materially different contracts.
    axes, selected contexts, and Librarian+ create/edit are built; Delete remains
    deferred.
 3. **Book Detail (complete):** read-only hero, metadata, safe EPUB download,
-   repair-state handling, and contextual breadcrumbs.
+   repair-state handling, contextual breadcrumbs, and visible shelves containing
+   the Book.
 4. **Book Edit (current scope complete):** bibliographic, relationship,
    identifier, advanced-mode Library Group assignment, and independent cover
    replace/clear workflows are built. File/EPUB editing remains deferred.
-5. **Shelves:** SDK, scoped list/create/view/edit. This reuses Book rows and
-   broad Library search.
-6. **Groups:** SDK, list/create/view/edit. This reuses Book rows, shelf previews,
+5. **Groups:** SDK, list/create/view/edit. This reuses Book rows, shelf previews,
    badges, tabs, pagers, and broad search.
+6. **Shelves:** extend the existing read-only SDK subset with scoped
+   list/create/view/edit. This reuses Book rows and broad Library search.
 7. **Dashboard:** recent Sessions plus action cards after destination routes
    exist.
 8. **My Marginalia:** browse/detail, export, then preview/apply import. Resolve
@@ -731,8 +732,9 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Continue with Shelves or Groups while keeping deferred Delete and cover work as
-separate mutation boundaries.
+Continue with Groups, then Shelves. Keep deferred entity deletion,
+EPUB/file editing, shelf mutation from Book surfaces, and Reader/Open integration
+as separate future boundaries.
 
 ## Focused test strategy
 

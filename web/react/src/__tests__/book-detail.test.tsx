@@ -15,10 +15,7 @@ import {
   formatBookPublishedDate,
 } from "../features/library/bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "../features/library/regions/BookDetailHeroPageRegion";
-import {
-  BookDetailSectionsPageRegion,
-  shouldLoadBookShelves,
-} from "../features/library/regions/BookDetailSectionsPageRegion";
+import { BookDetailSectionsPageRegion } from "../features/library/regions/BookDetailSectionsPageRegion";
 
 const book: BookDetail = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -104,15 +101,6 @@ describe("Book Detail presentation", () => {
     expect(markup).toContain("Sci-Fi Stack");
     expect(markup).toContain("Common Room");
     expect(markup).not.toContain('href="/shelves/');
-  });
-
-  it("loads shelves only on first activation and requires explicit retry after an error", () => {
-    expect(shouldLoadBookShelves("shelves", { status: "idle" })).toBe(true);
-    expect(shouldLoadBookShelves("groups", { status: "idle" })).toBe(false);
-    expect(shouldLoadBookShelves("shelves", { status: "loading" })).toBe(false);
-    expect(shouldLoadBookShelves("shelves", { status: "ready", shelves: [] })).toBe(false);
-    expect(shouldLoadBookShelves("shelves", { status: "error", error: new Error("failed") })).toBe(false);
-    expect(shouldLoadBookShelves("shelves", { status: "error", error: new Error("failed") }, "retry")).toBe(true);
   });
 
   it("uses a null file projection to show repair state and suppress download", () => {
