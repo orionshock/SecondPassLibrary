@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from library.api_access import LibraryBearerReadMixin
@@ -31,6 +34,8 @@ from library.catalog.views import book_row_queryset
 from library.groups.api_access import groups_available_via_api
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
+from shelves.models import Shelf
+from shelves.querysets import filter_readable_shelves, with_visible_item_count
 
 
 class GroupBrowseMixin(LibraryBearerReadMixin):
@@ -53,9 +58,44 @@ class GroupBookListView(GroupBrowseMixin, ListAPIView):
     serializer_class = BookListSerializer
 
     def get_queryset(self):
-        queryset = book_row_queryset(self.visible_group_books())
+        group = self.get_group()
+        queryset = book_row_queryset(
+            visible_books_for_group(self.request.user, group, cached=True)
+        )
+        queryset = _exclude_group_shelf_books(
+            queryset,
+            user=self.request.user,
+            group=group,
+            raw_shelf_id=self.request.query_params.get("exclude_shelf"),
+        )
         queryset = apply_book_filters(queryset, self.request.query_params)
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
+
+
+def _exclude_group_shelf_books(queryset, *, user, group, raw_shelf_id):
+    if raw_shelf_id is None:
+        return queryset
+
+    try:
+        shelf_id = UUID(str(raw_shelf_id).strip())
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValidationError({"exclude_shelf": "Must be a valid UUID."}) from exc
+
+    shelves = with_visible_item_count(
+        Shelf.objects.select_related("owner_group", "owner_user"),
+        user=user,
+    )
+    shelf = filter_readable_shelves(shelves, user=user).filter(pk=shelf_id).first()
+    if shelf is None:
+        raise Http404
+    if (
+        shelf.owner_type != Shelf.OWNER_TYPE_GROUP
+        or shelf.owner_group_id != group.id
+    ):
+        raise ValidationError(
+            {"exclude_shelf": "Shelf must be owned by the requested group."}
+        )
+    return queryset.exclude(shelf_items__shelf=shelf)
 
 
 class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):

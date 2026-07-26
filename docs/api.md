@@ -371,6 +371,8 @@ Shelf payload notes:
   group-owned shelves remain readable when empty because their visibility is
   determined by group scope rather than item count. Session and bearer reads
   use the same policy.
+- Shelf create returns the same complete Shelf summary shape as list/detail,
+  including `item_count: 0` for the new empty shelf.
 - User-owned shelves include `owner_user` as a compact user object with `profile_id` and `username`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
@@ -387,10 +389,20 @@ Shelf payload notes:
 - Group-owned Shelf creation requires `owner_group`; omission returns a
   structured `owner_group` field error. Malformed group ids return `400`, while
   missing or inaccessible groups return `404`. A visible group for which the
-  caller lacks creation authority remains a permission error.
+  caller lacks creation authority remains a permission error. User-owned Shelf
+  creation rejects a supplied `owner_group` with a structured field error.
 - Shelf item add requires `book` as a UUID. Malformed values return `400`.
   Valid missing Books and Books outside the Shelf editor's eligible Book scope
   both return `404`; lack of authority over the Shelf itself remains `403`.
+  Adding a Book already on the Shelf returns `400` under the `book` field.
+- Malformed Shelf item ids on PATCH/DELETE return the same bounded `404` as
+  missing or unavailable item ids.
+- Public/Common Room group shelves use the ordinary group-shelf contract in
+  simple and advanced modes. In simple mode they remain manageable by
+  Librarian, Manager, and Owner sessions; Public has no Reader curators.
+- Deleting a Shelf returns `204` and cascades only its ShelfItem rows. It does
+  not delete Books, EPUB/cover assets, reading sessions, annotations, or Book
+  group assignments.
 - Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
 - Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
 - Shelf item list ordering:
@@ -538,6 +550,13 @@ Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 - `GET /api/v1/library/groups/<group_id>/books/`
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
+
+The Group Books GET endpoint accepts `exclude_shelf=<shelf_id>` for Add Books
+candidate discovery. The Shelf must be readable and owned by the path Group.
+Malformed ids return a structured `400`; missing or inaccessible Shelves return
+`404`; a readable Shelf owned by another Group (or a user) returns a structured
+`exclude_shelf` field error. The exclusion composes with normal Group Book
+search, tag/author/series/publisher filters, ordering, and pagination.
 
 Client API bearer token support (read-only allow-list):
 

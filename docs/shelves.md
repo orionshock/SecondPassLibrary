@@ -85,9 +85,13 @@ EPUB files, reading sessions, or annotations.
 Shelf writes are strict: unknown create/update/item fields return structured
 validation errors. Shelf names are limited to 255 characters, Group-owned
 creation requires `owner_group`, metadata updates use PATCH, and PUT is not
-supported. Adding an item uses the `book` UUID field; missing or inaccessible
-Books collapse to the same not-found response after Shelf edit authority is
-established.
+supported. User-owned creation rejects `owner_group` rather than silently
+ignoring the contradictory owner. Create returns the complete Shelf summary,
+including viewer-visible `item_count` (`0` for a new shelf). Adding an item uses
+the `book` UUID field; missing or inaccessible Books collapse to the same
+not-found response after Shelf edit authority is established. Adding a Book
+that is already present returns a structured `book` field error. Malformed
+Shelf item ids collapse to the same `404` as missing items.
 
 ## User-owned shelf item retention
 
@@ -142,10 +146,15 @@ Shelves tabs. Empty Personal and Group Shelves rows remain; empty/hidden-only
 Shared by Others rows do not appear.
 
 Shelf View presents visible Books and safe shelf description/ownership context.
-Shelf Edit uses Details, Books, and Add Books tabs. Add Books uses broad library
-Book search with `exclude_shelf` so already-contained Books are suppressed by
-the server. Delete Shelf uses a collapsed disclosure and a final browser
-confirmation.
+Shelf Edit uses Details, Books, and Add Books tabs. Personal Shelf candidates
+use broad library Book search with `exclude_shelf`. Group Shelf candidates use
+the owning Group's Book endpoint with `exclude_shelf`, so candidates remain
+group-eligible while already-contained Books are suppressed by the server.
+Delete Shelf uses a collapsed disclosure and a final browser confirmation.
+
+User-owned shelves may retain unavailable items. Their stored positions remain
+intact; mutation UI must not silently collapse those positions or expose hidden
+Book metadata. Reorder UI for this locked-placeholder model remains deferred.
 
 Book Detail/Edit may surface shelves containing the Book, and Group View/Edit
 may surface group-owned shelves. Those relationships do not change shelf or

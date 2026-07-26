@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from rest_framework import status
 
+from library.cover_services import set_book_cover_from_bytes
 from library.models import (
     Author,
     BookAuthor,
@@ -14,6 +15,8 @@ from library.models import (
     CatalogTag,
     Series,
 )
+from reading.models import Annotation, ReadingSession
+from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import assert_response, response_data_dict, response_data_list
 
@@ -258,3 +261,113 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
             )
         )
         self.assertEqual(valid.status_code, status.HTTP_201_CREATED)
+
+    def test_user_owned_create_rejects_owner_group(self):
+        self.client.login(username="reader", password="pw")
+        response = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Contradictory shelf",
+                    "owner_type": "user",
+                    "owner_group": str(self.group.id),
+                },
+                format="json",
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("owner_group", response_data_dict(response))
+
+    def test_malformed_item_ids_return_not_found(self):
+        self.client.login(username="reader", password="pw")
+        shelf_id = self._create_personal_shelf()
+
+        requests = (
+            ("patch", self.client.patch, {"data": {"move": "up"}, "format": "json"}),
+            ("delete", self.client.delete, {}),
+        )
+        for name, method, kwargs in requests:
+            with self.subTest(method=name):
+                response = assert_response(
+                    method(
+                        f"/api/v1/shelves/{shelf_id}/items/not-a-uuid/",
+                        **kwargs,
+                    )
+                )
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                self.assertEqual(response_data_dict(response), {"detail": "Not found."})
+
+    def test_duplicate_item_add_returns_book_field_error(self):
+        self.client.login(username="reader", password="pw")
+        shelf_id = self._create_personal_shelf()
+        payload = {"book": str(self.book_in_group.id)}
+        first = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/", data=payload, format="json"
+            )
+        )
+        duplicate = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/", data=payload, format="json"
+            )
+        )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("book", response_data_dict(duplicate))
+
+    def test_delete_removes_only_shelf_and_items(self):
+        self.client.login(username="owner", password="pw")
+        set_book_cover_from_bytes(
+            book=self.book_in_group,
+            data=self._png_bytes(),
+            source="manual",
+        )
+        self.book_in_group.refresh_from_db()
+        book_file_name = self.book_in_group.book_file.name
+        cover_file_name = self.book_in_group.cover_file.name
+        session = ReadingSession.objects.create(
+            user=self.reader,
+            book=self.book_in_group,
+            name="Preserved session",
+        )
+        annotation = Annotation.objects.create(
+            session=session,
+            book=self.book_in_group,
+            selector_value="epubcfi(/6/2)",
+        )
+        create = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Disposable shelf",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                },
+                format="json",
+            )
+        )
+        shelf_id = response_data_dict(create)["id"]
+        added = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+            )
+        )
+        item_id = response_data_dict(added)["id"]
+
+        deleted = assert_response(self.client.delete(f"/api/v1/shelves/{shelf_id}/"))
+
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Shelf.objects.filter(pk=shelf_id).exists())
+        self.assertFalse(ShelfItem.objects.filter(pk=item_id).exists())
+        self.assertTrue(self.book_in_group.__class__.objects.filter(pk=self.book_in_group.pk).exists())
+        self.assertTrue(
+            self.book_in_group.group_assignments.filter(group=self.group).exists()
+        )
+        self.assertTrue(ReadingSession.objects.filter(pk=session.pk).exists())
+        self.assertTrue(Annotation.objects.filter(pk=annotation.pk).exists())
+        self.assertTrue(self.book_in_group.book_file.storage.exists(book_file_name))
+        self.assertTrue(self.book_in_group.cover_file.storage.exists(cover_file_name))

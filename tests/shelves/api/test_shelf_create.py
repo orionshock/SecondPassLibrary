@@ -96,6 +96,33 @@ class ShelfCreateEndpointTests(BaseShelvesAPITest):
         self.assertEqual(payload["owner_type"], "group")
         self.assertEqual(payload_dict(payload, "owner_group")["id"], self.public.id)
         self.assertEqual(payload["visibility"], "private")
+        self.assertEqual(payload["item_count"], 0)
+
+        shelf_id = payload["id"]
+        updated = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"description": "Updated in simple mode."},
+                format="json",
+            )
+        )
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+        added = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_public.id)},
+                format="json",
+            )
+        )
+        self.assertEqual(added.status_code, status.HTTP_201_CREATED)
+        removed = assert_response(
+            self.client.delete(
+                f"/api/v1/shelves/{shelf_id}/items/{response_data_dict(added)['id']}/"
+            )
+        )
+        self.assertEqual(removed.status_code, status.HTTP_204_NO_CONTENT)
+        deleted = assert_response(self.client.delete(f"/api/v1/shelves/{shelf_id}/"))
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
 
         self.client.logout()
         self.client.login(username="reader", password="pw")
@@ -136,6 +163,11 @@ class ShelfCreateEndpointTests(BaseShelvesAPITest):
         self.assertEqual(payload["owner_type"], "user")
         self.assertEqual(payload["visibility"], "private")
         self.assertIsNone(payload["owner_group"])
+        self.assertEqual(payload["item_count"], 0)
+        detail_payload = response_data_dict(
+            assert_response(self.client.get(f"/api/v1/shelves/{payload['id']}/"))
+        )
+        self.assertEqual(set(payload), set(detail_payload))
         self._assert_compact_user_payload(
             payload_dict(payload, "owner_user"), user=self.reader
         )

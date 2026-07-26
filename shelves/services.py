@@ -192,7 +192,7 @@ def add_book_to_shelf(actor, shelf: Shelf, book: Book, position: int | None = No
             defaults={"position": position, "added_by": actor},
         )
         if not created:
-            raise ValidationError("This book is already on the shelf.")
+            raise ValidationError({"book": "This book is already on the shelf."})
         canonicalize_shelf_positions(shelf)
         item.refresh_from_db()
         return item

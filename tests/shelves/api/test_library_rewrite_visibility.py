@@ -167,7 +167,7 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
         self.assertEqual(response.content, b"")
         self.assertFalse(ShelfItem.objects.filter(pk=item.pk).exists())
 
-    def test_non_owner_cannot_mutate_retained_unavailable_item(self):
+    def test_non_owner_cannot_discover_or_mutate_retained_unavailable_item(self):
         shelf = Shelf.objects.create(
             name="Listed owner shelf",
             owner_type=Shelf.OWNER_TYPE_USER,
@@ -195,8 +195,8 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
             self.client.delete(f"/api/v1/shelves/{shelf.id}/items/{item.id}/")
         )
 
-        self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(patch_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(ShelfItem.objects.filter(pk=item.pk).exists())
 
     def test_retained_item_reappears_when_owner_visibility_returns_before_cleanup(self):

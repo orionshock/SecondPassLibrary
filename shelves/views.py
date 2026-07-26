@@ -219,6 +219,7 @@ class ShelfViewSet(
             )
         except DjangoValidationError as exc:
             self._raise_drf_validation(exc)
+        shelf = self.get_queryset().get(pk=shelf.pk)
         out = ShelfSerializer(shelf, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -343,7 +344,7 @@ class ShelfViewSet(
 
         try:
             item = ShelfItem.objects.select_related("book").get(pk=item_id, shelf=shelf)
-        except ShelfItem.DoesNotExist as exc:
+        except (ShelfItem.DoesNotExist, DjangoValidationError, ValueError) as exc:
             raise Http404() from exc
 
         if request.method == "DELETE":

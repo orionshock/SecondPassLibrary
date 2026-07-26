@@ -14,6 +14,7 @@ from library.models import (
     LibraryGroupMembership,
     Series,
 )
+from shelves.models import Shelf, ShelfItem
 from tests.library.helpers import (
     create_catalog_book,
     response_book_counts,
@@ -162,6 +163,95 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Club Alpha"])
         self.assertIsNone(response.json()["next"])
+
+    def test_group_books_exclude_shelf_composes_with_filters_order_and_pagination(self):
+        shelf = Shelf.objects.create(
+            name="Club shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.club,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.club_alpha,
+            position=0,
+            added_by=self.reader,
+        )
+
+        response = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {
+                "exclude_shelf": str(shelf.id),
+                "q": "club",
+                "tag": self.mystery.slug,
+                "author": str(self.beta.id),
+                "series": str(self.first_series.id),
+                "publisher": "Beta House",
+                "ordering": "-title",
+                "page": 1,
+                "page_size": 1,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_titles(response), ["Club Beta"])
+
+    def test_group_books_exclude_shelf_validates_id_visibility_and_group_owner(self):
+        club_shelf = Shelf.objects.create(
+            name="Club shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.club,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=club_shelf,
+            book=self.club_alpha,
+            position=0,
+            added_by=self.reader,
+        )
+        excluded = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"exclude_shelf": str(club_shelf.id)},
+        )
+        self.assertEqual(excluded.status_code, 200)
+        self.assertNotIn("Club Alpha", response_titles(excluded))
+
+        family_shelf = Shelf.objects.create(
+            name="Family shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.family,
+            created_by=self.reader,
+        )
+        mismatch = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"exclude_shelf": str(family_shelf.id)},
+        )
+        self.assertEqual(mismatch.status_code, 400)
+        self.assertIn("exclude_shelf", mismatch.json())
+
+        malformed = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"exclude_shelf": "not-a-uuid"},
+        )
+        missing = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"exclude_shelf": "00000000-0000-0000-0000-000000000001"},
+        )
+        hidden_shelf = Shelf.objects.create(
+            name="Hidden shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.hidden,
+            created_by=self.other,
+        )
+        hidden = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"exclude_shelf": str(hidden_shelf.id)},
+        )
+
+        self.assertEqual(malformed.status_code, 400)
+        self.assertIn("exclude_shelf", malformed.json())
+        self.assertEqual(missing.status_code, 404)
+        self.assertEqual(hidden.status_code, 404)
 
     def test_group_books_first_and_subsequent_pages_use_normal_envelope(self):
         url = f"/api/v1/library/groups/{self.club.id}/books/"

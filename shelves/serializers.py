@@ -112,9 +112,13 @@ class ShelfCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
-        if attrs.get("owner_type") == Shelf.OWNER_TYPE_GROUP and not attrs.get(
-            "owner_group"
-        ):
+        owner_type = attrs.get("owner_type")
+        owner_group = attrs.get("owner_group")
+        if owner_type == Shelf.OWNER_TYPE_USER and owner_group is not None:
+            raise serializers.ValidationError(
+                {"owner_group": "This field is not valid for user-owned shelves."}
+            )
+        if owner_type == Shelf.OWNER_TYPE_GROUP and not owner_group:
             raise serializers.ValidationError(
                 {"owner_group": "This field is required for group-owned shelves."}
             )

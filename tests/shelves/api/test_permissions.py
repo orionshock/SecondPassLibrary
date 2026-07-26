@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from rest_framework import status
 
+from shelves.models import ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import (
     assert_response,
@@ -48,6 +49,11 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
         )
         self.assertEqual(created2.status_code, status.HTTP_201_CREATED)
         shelf2_id = response_data_dict(created2)["id"]
+        ShelfItem.objects.create(
+            shelf_id=shelf2_id,
+            book=self.book_public,
+            added_by=self.reader,
+        )
 
         self.client.logout()
         self.client.login(username="other", password="pw")
