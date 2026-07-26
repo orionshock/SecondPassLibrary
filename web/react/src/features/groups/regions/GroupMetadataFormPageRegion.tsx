@@ -13,6 +13,7 @@ export function GroupMetadataFormPageRegion({
   onChange,
   onSubmit,
   onCancel,
+  disabled = false,
 }: {
   mode: "new" | "edit";
   draft: GroupDraft;
@@ -21,6 +22,7 @@ export function GroupMetadataFormPageRegion({
   onChange: <K extends keyof GroupDraft>(field: K, value: GroupDraft[K]) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
+  disabled?: boolean;
 }) {
   return <form className="group-metadata-form" onSubmit={onSubmit}>
     <FormField label="Name" htmlFor="group-name" error={fieldError(state.error, "name")}>
@@ -28,7 +30,7 @@ export function GroupMetadataFormPageRegion({
         id="group-name"
         value={draft.name}
         maxLength={255}
-        disabled={!nameEditable}
+        disabled={disabled || !nameEditable}
         autoFocus={nameEditable}
         onChange={(event) => onChange("name", event.target.value)}
       />
@@ -37,6 +39,7 @@ export function GroupMetadataFormPageRegion({
       <textarea
         id="group-description"
         value={draft.description}
+        disabled={disabled}
         autoFocus={!nameEditable}
         onChange={(event) => onChange("description", event.target.value)}
       />
@@ -45,6 +48,7 @@ export function GroupMetadataFormPageRegion({
       state={state}
       submitLabel={mode === "new" ? "Create Group" : "Save Group"}
       pendingLabel="Saving..."
+      disabled={disabled}
       onCancel={onCancel}
     />
   </form>;

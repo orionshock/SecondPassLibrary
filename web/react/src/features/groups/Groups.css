@@ -241,6 +241,30 @@
 
 .group-metadata-form textarea { min-height: 12rem; }
 
+.group-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger), transparent 42%);
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--danger), transparent 93%);
+}
+
+.group-danger-zone h2,
+.group-danger-zone p { margin: 0; }
+
+.group-danger-zone h2 { font-size: 1rem; }
+
+.group-danger-zone p {
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.group-danger-zone .error-panel { margin-top: 0.55rem; }
+
 .group-lifecycle-state {
   max-width: 56rem;
   margin-inline: auto;
@@ -322,4 +346,6 @@
   .group-books-controls form,
   .group-edit-book-search,
   .group-edit-member-search { grid-template-columns: 1fr; }
+
+  .group-danger-zone { align-items: flex-start; flex-direction: column; }
 }

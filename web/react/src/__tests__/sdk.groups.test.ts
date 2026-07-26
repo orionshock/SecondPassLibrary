@@ -5,6 +5,7 @@ import {
   addBookToGroup,
   addGroupMember,
   createGroup,
+  deleteGroup,
   getGroup,
   listAllLibraryGroups,
   listGroupBooks,
@@ -229,5 +230,24 @@ describe("Library Groups SDK", () => {
 
     await expect(createGroup({ name: "", description: "" }, client)).rejects.toBe(error);
     await expect(updateGroup("group", { name: "" }, client)).rejects.toBe(error);
+  });
+
+  it("uses the custom Group DELETE contract and preserves structured failures", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return undefined as T;
+    } };
+    await expect(deleteGroup("group/id", client)).resolves.toBeUndefined();
+    expect(calls).toEqual([{
+      path: "/api/v1/library/groups/group%2Fid/",
+      init: { method: "DELETE" },
+    }]);
+
+    const error = new ApiError("Public cannot be deleted.", 400, {
+      fields: { detail: ["Public cannot be deleted."] },
+    });
+    const failing: ApiClient = { request: async () => { throw error; } };
+    await expect(deleteGroup("public", failing)).rejects.toBe(error);
   });
 });

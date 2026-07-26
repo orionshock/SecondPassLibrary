@@ -10,7 +10,9 @@ import {
   validateGroupDraft,
 } from "../features/groups/groupDraft";
 import { confirmGroupBookRemoval, confirmGroupMemberRemoval } from "../features/groups/groupBookMutation";
+import { confirmGroupDelete } from "../features/groups/groupDelete";
 import {
+  canDeleteGroup,
   canMutateGroupBooks,
   canMutateGroupMembers,
   canCreateGroupMetadata,
@@ -25,6 +27,7 @@ import { GroupMetadataFormPageRegion } from "../features/groups/regions/GroupMet
 import { GroupBookCandidatesPageRegion } from "../features/groups/regions/GroupBookCandidatesPageRegion";
 import { GroupBooksEditPageRegion } from "../features/groups/regions/GroupBooksEditPageRegion";
 import { GroupEditTabsPageRegion } from "../features/groups/regions/GroupEditTabsPageRegion";
+import { GroupDangerZonePageRegion } from "../features/groups/regions/GroupDangerZonePageRegion";
 import { GroupMemberCandidatesPageRegion } from "../features/groups/regions/GroupMemberCandidatesPageRegion";
 import { GroupMembersEditPageRegion } from "../features/groups/regions/GroupMembersEditPageRegion";
 import { MemoryRouter } from "react-router-dom";
@@ -72,6 +75,11 @@ describe("Group metadata lifecycle contracts", () => {
     expect(canMutateGroupMembers(owner)).toBe(true);
     expect(canMutateGroupMembers(librarian)).toBe(false);
     expect(canMutateGroupMembers(curator)).toBe(false);
+    expect(canDeleteGroup(manager, customGroup)).toBe(true);
+    expect(canDeleteGroup(owner, customGroup)).toBe(true);
+    expect(canDeleteGroup(librarian, customGroup)).toBe(false);
+    expect(canDeleteGroup(curator, customGroup)).toBe(false);
+    expect(canDeleteGroup(manager, publicGroup)).toBe(false);
   });
 
   it("normalizes dirty comparison and mutation inputs while allowing duplicate names", () => {
@@ -216,5 +224,22 @@ describe("Group metadata lifecycle contracts", () => {
     const deny = vi.fn(() => false);
     expect(confirmGroupMemberRemoval(deny)).toBe(false);
     expect(deny).toHaveBeenCalledWith("Remove this member from the group?");
+  });
+
+  it("renders Delete only through an explicit custom-Group danger contract", () => {
+    const danger = renderToStaticMarkup(<GroupDangerZonePageRegion
+      state={{ pending: false, error: new Error("Delete failed.") }}
+      onDelete={vi.fn()}
+    />);
+    expect(danger).toContain("Delete Group");
+    expect(danger).toContain("Delete failed.");
+    expect(danger).toContain("Users, Books, and files are not deleted.");
+
+    const reject = vi.fn((_message: string) => false);
+    expect(confirmGroupDelete(reject)).toBe(false);
+    const message = reject.mock.calls[0]?.[0] ?? "";
+    for (const meaning of ["memberships", "book assignments", "shelves owned", "Public/Common Room", "not deleted"]) {
+      expect(message).toMatch(new RegExp(meaning, "i"));
+    }
   });
 });

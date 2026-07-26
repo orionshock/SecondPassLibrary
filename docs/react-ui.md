@@ -88,8 +88,11 @@ by Server Settings, while Librarian+ may curate Public Books. Manager/Owner
 sessions also receive the Group Edit Members tab, with explicit username search,
 immediate add/remove, and custom-Group curator toggles. Membership operations
 never expose or edit global roles and remain independent from metadata Save;
-Public membership does not offer curator assignment. Delete and Group Shelves
-remain deferred.
+Public membership does not offer curator assignment. Manager/Owner custom-Group
+Details also include an immediate Delete danger zone. Confirmation discloses
+the membership, Book-assignment, Group-owned Shelf, and Public fallback effects;
+deletion never deletes users, Books, EPUB files, or covers. Public/Common Room
+cannot be deleted through Groups. Group Shelves remains deferred.
 Simple mode guards all Group routes before their Orchestrators issue API reads.
 
 `ShelvesListOrchestrator` owns `/shelves` in both simple and advanced modes.

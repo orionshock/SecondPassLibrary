@@ -37,3 +37,10 @@ export function canMutateGroupBooks(
 export function canMutateGroupMembers(user: CurrentUser): boolean {
   return user.advancedLibraryGroupsEnabled && isAtLeastManager(user);
 }
+
+export function canDeleteGroup(
+  user: CurrentUser,
+  group: Pick<LibraryGroup, "isPublicGroup">,
+): boolean {
+  return user.advancedLibraryGroupsEnabled && !group.isPublicGroup && isAtLeastManager(user);
+}

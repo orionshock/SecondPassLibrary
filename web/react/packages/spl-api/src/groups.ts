@@ -156,6 +156,16 @@ export async function updateGroup(
   return mapLibraryGroup(response);
 }
 
+export async function deleteGroup(
+  groupId: string,
+  client: ApiClient = apiClient,
+): Promise<void> {
+  await client.request<void>(
+    `/api/v1/library/groups/${encodeURIComponent(groupId)}/`,
+    { method: "DELETE" },
+  );
+}
+
 export async function listGroupBooks(
   groupId: string,
   query: GroupBooksQuery = {},

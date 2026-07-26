@@ -1,6 +1,7 @@
 import {
   addBookToGroup,
   ApiError,
+  deleteGroup,
   getGroup,
   listGroupBooks,
   removeBookFromGroup,
@@ -30,7 +31,8 @@ import {
   type GroupDraft,
 } from "./groupDraft";
 import { confirmGroupBookRemoval } from "./groupBookMutation";
-import { canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority } from "./groupMetadataAuthority";
+import { confirmGroupDelete } from "./groupDelete";
+import { canDeleteGroup, canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority } from "./groupMetadataAuthority";
 import { GroupMembersEditOrchestrator } from "./GroupMembersEditOrchestrator";
 import {
   groupDetailNavigationStateFromEdit,
@@ -43,6 +45,7 @@ import { GroupMetadataFormPageRegion } from "./regions/GroupMetadataFormPageRegi
 import { GroupBookCandidatesPageRegion } from "./regions/GroupBookCandidatesPageRegion";
 import { GroupBooksEditPageRegion } from "./regions/GroupBooksEditPageRegion";
 import { GroupEditTabsPageRegion, type GroupEditTab } from "./regions/GroupEditTabsPageRegion";
+import { GroupDangerZonePageRegion } from "./regions/GroupDangerZonePageRegion";
 import "./Groups.css";
 
 type GroupLoad =
@@ -78,6 +81,7 @@ export function GroupEditOrchestrator() {
       ? { message: readGroupLifecycleSuccessMessage(location.state) }
       : {}),
   }));
+  const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
   const [activeTab, setActiveTab] = useState<GroupEditTab>("details");
   const [booksPage, setBooksPage] = useState(1);
   const [booksPageSize, setBooksPageSize] = useState(20);
@@ -143,6 +147,7 @@ export function GroupEditOrchestrator() {
   const metadataAuthority = group ? groupMetadataAuthority(currentUser, group) : "none";
   const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group) : false;
   const memberMutationAllowed = canMutateGroupMembers(currentUser);
+  const deleteAllowed = group ? canDeleteGroup(currentUser, group) : false;
 
   useEffect(() => {
     if (!group || !bookMutationAllowed || activeTab !== "books") return;
@@ -250,6 +255,18 @@ export function GroupEditOrchestrator() {
     }
   }
 
+  async function removeGroup() {
+    if (!group || !deleteAllowed || !confirmGroupDelete()) return;
+    setDeleteMutation({ pending: true });
+    try {
+      await deleteGroup(group.id);
+      allowNavigation.current = true;
+      navigate("/groups", { replace: true, state: null });
+    } catch (error: unknown) {
+      setDeleteMutation({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
   if (load.status === "loading") {
     return <section className="group-lifecycle-state" aria-live="polite" aria-busy="true">Loading group...</section>;
   }
@@ -278,7 +295,13 @@ export function GroupEditOrchestrator() {
         onChange={change}
         onSubmit={(event) => void save(event)}
         onCancel={cancel}
+        disabled={deleteMutation.pending}
       /> : null}
+    {activeTab === "details" && deleteAllowed ? <GroupDangerZonePageRegion
+      state={deleteMutation}
+      controlsDisabled={mutation.pending}
+      onDelete={() => void removeGroup()}
+    /> : null}
     {activeTab === "books" && bookMutationAllowed ? <>
       {bookMutation.message ? <p className="group-edit-section-feedback" aria-live="polite">{bookMutation.message}</p> : null}
       <GroupBooksEditPageRegion
