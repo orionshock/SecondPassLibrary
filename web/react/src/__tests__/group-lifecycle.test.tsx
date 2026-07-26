@@ -13,10 +13,12 @@ import { confirmGroupBookRemoval, confirmGroupMemberRemoval } from "../features/
 import { confirmGroupDelete } from "../features/groups/groupDelete";
 import {
   canDeleteGroup,
+  canManageGroup,
   canMutateGroupBooks,
   canMutateGroupMembers,
   canCreateGroupMetadata,
   groupMetadataAuthority,
+  initialGroupEditTab,
 } from "../features/groups/groupMetadataAuthority";
 import {
   groupEditBreadcrumbFallback,
@@ -30,6 +32,7 @@ import { GroupEditTabsPageRegion } from "../features/groups/regions/GroupEditTab
 import { GroupDangerZonePageRegion } from "../features/groups/regions/GroupDangerZonePageRegion";
 import { GroupMemberCandidatesPageRegion } from "../features/groups/regions/GroupMemberCandidatesPageRegion";
 import { GroupMembersEditPageRegion } from "../features/groups/regions/GroupMembersEditPageRegion";
+import { GroupPublicDetailsPageRegion } from "../features/groups/regions/GroupPublicDetailsPageRegion";
 import { MemoryRouter } from "react-router-dom";
 
 const baseUser: CurrentUser = {
@@ -80,6 +83,16 @@ describe("Group metadata lifecycle contracts", () => {
     expect(canDeleteGroup(librarian, customGroup)).toBe(false);
     expect(canDeleteGroup(curator, customGroup)).toBe(false);
     expect(canDeleteGroup(manager, publicGroup)).toBe(false);
+    expect(canManageGroup(manager, customGroup)).toBe(true);
+    expect(canManageGroup(librarian, customGroup)).toBe(true);
+    expect(canManageGroup(curator, customGroup)).toBe(true);
+    expect(canManageGroup(librarian, publicGroup)).toBe(true);
+    expect(canManageGroup(manager, publicGroup)).toBe(true);
+    expect(canManageGroup(baseUser, customGroup)).toBe(false);
+    expect(canManageGroup(baseUser, publicGroup)).toBe(false);
+    expect(initialGroupEditTab(librarian, publicGroup)).toBe("books");
+    expect(initialGroupEditTab(manager, publicGroup)).toBe("books");
+    expect(initialGroupEditTab(manager, customGroup)).toBe("details");
   });
 
   it("normalizes dirty comparison and mutation inputs while allowing duplicate names", () => {
@@ -146,6 +159,26 @@ describe("Group metadata lifecycle contracts", () => {
     expect(editable).toContain("Members");
     expect(readOnly).not.toContain("Books");
     expect(readOnly).not.toContain("Members");
+  });
+
+  it("disables all Group Edit tabs while an immediate mutation is pending", () => {
+    const markup = renderToStaticMarkup(<GroupEditTabsPageRegion
+      activeTab="books"
+      canMutateBooks
+      canMutateMembers
+      disabled
+      onTabChange={vi.fn()}
+    />);
+    const buttons = markup.match(/<button\b[^>]*>/g) ?? [];
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons.every((button) => button.includes("disabled"))).toBe(true);
+  });
+
+  it("renders Public Details as read-only policy context rather than an error", () => {
+    const markup = renderToStaticMarkup(<GroupPublicDetailsPageRegion group={publicGroup} />);
+    expect(markup).toContain('aria-label="Public group: Readers"');
+    expect(markup).toContain("Server Settings");
+    expect(markup).not.toContain('role="alert"');
   });
 
   it("keeps assigned rows visible with persistent removal errors and exposes explicit candidate actions", () => {
@@ -234,6 +267,13 @@ describe("Group metadata lifecycle contracts", () => {
     expect(danger).toContain("Delete Group");
     expect(danger).toContain("Delete failed.");
     expect(danger).toContain("Users, Books, and files are not deleted.");
+
+    const disabledDanger = renderToStaticMarkup(<GroupDangerZonePageRegion
+      state={{ pending: false }}
+      controlsDisabled
+      onDelete={vi.fn()}
+    />);
+    expect(disabledDanger).toContain("disabled");
 
     const reject = vi.fn((_message: string) => false);
     expect(confirmGroupDelete(reject)).toBe(false);

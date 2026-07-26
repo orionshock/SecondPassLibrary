@@ -53,7 +53,7 @@ describe("Groups read-only regions", () => {
     expect(markup).not.toContain("href=");
   });
 
-  it("renders metadata lifecycle affordances only when authorized by its orchestrator", () => {
+  it("renders the Manage destination only when authorized by its orchestrator", () => {
     const detail = renderToStaticMarkup(<MemoryRouter><GroupHeaderPageRegion
       group={{ ...group, isPublicGroup: false }}
       loading={false}
@@ -64,6 +64,7 @@ describe("Groups read-only regions", () => {
       onRetry={vi.fn()}
     /></MemoryRouter>);
     expect(detail).toContain('href="/groups/group/edit"');
+    expect(detail).toContain(">Manage</a>");
 
     const list = (canCreate: boolean) => renderToStaticMarkup(<MemoryRouter><GroupsListPageRegion
       page={{ items: [], count: 0, next: null, previous: null }}

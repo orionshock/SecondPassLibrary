@@ -28,9 +28,10 @@ interface MemberMutation {
   message?: string;
 }
 
-export function GroupMembersEditOrchestrator({ group, metadataPending }: {
+export function GroupMembersEditOrchestrator({ group, metadataPending, onMutationPendingChange }: {
   group: LibraryGroup;
   metadataPending: boolean;
+  onMutationPendingChange: (pending: boolean) => void;
 }) {
   const [membersPage, setMembersPage] = useState(1);
   const [membersPageSize, setMembersPageSize] = useState(20);
@@ -125,6 +126,13 @@ export function GroupMembersEditOrchestrator({ group, metadataPending }: {
   const controlsDisabled = metadataPending
     || Boolean(memberMutation.pendingProfileId)
     || Boolean(candidateMutation.pendingProfileId);
+
+  useEffect(() => {
+    onMutationPendingChange(
+      Boolean(memberMutation.pendingProfileId) || Boolean(candidateMutation.pendingProfileId),
+    );
+    return () => onMutationPendingChange(false);
+  }, [candidateMutation.pendingProfileId, memberMutation.pendingProfileId, onMutationPendingChange]);
 
   return <div className="group-members-editor">
     {memberMutation.message ? <p className="group-edit-section-feedback" aria-live="polite">{memberMutation.message}</p> : null}

@@ -76,7 +76,7 @@ export function GroupCreateOrchestrator() {
       allowNavigation.current = true;
       navigate(groupEditPath(saved.id), {
         replace: true,
-        state: groupEditNavigationState(location.state, saved, "Group saved."),
+        state: groupEditNavigationState(location.state, saved, "Group created."),
       });
     } catch (error: unknown) {
       setMutation({ pending: false, error: normalizeMutationError(error) });

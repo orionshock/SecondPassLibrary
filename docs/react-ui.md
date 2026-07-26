@@ -74,7 +74,9 @@ description excerpts, and bounded cover previews. They do not show a Book
 count because the Group API does not return one. Manager/Owner sessions receive
 the `/groups/new` metadata lifecycle. `GroupDetailOrchestrator` owns
 `/groups/:groupId`, role-scoped detail loading, and URL-backed Books/Members
-tabs. Books reuse the shared compact Book row with contextual Group
+tabs. Its Manage affordance appears for any user with metadata, Book-curation,
+membership-management, or deletion authority, including authorized Public
+Group managers. Books reuse the shared compact Book row with contextual Group
 breadcrumbs; Members expose only username and curator state. Custom Group
 metadata editing at `/groups/:groupId/edit` is operation-specific: Manager/Owner
 may edit name and description, while Librarian and the exact custom-group
@@ -88,7 +90,10 @@ by Server Settings, while Librarian+ may curate Public Books. Manager/Owner
 sessions also receive the Group Edit Members tab, with explicit username search,
 immediate add/remove, and custom-Group curator toggles. Membership operations
 never expose or edit global roles and remain independent from metadata Save;
-Public membership does not offer curator assignment. Manager/Owner custom-Group
+Public membership does not offer curator assignment. Public Group management
+opens on its first actionable tab and retains a neutral read-only Details view.
+Immediate Book and Member mutations keep the active tab mounted and disable
+tab changes and deletion until the request settles. Manager/Owner custom-Group
 Details also include an immediate Delete danger zone. Confirmation discloses
 the membership, Book-assignment, Group-owned Shelf, and Public fallback effects;
 deletion never deletes users, Books, EPUB files, or covers. Public/Common Room

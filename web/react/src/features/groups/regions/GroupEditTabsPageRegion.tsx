@@ -1,9 +1,10 @@
 export type GroupEditTab = "details" | "books" | "add-books" | "members";
 
-export function GroupEditTabsPageRegion({ activeTab, canMutateBooks, canMutateMembers, onTabChange }: {
+export function GroupEditTabsPageRegion({ activeTab, canMutateBooks, canMutateMembers, disabled = false, onTabChange }: {
   activeTab: GroupEditTab;
   canMutateBooks: boolean;
   canMutateMembers: boolean;
+  disabled?: boolean;
   onTabChange: (tab: GroupEditTab) => void;
 }) {
   const tabs: Array<readonly [GroupEditTab, string]> = [["details", "Details"]];
@@ -16,6 +17,7 @@ export function GroupEditTabsPageRegion({ activeTab, canMutateBooks, canMutateMe
       type="button"
       className="button--secondary"
       aria-current={activeTab === tab ? "page" : undefined}
+      disabled={disabled}
       onClick={() => onTabChange(tab)}
     >{label}</button>)}
   </nav>;

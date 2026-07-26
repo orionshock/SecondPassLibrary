@@ -18,7 +18,7 @@ import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
 import { groupEditNavigationState, groupEditPath } from "./groupsBreadcrumbs";
-import { groupMetadataAuthority } from "./groupMetadataAuthority";
+import { canManageGroup } from "./groupMetadataAuthority";
 import {
   groupBooksSdkQuery,
   groupDetailPath,
@@ -144,9 +144,7 @@ export function GroupDetailOrchestrator() {
   const isCurator = Boolean(group && currentUser.groups.some(
     (membership) => membership.id === group.id && membership.isCurator,
   ));
-  const canEditMetadata = Boolean(
-    group && groupMetadataAuthority(currentUser, group) !== "none",
-  );
+  const canManage = Boolean(group && canManageGroup(currentUser, group));
   const currentPath = groupDetailPath(groupId, queryState);
 
   return <div className="page-stack groups-page group-detail-page">
@@ -155,8 +153,8 @@ export function GroupDetailOrchestrator() {
       loading={detail.status === "loading"}
       error={detail.status === "error" ? detail.error : undefined}
       isCurator={isCurator}
-      editPath={canEditMetadata && group ? groupEditPath(group.id) : undefined}
-      editNavigationState={canEditMetadata && group
+      editPath={canManage && group ? groupEditPath(group.id) : undefined}
+      editNavigationState={canManage && group
         ? groupEditNavigationState(location.state, group)
         : undefined}
       activeTab={queryState.tab}

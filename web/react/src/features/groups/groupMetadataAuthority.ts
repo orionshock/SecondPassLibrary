@@ -44,3 +44,23 @@ export function canDeleteGroup(
 ): boolean {
   return user.advancedLibraryGroupsEnabled && !group.isPublicGroup && isAtLeastManager(user);
 }
+
+export function canManageGroup(
+  user: CurrentUser,
+  group: Pick<LibraryGroup, "id" | "isPublicGroup">,
+): boolean {
+  return groupMetadataAuthority(user, group) !== "none"
+    || canMutateGroupBooks(user, group)
+    || canMutateGroupMembers(user)
+    || canDeleteGroup(user, group);
+}
+
+export function initialGroupEditTab(
+  user: CurrentUser,
+  group: Pick<LibraryGroup, "id" | "isPublicGroup">,
+): "details" | "books" | "members" {
+  if (!group.isPublicGroup) return "details";
+  if (canMutateGroupBooks(user, group)) return "books";
+  if (canMutateGroupMembers(user)) return "members";
+  return "details";
+}
