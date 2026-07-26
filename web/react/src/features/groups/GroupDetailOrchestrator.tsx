@@ -3,10 +3,12 @@ import {
   getGroup,
   listGroupBooks,
   listGroupMembers,
+  listShelves,
   type CompactBook,
   type GroupMembership,
   type LibraryGroup,
   type Page,
+  type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router-dom";
@@ -25,11 +27,13 @@ import {
   groupDetailSearchParams,
   groupDetailStateFromSearchParams,
   groupMembersSdkQuery,
+  groupShelvesSdkQuery,
   withGroupDetailChange,
 } from "./groupsQuery";
 import { GroupBooksPageRegion } from "./regions/GroupBooksPageRegion";
 import { GroupHeaderPageRegion } from "./regions/GroupHeaderPageRegion";
 import { GroupMembersPageRegion } from "./regions/GroupMembersPageRegion";
+import { GroupShelvesPageRegion } from "./regions/GroupShelvesPageRegion";
 import "./Groups.css";
 
 interface PageLoad<Item> {
@@ -61,6 +65,7 @@ export function GroupDetailOrchestrator() {
   const [detail, setDetail] = useState<GroupLoad>({ status: "loading" });
   const [books, setBooks] = useState<PageLoad<CompactBook>>({ loading: true });
   const [members, setMembers] = useState<PageLoad<GroupMembership>>({ loading: true });
+  const [shelves, setShelves] = useState<PageLoad<ShelfSummary>>({ loading: true });
   const recoveredPageKeys = useRef(new Set<string>());
   const group = detail.status === "ready" ? detail.group : undefined;
   const breadcrumbs = useMemo(() => groupDetailBreadcrumbFallback(group?.name), [group?.name]);
@@ -105,23 +110,32 @@ export function GroupDetailOrchestrator() {
       },
     });
     if (queryState.tab === "books") setBooks((current) => ({ page: current.page, loading: true }));
-    else setMembers((current) => ({ page: current.page, loading: true }));
+    else if (queryState.tab === "members") setMembers((current) => ({ page: current.page, loading: true }));
+    else setShelves((current) => ({ page: current.page, loading: true }));
 
-    const request = queryState.tab === "books"
-      ? recoverPage((page) => listGroupBooks(groupId, { ...groupBooksSdkQuery(queryState), page }))
-      : recoverPage((page) => listGroupMembers(groupId, { ...groupMembersSdkQuery(queryState), page }));
+    const request = (() => {
+      if (queryState.tab === "books") {
+        return recoverPage((page) => listGroupBooks(groupId, { ...groupBooksSdkQuery(queryState), page }));
+      }
+      if (queryState.tab === "members") {
+        return recoverPage((page) => listGroupMembers(groupId, { ...groupMembersSdkQuery(queryState), page }));
+      }
+      return recoverPage((page) => listShelves({ ...groupShelvesSdkQuery(groupId, queryState), page }));
+    })();
     request
       .then(({ page, recovered }) => {
         if (!active) return;
         if (recovered) return;
         if (queryState.tab === "books") setBooks({ page: page as Page<CompactBook>, loading: false });
-        else setMembers({ page: page as Page<GroupMembership>, loading: false });
+        else if (queryState.tab === "members") setMembers({ page: page as Page<GroupMembership>, loading: false });
+        else setShelves({ page: page as Page<ShelfSummary>, loading: false });
       })
       .catch((error: unknown) => {
         if (!active) return;
         const normalized = normalizeMutationError(error);
         if (queryState.tab === "books") setBooks((current) => ({ page: current.page, loading: false, error: normalized }));
-        else setMembers((current) => ({ page: current.page, loading: false, error: normalized }));
+        else if (queryState.tab === "members") setMembers((current) => ({ page: current.page, loading: false, error: normalized }));
+        else setShelves((current) => ({ page: current.page, loading: false, error: normalized }));
       });
     return () => { active = false; };
   }, [canonicalQuery, groupId, pageRetry, queryKey, queryState.ordering, queryState.page, queryState.pageSize, queryState.q, queryState.tab]);
@@ -185,6 +199,19 @@ export function GroupDetailOrchestrator() {
       pageSize={queryState.pageSize}
       loading={members.loading}
       error={members.error}
+      onPageChange={(page) => changeQuery({ page }, false)}
+      onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
+      onRetry={() => setPageRetry((value) => value + 1)}
+    /> : null}
+    {group && queryState.tab === "shelves" ? <GroupShelvesPageRegion
+      groupId={group.id}
+      groupName={group.name}
+      groupPath={currentPath}
+      page={shelves.page}
+      pageNumber={queryState.page}
+      pageSize={queryState.pageSize}
+      loading={shelves.loading}
+      error={shelves.error}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setPageRetry((value) => value + 1)}

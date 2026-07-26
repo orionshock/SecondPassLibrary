@@ -3,11 +3,12 @@ import type {
   GroupBooksQuery,
   GroupMembersQuery,
   LibraryGroupsQuery,
+  ShelvesQuery,
 } from "@second-pass/spl-api";
 
 export type GroupBookOrdering = Extract<BookOrdering,
   "title" | "-title" | "author" | "-author" | "series" | "-series">;
-export type GroupDetailTab = "books" | "members";
+export type GroupDetailTab = "books" | "members" | "shelves";
 
 export interface GroupsListUrlState {
   q: string;
@@ -72,7 +73,8 @@ export function withGroupsListChange(
 }
 
 export function groupDetailStateFromSearchParams(parameters: URLSearchParams): GroupDetailUrlState {
-  const tab = parameters.get("tab") === "members" ? "members" : "books";
+  const rawTab = parameters.get("tab");
+  const tab: GroupDetailTab = rawTab === "members" || rawTab === "shelves" ? rawTab : "books";
   const rawOrdering = parameters.get("ordering") as GroupBookOrdering | null;
   return {
     tab,
@@ -87,7 +89,7 @@ export function groupDetailStateFromSearchParams(parameters: URLSearchParams): G
 
 export function groupDetailSearchParams(state: GroupDetailUrlState): URLSearchParams {
   const parameters = new URLSearchParams();
-  if (state.tab === "members") parameters.set("tab", "members");
+  if (state.tab !== "books") parameters.set("tab", state.tab);
   if (state.tab === "books" && state.ordering !== "title") parameters.set("ordering", state.ordering);
   if (state.page > 1) parameters.set("page", String(state.page));
   if (state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));
@@ -105,7 +107,7 @@ export function withGroupDetailChange(
   resetPage = true,
 ): GroupDetailUrlState {
   const next = { ...current, ...changes, page: resetPage ? 1 : changes.page ?? current.page };
-  return next.tab === "members" ? { ...next, q: "", ordering: "title" } : next;
+  return next.tab !== "books" ? { ...next, q: "", ordering: "title" } : next;
 }
 
 export function groupBooksSdkQuery(state: GroupDetailUrlState): GroupBooksQuery {
@@ -119,6 +121,16 @@ export function groupBooksSdkQuery(state: GroupDetailUrlState): GroupBooksQuery 
 
 export function groupMembersSdkQuery(state: GroupDetailUrlState): GroupMembersQuery {
   return { page: state.page, pageSize: state.pageSize };
+}
+
+export function groupShelvesSdkQuery(groupId: string, state: GroupDetailUrlState): ShelvesQuery {
+  return {
+    scope: "group",
+    ownerGroupId: groupId,
+    ordering: "name",
+    page: state.page,
+    pageSize: state.pageSize,
+  };
 }
 
 function validPageSize(raw: string | null): number {

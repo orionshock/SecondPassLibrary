@@ -89,3 +89,17 @@ export function groupBookBreadcrumbs(
     { label: bookTitle },
   ];
 }
+
+export function groupShelfBreadcrumbs(
+  groupId: string,
+  groupName: string,
+  shelfName: string,
+  shelvesPath: string,
+): BreadcrumbItem[] {
+  return [
+    { label: "Groups", to: "/groups", resetTrail: true },
+    { label: groupName, to: groupDetailPath(groupId) },
+    { label: "Shelves", to: shelvesPath },
+    { label: shelfName },
+  ];
+}

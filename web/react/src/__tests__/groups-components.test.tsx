@@ -2,12 +2,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CompactBook, LibraryGroup } from "@second-pass/spl-api";
+import type { CompactBook, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 import { GroupMemberRowComponent } from "../features/groups/components/GroupMemberRowComponent";
 import { GroupRowComponent } from "../features/groups/components/GroupRowComponent";
 import { GroupBooksPageRegion } from "../features/groups/regions/GroupBooksPageRegion";
 import { GroupHeaderPageRegion } from "../features/groups/regions/GroupHeaderPageRegion";
 import { GroupMembersPageRegion } from "../features/groups/regions/GroupMembersPageRegion";
+import { GroupShelvesPageRegion } from "../features/groups/regions/GroupShelvesPageRegion";
 import { GroupsListPageRegion } from "../features/groups/regions/GroupsListPageRegion";
 
 const group: LibraryGroup = {
@@ -38,7 +39,7 @@ describe("Groups read-only regions", () => {
     expect(markup).not.toContain("1 Book");
   });
 
-  it("renders only Books and Members detail sections", () => {
+  it("renders all read-only Group detail sections", () => {
     const markup = renderToStaticMarkup(<GroupHeaderPageRegion
       group={group}
       loading={false}
@@ -49,7 +50,7 @@ describe("Groups read-only regions", () => {
     />);
     expect(markup).toContain("Books");
     expect(markup).toContain("Members");
-    expect(markup).not.toContain("Shelves");
+    expect(markup).toContain("Shelves");
     expect(markup).not.toContain("href=");
   });
 
@@ -128,5 +129,41 @@ describe("Groups read-only regions", () => {
     expect(list).not.toContain('aria-label="Remove');
     expect(list).not.toContain("<form");
     expect(list).not.toContain("email");
+  });
+
+  it("renders Group-owned Shelf discovery without mutation controls", () => {
+    const shelf: ShelfSummary = {
+      id: "shelf/id", name: "Favorites", description: "Shared picks", ownerType: "group",
+      ownerUser: null, ownerGroup: { id: group.id, name: group.name, isPublicGroup: true },
+      visibility: "private", itemCount: 3, canEdit: true,
+    };
+    const props = {
+      groupId: group.id, groupName: group.name, groupPath: "/groups/group?tab=shelves",
+      pageNumber: 1, pageSize: 20, loading: false, onPageChange: vi.fn(),
+      onPageSizeChange: vi.fn(), onRetry: vi.fn(),
+    };
+    const markup = renderToStaticMarkup(<MemoryRouter><GroupShelvesPageRegion
+      {...props}
+      page={{ items: [shelf], count: 1, next: null, previous: null }}
+    /></MemoryRouter>);
+    expect(markup).toContain('href="/shelves/shelf%2Fid"');
+    expect(markup).toContain("Favorites");
+    expect(markup).toContain("3 items");
+    expect(markup).not.toContain('aria-label="Edit');
+    expect(markup).not.toContain('aria-label="Delete');
+    expect(markup).not.toContain("<form");
+
+    const empty = renderToStaticMarkup(<GroupShelvesPageRegion
+      {...props}
+      page={{ items: [], count: 0, next: null, previous: null }}
+    />);
+    expect(empty).toContain("No shelves yet.");
+
+    const failed = renderToStaticMarkup(<GroupShelvesPageRegion
+      {...props}
+      error={new Error("Shelf discovery failed.")}
+    />);
+    expect(failed).toContain("Shelf discovery failed.");
+    expect(failed).toContain("Retry");
   });
 });

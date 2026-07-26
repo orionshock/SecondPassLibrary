@@ -302,7 +302,33 @@
 }
 
 .group-books-region,
-.group-members-region { margin-top: 0.8rem; }
+.group-members-region,
+.group-shelves-region { margin-top: 0.8rem; }
+
+.group-shelf-rows { display: grid; gap: 0.45rem; }
+
+.group-shelf-row-component {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.group-shelf-row-component__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.group-shelf-row-component h2,
+.group-shelf-row-component p { margin: 0; }
+
+.group-shelf-row-component h2 { font-size: 1rem; }
+
+.group-shelves-region > .pager-component { margin-top: 0.75rem; }
 
 .group-member-row-component {
   display: flex;

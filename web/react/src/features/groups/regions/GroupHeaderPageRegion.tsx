@@ -42,6 +42,7 @@ export function GroupHeaderPageRegion({
     <nav className="group-detail-tabs" aria-label="Group sections">
       <Button type="button" aria-current={activeTab === "books" ? "page" : undefined} onClick={() => onTabChange("books")}>Books</Button>
       <Button type="button" aria-current={activeTab === "members" ? "page" : undefined} onClick={() => onTabChange("members")}>Members</Button>
+      <Button type="button" aria-current={activeTab === "shelves" ? "page" : undefined} onClick={() => onTabChange("shelves")}>Shelves</Button>
     </nav>
   </>;
 }

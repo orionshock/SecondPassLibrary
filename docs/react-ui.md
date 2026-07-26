@@ -14,7 +14,7 @@ There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or o
 
 The React shell bootstraps the authenticated user through `getCurrentUser()` and server identity through `getServerInfo()` from `@second-pass/spl-api`. Server identity comes from `/.well-known/secondpass`. Components do not make raw `fetch()` calls. The shell provides loading, login-required, retryable error, server identity/banner, user identity, and logout states. `/logout/` remains a Django endpoint.
 
-Dashboard (`/`) and My Marginalia remain placeholders. Shelves implements list/detail plus metadata and immediate Book membership management at `/shelves`, `/shelves/:shelfId`, `/shelves/new`, and `/shelves/:shelfId/edit`; the list exposes Personal, Shared by Others, and Group Shelves scopes. Groups implements an advanced-mode-only list/detail branch plus metadata lifecycle at `/groups`, `/groups/:groupId`, `/groups/new`, and `/groups/:groupId/edit`; Group detail has read-only Books and Members tabs. Library (`/library`) implements top-level Books, Authors, and Series browse axes plus selected Author and Series Book contexts with URL-backed search, ordering, and pagination. Books retains its paginated Catalog Tag facet and compact rows; Author and Series rows show visible Book counts and bounded cover previews without biography or summary prose. Selecting an Author or Series name reuses the compact Book list inside the stable Library shell. `/library/books/:bookId` is real read-only Book Detail and `/library/books/:bookId/edit` is the Librarian+ core bibliographic editor. Imports (`/imports`) provides the synchronous EPUB/ZIP library-upload workflow for Librarian, Manager, and Owner users. Users (`/users`) is a server-driven React list: its search, role/status filters, ordering, page, and page size live in the URL, while the API owns filtering, sorting, and pagination. User creation is available at `/users/new`; managed-user editing is `/users/:profileId/edit`, with no separate User Detail route. Profile (`/profile`) owns self-profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. The pairing page accepts `?code=...`, immediately looks up a supplied code, and otherwise presents code entry before approval. Server Settings is available to the Owner at `/server`, with General, Public Library, and Library Groups selected through `?tab=`. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
+Dashboard (`/`) and My Marginalia remain placeholders. Shelves implements list/detail plus metadata and immediate Book membership management at `/shelves`, `/shelves/:shelfId`, `/shelves/new`, and `/shelves/:shelfId/edit`; the list exposes Personal, Shared by Others, and Group Shelves scopes. Groups implements an advanced-mode-only list/detail branch plus metadata lifecycle at `/groups`, `/groups/:groupId`, `/groups/new`, and `/groups/:groupId/edit`; Group detail has read-only Books, Members, and Shelves tabs. Library (`/library`) implements top-level Books, Authors, and Series browse axes plus selected Author and Series Book contexts with URL-backed search, ordering, and pagination. Books retains its paginated Catalog Tag facet and compact rows; Author and Series rows show visible Book counts and bounded cover previews without biography or summary prose. Selecting an Author or Series name reuses the compact Book list inside the stable Library shell. `/library/books/:bookId` is real read-only Book Detail and `/library/books/:bookId/edit` is the Librarian+ core bibliographic editor. Imports (`/imports`) provides the synchronous EPUB/ZIP library-upload workflow for Librarian, Manager, and Owner users. Users (`/users`) is a server-driven React list: its search, role/status filters, ordering, page, and page size live in the URL, while the API owns filtering, sorting, and pagination. User creation is available at `/users/new`; managed-user editing is `/users/:profileId/edit`, with no separate User Detail route. Profile (`/profile`) owns self-profile editing, membership display, session actions, and connected clients. Password changes use `/profile/password`; pairing approval uses `/profile/client-pairing`. The pairing page accepts `?code=...`, immediately looks up a supplied code, and otherwise presents code entry before approval. Server Settings is available to the Owner at `/server`, with General, Public Library, and Library Groups selected through `?tab=`. Unknown paths within Django's explicit React route policy render an in-shell not-found page.
 
 ## Deferred production integration
 
@@ -73,8 +73,10 @@ server-provided Public identity, exact current-user Curator membership, escaped
 description excerpts, and bounded cover previews. They do not show a Book
 count because the Group API does not return one. Manager/Owner sessions receive
 the `/groups/new` metadata lifecycle. `GroupDetailOrchestrator` owns
-`/groups/:groupId`, role-scoped detail loading, and URL-backed Books/Members
-tabs. Its Manage affordance appears for any user with metadata, Book-curation,
+`/groups/:groupId`, role-scoped detail loading, and URL-backed Books/Members/Shelves
+tabs. Shelves lists visibility-scoped shelves owned by the Group and links to
+Shelf Detail with contextual Group breadcrumbs; it exposes no Shelf mutation
+controls. Its Manage affordance appears for any user with metadata, Book-curation,
 membership-management, or deletion authority, including authorized Public
 Group managers. Books reuse the shared compact Book row with contextual Group
 breadcrumbs; Members expose only username and curator state. Custom Group
@@ -97,7 +99,7 @@ tab changes and deletion until the request settles. Manager/Owner custom-Group
 Details also include an immediate Delete danger zone. Confirmation discloses
 the membership, Book-assignment, Group-owned Shelf, and Public fallback effects;
 deletion never deletes users, Books, EPUB files, or covers. Public/Common Room
-cannot be deleted through Groups. Group Shelves remains deferred.
+cannot be deleted through Groups. Group Edit remains the mutation route.
 Simple mode guards all Group routes before their Orchestrators issue API reads.
 
 `ShelvesListOrchestrator` owns `/shelves` in both simple and advanced modes.
@@ -120,8 +122,7 @@ remove, and reorder mutations are immediate and independent from metadata Save;
 adds remain append-only. Blank Add Books search performs no request;
 personal shelves use broad Library search while group shelves use their owning
 Group Books endpoint, both with `exclude_shelf`. Deleting a Shelf removes its
-ShelfItems but never Books or files. Drag/drop, move-to-position, and the Group
-Detail Shelves tab remain deferred.
+ShelfItems but never Books or files. Drag/drop and move-to-position remain deferred.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 
