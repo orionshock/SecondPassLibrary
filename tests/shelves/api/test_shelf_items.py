@@ -47,7 +47,7 @@ class ShelfItemTests(BaseShelvesAPITest):
                 format="json",
             )
         )
-        self.assertEqual(add_denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(add_denied.status_code, status.HTTP_404_NOT_FOUND)
 
         items = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
         self.assertEqual(items.status_code, status.HTTP_200_OK)

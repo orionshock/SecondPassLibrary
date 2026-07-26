@@ -327,10 +327,10 @@ Shelves are presentation/organization and **do not** grant book access. LibraryG
 Endpoints:
 
 - `GET /api/v1/shelves/` (paginated; visible shelves)
-- `POST /api/v1/shelves/` (create; user-owned or group-owned depending on permissions)
+- `POST /api/v1/shelves/` (create; user-owned or group-owned depending on permissions; `name` is required and limited to 255 characters)
 - `GET /api/v1/shelves/<id>/`
 - `PATCH /api/v1/shelves/<id>/` (partial update; name/description/visibility only)
-- `PUT /api/v1/shelves/<id>/` (treated the same as `PATCH` for compatibility; partial update)
+- `PUT /api/v1/shelves/<id>/` (unsupported; returns `405`)
 - `DELETE /api/v1/shelves/<id>/`
 - Items:
   - `GET /api/v1/shelves/<id>/items/` (paginated; books are filtered through access policy)
@@ -371,6 +371,23 @@ Shelf payload notes:
 - User-owned shelves include `owner_user` as a compact user object with `profile_id` and `username`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
+- The nested Shelf item `book` uses the same compact Book shape as Library browse
+  and Group Book lists: `id`, title/sort title/subtitle, ordered Authors,
+  Series with `series_index`, `catalog_tags`, language, publisher, precision-aware
+  publication components, `cover_url`, and `file_format`. It excludes Groups,
+  identifiers, description, detailed file/download metadata, checksum, and
+  storage/source/provenance fields. Shelf item id, shelf id, position, and
+  `added_by` remain fields of the Shelf item rather than the nested Book.
+- Shelf create, Shelf PATCH, item add, and item PATCH reject unknown fields with
+  structured `400` field errors. Shelf PATCH accepts only `name`, `description`,
+  and `visibility`; `name`, when supplied, is limited to 255 characters.
+- Group-owned Shelf creation requires `owner_group`; omission returns a
+  structured `owner_group` field error. Malformed group ids return `400`, while
+  missing or inaccessible groups return `404`. A visible group for which the
+  caller lacks creation authority remains a permission error.
+- Shelf item add requires `book` as a UUID. Malformed values return `400`.
+  Valid missing Books and Books outside the Shelf editor's eligible Book scope
+  both return `404`; lack of authority over the Shelf itself remains `403`.
 - Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
 - Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
 - Shelf item list ordering:

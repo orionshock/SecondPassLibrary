@@ -6,12 +6,11 @@ from rest_framework import serializers
 
 from accounts.models import UserClientSession
 from accounts.user_payloads import compact_user_payload
-from library.models import Book
 from library.groups.public_group import is_public_group
 from library.catalog.serializers import (
-    AuthorSummarySerializer,
+    BookListSerializer,
     BookPreviewSerializer,
-    SeriesSummarySerializer,
+    RejectUnknownFieldsMixin,
 )
 
 from .models import Shelf, ShelfItem
@@ -100,8 +99,8 @@ class ShelfSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class ShelfCreateSerializer(serializers.Serializer):
-    name = serializers.CharField()
+class ShelfCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
+    name = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True)
     owner_type = serializers.ChoiceField(choices=[Shelf.OWNER_TYPE_USER, Shelf.OWNER_TYPE_GROUP])
     owner_group = serializers.UUIDField(required=False, allow_null=True)
@@ -111,9 +110,19 @@ class ShelfCreateSerializer(serializers.Serializer):
         default=Shelf.VISIBILITY_PRIVATE,
     )
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs.get("owner_type") == Shelf.OWNER_TYPE_GROUP and not attrs.get(
+            "owner_group"
+        ):
+            raise serializers.ValidationError(
+                {"owner_group": "This field is required for group-owned shelves."}
+            )
+        return attrs
 
-class ShelfPatchSerializer(serializers.Serializer):
-    name = serializers.CharField(required=False)
+
+class ShelfPatchSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     visibility = serializers.ChoiceField(
         choices=[Shelf.VISIBILITY_PRIVATE, Shelf.VISIBILITY_LISTED],
@@ -121,43 +130,8 @@ class ShelfPatchSerializer(serializers.Serializer):
     )
 
 
-class BookSummarySerializer(serializers.ModelSerializer):
-    authors = AuthorSummarySerializer(many=True, read_only=True)
-    series = serializers.SerializerMethodField(read_only=True)
-    has_file = serializers.SerializerMethodField(read_only=True)
-    cover_url = serializers.SerializerMethodField(read_only=True)
-
-    def get_series(self, obj: Book) -> dict[str, Any] | None:
-        link = getattr(obj, "book_series", None)
-        if link is None:
-            return None
-        return cast(dict[str, Any], SeriesSummarySerializer(link.series).data)
-
-    def get_has_file(self, obj: Book) -> bool:
-        return bool(getattr(obj, "book_file", None))
-
-    def get_cover_url(self, obj: Book) -> str | None:
-        cover = getattr(obj, "cover_file", None)
-        if not cover:
-            return None
-        try:
-            url = cover.url
-        except Exception:
-            return None
-
-        request = self.context.get("request")
-        if request is not None:
-            return request.build_absolute_uri(url)
-        return url
-
-    class Meta:
-        model = Book
-        fields = ["id", "title", "authors", "series", "has_file", "cover_url"]
-        read_only_fields = fields
-
-
 class ShelfItemSerializer(serializers.ModelSerializer):
-    book = BookSummarySerializer(read_only=True)
+    book = BookListSerializer(read_only=True)
     added_by = serializers.SerializerMethodField(read_only=True)
 
     def get_added_by(self, obj: ShelfItem) -> dict[str, Any] | None:
@@ -180,12 +154,12 @@ class ShelfItemSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class ShelfItemCreateSerializer(serializers.Serializer):
+class ShelfItemCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     book = serializers.UUIDField()
     position = serializers.IntegerField(required=False, allow_null=True)
 
 
-class ShelfItemPatchSerializer(serializers.Serializer):
+class ShelfItemPatchSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     position = serializers.IntegerField(required=False)
     move = serializers.ChoiceField(choices=["up", "down"], required=False)
 

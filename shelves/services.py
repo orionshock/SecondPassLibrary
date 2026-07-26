@@ -4,12 +4,12 @@ from typing import Any
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Max, QuerySet
+from django.db.models import Max, Prefetch, QuerySet
 from django.utils import timezone
 
 from accounts.roles import is_librarian
 from library.groups.public_group import is_public_group
-from library.models import Book
+from library.models import Book, BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_group, visible_books_for_user
 from library.roles import is_curator
 
@@ -68,20 +68,24 @@ def can_edit_shelf(*, user, shelf: Shelf) -> bool:
     return False
 
 
-def _can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
+def books_available_to_shelf_editor(*, user, shelf: Shelf) -> QuerySet[Book]:
     if not can_edit_shelf(user=user, shelf=shelf):
-        return False
+        return Book.objects.none()
 
     if shelf.owner_type == Shelf.OWNER_TYPE_USER:
-        return visible_books_for_user(user, cached=False).filter(pk=book.pk).exists()
+        return visible_books_for_user(user, cached=False)
 
     if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
         group = shelf.owner_group
         if group is None:
-            return False
-        return visible_books_for_group(user, group, cached=False).filter(pk=book.pk).exists()
+            return Book.objects.none()
+        return visible_books_for_group(user, group, cached=False)
 
-    return False
+    return Book.objects.none()
+
+
+def _can_add_book_to_shelf(*, user, book: Book, shelf: Shelf) -> bool:
+    return books_available_to_shelf_editor(user=user, shelf=shelf).filter(pk=book.pk).exists()
 
 
 def canonicalize_shelf_positions(shelf: Shelf) -> list[ShelfItem]:
@@ -292,7 +296,26 @@ def visible_shelf_items_for_user(user, shelf: Shelf) -> QuerySet[ShelfItem]:
     if not Shelf.objects.filter(visible_shelf_filter(user), pk=shelf.pk).exists():
         raise PermissionDenied("Not allowed.")
 
-    qs = ShelfItem.objects.select_related("book").filter(shelf=shelf)
+    qs = (
+        ShelfItem.objects.select_related("book", "book__book_series__series")
+        .prefetch_related(
+            Prefetch(
+                "book__book_authors",
+                queryset=BookAuthor.objects.select_related("author").order_by(
+                    "position", "id"
+                ),
+            ),
+            Prefetch(
+                "book__book_catalog_tags",
+                queryset=BookCatalogTag.objects.select_related("catalog_tag").order_by(
+                    "catalog_tag__sort_name",
+                    "catalog_tag__name",
+                    "id",
+                ),
+            ),
+        )
+        .filter(shelf=shelf)
+    )
 
     if shelf.owner_type == Shelf.OWNER_TYPE_GROUP and shelf.owner_group is not None:
         visible_books = visible_books_for_group(user, shelf.owner_group, cached=False)

@@ -7,12 +7,11 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from library.models import Book, LibraryGroup
 from library.catalog.preview_books import (
     PREVIEW_BOOK_LIMIT,
     include_preview_books,
@@ -20,6 +19,7 @@ from library.catalog.preview_books import (
 from library.catalog.ordering import parse_ordering_param
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
+from library.queries import visible_groups_for_user
 
 from .models import Shelf, ShelfItem
 from .serializers import (
@@ -32,6 +32,7 @@ from .serializers import (
 )
 from .services import (
     add_book_to_shelf,
+    books_available_to_shelf_editor,
     create_shelf,
     delete_shelf,
     move_shelf_item,
@@ -202,12 +203,9 @@ class ShelfViewSet(
         owner_group = None
         if owner_type == Shelf.OWNER_TYPE_GROUP:
             group_id = data.get("owner_group")
-            if not group_id:
-                raise PermissionDenied("Missing owner_group.")
-            try:
-                owner_group = LibraryGroup.objects.get(pk=group_id)
-            except LibraryGroup.DoesNotExist as exc:
-                raise Http404() from exc
+            owner_group = visible_groups_for_user(request.user).filter(pk=group_id).first()
+            if owner_group is None:
+                raise Http404()
 
         try:
             shelf = create_shelf(
@@ -225,8 +223,7 @@ class ShelfViewSet(
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        # Treat PUT the same as PATCH for this API (partial updates only).
-        return self.partial_update(request, *args, **kwargs)
+        raise MethodNotAllowed("PUT")
 
     def partial_update(self, request, *args, **kwargs):
         shelf = self.get_object()
@@ -271,10 +268,11 @@ class ShelfViewSet(
         serializer = cast(Any, ShelfItemCreateSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)
         data = cast(dict[str, Any], serializer.validated_data)
-        try:
-            book = Book.objects.get(pk=data["book"])
-        except Book.DoesNotExist as exc:
-            raise Http404() from exc
+        book = books_available_to_shelf_editor(user=request.user, shelf=shelf).filter(
+            pk=data["book"]
+        ).first()
+        if book is None:
+            raise Http404()
 
         try:
             item = add_book_to_shelf(

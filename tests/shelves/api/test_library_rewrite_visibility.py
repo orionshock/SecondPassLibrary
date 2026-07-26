@@ -42,7 +42,7 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
                 format="json",
             )
         )
-        self.assertEqual(hidden.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(hidden.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_group_owned_shelf_add_uses_owner_group_universe(self):
         other_group = LibraryGroup.objects.create(name="Other group")
@@ -69,7 +69,7 @@ class ShelfLibraryReWriteVisibilityTests(BaseShelvesAPITest):
                 format="json",
             )
         )
-        self.assertEqual(wrong_group_book.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(wrong_group_book.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_already_on_shelf_book_is_rejected(self):
         self.client.login(username="reader", password="pw")

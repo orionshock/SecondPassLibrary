@@ -63,6 +63,12 @@ cause a match and do not expose their item identifiers.
 A `ShelfItem` relates one Book to one shelf and stores a zero-based position.
 A Book appears at most once per shelf.
 
+Shelf item API rows keep item identity, shelf identity, position, and `added_by`
+outside the nested Book. The nested Book uses the shared compact catalog shape,
+including ordered Authors, Series/index, Catalog Tags, publisher, cover, and
+file format, while excluding detail, file/download, checksum, and
+storage/source/provenance fields.
+
 Positions remain contiguous. Add, remove, move-up, move-down, move-to-position,
 group-assignment cleanup, and explicit unavailable-item cleanup compact the
 remaining order. Duplicate/colliding requested positions are canonicalized
@@ -71,6 +77,13 @@ and API position remains zero-based.
 
 Deleting a shelf deletes its ShelfItems only. It never deletes Books, stored
 EPUB files, reading sessions, or annotations.
+
+Shelf writes are strict: unknown create/update/item fields return structured
+validation errors. Shelf names are limited to 255 characters, Group-owned
+creation requires `owner_group`, metadata updates use PATCH, and PUT is not
+supported. Adding an item uses the `book` UUID field; missing or inaccessible
+Books collapse to the same not-found response after Shelf edit authority is
+established.
 
 ## User-owned shelf item retention
 

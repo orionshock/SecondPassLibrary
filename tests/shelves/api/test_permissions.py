@@ -55,7 +55,7 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
         self.assertEqual(detail3.status_code, status.HTTP_200_OK)
         self.assertEqual(response_data_dict(detail3)["can_edit"], False)
 
-    def test_put_shelf_behaves_like_partial_update(self):
+    def test_put_shelf_is_not_supported(self):
         self.client.login(username="reader", password="pw")
         created = assert_response(
             self.client.post(
@@ -79,10 +79,12 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
                 format="json",
             ),
         )
-        self.assertEqual(put.status_code, status.HTTP_200_OK)
-        payload = response_data_dict(put)
-        self.assertEqual(payload["name"], "After")
-        # PUT behaves like PATCH here: omitted fields are preserved.
+        self.assertEqual(put.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        payload = response_data_dict(
+            assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        )
+        self.assertEqual(payload["name"], "Before")
         self.assertEqual(payload["description"], "Desc")
         self.assertEqual(payload["visibility"], "listed")
 
@@ -206,7 +208,7 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
                 format="json",
             ),
         )
-        self.assertEqual(unrelated.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(unrelated.status_code, status.HTTP_404_NOT_FOUND)
 
         public = assert_response(
             self.client.post(

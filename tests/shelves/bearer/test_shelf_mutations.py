@@ -20,7 +20,7 @@ class ShelvesBearerShelfMutationTests(ShelvesBearerApiTestCase):
         self.assertEqual(data["name"], "P2")
         self.assertTrue(data["can_edit"])
 
-    def test_bearer_put_behaves_like_partial_update_for_own_shelf(self):
+    def test_bearer_put_is_not_supported_for_own_shelf(self):
         shelf_id = self._create_personal_shelf_as_owner()
         # Set initial description via PATCH first.
         patch1 = assert_response(
@@ -41,10 +41,17 @@ class ShelvesBearerShelfMutationTests(ShelvesBearerApiTestCase):
                 HTTP_AUTHORIZATION=self._auth,
             ),
         )
-        self.assertEqual(put.status_code, 200)
-        data = response_data_dict(put)
-        self.assertEqual(data["name"], "After")
-        # PUT behaves like PATCH: omitted fields are preserved.
+        self.assertEqual(put.status_code, 405)
+
+        data = response_data_dict(
+            assert_response(
+                self.client.get(
+                    f"/api/v1/shelves/{shelf_id}/",
+                    HTTP_AUTHORIZATION=self._auth,
+                )
+            )
+        )
+        self.assertNotEqual(data["name"], "After")
         self.assertEqual(data["description"], "Before")
         self.assertEqual(data["visibility"], "listed")
 

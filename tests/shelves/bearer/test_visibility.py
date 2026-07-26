@@ -294,7 +294,7 @@ class ShelvesBearerVisibilityTests(ShelvesBearerApiTestCase):
                 HTTP_AUTHORIZATION=self._auth,
             ),
         )
-        self.assertEqual(put.status_code, 403)
+        self.assertEqual(put.status_code, 405)
 
         delete = assert_response(
             self.client.delete(
