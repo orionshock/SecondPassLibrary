@@ -446,10 +446,11 @@ breadcrumb context through Router location state.
 - The implemented first slice uses a polished two-column workspace: a
   fixed-width read-only cover on the left and identity plus tabbed editing on
   the right, collapsing to one column on narrow screens.
-- Its core local tabs are Book (title, sort title, subtitle, description),
+- Its local tab order is Book (title, sort title, subtitle, description),
   Catalog (publisher, language, precision-aware publication date, Catalog
-  Tags), Authors & Series (existing-entity assignment only), and Identifiers
-  (complete scheme/value replacement through the Book PATCH).
+  Tags), Authors & Series (existing-entity assignment only), optional advanced
+  Library Groups, then Identifiers (complete scheme/value replacement through
+  the Book PATCH).
 - Save sends one explicit transactional PATCH for those edited domains, then
   replaces the draft and dirty baseline from the returned Book Detail while
   remaining on Edit. Dirty cancel/browser unload asks for confirmation.

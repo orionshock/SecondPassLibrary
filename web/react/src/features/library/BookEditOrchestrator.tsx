@@ -225,8 +225,8 @@ export function BookEditOrchestrator() {
     if (!bookId || mutation.pending || groupMutation.pending) return;
     const restoresPublic = readyGroupsForRemoval(load, group.id);
     const warning = restoresPublic
-      ? `Remove ${group.name}? This may affect group-owned shelves. Public/Common Room will be restored.`
-      : `Remove ${group.name}? This may affect group-owned shelves.`;
+      ? `Remove ${group.name}? This will affect group-owned shelves. Public/Common Room will be restored.`
+      : `Remove ${group.name}? This will affect group-owned shelves.`;
     if (!window.confirm(warning)) return;
     setGroupMutation({ pending: true });
     try {
