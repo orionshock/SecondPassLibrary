@@ -771,7 +771,7 @@ as separate future boundaries.
 
 ## Focused test strategy
 
-- Keep all Vitest files under `web/react/src/__tests__/`.
+- Keep app and feature Vitest files under `web/react/src/__tests__/`; keep SDK contract tests package-local under `web/react/packages/spl-api/src/__tests__/`.
 - Classify API shape/auth/visibility and URL restoration tests as contracts;
   Public/fallback/privacy/non-disclosure tests as invariants; reported visual or
   workflow defects as regressions; isolated render mechanics as implementation

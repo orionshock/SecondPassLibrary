@@ -14,7 +14,7 @@ import {
   removeShelfItem,
   updateShelf,
 } from "@second-pass/spl-api";
-import type { ApiClient } from "../../packages/spl-api/src/client";
+import type { ApiClient } from "../client";
 
 const personalShelf = {
   id: "personal",

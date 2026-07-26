@@ -10,8 +10,8 @@ import {
   isAtLeastManager,
   updateCurrentUser,
   type CurrentUserRoleFacts,
-} from "../../packages/spl-api/src/accounts";
-import type { ApiClient } from "../../packages/spl-api/src/client";
+} from "../accounts";
+import type { ApiClient } from "../client";
 
 describe("getCurrentUser", () => {
   it("maps the server bootstrap shape to a stable app-facing user", async () => {

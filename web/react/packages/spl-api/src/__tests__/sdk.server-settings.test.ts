@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError, enableAdvancedGroups, getServerSettings, updateGeneralSettings, updatePublicLibrarySettings } from "@second-pass/spl-api";
-import type { ApiClient } from "../../packages/spl-api/src/client";
+import type { ApiClient } from "../client";
 
 const response = {
   server_name: "Virgo SPL",

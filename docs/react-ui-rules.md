@@ -16,7 +16,7 @@ This is the running list of cross-page presentation and interaction rules that a
 - Do not prematurely create `list/`, `create/`, or `edit/` folders unless each workflow has grown its own coherent cluster.
 - Promote genuinely cross-feature behavior into a focused `src/shared` module. Do not promote feature-specific rules merely to reduce line count.
 - A feature may contain many focused files. Prefer explicit responsibility names over a large page file.
-- Keep all Vitest files centralized under `web/react/src/__tests__/`; organize them by subject rather than colocating them with production modules.
+- Keep app and feature Vitest files centralized under `web/react/src/__tests__/`; organize them by subject rather than colocating them with production modules. Keep SDK contract tests package-local under `web/react/packages/spl-api/src/__tests__/`.
 
 ## User identity and roles
 

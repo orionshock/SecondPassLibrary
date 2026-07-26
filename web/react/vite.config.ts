@@ -7,7 +7,10 @@ export default defineConfig(({ command }) => ({
   base: command === "build" ? "/static/react/" : "/",
   plugins: [react()],
   test: {
-    include: ["src/__tests__/**/*.test.{ts,tsx}"],
+    include: [
+      "src/__tests__/**/*.test.{ts,tsx}",
+      "packages/spl-api/src/__tests__/**/*.test.ts",
+    ],
   },
   server: {
     port: 5174,

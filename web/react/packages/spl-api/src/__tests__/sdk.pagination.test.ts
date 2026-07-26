@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectPaginatedResults, toPage, type ApiPage } from "../../packages/spl-api/src/pagination";
+import { collectPaginatedResults, toPage, type ApiPage } from "../pagination";
 
 describe("toPage", () => {
   it("maps server results to stable app items", () => {

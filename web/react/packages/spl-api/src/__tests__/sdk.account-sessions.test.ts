@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { listClientSessions, logoutOtherWebSessions, revokeClientSession } from "../../packages/spl-api/src/accountSessions";
-import type { ApiClient } from "../../packages/spl-api/src/client";
+import { listClientSessions, logoutOtherWebSessions, revokeClientSession } from "../accountSessions";
+import type { ApiClient } from "../client";
 
 describe("account sessions SDK", () => {
   it("maps connected-client metadata and session operations", async () => {
