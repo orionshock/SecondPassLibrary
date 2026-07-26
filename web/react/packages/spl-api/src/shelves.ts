@@ -1,7 +1,8 @@
 import { apiClient, type ApiClient } from "./client";
+import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { ApiError } from "./errors";
-import { mapCompactBook, type BookPreview, type CompactBook } from "./library";
-import { toPage, type ApiPage, type Page } from "./pagination";
+import type { BookPreview, CompactBook } from "./library";
+import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";
 
 export type ShelfOwnerType = "user" | "group";
 export type ShelfVisibility = "private" | "listed";
@@ -135,24 +136,6 @@ interface BookPreviewResponse {
   cover_url: string | null;
 }
 
-interface CompactBookResponse {
-  id: string;
-  title: string;
-  sort_title: string;
-  subtitle: string;
-  authors: Array<{ id: string; name: string }>;
-  series: { id: string; name: string; sort_name: string; series_index: string | null } | null;
-  catalog_tags: Array<{ id: string; name: string; slug: string }>;
-  language: string;
-  publisher: string;
-  published_year: number | null;
-  published_month: number | null;
-  published_day: number | null;
-  published_date_precision: string;
-  cover_url: string | null;
-  file_format: string;
-}
-
 interface ShelfItemResponse {
   id: string;
   shelf: string;
@@ -247,21 +230,16 @@ export async function listAllShelvesForBook(
   bookId: string,
   client: ApiClient = apiClient,
 ): Promise<ShelfSummary[]> {
-  const shelves: ShelfSummary[] = [];
   const parameters = new URLSearchParams({
     book: bookId,
     ordering: "name",
     page_size: "200",
   });
-  let path: string | null = `/api/v1/shelves/?${parameters.toString()}`;
-
-  while (path) {
-    const page: ApiPage<ShelfSummaryResponse> = await client.request<ApiPage<ShelfSummaryResponse>>(path);
-    shelves.push(...page.results.map(mapShelfSummary));
-    path = page.next;
-  }
-
-  return shelves;
+  return collectPaginatedResults(
+    `/api/v1/shelves/?${parameters.toString()}`,
+    (path) => client.request<ApiPage<ShelfSummaryResponse>>(path),
+    mapShelfSummary,
+  );
 }
 
 export async function createShelf(

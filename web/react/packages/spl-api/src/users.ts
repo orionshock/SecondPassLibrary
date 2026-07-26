@@ -1,5 +1,5 @@
 import { apiClient, type ApiClient } from "./client";
-import { toPage, type ApiPage, type Page } from "./pagination";
+import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";
 
 export type UserRoleFilter = "owner" | "manager" | "librarian" | "reader" | "curator";
 export type CreateUserRole = "manager" | "librarian" | "reader";
@@ -195,13 +195,11 @@ export async function listAssignableGroupsForUser(
 ): Promise<AssignableGroup[]> {
   const user = await getManagedUser(profileId, client);
   const assigned = new Set(user.groups.map(({ id }) => id));
-  const groups: LibraryGroupResponse[] = [];
-  let path: string | null = "/api/v1/library/groups/?ordering=name&page_size=100";
-  while (path) {
-    const page: ApiPage<LibraryGroupResponse> = await client.request<ApiPage<LibraryGroupResponse>>(path);
-    groups.push(...page.results);
-    path = page.next;
-  }
+  const groups = await collectPaginatedResults(
+    "/api/v1/library/groups/?ordering=name&page_size=100",
+    (path) => client.request<ApiPage<LibraryGroupResponse>>(path),
+    (group) => group,
+  );
   return groups
     .filter(({ id }) => !assigned.has(id))
     .map((group) => ({ id: group.id, name: group.name, isPublicGroup: group.is_public_group }));

@@ -1,6 +1,7 @@
 import { apiClient, type ApiClient } from "./client";
+import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { ApiError } from "./errors";
-import { toPage, type ApiPage, type Page } from "./pagination";
+import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";
 
 export type BookOrdering =
   | "title" | "-title"
@@ -183,24 +184,6 @@ export interface BookDetail {
   catalogTags: CatalogTagSummary[];
   file: BookFileDetail | null;
   groups: BookGroupSummary[];
-}
-
-interface CompactBookResponse {
-  id: string;
-  title: string;
-  sort_title: string;
-  subtitle: string;
-  authors: Array<{ id: string; name: string }>;
-  series: { id: string; name: string; sort_name: string; series_index: string | null } | null;
-  catalog_tags: Array<{ id: string; name: string; slug: string }>;
-  language: string;
-  publisher: string;
-  published_year: number | null;
-  published_month: number | null;
-  published_day: number | null;
-  published_date_precision: string;
-  cover_url: string | null;
-  file_format: string;
 }
 
 interface BookDetailResponse {
@@ -434,14 +417,11 @@ export async function listCatalogTags(
 }
 
 export async function listAllCatalogTags(client: ApiClient = apiClient): Promise<CatalogTag[]> {
-  const tags: CatalogTag[] = [];
-  let path: string | null = "/api/v1/library/tags/?ordering=name&page_size=200";
-  while (path) {
-    const page: ApiPage<CatalogTagResponse> = await client.request<ApiPage<CatalogTagResponse>>(path);
-    tags.push(...page.results.map(mapCatalogTag));
-    path = page.next;
-  }
-  return tags;
+  return collectPaginatedResults(
+    "/api/v1/library/tags/?ordering=name&page_size=200",
+    (path) => client.request<ApiPage<CatalogTagResponse>>(path),
+    mapCatalogTag,
+  );
 }
 
 function withQuery(path: string, parameters: URLSearchParams): string {
@@ -471,14 +451,11 @@ async function listAllLibraryAxis<Response, Item>(
   mapper: (response: Response) => Item,
   client: ApiClient,
 ): Promise<Item[]> {
-  const items: Item[] = [];
-  let next: string | null = `${path}?ordering=name&page_size=200`;
-  while (next) {
-    const page: ApiPage<Response> = await client.request<ApiPage<Response>>(next);
-    items.push(...page.results.map(mapper));
-    next = page.next;
-  }
-  return items;
+  return collectPaginatedResults(
+    `${path}?ordering=name&page_size=200`,
+    (next) => client.request<ApiPage<Response>>(next),
+    mapper,
+  );
 }
 
 async function mutateLibraryAxis<Response, Item>(
@@ -507,31 +484,6 @@ async function mutateLibraryAxis<Response, Item>(
       ),
     });
   }
-}
-
-export function mapCompactBook(response: CompactBookResponse): CompactBook {
-  return {
-    id: response.id,
-    title: response.title,
-    sortTitle: response.sort_title,
-    subtitle: response.subtitle,
-    authors: response.authors.map(({ id, name }) => ({ id, name })),
-    series: response.series ? {
-      id: response.series.id,
-      name: response.series.name,
-      sortName: response.series.sort_name,
-      seriesIndex: response.series.series_index,
-    } : null,
-    catalogTags: response.catalog_tags.map(({ id, name, slug }) => ({ id, name, slug })),
-    language: response.language,
-    publisher: response.publisher,
-    publishedYear: response.published_year,
-    publishedMonth: response.published_month,
-    publishedDay: response.published_day,
-    publishedDatePrecision: response.published_date_precision,
-    coverUrl: response.cover_url,
-    fileFormat: response.file_format,
-  };
 }
 
 export function mapBookDetail(response: BookDetailResponse): BookDetail {

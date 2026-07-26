@@ -20,3 +20,19 @@ export function toPage<T, U>(page: ApiPage<T>, mapItem: (item: T) => U): Page<U>
     previous: page.previous,
   };
 }
+
+/** @internal Shared traversal for SDK helpers that intentionally read every page. */
+export async function collectPaginatedResults<T, U>(
+  firstPath: string,
+  readPage: (path: string) => Promise<ApiPage<T>>,
+  mapItem: (item: T) => U,
+): Promise<U[]> {
+  const items: U[] = [];
+  let path: string | null = firstPath;
+  while (path) {
+    const page = await readPage(path);
+    items.push(...page.results.map(mapItem));
+    path = page.next;
+  }
+  return items;
+}

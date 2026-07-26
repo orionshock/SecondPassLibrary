@@ -1,7 +1,8 @@
 import { apiClient, type ApiClient } from "./client";
+import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { ApiError } from "./errors";
-import { mapCompactBook, type BookOrdering, type BookPreview, type CompactBook } from "./library";
-import { toPage, type ApiPage, type Page } from "./pagination";
+import type { BookOrdering, BookPreview, CompactBook } from "./library";
+import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";
 
 export interface LibraryGroup {
   id: string;
@@ -56,24 +57,6 @@ interface BookPreviewResponse {
   id: string;
   title: string;
   cover_url: string | null;
-}
-
-interface CompactBookResponse {
-  id: string;
-  title: string;
-  sort_title: string;
-  subtitle: string;
-  authors: Array<{ id: string; name: string }>;
-  series: { id: string; name: string; sort_name: string; series_index: string | null } | null;
-  catalog_tags: Array<{ id: string; name: string; slug: string }>;
-  language: string;
-  publisher: string;
-  published_year: number | null;
-  published_month: number | null;
-  published_day: number | null;
-  published_date_precision: string;
-  cover_url: string | null;
-  file_format: string;
 }
 
 interface GroupMembershipResponse {
@@ -160,14 +143,11 @@ export async function listGroupMembers(
 }
 
 export async function listAllLibraryGroups(client: ApiClient = apiClient): Promise<LibraryGroup[]> {
-  const groups: LibraryGroup[] = [];
-  let path: string | null = "/api/v1/library/groups/?ordering=name&page_size=200";
-  while (path) {
-    const page: ApiPage<LibraryGroupResponse> = await client.request<ApiPage<LibraryGroupResponse>>(path);
-    groups.push(...page.results.map(mapLibraryGroup));
-    path = page.next;
-  }
-  return groups;
+  return collectPaginatedResults(
+    "/api/v1/library/groups/?ordering=name&page_size=200",
+    (path) => client.request<ApiPage<LibraryGroupResponse>>(path),
+    mapLibraryGroup,
+  );
 }
 
 export async function addBookToGroup(

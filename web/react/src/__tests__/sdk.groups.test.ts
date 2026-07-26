@@ -65,7 +65,10 @@ describe("Library Groups SDK", () => {
     await expect(listGroupBooks("group/id", {
       q: " book ", tag: "fantasy", excludeShelfId: "shelf/id", ordering: "-author", page: 2, pageSize: 30,
     }, client)).resolves.toMatchObject({
-      items: [{ id: "book", title: "Book", authors: [{ id: "author", name: "Author" }] }],
+      items: [{
+        id: "book", title: "Book", authors: [{ id: "author", name: "Author" }],
+        catalogTags: [], fileFormat: "EPUB",
+      }],
     });
     const members = await listGroupMembers("group/id", { page: 3, pageSize: 40 }, client);
     expect(members.items).toEqual([{
