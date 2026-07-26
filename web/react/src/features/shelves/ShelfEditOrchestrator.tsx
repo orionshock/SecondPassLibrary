@@ -1,10 +1,8 @@
 import {
   addShelfItem,
   ApiError,
-  createShelf,
   deleteShelf,
   getShelf,
-  listAllLibraryGroups,
   listGroupBooks,
   listShelfEditorItems,
   moveShelfItem,
@@ -12,23 +10,14 @@ import {
   searchLibraryBooks,
   updateShelf,
   type CompactBook,
-  type LibraryGroup,
   type Page,
   type ShelfEditorItem,
   type ShelfEditorItemsPage,
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import {
-  Link,
-  useBlocker,
-  useLocation,
-  useNavigate,
-  useOutletContext,
-  useParams,
-} from "react-router-dom";
+import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../components/ui";
 import {
@@ -36,34 +25,26 @@ import {
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
+import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
+import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
+import { ShelfEditTabsPageRegion } from "./regions/ShelfEditTabsPageRegion";
 import {
-  createShelfInputFromDraft,
   emptyShelfDraft,
   shelfDraftFromSummary,
   shelfDraftsEqual,
   updateShelfInputFromDraft,
   validateShelfDraft,
-  withShelfOwnerType,
   type ShelfDraft,
 } from "./shelfDraft";
 import {
   confirmShelfDelete,
   confirmUnavailableShelfItemRemoval,
-  localManageableShelfGroups,
   readShelfLifecycleSuccessMessage,
   shelfDetailNavigationStateFromEdit,
   shelfDetailPathForId,
   shelfEditBreadcrumbs,
-  shelfEditPath,
-  shelfLifecycleNavigationState,
-  shelfNewBreadcrumbs,
-  shouldLoadAllShelfGroups,
-  type ShelfLifecycleMode,
 } from "./shelfLifecycle";
-import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
-import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
-import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
-import { ShelfEditTabsPageRegion } from "./regions/ShelfEditTabsPageRegion";
 import {
   shelfEditPathWithState,
   shelfEditSearchParams,
@@ -76,16 +57,10 @@ import "./ShelfLifecycle.css";
 
 type ShelfLoad =
   | { status: "loading" }
-  | { status: "ready"; shelf?: ShelfSummary }
+  | { status: "ready"; shelf: ShelfSummary }
   | { status: "unavailable" }
   | { status: "not-allowed"; shelf: ShelfSummary }
   | { status: "error"; error: Error };
-
-interface GroupChoicesLoad {
-  loading: boolean;
-  items: LibraryGroup[];
-  error?: Error;
-}
 
 interface PageLoad<T> {
   page?: Page<T>;
@@ -100,17 +75,12 @@ interface RowMutation {
   message?: string;
 }
 
-export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode }) {
+export function ShelfEditOrchestrator() {
   const { shelfId = "" } = useParams<{ shelfId: string }>();
-  const { currentUser } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
   const [retry, setRetry] = useState(0);
-  const [load, setLoad] = useState<ShelfLoad>(mode === "new" ? { status: "ready" } : { status: "loading" });
-  const [groups, setGroups] = useState<GroupChoicesLoad>(() => ({
-    loading: shouldLoadAllShelfGroups(currentUser),
-    items: localManageableShelfGroups(currentUser),
-  }));
+  const [load, setLoad] = useState<ShelfLoad>({ status: "loading" });
   const [draft, setDraft] = useState<ShelfDraft>({ ...emptyShelfDraft });
   const [baseline, setBaseline] = useState<ShelfDraft>({ ...emptyShelfDraft });
   const [mutation, setMutation] = useState<MutationState>(() => ({
@@ -138,18 +108,17 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
   ));
   const breadcrumbs = useMemo(
-    () => mode === "new" ? shelfNewBreadcrumbs() : shelfEditBreadcrumbs(shelfId, shelf?.name),
-    [mode, shelf?.name, shelfId],
+    () => shelfEditBreadcrumbs(shelfId, shelf?.name),
+    [shelf?.name, shelfId],
   );
   usePageBreadcrumbs(breadcrumbs);
 
   useEffect(() => {
-    if (mode !== "edit" || !shelfId) return;
     const canonical = shelfEditPathWithState(shelfId, editState);
     if (`${location.pathname}${location.search}` !== canonical) {
       navigate(canonical, { replace: true, state: location.state });
     }
-  }, [editState, location.pathname, location.search, location.state, mode, navigate, shelfId]);
+  }, [editState, location.pathname, location.search, location.state, navigate, shelfId]);
 
   useEffect(() => { setSearchDraft(editState.q); }, [editState.q]);
 
@@ -166,29 +135,7 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
   }, [blocker]);
 
   useEffect(() => {
-    if (mode !== "new" || !shouldLoadAllShelfGroups(currentUser)) {
-      setGroups({ loading: false, items: localManageableShelfGroups(currentUser) });
-      return;
-    }
-    let active = true;
-    setGroups({ loading: true, items: [] });
-    listAllLibraryGroups()
-      .then((items) => { if (active) setGroups({ loading: false, items }); })
-      .catch((error: unknown) => {
-        if (active) setGroups({ loading: false, items: [], error: normalizeMutationError(error) });
-      });
-    return () => { active = false; };
-  }, [currentUser, mode]);
-
-  useEffect(() => {
     allowNavigation.current = false;
-    if (mode === "new") {
-      const empty = { ...emptyShelfDraft };
-      setLoad({ status: "ready" });
-      setDraft(empty);
-      setBaseline(empty);
-      return;
-    }
     if (!shelfId) {
       setLoad({ status: "unavailable" });
       return;
@@ -212,10 +159,10 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
           : { status: "error", error: normalizeMutationError(error) });
       });
     return () => { active = false; };
-  }, [mode, retry, shelfId]);
+  }, [retry, shelfId]);
 
   useEffect(() => {
-    if (mode !== "edit" || load.status !== "ready" || editState.tab !== "books") return;
+    if (load.status !== "ready" || editState.tab !== "books") return;
     let active = true;
     setItemsLoad((current) => ({ ...current, loading: true, error: undefined }));
     listShelfEditorItems(shelfId, {
@@ -227,28 +174,26 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
       if (active) setItemsLoad((current) => ({ ...current, loading: false, error: normalizeMutationError(error) }));
     });
     return () => { active = false; };
-  }, [editState.page, editState.pageSize, editState.tab, itemsVersion, load.status, mode, shelfId]);
+  }, [editState.page, editState.pageSize, editState.tab, itemsVersion, load.status, shelfId]);
 
   useEffect(() => {
-    if (mode !== "edit" || load.status !== "ready" || editState.tab !== "add-books") return;
+    if (load.status !== "ready" || editState.tab !== "add-books" || !shelf) return;
     if (!editState.q) {
       setCandidatesLoad({ loading: false });
       return;
     }
-    const currentShelf = shelf;
-    if (!currentShelf) return;
     let active = true;
     setCandidatesLoad((current) => ({ ...current, loading: true, error: undefined }));
     const query = {
       q: editState.q,
-      excludeShelfId: currentShelf.id,
+      excludeShelfId: shelf.id,
       ordering: "title" as const,
       page: editState.page,
       pageSize: editState.pageSize,
     };
-    const request = currentShelf.ownerType === "group"
-      ? currentShelf.ownerGroup
-        ? listGroupBooks(currentShelf.ownerGroup.id, query)
+    const request = shelf.ownerType === "group"
+      ? shelf.ownerGroup
+        ? listGroupBooks(shelf.ownerGroup.id, query)
         : Promise.reject(new Error("Shelf owner group is unavailable."))
       : searchLibraryBooks(query);
     request.then((page) => {
@@ -264,7 +209,6 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     editState.q,
     editState.tab,
     load.status,
-    mode,
     shelf?.id,
     shelf?.ownerGroup?.id,
     shelf?.ownerType,
@@ -275,42 +219,22 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     setMutation(idleMutationState);
   }
 
-  function changeOwnerType(ownerType: ShelfDraft["ownerType"]) {
-    setDraft((current) => withShelfOwnerType(current, ownerType));
-    setMutation(idleMutationState);
-  }
-
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      validateShelfDraft(
-        draft,
-        mode === "new" ? groups.items.map(({ id }) => id) : undefined,
-      );
+      validateShelfDraft(draft);
     } catch (error: unknown) {
       setMutation({ pending: false, error: normalizeMutationError(error) });
       return;
     }
     setMutation({ pending: true });
     try {
-      const saved = mode === "new"
-        ? await createShelf(createShelfInputFromDraft(draft))
-        : await updateShelf(shelfId, updateShelfInputFromDraft(draft));
+      const saved = await updateShelf(shelfId, updateShelfInputFromDraft(draft));
       const next = shelfDraftFromSummary(saved);
       setLoad({ status: "ready", shelf: saved });
       setDraft(next);
       setBaseline(next);
       setMutation({ pending: false, message: "Shelf saved." });
-      if (mode === "new") {
-        allowNavigation.current = true;
-        navigate(shelfEditPath(saved.id), {
-          replace: true,
-          state: shelfLifecycleNavigationState(
-            shelfEditBreadcrumbs(saved.id, saved.name),
-            "Shelf saved.",
-          ),
-        });
-      }
     } catch (error: unknown) {
       setMutation({ pending: false, error: normalizeMutationError(error) });
     }
@@ -319,13 +243,11 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
   function cancel() {
     if (dirty && !window.confirm("Discard unsaved Shelf changes?")) return;
     allowNavigation.current = true;
-    if (mode === "edit" && shelf) {
+    if (shelf) {
       navigate(shelfDetailPathForId(shelf.id), {
         state: shelfDetailNavigationStateFromEdit(location.state, shelf),
       });
-      return;
     }
-    navigate("/shelves", { state: null });
   }
 
   async function removeShelf() {
@@ -346,7 +268,7 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
 
   async function refreshShelfItemCount() {
     const refreshed = await getShelf(shelfId);
-    setLoad((current) => current.status === "ready" && current.shelf
+    setLoad((current) => current.status === "ready"
       ? { status: "ready", shelf: { ...current.shelf, itemCount: refreshed.itemCount } }
       : current);
   }
@@ -416,37 +338,34 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
   if (load.status === "error") {
     return <section className="shelf-lifecycle-state"><ErrorPanel>{load.error.message}</ErrorPanel><Button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</Button></section>;
   }
+  const editableShelf = load.shelf;
 
   return <div className="page-stack shelf-lifecycle-page">
-    <PageHeader
-      eyebrow={mode === "new" ? "New Shelf" : "Editing Shelf"}
-      title={mode === "new" ? "Create Shelf" : draft.name || shelf?.name || "Shelf"}
-    />
-    {mode === "edit" ? <ShelfEditTabsPageRegion
+    <PageHeader eyebrow="Editing Shelf" title={draft.name || editableShelf.name || "Shelf"} />
+    <ShelfEditTabsPageRegion
       activeTab={editState.tab}
       onTabChange={(tab) => navigateEditState(withShelfEditTab(editState, tab))}
-    /> : null}
-    {mode === "new" || editState.tab === "details" ? <ShelfDetailsEditPageRegion
-      mode={mode}
-      shelf={shelf}
+    />
+    {editState.tab === "details" ? <ShelfDetailsEditPageRegion
+      mode="edit"
+      shelf={editableShelf}
       draft={draft}
-      groups={groups.items}
-      groupsLoading={groups.loading}
-      groupsError={groups.error}
+      groups={[]}
+      groupsLoading={false}
       mutation={mutation}
       deleteMutation={deleteMutation}
       itemMutationPending={Boolean(itemMutation.pendingId || candidateMutation.pendingId)}
       onChange={change}
-      onOwnerTypeChange={changeOwnerType}
+      onOwnerTypeChange={() => undefined}
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
       onDelete={() => void removeShelf()}
     /> : null}
-    {mode === "edit" && shelf && editState.tab === "books" ? <>
+    {editState.tab === "books" ? <>
       {itemMutation.message ? <p className="shelf-edit-section-feedback" aria-live="polite">{itemMutation.message}</p> : null}
       <ShelfEditBooksPageRegion
-        shelfId={shelf.id}
-        shelfName={shelf.name}
+        shelfId={editableShelf.id}
+        shelfName={editableShelf.name}
         page={itemsLoad.page}
         pageNumber={editState.page}
         pageSize={editState.pageSize}
@@ -462,11 +381,11 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
         onRetry={() => setItemsVersion((value) => value + 1)}
       />
     </> : null}
-    {mode === "edit" && shelf && editState.tab === "add-books" ? <>
+    {editState.tab === "add-books" ? <>
       {candidateMutation.message ? <p className="shelf-edit-section-feedback" aria-live="polite">{candidateMutation.message}</p> : null}
       <ShelfEditAddBooksPageRegion
-        shelfId={shelf.id}
-        shelfName={shelf.name}
+        shelfId={editableShelf.id}
+        shelfName={editableShelf.name}
         search={searchDraft}
         page={candidatesLoad.page}
         pageNumber={editState.page}
