@@ -3,8 +3,8 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { breadcrumbNavigationState } from "../app/navigation/breadcrumbs";
+import { clientPairingBreadcrumbFallback } from "../app/navigation/accountBreadcrumbs";
 import { AccountSessionsPageRegion } from "../features/profile/regions/AccountSessionsPageRegion";
-import { clientPairingBreadcrumbFallback } from "../features/profile/profileBreadcrumbs";
 import { confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "../features/profile/profileConfirmations";
 
 describe("AccountSessionsPageRegion", () => {

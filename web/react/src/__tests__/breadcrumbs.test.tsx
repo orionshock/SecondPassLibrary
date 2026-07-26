@@ -15,7 +15,7 @@ import {
   clientPairingBreadcrumbFallback,
   passwordBreadcrumbFallback,
   profileBreadcrumbFallback,
-} from "../features/profile/profileBreadcrumbs";
+} from "../app/navigation/accountBreadcrumbs";
 
 function breadcrumbText(items: readonly BreadcrumbItem[]): string {
   return renderBreadcrumbs(items).replace(/<[^>]+>/g, "");

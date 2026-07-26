@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { clientPairingBreadcrumbFallback, passwordBreadcrumbFallback, profileBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { PageHeader } from "../../components/ui";
@@ -19,7 +20,6 @@ import { AccountSessionsPageRegion } from "./regions/AccountSessionsPageRegion";
 import { GroupMembershipsPageRegion } from "./regions/GroupMembershipsPageRegion";
 import { ProfileDetailsPageRegion } from "./regions/ProfileDetailsPageRegion";
 import "./Profile.css";
-import { clientPairingBreadcrumbFallback, passwordBreadcrumbFallback, profileBreadcrumbFallback } from "./profileBreadcrumbs";
 import { confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "./profileConfirmations";
 
 export function ProfileOrchestrator() {

@@ -3,9 +3,9 @@ import { useReducer, useState, type FormEvent } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { passwordBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { passwordBreadcrumbFallback } from "../profile/profileBreadcrumbs";
 import "../../shared/layout/AccountPageLayout.css";
 import { PasswordChangePageRegion } from "./regions/PasswordChangePageRegion";
 import { emptyPasswordDraft, passwordConfirmationError, passwordDraftReducer } from "./passwordChangeForm";

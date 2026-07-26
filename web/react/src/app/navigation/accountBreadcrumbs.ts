@@ -1,4 +1,4 @@
-import { appendBreadcrumbTrail, type BreadcrumbItem } from "../../app/navigation/breadcrumbs";
+import { appendBreadcrumbTrail, type BreadcrumbItem } from "./breadcrumbs";
 
 export const profileBreadcrumbFallback: readonly BreadcrumbItem[] = [];
 
