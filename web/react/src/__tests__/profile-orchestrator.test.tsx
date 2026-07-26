@@ -29,6 +29,7 @@ describe("ProfileOrchestrator", () => {
     expect(markup).toContain('aria-label="Public group: Common Room"');
     expect(markup).toContain('aria-label="Group: Editors"');
     expect(markup).toContain("Curator");
+    expect(markup).not.toContain(">Member<");
     expect(markup).not.toContain("Remove Common Room");
     expect(markup).not.toContain('<p class="eyebrow">Profile</p>');
   });

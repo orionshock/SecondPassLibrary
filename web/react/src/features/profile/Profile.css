@@ -114,6 +114,26 @@
   gap: 0.4rem;
 }
 
+.profile-group-memberships {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  align-items: center;
+  column-gap: 0.75rem;
+}
+
+.profile-group-membership-row {
+  display: contents;
+}
+
+.profile-group-membership-identity {
+  justify-self: end;
+}
+
+.profile-group-membership-status {
+  justify-self: start;
+}
+
 @media (max-width: 42rem) {
   .profile-user-row,
   .session-management-row {
@@ -125,5 +145,10 @@
   .section-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .profile-group-memberships {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    width: 100%;
   }
 }
