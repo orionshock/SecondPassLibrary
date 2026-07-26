@@ -1,15 +1,15 @@
 import { ApiError, getShelf, listShelfItems, type Page, type ShelfItem, type ShelfSummary } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "./regions/ShelfItemsPageRegion";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
 import { shelfEditNavigationState, shelfEditPath } from "./shelfLifecycle";
-import { loadShelfPageWithRecovery } from "./shelvesPageRecovery";
 import {
   shelfDetailPath,
   shelfDetailSearchParams,
@@ -45,6 +45,7 @@ export function ShelfDetailOrchestrator() {
   const [itemsRetry, setItemsRetry] = useState(0);
   const [detail, setDetail] = useState<ShelfLoad>({ status: "loading" });
   const [items, setItems] = useState<ItemsLoad>({ loading: true });
+  const recoveredPageKeys = useRef(new Set<string>());
   const shelf = detail.status === "ready" ? detail.shelf : undefined;
   const breadcrumbs = useMemo(() => shelfDetailBreadcrumbFallback(shelf?.name), [shelf?.name]);
   usePageBreadcrumbs(breadcrumbs);
@@ -72,16 +73,24 @@ export function ShelfDetailOrchestrator() {
     if (queryKey !== canonicalQuery) return;
     let active = true;
     setItems((current) => ({ page: current.page, loading: true }));
-    loadShelfPageWithRecovery(
-      shelfItemsSdkQuery(queryState),
-      (query) => listShelfItems(shelfId, query),
-    )
-      .then(({ page, correctedPage }) => {
+    const sdkQuery = shelfItemsSdkQuery(queryState);
+    const locationState = location.state;
+    loadPageWithRecovery({
+      requestedPage: queryState.page,
+      pageSize: queryState.pageSize,
+      recoveryKey: `${shelfId}:${canonicalQuery}`,
+      recoveredKeys: recoveredPageKeys.current,
+      fetchPage: (page) => listShelfItems(shelfId, { ...sdkQuery, page }),
+      buildRecoveredLocation: (page) => shelfDetailSearchParams(withShelfDetailChange(queryState, { page }, false)).toString(),
+      replaceLocation: (location) => {
+        if (!active) return false;
+        setSearchParameters(new URLSearchParams(location), { replace: true, state: locationState });
+        return true;
+      },
+    })
+      .then(({ page, recovered }) => {
         if (!active) return;
-        if (correctedPage !== queryState.page) {
-          changeQuery({ page: correctedPage }, false, true);
-          return;
-        }
+        if (recovered) return;
         setItems({ page, loading: false });
       })
       .catch((error: unknown) => {

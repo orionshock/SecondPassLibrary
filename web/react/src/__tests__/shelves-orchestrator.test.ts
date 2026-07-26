@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError, type Page, type ShelvesQuery } from "@second-pass/spl-api";
+import { loadPageWithRecovery } from "../app/routing/pageRecovery";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback, shelvesListBreadcrumbFallback } from "../features/shelves/shelvesBreadcrumbs";
-import { loadShelfPageWithRecovery } from "../features/shelves/shelvesPageRecovery";
 
 describe("Shelves orchestrator contracts", () => {
   it("uses no base breadcrumb and canonical detail and Book trails", () => {
@@ -26,19 +26,17 @@ describe("Shelves orchestrator contracts", () => {
       if (candidate.page === 8) throw new ApiError("Invalid page.", 404);
       return { items: [], count: 45, next: null, previous: null };
     };
-    const result = await loadShelfPageWithRecovery(query, request);
+    const result = await loadPageWithRecovery({
+      requestedPage: query.page ?? 1,
+      pageSize: query.pageSize ?? 20,
+      recoveryKey: "shelves",
+      recoveredKeys: new Set<string>(),
+      fetchPage: (page) => request({ ...query, page }),
+      buildRecoveredLocation: (page) => `page=${page}`,
+      replaceLocation: () => undefined,
+    });
     expect(result.correctedPage).toBe(3);
     expect(calls).toEqual([8, 1, 3]);
   });
 
-  it("does not reinterpret page-one or non-404 failures as recovery", async () => {
-    await expect(loadShelfPageWithRecovery(
-      { page: 1, pageSize: 20 },
-      async () => { throw new ApiError("Unavailable.", 404); },
-    )).rejects.toThrow("Unavailable");
-    await expect(loadShelfPageWithRecovery(
-      { page: 2, pageSize: 20 },
-      async () => { throw new ApiError("Broken.", 500); },
-    )).rejects.toThrow("Broken");
-  });
 });

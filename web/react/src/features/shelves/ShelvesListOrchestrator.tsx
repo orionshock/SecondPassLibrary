@@ -1,12 +1,12 @@
 import { listShelves, type Page, type ShelfSummary } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ShelvesListPageRegion } from "./regions/ShelvesListPageRegion";
 import { shelvesListBreadcrumbFallback } from "./shelvesBreadcrumbs";
-import { loadShelfPageWithRecovery } from "./shelvesPageRecovery";
 import {
   shelvesListSdkQuery,
   shelvesListSearchParams,
@@ -32,6 +32,7 @@ export function ShelvesListOrchestrator() {
   const canonicalQuery = shelvesListSearchParams(queryState).toString();
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<ShelvesLoadState>({ loading: true });
+  const recoveredPageKeys = useRef(new Set<string>());
 
   useEffect(() => {
     if (queryKey === canonicalQuery) return;
@@ -42,17 +43,23 @@ export function ShelvesListOrchestrator() {
     if (queryKey !== canonicalQuery) return;
     let active = true;
     setLoad((current) => ({ page: current.page, loading: true }));
-    loadShelfPageWithRecovery(shelvesListSdkQuery(queryState), listShelves)
-      .then(({ page, correctedPage }) => {
+    const sdkQuery = shelvesListSdkQuery(queryState);
+    loadPageWithRecovery({
+      requestedPage: queryState.page,
+      pageSize: queryState.pageSize,
+      recoveryKey: `shelves:${canonicalQuery}`,
+      recoveredKeys: recoveredPageKeys.current,
+      fetchPage: (page) => listShelves({ ...sdkQuery, page }),
+      buildRecoveredLocation: (page) => shelvesListSearchParams(withShelvesListChange(queryState, { page }, false)).toString(),
+      replaceLocation: (location) => {
+        if (!active) return false;
+        setSearchParameters(new URLSearchParams(location), { replace: true, state: null });
+        return true;
+      },
+    })
+      .then(({ page, recovered }) => {
         if (!active) return;
-        if (correctedPage !== queryState.page) {
-          setSearchParameters(shelvesListSearchParams(withShelvesListChange(
-            queryState,
-            { page: correctedPage },
-            false,
-          )), { replace: true, state: null });
-          return;
-        }
+        if (recovered) return;
         setLoad({ page, loading: false });
       })
       .catch((error: unknown) => {

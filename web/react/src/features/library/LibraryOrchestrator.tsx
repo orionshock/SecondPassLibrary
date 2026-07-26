@@ -10,16 +10,15 @@ import {
   type CatalogTag,
   type CompactBook,
   type LibraryAuthor,
-  type LibraryAxisQuery,
-  type LibraryBooksQuery,
   type LibrarySeries,
   type Page,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import {
   libraryAxisBasePath,
@@ -95,6 +94,7 @@ export function LibraryOrchestrator() {
   const [series, setSeries] = useState<LoadState<LibrarySeries>>({ loading: true });
   const [tags, setTags] = useState<TagsLoadState>({ loading: false });
   const [contextDetails, setContextDetails] = useState<SelectedContextDetailsLoad>({ status: "idle" });
+  const recoveredPageKeys = useRef(new Set<string>());
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.authorId, queryState.q, queryState.seriesId, queryState.view]);
 
@@ -140,40 +140,52 @@ export function LibraryOrchestrator() {
   useEffect(() => {
     if (queryKey !== canonicalQuery) return;
     let active = true;
+    const locationState = location.state;
+
+    const recoverPage = <Item,>(request: (page: number) => Promise<Page<Item>>) => loadPageWithRecovery({
+      requestedPage: queryState.page,
+      pageSize: queryState.pageSize,
+      recoveryKey: `${requestView}:${canonicalQuery}`,
+      recoveredKeys: recoveredPageKeys.current,
+      fetchPage: request,
+      buildRecoveredLocation: (page) => librarySearchParams(withLibraryChange(queryState, { page }, false)).toString(),
+      replaceLocation: (location) => {
+        if (!active) return false;
+        setSearchParameters(new URLSearchParams(location), { replace: true, state: selectedContextDisplay ? locationState : null });
+        return true;
+      },
+    });
 
     if (requestView === "books") {
       setBooks((current) => ({ page: current.page, loading: true }));
-      loadLibraryPageWithRecovery(libraryBooksSdkQuery(queryState), listBooks)
-        .then(({ page, correctedPage }) => {
+      const sdkQuery = libraryBooksSdkQuery(queryState);
+      recoverPage((page) => listBooks({ ...sdkQuery, page }))
+        .then(({ page, recovered }) => {
           if (!active) return;
-          if (replaceCorrectedPage(correctedPage)) return;
+          if (recovered) return;
           setBooks({ page, loading: false });
         })
         .catch((error: unknown) => { if (active) setBooks((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
     } else if (requestView === "authors") {
       setAuthors((current) => ({ page: current.page, loading: true }));
-      loadLibraryPageWithRecovery(libraryAxisSdkQuery(queryState), listAuthors)
-        .then(({ page, correctedPage }) => {
+      const sdkQuery = libraryAxisSdkQuery(queryState);
+      recoverPage((page) => listAuthors({ ...sdkQuery, page }))
+        .then(({ page, recovered }) => {
           if (!active) return;
-          if (replaceCorrectedPage(correctedPage)) return;
+          if (recovered) return;
           setAuthors({ page, loading: false });
         })
         .catch((error: unknown) => { if (active) setAuthors((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
     } else {
       setSeries((current) => ({ page: current.page, loading: true }));
-      loadLibraryPageWithRecovery(libraryAxisSdkQuery(queryState), listSeries)
-        .then(({ page, correctedPage }) => {
+      const sdkQuery = libraryAxisSdkQuery(queryState);
+      recoverPage((page) => listSeries({ ...sdkQuery, page }))
+        .then(({ page, recovered }) => {
           if (!active) return;
-          if (replaceCorrectedPage(correctedPage)) return;
+          if (recovered) return;
           setSeries({ page, loading: false });
         })
         .catch((error: unknown) => { if (active) setSeries((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) })); });
-    }
-
-    function replaceCorrectedPage(correctedPage: number): boolean {
-      if (correctedPage === queryState.page) return false;
-      setSearchParameters(librarySearchParams(withLibraryChange(queryState, { page: correctedPage }, false)), { replace: true, state: selectedContextDisplay ? location.state : null });
-      return true;
     }
 
     return () => { active = false; };
@@ -269,29 +281,6 @@ export function LibraryOrchestrator() {
       </div>
     </div>
   </div>;
-}
-
-export async function loadLibraryPageWithRecovery<Item, Query extends { page?: number; pageSize?: number }>(
-  query: Query,
-  request: (query: Query) => Promise<Page<Item>>,
-): Promise<{ page: Page<Item>; correctedPage: number }> {
-  const requestedPage = query.page ?? 1;
-  try {
-    return { page: await request(query), correctedPage: requestedPage };
-  } catch (error) {
-    if (requestedPage <= 1 || !(error instanceof ApiError) || error.status !== 404) throw error;
-    const firstPage = await request({ ...query, page: 1 });
-    const maxPage = Math.max(1, Math.ceil(firstPage.count / (query.pageSize ?? 20)));
-    if (maxPage === 1) return { page: firstPage, correctedPage: 1 };
-    return { page: await request({ ...query, page: maxPage }), correctedPage: maxPage };
-  }
-}
-
-export function loadBooksWithPageRecovery(
-  query: LibraryBooksQuery,
-  request: (query: LibraryBooksQuery) => Promise<Page<CompactBook>> = listBooks,
-) {
-  return loadLibraryPageWithRecovery(query, request);
 }
 
 export function unknownCatalogTag(activeTag: string | undefined, tags: readonly CatalogTag[] | undefined): boolean {

@@ -1,12 +1,12 @@
 import { listGroups, type LibraryGroup, type Page } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { groupsListBreadcrumbFallback } from "./groupsBreadcrumbs";
-import { loadGroupPageWithRecovery } from "./groupsPageRecovery";
 import {
   groupsListSdkQuery,
   groupsListSearchParams,
@@ -35,6 +35,7 @@ export function GroupsListOrchestrator() {
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<GroupsLoadState>({ loading: true });
+  const recoveredPageKeys = useRef(new Set<string>());
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
 
@@ -47,17 +48,23 @@ export function GroupsListOrchestrator() {
     if (queryKey !== canonicalQuery) return;
     let active = true;
     setLoad((current) => ({ page: current.page, loading: true }));
-    loadGroupPageWithRecovery(groupsListSdkQuery(queryState), listGroups)
-      .then(({ page, correctedPage }) => {
+    const sdkQuery = groupsListSdkQuery(queryState);
+    loadPageWithRecovery({
+      requestedPage: queryState.page,
+      pageSize: queryState.pageSize,
+      recoveryKey: `groups:${canonicalQuery}`,
+      recoveredKeys: recoveredPageKeys.current,
+      fetchPage: (page) => listGroups({ ...sdkQuery, page }),
+      buildRecoveredLocation: (page) => groupsListSearchParams(withGroupsListChange(queryState, { page }, false)).toString(),
+      replaceLocation: (location) => {
+        if (!active) return false;
+        setSearchParameters(new URLSearchParams(location), { replace: true, state: null });
+        return true;
+      },
+    })
+      .then(({ page, recovered }) => {
         if (!active) return;
-        if (correctedPage !== queryState.page) {
-          setSearchParameters(groupsListSearchParams(withGroupsListChange(
-            queryState,
-            { page: correctedPage },
-            false,
-          )), { replace: true, state: null });
-          return;
-        }
+        if (recovered) return;
         setLoad({ page, loading: false });
       })
       .catch((error: unknown) => {

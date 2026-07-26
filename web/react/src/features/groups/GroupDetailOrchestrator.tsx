@@ -8,15 +8,15 @@ import {
   type LibraryGroup,
   type Page,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
-import { loadGroupPageWithRecovery } from "./groupsPageRecovery";
 import {
   groupBooksSdkQuery,
   groupDetailPath,
@@ -59,6 +59,7 @@ export function GroupDetailOrchestrator() {
   const [detail, setDetail] = useState<GroupLoad>({ status: "loading" });
   const [books, setBooks] = useState<PageLoad<CompactBook>>({ loading: true });
   const [members, setMembers] = useState<PageLoad<GroupMembership>>({ loading: true });
+  const recoveredPageKeys = useRef(new Set<string>());
   const group = detail.status === "ready" ? detail.group : undefined;
   const breadcrumbs = useMemo(() => groupDetailBreadcrumbFallback(group?.name), [group?.name]);
   usePageBreadcrumbs(breadcrumbs);
@@ -87,19 +88,30 @@ export function GroupDetailOrchestrator() {
   useEffect(() => {
     if (queryKey !== canonicalQuery) return;
     let active = true;
-    const request = queryState.tab === "books"
-      ? () => loadGroupPageWithRecovery(groupBooksSdkQuery(queryState), (query) => listGroupBooks(groupId, query))
-      : () => loadGroupPageWithRecovery(groupMembersSdkQuery(queryState), (query) => listGroupMembers(groupId, query));
+    const locationState = location.state;
+    const recoverPage = <Item,>(fetchPage: (page: number) => Promise<Page<Item>>) => loadPageWithRecovery({
+      requestedPage: queryState.page,
+      pageSize: queryState.pageSize,
+      recoveryKey: `${groupId}:${queryState.tab}:${canonicalQuery}`,
+      recoveredKeys: recoveredPageKeys.current,
+      fetchPage,
+      buildRecoveredLocation: (page) => groupDetailSearchParams(withGroupDetailChange(queryState, { page }, false)).toString(),
+      replaceLocation: (nextLocation) => {
+        if (!active) return false;
+        setSearchParameters(new URLSearchParams(nextLocation), { replace: true, state: locationState });
+        return true;
+      },
+    });
     if (queryState.tab === "books") setBooks((current) => ({ page: current.page, loading: true }));
     else setMembers((current) => ({ page: current.page, loading: true }));
 
-    request()
-      .then(({ page, correctedPage }) => {
+    const request = queryState.tab === "books"
+      ? recoverPage((page) => listGroupBooks(groupId, { ...groupBooksSdkQuery(queryState), page }))
+      : recoverPage((page) => listGroupMembers(groupId, { ...groupMembersSdkQuery(queryState), page }));
+    request
+      .then(({ page, recovered }) => {
         if (!active) return;
-        if (correctedPage !== queryState.page) {
-          changeQuery({ page: correctedPage }, false, true);
-          return;
-        }
+        if (recovered) return;
         if (queryState.tab === "books") setBooks({ page: page as Page<CompactBook>, loading: false });
         else setMembers({ page: page as Page<GroupMembership>, loading: false });
       })
