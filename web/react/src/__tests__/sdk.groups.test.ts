@@ -63,7 +63,7 @@ describe("Library Groups SDK", () => {
       previewBooks: [{ id: "preview", title: "Preview", coverUrl: "/cover.jpg" }],
     });
     await expect(listGroupBooks("group/id", {
-      q: " book ", tag: "fantasy", ordering: "-author", page: 2, pageSize: 30,
+      q: " book ", tag: "fantasy", excludeShelfId: "shelf/id", ordering: "-author", page: 2, pageSize: 30,
     }, client)).resolves.toMatchObject({
       items: [{ id: "book", title: "Book", authors: [{ id: "author", name: "Author" }] }],
     });
@@ -76,7 +76,7 @@ describe("Library Groups SDK", () => {
     expect(members.items[0]).not.toHaveProperty("createdAt");
     expect(calls).toEqual([
       "/api/v1/library/groups/group%2Fid/?include_preview_books=true",
-      "/api/v1/library/groups/group%2Fid/books/?q=book&tag=fantasy&ordering=-author&page=2&page_size=30",
+      "/api/v1/library/groups/group%2Fid/books/?q=book&tag=fantasy&exclude_shelf=shelf%2Fid&ordering=-author&page=2&page_size=30",
       "/api/v1/library/groups/group%2Fid/memberships/?page=3&page_size=40",
     ]);
   });

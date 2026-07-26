@@ -16,6 +16,7 @@ export function ShelfDetailsEditPageRegion({
   groupsError,
   mutation,
   deleteMutation,
+  itemMutationPending,
   onChange,
   onOwnerTypeChange,
   onSubmit,
@@ -30,6 +31,7 @@ export function ShelfDetailsEditPageRegion({
   groupsError?: Error;
   mutation: MutationState;
   deleteMutation: MutationState;
+  itemMutationPending?: boolean;
   onChange: <K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) => void;
   onOwnerTypeChange: (ownerType: ShelfDraft["ownerType"]) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -73,7 +75,7 @@ export function ShelfDetailsEditPageRegion({
         state={mutation}
         submitLabel={mode === "new" ? "Create Shelf" : "Save Shelf"}
         pendingLabel="Saving..."
-        disabled={deleteMutation.pending}
+        disabled={deleteMutation.pending || itemMutationPending}
         onCancel={onCancel}
       />
     </form>

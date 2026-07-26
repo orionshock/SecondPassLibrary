@@ -1,11 +1,19 @@
 import {
+  addShelfItem,
   ApiError,
   createShelf,
   deleteShelf,
   getShelf,
   listAllLibraryGroups,
+  listGroupBooks,
+  listShelfItems,
+  removeShelfItem,
+  searchLibraryBooks,
   updateShelf,
+  type CompactBook,
   type LibraryGroup,
+  type Page,
+  type ShelfItem,
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -50,6 +58,17 @@ import {
   type ShelfLifecycleMode,
 } from "./shelfLifecycle";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
+import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
+import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
+import { ShelfEditTabsPageRegion } from "./regions/ShelfEditTabsPageRegion";
+import {
+  shelfEditPathWithState,
+  shelfEditSearchParams,
+  shelfEditStateFromSearchParams,
+  withShelfEditPage,
+  withShelfEditTab,
+  type ShelfEditUrlState,
+} from "./shelvesQuery";
 import "./ShelfLifecycle.css";
 
 type ShelfLoad =
@@ -63,6 +82,18 @@ interface GroupChoicesLoad {
   loading: boolean;
   items: LibraryGroup[];
   error?: Error;
+}
+
+interface PageLoad<T> {
+  page?: Page<T>;
+  loading: boolean;
+  error?: Error;
+}
+
+interface RowMutation {
+  pendingId?: string;
+  error?: Error;
+  message?: string;
 }
 
 export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode }) {
@@ -85,6 +116,17 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
       : {}),
   }));
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
+  const editState = useMemo(
+    () => shelfEditStateFromSearchParams(new URLSearchParams(location.search)),
+    [location.search],
+  );
+  const [searchDraft, setSearchDraft] = useState(editState.q);
+  const [itemsLoad, setItemsLoad] = useState<PageLoad<ShelfItem>>({ loading: false });
+  const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<CompactBook>>({ loading: false });
+  const [itemMutation, setItemMutation] = useState<RowMutation>({});
+  const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
+  const [itemsVersion, setItemsVersion] = useState(0);
+  const [candidatesVersion, setCandidatesVersion] = useState(0);
   const allowNavigation = useRef(false);
   const shelf = load.status === "ready" || load.status === "not-allowed" ? load.shelf : undefined;
   const dirty = !shelfDraftsEqual(draft, baseline);
@@ -96,6 +138,16 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     [mode, shelf?.name, shelfId],
   );
   usePageBreadcrumbs(breadcrumbs);
+
+  useEffect(() => {
+    if (mode !== "edit" || !shelfId) return;
+    const canonical = shelfEditPathWithState(shelfId, editState);
+    if (`${location.pathname}${location.search}` !== canonical) {
+      navigate(canonical, { replace: true, state: location.state });
+    }
+  }, [editState, location.pathname, location.search, location.state, mode, navigate, shelfId]);
+
+  useEffect(() => { setSearchDraft(editState.q); }, [editState.q]);
 
   useEffect(() => {
     const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
@@ -157,6 +209,63 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
       });
     return () => { active = false; };
   }, [mode, retry, shelfId]);
+
+  useEffect(() => {
+    if (mode !== "edit" || load.status !== "ready" || editState.tab !== "books") return;
+    let active = true;
+    setItemsLoad((current) => ({ ...current, loading: true, error: undefined }));
+    listShelfItems(shelfId, {
+      ordering: "position",
+      page: editState.page,
+      pageSize: editState.pageSize,
+    }).then((page) => {
+      if (active) setItemsLoad({ page, loading: false });
+    }).catch((error: unknown) => {
+      if (active) setItemsLoad((current) => ({ ...current, loading: false, error: normalizeMutationError(error) }));
+    });
+    return () => { active = false; };
+  }, [editState.page, editState.pageSize, editState.tab, itemsVersion, load.status, mode, shelfId]);
+
+  useEffect(() => {
+    if (mode !== "edit" || load.status !== "ready" || editState.tab !== "add-books") return;
+    if (!editState.q) {
+      setCandidatesLoad({ loading: false });
+      return;
+    }
+    const currentShelf = shelf;
+    if (!currentShelf) return;
+    let active = true;
+    setCandidatesLoad((current) => ({ ...current, loading: true, error: undefined }));
+    const query = {
+      q: editState.q,
+      excludeShelfId: currentShelf.id,
+      ordering: "title" as const,
+      page: editState.page,
+      pageSize: editState.pageSize,
+    };
+    const request = currentShelf.ownerType === "group"
+      ? currentShelf.ownerGroup
+        ? listGroupBooks(currentShelf.ownerGroup.id, query)
+        : Promise.reject(new Error("Shelf owner group is unavailable."))
+      : searchLibraryBooks(query);
+    request.then((page) => {
+      if (active) setCandidatesLoad({ page, loading: false });
+    }).catch((error: unknown) => {
+      if (active) setCandidatesLoad((current) => ({ ...current, loading: false, error: normalizeMutationError(error) }));
+    });
+    return () => { active = false; };
+  }, [
+    candidatesVersion,
+    editState.page,
+    editState.pageSize,
+    editState.q,
+    editState.tab,
+    load.status,
+    mode,
+    shelf?.id,
+    shelf?.ownerGroup?.id,
+    shelf?.ownerType,
+  ]);
 
   function change<K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -228,6 +337,52 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
     }
   }
 
+  function navigateEditState(next: ShelfEditUrlState, replace = false) {
+    navigate(shelfEditPathWithState(shelfId, next), { replace, state: location.state });
+  }
+
+  async function refreshShelfItemCount() {
+    const refreshed = await getShelf(shelfId);
+    setLoad((current) => current.status === "ready" && current.shelf
+      ? { status: "ready", shelf: { ...current.shelf, itemCount: refreshed.itemCount } }
+      : current);
+  }
+
+  async function removeItem(itemId: string) {
+    setItemMutation({ pendingId: itemId });
+    try {
+      await removeShelfItem(shelfId, itemId);
+      setItemsVersion((value) => value + 1);
+    } catch (error: unknown) {
+      setItemMutation({ error: normalizeMutationError(error) });
+      return;
+    }
+    try {
+      await refreshShelfItemCount();
+      setItemMutation({ message: "Book removed from shelf." });
+    } catch {
+      setItemMutation({ error: new Error("Book removed, but the shelf summary could not be refreshed.") });
+    }
+  }
+
+  async function addItem(bookId: string) {
+    setCandidateMutation({ pendingId: bookId });
+    try {
+      await addShelfItem(shelfId, { bookId });
+      setItemsVersion((value) => value + 1);
+      setCandidatesVersion((value) => value + 1);
+    } catch (error: unknown) {
+      setCandidateMutation({ error: normalizeMutationError(error) });
+      return;
+    }
+    try {
+      await refreshShelfItemCount();
+      setCandidateMutation({ message: "Book added to shelf." });
+    } catch {
+      setCandidateMutation({ error: new Error("Book added, but the shelf summary could not be refreshed.") });
+    }
+  }
+
   if (load.status === "loading") {
     return <section className="shelf-lifecycle-state" aria-live="polite" aria-busy="true">Loading shelf...</section>;
   }
@@ -246,7 +401,11 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
       eyebrow={mode === "new" ? "New Shelf" : "Editing Shelf"}
       title={mode === "new" ? "Create Shelf" : draft.name || shelf?.name || "Shelf"}
     />
-    <ShelfDetailsEditPageRegion
+    {mode === "edit" ? <ShelfEditTabsPageRegion
+      activeTab={editState.tab}
+      onTabChange={(tab) => navigateEditState(withShelfEditTab(editState, tab))}
+    /> : null}
+    {mode === "new" || editState.tab === "details" ? <ShelfDetailsEditPageRegion
       mode={mode}
       shelf={shelf}
       draft={draft}
@@ -255,11 +414,51 @@ export function ShelfLifecycleOrchestrator({ mode }: { mode: ShelfLifecycleMode 
       groupsError={groups.error}
       mutation={mutation}
       deleteMutation={deleteMutation}
+      itemMutationPending={Boolean(itemMutation.pendingId || candidateMutation.pendingId)}
       onChange={change}
       onOwnerTypeChange={changeOwnerType}
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
       onDelete={() => void removeShelf()}
-    />
+    /> : null}
+    {mode === "edit" && shelf && editState.tab === "books" ? <>
+      {itemMutation.message ? <p className="shelf-edit-section-feedback" aria-live="polite">{itemMutation.message}</p> : null}
+      <ShelfEditBooksPageRegion
+        shelfId={shelf.id}
+        shelfName={shelf.name}
+        page={itemsLoad.page}
+        pageNumber={editState.page}
+        pageSize={editState.pageSize}
+        loading={itemsLoad.loading}
+        error={itemMutation.error ?? itemsLoad.error}
+        pendingItemId={itemMutation.pendingId}
+        controlsDisabled={mutation.pending || deleteMutation.pending}
+        onRemove={(itemId) => void removeItem(itemId)}
+        onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}
+        onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
+        onRetry={() => setItemsVersion((value) => value + 1)}
+      />
+    </> : null}
+    {mode === "edit" && shelf && editState.tab === "add-books" ? <>
+      {candidateMutation.message ? <p className="shelf-edit-section-feedback" aria-live="polite">{candidateMutation.message}</p> : null}
+      <ShelfEditAddBooksPageRegion
+        shelfId={shelf.id}
+        shelfName={shelf.name}
+        search={searchDraft}
+        page={candidatesLoad.page}
+        pageNumber={editState.page}
+        pageSize={editState.pageSize}
+        loading={candidatesLoad.loading}
+        error={candidateMutation.error ?? candidatesLoad.error}
+        pendingBookId={candidateMutation.pendingId}
+        controlsDisabled={mutation.pending || deleteMutation.pending}
+        onSearchChange={(value) => { setSearchDraft(value); setCandidateMutation({}); }}
+        onSearch={() => navigateEditState({ ...editState, q: searchDraft.trim(), page: 1 })}
+        onAdd={(bookId) => void addItem(bookId)}
+        onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}
+        onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
+        onRetry={() => setCandidatesVersion((value) => value + 1)}
+      />
+    </> : null}
   </div>;
 }

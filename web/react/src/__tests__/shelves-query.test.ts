@@ -4,12 +4,17 @@ import {
   shelfDetailPath,
   shelfDetailSearchParams,
   shelfDetailStateFromSearchParams,
+  shelfEditPathWithState,
+  shelfEditSearchParams,
+  shelfEditStateFromSearchParams,
   shelfItemsSdkQuery,
   shelvesListPath,
   shelvesListSdkQuery,
   shelvesListSearchParams,
   shelvesListStateFromSearchParams,
   withShelfDetailChange,
+  withShelfEditPage,
+  withShelfEditTab,
   withShelvesListChange,
 } from "../features/shelves/shelvesQuery";
 
@@ -50,5 +55,19 @@ describe("Shelves URL state", () => {
     expect(withShelfDetailChange(state, { pageSize: 40 }).page).toBe(1);
     expect(withShelfDetailChange(state, { page: 4 }, false).page).toBe(4);
     expect(shelfDetailStateFromSearchParams(new URLSearchParams("ordering=bad&page=-1&page_size=10"))).toEqual(defaults);
+  });
+
+  it("keeps Shelf Edit Details canonical and normalizes item-tab URL state", () => {
+    const details = shelfEditStateFromSearchParams(new URLSearchParams("tab=bad&q=ignored&page=4&page_size=40"));
+    expect(details).toEqual({ tab: "details", page: 1, pageSize: 20, q: "" });
+    expect(shelfEditPathWithState("shelf/id", details)).toBe("/shelves/shelf%2Fid/edit");
+
+    const addBooks = shelfEditStateFromSearchParams(new URLSearchParams("q= Storm &page_size=30&page=2&tab=add-books"));
+    expect(shelfEditSearchParams(addBooks).toString()).toBe("tab=add-books&page=2&page_size=30&q=Storm");
+    expect(shelfEditPathWithState("shelf/id", addBooks)).toBe(
+      "/shelves/shelf%2Fid/edit?tab=add-books&page=2&page_size=30&q=Storm",
+    );
+    expect(withShelfEditTab(addBooks, "books")).toEqual({ tab: "books", page: 1, pageSize: 30, q: "" });
+    expect(withShelfEditPage(addBooks, { pageSize: 40 })).toMatchObject({ page: 1, pageSize: 40 });
   });
 });

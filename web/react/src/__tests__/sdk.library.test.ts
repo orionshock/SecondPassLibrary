@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, clearBookCover, createAuthor, createSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, replaceBookCover, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
+import { ApiError, clearBookCover, createAuthor, createSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, replaceBookCover, searchLibraryBooks, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
@@ -220,6 +220,21 @@ describe("Library SDK", () => {
     for (const field of ["groups", "identifiers", "file", "checksum", "description", "storagePath", "sourceFilename"]) {
       expect(page.items[0]).not.toHaveProperty(field);
     }
+  });
+
+  it("uses broad Library search with Shelf exclusion for personal Shelf candidates", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 1, next: null, previous: null, results: [compactWireBook] } as T;
+    } };
+
+    await expect(searchLibraryBooks({
+      q: " Book ", excludeShelfId: "shelf/id", ordering: "title", page: 2, pageSize: 30,
+    }, client)).resolves.toMatchObject({ items: [{ id: "book-1", title: "The Book" }] });
+    expect(calls).toEqual([
+      "/api/v1/library/search?q=Book&exclude_shelf=shelf%2Fid&ordering=title&page=2&page_size=30",
+    ]);
   });
 
   it("serializes selected Author and Series Book filters with the existing query controls", async () => {

@@ -28,6 +28,7 @@ export interface LibraryGroupsQuery {
 export interface GroupBooksQuery {
   q?: string;
   tag?: string;
+  excludeShelfId?: string;
   ordering?: BookOrdering;
   page?: number;
   pageSize?: number;
@@ -128,6 +129,7 @@ export async function listGroupBooks(
   const search = query.q?.trim();
   if (search) parameters.set("q", search);
   if (query.tag) parameters.set("tag", query.tag);
+  if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));

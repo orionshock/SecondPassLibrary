@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   ApiError,
+  addShelfItem,
   createShelf,
   deleteShelf,
   getShelf,
   listAllShelvesForBook,
   listShelfItems,
   listShelves,
+  removeShelfItem,
   updateShelf,
 } from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
@@ -194,6 +196,35 @@ describe("Shelves SDK", () => {
     expect(items.items[0]).not.toHaveProperty("created_at");
     expect(items.items[0].book).not.toHaveProperty("description");
     expect(items.items[0].book).not.toHaveProperty("groups");
+  });
+
+  it("uses the immediate Shelf item add/remove contracts", async () => {
+    const calls: Array<{ path: string; options?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, options?: RequestInit) => {
+      calls.push({ path, options });
+      return {
+        id: "item", shelf: "shelf/id", book: compactBook, position: 0, added_by: null,
+      } as T;
+    } };
+
+    await expect(addShelfItem("shelf/id", { bookId: "book/id" }, client)).resolves.toMatchObject({
+      id: "item", shelfId: "shelf/id", book: { id: "book", title: "Book" },
+    });
+    await removeShelfItem("shelf/id", "item/id", client);
+
+    expect(calls.map(({ path, options }) => [path, options?.method])).toEqual([
+      ["/api/v1/shelves/shelf%2Fid/items/", "POST"],
+      ["/api/v1/shelves/shelf%2Fid/items/item%2Fid/", "DELETE"],
+    ]);
+    expect(JSON.parse(String(calls[0]?.options?.body))).toEqual({ book: "book/id" });
+    expect(calls[1]?.options).toEqual({ method: "DELETE" });
+
+    const failing: ApiClient = { request: async () => {
+      throw new ApiError("Duplicate.", 400, { fields: { book: ["Already on shelf."] } });
+    } };
+    await expect(addShelfItem("shelf", { bookId: "book" }, failing)).rejects.toMatchObject({
+      fields: { bookId: ["Already on shelf."] },
+    });
   });
 
   it("maps group ownership and follows every shelves-for-Book page", async () => {

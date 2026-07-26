@@ -21,6 +21,9 @@ import {
   shouldLoadAllShelfGroups,
 } from "../features/shelves/shelfLifecycle";
 import { ShelfDetailsEditPageRegion } from "../features/shelves/regions/ShelfDetailsEditPageRegion";
+import { ShelfEditAddBooksPageRegion } from "../features/shelves/regions/ShelfEditAddBooksPageRegion";
+import { ShelfEditBooksPageRegion } from "../features/shelves/regions/ShelfEditBooksPageRegion";
+import { ShelfEditTabsPageRegion } from "../features/shelves/regions/ShelfEditTabsPageRegion";
 import { ShelfHeaderPageRegion } from "../features/shelves/regions/ShelfHeaderPageRegion";
 import { LocalValidationError, idleMutationState } from "../shared/feedback/mutationState";
 
@@ -118,7 +121,7 @@ describe("Shelf lifecycle contracts", () => {
     expect(confirm).toHaveBeenCalledOnce();
   });
 
-  it("uses server canEdit for lifecycle affordances and keeps item controls absent", () => {
+  it("uses server canEdit for lifecycle affordances and keeps item controls out of Details", () => {
     const editableHeader = renderToStaticMarkup(<MemoryRouter><ShelfHeaderPageRegion
       shelf={personalShelf} loading={false} editPath="/shelves/shelf/edit" onRetry={vi.fn()}
     /></MemoryRouter>);
@@ -143,6 +146,36 @@ describe("Shelf lifecycle contracts", () => {
     expect(region).not.toContain('id="shelf-visibility"');
     for (const absent of ["Add Book", "Remove Book", "Move up", "Move down"]) {
       expect(region).not.toContain(absent);
+    }
+  });
+
+  it("exposes immediate add/remove item responsibilities without reorder controls", () => {
+    const book = {
+      id: "book", title: "Book", sortTitle: "Book", subtitle: "", authors: [], series: null,
+      catalogTags: [], language: "", publisher: "", publishedYear: null, publishedMonth: null,
+      publishedDay: null, publishedDatePrecision: "" as const, coverUrl: null, fileFormat: "EPUB",
+    };
+    const page = { count: 1, next: null, previous: null, items: [{
+      id: "item", shelfId: "shelf", book, position: 0, addedBy: null,
+    }] };
+    const tabs = renderToStaticMarkup(<ShelfEditTabsPageRegion activeTab="details" onTabChange={vi.fn()} />);
+    const books = renderToStaticMarkup(<MemoryRouter><ShelfEditBooksPageRegion
+      shelfId="shelf" shelfName="Favorites" page={page} pageNumber={1} pageSize={20}
+      loading={false} onRemove={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    /></MemoryRouter>);
+    const candidates = renderToStaticMarkup(<MemoryRouter><ShelfEditAddBooksPageRegion
+      shelfId="shelf" shelfName="Favorites" search="Book"
+      page={{ count: 1, next: null, previous: null, items: [book] }} pageNumber={1} pageSize={20}
+      loading={false} onSearchChange={vi.fn()} onSearch={vi.fn()} onAdd={vi.fn()}
+      onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+    /></MemoryRouter>);
+
+    expect(tabs).toContain("Books");
+    expect(tabs).toContain("Add Books");
+    expect(books).toContain("Remove");
+    expect(candidates).toContain("Add");
+    for (const absent of ["Move up", "Move down", "Position"]) {
+      expect(`${books}${candidates}`).not.toContain(absent);
     }
   });
 });

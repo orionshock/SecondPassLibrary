@@ -167,7 +167,7 @@ remains authoritative.
 | Author lifecycle | `/library/authors/new`, `/library/authors/:authorId/edit` | Create/Edit rebuilt | Detail remains selected Author in `/library`; Delete remains deferred. |
 | Series lifecycle | `/library/series/new`, `/library/series/:seriesId/edit` | Create/Edit rebuilt | Same model as Authors; Delete remains deferred. |
 | Groups | `/groups`, `/groups/:groupId` | Read-only list/detail implemented | Entire branch hidden/unavailable in simple mode; lifecycle routes remain deferred. |
-| Shelves | `/shelves`, `/shelves/new`, `/shelves/:shelfId`, `/shelves/:shelfId/edit` | Read-only list/detail plus metadata lifecycle implemented | Available in simple and advanced modes; item mutations remain deferred. |
+| Shelves | `/shelves`, `/shelves/new`, `/shelves/:shelfId`, `/shelves/:shelfId/edit` | List/detail, metadata lifecycle, and immediate item add/remove implemented | Available in simple and advanced modes; reorder remains deferred. |
 | Library Imports | `/imports` | Rebuilt | Synchronous EPUB/ZIP upload; parked result cap is intentionally retired. |
 | Users | `/users`, `/users/new`, `/users/:profileId/edit` | Rebuilt | No separate User Detail route. |
 | Profile | `/profile` | Rebuilt | Self profile, memberships, sessions, clients. |
@@ -617,19 +617,20 @@ authoritative 403/404 handling.
 
 ### Shelf Edit (`/shelves/:shelfId/edit`)
 
-- The metadata lifecycle is implemented without tabs: bounded Name/Description,
+- The metadata lifecycle is the default Details tab: bounded Name/Description,
   personal visibility, immutable ownership, and server-driven `can_edit` access.
   Group shelf visibility is fixed. Save uses PATCH and remains on Edit; dirty
   navigation confirms. Delete is confirmed and removes ShelfItems, never
   Books/files.
-- Books and Add Books editing remain deferred. When implemented, use local tabs
-  without contaminating metadata PATCH or ownership.
-- Books: paginated canonical Book rows with one-based position label, accessible
-  Move up/down, Move to dropdown, and confirmed Remove. Disable impossible
-  moves. Reordering uses zero-based API positions and refreshes canonical order.
-- Add Books: blank search loads nothing. Use broad search with `exclude_shelf`,
-  title ordering, paginated URL-backed `q/page/page_size`, Add, and refresh both
-  current/candidate lists.
+- Books and Add Books are implemented as local URL-backed tabs without
+  contaminating metadata PATCH or ownership. Books renders paginated canonical
+  Book rows and removes immediately without position controls. Add Books loads
+  nothing for blank search, uses `exclude_shelf`, and appends immediately. It
+  uses broad Library search for personal shelves and the owning Group Books
+  endpoint for group shelves. Successful mutations refresh items, candidates
+  where applicable, and summary item count while preserving metadata dirty state.
+- Reorder, move up/down, move-to-position, and retained-hidden placeholders are
+  deferred until the backend exposes an editor-safe retained-item contract.
 - A retained unavailable personal item is not rendered by normal reads. If an
   operation races with access loss, show bounded not-found and refresh; never
   reveal hidden Book metadata. The `cleanup_shelves` operator policy has no
@@ -637,14 +638,15 @@ authoritative 403/404 handling.
 
 ### Shelves API, SDK, and tests
 
-Existing API is sufficient. Add `shelves.ts` with scope/list/detail/item query
-types, owner summaries, preview Books, `canEdit`, `matchedItemId`, and lifecycle/
-reorder calls. Add Books uses `library.ts` broad search rather than raw calls.
+Existing API is sufficient. `shelves.ts` owns scope/list/detail/item query types,
+owner summaries, preview Books, `canEdit`, `matchedItemId`, lifecycle calls, and
+immediate item add/remove. Add Books uses `library.ts` broad search or the owning
+Group Books endpoint rather than raw calls.
 
 Tests cover all scope/empty rules, URL state, private/shared/group ownership,
 simple-mode Public shelf creation, curator eligibility, `can_edit` affordances,
-hidden-item non-disclosure, ordering versus stored position, move boundaries,
-blank broad search, exclusion, delete consequences, and 403/404 refresh paths.
+hidden-item non-disclosure, blank search, candidate exclusion, immediate
+add/remove boundaries, delete consequences, and 403/404 refresh paths.
 
 ## Existing rebuilt surfaces
 
@@ -741,7 +743,7 @@ have materially different contracts.
 
 ### Recommended next slice
 
-Continue with deferred Group lifecycle and Shelf item-management slices. Keep
+Continue with deferred Group lifecycle and Shelf reorder-contract work. Keep
 EPUB/file editing, shelf mutation from Book surfaces, and Reader/Open integration
 as separate future boundaries.
 

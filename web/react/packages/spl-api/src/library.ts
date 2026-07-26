@@ -19,6 +19,14 @@ export interface LibraryBooksQuery {
   pageSize?: number;
 }
 
+export interface LibraryBookSearchQuery {
+  q: string;
+  excludeShelfId?: string;
+  ordering?: BookOrdering;
+  page?: number;
+  pageSize?: number;
+}
+
 export type LibraryAxisOrdering = "name" | "-name" | "book_count" | "-book_count";
 
 export interface LibraryAxisQuery {
@@ -259,6 +267,23 @@ export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   return toPage(
     await client.request<ApiPage<CompactBookResponse>>(withQuery("/api/v1/library/books/", parameters)),
+    mapCompactBook,
+  );
+}
+
+export async function searchLibraryBooks(
+  query: LibraryBookSearchQuery,
+  client: ApiClient = apiClient,
+): Promise<Page<CompactBook>> {
+  const parameters = new URLSearchParams({ q: query.q.trim() });
+  if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  return toPage(
+    await client.request<ApiPage<CompactBookResponse>>(
+      withQuery("/api/v1/library/search", parameters),
+    ),
     mapCompactBook,
   );
 }

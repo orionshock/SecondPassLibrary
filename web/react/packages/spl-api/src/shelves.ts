@@ -48,6 +48,10 @@ export interface UpdateShelfInput {
   visibility?: ShelfVisibility;
 }
 
+export interface AddShelfItemInput {
+  bookId: string;
+}
+
 export interface ShelvesQuery {
   scope?: ShelfScope;
   ownerGroupId?: string;
@@ -237,6 +241,40 @@ export async function deleteShelf(
 ): Promise<void> {
   await client.request<void>(
     `/api/v1/shelves/${encodeURIComponent(shelfId)}/`,
+    { method: "DELETE" },
+  );
+}
+
+export async function addShelfItem(
+  shelfId: string,
+  input: AddShelfItemInput,
+  client: ApiClient = apiClient,
+): Promise<ShelfItem> {
+  try {
+    const response = await client.request<ShelfItemResponse>(
+      `/api/v1/shelves/${encodeURIComponent(shelfId)}/items/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ book: input.bookId }),
+      },
+    );
+    return mapShelfItem(response);
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || !error.fields?.book) throw error;
+    const fields: Record<string, string[]> = { ...error.fields, bookId: error.fields.book };
+    delete fields.book;
+    throw new ApiError(error.message, error.status, { code: error.code, fields });
+  }
+}
+
+export async function removeShelfItem(
+  shelfId: string,
+  itemId: string,
+  client: ApiClient = apiClient,
+): Promise<void> {
+  await client.request<void>(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/items/${encodeURIComponent(itemId)}/`,
     { method: "DELETE" },
   );
 }

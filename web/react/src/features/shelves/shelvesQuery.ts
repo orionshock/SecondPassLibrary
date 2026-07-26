@@ -19,10 +19,20 @@ export interface ShelfDetailUrlState {
   pageSize: number;
 }
 
+export type ShelfEditTab = "details" | "books" | "add-books";
+
+export interface ShelfEditUrlState {
+  tab: ShelfEditTab;
+  page: number;
+  pageSize: number;
+  q: string;
+}
+
 const pageSizes = new Set([20, 30, 40, 50]);
 const scopes = new Set<ShelfScope>(["personal", "shared", "group"]);
 const shelfOrderings = new Set<ShelfOrdering>(["name", "-item_count"]);
 const itemOrderings = new Set<ShelfItemOrdering>(["position", "title", "author"]);
+const shelfEditTabs = new Set<ShelfEditTab>(["details", "books", "add-books"]);
 
 export function shelvesListStateFromSearchParams(parameters: URLSearchParams): ShelvesListUrlState {
   const rawScope = parameters.get("scope") as ShelfScope | null;
@@ -97,6 +107,50 @@ export function withShelfDetailChange(
   resetPage = true,
 ): ShelfDetailUrlState {
   return { ...current, ...changes, page: resetPage ? 1 : changes.page ?? current.page };
+}
+
+export function shelfEditStateFromSearchParams(parameters: URLSearchParams): ShelfEditUrlState {
+  const rawTab = parameters.get("tab") as ShelfEditTab | null;
+  const tab = rawTab && shelfEditTabs.has(rawTab) ? rawTab : "details";
+  return {
+    tab,
+    page: tab === "details" ? 1 : positiveInteger(parameters.get("page"), 1),
+    pageSize: tab === "details" ? 20 : validPageSize(parameters.get("page_size")),
+    q: tab === "add-books" ? (parameters.get("q") ?? "").trim() : "",
+  };
+}
+
+export function shelfEditSearchParams(state: ShelfEditUrlState): URLSearchParams {
+  const parameters = new URLSearchParams();
+  if (state.tab !== "details") parameters.set("tab", state.tab);
+  if (state.tab !== "details" && state.page > 1) parameters.set("page", String(state.page));
+  if (state.tab !== "details" && state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));
+  if (state.tab === "add-books" && state.q) parameters.set("q", state.q.trim());
+  return parameters;
+}
+
+export function shelfEditPathWithState(shelfId: string, state: ShelfEditUrlState): string {
+  return withQuery(`/shelves/${encodeURIComponent(shelfId)}/edit`, shelfEditSearchParams(state));
+}
+
+export function withShelfEditTab(current: ShelfEditUrlState, tab: ShelfEditTab): ShelfEditUrlState {
+  return {
+    tab,
+    page: 1,
+    pageSize: current.pageSize,
+    q: tab === "add-books" ? current.q : "",
+  };
+}
+
+export function withShelfEditPage(
+  current: ShelfEditUrlState,
+  changes: Partial<Pick<ShelfEditUrlState, "page" | "pageSize">>,
+): ShelfEditUrlState {
+  return {
+    ...current,
+    ...changes,
+    page: changes.pageSize === undefined ? changes.page ?? current.page : 1,
+  };
 }
 
 function validPageSize(raw: string | null): number {
