@@ -16,6 +16,7 @@ import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrch
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
 import { ShelfDetailOrchestrator } from "../features/shelves/ShelfDetailOrchestrator";
+import { ShelfLifecycleOrchestrator } from "../features/shelves/ShelfLifecycleOrchestrator";
 import { ShelvesListOrchestrator } from "../features/shelves/ShelvesListOrchestrator";
 import { UserEditOrchestrator } from "../features/users/UserEditOrchestrator";
 import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
@@ -60,6 +61,8 @@ export const appRoutes = [
       { path: "groups", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuardComponent> },
       { path: "groups/:groupId", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuardComponent> },
       { path: "shelves", element: <ShelvesListOrchestrator /> },
+      { path: "shelves/new", element: <ShelfLifecycleOrchestrator mode="new" /> },
+      { path: "shelves/:shelfId/edit", element: <ShelfLifecycleOrchestrator mode="edit" /> },
       { path: "shelves/:shelfId", element: <ShelfDetailOrchestrator /> },
       { path: "library", element: <LibraryOrchestrator /> },
       { path: "library/books/:bookId", element: <BookDetailOrchestrator /> },

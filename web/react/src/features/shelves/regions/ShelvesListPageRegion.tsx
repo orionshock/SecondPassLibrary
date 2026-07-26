@@ -1,4 +1,5 @@
 import type { Page, ShelfOrdering, ShelfScope, ShelfSummary } from "@second-pass/spl-api";
+import { Link } from "react-router-dom";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
@@ -6,6 +7,7 @@ import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPrevie
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { ShelfRowComponent } from "../components/ShelfRowComponent";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
+import { shelfEditBreadcrumbs, shelfEditPath, shelfNewBreadcrumbs, shelfNewPath } from "../shelfLifecycle";
 import { ShelfScopesPageRegion } from "./ShelfScopesPageRegion";
 
 export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, ordering, loading, error, onScopeChange, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
@@ -23,7 +25,7 @@ export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, order
   onRetry: () => void;
 }) {
   return <div className="shelves-list-page">
-    <PageHeader title="Shelves" />
+    <PageHeader title="Shelves" actions={<Link className="button-link button--secondary" to={shelfNewPath()} state={breadcrumbNavigationState(shelfNewBreadcrumbs())}>New Shelf</Link>} />
     <div className="shelves-list-toolbar">
       <ShelfScopesPageRegion activeScope={scope} onScopeChange={onScopeChange} />
       <label className="shelves-ordering">Order
@@ -68,6 +70,8 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, loading, error,
           detailPath={detailPath}
           navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
           previewBooks={previewBooks}
+          editPath={shelf.canEdit ? shelfEditPath(shelf.id) : undefined}
+          editNavigationState={shelf.canEdit ? breadcrumbNavigationState(shelfEditBreadcrumbs(shelf.id, shelf.name)) : undefined}
         />;
       })}
     </div>}

@@ -83,8 +83,14 @@ ownership, visibility, viewer-visible item count, description, Public identity,
 and bounded previews. `ShelfDetailOrchestrator` owns `/shelves/:shelfId`, its
 read-only Shelf header, URL-backed item ordering, pagination, bounded recovery,
 and shared compact Book rows with contextual Shelf breadcrumbs. Shelf create,
-edit, delete, item add/remove/reorder, and the Group Detail Shelves tab remain
-deferred.
+edit, and delete metadata lifecycle is available at `/shelves/new` and
+`/shelves/:shelfId/edit`. All authenticated users can create personal shelves;
+manageable group ownership is offered only from existing role and exact-curator
+facts. Ownership is create-only, personal visibility is editable, and group
+shelves keep group-controlled visibility. Shelf responses provide the
+authoritative `canEdit` affordance for existing shelves. Deleting a Shelf removes
+its ShelfItems but never Books or files. Item add/remove/reorder and the Group
+Detail Shelves tab remain deferred.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 

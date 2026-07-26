@@ -4,11 +4,13 @@ import { Link } from "react-router-dom";
 import { Badge } from "../../../components/ui";
 import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
 
-export function ShelfRowComponent({ shelf, detailPath, navigationState, previewBooks }: {
+export function ShelfRowComponent({ shelf, detailPath, navigationState, previewBooks, editPath, editNavigationState }: {
   shelf: ShelfSummary;
   detailPath: string;
   navigationState?: unknown;
   previewBooks: readonly BookCoverPreviewItem[];
+  editPath?: string;
+  editNavigationState?: unknown;
 }) {
   return <article className="shelf-row-component">
     <div className="shelf-row-component__identity">
@@ -22,6 +24,7 @@ export function ShelfRowComponent({ shelf, detailPath, navigationState, previewB
         {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
         <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
       </div>
+      {shelf.canEdit && editPath ? <Link className="shelf-row-component__edit" to={editPath} state={editNavigationState}>Edit</Link> : null}
     </div>
     <BookCoverPreviewStripComponent books={previewBooks} />
   </article>;

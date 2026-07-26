@@ -47,10 +47,14 @@ export {
   type LibraryGroupsQuery,
 } from "./groups";
 export {
+  createShelf,
+  deleteShelf,
   getShelf,
   listAllShelvesForBook,
   listShelfItems,
   listShelves,
+  updateShelf,
+  type CreateShelfInput,
   type ShelfItem,
   type ShelfItemOrdering,
   type ShelfItemsQuery,
@@ -62,6 +66,7 @@ export {
   type ShelfScope,
   type ShelvesQuery,
   type ShelfVisibility,
+  type UpdateShelfInput,
 } from "./shelves";
 export {
   getBook,

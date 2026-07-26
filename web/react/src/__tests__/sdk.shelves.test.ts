@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { getShelf, listAllShelvesForBook, listShelfItems, listShelves } from "@second-pass/spl-api";
+import {
+  ApiError,
+  createShelf,
+  deleteShelf,
+  getShelf,
+  listAllShelvesForBook,
+  listShelfItems,
+  listShelves,
+  updateShelf,
+} from "@second-pass/spl-api";
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const personalShelf = {
@@ -38,6 +47,70 @@ const compactBook = {
 };
 
 describe("Shelves SDK", () => {
+  it("maps create, update, and delete to the strict Shelf mutation contract", async () => {
+    const calls: Array<{ path: string; options?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, options?: RequestInit) => {
+      calls.push({ path, options });
+      return personalShelf as T;
+    } };
+
+    const created = await createShelf({
+      name: "Current Favorites",
+      description: "Favorites",
+      ownerType: "group",
+      ownerGroupId: "group/id",
+      visibility: "private",
+    }, client);
+    await updateShelf("shelf/id", {
+      name: "Renamed",
+      description: "",
+      visibility: undefined,
+    }, client);
+    await deleteShelf("shelf/id", client);
+
+    expect(created.name).toBe("Current Favorites");
+    expect(calls.map(({ path }) => path)).toEqual([
+      "/api/v1/shelves/",
+      "/api/v1/shelves/shelf%2Fid/",
+      "/api/v1/shelves/shelf%2Fid/",
+    ]);
+    expect(calls[0]?.options?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]?.options?.body))).toEqual({
+      name: "Current Favorites",
+      description: "Favorites",
+      owner_type: "group",
+      visibility: "private",
+      owner_group: "group/id",
+    });
+    expect(calls[1]?.options?.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[1]?.options?.body))).toEqual({
+      name: "Renamed",
+      description: "",
+    });
+    expect(calls[2]?.options).toEqual({ method: "DELETE" });
+    for (const forbidden of ["owner_user", "can_edit", "item_count", "preview_books", "matched_item_id"] as const) {
+      expect(JSON.parse(String(calls[0]?.options?.body))).not.toHaveProperty(forbidden);
+    }
+  });
+
+  it("maps Shelf mutation field errors to app-facing names", async () => {
+    const client: ApiClient = { request: async () => {
+      throw new ApiError("Invalid.", 400, {
+        fields: { owner_type: ["Invalid owner."], owner_group: ["Choose a group."] },
+      });
+    } };
+
+    await expect(createShelf({
+      name: "Shelf",
+      description: "",
+      ownerType: "group",
+      ownerGroupId: "group",
+      visibility: "private",
+    }, client)).rejects.toMatchObject({
+      fields: { ownerType: ["Invalid owner."], ownerGroupId: ["Choose a group."] },
+    });
+  });
+
   it("maps list query and explicitly picks the app-facing shelf contract", async () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {

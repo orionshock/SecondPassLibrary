@@ -1,0 +1,87 @@
+.shelf-lifecycle-page,
+.shelf-lifecycle-state {
+  width: min(100%, 56rem);
+  margin-inline: auto;
+}
+
+.shelf-lifecycle-surface {
+  display: grid;
+  gap: 1rem;
+}
+
+.shelf-lifecycle-form {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+.shelf-lifecycle-form .form-field {
+  grid-template-columns: minmax(7.5rem, 9.5rem) minmax(0, 1fr);
+}
+
+.shelf-lifecycle-form textarea {
+  min-height: 10rem;
+}
+
+.shelf-lifecycle-form .form-action-row {
+  min-height: 3.75rem;
+  margin-top: 0.35rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+.shelf-lifecycle-owner-context {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+}
+
+.shelf-group-picker-note,
+.shelf-group-picker-error p { margin: 0; }
+
+.shelf-group-picker-error {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.shelf-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgb(251 113 133 / 35%);
+  border-radius: 0.7rem;
+  background: rgb(251 113 133 / 5%);
+}
+
+.shelf-danger-zone h2,
+.shelf-danger-zone p { margin: 0; }
+
+.shelf-danger-zone h2 { font-size: 1rem; }
+
+.shelf-danger-zone p {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.shelf-danger-zone .error-panel { margin-top: 0.55rem; }
+
+.shelf-lifecycle-state {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+@media (max-width: 38rem) {
+  .shelf-lifecycle-form .form-field { grid-template-columns: minmax(0, 1fr); }
+  .shelf-danger-zone { align-items: flex-start; flex-direction: column; }
+}

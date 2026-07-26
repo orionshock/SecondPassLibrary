@@ -1,12 +1,15 @@
 import type { ShelfSummary } from "@second-pass/spl-api";
+import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel } from "../../../components/ui";
 import { shelfOwnerLabel } from "../components/ShelfRowComponent";
 
-export function ShelfHeaderPageRegion({ shelf, loading, error, onRetry }: {
+export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {
   shelf?: ShelfSummary;
   loading: boolean;
   error?: Error;
+  editPath?: string;
+  editNavigationState?: unknown;
   onRetry: () => void;
 }) {
   if (!shelf && loading) return <section className="shelf-detail-state" aria-live="polite" aria-busy="true">Loading shelf...</section>;
@@ -24,5 +27,6 @@ export function ShelfHeaderPageRegion({ shelf, loading, error, onRetry }: {
       {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
       <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
     </div>
+    {shelf.canEdit && editPath ? <Link className="button-link button--secondary shelf-detail-header__edit" to={editPath} state={editNavigationState}>Edit Shelf</Link> : null}
   </header>;
 }

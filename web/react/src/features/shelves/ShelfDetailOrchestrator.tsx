@@ -8,6 +8,7 @@ import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "./regions/ShelfItemsPageRegion";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
+import { shelfEditNavigationState, shelfEditPath } from "./shelfLifecycle";
 import { loadShelfPageWithRecovery } from "./shelvesPageRecovery";
 import {
   shelfDetailPath,
@@ -110,6 +111,8 @@ export function ShelfDetailOrchestrator() {
       shelf={shelf}
       loading={detail.status === "loading"}
       error={detail.status === "error" ? detail.error : undefined}
+      editPath={shelf?.canEdit ? shelfEditPath(shelf.id) : undefined}
+      editNavigationState={shelf?.canEdit ? shelfEditNavigationState(location.state, shelf) : undefined}
       onRetry={() => setDetailRetry((value) => value + 1)}
     />
     {shelf ? <ShelfItemsPageRegion

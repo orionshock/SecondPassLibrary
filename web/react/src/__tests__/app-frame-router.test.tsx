@@ -66,6 +66,8 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "shelves")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "shelves/new")).toBe(true);
+    expect(appRoutes[0].children.some((route) => route.path === "shelves/:shelfId/edit")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "shelves/:shelfId")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "library/books/:bookId")).toBe(true);

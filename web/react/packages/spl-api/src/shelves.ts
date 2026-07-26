@@ -1,4 +1,5 @@
 import { apiClient, type ApiClient } from "./client";
+import { ApiError } from "./errors";
 import { mapCompactBook, type BookPreview, type CompactBook } from "./library";
 import { toPage, type ApiPage, type Page } from "./pagination";
 
@@ -31,6 +32,20 @@ export interface ShelfSummary {
   matchedItemId?: string | null;
   canEdit: boolean;
   previewBooks?: BookPreview[];
+}
+
+export interface CreateShelfInput {
+  name: string;
+  description: string;
+  ownerType: ShelfOwnerType;
+  ownerGroupId?: string;
+  visibility: ShelfVisibility;
+}
+
+export interface UpdateShelfInput {
+  name?: string;
+  description?: string;
+  visibility?: ShelfVisibility;
 }
 
 export interface ShelvesQuery {
@@ -185,6 +200,47 @@ export async function listAllShelvesForBook(
   return shelves;
 }
 
+export async function createShelf(
+  input: CreateShelfInput,
+  client: ApiClient = apiClient,
+): Promise<ShelfSummary> {
+  const payload: Record<string, unknown> = {
+    name: input.name,
+    description: input.description,
+    owner_type: input.ownerType,
+    visibility: input.visibility,
+  };
+  if (input.ownerGroupId !== undefined) payload.owner_group = input.ownerGroupId;
+  return mutateShelf("/api/v1/shelves/", "POST", payload, client);
+}
+
+export async function updateShelf(
+  shelfId: string,
+  input: UpdateShelfInput,
+  client: ApiClient = apiClient,
+): Promise<ShelfSummary> {
+  const payload: Record<string, unknown> = {};
+  if (input.name !== undefined) payload.name = input.name;
+  if (input.description !== undefined) payload.description = input.description;
+  if (input.visibility !== undefined) payload.visibility = input.visibility;
+  return mutateShelf(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/`,
+    "PATCH",
+    payload,
+    client,
+  );
+}
+
+export async function deleteShelf(
+  shelfId: string,
+  client: ApiClient = apiClient,
+): Promise<void> {
+  await client.request<void>(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/`,
+    { method: "DELETE" },
+  );
+}
+
 function mapShelfSummary(response: ShelfSummaryResponse): ShelfSummary {
   return {
     id: response.id,
@@ -225,4 +281,34 @@ function mapShelfItem(response: ShelfItemResponse): ShelfItem {
       username: response.added_by.username,
     } : null,
   };
+}
+
+async function mutateShelf(
+  path: string,
+  method: "POST" | "PATCH",
+  payload: Record<string, unknown>,
+  client: ApiClient,
+): Promise<ShelfSummary> {
+  try {
+    return mapShelfSummary(await client.request<ShelfSummaryResponse>(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }));
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || !error.fields) throw error;
+    const aliases: Record<string, string> = {
+      owner_type: "ownerType",
+      owner_group: "ownerGroupId",
+    };
+    throw new ApiError(error.message, error.status, {
+      code: error.code,
+      fields: Object.fromEntries(
+        Object.entries(error.fields).map(([field, messages]) => [
+          aliases[field] ?? field,
+          messages,
+        ]),
+      ),
+    });
+  }
 }
