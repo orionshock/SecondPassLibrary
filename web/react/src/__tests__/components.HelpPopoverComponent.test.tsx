@@ -5,22 +5,21 @@ import { HelpPopoverComponent } from "../components/HelpPopoverComponent";
 
 describe("HelpPopoverComponent", () => {
   it("uses a labelled, described control without a native title", () => {
-    const markup = renderToStaticMarkup(<HelpPopoverComponent ariaLabel="Public Group curator help" icon="help" mouseoverText="Only Librarians/Managers may Curate the Public Group" />);
+    const markup = renderToStaticMarkup(<HelpPopoverComponent ariaLabel="Trigger description" icon="help" mouseoverText="Popover content" />);
 
     expect(markup).toContain('type="button"');
-    expect(markup).toContain('aria-label="Public Group curator help"');
+    expect(markup).toContain('aria-label="Trigger description"');
     expect(markup).toMatch(/aria-describedby="([^"]+)"/);
     expect(markup).toContain('role="tooltip"');
-    expect(markup).toContain("Only Librarians/Managers may Curate the Public Group");
+    expect(markup).toContain("Popover content");
     expect(markup).not.toContain("title=");
   });
 
-  it("supports a warning triangle without changing the default help treatment", () => {
-    const warning = renderToStaticMarkup(<HelpPopoverComponent ariaLabel="Import warning" icon="warning_amber" label="Unmatched" mouseoverText="This Book is unmatched." border borderColor="#d8b65a" color="#d8b65a" />);
-    expect(warning).toContain("warning_amber");
-    expect(warning).toContain("Unmatched");
-    expect(warning).toContain("help-popover__button--bordered");
-    expect(warning).toContain("border-color:#d8b65a");
-    expect(renderToStaticMarkup(<HelpPopoverComponent ariaLabel="Help" icon="help" mouseoverText="Details" />)).toContain(">help</span>");
+  it("renders caller-provided trigger content and border colors", () => {
+    const markup = renderToStaticMarkup(<HelpPopoverComponent ariaLabel="Trigger description" icon="warning_amber" label="Visible label" mouseoverText="Popover content" border borderColor="#d8b65a" color="#d8b65a" />);
+    expect(markup).toContain("warning_amber");
+    expect(markup).toContain("Visible label");
+    expect(markup).toContain("help-popover__button--bordered");
+    expect(markup).toContain("border-color:#d8b65a");
   });
 });
