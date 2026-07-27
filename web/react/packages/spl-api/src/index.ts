@@ -32,6 +32,8 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  downloadCompleteReadingExport,
+  downloadSelectedReadingExport,
   applyReadingImport,
   getReadingProgress,
   getReadingSession,
@@ -47,6 +49,8 @@ export {
   type ReadingImportSelectedBook,
   type ReadingImportSelectedSession,
   type ReadingImportSessionPreview,
+  type ReadingExportSelection,
+  type ReadingExportSessionSelection,
   type ReadingAnnotation,
   type ReadingAnnotationCategory,
   type ReadingAnnotationKind,
@@ -59,6 +63,7 @@ export {
   type ReadingSessionsQuery,
   type RecentReadingSession,
 } from "./reading";
+export type { AttachmentDownload } from "./client";
 export {
   addGroupMember,
   addBookToGroup,

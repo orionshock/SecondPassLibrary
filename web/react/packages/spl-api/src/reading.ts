@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from "./client";
+import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "./client";
 import { toPage, type ApiPage, type Page } from "./pagination";
 import { sameOriginUrl } from "./urls";
 
@@ -133,6 +133,15 @@ export interface ReadingAnnotationsQuery {
   ordering?: ReadingAnnotationOrdering;
   page?: number;
   pageSize?: number;
+}
+
+export interface ReadingExportSessionSelection {
+  sessionId: string;
+  bookId: string;
+}
+
+export interface ReadingExportSelection {
+  sessions: readonly ReadingExportSessionSelection[];
 }
 
 export interface ReadingImportCounts {
@@ -420,6 +429,26 @@ export async function listReadingAnnotations(query: ReadingAnnotationsQuery, cli
     createdAt: item.created_at,
     updatedAt: item.updated_at,
   }));
+}
+
+export function downloadCompleteReadingExport(client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
+  return client.requestAttachment("/api/v1/reading/export/", undefined, "second-pass-marginalia.json");
+}
+
+export function downloadSelectedReadingExport(selection: ReadingExportSelection, client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
+  const sessionsByBook = new Map<string, string[]>();
+  for (const selected of selection.sessions) {
+    const sessions = sessionsByBook.get(selected.bookId) ?? [];
+    if (!sessions.includes(selected.sessionId)) sessions.push(selected.sessionId);
+    sessionsByBook.set(selected.bookId, sessions);
+  }
+  return client.requestAttachment("/api/v1/reading/export/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      books: [...sessionsByBook].map(([bookId, sessions]) => ({ book_id: bookId, sessions })),
+    }),
+  }, "second-pass-marginalia.json");
 }
 
 function mapReadingSessionSummary(item: ReadingSessionSummaryResponse): ReadingSessionSummary {

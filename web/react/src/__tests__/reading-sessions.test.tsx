@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReadingSessionsPageRegion } from "../features/reading/regions/ReadingSessionsPageRegion";
-import { readingImportBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
+import { readingExportBreadcrumbFallback, readingImportBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
 
 const visibleSession: ReadingSessionSummary = {
   id: "9fdd6203-a111-4f17-a477-b9d7ddeec77d",
@@ -97,10 +97,10 @@ describe("My Marginalia Session list", () => {
     expect(failed).toContain("Retry");
   });
 
-  it("keeps Export absent while exposing Session Detail and the Import destination", () => {
+  it("exposes Session Detail and implemented Import/Export destinations", () => {
     const markup = renderRegion({ items: [visibleSession], count: 1, next: null, previous: null });
-    expect(markup).not.toContain('href="/reading/export"');
     expect(markup).toContain(`/reading/sessions/${visibleSession.id}`);
     expect(readingImportBreadcrumbFallback[0]).toMatchObject({ to: "/reading" });
+    expect(readingExportBreadcrumbFallback[0]).toMatchObject({ to: "/reading" });
   });
 });

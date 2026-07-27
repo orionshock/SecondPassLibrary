@@ -317,6 +317,102 @@
 
 .reading-import-result-actions { margin-top: 1rem; }
 
+.reading-export-page,
+.reading-export-selective,
+.reading-export-session-rows {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.reading-export-complete > p,
+.reading-export-selective__header p,
+.reading-export-session-row__body p {
+  margin: 0;
+}
+
+.reading-export-action-row,
+.reading-export-submit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+.reading-export-selective {
+  padding-top: 0.4rem;
+}
+
+.reading-export-selective__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.reading-export-selective__header h2 { margin: 0 0 0.2rem; }
+
+.reading-export-selection-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.reading-export-selection-summary strong { color: var(--text); }
+
+.reading-export-page-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.reading-export-session-row {
+  display: grid;
+  grid-template-columns: 1rem 3.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.reading-export-session-row:hover,
+.reading-export-session-row:focus-within {
+  border-color: rgb(125 211 252 / 45%);
+  background: rgb(125 211 252 / 7%);
+}
+
+.reading-export-session-row__selection input { margin: 0; }
+
+.reading-export-session-row__cover .book-cover-component {
+  width: 3.25rem;
+  aspect-ratio: 2 / 3;
+}
+
+.reading-export-session-row__body {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.reading-export-session-row__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.reading-export-submit {
+  margin-top: 0.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
 .reading-session-detail {
   display: grid;
   gap: 1rem;
@@ -600,6 +696,12 @@
   .reading-import-book__cover .book-cover-component { width: 2.25rem; }
   .reading-import-book__identity { flex-wrap: wrap; }
   .reading-import-upload__file-row { grid-template-columns: 1fr; }
+  .reading-export-selective__header { align-items: flex-start; flex-direction: column; }
+  .reading-export-selection-summary { white-space: normal; }
+  .reading-export-action-row,
+  .reading-export-submit { grid-template-columns: 1fr; justify-items: start; }
+  .reading-export-session-row { grid-template-columns: 1rem 2.75rem minmax(0, 1fr); }
+  .reading-export-session-row__cover .book-cover-component { width: 2.75rem; }
   .reading-session-summary { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.85rem; }
   .reading-session-summary__cover .book-cover-component { width: 5rem; }
   .reading-session-detail__annotations > header { align-items: flex-start; flex-direction: column; }

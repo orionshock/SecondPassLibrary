@@ -9,7 +9,7 @@ import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { readingListSdkQuery, readingListSearchParams, readingListStateFromSearchParams, withReadingListChange } from "./readingQuery";
 import { ReadingSessionsPageRegion } from "./regions/ReadingSessionsPageRegion";
-import { readingImportBreadcrumbFallback, readingListBreadcrumbFallback } from "./readingBreadcrumbs";
+import { readingExportBreadcrumbFallback, readingImportBreadcrumbFallback, readingListBreadcrumbFallback } from "./readingBreadcrumbs";
 import "./Reading.css";
 
 interface ReadingLoadState {
@@ -66,7 +66,7 @@ export function ReadingSessionsOrchestrator() {
     setSearchParameters(readingListSearchParams(withReadingListChange(queryState, changes, resetPage)), { state: null });
   }
 
-  return <ProductPageShellComponent title="My Marginalia" actions={<Link className="button" to="/reading/import" state={breadcrumbNavigationState(readingImportBreadcrumbFallback)}>Import</Link>}>
+  return <ProductPageShellComponent title="My Marginalia" actions={<><Link className="button button--secondary" to="/reading/import" state={breadcrumbNavigationState(readingImportBreadcrumbFallback)}>Import</Link><Link className="button" to="/reading/export" state={breadcrumbNavigationState(readingExportBreadcrumbFallback)}>Export</Link></>}>
     <ReadingSessionsPageRegion page={load.page} pageNumber={queryState.page} pageSize={queryState.pageSize} search={searchDraft} status={queryState.status} loading={load.loading} error={load.error} onSearchChange={setSearchDraft} onSearch={() => changeQuery({ q: searchDraft.trim() })} onStatusChange={(status) => changeQuery({ status })} onPageChange={(page) => changeQuery({ page }, false)} onPageSizeChange={(pageSize) => changeQuery({ pageSize })} onRetry={() => setRetry((value) => value + 1)} />
   </ProductPageShellComponent>;
 }

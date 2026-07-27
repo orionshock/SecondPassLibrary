@@ -18,6 +18,7 @@ import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
 import { ReadingSessionDetailOrchestrator } from "../features/reading/ReadingSessionDetailOrchestrator";
 import { ReadingImportOrchestrator } from "../features/reading/ReadingImportOrchestrator";
+import { ReadingExportOrchestrator } from "../features/reading/ReadingExportOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
@@ -62,6 +63,7 @@ export const appRoutes = [
       { path: "reading", element: <ReadingSessionsOrchestrator /> },
       { path: "reading/sessions/:sessionId", element: <ReadingSessionDetailOrchestrator /> },
       { path: "reading/import", element: <ReadingImportOrchestrator /> },
+      { path: "reading/export", element: <ReadingExportOrchestrator /> },
       ...sectionRoutes.map(({ path, title }) => ({
         path,
         element: <PlaceholderPageRegion title={title} />,

@@ -305,8 +305,8 @@ The canonical Second Pass Library Marginalia Profile is documented in
 Product UI:
 
 ```text
-GET /reading/export/
-GET /reading/import/
+GET /reading/export
+GET /reading/import
 ```
 
 Session-authenticated API exports:
@@ -319,7 +319,7 @@ GET /api/v1/reading/import/unmatched/?import_token=<token>
 POST /api/v1/reading/import/apply/
 ```
 
-Export and import preview/apply endpoints are for the Django product UI/session-authenticated user. They are not enabled for Client API bearer tokens. Exports include owned reading sessions and annotations even when the user no longer has current book visibility. Other-user or mismatched sessions are rejected. Import preview/apply remains stricter and matches visible local books only.
+Export and import preview/apply endpoints are for the Product UI's session-authenticated user. They are not enabled for Client API bearer tokens. Exports include owned reading sessions and annotations even when the user no longer has current book visibility. Other-user or mismatched sessions are rejected. Import preview/apply remains stricter and matches visible local books only.
 
 Selected exports post a JSON body to `/api/v1/reading/export/`:
 
