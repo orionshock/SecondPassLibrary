@@ -1,7 +1,7 @@
 import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
-import { Badge, Button, ErrorPanel } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
 
 export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {
   shelf?: ShelfSummary;
@@ -15,19 +15,21 @@ export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNav
   if (!shelf && error) return <section className="shelf-detail-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
   if (!shelf) return null;
 
-  return <header className="shelf-detail-header">
-    <div className="shelf-detail-header__title">
-      <h1>{shelf.name}</h1>
+  return <div className="shelf-detail-header">
+    <PageHeader
+      title={<span className="page-header__title-content">
+      <span>{shelf.name}</span>
       {shelf.ownerGroup?.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
-    </div>
-    {shelf.description ? <p>{shelf.description}</p> : null}
+      </span>}
+      description={shelf.description || undefined}
+      actions={shelf.canEdit && editPath ? <Link className="button-link button--secondary" to={editPath} state={editNavigationState}>Edit Shelf</Link> : undefined}
+    />
     <div className="shelf-detail-header__facts">
       <span>{shelfOwnerLabel(shelf)}</span>
       {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
       <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
     </div>
-    {shelf.canEdit && editPath ? <Link className="button-link button--secondary shelf-detail-header__edit" to={editPath} state={editNavigationState}>Edit Shelf</Link> : null}
-  </header>;
+  </div>;
 }
 
 function shelfOwnerLabel(shelf: ShelfSummary): string {

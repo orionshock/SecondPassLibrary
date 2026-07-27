@@ -1,0 +1,7 @@
+.product-page-shell {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+  gap: 1rem;
+}

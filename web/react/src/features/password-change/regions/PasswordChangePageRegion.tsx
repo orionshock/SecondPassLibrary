@@ -1,8 +1,9 @@
 import type { FormEvent } from "react";
 
-import { Button, FormField, PageHeader } from "../../../components/ui";
+import { Button, FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { ProductPageShellComponent } from "../../../shared/layout/ProductPageShellComponent";
 import { passwordCancelVisible, type PasswordDraft } from "../passwordChangeForm";
 
 export function PasswordChangePageRegion({ draft, state, mustChangePassword, onSubmit, onChange, onCancel }: {
@@ -13,8 +14,7 @@ export function PasswordChangePageRegion({ draft, state, mustChangePassword, onS
   onChange: (field: keyof PasswordDraft, value: string) => void;
   onCancel: () => void;
 }) {
-  return <div className="page-stack account-page">
-    <PageHeader title="Change password" />
+  return <ProductPageShellComponent className="account-page" title="Change password">
     {mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
     <form className="form-grid" onSubmit={onSubmit}>
       <PasswordField id="current-password" label="Current password" field="currentPassword" value={draft.currentPassword} state={state} onChange={onChange} autoComplete="current-password" />
@@ -25,7 +25,7 @@ export function PasswordChangePageRegion({ draft, state, mustChangePassword, onS
         <Button type="submit" disabled={state.pending}>{state.pending ? "Changing..." : "Change password"}</Button>
       </ActionRowComponent>
     </form>
-  </div>;
+  </ProductPageShellComponent>;
 }
 
 function PasswordField({ id, label, field, value, state, onChange, autoComplete }: {

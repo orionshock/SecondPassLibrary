@@ -5,8 +5,9 @@ import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, PageHeader } from "../../components/ui";
+import { Button } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { UsersFiltersPageRegion } from "./regions/UsersFiltersPageRegion";
 import { UsersListPageRegion } from "./regions/UsersListPageRegion";
 import { creatableUserRoles } from "./userCreateRoles";
@@ -56,10 +57,9 @@ export function UsersListOrchestrator() {
     setSearchParameters(usersListSearchParams(withUsersListChange(queryState, changes, resetPage)));
   }
 
-  return <div className="page-stack users-page">
-    <PageHeader title="Users" actions={canCreateUsers
+  return <ProductPageShellComponent className="users-page" title="Users" actions={canCreateUsers
       ? <Link className="button" to="/users/new" state={breadcrumbNavigationState(usersCreateBreadcrumbFallback)}>Create User</Link>
-      : <Button type="button" disabled>Create User</Button>} />
+      : <Button type="button" disabled>Create User</Button>}>
     <UsersFiltersPageRegion
       search={searchDraft}
       role={queryState.role}
@@ -84,5 +84,5 @@ export function UsersListOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setRetry((value) => value + 1)}
     />
-  </div>;
+  </ProductPageShellComponent>;
 }

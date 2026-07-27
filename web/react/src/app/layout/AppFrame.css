@@ -1,6 +1,9 @@
 .app-shell {
+  --page-max-width: 66rem;
+  --page-gutter: 1rem;
+
   display: flex;
-  width: min(72rem, calc(100% - 2rem));
+  width: min(var(--page-max-width), calc(100% - (2 * var(--page-gutter))));
   min-height: 100vh;
   margin: 0 auto;
   flex-direction: column;

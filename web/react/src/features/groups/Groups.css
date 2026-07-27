@@ -1,6 +1,5 @@
 .groups-page {
-  width: min(100%, 70rem);
-  margin-inline: auto;
+  min-width: 0;
 }
 
 .groups-list-page,
@@ -122,16 +121,6 @@
 .groups-inline-error .button { margin-top: 0.55rem; }
 
 .groups-inline-error { margin-bottom: 0.7rem; }
-
-.group-detail-header {
-  display: grid;
-  gap: 0.45rem;
-  padding-bottom: 0.8rem;
-}
-
-.group-detail-header__edit { justify-self: end; }
-
-.group-lifecycle-page { max-width: 56rem; }
 
 .group-edit-tabs {
   display: flex;
@@ -266,27 +255,10 @@
 .group-danger-zone .error-panel { margin-top: 0.55rem; }
 
 .group-lifecycle-state {
-  max-width: 56rem;
-  margin-inline: auto;
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.55rem;
   background: var(--surface);
-}
-
-.group-detail-header__title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.group-detail-header h1 { margin: 0; }
-
-.group-detail-header p {
-  max-width: 60rem;
-  margin: 0;
-  white-space: pre-wrap;
 }
 
 .group-detail-tabs {
@@ -300,6 +272,8 @@
   border-color: var(--focus);
   background: var(--surface-raised);
 }
+
+.group-detail-page .page-description { white-space: pre-wrap; }
 
 .group-books-region,
 .group-members-region,

@@ -3,8 +3,7 @@
   grid-template-columns: minmax(11.5rem, 13rem) minmax(0, 1fr);
   align-items: start;
   gap: clamp(1.35rem, 3vw, 2.25rem);
-  width: min(100%, 72rem);
-  margin-inline: auto;
+  min-width: 0;
 }
 
 .book-edit-cover {

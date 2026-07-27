@@ -1,7 +1,6 @@
 .shelf-lifecycle-page,
 .shelf-lifecycle-state {
-  width: min(100%, 56rem);
-  margin-inline: auto;
+  min-width: 0;
 }
 
 .shelf-lifecycle-surface {

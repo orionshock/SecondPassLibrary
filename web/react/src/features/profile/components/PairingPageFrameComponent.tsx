@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 
-import { PageHeader, Surface } from "../../../components/ui";
+import { Surface } from "../../../components/ui";
+import { ProductPageShellComponent } from "../../../shared/layout/ProductPageShellComponent";
 
 export function PairingPageFrameComponent({ children }: { children: ReactNode }) {
-  return <div className="page-stack account-page">
-    <PageHeader title="Authorize reader/client" />
+  return <ProductPageShellComponent className="account-page" title="Authorize reader/client">
     <Surface title="Client API">{children}</Surface>
-  </div>;
+  </ProductPageShellComponent>;
 }

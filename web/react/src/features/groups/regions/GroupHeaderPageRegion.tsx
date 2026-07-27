@@ -1,7 +1,7 @@
 import type { LibraryGroup } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
-import { Badge, Button, ErrorPanel } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { GroupDetailTab } from "../groupsQuery";
 
 export function GroupHeaderPageRegion({
@@ -30,15 +30,15 @@ export function GroupHeaderPageRegion({
   if (!group) return null;
 
   return <>
-    <header className="group-detail-header">
-      <div className="group-detail-header__title">
-        <h1>{group.name}</h1>
+    <PageHeader
+      title={<span className="page-header__title-content">
+        <span>{group.name}</span>
         {group.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
         {isCurator ? <Badge tone="accent">Curator</Badge> : null}
-      </div>
-      {editPath ? <Link className="button button--secondary group-detail-header__edit" to={editPath} state={editNavigationState}>Manage</Link> : null}
-      {group.description ? <p>{group.description}</p> : null}
-    </header>
+      </span>}
+      description={group.description || undefined}
+      actions={editPath ? <Link className="button button--secondary" to={editPath} state={editNavigationState}>Manage</Link> : undefined}
+    />
     <nav className="group-detail-tabs" aria-label="Group sections">
       <Button type="button" aria-current={activeTab === "books" ? "page" : undefined} onClick={() => onTabChange("books")}>Books</Button>
       <Button type="button" aria-current={activeTab === "members" ? "page" : undefined} onClick={() => onTabChange("members")}>Members</Button>

@@ -8,12 +8,12 @@ import { useBlocker, useLocation, useNavigate, useOutletContext } from "react-ro
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { PageHeader } from "../../components/ui";
 import {
   idleMutationState,
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
 import {
   createShelfInputFromDraft,
@@ -136,8 +136,7 @@ export function ShelfCreateOrchestrator() {
     navigate("/shelves", { state: null });
   }
 
-  return <div className="page-stack shelf-lifecycle-page">
-    <PageHeader eyebrow="New Shelf" title="Create Shelf" />
+  return <ProductPageShellComponent className="shelf-lifecycle-page" eyebrow="New Shelf" title="Create Shelf">
     <ShelfDetailsEditPageRegion
       mode="new"
       draft={draft}
@@ -153,5 +152,5 @@ export function ShelfCreateOrchestrator() {
       onCancel={cancel}
       onDelete={() => undefined}
     />
-  </div>;
+  </ProductPageShellComponent>;
 }

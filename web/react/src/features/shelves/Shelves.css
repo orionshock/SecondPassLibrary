@@ -1,6 +1,5 @@
 .shelves-page {
-  width: min(100%, 70rem);
-  margin-inline: auto;
+  min-width: 0;
 }
 
 .shelves-list-page,
@@ -74,25 +73,12 @@
 
 .shelf-detail-header {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.65rem;
   padding-bottom: 0.8rem;
   border-bottom: 1px solid var(--border);
 }
 
-.shelf-detail-header__title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.shelf-detail-header h1,
-.shelf-detail-header p { margin: 0; }
-
-.shelf-detail-header p {
-  max-width: 60rem;
-  white-space: pre-wrap;
-}
+.shelf-detail-page .page-description { white-space: pre-wrap; }
 
 .shelf-items-region { margin-top: 0.8rem; }
 

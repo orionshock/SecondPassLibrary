@@ -232,10 +232,6 @@
   width: 100%;
 }
 
-.user-edit-page {
-  width: min(100%, 58rem);
-}
-
 .user-edit-region {
   display: grid;
   gap: 0.9rem;

@@ -6,6 +6,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "./regions/ShelfItemsPageRegion";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
@@ -115,7 +116,7 @@ export function ShelfDetailOrchestrator() {
   }
 
   const currentPath = shelfDetailPath(shelfId, queryState);
-  return <div className="page-stack shelves-page shelf-detail-page">
+  return <ProductPageShellComponent className="shelves-page shelf-detail-page">
     <ShelfHeaderPageRegion
       shelf={shelf}
       loading={detail.status === "loading"}
@@ -139,5 +140,5 @@ export function ShelfDetailOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setItemsRetry((value) => value + 1)}
     /> : null}
-  </div>;
+  </ProductPageShellComponent>;
 }

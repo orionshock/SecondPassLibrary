@@ -19,12 +19,13 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel, PageHeader } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/ui";
 import {
   idleMutationState,
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
 import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
 import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
@@ -340,8 +341,7 @@ export function ShelfEditOrchestrator() {
   }
   const editableShelf = load.shelf;
 
-  return <div className="page-stack shelf-lifecycle-page">
-    <PageHeader eyebrow="Editing Shelf" title={draft.name || editableShelf.name || "Shelf"} />
+  return <ProductPageShellComponent className="shelf-lifecycle-page" eyebrow="Editing Shelf" title={draft.name || editableShelf.name || "Shelf"}>
     <ShelfEditTabsPageRegion
       activeTab={editState.tab}
       onTabChange={(tab) => navigateEditState(withShelfEditTab(editState, tab))}
@@ -402,5 +402,5 @@ export function ShelfEditOrchestrator() {
         onRetry={() => setCandidatesVersion((value) => value + 1)}
       />
     </> : null}
-  </div>;
+  </ProductPageShellComponent>;
 }

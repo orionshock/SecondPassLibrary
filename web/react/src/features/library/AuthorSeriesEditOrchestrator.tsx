@@ -13,8 +13,9 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel, PageHeader } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import {
   authorEditDraft,
   authorMutationInput,
@@ -176,11 +177,11 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   if (load.status === "not-found") return <div className="author-series-edit-state"><ErrorPanel>{entityTitle} not found or unavailable.</ErrorPanel><Link to={libraryEntityAxisPath(kind)}>Back to {entityTitle === "Author" ? "Authors" : "Series"}</Link></div>;
   if (load.status === "error") return <div className="author-series-edit-state"><ErrorPanel>{load.error.message}</ErrorPanel><Button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</Button></div>;
 
-  return <div className="page-stack author-series-edit-page">
-    <PageHeader
-      eyebrow={mode === "new" ? `New ${entityTitle}` : `Editing ${entityTitle}`}
-      title={mode === "new" ? `Create ${entityTitle}` : draft.name || entity?.name || entityTitle}
-    />
+  return <ProductPageShellComponent
+    className="author-series-edit-page"
+    eyebrow={mode === "new" ? `New ${entityTitle}` : `Editing ${entityTitle}`}
+    title={mode === "new" ? `Create ${entityTitle}` : draft.name || entity?.name || entityTitle}
+  >
     <AuthorSeriesEditFormPageRegion
       kind={kind}
       draft={draft}
@@ -189,7 +190,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
     />
-  </div>;
+  </ProductPageShellComponent>;
 }
 
 async function saveEntity(

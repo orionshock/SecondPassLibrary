@@ -17,8 +17,9 @@ import { Link, useOutletContext, useParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel, PageHeader } from "../../components/ui";
+import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { UserDetailsPageRegion } from "./regions/UserDetailsPageRegion";
 import { UserGroupMembershipsPageRegion } from "./regions/UserGroupMembershipsPageRegion";
 import { UserPasswordPageRegion } from "./regions/UserPasswordPageRegion";
@@ -122,8 +123,7 @@ export function UserEditOrchestrator() {
   if (load.error || !user) return <div className="users-results-state"><ErrorPanel>{load.error?.message ?? "User not found."}</ErrorPanel><button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</button><Link to="/users">Back to Users</Link></div>;
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username;
-  return <div className="page-stack users-page user-edit-page">
-    <PageHeader title={`Editing User: ${displayName} <@${user.username}>`} actions={<Link className="button button--secondary" to="/users">Back to Users</Link>} />
+  return <ProductPageShellComponent className="users-page user-edit-page" title={`Editing User: ${displayName} <@${user.username}>`} actions={<Link className="button button--secondary" to="/users">Back to Users</Link>}>
     <UserDetailsPageRegion
       user={user}
       roles={editableUserRoles(currentUser, user)}
@@ -150,7 +150,7 @@ export function UserEditOrchestrator() {
       onRemove={removeMembership}
       onCuratorChange={(membership, isCurator) => void runMembershipAction(() => updateGroupMember(membership.id, profileId, { isCurator }), "Curator access saved.")}
     /> : null}
-  </div>;
+  </ProductPageShellComponent>;
 }
 
 export function shouldShowManagedGroupMemberships(

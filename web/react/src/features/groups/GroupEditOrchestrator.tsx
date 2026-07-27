@@ -16,12 +16,13 @@ import { Link, useBlocker, useLocation, useNavigate, useOutletContext, useParams
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel, PageHeader } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/ui";
 import {
   idleMutationState,
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import {
   emptyGroupDraft,
   groupDraftFromGroup,
@@ -287,8 +288,7 @@ export function GroupEditOrchestrator() {
     return <section className="group-lifecycle-state"><ErrorPanel>This Group is not available for editing.</ErrorPanel><Link to={groupDetailPath(load.group.id)}>Back to Group</Link></section>;
   }
 
-  return <div className="page-stack groups-page group-lifecycle-page">
-    <PageHeader eyebrow="Managing Group" title={draft.name || load.group.name} />
+  return <ProductPageShellComponent className="groups-page group-lifecycle-page" eyebrow="Managing Group" title={draft.name || load.group.name}>
     <GroupEditTabsPageRegion activeTab={activeTab} canMutateBooks={bookMutationAllowed} canMutateMembers={memberMutationAllowed} disabled={immediateMutationPending} onTabChange={changeTab} />
     {activeTab === "details" && metadataAuthority === "none"
       ? <GroupPublicDetailsPageRegion group={load.group} />
@@ -352,5 +352,5 @@ export function GroupEditOrchestrator() {
     {activeTab === "members" && memberMutationAllowed
       ? <GroupMembersEditOrchestrator group={load.group} metadataPending={mutation.pending} onMutationPendingChange={setMemberMutationPending} />
       : null}
-  </div>;
+  </ProductPageShellComponent>;
 }

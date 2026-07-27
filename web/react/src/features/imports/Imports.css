@@ -1,5 +1,5 @@
 .imports-page {
-  width: min(100%, 68rem);
+  min-width: 0;
 }
 
 .imports-state {

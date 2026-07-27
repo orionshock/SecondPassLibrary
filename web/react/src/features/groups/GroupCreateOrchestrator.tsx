@@ -4,12 +4,13 @@ import { useBlocker, useLocation, useNavigate, useOutletContext } from "react-ro
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel, PageHeader } from "../../components/ui";
+import { ErrorPanel } from "../../components/ui";
 import {
   idleMutationState,
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import {
   createGroupInputFromDraft,
   emptyGroupDraft,
@@ -93,8 +94,7 @@ export function GroupCreateOrchestrator() {
     return <section className="group-lifecycle-state"><ErrorPanel>Group creation is not available.</ErrorPanel></section>;
   }
 
-  return <div className="page-stack groups-page group-lifecycle-page">
-    <PageHeader eyebrow="New Group" title="Create Group" />
+  return <ProductPageShellComponent className="groups-page group-lifecycle-page" eyebrow="New Group" title="Create Group">
     <GroupMetadataFormPageRegion
       mode="new"
       draft={draft}
@@ -104,5 +104,5 @@ export function GroupCreateOrchestrator() {
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
     />
-  </div>;
+  </ProductPageShellComponent>;
 }

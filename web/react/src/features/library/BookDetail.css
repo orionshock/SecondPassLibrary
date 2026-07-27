@@ -1,6 +1,5 @@
 .book-detail-page {
-  width: min(100%, 62rem);
-  margin-inline: auto;
+  min-width: 0;
 }
 
 .book-detail-hero-region {

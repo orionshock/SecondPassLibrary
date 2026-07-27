@@ -18,6 +18,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
 import { groupEditNavigationState, groupEditPath } from "./groupsBreadcrumbs";
 import { canManageGroup } from "./groupMetadataAuthority";
@@ -161,7 +162,7 @@ export function GroupDetailOrchestrator() {
   const canManage = Boolean(group && canManageGroup(currentUser, group));
   const currentPath = groupDetailPath(groupId, queryState);
 
-  return <div className="page-stack groups-page group-detail-page">
+  return <ProductPageShellComponent className="groups-page group-detail-page">
     <GroupHeaderPageRegion
       group={group}
       loading={detail.status === "loading"}
@@ -218,5 +219,5 @@ export function GroupDetailOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setPageRetry((value) => value + 1)}
     /> : null}
-  </div>;
+  </ProductPageShellComponent>;
 }

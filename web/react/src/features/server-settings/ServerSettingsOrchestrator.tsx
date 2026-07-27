@@ -13,9 +13,10 @@ import { useOutletContext, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel, PageHeader } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../shared/forms/ActionRowComponent";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { GeneralSettingsPageRegion } from "./regions/GeneralSettingsPageRegion";
 import { LibraryGroupsPageRegion } from "./regions/LibraryGroupsPageRegion";
 import { PublicLibraryPageRegion } from "./regions/PublicLibraryPageRegion";
@@ -140,8 +141,7 @@ export function ServerSettingsOrchestrator() {
     </> : <Button type="button" tone="secondary" onClick={() => { setState(idleMutationState); setEditing(true); }}>Edit</Button>}
   </ActionRowComponent>;
 
-  return <div className="page-stack server-settings-page">
-    <PageHeader title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />} />
+  return <ProductPageShellComponent className="server-settings-page" title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />}>
     <div className="server-settings-tabs">
       <div className="server-settings-tab-list" role="tablist" aria-label="Server settings sections">
         {serverSettingsTabs.map(({ id, label }) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => selectTab(id)}>{label}</button>)}
@@ -165,7 +165,7 @@ export function ServerSettingsOrchestrator() {
       onSubmit={(event) => void savePublicLibrary(event)}
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}
-  </div>;
+  </ProductPageShellComponent>;
 }
 
 export function canAccessServerSettings(isOwner: boolean): boolean { return isOwner; }

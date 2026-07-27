@@ -1,8 +1,7 @@
 .library-page {
   grid-template-columns: 11.5rem minmax(0, 1fr);
   gap: 0.65rem 1rem;
-  width: min(100%, 66rem);
-  margin-inline: auto;
+  min-width: 0;
 }
 
 .library-heading {

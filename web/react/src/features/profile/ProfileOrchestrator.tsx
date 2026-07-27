@@ -13,9 +13,9 @@ import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { clientPairingBreadcrumbFallback, passwordBreadcrumbFallback, profileBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { PageHeader } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import "../../shared/layout/AccountPageLayout.css";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { AccountSessionsPageRegion } from "./regions/AccountSessionsPageRegion";
 import { GroupMembershipsPageRegion } from "./regions/GroupMembershipsPageRegion";
 import { ProfileDetailsPageRegion } from "./regions/ProfileDetailsPageRegion";
@@ -74,8 +74,7 @@ export function ProfileOrchestrator() {
     }
   }
 
-  return <div className="page-stack account-page">
-    <PageHeader title="Profile" actions={<Link className="button" to="/profile/password" state={breadcrumbNavigationState(passwordBreadcrumbFallback)}>Change password</Link>} />
+  return <ProductPageShellComponent className="account-page" title="Profile" actions={<Link className="button" to="/profile/password" state={breadcrumbNavigationState(passwordBreadcrumbFallback)}>Change password</Link>}>
     <ProfileDetailsPageRegion user={currentUser} state={profileState} onSave={saveProfile} onClearStatus={() => setProfileState(idleMutationState)} />
     <GroupMembershipsPageRegion user={currentUser} />
     <AccountSessionsPageRegion
@@ -87,5 +86,5 @@ export function ProfileOrchestrator() {
       onLogoutOthers={logoutOthers}
       onRevokeSession={revokeSession}
     />
-  </div>;
+  </ProductPageShellComponent>;
 }

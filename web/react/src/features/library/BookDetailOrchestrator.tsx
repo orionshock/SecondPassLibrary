@@ -12,6 +12,7 @@ import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookShelfBreadcrumbTrail } from "./bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
 import {
@@ -85,11 +86,11 @@ export function BookDetailOrchestrator() {
       });
   }, [bookId, shelvesLoad.status]);
 
-  if (load.status === "loading") return <div className="page-stack book-detail-page"><BookDetailStatePageRegion state="loading" /></div>;
-  if (load.status === "not-found") return <div className="page-stack book-detail-page"><BookDetailStatePageRegion state="not-found" /></div>;
-  if (load.status === "error") return <div className="page-stack book-detail-page"><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setRetry((value) => value + 1)} /></div>;
+  if (load.status === "loading") return <ProductPageShellComponent><BookDetailStatePageRegion state="loading" /></ProductPageShellComponent>;
+  if (load.status === "not-found") return <ProductPageShellComponent><BookDetailStatePageRegion state="not-found" /></ProductPageShellComponent>;
+  if (load.status === "error") return <ProductPageShellComponent><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setRetry((value) => value + 1)} /></ProductPageShellComponent>;
 
-  return <article className="page-stack book-detail-page">
+  return <ProductPageShellComponent><article className="page-stack book-detail-page">
     <BookDetailHeroPageRegion
       book={load.book}
       canEdit={isAtLeastLibrarian(currentUser)}
@@ -108,5 +109,5 @@ export function BookDetailOrchestrator() {
       onLoadShelves={loadShelves}
       onRetryShelves={loadShelves}
     />
-  </article>;
+  </article></ProductPageShellComponent>;
 }

@@ -25,6 +25,7 @@ import { ShelvesListOrchestrator } from "../features/shelves/ShelvesListOrchestr
 import { UserEditOrchestrator } from "../features/users/UserEditOrchestrator";
 import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
 import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
+import { ProductPageShellComponent } from "../shared/layout/ProductPageShellComponent";
 
 export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
@@ -33,23 +34,19 @@ export const sectionRoutes = [
 const advancedGroupsRouteAvailable = (user: CurrentUser) => user.advancedLibraryGroupsEnabled;
 
 export function PlaceholderPageRegion({ title }: { title: string }) {
-  return (
+  return <ProductPageShellComponent eyebrow="React Product UI" title={title}>
     <section className="page-panel">
-      <p className="eyebrow">React Product UI</p>
-      <h1>{title}</h1>
       <p>This section has not been rebuilt yet.</p>
     </section>
-  );
+  </ProductPageShellComponent>;
 }
 
 export function NotFoundPageRegion() {
-  return (
+  return <ProductPageShellComponent eyebrow="Not found" title="Page not found">
     <section className="page-panel">
-      <p className="eyebrow">Not found</p>
-      <h1>Page not found</h1>
       <p>This address does not match a Product UI page.</p>
     </section>
-  );
+  </ProductPageShellComponent>;
 }
 
 export const appRoutes = [

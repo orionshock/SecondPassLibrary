@@ -25,6 +25,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { BookCoverComponent } from "../../shared/books/BookCoverComponent";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { SaveCancelActionRowComponent } from "../../shared/forms/ActionRowComponent";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail } from "./bookDetailPresentation";
 import { bookDetailWithUpdatedCover } from "./bookCoverMutation";
 import { bookDetailWithUpdatedGroups, canEditBookGroups } from "./bookGroupMutation";
@@ -245,12 +246,12 @@ export function BookEditOrchestrator() {
     navigate(`/library/books/${encodeURIComponent(bookId)}`, { state: breadcrumbNavigationState(detailTrail) });
   }
 
-  if (load.status === "not-found") return <div className="page-stack book-edit-page"><BookDetailStatePageRegion state="not-found" /></div>;
-  if (load.status === "error") return <div className="page-stack book-edit-page"><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setBookRetry((value) => value + 1)} /></div>;
-  if (load.status === "loading" || !draft) return <div className="page-stack book-edit-page"><BookDetailStatePageRegion state="loading" /></div>;
+  if (load.status === "not-found") return <ProductPageShellComponent><BookDetailStatePageRegion state="not-found" /></ProductPageShellComponent>;
+  if (load.status === "error") return <ProductPageShellComponent><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setBookRetry((value) => value + 1)} /></ProductPageShellComponent>;
+  if (load.status === "loading" || !draft) return <ProductPageShellComponent><BookDetailStatePageRegion state="loading" /></ProductPageShellComponent>;
   const readyBook = load.book;
 
-  return <form className="book-edit-page" onSubmit={save}>
+  return <ProductPageShellComponent><form className="book-edit-page" onSubmit={save}>
     <aside className="book-edit-cover">
       <BookCoverComponent coverUrl={readyBook.coverUrl} title={readyBook.title} />
       <BookCoverEditorComponent
@@ -290,7 +291,7 @@ export function BookEditOrchestrator() {
       /> : null}
       <SaveCancelActionRowComponent state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={groupMutation.pending} onCancel={cancel} />
     </main>
-  </form>;
+  </form></ProductPageShellComponent>;
 }
 
 function readyGroupsForRemoval(load: BookLoad, removedGroupId: string): boolean {

@@ -4,8 +4,9 @@ import { useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel, PageHeader } from "../../components/ui";
+import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { ImportResultPageRegion } from "./regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "./regions/ImportUploadPageRegion";
 import "./Imports.css";
@@ -36,11 +37,10 @@ export function ImportsOrchestrator() {
     }
   }
 
-  return <div className="page-stack imports-page">
-    <PageHeader title="Imports" />
+  return <ProductPageShellComponent className="imports-page" title="Imports">
     <ImportUploadPageRegion state={state} inputRef={inputRef} onFileChange={(value) => { setFile(value); setState(idleMutationState); }} onSubmit={(event) => void submit(event)} />
     <ImportResultPageRegion result={result} />
-  </div>;
+  </ProductPageShellComponent>;
 }
 
 export function uploadSelectedLibraryFile(

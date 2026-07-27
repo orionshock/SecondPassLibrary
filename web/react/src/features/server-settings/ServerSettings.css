@@ -1,5 +1,5 @@
 .server-settings-page {
-  width: min(100%, 58rem);
+  min-width: 0;
 }
 
 .server-settings-tabs {

@@ -117,7 +117,10 @@ This is the running list of cross-page presentation and interaction rules that a
 
 ## Page headings
 
+- Product UI routes use `ProductPageShellComponent` for the shared content width, left edge, top/body rhythm, and optional title/action row. AppFrame breadcrumbs and footer align to the same frame.
+- Feature pages must not add their own page-level max width or centering without an explicit product reason. Deliberately narrower forms or subregions may keep local widths inside the shared frame.
 - Product page titles use the restrained legacy Product UI scale rather than oversized landing-page typography. Keep titles on one line at normal desktop widths and allow wrapping only when the viewport requires it.
+- Book Detail may keep its distinct internal hero composition, but it still uses the shared page frame and breadcrumb alignment.
 
 ## Operational results
 
