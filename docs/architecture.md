@@ -60,8 +60,12 @@ Position:
 - Django `User` is the canonical local user record.
 - `accounts.UserProfile` stores the app-level global role (`manager|librarian|reader`).
 - `accounts.UserWebSession` tracks active Django web sessions to support revocation (companion tracking only; does not replace Django sessions).
-- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
+- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, `/api/v1/server/info/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
+- Authenticated server-wide display context belongs to `/api/v1/server/info/`;
+  current-user identity, memberships, and user-specific capabilities belong to
+  `/api/v1/accounts/me/`. Public `/.well-known/secondpass` remains a smaller
+  anonymous discovery contract.
 - CORS is open for API/discovery endpoints only, with credentials disabled, so
   independent browser reader clients can use bearer tokens from another origin.
   Product UI session-auth routes are intentionally not CORS-open.

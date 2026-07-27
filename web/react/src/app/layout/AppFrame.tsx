@@ -3,7 +3,7 @@ import {
   canSeeServerSettings,
   canSeeUsers,
   type CurrentUser,
-  type ServerInfo,
+  type ServerDiscovery,
 } from "@second-pass/spl-api";
 import { useCallback, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
@@ -15,9 +15,9 @@ import "./AppFrame.css";
 
 export interface AppOutletContext {
   currentUser: CurrentUser;
-  serverInfo: ServerInfo;
+  serverInfo: ServerDiscovery;
   onCurrentUserChange: (user: CurrentUser) => void;
-  onServerInfoChange: (server: ServerInfo) => void;
+  onServerInfoChange: (server: ServerDiscovery) => void;
   refreshCurrentUser: () => Promise<CurrentUser>;
   setBreadcrumbs: (pathname: string, items: readonly BreadcrumbItem[]) => void;
 }
@@ -41,9 +41,9 @@ export function AppFrame({
   onRefreshCurrentUser = async () => user,
 }: {
   user: CurrentUser;
-  server: ServerInfo;
+  server: ServerDiscovery;
   onCurrentUserChange: (user: CurrentUser) => void;
-  onServerInfoChange?: (server: ServerInfo) => void;
+  onServerInfoChange?: (server: ServerDiscovery) => void;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {
   const location = useLocation();

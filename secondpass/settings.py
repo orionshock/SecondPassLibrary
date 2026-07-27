@@ -17,7 +17,7 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 import environ
 
-from secondpass.version import SERVER_RELEASE, SERVER_RELEASE_DATE, SERVER_VERSION
+from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION
 
 try:
     import django_stubs_ext
@@ -80,7 +80,6 @@ RUNNING_TESTS = "test" in sys.argv or any(
 ) or "pytest" in sys.modules
 
 SECOND_PASS_SERVER_VERSION = SERVER_VERSION
-SECOND_PASS_SERVER_RELEASE = SERVER_RELEASE
 SECOND_PASS_SERVER_RELEASE_DATE = SERVER_RELEASE_DATE
 
 # Ensure required directories exist

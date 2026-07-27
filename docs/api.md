@@ -147,8 +147,9 @@ Discovery:
 - `GET /api/v1/client-api/discovery/` returns the detailed Client API pairing
   discovery document.
 - Authenticated clients should refresh `GET /api/v1/accounts/me/` for current
-  user context plus small server context such as `advanced_library_groups_enabled`
-  and `banner_text`.
+  user context and `GET /api/v1/server/info/` for server-wide display context.
+  During the staged client migration, `/me` still duplicates
+  `advanced_library_groups_enabled` and `banner_text`.
 
 Client API route conventions under `api_base_url`:
 
@@ -217,7 +218,7 @@ Notes:
 
 ### `GET /api/v1/accounts/me/` response
 
-`/accounts/me/` is intended to be the UI bootstrap endpoint for authenticated clients:
+`/accounts/me/` is the current-user context endpoint for authenticated clients:
 
 - Who am I?
 - What global role do I have?
@@ -261,6 +262,10 @@ Refreshable server context:
   show or hide group browsing UI.
 - `banner_text` (string): the current server banner text, or an empty string
   when unset.
+
+These two server-wide fields remain temporarily during migration to
+`/api/v1/server/info/`; new consumers should read them from server info rather
+than treating them as current-user identity.
 
 Broad Product UI affordances should be derived from `role` and `is_owner`.
 Group-scoped curator affordances should use the matching `groups[]` membership
@@ -1109,11 +1114,21 @@ Reading payload notes:
 ## Core
 
 - Health check: `GET /api/v1/health/`
+- Authenticated server context: `GET /api/v1/server/info/`
+  - accepts session or Client API bearer authentication
+  - `server_name`
+  - `server_description`
+  - `server_banner_message`
+  - `advanced_library_groups_enabled`
+  - `public_group` (`id`, `name`, `description`)
+  - `server_version`
+  - `server_release_date`
+  - read-only; contains no user identity, membership, capability, API-base, or
+    operator-only configuration fields
 - Public discovery: `GET /.well-known/secondpass`
   - `server_name`
   - `server_description`
   - `server_version`
-  - `server_release`
   - `server_release_date`
   - `api_base_url`
   - does not include banner text, advanced library group state, capabilities,

@@ -4,13 +4,16 @@ from typing import Any, cast
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.roles import is_owner
+from accounts.authentication import ClientBearerAuthentication
 from core import server_settings
+from core.server_info import server_info_payload
 from library.groups.public_services import configure_public_group
 from library.groups.public_group import get_public_group
 
@@ -27,6 +30,14 @@ def _server_settings_payload() -> dict[str, Any]:
             server_settings.get_advanced_library_groups_enabled()
         ),
     }
+
+
+class ServerInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
+
+    def get(self, request):
+        return Response(server_info_payload(), status=status.HTTP_200_OK)
 
 
 class ServerSettingsView(APIView):

@@ -138,7 +138,12 @@ export {
   type LibraryImportItem,
   type LibraryImportResult,
 } from "./imports";
-export { getServerInfo, type ServerInfo } from "./server";
+export {
+  getServerDiscovery,
+  getServerInfo,
+  type ServerDiscovery,
+  type ServerInfo,
+} from "./server";
 export {
   enableAdvancedGroups,
   getServerSettings,

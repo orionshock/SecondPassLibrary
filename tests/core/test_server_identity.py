@@ -176,12 +176,12 @@ class ServerIdentitySettingsTests(TestCase):
                 "server_name": "Second Pass Library",
                 "server_description": "",
                 "server_version": "0.1.0-dev",
-                "server_release": "pre-release",
                 "server_release_date": "2026-07-19",
                 "api_base_url": "http://testserver/api/v1/",
             },
         )
         payload = response.json()
+        self.assertNotIn("server_release", payload)
         self.assertNotIn("banner_text", payload)
         self.assertNotIn("advanced_library_groups_enabled", payload)
         self.assertNotIn("capabilities", payload)
@@ -212,7 +212,6 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(payload["server_name"], "My Library")
         self.assertEqual(payload["server_description"], "Private.")
         self.assertEqual(payload["server_version"], "0.1.0-dev")
-        self.assertEqual(payload["server_release"], "pre-release")
         self.assertEqual(payload["server_release_date"], "2026-07-19")
         self.assertEqual(payload["api_base_url"], "http://testserver/api/v1/")
         self.assertNotIn("banner_text", payload)
@@ -230,7 +229,6 @@ class ServerIdentitySettingsTests(TestCase):
                 "server_name",
                 "server_description",
                 "server_version",
-                "server_release",
                 "server_release_date",
                 "api_base_url",
             },

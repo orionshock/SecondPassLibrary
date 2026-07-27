@@ -3,13 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
+import type { CurrentUser, ServerDiscovery } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [] };
-const server: ServerInfo = { name: "Family Library", description: "Hidden", version: "0.1.0-dev", release: "Early Access", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
+const server: ServerDiscovery = { name: "Family Library", description: "Hidden", version: "0.1.0-dev", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
 
 function navMarkup(overrides: Partial<CurrentUser> = {}): string {
   return renderToStaticMarkup(<MemoryRouter initialEntries={["/library"]}><AppFrame user={{ ...user, ...overrides }} server={server} onCurrentUserChange={vi.fn()} /></MemoryRouter>);

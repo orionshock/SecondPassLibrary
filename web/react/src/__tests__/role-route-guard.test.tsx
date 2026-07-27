@@ -2,11 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { canSeeImports, canSeeServerSettings, canSeeUsers, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
+import { canSeeImports, canSeeServerSettings, canSeeUsers, type CurrentUser, type ServerDiscovery } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { RoleRouteGuardComponent, unauthorizedRouteFallback } from "../app/navigation/RoleRouteGuardComponent";
 
-const server: ServerInfo = { name: "SPL", description: "", version: "dev", release: "", releaseDate: "", apiBaseUrl: "" };
+const server: ServerDiscovery = { name: "SPL", description: "", version: "dev", releaseDate: "", apiBaseUrl: "" };
 const reader: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "reader", role: "reader",
   mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true,

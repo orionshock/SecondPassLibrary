@@ -1,10 +1,10 @@
 import {
   classifyApiError,
   getCurrentUser,
-  getServerInfo,
+  getServerDiscovery,
   type ApiErrorKind,
   type CurrentUser,
-  type ServerInfo,
+  type ServerDiscovery,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
@@ -14,7 +14,7 @@ import "../components/ui.css";
 
 type BootstrapState =
   | { status: "loading" }
-  | { status: "ready"; user: CurrentUser; server: ServerInfo }
+  | { status: "ready"; user: CurrentUser; server: ServerDiscovery }
   | { status: "failed"; kind: ApiErrorKind };
 
 export function App() {
@@ -31,7 +31,7 @@ export function App() {
   useEffect(() => {
     let active = true;
     setState({ status: "loading" });
-    Promise.all([getCurrentUser(), getServerInfo()])
+    Promise.all([getCurrentUser(), getServerDiscovery()])
       .then(([user, server]) => {
         if (active) setState({ status: "ready", user, server });
       })
@@ -73,7 +73,7 @@ export function AppBootstrapView({
   loginPath: string;
   onRetry: () => void;
   onCurrentUserChange: (user: CurrentUser) => void;
-  onServerInfoChange?: (server: ServerInfo) => void;
+  onServerInfoChange?: (server: ServerDiscovery) => void;
   currentPath?: string;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
 }) {

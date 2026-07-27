@@ -20,6 +20,10 @@ This is the running list of cross-page presentation and interaction rules that a
 
 ## User identity and roles
 
+- `CurrentUser` owns account identity, memberships, role facts, and
+  user-specific capabilities. Authenticated `ServerInfo` owns server-wide
+  Product UI context such as banner text, feature mode, Public group identity,
+  and version metadata. Do not add new server-wide settings to `CurrentUser`.
 - Product UI permissions are derived from stable SDK role facts, not invented
   generic capability fields. `CurrentUser` exposes mutually exclusive
   `isOwner`, `isManager`, `isLibrarian`, and `isReader` facts from the existing

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError, type CreateUserResult, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
+import { ApiError, type CreateUserResult, type CurrentUser, type ServerDiscovery } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { UserCreateFormPageRegion } from "../features/users/regions/UserCreateFormPageRegion";
 import { UserCreateSuccessPageRegion } from "../features/users/regions/UserCreateSuccessPageRegion";
@@ -16,7 +16,7 @@ const owner: CurrentUser = {
   mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [],
 };
 const manager: CurrentUser = { ...owner, username: "manager", profileId: "manager-id", isOwner: false, isManager: true };
-const server: ServerInfo = { name: "Library", description: "", version: "dev", release: "", releaseDate: "", apiBaseUrl: "unused" };
+const server: ServerDiscovery = { name: "Library", description: "", version: "dev", releaseDate: "", apiBaseUrl: "unused" };
 
 function renderForm(user: CurrentUser, error?: Error): string {
   return renderToStaticMarkup(<MemoryRouter><UserCreateFormPageRegion

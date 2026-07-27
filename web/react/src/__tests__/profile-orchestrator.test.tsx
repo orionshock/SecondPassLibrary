@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
+import type { CurrentUser, ServerDiscovery } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 
@@ -15,7 +15,7 @@ const user: CurrentUser = {
     { id: "editors", name: "Editors", isPublicGroup: false, isCurator: true },
   ],
 };
-const server: ServerInfo = { name: "Analytical Library", description: "", version: "0.1.0-dev", release: "Early Access", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
+const server: ServerDiscovery = { name: "Analytical Library", description: "", version: "0.1.0-dev", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
 
 describe("ProfileOrchestrator", () => {
   it("composes profile regions from app-owned current-user data", () => {
