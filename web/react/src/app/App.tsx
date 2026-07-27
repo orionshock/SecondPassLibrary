@@ -1,10 +1,10 @@
 import {
   classifyApiError,
   getCurrentUser,
-  getServerDiscovery,
+  getServerInfo,
   type ApiErrorKind,
   type CurrentUser,
-  type ServerDiscovery,
+  type ServerInfo,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
@@ -14,7 +14,7 @@ import "../components/ui.css";
 
 type BootstrapState =
   | { status: "loading" }
-  | { status: "ready"; user: CurrentUser; server: ServerDiscovery }
+  | { status: "ready"; user: CurrentUser; server: ServerInfo }
   | { status: "failed"; kind: ApiErrorKind };
 
 export function App() {
@@ -28,10 +28,16 @@ export function App() {
     return user;
   }
 
+  async function refreshServerInfo(): Promise<ServerInfo> {
+    const server = await getServerInfo();
+    setState((current) => current.status === "ready" ? { ...current, server } : current);
+    return server;
+  }
+
   useEffect(() => {
     let active = true;
     setState({ status: "loading" });
-    Promise.all([getCurrentUser(), getServerDiscovery()])
+    Promise.all([getCurrentUser(), getServerInfo()])
       .then(([user, server]) => {
         if (active) setState({ status: "ready", user, server });
       })
@@ -50,11 +56,9 @@ export function App() {
       onRetry={() => setAttempt((current) => current + 1)}
       currentPath={location.pathname}
       onRefreshCurrentUser={refreshCurrentUser}
+      onRefreshServerInfo={refreshServerInfo}
       onCurrentUserChange={(user) => {
         setState((current) => current.status === "ready" ? { ...current, user } : current);
-      }}
-      onServerInfoChange={(server) => {
-        setState((current) => current.status === "ready" ? { ...current, server } : current);
       }}
     />
   );
@@ -65,17 +69,17 @@ export function AppBootstrapView({
   loginPath,
   onRetry,
   onCurrentUserChange,
-  onServerInfoChange,
   currentPath,
   onRefreshCurrentUser,
+  onRefreshServerInfo,
 }: {
   state: BootstrapState;
   loginPath: string;
   onRetry: () => void;
   onCurrentUserChange: (user: CurrentUser) => void;
-  onServerInfoChange?: (server: ServerDiscovery) => void;
   currentPath?: string;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
+  onRefreshServerInfo?: () => Promise<ServerInfo>;
 }) {
   if (state.status === "loading") {
     return (
@@ -117,8 +121,8 @@ export function AppBootstrapView({
       user={state.user}
       server={state.server}
       onCurrentUserChange={onCurrentUserChange}
-      onServerInfoChange={onServerInfoChange}
       onRefreshCurrentUser={onRefreshCurrentUser}
+      onRefreshServerInfo={onRefreshServerInfo}
     />
   );
 }

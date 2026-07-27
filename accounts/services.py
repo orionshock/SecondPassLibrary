@@ -12,7 +12,6 @@ from django.db import IntegrityError, transaction
 
 from accounts.operational_logging import logger, user_log_label, user_uuid
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
-from core import server_settings
 from library.groups.memberships import ensure_user_public_membership
 from library.models import LibraryGroupMembership
 from library.groups.public_group import is_public_group
@@ -478,7 +477,6 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "last_name": user.last_name or "",
         "profile_id": profile.id,
         "role": profile.role,
-        "banner_text": server_settings.get_server_banner_message(),
         "groups": groups,
     }
     owner = is_owner(user)
@@ -486,8 +484,6 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         payload["must_change_password"] = True
     if owner:
         payload["is_owner"] = True
-    if server_settings.get_advanced_library_groups_enabled():
-        payload["advanced_library_groups_enabled"] = True
     if owner and settings.SECOND_PASS_ENABLE_DJANGO_ADMIN:
         payload["can_access_django_admin"] = True
     return payload

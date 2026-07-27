@@ -38,7 +38,7 @@ interface UserEditLoadState {
 
 export function UserEditOrchestrator() {
   const { profileId = "" } = useParams();
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<UserEditLoadState>({ loading: true, assignableGroups: [] });
   const [detailsState, setDetailsState] = useState<MutationState>(idleMutationState);
@@ -52,12 +52,12 @@ export function UserEditOrchestrator() {
   useEffect(() => {
     let active = true;
     setLoad((value) => ({ ...value, loading: true, error: undefined }));
-    const groups = currentUser.advancedLibraryGroupsEnabled ? listAssignableGroupsForUser(profileId) : Promise.resolve([]);
+    const groups = serverInfo.advancedLibraryGroupsEnabled ? listAssignableGroupsForUser(profileId) : Promise.resolve([]);
     Promise.all([getManagedUser(profileId), groups])
       .then(([user, assignableGroups]) => { if (active) setLoad({ loading: false, user, assignableGroups }); })
       .catch((error: unknown) => { if (active) setLoad({ loading: false, assignableGroups: [], error: normalizeMutationError(error) }); });
     return () => { active = false; };
-  }, [currentUser.advancedLibraryGroupsEnabled, profileId, retry]);
+  }, [profileId, retry, serverInfo.advancedLibraryGroupsEnabled]);
 
   const user = load.user;
   const isSelf = user?.id === currentUser.profileId;
@@ -70,7 +70,7 @@ export function UserEditOrchestrator() {
   async function reloadUserAndGroups(): Promise<ManagedUser> {
     const [updated, assignableGroups] = await Promise.all([
       getManagedUser(profileId),
-      currentUser.advancedLibraryGroupsEnabled ? listAssignableGroupsForUser(profileId) : Promise.resolve([]),
+      serverInfo.advancedLibraryGroupsEnabled ? listAssignableGroupsForUser(profileId) : Promise.resolve([]),
     ]);
     setLoad({ loading: false, user: updated, assignableGroups });
     return updated;
@@ -143,7 +143,7 @@ export function UserEditOrchestrator() {
       onRequirementChange={(value) => void changePasswordRequirement(value)}
       onReset={() => void resetPassword()}
     />
-    {shouldShowManagedGroupMemberships(currentUser.advancedLibraryGroupsEnabled, currentUser) ? <UserGroupMembershipsPageRegion
+    {shouldShowManagedGroupMemberships(serverInfo.advancedLibraryGroupsEnabled, currentUser) ? <UserGroupMembershipsPageRegion
       memberships={user.groups}
       assignableGroups={load.assignableGroups}
       state={membershipState}

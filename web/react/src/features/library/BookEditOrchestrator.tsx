@@ -62,7 +62,7 @@ type GroupShelvesLoad =
 
 export function BookEditOrchestrator() {
   const { bookId = "" } = useParams();
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
   const [bookRetry, setBookRetry] = useState(0);
@@ -93,7 +93,7 @@ export function BookEditOrchestrator() {
   const allowNavigation = useRef(false);
   const book = load.status === "ready" ? load.book : undefined;
   const dirty = Boolean(draft && baseline && !bookEditDraftsEqual(draft, baseline));
-  const canEditGroups = canEditBookGroups(currentUser);
+  const canEditGroups = canEditBookGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled);
   const immediateMutationPending = groupMutation.pending || groupShelfMutation.pending;
   const requestedEditQuery = useMemo(
     () => bookEditQueryFromSearchParams(new URLSearchParams(location.search), canEditGroups),

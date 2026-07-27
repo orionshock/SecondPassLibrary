@@ -24,9 +24,7 @@ describe("getCurrentUser", () => {
       role: "reader",
       must_change_password: true,
       is_owner: true,
-      advanced_library_groups_enabled: true,
       can_access_django_admin: true,
-      banner_text: "Welcome",
       groups: [{ id: "group-id", name: "Public", is_public_group: true, is_curator: true }],
     };
     const client: ApiClient = {
@@ -45,9 +43,7 @@ describe("getCurrentUser", () => {
       isManager: false,
       isLibrarian: false,
       isReader: false,
-      advancedLibraryGroupsEnabled: true,
       canAccessDjangoAdmin: true,
-      bannerText: "Welcome",
       groups: [{ id: "group-id", name: "Public", isPublicGroup: true, isCurator: true }],
     });
   });
@@ -55,7 +51,7 @@ describe("getCurrentUser", () => {
   it("normalizes omitted capability flags to stable false values", async () => {
     const response = {
       username: "reader", email: "", first_name: "", last_name: "",
-      profile_id: "profile-id", role: "reader", banner_text: "",
+      profile_id: "profile-id", role: "reader",
       groups: [{ id: "group-id", name: "Public", is_public_group: true }],
     };
     const client: ApiClient = { request: async <T>() => response as T };
@@ -67,7 +63,6 @@ describe("getCurrentUser", () => {
     expect(user.isLibrarian).toBe(false);
     expect(user.isReader).toBe(true);
     expect(user.mustChangePassword).toBe(false);
-    expect(user.advancedLibraryGroupsEnabled).toBe(false);
     expect(user.canAccessDjangoAdmin).toBe(false);
     expect(user.groups[0]?.isCurator).toBe(false);
   });
@@ -76,7 +71,7 @@ describe("getCurrentUser", () => {
     for (const role of ["manager", "librarian", "reader"] as const) {
       const response = {
         username: role, email: "", first_name: "", last_name: "",
-        profile_id: `${role}-id`, role, banner_text: "", groups: [],
+        profile_id: `${role}-id`, role, groups: [],
       };
       const client: ApiClient = { request: async <T>() => response as T };
 
@@ -92,7 +87,7 @@ describe("getCurrentUser", () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const response = {
       username: "reader", email: "new@example.test", first_name: "New", last_name: "Name",
-      profile_id: "profile-id", role: "reader", banner_text: "", groups: [],
+      profile_id: "profile-id", role: "reader", groups: [],
     };
     const client: ApiClient = {
       request: async <T>(path: string, init?: RequestInit) => {

@@ -40,15 +40,15 @@ type BookDetailLoadState =
 
 export function BookDetailOrchestrator() {
   const { bookId } = useParams();
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
   const detailQuery = useMemo(
     () => bookDetailQueryFromSearchParams(
       new URLSearchParams(location.search),
-      currentUser.advancedLibraryGroupsEnabled,
+      serverInfo.advancedLibraryGroupsEnabled,
     ),
-    [currentUser.advancedLibraryGroupsEnabled, location.search],
+    [location.search, serverInfo.advancedLibraryGroupsEnabled],
   );
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<BookDetailLoadState>({ status: "loading" });
@@ -166,7 +166,7 @@ export function BookDetailOrchestrator() {
     />
     <BookDetailSectionsPageRegion
       book={load.book}
-      advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
+      advancedGroupsEnabled={serverInfo.advancedLibraryGroupsEnabled}
       activeSection={detailQuery.tab}
       shelvesState={shelvesLoad}
       groupsState={groupsLoad}

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError, type CurrentUser } from "@second-pass/spl-api";
 import { ProfileDetailsPageRegion, profileDraftFromUser, profileDraftReducer } from "../features/profile/regions/ProfileDetailsPageRegion";
 
-const user: CurrentUser = { username: "ada", email: "ada@example.test", firstName: "Ada", lastName: "Lovelace", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [] };
+const user: CurrentUser = { username: "ada", email: "ada@example.test", firstName: "Ada", lastName: "Lovelace", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 
 describe("ProfileDetailsPageRegion", () => {
   it("renders success feedback without duplicating identity fields", () => {

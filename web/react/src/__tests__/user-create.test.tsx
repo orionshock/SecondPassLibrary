@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError, type CreateUserResult, type CurrentUser, type ServerDiscovery } from "@second-pass/spl-api";
+import { ApiError, type CreateUserResult, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { UserCreateFormPageRegion } from "../features/users/regions/UserCreateFormPageRegion";
 import { UserCreateSuccessPageRegion } from "../features/users/regions/UserCreateSuccessPageRegion";
@@ -13,10 +13,10 @@ import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 
 const owner: CurrentUser = {
   username: "owner", email: "", firstName: "", lastName: "", profileId: "owner-id", role: "manager",
-  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [],
+  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [],
 };
 const manager: CurrentUser = { ...owner, username: "manager", profileId: "manager-id", isOwner: false, isManager: true };
-const server: ServerDiscovery = { name: "Library", description: "", version: "dev", releaseDate: "", apiBaseUrl: "unused" };
+const server: ServerInfo = { name: "Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
 function renderForm(user: CurrentUser, error?: Error): string {
   return renderToStaticMarkup(<MemoryRouter><UserCreateFormPageRegion

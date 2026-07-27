@@ -78,7 +78,7 @@ interface BookMutation {
 
 export function GroupEditOrchestrator() {
   const { groupId = "" } = useParams<{ groupId: string }>();
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
   const [retry, setRetry] = useState(0);
@@ -180,10 +180,10 @@ export function GroupEditOrchestrator() {
     return () => { active = false; };
   }, [currentUser, groupId, retry]);
 
-  const metadataAuthority = group ? groupMetadataAuthority(currentUser, group) : "none";
-  const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group) : false;
-  const memberMutationAllowed = canMutateGroupMembers(currentUser);
-  const deleteAllowed = group ? canDeleteGroup(currentUser, group) : false;
+  const metadataAuthority = group ? groupMetadataAuthority(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : "none";
+  const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : false;
+  const memberMutationAllowed = canMutateGroupMembers(currentUser, serverInfo.advancedLibraryGroupsEnabled);
+  const deleteAllowed = group ? canDeleteGroup(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : false;
   useEffect(() => {
     if (!group || !bookMutationAllowed || activeTab !== "books") return;
     let active = true;

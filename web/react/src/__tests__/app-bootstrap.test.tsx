@@ -2,11 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CurrentUser, ServerDiscovery } from "@second-pass/spl-api";
+import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppBootstrapView, forcedPasswordChangeDestination, type BootstrapState } from "../app/App";
 
-const user: CurrentUser = { username: "owner", email: "owner@example.test", firstName: "Ada", lastName: "Reader", profileId: "profile-id", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "Maintenance tonight", groups: [] };
-const server: ServerDiscovery = { name: "Family Library", description: "Books for everyone.", version: "0.1.0-dev", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
+const user: CurrentUser = { username: "owner", email: "owner@example.test", firstName: "Ada", lastName: "Reader", profileId: "profile-id", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
+const server: ServerInfo = { name: "Family Library", description: "Books for everyone.", bannerText: "Maintenance tonight", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
 function renderBootstrap(state: BootstrapState): string {
   return renderToStaticMarkup(<MemoryRouter><AppBootstrapView state={state} loginPath="/login/?next=%2Flibrary" onRetry={vi.fn()} onCurrentUserChange={vi.fn()} /></MemoryRouter>);

@@ -27,7 +27,7 @@ interface GroupsLoadState {
 
 export function GroupsListOrchestrator() {
   usePageBreadcrumbs(groupsListBreadcrumbFallback);
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
   const queryState = useMemo(
@@ -94,7 +94,7 @@ export function GroupsListOrchestrator() {
       loading={load.loading}
       error={load.error}
       curatorGroupIds={curatorGroupIds}
-      canCreate={canCreateGroupMetadata(currentUser)}
+      canCreate={canCreateGroupMetadata(currentUser, serverInfo.advancedLibraryGroupsEnabled)}
       newGroupNavigationState={breadcrumbNavigationState(groupNewBreadcrumbs())}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}

@@ -23,12 +23,12 @@ interface UsersLoadState {
 
 export function UsersListOrchestrator() {
   usePageBreadcrumbs(usersListBreadcrumbFallback);
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
   const queryState = useMemo(
-    () => usersListStateFromSearchParams(new URLSearchParams(queryKey), currentUser.advancedLibraryGroupsEnabled, currentUser.isOwner),
-    [currentUser.advancedLibraryGroupsEnabled, currentUser.isOwner, queryKey],
+    () => usersListStateFromSearchParams(new URLSearchParams(queryKey), serverInfo.advancedLibraryGroupsEnabled, currentUser.isOwner),
+    [currentUser.isOwner, queryKey, serverInfo.advancedLibraryGroupsEnabled],
   );
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [retry, setRetry] = useState(0);
@@ -64,7 +64,7 @@ export function UsersListOrchestrator() {
       search={searchDraft}
       role={queryState.role}
       isActive={queryState.isActive}
-      advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
+      advancedGroupsEnabled={serverInfo.advancedLibraryGroupsEnabled}
       operatorIsOwner={currentUser.isOwner}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
@@ -76,7 +76,7 @@ export function UsersListOrchestrator() {
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}
       ordering={queryState.ordering}
-      advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
+      advancedGroupsEnabled={serverInfo.advancedLibraryGroupsEnabled}
       loading={loadState.loading}
       error={loadState.error}
       onOrderingChange={(ordering) => changeQuery({ ordering })}

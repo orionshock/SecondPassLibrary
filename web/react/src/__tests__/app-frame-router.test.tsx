@@ -3,21 +3,21 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CurrentUser, ServerDiscovery } from "@second-pass/spl-api";
+import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 
-const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false, canAccessDjangoAdmin: false, bannerText: "", groups: [] };
-const server: ServerDiscovery = { name: "Family Library", description: "Hidden", version: "0.1.0-dev", releaseDate: "2026-07-20", apiBaseUrl: "unused" };
+const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
+const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
-function navMarkup(overrides: Partial<CurrentUser> = {}): string {
-  return renderToStaticMarkup(<MemoryRouter initialEntries={["/library"]}><AppFrame user={{ ...user, ...overrides }} server={server} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
+function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Partial<ServerInfo> = {}): string {
+  return renderToStaticMarkup(<MemoryRouter initialEntries={["/library"]}><AppFrame user={{ ...user, ...userOverrides }} server={{ ...server, ...serverOverrides }} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
 }
 
 describe("app frame and router", () => {
   it("renders the dashboard placeholder inside the frame", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={{ ...user, bannerText: "Maintenance tonight" }} server={server} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Your reading home");
     expect(markup).toContain("Dashboard preview");
     expect(markup).toContain("Maintenance tonight");
@@ -25,7 +25,7 @@ describe("app frame and router", () => {
   });
 
   it("keeps Dashboard banner content out of the global frame on other routes", () => {
-    const markup = navMarkup({ bannerText: "Dashboard only notice" });
+    const markup = navMarkup({}, { bannerText: "Dashboard only notice" });
     expect(markup).not.toContain("Dashboard only notice");
     expect(markup).toContain('href="/library"');
     expect(markup).toContain('href="/profile"');
@@ -34,7 +34,7 @@ describe("app frame and router", () => {
     expect(markup).toContain('href="/logout/"');
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
-    const markup = navMarkup({ advancedLibraryGroupsEnabled: true });
+    const markup = navMarkup({}, { advancedLibraryGroupsEnabled: true });
     for (const path of ["/reading", "/library", "/groups", "/shelves", "/imports", "/users", "/server", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
     expect(markup).toMatch(/aria-current="page" class="active" href="\/library"/);
   });
@@ -46,7 +46,7 @@ describe("app frame and router", () => {
     expect(simpleMarkup).toContain('href="/users"');
     expect(simpleMarkup).not.toContain('href="/server"');
     expect(simpleMarkup).not.toContain('href="/groups"');
-    expect(navMarkup({ ...manager, advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
+    expect(navMarkup(manager, { advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
   });
 
   it("shows Imports but not Users or Server Settings to Librarians", () => {
@@ -61,7 +61,7 @@ describe("app frame and router", () => {
     const markup = navMarkup(reader);
     for (const path of ["/reading", "/library", "/shelves", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
     for (const path of ["/groups", "/imports", "/users", "/server"]) expect(markup).not.toContain(`href="${path}"`);
-    expect(navMarkup({ ...reader, advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
+    expect(navMarkup(reader, { advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
   });
 
   it("hides Groups in simple mode for every role", () => {
@@ -70,7 +70,7 @@ describe("app frame and router", () => {
       { isOwner: false, isManager: true },
       { isOwner: false, isLibrarian: true },
       { isOwner: false, isReader: true },
-    ]) expect(navMarkup({ ...facts, advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
+    ]) expect(navMarkup(facts, { advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
   });
   it("defines placeholder and not-found routes", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading"]);
@@ -103,20 +103,20 @@ describe("app frame and router", () => {
   it("guards Groups routes by the server-driven advanced-groups mode, not role rank", () => {
     for (const path of ["groups", "groups/:groupId", "groups/:groupId/edit"]) {
       const route = appRoutes[0].children.find((candidate) => candidate.path === path);
-      expect(isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)).toBe(true);
-      if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) continue;
-      expect(route.element.props.canAccess({ ...user, isOwner: false, isReader: true, advancedLibraryGroupsEnabled: true })).toBe(true);
-      expect(route.element.props.canAccess({ ...user, isOwner: true, advancedLibraryGroupsEnabled: false })).toBe(false);
+      expect(isValidElement<{ canAccess: (candidate: CurrentUser, context: ServerInfo) => boolean }>(route?.element)).toBe(true);
+      if (!isValidElement<{ canAccess: (candidate: CurrentUser, context: ServerInfo) => boolean }>(route?.element)) continue;
+      expect(route.element.props.canAccess({ ...user, isOwner: false, isReader: true }, { ...server, advancedLibraryGroupsEnabled: true })).toBe(true);
+      expect(route.element.props.canAccess({ ...user, isOwner: true }, { ...server, advancedLibraryGroupsEnabled: false })).toBe(false);
     }
   });
 
   it("guards Group creation by advanced mode and Manager authority", () => {
     const route = appRoutes[0].children.find((candidate) => candidate.path === "groups/new");
-    expect(isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)).toBe(true);
-    if (!isValidElement<{ canAccess: (candidate: CurrentUser) => boolean }>(route?.element)) return;
-    expect(route.element.props.canAccess({ ...user, isOwner: false, isManager: true, advancedLibraryGroupsEnabled: true })).toBe(true);
-    expect(route.element.props.canAccess({ ...user, isOwner: false, isLibrarian: true, advancedLibraryGroupsEnabled: true })).toBe(false);
-    expect(route.element.props.canAccess({ ...user, isOwner: true, advancedLibraryGroupsEnabled: false })).toBe(false);
+    expect(isValidElement<{ canAccess: (candidate: CurrentUser, context: ServerInfo) => boolean }>(route?.element)).toBe(true);
+    if (!isValidElement<{ canAccess: (candidate: CurrentUser, context: ServerInfo) => boolean }>(route?.element)) return;
+    expect(route.element.props.canAccess({ ...user, isOwner: false, isManager: true }, { ...server, advancedLibraryGroupsEnabled: true })).toBe(true);
+    expect(route.element.props.canAccess({ ...user, isOwner: false, isLibrarian: true }, { ...server, advancedLibraryGroupsEnabled: true })).toBe(false);
+    expect(route.element.props.canAccess({ ...user, isOwner: true }, { ...server, advancedLibraryGroupsEnabled: false })).toBe(false);
   });
 
   it("guards direct Book Edit access with the Librarian-level role contract", () => {

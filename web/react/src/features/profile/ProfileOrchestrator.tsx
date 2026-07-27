@@ -24,7 +24,7 @@ import { confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "./pro
 
 export function ProfileOrchestrator() {
   usePageBreadcrumbs(profileBreadcrumbFallback);
-  const { currentUser, onCurrentUserChange } = useOutletContext<AppOutletContext>();
+  const { currentUser, onCurrentUserChange, serverInfo } = useOutletContext<AppOutletContext>();
   const [profileState, setProfileState] = useState<MutationState>(idleMutationState);
   const [sessions, setSessions] = useState<ClientSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
@@ -76,7 +76,7 @@ export function ProfileOrchestrator() {
 
   return <ProductPageShellComponent className="account-page" title="Profile" actions={<Link className="button" to="/profile/password" state={breadcrumbNavigationState(passwordBreadcrumbFallback)}>Change password</Link>}>
     <ProfileDetailsPageRegion user={currentUser} state={profileState} onSave={saveProfile} onClearStatus={() => setProfileState(idleMutationState)} />
-    <GroupMembershipsPageRegion user={currentUser} />
+    <GroupMembershipsPageRegion user={currentUser} advancedGroupsEnabled={serverInfo.advancedLibraryGroupsEnabled} />
     <AccountSessionsPageRegion
       sessions={sessions}
       loading={sessionsLoading}

@@ -99,9 +99,9 @@ capabilities, route manifests, or the removed `server_release` field. Reader
 clients should use authenticated `GET /api/v1/server/info/` for refreshable
 server display context after pairing. It accepts bearer authentication and
 includes banner text, advanced-library-group mode, Public group identity,
-server version, and release date. `/me` temporarily duplicates banner and group
-mode during the staged client migration. Capability flags in `/me` are sparse
-and appear only when true; clients must treat omitted flags as false.
+server version, and release date. `/me` remains limited to current-user identity,
+role, membership, and user-specific capability facts. Capability flags in `/me`
+are sparse and appear only when true; clients must treat omitted flags as false.
 
 Product UI (React):
 
@@ -115,7 +115,7 @@ Allowed surface is an explicit allow-list.
 
 | Domain | Bearer access | Notes |
 | --- | --- | --- |
-| `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, banner text, and advanced-groups state. Bearer `PATCH` is rejected. |
+| `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, and user-specific capabilities. Bearer `PATCH` is rejected. |
 | `GET /api/v1/server/info/` | read-only | Refreshes authenticated server-wide display context and Public group identity; it grants no membership or mutation authority. |
 | `/api/v1/library/` Books, broad book search, Authors, Series, Tags | read-only | List/detail/search endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list/search rows do not include groups. |
 | `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |

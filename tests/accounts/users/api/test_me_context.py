@@ -31,7 +31,7 @@ class ManagedUsersMeContextAPITest(ManagedUsersApiTestMixin):
         self.assertNotIn("must_change_password", data)
         self.assertNotIn("advanced_library_groups_enabled", data)
         self.assertNotIn("can_access_django_admin", data)
-        self.assertEqual(data["banner_text"], "")
+        self.assertNotIn("banner_text", data)
         self.assertNotIn("id", data)
         self.assertNotIn("capabilities", data)
 
@@ -44,7 +44,7 @@ class ManagedUsersMeContextAPITest(ManagedUsersApiTestMixin):
         self.assertNotIn("membership_role", public_groups[0])
         self.assertNotIn("curated_group_ids", data)
 
-    def test_me_includes_refreshable_server_context(self):
+    def test_me_excludes_server_context(self):
         server_settings.set_server_banner_message("Maintenance tonight.")
 
         self.client.login(username="reader", password="pw")
@@ -60,18 +60,17 @@ class ManagedUsersMeContextAPITest(ManagedUsersApiTestMixin):
             "profile_id",
             "role",
             "groups",
-            "banner_text",
         ):
             self.assertIn(key, data)
         self.assertNotIn("must_change_password", data)
         self.assertNotIn("is_owner", data)
         self.assertNotIn("advanced_library_groups_enabled", data)
-        self.assertEqual(data["banner_text"], "Maintenance tonight.")
+        self.assertNotIn("banner_text", data)
         self.assertNotIn("capabilities", data)
         self.assertNotIn("routes", data)
         self.assertNotIn("route_manifest", data)
 
-    def test_me_advanced_library_groups_enabled_reflects_server_setting(self):
+    def test_me_excludes_advanced_group_mode_when_enabled(self):
         server_settings.enable_advanced_library_groups()
 
         self.client.login(username="reader", password="pw")
@@ -79,7 +78,7 @@ class ManagedUsersMeContextAPITest(ManagedUsersApiTestMixin):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response_data_dict(response)
-        self.assertTrue(data["advanced_library_groups_enabled"])
+        self.assertNotIn("advanced_library_groups_enabled", data)
 
     def test_me_manager_payload_uses_role_without_capabilities(self):
         self.client.login(username="manager", password="pw")

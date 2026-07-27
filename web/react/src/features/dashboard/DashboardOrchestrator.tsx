@@ -6,7 +6,7 @@ import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellC
 import "./Dashboard.css";
 
 export function DashboardOrchestrator() {
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { serverInfo } = useOutletContext<AppOutletContext>();
 
   return (
     <ProductPageShellComponent
@@ -14,7 +14,7 @@ export function DashboardOrchestrator() {
       title="Your reading home"
       description="The React dashboard foundation is ready for its future reading and library regions."
     >
-      {currentUser.bannerText ? <aside className="dashboard-banner">{currentUser.bannerText}</aside> : null}
+      {serverInfo.bannerText ? <aside className="dashboard-banner">{serverInfo.bannerText}</aside> : null}
       <Surface title="Dashboard preview">
         <p className="muted">Metrics, recent reading, and activity have not been rebuilt yet.</p>
       </Surface>

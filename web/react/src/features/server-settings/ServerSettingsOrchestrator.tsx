@@ -38,7 +38,7 @@ interface SettingsLoadState {
 
 export function ServerSettingsOrchestrator() {
   usePageBreadcrumbs(serverSettingsBreadcrumbFallback);
-  const { currentUser, serverInfo, onServerInfoChange, refreshCurrentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, refreshServerInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const tab = serverSettingsTabFromSearchParams(searchParameters);
@@ -103,8 +103,7 @@ export function ServerSettingsOrchestrator() {
       const settings = await updateGeneralSettings(generalDraft);
       setLoad({ loading: false, settings });
       setGeneralDraft(settings.general);
-      onServerInfoChange({ ...serverInfo, name: settings.general.name, description: settings.general.description });
-      void refreshCurrentUser().catch(() => undefined);
+      void refreshServerInfo().catch(() => undefined);
       setEditing(false);
       setState({ pending: false, message: "General settings saved." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
@@ -117,6 +116,7 @@ export function ServerSettingsOrchestrator() {
       const settings = await updatePublicLibrarySettings(publicDraft);
       setLoad({ loading: false, settings });
       setPublicDraft(settings.publicLibrary);
+      void refreshServerInfo().catch(() => undefined);
       setEditing(false);
       setState({ pending: false, message: "Public Library saved." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
@@ -128,7 +128,7 @@ export function ServerSettingsOrchestrator() {
     try {
       const settings = await enableAdvancedGroups();
       setLoad({ loading: false, settings });
-      void refreshCurrentUser().catch(() => undefined);
+      void refreshServerInfo().catch(() => undefined);
       setEditing(false);
       setState({ pending: false, message: "Advanced library groups enabled." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }

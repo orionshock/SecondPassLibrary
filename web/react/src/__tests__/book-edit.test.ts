@@ -111,11 +111,11 @@ describe("Book Edit draft contract", () => {
 
   it("limits group editing to advanced-mode catalog managers and merges only refreshed groups", () => {
     const librarian = {
-      role: "librarian", isLibrarian: true, advancedLibraryGroupsEnabled: true,
+      role: "librarian", isLibrarian: true,
     } as CurrentUser;
-    expect(canEditBookGroups(librarian)).toBe(true);
-    expect(canEditBookGroups({ ...librarian, advancedLibraryGroupsEnabled: false })).toBe(false);
-    expect(canEditBookGroups({ ...librarian, role: "reader", isLibrarian: false, isReader: true })).toBe(false);
+    expect(canEditBookGroups(librarian, true)).toBe(true);
+    expect(canEditBookGroups(librarian, false)).toBe(false);
+    expect(canEditBookGroups({ ...librarian, role: "reader", isLibrarian: false, isReader: true }, true)).toBe(false);
 
     const baseline = bookEditDraftFromBook(book);
     const dirtyDraft = { ...baseline, title: "Unsaved title" };

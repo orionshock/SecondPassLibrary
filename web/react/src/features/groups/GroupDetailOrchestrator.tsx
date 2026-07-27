@@ -52,7 +52,7 @@ type GroupLoad =
 
 export function GroupDetailOrchestrator() {
   const { groupId = "" } = useParams<{ groupId: string }>();
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
@@ -160,7 +160,7 @@ export function GroupDetailOrchestrator() {
   const isCurator = Boolean(group && currentUser.groups.some(
     (membership) => membership.id === group.id && membership.isCurator,
   ));
-  const canManage = Boolean(group && canManageGroup(currentUser, group));
+  const canManage = Boolean(group && canManageGroup(currentUser, group, serverInfo.advancedLibraryGroupsEnabled));
   const currentPath = groupDetailPath(groupId, queryState);
 
   return <ProductPageShellComponent className="groups-page group-detail-page">

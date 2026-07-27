@@ -9,9 +9,7 @@ interface CurrentUserResponse {
   role: string;
   must_change_password?: true;
   is_owner?: true;
-  advanced_library_groups_enabled?: true;
   can_access_django_admin?: true;
-  banner_text: string;
   groups: Array<{
     id: string;
     name: string;
@@ -32,9 +30,7 @@ export interface CurrentUser {
   isManager: boolean;
   isLibrarian: boolean;
   isReader: boolean;
-  advancedLibraryGroupsEnabled: boolean;
   canAccessDjangoAdmin: boolean;
-  bannerText: string;
   groups: Array<{
     id: string;
     name: string;
@@ -131,9 +127,7 @@ function mapCurrentUser(response: CurrentUserResponse): CurrentUser {
     isManager: !isOwner && response.role === "manager",
     isLibrarian: !isOwner && response.role === "librarian",
     isReader: !isOwner && response.role === "reader",
-    advancedLibraryGroupsEnabled: Boolean(response.advanced_library_groups_enabled),
     canAccessDjangoAdmin: Boolean(response.can_access_django_admin),
-    bannerText: response.banner_text,
     groups: response.groups.map((group) => ({
       id: group.id,
       name: group.name,

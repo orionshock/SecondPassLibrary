@@ -42,12 +42,12 @@ interface GroupChoicesLoad {
 }
 
 export function ShelfCreateOrchestrator() {
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<GroupChoicesLoad>(() => ({
-    loading: shouldLoadAllShelfGroups(currentUser),
-    items: localManageableShelfGroups(currentUser),
+    loading: shouldLoadAllShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled),
+    items: localManageableShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled),
   }));
   const [draft, setDraft] = useState<ShelfDraft>({ ...emptyShelfDraft });
   const [baseline, setBaseline] = useState<ShelfDraft>({ ...emptyShelfDraft });
@@ -78,8 +78,8 @@ export function ShelfCreateOrchestrator() {
   }, [blocker]);
 
   useEffect(() => {
-    if (!shouldLoadAllShelfGroups(currentUser)) {
-      setGroups({ loading: false, items: localManageableShelfGroups(currentUser) });
+    if (!shouldLoadAllShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled)) {
+      setGroups({ loading: false, items: localManageableShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled) });
       return;
     }
     let active = true;
@@ -90,7 +90,7 @@ export function ShelfCreateOrchestrator() {
         if (active) setGroups({ loading: false, items: [], error: normalizeMutationError(error) });
       });
     return () => { active = false; };
-  }, [currentUser]);
+  }, [currentUser, serverInfo.advancedLibraryGroupsEnabled]);
 
   function change<K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));

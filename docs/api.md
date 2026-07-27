@@ -148,8 +148,6 @@ Discovery:
   discovery document.
 - Authenticated clients should refresh `GET /api/v1/accounts/me/` for current
   user context and `GET /api/v1/server/info/` for server-wide display context.
-  During the staged client migration, `/me` still duplicates
-  `advanced_library_groups_enabled` and `banner_text`.
 
 Client API route conventions under `api_base_url`:
 
@@ -225,8 +223,6 @@ Notes:
 - Am I an Owner?
 - Which LibraryGroups am I a member of?
 - Which group memberships are marked as curator/steward relationships?
-- Are advanced library groups currently enabled?
-- What single server banner text should be shown, if any?
 
 It includes a `groups` array listing the caller's `LibraryGroupMembership`s.
 
@@ -247,7 +243,7 @@ Example `groups[]` item:
 }
 ```
 
-`/accounts/me/` uses sparse true-only capability flags. `is_owner`, `must_change_password`, `advanced_library_groups_enabled`, `can_access_django_admin`, and `groups[].is_curator` are present only when true and omitted otherwise. First-party SDKs normalize missing flags to stable `false` booleans for application code.
+`/accounts/me/` uses sparse true-only capability flags. `is_owner`, `must_change_password`, `can_access_django_admin`, and `groups[].is_curator` are present only when true and omitted otherwise. First-party SDKs normalize missing flags to stable `false` booleans for application code.
 
 Global `role` and `is_owner` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list. `can_access_django_admin` is included only for an Owner when Django Admin is enabled; it exposes neither raw settings nor an admin route manifest.
 
@@ -255,17 +251,6 @@ Additional identity fields:
 
 - `first_name`, `last_name`
 - `must_change_password` (force change via product UI redirect)
-
-Refreshable server context:
-
-- `advanced_library_groups_enabled` (boolean): reader clients can use this to
-  show or hide group browsing UI.
-- `banner_text` (string): the current server banner text, or an empty string
-  when unset.
-
-These two server-wide fields remain temporarily during migration to
-`/api/v1/server/info/`; new consumers should read them from server info rather
-than treating them as current-user identity.
 
 Broad Product UI affordances should be derived from `role` and `is_owner`.
 Group-scoped curator affordances should use the matching `groups[]` membership
@@ -282,7 +267,6 @@ Example response:
   "last_name": "Incididunt",
   "profile_id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
   "role": "reader",
-  "banner_text": "",
   "groups": [
     {
       "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",

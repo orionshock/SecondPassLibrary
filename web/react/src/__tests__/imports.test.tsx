@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError, canSeeImports, type CurrentUser, type LibraryImportResult, type ServerDiscovery } from "@second-pass/spl-api";
+import { ApiError, canSeeImports, type CurrentUser, type LibraryImportResult, type ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { clearImportFileInput, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
 import { ImportResultPageRegion } from "../features/imports/regions/ImportResultPageRegion";
@@ -11,10 +11,10 @@ import { LocalValidationError } from "../shared/feedback/mutationState";
 
 const owner: CurrentUser = {
   username: "owner", email: "", firstName: "", lastName: "", profileId: "owner", role: "manager",
-  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: false,
-  canAccessDjangoAdmin: false, bannerText: "", groups: [],
+  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false,
+  canAccessDjangoAdmin: false, groups: [],
 };
-const server: ServerDiscovery = { name: "SPL", description: "", version: "dev", releaseDate: "", apiBaseUrl: "" };
+const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
 function renderRoute(user: CurrentUser) {
   return renderToStaticMarkup(<MemoryRouter initialEntries={["/imports"]}><Routes>

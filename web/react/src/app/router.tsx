@@ -1,4 +1,4 @@
-import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian, type CurrentUser } from "@second-pass/spl-api";
+import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
 import { createBrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
@@ -31,7 +31,10 @@ export const sectionRoutes = [
   { path: "reading", title: "My Marginalia" },
 ] as const;
 
-const advancedGroupsRouteAvailable = (user: CurrentUser) => user.advancedLibraryGroupsEnabled;
+const advancedGroupsRouteAvailable = (_user: CurrentUser, server: ServerInfo) => server.advancedLibraryGroupsEnabled;
+const groupCreationRouteAvailable = (user: CurrentUser, server: ServerInfo) => (
+  canCreateGroupMetadata(user, server.advancedLibraryGroupsEnabled)
+);
 
 export function PlaceholderPageRegion({ title }: { title: string }) {
   return <ProductPageShellComponent eyebrow="React Product UI" title={title}>
@@ -60,7 +63,7 @@ export const appRoutes = [
         element: <PlaceholderPageRegion title={title} />,
       })),
       { path: "groups", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuardComponent> },
-      { path: "groups/new", element: <RoleRouteGuardComponent canAccess={canCreateGroupMetadata}><GroupCreateOrchestrator /></RoleRouteGuardComponent> },
+      { path: "groups/new", element: <RoleRouteGuardComponent canAccess={groupCreationRouteAvailable}><GroupCreateOrchestrator /></RoleRouteGuardComponent> },
       { path: "groups/:groupId/edit", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupEditOrchestrator /></RoleRouteGuardComponent> },
       { path: "groups/:groupId", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuardComponent> },
       { path: "shelves", element: <ShelvesListOrchestrator /> },

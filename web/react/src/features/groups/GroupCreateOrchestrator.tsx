@@ -29,7 +29,7 @@ import { GroupMetadataFormPageRegion } from "./regions/GroupMetadataFormPageRegi
 import "./Groups.css";
 
 export function GroupCreateOrchestrator() {
-  const { currentUser } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<GroupDraft>({ ...emptyGroupDraft });
@@ -90,7 +90,7 @@ export function GroupCreateOrchestrator() {
     navigate("/groups", { state: null });
   }
 
-  if (!canCreateGroupMetadata(currentUser)) {
+  if (!canCreateGroupMetadata(currentUser, serverInfo.advancedLibraryGroupsEnabled)) {
     return <section className="group-lifecycle-state"><ErrorPanel>Group creation is not available.</ErrorPanel></section>;
   }
 

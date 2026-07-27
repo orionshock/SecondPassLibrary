@@ -30,8 +30,7 @@ import { LocalValidationError, idleMutationState } from "../shared/feedback/muta
 const baseUser: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "profile",
   role: "reader", mustChangePassword: false, isOwner: false, isManager: false,
-  isLibrarian: false, isReader: true, advancedLibraryGroupsEnabled: true,
-  canAccessDjangoAdmin: false, bannerText: "", groups: [],
+  isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [],
 };
 const publicGroup: LibraryGroup = {
   id: "public", name: "Common Room", description: "", isPublicGroup: true,
@@ -94,16 +93,15 @@ describe("Shelf lifecycle contracts", () => {
         { id: "public", name: "Common Room", isPublicGroup: true, isCurator: false },
       ],
     };
-    expect(localManageableShelfGroups(curator).map(({ id }) => id)).toEqual(["group"]);
-    expect(shouldLoadAllShelfGroups(curator)).toBe(false);
+    expect(localManageableShelfGroups(curator, true).map(({ id }) => id)).toEqual(["group"]);
+    expect(shouldLoadAllShelfGroups(curator, true)).toBe(false);
 
     const simpleLibrarian = {
       ...baseUser, role: "librarian", isReader: false, isLibrarian: true,
-      advancedLibraryGroupsEnabled: false,
       groups: [{ id: "public", name: "Common Room", isPublicGroup: true, isCurator: false }],
     };
-    expect(localManageableShelfGroups(simpleLibrarian).map(({ id }) => id)).toEqual(["public"]);
-    expect(shouldLoadAllShelfGroups({ ...simpleLibrarian, advancedLibraryGroupsEnabled: true })).toBe(true);
+    expect(localManageableShelfGroups(simpleLibrarian, false).map(({ id }) => id)).toEqual(["public"]);
+    expect(shouldLoadAllShelfGroups(simpleLibrarian, true)).toBe(true);
   });
 
   it("uses explicit lifecycle breadcrumbs and confirmation", () => {

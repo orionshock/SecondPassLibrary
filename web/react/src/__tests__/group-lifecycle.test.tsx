@@ -37,8 +37,7 @@ import { MemoryRouter } from "react-router-dom";
 const baseUser: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "profile",
   role: "reader", mustChangePassword: false, isOwner: false, isManager: false,
-  isLibrarian: false, isReader: true, advancedLibraryGroupsEnabled: true,
-  canAccessDjangoAdmin: false, bannerText: "", groups: [],
+  isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [],
 };
 const customGroup: LibraryGroup = {
   id: "group/id", name: "Readers", description: "Description", isPublicGroup: false,
@@ -55,40 +54,40 @@ describe("Group metadata lifecycle contracts", () => {
       groups: [{ id: customGroup.id, name: customGroup.name, isPublicGroup: false, isCurator: true }],
     };
 
-    expect(canCreateGroupMetadata(manager)).toBe(true);
-    expect(canCreateGroupMetadata(owner)).toBe(true);
-    expect(canCreateGroupMetadata(librarian)).toBe(false);
-    expect(groupMetadataAuthority(manager, customGroup)).toBe("full");
-    expect(groupMetadataAuthority(owner, customGroup)).toBe("full");
-    expect(groupMetadataAuthority(librarian, customGroup)).toBe("description");
-    expect(groupMetadataAuthority(curator, customGroup)).toBe("description");
-    expect(groupMetadataAuthority(baseUser, customGroup)).toBe("none");
-    expect(groupMetadataAuthority(manager, publicGroup)).toBe("none");
-    expect(groupMetadataAuthority({ ...manager, advancedLibraryGroupsEnabled: false }, customGroup)).toBe("none");
-    expect(canMutateGroupBooks(manager, customGroup)).toBe(true);
-    expect(canMutateGroupBooks(owner, customGroup)).toBe(true);
-    expect(canMutateGroupBooks(librarian, customGroup)).toBe(true);
-    expect(canMutateGroupBooks(curator, customGroup)).toBe(true);
-    expect(canMutateGroupBooks(baseUser, customGroup)).toBe(false);
-    expect(canMutateGroupBooks(librarian, publicGroup)).toBe(true);
-    expect(canMutateGroupBooks(curator, publicGroup)).toBe(false);
-    expect(canMutateGroupBooks({ ...manager, advancedLibraryGroupsEnabled: false }, customGroup)).toBe(false);
-    expect(canMutateGroupMembers(manager)).toBe(true);
-    expect(canMutateGroupMembers(owner)).toBe(true);
-    expect(canMutateGroupMembers(librarian)).toBe(false);
-    expect(canMutateGroupMembers(curator)).toBe(false);
-    expect(canDeleteGroup(manager, customGroup)).toBe(true);
-    expect(canDeleteGroup(owner, customGroup)).toBe(true);
-    expect(canDeleteGroup(librarian, customGroup)).toBe(false);
-    expect(canDeleteGroup(curator, customGroup)).toBe(false);
-    expect(canDeleteGroup(manager, publicGroup)).toBe(false);
-    expect(canManageGroup(manager, customGroup)).toBe(true);
-    expect(canManageGroup(librarian, customGroup)).toBe(true);
-    expect(canManageGroup(curator, customGroup)).toBe(true);
-    expect(canManageGroup(librarian, publicGroup)).toBe(true);
-    expect(canManageGroup(manager, publicGroup)).toBe(true);
-    expect(canManageGroup(baseUser, customGroup)).toBe(false);
-    expect(canManageGroup(baseUser, publicGroup)).toBe(false);
+    expect(canCreateGroupMetadata(manager, true)).toBe(true);
+    expect(canCreateGroupMetadata(owner, true)).toBe(true);
+    expect(canCreateGroupMetadata(librarian, true)).toBe(false);
+    expect(groupMetadataAuthority(manager, customGroup, true)).toBe("full");
+    expect(groupMetadataAuthority(owner, customGroup, true)).toBe("full");
+    expect(groupMetadataAuthority(librarian, customGroup, true)).toBe("description");
+    expect(groupMetadataAuthority(curator, customGroup, true)).toBe("description");
+    expect(groupMetadataAuthority(baseUser, customGroup, true)).toBe("none");
+    expect(groupMetadataAuthority(manager, publicGroup, true)).toBe("none");
+    expect(groupMetadataAuthority(manager, customGroup, false)).toBe("none");
+    expect(canMutateGroupBooks(manager, customGroup, true)).toBe(true);
+    expect(canMutateGroupBooks(owner, customGroup, true)).toBe(true);
+    expect(canMutateGroupBooks(librarian, customGroup, true)).toBe(true);
+    expect(canMutateGroupBooks(curator, customGroup, true)).toBe(true);
+    expect(canMutateGroupBooks(baseUser, customGroup, true)).toBe(false);
+    expect(canMutateGroupBooks(librarian, publicGroup, true)).toBe(true);
+    expect(canMutateGroupBooks(curator, publicGroup, true)).toBe(false);
+    expect(canMutateGroupBooks(manager, customGroup, false)).toBe(false);
+    expect(canMutateGroupMembers(manager, true)).toBe(true);
+    expect(canMutateGroupMembers(owner, true)).toBe(true);
+    expect(canMutateGroupMembers(librarian, true)).toBe(false);
+    expect(canMutateGroupMembers(curator, true)).toBe(false);
+    expect(canDeleteGroup(manager, customGroup, true)).toBe(true);
+    expect(canDeleteGroup(owner, customGroup, true)).toBe(true);
+    expect(canDeleteGroup(librarian, customGroup, true)).toBe(false);
+    expect(canDeleteGroup(curator, customGroup, true)).toBe(false);
+    expect(canDeleteGroup(manager, publicGroup, true)).toBe(false);
+    expect(canManageGroup(manager, customGroup, true)).toBe(true);
+    expect(canManageGroup(librarian, customGroup, true)).toBe(true);
+    expect(canManageGroup(curator, customGroup, true)).toBe(true);
+    expect(canManageGroup(librarian, publicGroup, true)).toBe(true);
+    expect(canManageGroup(manager, publicGroup, true)).toBe(true);
+    expect(canManageGroup(baseUser, customGroup, true)).toBe(false);
+    expect(canManageGroup(baseUser, publicGroup, true)).toBe(false);
   });
 
   it("normalizes dirty comparison and mutation inputs while allowing duplicate names", () => {

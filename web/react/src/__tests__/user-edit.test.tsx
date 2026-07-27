@@ -17,7 +17,7 @@ const target: ManagedUser = {
   isOwner: false, isActive: true, dateJoined: "2026-01-01T00:00:00Z", lastLogin: null, mustChangePassword: false,
   groups: [{ id: "public", name: "Common Room", isPublicGroup: true, isCurator: false }, { id: "custom", name: "Book Club", isPublicGroup: false, isCurator: true }],
 };
-const owner: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "owner", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, advancedLibraryGroupsEnabled: true, canAccessDjangoAdmin: false, bannerText: "", groups: [] };
+const owner: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "owner", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const manager: CurrentUser = { ...owner, username: "manager", profileId: "manager", isOwner: false, isManager: true };
 
 describe("User Edit", () => {

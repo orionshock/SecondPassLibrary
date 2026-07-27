@@ -3,7 +3,7 @@ import {
   canSeeServerSettings,
   canSeeUsers,
   type CurrentUser,
-  type ServerDiscovery,
+  type ServerInfo,
 } from "@second-pass/spl-api";
 import { useCallback, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
@@ -15,10 +15,10 @@ import "./AppFrame.css";
 
 export interface AppOutletContext {
   currentUser: CurrentUser;
-  serverInfo: ServerDiscovery;
+  serverInfo: ServerInfo;
   onCurrentUserChange: (user: CurrentUser) => void;
-  onServerInfoChange: (server: ServerDiscovery) => void;
   refreshCurrentUser: () => Promise<CurrentUser>;
+  refreshServerInfo: () => Promise<ServerInfo>;
   setBreadcrumbs: (pathname: string, items: readonly BreadcrumbItem[]) => void;
 }
 
@@ -26,7 +26,7 @@ const navigation = [
   { to: "/", label: "Dashboard" },
   { to: "/reading", label: "My Marginalia" },
   { to: "/library", label: "Library" },
-  { to: "/groups", label: "Groups", visible: (user: CurrentUser) => user.advancedLibraryGroupsEnabled },
+  { to: "/groups", label: "Groups", visible: (_user: CurrentUser, server: ServerInfo) => server.advancedLibraryGroupsEnabled },
   { to: "/shelves", label: "Shelves" },
   { to: "/imports", label: "Imports", visible: canSeeImports },
   { to: "/users", label: "Users", visible: canSeeUsers },
@@ -37,14 +37,14 @@ export function AppFrame({
   user,
   server,
   onCurrentUserChange,
-  onServerInfoChange = () => undefined,
   onRefreshCurrentUser = async () => user,
+  onRefreshServerInfo = async () => server,
 }: {
   user: CurrentUser;
-  server: ServerDiscovery;
+  server: ServerInfo;
   onCurrentUserChange: (user: CurrentUser) => void;
-  onServerInfoChange?: (server: ServerDiscovery) => void;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
+  onRefreshServerInfo?: () => Promise<ServerInfo>;
 }) {
   const location = useLocation();
   const [breadcrumbRegistration, setBreadcrumbRegistration] = useState<{ pathname: string; items: readonly BreadcrumbItem[] }>();
@@ -62,7 +62,7 @@ export function AppFrame({
         </Link>
 
         <nav className="primary-nav" aria-label="Product UI">
-          {navigation.filter((item) => !("visible" in item) || item.visible(user)).map(({ to, label }) => (
+          {navigation.filter((item) => !("visible" in item) || item.visible(user, server)).map(({ to, label }) => (
             <NavLink key={to} to={to} end={to === "/"}>{label}</NavLink>
           ))}
         </nav>
@@ -76,7 +76,7 @@ export function AppFrame({
       <BreadcrumbsComponent items={breadcrumbs} />
 
       <main className="app-content">
-        <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, onServerInfoChange, refreshCurrentUser: onRefreshCurrentUser, setBreadcrumbs } satisfies AppOutletContext} />
+        <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, refreshServerInfo: onRefreshServerInfo, setBreadcrumbs } satisfies AppOutletContext} />
       </main>
 
       <footer className="app-footer">

@@ -86,19 +86,19 @@ export function readShelfLifecycleSuccessMessage(state: unknown): string | undef
   return state.shelfLifecycleSuccessMessage;
 }
 
-export function localManageableShelfGroups(user: CurrentUser): LibraryGroup[] {
+export function localManageableShelfGroups(user: CurrentUser, advancedGroupsEnabled: boolean): LibraryGroup[] {
   if (isAtLeastLibrarian(user)) {
-    if (user.advancedLibraryGroupsEnabled) return [];
+    if (advancedGroupsEnabled) return [];
     return user.groups.filter(({ isPublicGroup }) => isPublicGroup).map(currentGroupAsLibraryGroup);
   }
-  if (!user.advancedLibraryGroupsEnabled) return [];
+  if (!advancedGroupsEnabled) return [];
   return user.groups
     .filter(({ isCurator, isPublicGroup }) => isCurator && !isPublicGroup)
     .map(currentGroupAsLibraryGroup);
 }
 
-export function shouldLoadAllShelfGroups(user: CurrentUser): boolean {
-  return isAtLeastLibrarian(user) && user.advancedLibraryGroupsEnabled;
+export function shouldLoadAllShelfGroups(user: CurrentUser, advancedGroupsEnabled: boolean): boolean {
+  return isAtLeastLibrarian(user) && advancedGroupsEnabled;
 }
 
 export function confirmShelfDelete(

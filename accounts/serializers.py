@@ -32,9 +32,7 @@ class CurrentUserSerializer(serializers.Serializer):
     role = serializers.CharField()
     must_change_password = serializers.BooleanField(required=False)
     is_owner = serializers.BooleanField(required=False)
-    advanced_library_groups_enabled = serializers.BooleanField(required=False)
     can_access_django_admin = serializers.BooleanField(required=False)
-    banner_text = serializers.CharField(allow_blank=True)
     groups = GroupSummarySerializer(many=True)
 
 
