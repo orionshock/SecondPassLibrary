@@ -1,13 +1,15 @@
 import { listReadingSessions, type Page, type ReadingSessionSummary } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
+import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { readingListSdkQuery, readingListSearchParams, readingListStateFromSearchParams, withReadingListChange } from "./readingQuery";
 import { ReadingSessionsPageRegion } from "./regions/ReadingSessionsPageRegion";
+import { readingImportBreadcrumbFallback, readingListBreadcrumbFallback } from "./readingBreadcrumbs";
 import "./Reading.css";
 
 interface ReadingLoadState {
@@ -16,10 +18,8 @@ interface ReadingLoadState {
   error?: Error;
 }
 
-const readingBreadcrumbFallback = [] as const;
-
 export function ReadingSessionsOrchestrator() {
-  usePageBreadcrumbs(readingBreadcrumbFallback);
+  usePageBreadcrumbs(readingListBreadcrumbFallback);
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
   const queryState = useMemo(() => readingListStateFromSearchParams(new URLSearchParams(queryKey)), [queryKey]);
@@ -66,7 +66,7 @@ export function ReadingSessionsOrchestrator() {
     setSearchParameters(readingListSearchParams(withReadingListChange(queryState, changes, resetPage)), { state: null });
   }
 
-  return <ProductPageShellComponent title="My Marginalia">
+  return <ProductPageShellComponent title="My Marginalia" actions={<Link className="button" to="/reading/import" state={breadcrumbNavigationState(readingImportBreadcrumbFallback)}>Import</Link>}>
     <ReadingSessionsPageRegion page={load.page} pageNumber={queryState.page} pageSize={queryState.pageSize} search={searchDraft} status={queryState.status} loading={load.loading} error={load.error} onSearchChange={setSearchDraft} onSearch={() => changeQuery({ q: searchDraft.trim() })} onStatusChange={(status) => changeQuery({ status })} onPageChange={(page) => changeQuery({ page }, false)} onPageSizeChange={(pageSize) => changeQuery({ pageSize })} onRetry={() => setRetry((value) => value + 1)} />
   </ProductPageShellComponent>;
 }

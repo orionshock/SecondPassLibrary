@@ -56,6 +56,15 @@ export function apiErrorFromPayload(status: number, payload: unknown): ApiError 
 }
 
 function normalizeFieldErrors(value: unknown): Record<string, string[]> | undefined {
+  if (Array.isArray(value)) {
+    const fields: Record<string, string[]> = {};
+    for (const item of value) {
+      if (!isRecord(item) || typeof item.path !== "string" || typeof item.message !== "string") continue;
+      const path = importErrorPath(item.path);
+      fields[path] = [...(fields[path] ?? []), item.message];
+    }
+    return Object.keys(fields).length > 0 ? fields : undefined;
+  }
   if (!isRecord(value)) return undefined;
 
   const fields: Record<string, string[]> = {};
@@ -63,6 +72,11 @@ function normalizeFieldErrors(value: unknown): Record<string, string[]> | undefi
     collectFieldErrors(fields, toAppFieldName(field), messages);
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
+}
+
+function importErrorPath(path: string): string {
+  const field = path.startsWith("$.") ? path.slice(2) : path === "$" ? "file" : path;
+  return toAppFieldName(field);
 }
 
 function collectFieldErrors(fields: Record<string, string[]>, path: string, value: unknown): void {

@@ -32,8 +32,18 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  applyReadingImport,
   listReadingSessions,
   listRecentReadingSessions,
+  previewReadingImport,
+  type ReadingImportApplyInput,
+  type ReadingImportBookPreview,
+  type ReadingImportCounts,
+  type ReadingImportPreview,
+  type ReadingImportResult,
+  type ReadingImportSelectedBook,
+  type ReadingImportSelectedSession,
+  type ReadingImportSessionPreview,
   type ReadingSessionStatus,
   type ReadingSessionSummary,
   type ReadingSessionsQuery,

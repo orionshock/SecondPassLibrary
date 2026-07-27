@@ -16,6 +16,7 @@ import { AuthorSeriesEditOrchestrator } from "../features/library/AuthorSeriesEd
 import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
+import { ReadingImportOrchestrator } from "../features/reading/ReadingImportOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
@@ -58,6 +59,7 @@ export const appRoutes = [
     children: [
       { index: true, element: <DashboardOrchestrator /> },
       { path: "reading", element: <ReadingSessionsOrchestrator /> },
+      { path: "reading/import", element: <ReadingImportOrchestrator /> },
       ...sectionRoutes.map(({ path, title }) => ({
         path,
         element: <PlaceholderPageRegion title={title} />,

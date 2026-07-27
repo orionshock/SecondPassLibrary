@@ -9,6 +9,22 @@ import {
 } from "../errors";
 
 describe("apiErrorFromPayload", () => {
+  it("preserves structured import error arrays without promoting raw paths to the message", () => {
+    const error = apiErrorFromPayload(400, {
+      valid: false,
+      errors: [
+        { path: "$.file", message: "Upload a JSON file." },
+        { path: "$.import_token", message: "Import preview expired." },
+        { path: "$.books[0].sessions[0]", message: "Session is invalid." },
+      ],
+    });
+    expect(error.message).toBe("The server could not complete the request.");
+    expect(error.fields).toEqual({
+      file: ["Upload a JSON file."],
+      importToken: ["Import preview expired."],
+      "books[0].sessions[0]": ["Session is invalid."],
+    });
+  });
   it("normalizes structured server errors", () => {
     const error = apiErrorFromPayload(400, {
       detail: "Check the submitted fields.",

@@ -100,3 +100,101 @@
   .reading-session-row__cover .book-cover-component { width: 2.75rem; }
   .reading-session-row__book-link { grid-column: 2; }
 }
+
+.reading-import-page,
+.reading-import-upload,
+.reading-import-books,
+.reading-import-sessions {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.reading-import-page { min-width: 0; }
+
+.reading-import-upload input[type="file"] {
+  min-width: 0;
+  color: var(--muted);
+}
+
+.reading-import-upload > p { margin: 0; }
+
+.reading-import-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.reading-import-warnings,
+.reading-import-warning {
+  color: var(--warning, #facc15);
+}
+
+.reading-import-warnings ul { margin-bottom: 0; }
+
+.reading-import-book {
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.reading-import-book__header {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.65rem;
+}
+
+.reading-import-book__header .book-cover-component {
+  width: 2.75rem;
+  aspect-ratio: 2 / 3;
+}
+
+.reading-import-book__header h2,
+.reading-import-book__header p,
+.reading-import-warning { margin: 0; }
+
+.reading-import-book__header h2 { font-size: 1rem; }
+.reading-import-book__header p { margin-top: 0.2rem; color: var(--muted); }
+.reading-import-warning { margin-bottom: 0.55rem; font-size: 0.85rem; }
+
+.reading-import-session {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: rgb(255 255 255 / 3%);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.reading-import-session:hover,
+.reading-import-session:focus-within {
+  border-color: rgb(125 211 252 / 45%);
+  background: rgb(125 211 252 / 7%);
+}
+
+.reading-import-session__select,
+.reading-import-session__facts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reading-import-session__select { font-weight: 700; }
+.reading-import-session__facts { color: var(--muted); font-size: 0.85rem; }
+
+.reading-import-session__edits {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(16rem, 1.2fr);
+  gap: 0.75rem;
+}
+
+.reading-import-session__edits textarea { min-height: 4.5rem; }
+
+.reading-import-result-actions { margin-top: 1rem; }
+
+@media (max-width: 700px) {
+  .reading-import-session__edits { grid-template-columns: 1fr; }
+}

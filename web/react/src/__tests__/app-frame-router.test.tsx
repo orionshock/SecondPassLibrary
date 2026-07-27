@@ -8,6 +8,7 @@ import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
+import { ReadingImportOrchestrator } from "../features/reading/ReadingImportOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
@@ -79,6 +80,9 @@ describe("app frame and router", () => {
     const readingRoute = appRoutes[0].children.find((route) => route.path === "reading");
     expect(isValidElement(readingRoute?.element)).toBe(true);
     if (isValidElement(readingRoute?.element)) expect(readingRoute.element.type).toBe(ReadingSessionsOrchestrator);
+    const readingImportRoute = appRoutes[0].children.find((route) => route.path === "reading/import");
+    expect(isValidElement(readingImportRoute?.element)).toBe(true);
+    if (isValidElement(readingImportRoute?.element)) expect(readingImportRoute.element.type).toBe(ReadingImportOrchestrator);
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId/edit")).toBe(true);
