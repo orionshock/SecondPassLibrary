@@ -9,9 +9,11 @@ import {
   bookBrowseDetailBreadcrumbs,
   bookDetailBreadcrumbFallback,
   bookEditBreadcrumbTrail,
+  bookGroupBreadcrumbTrail,
   bookIdentifierLabel,
   bookSeriesDisplay,
   bookShelfBreadcrumbTrail,
+  bookShelfPreviewBreadcrumbTrail,
   formatBookFileSize,
   formatBookPublishedDate,
 } from "../features/library/bookDetailPresentation";
@@ -37,14 +39,18 @@ const book: BookDetail = {
   identifiers: [{ id: "identifier", scheme: "isbn_13", value: "9781234567890" }],
   catalogTags: [{ id: "tag", name: "Fantasy", slug: "fantasy" }],
   file: { format: "epub", fileSize: 1536, checksum: "DO-NOT-RENDER", downloadUrl: "/download/book.epub" },
-  groups: [{ id: "group", name: "Common Room", description: "Everyone reads here", isPublicGroup: true }],
+  groups: [
+    { id: "group", name: "Common Room", description: "Everyone reads here", isPublicGroup: true },
+    { id: "editors", name: "Editors", description: "Selected readers", isPublicGroup: false },
+  ],
 };
 
 const shelves: ShelfSummary[] = [
   {
-    id: "personal-shelf", name: "Current Favorites", description: "", ownerType: "user",
+    id: "personal-shelf", name: "Current Favorites", description: "Reader picks", ownerType: "user",
     ownerUser: { profileId: "reader-profile", username: "reader" }, ownerGroup: null,
     visibility: "listed", itemCount: 12, matchedItemId: "item", canEdit: true,
+    previewBooks: [{ id: "preview", title: "Preview Book", coverUrl: "/cover.jpg" }],
   },
   {
     id: "public-shelf", name: "Sci-Fi Stack", description: "", ownerType: "group",
@@ -91,6 +97,11 @@ describe("Book Detail presentation", () => {
     expect(simple).not.toContain('id="book-detail-groups-tab"');
     expect(simple).not.toContain("Common Room");
     expect(advanced).toContain("Common Room");
+    expect(advanced).toContain("Editors");
+    expect(advanced).toContain('href="/groups/group"');
+    expect(advanced).toContain('href="/groups/editors"');
+    expect(advanced).toContain("group-badge-component--medium");
+    expect(advanced).not.toContain("Manage");
   });
 
   it("links read-only server-scoped shelf facts without exposing mutations", () => {
@@ -102,8 +113,9 @@ describe("Book Detail presentation", () => {
       onSectionChange={() => undefined}
     />);
     expect(markup).toContain("Current Favorites");
+    expect(markup).toContain("Reader picks");
     expect(markup).toContain("@reader");
-    expect(markup).toContain("12 items");
+    expect(markup).toContain('aria-label="Open Preview Book"');
     expect(markup).toContain("Sci-Fi Stack");
     expect(markup).toContain("Common Room");
     expect(markup).toContain('href="/shelves/personal-shelf"');
@@ -187,6 +199,22 @@ describe("Book Detail navigation", () => {
       { label: "Dresden Files", to: "/library?view=series&series=series-id", icon: "series" },
       { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
       { label: "Favorites", icon: "shelf" },
+    ]);
+  });
+
+  it("extends Book context through Shelf previews and Group links", () => {
+    const detailTrail = bookDetailBreadcrumbFallback("Storm Front");
+    expect(bookShelfPreviewBreadcrumbTrail(
+      detailTrail, book.id, "Storm Front", "shelf/id", "Favorites", "Preview Book",
+    ).slice(-3)).toEqual([
+      { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
+      { label: "Favorites", to: "/shelves/shelf%2Fid", icon: "shelf" },
+      { label: "Preview Book", icon: "book" },
+    ]);
+    expect(bookGroupBreadcrumbTrail(detailTrail, book.id, "Storm Front", "Common Room", true).slice(-3)).toEqual([
+      { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
+      { label: "Groups", to: `/library/books/${book.id}?tab=groups`, icon: "group" },
+      { label: "Common Room", icon: "public-group" },
     ]);
   });
 

@@ -233,6 +233,7 @@ export async function listAllShelvesForBook(
   const parameters = new URLSearchParams({
     book: bookId,
     ordering: "name",
+    include_preview_books: "true",
     page_size: "200",
   });
   return collectPaginatedResults(

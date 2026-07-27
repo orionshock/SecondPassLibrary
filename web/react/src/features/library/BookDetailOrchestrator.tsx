@@ -13,7 +13,13 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookShelfBreadcrumbTrail } from "./bookDetailPresentation";
+import {
+  bookDetailBreadcrumbFallback,
+  bookEditBreadcrumbTrail,
+  bookGroupBreadcrumbTrail,
+  bookShelfBreadcrumbTrail,
+  bookShelfPreviewBreadcrumbTrail,
+} from "./bookDetailPresentation";
 import { bookDetailQueryFromSearchParams, bookDetailSearchParams, type BookDetailTab } from "./bookTabs";
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
 import {
@@ -130,11 +136,26 @@ export function BookDetailOrchestrator() {
       advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
       activeSection={detailQuery.tab}
       shelvesState={shelvesLoad}
-      shelfNavigationState={(shelfName) => breadcrumbNavigationState(bookShelfBreadcrumbTrail(
+      shelfNavigationState={(shelf) => breadcrumbNavigationState(bookShelfBreadcrumbTrail(
         resolveBreadcrumbTrail(location.state, breadcrumbFallback),
         load.book.id,
         load.book.title,
-        shelfName,
+        shelf.name,
+      ))}
+      shelfBookNavigationState={(shelf, preview) => breadcrumbNavigationState(bookShelfPreviewBreadcrumbTrail(
+        resolveBreadcrumbTrail(location.state, breadcrumbFallback),
+        load.book.id,
+        load.book.title,
+        shelf.id,
+        shelf.name,
+        preview.title,
+      ))}
+      groupNavigationState={(group) => breadcrumbNavigationState(bookGroupBreadcrumbTrail(
+        resolveBreadcrumbTrail(location.state, breadcrumbFallback),
+        load.book.id,
+        load.book.title,
+        group.name,
+        group.isPublicGroup,
       ))}
       onSectionChange={changeSection}
       onRetryShelves={loadShelves}

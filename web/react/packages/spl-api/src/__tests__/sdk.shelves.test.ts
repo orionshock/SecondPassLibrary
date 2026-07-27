@@ -324,7 +324,7 @@ describe("Shelves SDK", () => {
       can_edit: false,
     };
     const responses = [
-      { count: 2, next: "/api/v1/shelves/?book=book-id&ordering=name&page=2&page_size=200", previous: null, results: [personalShelf] },
+      { count: 2, next: "/api/v1/shelves/?book=book-id&ordering=name&include_preview_books=true&page=2&page_size=200", previous: null, results: [{ ...personalShelf, preview_books: [{ id: "preview", title: "Preview", cover_url: "/cover.jpg" }] }] },
       { count: 2, next: null, previous: "previous", results: [groupShelf] },
     ];
     const client: ApiClient = { request: async <T>(path: string) => {
@@ -335,10 +335,11 @@ describe("Shelves SDK", () => {
     const shelves = await listAllShelvesForBook("book-id", client);
 
     expect(calls).toEqual([
-      "/api/v1/shelves/?book=book-id&ordering=name&page_size=200",
-      "/api/v1/shelves/?book=book-id&ordering=name&page=2&page_size=200",
+      "/api/v1/shelves/?book=book-id&ordering=name&include_preview_books=true&page_size=200",
+      "/api/v1/shelves/?book=book-id&ordering=name&include_preview_books=true&page=2&page_size=200",
     ]);
     expect(shelves.map(({ id }) => id)).toEqual(["personal", "group-shelf"]);
+    expect(shelves[0].previewBooks).toEqual([{ id: "preview", title: "Preview", coverUrl: "/cover.jpg" }]);
     expect(shelves[1].ownerGroup).toEqual({ id: "public", name: "Common Room", isPublicGroup: true });
   });
 });

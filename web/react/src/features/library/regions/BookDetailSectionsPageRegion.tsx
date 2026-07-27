@@ -1,8 +1,10 @@
-import type { BookDetail, ShelfSummary } from "@second-pass/spl-api";
+import type { BookDetail, BookGroupSummary, BookPreview, ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { ErrorPanel } from "../../../components/ui";
 import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
+import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
+import { ShelfSummaryRowComponent, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { TabListComponent, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabListComponent";
 import { BookIdentifierListComponent } from "../components/BookIdentifierListComponent";
 import { formatBookFileSize, formatBookPublishedDate } from "../bookDetailPresentation";
@@ -20,6 +22,8 @@ export function BookDetailSectionsPageRegion({
   activeSection,
   shelvesState = { status: "idle" },
   shelfNavigationState,
+  shelfBookNavigationState,
+  groupNavigationState,
   onSectionChange,
   onRetryShelves,
 }: {
@@ -27,7 +31,9 @@ export function BookDetailSectionsPageRegion({
   advancedGroupsEnabled: boolean;
   activeSection: BookDetailTab;
   shelvesState?: BookShelvesState;
-  shelfNavigationState?: (shelfName: string) => unknown;
+  shelfNavigationState?: (shelf: ShelfSummary) => unknown;
+  shelfBookNavigationState?: (shelf: ShelfSummary, book: BookPreview) => unknown;
+  groupNavigationState?: (group: BookGroupSummary) => unknown;
   onSectionChange: (section: BookDetailTab) => void;
   onRetryShelves?: () => void;
 }) {
@@ -44,6 +50,8 @@ export function BookDetailSectionsPageRegion({
     onSectionChange={onSectionChange}
     shelvesState={shelvesState}
     shelfNavigationState={shelfNavigationState}
+    shelfBookNavigationState={shelfBookNavigationState}
+    groupNavigationState={groupNavigationState}
     onRetryShelves={onRetryShelves}
   />;
 }
@@ -55,6 +63,8 @@ function BookDetailSectionsComponent({
   onSectionChange,
   shelvesState,
   shelfNavigationState,
+  shelfBookNavigationState,
+  groupNavigationState,
   onRetryShelves,
 }: {
   book: BookDetail;
@@ -62,7 +72,9 @@ function BookDetailSectionsComponent({
   activeSection: BookDetailTab;
   onSectionChange: (section: BookDetailTab) => void;
   shelvesState: BookShelvesState;
-  shelfNavigationState?: (shelfName: string) => unknown;
+  shelfNavigationState?: (shelf: ShelfSummary) => unknown;
+  shelfBookNavigationState?: (shelf: ShelfSummary, book: BookPreview) => unknown;
+  groupNavigationState?: (group: BookGroupSummary) => unknown;
   onRetryShelves?: () => void;
 }) {
   return <section className="book-detail-sections-region" aria-label="Book relationships and metadata">
@@ -73,16 +85,17 @@ function BookDetailSectionsComponent({
       role="tabpanel"
       aria-labelledby={tabButtonId("book-detail", activeSection)}
     >
-      {activeSection === "shelves" ? <BookDetailShelvesSection state={shelvesState} shelfNavigationState={shelfNavigationState} onRetry={onRetryShelves} /> : null}
-      {activeSection === "groups" ? <BookDetailGroupsSection book={book} /> : null}
+      {activeSection === "shelves" ? <BookDetailShelvesSection state={shelvesState} shelfNavigationState={shelfNavigationState} shelfBookNavigationState={shelfBookNavigationState} onRetry={onRetryShelves} /> : null}
+      {activeSection === "groups" ? <BookDetailGroupsSection book={book} groupNavigationState={groupNavigationState} /> : null}
       {activeSection === "metadata" ? <BookDetailMetadataSection book={book} /> : null}
     </div>
   </section>;
 }
 
-function BookDetailShelvesSection({ state, shelfNavigationState, onRetry }: {
+function BookDetailShelvesSection({ state, shelfNavigationState, shelfBookNavigationState, onRetry }: {
   state: BookShelvesState;
-  shelfNavigationState?: (shelfName: string) => unknown;
+  shelfNavigationState?: (shelf: ShelfSummary) => unknown;
+  shelfBookNavigationState?: (shelf: ShelfSummary, book: BookPreview) => unknown;
   onRetry?: () => void;
 }) {
   if (state.status === "idle" || state.status === "loading") {
@@ -96,29 +109,41 @@ function BookDetailShelvesSection({ state, shelfNavigationState, onRetry }: {
   }
   if (state.shelves.length === 0) return <p className="muted">No visible shelves contain this book.</p>;
 
-  return <ul className="book-detail-sections-region__shelves">
-    {state.shelves.map((shelf) => <li key={shelf.id}>
-      <strong><Link
-        to={`/shelves/${encodeURIComponent(shelf.id)}`}
-        state={shelfNavigationState?.(shelf.name)}
-      >{shelf.name}</Link></strong>
-      <div className="book-detail-sections-region__shelf-facts">
-        {shelf.ownerType === "user" && shelf.visibility === "listed" && shelf.ownerUser
-          ? <span>Shared by @{shelf.ownerUser.username}</span>
-          : null}
-        {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
-        {shelf.ownerType === "group" && shelf.ownerGroup ? <GroupBadgeComponent name={shelf.ownerGroup.name} isPublicGroup={shelf.ownerGroup.isPublicGroup} /> : null}
-        <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
-      </div>
-    </li>)}
-  </ul>;
+  return <div className="book-detail-sections-region__shelves">
+    {state.shelves.map((shelf) => {
+      const previewBooks: BookCoverPreviewItem[] = (shelf.previewBooks ?? []).map((preview) => ({
+        ...preview,
+        href: `/library/books/${encodeURIComponent(preview.id)}`,
+        navigationState: shelfBookNavigationState?.(shelf, preview),
+      }));
+      const owner: ShelfOwnerBadge | undefined = shelf.ownerType === "group" && shelf.ownerGroup
+        ? { kind: "group", label: shelf.ownerGroup.name, isPublicGroup: shelf.ownerGroup.isPublicGroup }
+        : shelf.visibility === "listed" && shelf.ownerUser
+          ? { kind: "user", label: `@${shelf.ownerUser.username}` }
+          : undefined;
+      return <ShelfSummaryRowComponent
+        key={shelf.id}
+        name={shelf.name}
+        description={shelf.description}
+        detailPath={`/shelves/${encodeURIComponent(shelf.id)}`}
+        navigationState={shelfNavigationState?.(shelf)}
+        previewBooks={previewBooks}
+        owner={owner}
+      />;
+    })}
+  </div>;
 }
 
-function BookDetailGroupsSection({ book }: { book: BookDetail }) {
+function BookDetailGroupsSection({ book, groupNavigationState }: {
+  book: BookDetail;
+  groupNavigationState?: (group: BookGroupSummary) => unknown;
+}) {
   if (book.groups.length === 0) return <p className="muted">No visible groups.</p>;
-  return <ul className="book-detail-sections-region__groups">
+  return <ul className="book-detail-sections-region__groups" aria-label="Book groups">
     {book.groups.map((group) => <li key={group.id} title={group.description || undefined}>
-      <GroupBadgeComponent name={group.name} isPublicGroup={group.isPublicGroup} />
+      <Link to={`/groups/${encodeURIComponent(group.id)}`} state={groupNavigationState?.(group)}>
+        <GroupBadgeComponent name={group.name} isPublicGroup={group.isPublicGroup} size="medium" />
+      </Link>
     </li>)}
   </ul>;
 }

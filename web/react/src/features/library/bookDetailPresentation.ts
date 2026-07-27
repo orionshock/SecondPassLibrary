@@ -83,6 +83,40 @@ export function bookShelfBreadcrumbTrail(
   ];
 }
 
+export function bookShelfPreviewBreadcrumbTrail(
+  detailTrail: readonly BreadcrumbItem[],
+  bookId: string,
+  bookTitle: string,
+  shelfId: string,
+  shelfName: string,
+  previewTitle: string,
+): BreadcrumbItem[] {
+  const trail = bookShelfBreadcrumbTrail(detailTrail, bookId, bookTitle, shelfName);
+  trail[trail.length - 1] = {
+    label: shelfName,
+    to: `/shelves/${encodeURIComponent(shelfId)}`,
+    icon: "shelf",
+  };
+  return [...trail, { label: previewTitle, icon: "book" }];
+}
+
+export function bookGroupBreadcrumbTrail(
+  detailTrail: readonly BreadcrumbItem[],
+  bookId: string,
+  bookTitle: string,
+  groupName: string,
+  isPublicGroup = false,
+): BreadcrumbItem[] {
+  const resolvedDetailTrail = detailTrail.length > 0 ? detailTrail : bookDetailBreadcrumbFallback(bookTitle);
+  const bookPath = `/library/books/${encodeURIComponent(bookId)}`;
+  return [
+    ...resolvedDetailTrail.slice(0, -1),
+    { label: bookTitle, to: bookPath, icon: "book" },
+    { label: "Groups", to: `${bookPath}?tab=groups`, icon: "group" },
+    { label: groupName, icon: isPublicGroup ? "public-group" : "group" },
+  ];
+}
+
 export function bookBrowseDetailBreadcrumbs({
   title,
   libraryPath,
