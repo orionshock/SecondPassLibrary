@@ -108,6 +108,11 @@ This is the running list of cross-page presentation and interaction rules that a
 - It owns the Material Symbols `delete` token, danger styling, tooltip, and accessible label. Do not recreate this button with ad hoc icon spans or local styles.
 - The calling branch still owns confirmation and the actual operation; the shared button remains server-blind.
 
+## Interactive surfaces
+
+- A mouse-interactive element presented with a surrounding box, border, card, row, or chip should normally provide at least a restrained decorative hover highlight so it does not appear inert. Keyboard-operable content should receive an equivalent `focus-visible` or `focus-within` treatment where appropriate.
+- Do not add active-looking hover treatment to disabled controls or purely static containers. Hover decoration supplements accessible labels, focus behavior, and control semantics; it does not make a non-interactive box interactive.
+
 ## Group identity
 
 - Group identity pills use the shared structural `GroupBadgeComponent`. Public/Common Room receives the green Public treatment; ordinary groups receive the neutral group treatment.
