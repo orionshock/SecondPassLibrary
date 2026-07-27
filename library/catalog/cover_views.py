@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from django.http import Http404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -9,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.roles import is_librarian
+from core.errors import ErrorCode, api_error_response
 from library.catalog.serializers import BookDetailSerializer
 from library.catalog.views import attach_visible_groups_to_book, book_detail_queryset
 from library.cover_services import (
@@ -18,6 +21,10 @@ from library.cover_services import (
     validate_book_cover_upload,
 )
 from library.queries import visible_books_for_user
+from library.storage_diagnostics import log_storage_issue
+
+
+logger = logging.getLogger(__name__)
 
 
 class BookCoverView(APIView):
@@ -34,13 +41,48 @@ class BookCoverView(APIView):
             cover = validate_book_cover_upload(upload)
         except InvalidBookCover as exc:
             raise ValidationError({"cover": [str(exc)]}) from exc
-        replace_book_cover(book=book, cover=cover, actor=request.user)
+        try:
+            replace_book_cover(book=book, cover=cover, actor=request.user)
+        except Exception as exc:
+            # Storage backends do not share a useful exception base class. Keep
+            # this API boundary broad so internal details never escape.
+            log_storage_issue(
+                logger,
+                action="book_cover_replace",
+                book_id=book.pk,
+                actor=request.user,
+                reason="storage-error",
+                exc=exc,
+                storage_name=str(book.cover_file.name or ""),
+            )
+            return api_error_response(
+                code=ErrorCode.BOOK_COVER_UNAVAILABLE,
+                message="The book cover could not be updated.",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return self._book_response(request, book_id)
 
     def delete(self, request, book_id):
         book = self._get_book(request.user, book_id)
         self._require_librarian(request.user)
-        clear_book_cover(book=book, actor=request.user)
+        try:
+            clear_book_cover(book=book, actor=request.user)
+        except Exception as exc:
+            # See POST: bounded storage failures are part of this API boundary.
+            log_storage_issue(
+                logger,
+                action="book_cover_clear",
+                book_id=book.pk,
+                actor=request.user,
+                reason="storage-error",
+                exc=exc,
+                storage_name=str(book.cover_file.name or ""),
+            )
+            return api_error_response(
+                code=ErrorCode.BOOK_COVER_UNAVAILABLE,
+                message="The book cover could not be updated.",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return self._book_response(request, book_id)
 
     @staticmethod

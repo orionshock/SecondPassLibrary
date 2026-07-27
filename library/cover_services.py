@@ -3,23 +3,26 @@ from __future__ import annotations
 from functools import partial
 import hashlib
 import logging
-from pathlib import PurePath
-import re
 
 from django.core.files.base import ContentFile
 from django.db import transaction
 
+from core.operational_logging import (
+    info_on_commit,
+    safe_log_label,
+    user_log_label,
+    user_uuid,
+)
 from library.imports.covers import (
     ExtractedCover,
     MAX_COVER_IMAGE_BYTES,
     validate_cover_bytes,
 )
 from library.models import Book
+from library.storage_diagnostics import log_storage_issue
 
 
 logger = logging.getLogger(__name__)
-
-_LONG_HEX_RE = re.compile(r"[0-9a-fA-F]{32,}")
 
 COVER_VALIDATION_MESSAGE = (
     "Upload a valid JPEG, PNG, or WebP image no larger than 10 MiB "
@@ -74,20 +77,34 @@ def replace_book_cover(
                         name=old_name,
                         book_id=str(locked.pk),
                         operation="replace",
+                        actor=actor,
                     )
                 )
             if log_success:
-                transaction.on_commit(
-                    partial(
-                        _log_cover_change,
-                        "replaced",
-                        _book_label(locked),
-                        _actor_label(actor),
-                    )
+                info_on_commit(
+                    logger,
+                    "Book cover changed: action=%s book_id=%s book=%s actor=%s "
+                    "actor_profile_id=%s",
+                    "book_cover_replace",
+                    locked.pk,
+                    safe_log_label(locked.title, fallback=str(locked.pk)),
+                    user_log_label(actor),
+                    user_uuid(actor),
                 )
     except Exception:
         if created_file and not Book.objects.filter(cover_file=stored_name).exists():
-            storage.delete(stored_name)
+            try:
+                storage.delete(stored_name)
+            except Exception as cleanup_exc:
+                log_storage_issue(
+                    logger,
+                    action="new_cover_rollback_cleanup",
+                    book_id=book.pk,
+                    actor=actor,
+                    reason="delete-failed",
+                    exc=cleanup_exc,
+                    storage_name=stored_name,
+                )
         raise
 
     book.cover_file.name = stored_name
@@ -110,15 +127,18 @@ def clear_book_cover(*, book: Book, actor=None) -> Book:
                 name=old_name,
                 book_id=str(locked.pk),
                 operation="clear",
+                actor=actor,
             )
         )
-        transaction.on_commit(
-            partial(
-                _log_cover_change,
-                "cleared",
-                _book_label(locked),
-                _actor_label(actor),
-            )
+        info_on_commit(
+            logger,
+            "Book cover changed: action=%s book_id=%s book=%s actor=%s "
+            "actor_profile_id=%s",
+            "book_cover_clear",
+            locked.pk,
+            safe_log_label(locked.title, fallback=str(locked.pk)),
+            user_log_label(actor),
+            user_uuid(actor),
         )
 
     book.cover_file.name = ""
@@ -132,52 +152,38 @@ def set_book_cover_from_bytes(*, book: Book, data: bytes, source: str = "") -> B
     return book
 
 
-def _cleanup_old_cover(*, name: str, book_id: str, operation: str) -> None:
+def _cleanup_old_cover(
+    *,
+    name: str,
+    book_id: str,
+    operation: str,
+    actor=None,
+) -> None:
     referenced: bool | None = None
     try:
         referenced = Book.objects.filter(cover_file=name).exists()
         if referenced:
             logger.info(
-                "Book cover cleanup skipped: book_id=%s operation=%s "
-                "reason=still-referenced",
+                "Book cover cleanup skipped: action=old_cover_cleanup book_id=%s "
+                "operation=%s actor=%s actor_profile_id=%s reason=still-referenced",
                 book_id,
                 operation,
+                user_log_label(actor),
+                user_uuid(actor),
             )
             return
         Book._meta.get_field("cover_file").storage.delete(name)
     except Exception as exc:
-        logger.warning(
-            "Book cover cleanup failed: book_id=%s operation=%s "
-            "still_referenced=%s error=%s message=%s",
-            book_id,
-            operation,
-            "unknown" if referenced is None else str(referenced).lower(),
-            type(exc).__name__,
-            _safe_cleanup_error_message(exc, cover_name=name),
+        log_storage_issue(
+            logger,
+            action="old_cover_cleanup",
+            book_id=book_id,
+            actor=actor,
+            reason="delete-failed",
+            exc=exc,
+            storage_name=name,
+            operation=operation,
+            reference_state=(
+                "unknown" if referenced is None else str(referenced).lower()
+            ),
         )
-
-
-def _safe_cleanup_error_message(exc: Exception, *, cover_name: str) -> str:
-    message = getattr(exc, "strerror", None) or str(exc) or "No error message."
-    message = " ".join(str(message).split())
-    secrets = {cover_name, PurePath(cover_name).name}
-    for secret in secrets:
-        if secret:
-            message = message.replace(secret, "[redacted]")
-    message = " ".join(
-        "[redacted]" if "/" in token or "\\" in token else token
-        for token in message.split()
-    )
-    return _LONG_HEX_RE.sub("[redacted]", message)[:160]
-
-
-def _book_label(book: Book) -> str:
-    return str(book.title or book.pk)
-
-
-def _actor_label(actor) -> str:
-    return str(getattr(actor, "username", "") or getattr(actor, "pk", "unknown"))
-
-
-def _log_cover_change(action: str, book_label: str, actor_label: str) -> None:
-    logger.info("Book cover %s: book=%s actor=%s", action, book_label, actor_label)

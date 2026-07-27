@@ -180,6 +180,14 @@ on disk, treat that as an operator repair state. Do not delete and re-import the
 Book merely to restore the EPUB, because Book deletion can destroy related user
 reading data.
 
+File and cover diagnostics use bounded structured operational logs. Storage
+failures identify the action, Book id, and authenticated profile id when
+available, plus the exception class and a sanitized message. They must not log
+storage keys, filesystem paths, checksums, uploads, or response payloads.
+Missing EPUB downloads and primary cover-storage failures return stable bounded
+API errors. Old-cover deletion remains best-effort post-commit cleanup and must
+not turn a successful cover replacement or clear into an API failure.
+
 ## Library import services (current)
 
 The library import pipeline follows a focused-module structure:

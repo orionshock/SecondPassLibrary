@@ -2,21 +2,39 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+import logging
 
 from django.urls import reverse
 from rest_framework import serializers
 
 from library.groups.public_group import is_public_group
 from library.models import Author, Book, BookIdentifier, CatalogTag, LibraryGroup, Series
+from library.storage_diagnostics import log_storage_issue
 
 
-def book_cover_url(obj: Book, request=None) -> str | None:
+logger = logging.getLogger(__name__)
+
+
+def book_cover_url(
+    obj: Book,
+    request=None,
+) -> str | None:
     cover = getattr(obj, "cover_file", None)
     if not cover:
         return None
+    storage_name = str(cover.name or "")
     try:
         url = cover.url
-    except Exception:
+    except Exception as exc:
+        log_storage_issue(
+            logger,
+            action="book_cover_url",
+            book_id=obj.pk,
+            actor=getattr(request, "user", None),
+            reason="storage-error",
+            exc=exc,
+            storage_name=storage_name,
+        )
         return None
     return request.build_absolute_uri(url) if request is not None else url
 
@@ -246,8 +264,45 @@ class BookDetailSerializer(BookListSerializer):
     file = serializers.SerializerMethodField(read_only=True)
     groups = serializers.SerializerMethodField(read_only=True)
 
+    def get_cover_url(self, obj: Book) -> str | None:
+        request = self.context.get("request")
+        cover = getattr(obj, "cover_file", None)
+        if cover:
+            storage_name = str(cover.name or "")
+            try:
+                exists = cover.storage.exists(storage_name)
+            except Exception as exc:
+                log_storage_issue(
+                    logger,
+                    action="book_cover_url",
+                    book_id=obj.pk,
+                    actor=getattr(request, "user", None),
+                    reason="storage-error",
+                    exc=exc,
+                    storage_name=storage_name,
+                )
+                return None
+            if not exists:
+                log_storage_issue(
+                    logger,
+                    action="book_cover_url",
+                    book_id=obj.pk,
+                    actor=getattr(request, "user", None),
+                    reason="missing-storage-object",
+                )
+                return None
+        return book_cover_url(obj, request=request)
+
     def get_file(self, obj: Book) -> dict | None:
         if not obj.book_file:
+            request = self.context.get("request")
+            log_storage_issue(
+                logger,
+                action="book_file_projection",
+                book_id=obj.pk,
+                actor=getattr(request, "user", None),
+                reason="missing-file-field",
+            )
             return None
         return BookFileSerializer(obj, context=self.context).data
 

@@ -184,6 +184,27 @@ class BookDownloadApiTests(IsolatedMediaRootMixin, TestCase):
         )
         self.assertNotIn(self.visible_book.book_file.name, str(response.json()))
 
+    def test_fileless_detail_returns_repair_projection_and_safe_diagnostic(self):
+        fileless = Book.objects.create(title="Fileless")
+        BookGroupAssignment.objects.create(book=fileless, group=self.visible_group)
+
+        with self.assertLogs(
+            "library.catalog.serializers",
+            level="WARNING",
+        ) as captured:
+            response = APIClient().get(
+                f"/api/v1/library/books/{fileless.id}/",
+                HTTP_AUTHORIZATION=f"Bearer {self.reader_token}",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["file"])
+        warning = " ".join(captured.output)
+        self.assertIn("action=book_file_projection", warning)
+        self.assertIn(f"book_id={fileless.pk}", warning)
+        self.assertIn(f"actor_profile_id={self.reader.profile.pk}", warning)
+        self.assertNotIn("books/", warning)
+
     def test_fileless_and_non_epub_books_return_bounded_conflict(self):
         fileless = Book.objects.create(title="Fileless")
         BookGroupAssignment.objects.create(book=fileless, group=self.visible_group)
@@ -192,10 +213,18 @@ class BookDownloadApiTests(IsolatedMediaRootMixin, TestCase):
 
         for book in [fileless, self.visible_book]:
             with self.subTest(book=book.title):
-                response = self._bearer_get(book, self.reader_token)
+                with self.assertLogs(
+                    "library.catalog.download_views",
+                    level="WARNING",
+                ) as captured:
+                    response = self._bearer_get(book, self.reader_token)
                 self.assertEqual(response.status_code, 409)
                 self.assertEqual(response.json()["error"]["code"], "BOOK_FILE_UNAVAILABLE")
                 self.assertNotIn("books/", str(response.json()))
+                warning = " ".join(captured.output)
+                self.assertIn("action=book_download", warning)
+                self.assertIn(f"book_id={book.pk}", warning)
+                self.assertIn(f"actor_profile_id={self.reader.profile.pk}", warning)
 
     def test_missing_and_unreadable_storage_return_bounded_503_and_safe_log(self):
         internal_name = self.visible_book.book_file.name
@@ -214,9 +243,12 @@ class BookDownloadApiTests(IsolatedMediaRootMixin, TestCase):
             self.assertNotIn("private", str(response.json()).casefold())
             self.assertNotIn(internal_name, str(response.json()))
         combined_logs = " ".join(missing_logs.output + unreadable_logs.output)
-        self.assertIn("Visible Book", combined_logs)
+        self.assertIn("action=book_download", combined_logs)
+        self.assertIn(f"book_id={self.visible_book.pk}", combined_logs)
         self.assertIn("reader", combined_logs)
+        self.assertIn(f"actor_profile_id={self.reader.profile.pk}", combined_logs)
         self.assertIn("PermissionError", combined_logs)
+        self.assertIn("message=[redacted]", combined_logs)
         self.assertNotIn(internal_name, combined_logs)
         self.assertNotIn("C:/private", combined_logs)
 
@@ -236,6 +268,38 @@ class BookDownloadApiTests(IsolatedMediaRootMixin, TestCase):
 
         self.assertEqual(len(opened), 1)
         self.assertTrue(opened[0].closed)
+
+    def test_stream_read_failure_is_logged_without_storage_details(self):
+        storage = self.visible_book.book_file.storage
+        internal_name = self.visible_book.book_file.name
+        real_open = storage.open
+
+        class FailingReadHandle:
+            def __init__(self):
+                self.wrapped = real_open(internal_name, "rb")
+
+            def read(self, _block_size):
+                raise OSError("C:/private/read.epub")
+
+            def close(self):
+                self.wrapped.close()
+
+        with patch.object(storage, "open", return_value=FailingReadHandle()):
+            response = self._bearer_get(self.visible_book, self.reader_token)
+            with self.assertLogs(
+                "library.catalog.download_views",
+                level="WARNING",
+            ) as captured:
+                with self.assertRaises(OSError):
+                    self._streamed_body(response)
+
+        warning = " ".join(captured.output)
+        self.assertIn("action=book_download", warning)
+        self.assertIn("reason=storage-read-error", warning)
+        self.assertIn(f"book_id={self.visible_book.pk}", warning)
+        self.assertIn(f"actor_profile_id={self.reader.profile.pk}", warning)
+        self.assertNotIn(internal_name, warning)
+        self.assertNotIn("C:/private", warning)
 
     def test_range_header_deliberately_returns_complete_file(self):
         response = self._bearer_get(

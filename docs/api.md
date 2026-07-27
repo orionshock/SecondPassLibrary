@@ -625,11 +625,17 @@ session or bearer authentication. The attachment filename is generated from
 the sanitized, bounded Book title; it never uses the content-addressed storage
 name. Fileless or unsupported-format Books return bounded `409
 BOOK_FILE_UNAVAILABLE`; missing or unreadable storage returns the same bounded
-code with `503` and no storage detail.
+code with `503` and no storage detail when the failure occurs before streaming
+starts. A storage read failure after response streaming has begun terminates the
+stream and is recorded in the bounded operator log; HTTP status cannot be
+replaced after headers have been sent.
 
 The download endpoint currently returns the complete file with `200`; byte
 Range requests are not implemented. `cover_url` continues to use the public
-display-only `/media/covers/` namespace; cover mutation remains session-only.
+display-only `/media/covers/` namespace; a Book detail response returns
+`cover_url: null` when its configured cover cannot be found or resolved so the
+client can use its normal cover placeholder. Cover mutation remains
+session-only.
 
 Author/Series payload notes:
 
@@ -880,6 +886,11 @@ Book cover mutation is deliberately separate from metadata PATCH:
   for validation.
 - Cover mutation does not change EPUB files, checksums, bibliographic metadata,
   identifiers, groups, shelves, or reading data.
+- A primary cover storage failure returns bounded `503
+  BOOK_COVER_UNAVAILABLE` without exposing storage paths or backend exception
+  text. Failure to delete an old cover after a successful replace or clear is
+  best-effort operator cleanup: the mutation remains successful and the
+  cleanup failure is logged.
 
 ## Imports
 
