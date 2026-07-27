@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
 import { ErrorPanel } from "../../components/ui";
 import type { MutationState } from "./mutationState";
+import { SUCCESS_MESSAGE_TIMEOUT_MS } from "./useAutoDismissMutationMessage";
 
 export function ActionFeedbackComponent({ state }: { state: MutationState }) {
   const [visibleMessage, setVisibleMessage] = useState(state.message);
@@ -10,7 +11,7 @@ export function ActionFeedbackComponent({ state }: { state: MutationState }) {
   useEffect(() => {
     setVisibleMessage(state.message);
     if (!state.message) return;
-    const timeout = window.setTimeout(() => setVisibleMessage(undefined), 5000);
+    const timeout = window.setTimeout(() => setVisibleMessage(undefined), SUCCESS_MESSAGE_TIMEOUT_MS);
     return () => window.clearTimeout(timeout);
   }, [state.message]);
 

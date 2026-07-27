@@ -27,6 +27,7 @@ import { breadcrumbNavigationState, readIncomingBreadcrumbTrail, resolveBreadcru
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { BookCoverComponent } from "../../shared/books/BookCoverComponent";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { SaveCancelActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
@@ -85,6 +86,10 @@ export function BookEditOrchestrator() {
   const [coverInputResetKey, setCoverInputResetKey] = useState(0);
   const [groupMutation, setGroupMutation] = useState<MutationState>(idleMutationState);
   const [groupShelfMutation, setGroupShelfMutation] = useState<MutationState>(idleMutationState);
+  useAutoDismissMutationMessage(mutation, setMutation);
+  useAutoDismissMutationMessage(coverMutation, setCoverMutation);
+  useAutoDismissMutationMessage(groupMutation, setGroupMutation);
+  useAutoDismissMutationMessage(groupShelfMutation, setGroupShelfMutation);
   const allowNavigation = useRef(false);
   const book = load.status === "ready" ? load.book : undefined;
   const dirty = Boolean(draft && baseline && !bookEditDraftsEqual(draft, baseline));
@@ -168,11 +173,6 @@ export function BookEditOrchestrator() {
     });
     return () => { active = false; };
   }, [bookId, groupShelfRetry, tab]);
-  useEffect(() => {
-    if (tab !== "group-shelves" && groupShelfMutation.message) {
-      setGroupShelfMutation(idleMutationState);
-    }
-  }, [groupShelfMutation.message, tab]);
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {
     setDraft((current) => current ? { ...current, [field]: value } : current);
     setMutation(idleMutationState);

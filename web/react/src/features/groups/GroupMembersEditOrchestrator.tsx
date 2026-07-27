@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { confirmGroupMemberRemoval } from "./groupBookMutation";
 import { GroupMemberCandidatesPageRegion } from "./regions/GroupMemberCandidatesPageRegion";
 import { GroupMembersEditPageRegion } from "./regions/GroupMembersEditPageRegion";
@@ -45,6 +46,8 @@ export function GroupMembersEditOrchestrator({ group, metadataPending, onMutatio
   const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<UserChoice>>({ loading: false });
   const [candidatesVersion, setCandidatesVersion] = useState(0);
   const [candidateMutation, setCandidateMutation] = useState<MemberMutation>({});
+  useAutoDismissMutationMessage(memberMutation, setMemberMutation);
+  useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
 
   useEffect(() => {
     let active = true;

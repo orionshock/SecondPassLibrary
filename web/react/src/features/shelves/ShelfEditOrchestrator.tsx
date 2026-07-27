@@ -25,6 +25,7 @@ import {
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
@@ -101,6 +102,9 @@ export function ShelfEditOrchestrator() {
   const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<CompactBook>>({ loading: false });
   const [itemMutation, setItemMutation] = useState<RowMutation>({});
   const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
+  useAutoDismissMutationMessage(mutation, setMutation);
+  useAutoDismissMutationMessage(itemMutation, setItemMutation);
+  useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
   const [itemsVersion, setItemsVersion] = useState(0);
   const [candidatesVersion, setCandidatesVersion] = useState(0);
   const immediateItemMutationPending = Boolean(itemMutation.pendingId || candidateMutation.pendingId);

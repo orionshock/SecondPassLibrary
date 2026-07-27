@@ -22,6 +22,7 @@ import {
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import {
@@ -107,6 +108,9 @@ export function GroupEditOrchestrator() {
   const [candidatesLoad, setCandidatesLoad] = useState<BookPageLoad>({ loading: false });
   const [candidatesVersion, setCandidatesVersion] = useState(0);
   const [candidateMutation, setCandidateMutation] = useState<BookMutation>({});
+  useAutoDismissMutationMessage(mutation, setMutation);
+  useAutoDismissMutationMessage(bookMutation, setBookMutation);
+  useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
   const [memberMutationPending, setMemberMutationPending] = useState(false);
   const bookMutationPending = Boolean(bookMutation.pendingBookId || candidateMutation.pendingBookId);
   const immediateMutationPending = bookMutationPending || memberMutationPending;

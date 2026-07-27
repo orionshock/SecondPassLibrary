@@ -15,6 +15,7 @@ import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { TabListComponent, tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
@@ -46,6 +47,7 @@ export function ServerSettingsOrchestrator() {
   const [load, setLoad] = useState<SettingsLoadState>({ loading: canAccessServerSettings(currentUser.isOwner), forbidden: !canAccessServerSettings(currentUser.isOwner) });
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<MutationState>(idleMutationState);
+  useAutoDismissMutationMessage(state, setState);
   const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ name: "", description: "", bannerText: "" });
   const [publicDraft, setPublicDraft] = useState<PublicLibrarySettings>({ name: "", description: "" });
 
