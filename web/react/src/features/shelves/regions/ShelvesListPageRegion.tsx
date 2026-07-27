@@ -76,7 +76,11 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
             detailPath={detailPath}
             navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
             previewBooks={previewBooks}
-            group={scope === "group" ? shelf.ownerGroup ?? undefined : undefined}
+            owner={scope === "group" && shelf.ownerGroup
+              ? { kind: "group", label: shelf.ownerGroup.name, isPublicGroup: shelf.ownerGroup.isPublicGroup }
+              : scope === "shared" && shelf.ownerUser
+                ? { kind: "user", label: `@${shelf.ownerUser.username}` }
+                : undefined}
           />;
         })}
       </div>}

@@ -44,7 +44,7 @@ describe("Shelves read-only regions", () => {
   });
 
   it("renders Shelf list identity, previews, and optional Group treatment without inline Edit", () => {
-    const renderList = (shelf: ShelfSummary, scope: "personal" | "group", ordering: ShelfOrdering = "name") => renderToStaticMarkup(<MemoryRouter><ShelvesListPageRegion
+    const renderList = (shelf: ShelfSummary, scope: "personal" | "shared" | "group", ordering: ShelfOrdering = "name") => renderToStaticMarkup(<MemoryRouter><ShelvesListPageRegion
       page={{ items: [shelf], count: 1, next: null, previous: null }}
       pageNumber={1}
       pageSize={20}
@@ -66,6 +66,7 @@ describe("Shelves read-only regions", () => {
     expect(personal).toContain('aria-label="Shelves pagination, bottom"');
     expect(personal).toContain('aria-label="Order shelves, current: Name A-Z"');
     expect(personal).not.toContain('href="/shelves/shelf/edit"');
+    expect(personal).not.toContain('aria-label="User: @reader"');
 
     expect(renderList(personalShelf, "personal", "-name")).toContain("Name Z-A");
     expect(renderList(personalShelf, "personal", "-item_count")).toContain("Most Items");
@@ -74,6 +75,11 @@ describe("Shelves read-only regions", () => {
     const group = renderList(groupShelf, "group");
     expect(group).toContain('aria-label="Public group: Common Room"');
     expect(group).not.toContain('href="/shelves/group-shelf/edit"');
+
+    const shared = renderList(personalShelf, "shared");
+    expect(shared).toContain('aria-label="User: @reader"');
+    expect(shared).toContain('href="/shelves/shelf"');
+    expect(shared).not.toContain('href="/shelves/shelf/edit"');
   });
 
   it("renders a read-only detail header and compact Book rows", () => {
