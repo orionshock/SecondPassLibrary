@@ -3,8 +3,15 @@ import type { Page, ShelfItem, ShelfItemOrdering } from "@second-pass/spl-api";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
+import { OrderSelectComponent, type OrderSelectOption } from "../../../shared/forms/OrderSelectComponent";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
+
+const shelfItemOrderingOptions: readonly OrderSelectOption<ShelfItemOrdering>[] = [
+  { value: "position", label: "Shelf Order", icon: "format_list_numbered" },
+  { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
+  { value: "author", label: "Author A-Z", icon: "person" },
+];
 
 export function ShelfItemsPageRegion({ shelfId, shelfName, shelfPath, page, pageNumber, pageSize, ordering, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
   shelfId: string;
@@ -23,13 +30,7 @@ export function ShelfItemsPageRegion({ shelfId, shelfName, shelfPath, page, page
 }) {
   return <section className="shelf-items-region" aria-label="Shelf books">
     <div className="shelf-items-controls">
-      <label>Order
-        <select value={ordering} onChange={(event) => onOrderingChange(event.target.value as ShelfItemOrdering)}>
-          <option value="position">Shelf Order</option>
-          <option value="title">Title A-Z</option>
-          <option value="author">Author A-Z</option>
-        </select>
-      </label>
+      <OrderSelectComponent aria-label="Order shelf books" value={ordering} options={shelfItemOrderingOptions} onChange={onOrderingChange} />
     </div>
     <ShelfItemResults shelfId={shelfId} shelfName={shelfName} shelfPath={shelfPath} page={page} pageNumber={pageNumber} pageSize={pageSize} loading={loading} error={error} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetry} />
   </section>;

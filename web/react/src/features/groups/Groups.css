@@ -27,13 +27,6 @@
 .groups-controls input,
 .group-books-controls input { min-width: 0; }
 
-.groups-ordering,
-.group-books-controls > label {
-  display: grid;
-  gap: 0.25rem;
-  flex: 0 0 10rem;
-}
-
 .groups-results,
 .group-books-results,
 .group-members-region {

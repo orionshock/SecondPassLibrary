@@ -107,6 +107,7 @@ describe("Groups read-only regions", () => {
 
     expect(markup).toContain('aria-label="Groups pagination, top"');
     expect(markup).toContain('aria-label="Groups pagination, bottom"');
+    expect(markup).toContain('aria-label="Order groups"');
     expect(markup).toContain('value="room"');
     expect(markup).toContain("Name A-Z");
     expect(markup).toContain('href="/groups/group"');
@@ -132,6 +133,7 @@ describe("Groups read-only regions", () => {
     /></MemoryRouter>);
     expect(markup).toContain("Visible Book");
     expect(markup).toContain('href="/library/books/book"');
+    expect(markup).toContain('aria-label="Order group books"');
     expect(markup).not.toContain("Remove book");
     expect(markup).not.toContain("Add book");
   });

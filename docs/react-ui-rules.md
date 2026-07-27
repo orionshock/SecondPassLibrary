@@ -52,6 +52,8 @@ This is the running list of cross-page presentation and interaction rules that a
 - Promote paging controls only when their inputs are stable page metadata and callbacks; shared pagers must remain server-blind.
 - Product list pagers offer 20/30/40/50 by default. A feature with an established different contract supplies its own sizes explicitly.
 - Main list frames use a lean top pager without page-size selection and a full bottom pager. Nested detail and mutation lists remain free to use a single pager when duplicate controls would add clutter.
+- Native order controls place the `Order` label inline to the left of the select. The selected value may have a restrained semantic icon outside the native option text; native keyboard behavior remains intact.
+- Main paginated-list frames may accept server-blind top controls such as ordering. `PagerComponent` remains unaware of ordering values and feature query semantics.
 - Library Books search is title/sort-title search through the Book list endpoint. Broad Library search is reserved for picker and Add Books workflows.
 - Product language and app-facing fields use Catalog Tags. Compact Book wire `catalog_tags` is normalized to `catalogTags` by the SDK; row Components never inspect wire names.
 

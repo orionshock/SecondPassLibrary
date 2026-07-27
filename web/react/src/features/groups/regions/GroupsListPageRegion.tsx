@@ -5,9 +5,17 @@ import { Link } from "react-router-dom";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
+import { OrderSelectComponent, type OrderSelectOption } from "../../../shared/forms/OrderSelectComponent";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback } from "../groupsBreadcrumbs";
 import { GroupRowComponent } from "../components/GroupRowComponent";
+
+type GroupsListOrdering = "name" | "-name";
+
+const groupOrderingOptions: readonly OrderSelectOption<GroupsListOrdering>[] = [
+  { value: "name", label: "Name A-Z", icon: "sort_by_alpha" },
+  { value: "-name", label: "Name Z-A", icon: "sort_by_alpha" },
+];
 
 export function GroupsListPageRegion({
   page,
@@ -31,7 +39,7 @@ export function GroupsListPageRegion({
   pageNumber: number;
   pageSize: number;
   search: string;
-  ordering: "name" | "-name";
+  ordering: GroupsListOrdering;
   loading: boolean;
   error?: Error;
   curatorGroupIds: ReadonlySet<string>;
@@ -39,7 +47,7 @@ export function GroupsListPageRegion({
   newGroupNavigationState?: unknown;
   onSearchChange: (value: string) => void;
   onSearch: () => void;
-  onOrderingChange: (ordering: "name" | "-name") => void;
+  onOrderingChange: (ordering: GroupsListOrdering) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
@@ -59,12 +67,6 @@ export function GroupsListPageRegion({
         <input id="groups-search" value={search} placeholder="Group name or description..." onChange={(event) => onSearchChange(event.target.value)} />
         <Button type="submit">Search</Button>
       </form>
-      <label className="groups-ordering">Order
-        <select value={ordering} onChange={(event) => onOrderingChange(event.target.value as "name" | "-name")}>
-          <option value="name">Name A-Z</option>
-          <option value="-name">Name Z-A</option>
-        </select>
-      </label>
     </section>
     <GroupsListResults
       page={page}
@@ -72,7 +74,9 @@ export function GroupsListPageRegion({
       pageSize={pageSize}
       loading={loading}
       error={error}
+      ordering={ordering}
       curatorGroupIds={curatorGroupIds}
+      onOrderingChange={onOrderingChange}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onRetry={onRetry}
@@ -80,13 +84,15 @@ export function GroupsListPageRegion({
   </div>;
 }
 
-function GroupsListResults({ page, pageNumber, pageSize, loading, error, curatorGroupIds, onPageChange, onPageSizeChange, onRetry }: {
+function GroupsListResults({ page, pageNumber, pageSize, loading, error, ordering, curatorGroupIds, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<LibraryGroup>;
   pageNumber: number;
   pageSize: number;
   loading: boolean;
   error?: Error;
+  ordering: GroupsListOrdering;
   curatorGroupIds: ReadonlySet<string>;
+  onOrderingChange: (ordering: GroupsListOrdering) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
@@ -104,6 +110,7 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, curator
       hasPrevious={Boolean(page.previous)}
       hasNext={Boolean(page.next)}
       itemLabel="Groups"
+      topControls={<OrderSelectComponent aria-label="Order groups" size="small" value={ordering} options={groupOrderingOptions} onChange={onOrderingChange} />}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
     >

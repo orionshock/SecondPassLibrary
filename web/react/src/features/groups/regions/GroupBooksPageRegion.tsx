@@ -4,9 +4,19 @@ import type { FormEvent } from "react";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
+import { OrderSelectComponent, type OrderSelectOption } from "../../../shared/forms/OrderSelectComponent";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";
 import type { GroupBookOrdering } from "../groupsQuery";
+
+const groupBookOrderingOptions: readonly OrderSelectOption<GroupBookOrdering>[] = [
+  { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
+  { value: "-title", label: "Title Z-A", icon: "sort_by_alpha" },
+  { value: "author", label: "Author A-Z", icon: "person" },
+  { value: "-author", label: "Author Z-A", icon: "person" },
+  { value: "series", label: "Series A-Z", icon: "auto_stories" },
+  { value: "-series", label: "Series Z-A", icon: "auto_stories" },
+];
 
 export function GroupBooksPageRegion({
   groupId,
@@ -57,16 +67,7 @@ export function GroupBooksPageRegion({
         <input id="group-books-search" value={search} placeholder="Book title..." onChange={(event) => onSearchChange(event.target.value)} />
         <Button type="submit">Search</Button>
       </form>
-      <label>Order
-        <select value={ordering} onChange={(event) => onOrderingChange(event.target.value as GroupBookOrdering)}>
-          <option value="title">Title A-Z</option>
-          <option value="-title">Title Z-A</option>
-          <option value="author">Author A-Z</option>
-          <option value="-author">Author Z-A</option>
-          <option value="series">Series A-Z</option>
-          <option value="-series">Series Z-A</option>
-        </select>
-      </label>
+      <OrderSelectComponent aria-label="Order group books" value={ordering} options={groupBookOrderingOptions} onChange={onOrderingChange} />
     </div>
     <GroupBooksResults
       groupId={groupId}

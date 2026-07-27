@@ -24,13 +24,6 @@
   background: var(--surface-raised);
 }
 
-.shelves-ordering,
-.shelf-items-controls label {
-  display: grid;
-  gap: 0.25rem;
-  min-width: 10rem;
-}
-
 .shelves-results--loading,
 .shelf-results--loading { opacity: 0.65; }
 
@@ -90,5 +83,4 @@
 
 @media (max-width: 760px) {
   .shelves-list-toolbar { align-items: stretch; flex-wrap: wrap; }
-  .shelves-ordering { flex: 1 1 12rem; }
 }

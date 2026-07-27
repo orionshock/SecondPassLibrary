@@ -41,15 +41,19 @@ describe("shared pagination", () => {
       hasNext
       itemLabel="Users"
       pageSizes={[20, 50, 100, 200]}
+      topControls={<div data-top-control="true">Order control</div>}
       {...callbacks}
     >
       <div data-list-body="true">Rows</div>
     </PaginatedListFrameComponent>);
 
     const top = markup.indexOf('aria-label="Users pagination, top"');
+    const topControl = markup.indexOf('data-top-control="true"');
     const body = markup.indexOf('data-list-body="true"');
     const bottom = markup.indexOf('aria-label="Users pagination, bottom"');
     expect(top).toBeGreaterThanOrEqual(0);
+    expect(topControl).toBeGreaterThan(top);
+    expect(topControl).toBeLessThan(body);
     expect(body).toBeGreaterThan(top);
     expect(bottom).toBeGreaterThan(body);
     expect(markup).toContain('<option value="200">200</option>');

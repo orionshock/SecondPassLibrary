@@ -1,0 +1,31 @@
+.order-select-component {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.order-select-component__label {
+  flex: 0 0 auto;
+}
+
+.order-select-component__control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.order-select-component__control > .material-icon {
+  position: absolute;
+  z-index: 1;
+  left: 0.65rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.order-select-component .order-select-component__select--with-icon {
+  padding-left: 2rem;
+}
