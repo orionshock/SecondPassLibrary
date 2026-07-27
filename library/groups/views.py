@@ -17,6 +17,7 @@ from library.groups.public_group import is_public_group
 from library.groups.querysets import (
     apply_group_ordering,
     apply_group_search,
+    filter_groups_by_book,
     parse_group_ordering,
 )
 from library.groups.serializers import (
@@ -54,6 +55,7 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
 
     def get_queryset(self):
         queryset = groups_available_via_api(visible_groups_for_user(self.request.user))
+        queryset = filter_groups_by_book(queryset, self.request.query_params)
         queryset = apply_group_search(queryset, self.request.query_params)
         return apply_group_ordering(queryset, parse_group_ordering(self.request))
 

@@ -1012,6 +1012,15 @@ list; Readers may manage shelves only for matching non-Public memberships with
 
 Group list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
 
+`GET /api/v1/library/groups/?book=<book_uuid>` filters the paginated Group
+list to caller-visible Groups containing that Book. The filter composes with
+`q`, `ordering`, pagination, and `include_preview_books=true`; response rows
+retain the normal Group-list shape. A malformed UUID returns structured `400`
+under `book`. A well-formed missing or caller-inaccessible Book, or a Book with
+no caller-visible matching Groups, returns an empty paginated page so the
+collection filter does not disclose Book existence. Simple mode continues to
+restrict the Group API to Public/Common Room.
+
 Public restrictions:
 
 - Public cannot have curator assignments. Membership POST/PATCH with

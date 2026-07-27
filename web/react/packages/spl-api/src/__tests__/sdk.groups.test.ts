@@ -100,6 +100,27 @@ describe("Library Groups SDK", () => {
     expect(calls).toEqual(["/api/v1/library/groups/?include_preview_books=true"]);
   });
 
+  it("serializes the Book filter with existing Group list query options", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+
+    await listGroups({
+      q: " readers ",
+      bookId: "book/id",
+      ordering: "-name",
+      includePreviewBooks: true,
+      page: 2,
+      pageSize: 30,
+    }, client);
+
+    expect(calls).toEqual([
+      "/api/v1/library/groups/?q=readers&book=book%2Fid&ordering=-name&include_preview_books=true&page=2&page_size=30",
+    ]);
+  });
+
   it("uses the exact immediate assignment mutation contracts", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {

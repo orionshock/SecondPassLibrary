@@ -20,6 +20,7 @@ export interface BookGroupAssignment {
 
 export interface LibraryGroupsQuery {
   q?: string;
+  bookId?: string;
   ordering?: "name" | "-name";
   includePreviewBooks?: boolean;
   page?: number;
@@ -98,6 +99,7 @@ export async function listGroups(
   const parameters = new URLSearchParams();
   const search = query.q?.trim();
   if (search) parameters.set("q", search);
+  if (query.bookId) parameters.set("book", query.bookId);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
   if (query.page) parameters.set("page", String(query.page));
