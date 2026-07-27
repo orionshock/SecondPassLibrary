@@ -1,5 +1,6 @@
-import { getReadingProgress, getReadingSession, listReadingAnnotations } from "@second-pass/spl-api";
 import { describe, expect, it } from "vitest";
+
+import { getReadingProgress, getReadingSession, listReadingAnnotations } from "../reading";
 
 describe("reading detail SDK", () => {
   it("maps visible and unavailable Session Book projections without exposing locator fields", async () => {
