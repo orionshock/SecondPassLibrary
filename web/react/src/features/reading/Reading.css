@@ -3,6 +3,18 @@
   min-width: 0;
 }
 
+.reading-section-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reading-section-actions .button[aria-current="page"] {
+  border-color: rgb(125 211 252 / 72%);
+  background: rgb(125 211 252 / 16%);
+  box-shadow: inset 0 -2px 0 rgb(125 211 252 / 75%);
+}
+
 .reading-controls {
   display: flex;
   align-items: end;

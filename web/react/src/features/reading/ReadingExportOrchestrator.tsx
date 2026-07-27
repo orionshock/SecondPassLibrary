@@ -8,6 +8,7 @@ import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { readingExportBreadcrumbFallback } from "./readingBreadcrumbs";
+import { ReadingSectionActionsComponent } from "./components/ReadingSectionActionsComponent";
 import { readingExportSelectedBookCount, readingExportSelectedSessions, withReadingExportPageSelection, withReadingExportSessionSelection, type ReadingExportSelectionMap } from "./readingExportSelection";
 import { readingListSdkQuery, readingListSearchParams, readingListStateFromSearchParams, withReadingListChange } from "./readingQuery";
 import { ReadingExportPageRegion } from "./regions/ReadingExportPageRegion";
@@ -93,7 +94,7 @@ export function ReadingExportOrchestrator() {
   }
 
   const selectedSessionIds = new Set(selection.keys());
-  return <ProductPageShellComponent title="Export Marginalia">
+  return <ProductPageShellComponent title="Export Marginalia" actions={<ReadingSectionActionsComponent activeSection="export" />}>
     <ReadingExportPageRegion
       page={load.page}
       pageNumber={query.page}

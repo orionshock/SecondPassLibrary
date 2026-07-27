@@ -60,8 +60,12 @@ function renderImport(options: { preview?: ReadingImportPreview; result?: Readin
 describe("My Marginalia import", () => {
   it("links the Session list to the implemented Import route and renders that route", () => {
     const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading" element={<ReadingSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
+    expect(listMarkup).toContain("<h1>My Marginalia</h1>");
+    expect(listMarkup).toContain('aria-label="My Marginalia sections"');
     expect(listMarkup).toContain('href="/reading/import"');
     const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading/import"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading/import" element={<ReadingImportOrchestrator />} /></Route></Routes></MemoryRouter>);
+    expect(importMarkup).toContain("<h1>Import Marginalia</h1>");
+    expect(importMarkup).toContain('aria-label="My Marginalia sections"');
     expect(importMarkup).toContain('type="file"');
   });
 

@@ -6,6 +6,7 @@ import { idleMutationState, LocalValidationError, normalizeMutationError, type M
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { createReadingImportDraft, buildReadingImportApplyInput, readingImportSelectedCount, withReadingImportBookSelection, type ReadingImportDraft, type ReadingImportSessionDraft } from "./readingImportDraft";
 import { readingImportBreadcrumbFallback } from "./readingBreadcrumbs";
+import { ReadingSectionActionsComponent } from "./components/ReadingSectionActionsComponent";
 import { ReadingImportPageRegion } from "./regions/ReadingImportPageRegion";
 
 export function ReadingImportOrchestrator() {
@@ -57,7 +58,7 @@ export function ReadingImportOrchestrator() {
     }
   }
 
-  return <ProductPageShellComponent className="reading-import-shell" title="Import Marginalia">
+  return <ProductPageShellComponent className="reading-import-shell" title="Import Marginalia" actions={<ReadingSectionActionsComponent activeSection="import" />}>
     <ReadingImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} inputRef={inputRef} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: ReadingImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookIndex, selected) => setDraft((current) => preview ? withReadingImportBookSelection(preview, current, bookIndex, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
       const next = new Set(current);
       if (editing) next.add(key); else next.delete(key);

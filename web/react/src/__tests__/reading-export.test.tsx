@@ -58,6 +58,8 @@ describe("My Marginalia Export", () => {
     const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading" element={<ReadingSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(listMarkup).toContain('href="/reading/export"');
     const exportMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading/export"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading/export" element={<ReadingExportOrchestrator />} /></Route></Routes></MemoryRouter>);
+    expect(exportMarkup).toContain("<h1>Export Marginalia</h1>");
+    expect(exportMarkup).toContain('aria-label="My Marginalia sections"');
     expect(exportMarkup).toContain("Complete archive");
   });
 
