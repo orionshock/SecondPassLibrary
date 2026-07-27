@@ -31,6 +31,8 @@ describe("Shelves URL state", () => {
     ));
     expect(shelvesListSearchParams(state).toString()).toBe("scope=group&ordering=-item_count&page=3&page_size=40");
     expect(shelvesListPath(state)).toBe("/shelves?scope=group&ordering=-item_count&page=3&page_size=40");
+    expect(shelvesListStateFromSearchParams(new URLSearchParams("ordering=-name")).ordering).toBe("-name");
+    expect(shelvesListStateFromSearchParams(new URLSearchParams("ordering=item_count")).ordering).toBe("item_count");
     expect(shelvesListStateFromSearchParams(new URLSearchParams("scope=all&ordering=bad&page=0&page_size=99"))).toEqual(defaults);
   });
 
@@ -51,6 +53,12 @@ describe("Shelves URL state", () => {
     const state = shelfDetailStateFromSearchParams(new URLSearchParams("page_size=30&page=2&ordering=author"));
     expect(shelfDetailSearchParams(state).toString()).toBe("ordering=author&page=2&page_size=30");
     expect(shelfDetailPath("shelf/id", state)).toBe("/shelves/shelf%2Fid?ordering=author&page=2&page_size=30");
+    for (const ordering of ["-position", "-title", "-author"] as const) {
+      const reverse = shelfDetailStateFromSearchParams(new URLSearchParams(`ordering=${ordering}`));
+      expect(reverse.ordering).toBe(ordering);
+      expect(shelfDetailSearchParams(reverse).toString()).toBe(`ordering=${ordering}`);
+      expect(shelfItemsSdkQuery(reverse).ordering).toBe(ordering);
+    }
     expect(withShelfDetailChange(state, { ordering: "title" }).page).toBe(1);
     expect(withShelfDetailChange(state, { pageSize: 40 }).page).toBe(1);
     expect(withShelfDetailChange(state, { page: 4 }, false).page).toBe(4);

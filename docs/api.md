@@ -352,6 +352,8 @@ List filters:
   - When `?book=<book_id>` is provided, shelf rows include `matched_item_id` (the `ShelfItem.id` for that book on that shelf) to support UI removal without extra item lookups.
 - Ordering:
   - `GET /api/v1/shelves/?ordering=name` orders by shelf name A-Z, then stable id fallback.
+  - `GET /api/v1/shelves/?ordering=-name` orders by shelf name Z-A, then stable id fallback.
+  - `GET /api/v1/shelves/?ordering=item_count` orders by lowest viewer-visible item count first, then name/id fallback.
   - `GET /api/v1/shelves/?ordering=-item_count` orders by highest item count first, then name/id fallback.
   - Missing/blank `ordering` defaults to `name`.
   - Invalid ordering values return `400`.
@@ -391,8 +393,8 @@ Shelf payload notes:
   `404`. Its pagination operates over every stored ShelfItem slot, so `count`
   is the total stored count. The envelope also includes
   `visible_item_count` and `unavailable_item_count`. Results remain in stored
-  position order; `ordering=title` and `ordering=author` return `400` in this
-  representation. Unknown `view` values return `400`.
+  position order; any supplied ordering other than `position` returns `400` in
+  this representation. Unknown `view` values return `400`.
 - Visible `view=edit` rows include the ordinary compact `book` and
   `unavailable: false`. Retained hidden rows contain only ShelfItem identity,
   shelf identity, zero-based position, `unavailable: true`, `book: null`, and
@@ -437,8 +439,11 @@ Shelf payload notes:
   stored slots, including unavailable placeholders.
 - Shelf item list ordering:
   - `GET /api/v1/shelves/<id>/items/?ordering=position` orders by stored shelf position and is the default.
+  - `GET /api/v1/shelves/<id>/items/?ordering=-position` orders by stored shelf position in reverse.
   - `GET /api/v1/shelves/<id>/items/?ordering=title` orders the response by contained book title.
+  - `GET /api/v1/shelves/<id>/items/?ordering=-title` orders the response by contained book title descending.
   - `GET /api/v1/shelves/<id>/items/?ordering=author` orders the response by contained book primary author name using the same author-name ordering convention as book display.
+  - `GET /api/v1/shelves/<id>/items/?ordering=-author` reverses the author ordering.
   - Invalid ordering values return `400`.
   - Title/author ordering is response/view ordering only and does not mutate stored `ShelfItem.position`; move/reorder endpoints continue to operate on stored positions.
 - Product/UI displays may show one-based labels such as `#1`, `#2`, etc. React
@@ -675,12 +680,12 @@ Author/Series payload notes:
   the reusable preview shape described below. Tags do not currently attach
   preview books.
 - Author list ordering:
-  - `GET /api/v1/library/authors/?ordering=name` orders by author name A-Z and is the default.
-  - `GET /api/v1/library/authors/?ordering=-book_count` orders by highest role-scoped `book_count` first, then name/id fallback.
+  - `name` (default), `-name`, `book_count`, and `-book_count` are supported.
+  - Book-count ordering uses the role-scoped `book_count`, then name/id fallback.
   - Invalid ordering values return `400`.
 - Series list ordering:
-  - `GET /api/v1/library/series/?ordering=name` orders by series name A-Z and is the default.
-  - `GET /api/v1/library/series/?ordering=-book_count` orders by highest role-scoped `book_count` first, then name/id fallback.
+  - `name` (default), `-name`, `book_count`, and `-book_count` are supported.
+  - Book-count ordering uses the role-scoped `book_count`, then name/id fallback.
   - Invalid ordering values return `400`.
 
 Catalog Tag browse endpoints:
@@ -744,6 +749,8 @@ Book list ordering:
 - `GET /api/v1/library/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
 - `GET /api/v1/library/books/?series=<series_id>` defaults to `series_index` ordering.
 - `GET /api/v1/library/books/?series=<series_id>&ordering=series_index` orders by `series_index` ascending, nulls last, then title/id fallback.
+- Book list ordering accepts `title`, `author`, `series`, `series_index`, and
+  `publisher`, plus the descending `-` form of each value.
 - Invalid ordering values return `400`.
 - Time-based book ordering is intentionally not part of the public sorting contract in this pass.
 
@@ -938,6 +945,7 @@ errors. Group metadata uses PATCH; PUT is unsupported and returns `405`.
 Group list ordering:
 
 - `GET /api/v1/library/groups/?ordering=name` orders by group name A-Z and is the default.
+- `GET /api/v1/library/groups/?ordering=-name` orders by group name Z-A.
 - Invalid ordering values return `400`.
 - Public/Common Room is not forced to the top by this endpoint.
 
@@ -949,6 +957,9 @@ pagination envelope. React owns any UI paging state built on this API.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=title` orders by title A-Z and is the default.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
+- Group Book ordering accepts the normal Book-list values: `title`, `author`,
+  `series`, `series_index`, and `publisher`, plus the descending `-` form of
+  each value.
 - Invalid ordering values return `400`.
 - Memberships (Manager/Owner only):
   - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; readable by group members and by Owner/Manager/Librarian)

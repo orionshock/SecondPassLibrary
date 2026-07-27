@@ -153,7 +153,7 @@ class ShelfViewSet(
             )
             ordering = parse_ordering_param(
                 self.request,
-                allowed={"name", "-item_count"},
+                allowed={"name", "-name", "item_count", "-item_count"},
                 default="name",
             )
             return apply_shelf_ordering(visible_qs, ordering)
@@ -288,7 +288,7 @@ class ShelfViewSet(
         qs = visible_shelf_items_for_user(request.user, shelf)
         ordering = parse_ordering_param(
             request,
-            allowed={"position", "title", "author"},
+            allowed={"position", "-position", "title", "-title", "author", "-author"},
             default="position",
         )
         qs = apply_shelf_item_ordering(qs, ordering)

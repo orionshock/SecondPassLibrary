@@ -175,6 +175,10 @@ def with_visible_item_count(queryset: QuerySet[Shelf], *, user: Any) -> QuerySet
 def apply_shelf_ordering(queryset: QuerySet[Shelf], ordering: str) -> QuerySet[Shelf]:
     if ordering == "name":
         return queryset.order_by("name", "id")
+    if ordering == "-name":
+        return queryset.order_by("-name", "id")
+    if ordering == "item_count":
+        return queryset.order_by("item_count", "name", "id")
     if ordering == "-item_count":
         return queryset.order_by("-item_count", "name", "id")
     raise ValidationError({"ordering": "Invalid ordering."})
@@ -183,11 +187,22 @@ def apply_shelf_ordering(queryset: QuerySet[Shelf], ordering: str) -> QuerySet[S
 def apply_shelf_item_ordering(queryset: QuerySet[ShelfItem], ordering: str) -> QuerySet[ShelfItem]:
     if ordering == "position":
         return queryset.order_by("position", "id", "book_id")
+    if ordering == "-position":
+        return queryset.order_by("-position", "id", "book_id")
     if ordering == "title":
         return queryset.order_by("book__title", "id", "book_id")
-    if ordering == "author":
+    if ordering == "-title":
+        return queryset.order_by("-book__title", "id", "book_id")
+    if ordering in {"author", "-author"}:
+        descending = ordering.startswith("-")
+        author_order = (
+            F("_primary_author_name").desc(nulls_last=True)
+            if descending
+            else F("_primary_author_name").asc(nulls_last=True)
+        )
+        title_order = "-book__title" if descending else "book__title"
         return (
             queryset.annotate(_primary_author_name=Min("book__authors__sort_name"))
-            .order_by(F("_primary_author_name").asc(nulls_last=True), "book__title", "id")
+            .order_by(author_order, title_order, "id")
         )
     raise ValidationError({"ordering": "Invalid ordering."})

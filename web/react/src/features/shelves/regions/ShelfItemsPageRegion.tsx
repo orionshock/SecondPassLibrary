@@ -9,8 +9,11 @@ import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
 const shelfItemOrderingOptions: readonly OrderMenuOption<ShelfItemOrdering>[] = [
   { value: "position", label: "Shelf Order", icon: "format_list_numbered" },
+  { value: "-position", label: "Reverse Shelf Order", icon: "format_list_numbered_rtl" },
   { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
+  { value: "-title", label: "Title Z-A", icon: "sort_by_alpha" },
   { value: "author", label: "Author A-Z", icon: "person" },
+  { value: "-author", label: "Author Z-A", icon: "person" },
 ];
 
 export function ShelfItemsPageRegion({ shelfId, shelfName, shelfPath, page, pageNumber, pageSize, ordering, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {

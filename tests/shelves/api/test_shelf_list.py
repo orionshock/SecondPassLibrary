@@ -257,17 +257,34 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
         )
 
         self.client.login(username="reader", password="pw")
+        personal_default = assert_response(
+            self.client.get("/api/v1/shelves/?scope=personal")
+        )
         personal_name = assert_response(
             self.client.get("/api/v1/shelves/?scope=personal&ordering=name")
+        )
+        personal_name_desc = assert_response(
+            self.client.get("/api/v1/shelves/?scope=personal&ordering=-name")
+        )
+        self.assertEqual(
+            [row["name"] for row in response_data_list(personal_default)],
+            ["Alpha", "Zulu"],
         )
         self.assertEqual(personal_name.status_code, status.HTTP_200_OK)
         self.assertEqual(
             [row["name"] for row in response_data_list(personal_name)],
             ["Alpha", "Zulu"],
         )
+        self.assertEqual(
+            [row["name"] for row in response_data_list(personal_name_desc)],
+            ["Zulu", "Alpha"],
+        )
 
         personal_count = assert_response(
             self.client.get("/api/v1/shelves/?scope=personal&ordering=-item_count")
+        )
+        personal_count_asc = assert_response(
+            self.client.get("/api/v1/shelves/?scope=personal&ordering=item_count")
         )
         self.assertEqual(personal_count.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -276,6 +293,13 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
                 for row in response_data_list(personal_count)
             ],
             [("Zulu", 2), ("Alpha", 1)],
+        )
+        self.assertEqual(
+            [
+                (row["name"], row["item_count"])
+                for row in response_data_list(personal_count_asc)
+            ],
+            [("Alpha", 1), ("Zulu", 2)],
         )
 
         shared_name = assert_response(

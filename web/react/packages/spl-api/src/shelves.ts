@@ -6,9 +6,9 @@ import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagi
 
 export type ShelfOwnerType = "user" | "group";
 export type ShelfVisibility = "private" | "listed";
-export type ShelfOrdering = "name" | "-item_count";
+export type ShelfOrdering = "name" | "-name" | "item_count" | "-item_count";
 export type ShelfScope = "personal" | "shared" | "group";
-export type ShelfItemOrdering = "position" | "title" | "author";
+export type ShelfItemOrdering = "position" | "-position" | "title" | "-title" | "author" | "-author";
 
 export interface ShelfOwnerUser {
   profileId: string;

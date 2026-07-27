@@ -83,6 +83,12 @@ unavailable-item cleanup compact the remaining order. Duplicate/colliding
 requested positions are canonicalized deterministically. Product UI may display
 one-based positions while the stored and API position remains zero-based.
 
+Shelf lists accept name and viewer-visible item-count ordering in either
+direction. Normal item reads accept stored position, title, and author ordering
+in either direction. These read orderings do not mutate stored positions.
+Editor inventory remains stored-position-only because its locked unavailable
+placeholders describe the mutation order rather than an alternate presentation.
+
 Deleting a shelf deletes its ShelfItems only. It never deletes Books, stored
 EPUB files, reading sessions, or annotations.
 

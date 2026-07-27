@@ -151,6 +151,28 @@ describe("Shelves SDK", () => {
     expect(page.items[0]).not.toHaveProperty("preview_books");
   });
 
+  it("serializes every added Shelf and item ordering value", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+
+    await listShelves({ ordering: "-name" }, client);
+    await listShelves({ ordering: "item_count" }, client);
+    await listShelfItems("shelf/id", { ordering: "-position" }, client);
+    await listShelfItems("shelf/id", { ordering: "-title" }, client);
+    await listShelfItems("shelf/id", { ordering: "-author" }, client);
+
+    expect(calls).toEqual([
+      "/api/v1/shelves/?ordering=-name",
+      "/api/v1/shelves/?ordering=item_count",
+      "/api/v1/shelves/shelf%2Fid/items/?ordering=-position",
+      "/api/v1/shelves/shelf%2Fid/items/?ordering=-title",
+      "/api/v1/shelves/shelf%2Fid/items/?ordering=-author",
+    ]);
+  });
+
   it("maps detail and Shelf items through the compact Book contract", async () => {
     const calls: string[] = [];
     const responses = [

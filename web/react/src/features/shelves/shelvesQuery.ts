@@ -30,8 +30,8 @@ export interface ShelfEditUrlState {
 
 const pageSizes = new Set([20, 30, 40, 50]);
 const scopes = new Set<ShelfScope>(["personal", "shared", "group"]);
-const shelfOrderings = new Set<ShelfOrdering>(["name", "-item_count"]);
-const itemOrderings = new Set<ShelfItemOrdering>(["position", "title", "author"]);
+const shelfOrderings = new Set<ShelfOrdering>(["name", "-name", "item_count", "-item_count"]);
+const itemOrderings = new Set<ShelfItemOrdering>(["position", "-position", "title", "-title", "author", "-author"]);
 const shelfEditTabs = new Set<ShelfEditTab>(["details", "books", "add-books"]);
 
 export function shelvesListStateFromSearchParams(parameters: URLSearchParams): ShelvesListUrlState {

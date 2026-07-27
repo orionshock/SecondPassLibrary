@@ -95,14 +95,16 @@ class ShelfEditorItemViewTests(BaseShelvesAPITest):
         shelf, first, _hidden, last = self._mixed_personal_shelf()
         self.client.login(username="reader", password="pw")
 
-        response = assert_response(self.client.get(f"/api/v1/shelves/{shelf.id}/items/"))
+        response = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/items/?ordering=-position")
+        )
 
         payload = response_data_dict(response)
         self.assertEqual(payload["count"], 2)
         self.assertNotIn("visible_item_count", payload)
         self.assertEqual(
             [row["id"] for row in response_data_list(response)],
-            [str(first.id), str(last.id)],
+            [str(last.id), str(first.id)],
         )
 
     def test_non_editor_cannot_request_edit_view_but_unreadable_shelf_is_not_found(self):

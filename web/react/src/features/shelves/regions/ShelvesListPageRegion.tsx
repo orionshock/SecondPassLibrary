@@ -13,7 +13,9 @@ import { ShelfScopesPageRegion } from "./ShelfScopesPageRegion";
 
 const shelfOrderingOptions: readonly OrderMenuOption<ShelfOrdering>[] = [
   { value: "name", label: "Name A-Z", icon: "sort_by_alpha" },
-  { value: "-item_count", label: "Most Items", icon: "library_books" },
+  { value: "-name", label: "Name Z-A", icon: "sort_by_alpha" },
+  { value: "-item_count", label: "Most Items", icon: "format_list_numbered" },
+  { value: "item_count", label: "Fewest Items", icon: "format_list_numbered" },
 ];
 
 export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, ordering, loading, error, onScopeChange, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {

@@ -185,6 +185,15 @@ class ShelfItemTests(BaseShelvesAPITest):
             [("Zulu", 0), ("Alpha", 1)],
         )
 
+        reverse = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf_id}/items/?ordering=-position")
+        )
+        self.assertEqual(reverse.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(reverse)],
+            [("Alpha", 1), ("Zulu", 0)],
+        )
+
         invalid = assert_response(
             self.client.get(f"/api/v1/shelves/{shelf_id}/items/?ordering=created_at")
         )
@@ -218,6 +227,14 @@ class ShelfItemTests(BaseShelvesAPITest):
         self.assertEqual(
             [(row["book"]["title"], row["position"]) for row in response_data_list(response)],
             [("Alpha", 1), ("Zulu", 0)],
+        )
+
+        reverse = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/items/?ordering=-title")
+        )
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(reverse)],
+            [("Zulu", 0), ("Alpha", 1)],
         )
 
         stored = list(ShelfItem.objects.filter(shelf=shelf).order_by("position"))
@@ -262,6 +279,14 @@ class ShelfItemTests(BaseShelvesAPITest):
         self.assertEqual(
             [row["book"]["title"] for row in payload["results"]],
             ["Alpha", "Beta"],
+        )
+
+        reverse = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/items/?ordering=-author")
+        )
+        self.assertEqual(
+            [row["book"]["title"] for row in response_data_list(reverse)],
+            ["Zulu", "Beta", "Alpha"],
         )
 
     def test_item_patch_position_moves_item_down_and_shifts_intervening_items(self):

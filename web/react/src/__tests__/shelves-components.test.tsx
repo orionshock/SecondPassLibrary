@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CompactBook, ShelfItem, ShelfSummary } from "@second-pass/spl-api";
+import type { CompactBook, ShelfItem, ShelfItemOrdering, ShelfOrdering, ShelfSummary } from "@second-pass/spl-api";
 import { ShelfHeaderPageRegion } from "../features/shelves/regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "../features/shelves/regions/ShelfItemsPageRegion";
 import { ShelvesListPageRegion } from "../features/shelves/regions/ShelvesListPageRegion";
@@ -44,12 +44,12 @@ describe("Shelves read-only regions", () => {
   });
 
   it("renders Shelf list identity, previews, and optional Group treatment without inline Edit", () => {
-    const renderList = (shelf: ShelfSummary, scope: "personal" | "group") => renderToStaticMarkup(<MemoryRouter><ShelvesListPageRegion
+    const renderList = (shelf: ShelfSummary, scope: "personal" | "group", ordering: ShelfOrdering = "name") => renderToStaticMarkup(<MemoryRouter><ShelvesListPageRegion
       page={{ items: [shelf], count: 1, next: null, previous: null }}
       pageNumber={1}
       pageSize={20}
       scope={scope}
-      ordering="name"
+      ordering={ordering}
       loading={false}
       onScopeChange={vi.fn()}
       onOrderingChange={vi.fn()}
@@ -65,8 +65,11 @@ describe("Shelves read-only regions", () => {
     expect(personal).toContain('aria-label="Shelves pagination, top"');
     expect(personal).toContain('aria-label="Shelves pagination, bottom"');
     expect(personal).toContain('aria-label="Order shelves, current: Name A-Z"');
-    expect(personal).not.toContain("Reverse Shelf Order");
     expect(personal).not.toContain('href="/shelves/shelf/edit"');
+
+    expect(renderList(personalShelf, "personal", "-name")).toContain("Name Z-A");
+    expect(renderList(personalShelf, "personal", "-item_count")).toContain("Most Items");
+    expect(renderList(personalShelf, "personal", "item_count")).toContain("Fewest Items");
 
     const group = renderList(groupShelf, "group");
     expect(group).toContain('aria-label="Public group: Common Room"');
@@ -79,25 +82,28 @@ describe("Shelves read-only regions", () => {
     expect(header).toContain("Shared by @reader");
     expect(header).not.toContain("Edit");
 
-    const items = renderToStaticMarkup(<MemoryRouter><ShelfItemsPageRegion
+    const renderItems = (ordering: ShelfItemOrdering) => renderToStaticMarkup(<MemoryRouter><ShelfItemsPageRegion
       shelfId="shelf"
       shelfName="Favorites"
       shelfPath="/shelves/shelf?ordering=title"
       page={{ items: [item], count: 1, next: null, previous: null }}
       pageNumber={1}
       pageSize={20}
-      ordering="position"
+      ordering={ordering}
       loading={false}
       onOrderingChange={vi.fn()}
       onPageChange={vi.fn()}
       onPageSizeChange={vi.fn()}
       onRetry={vi.fn()}
     /></MemoryRouter>);
+    const items = renderItems("position");
     expect(items).toContain("Visible Book");
     expect(items).toContain('href="/library/books/book"');
     expect(items).toContain('aria-label="Order shelf books, current: Shelf Order"');
-    expect(items).not.toContain("Reverse Shelf Order");
     expect(items).not.toContain("adder");
     for (const absent of ["Add book", "Remove book", "Move up", "Move down"]) expect(items).not.toContain(absent);
+    expect(renderItems("-position")).toContain("Reverse Shelf Order");
+    expect(renderItems("-title")).toContain("Title Z-A");
+    expect(renderItems("-author")).toContain("Author Z-A");
   });
 });
