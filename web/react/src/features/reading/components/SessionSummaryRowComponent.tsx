@@ -2,7 +2,9 @@ import type { ReadingSessionSummary } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { Badge } from "../../../components/ui";
+import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { readingSessionBreadcrumbFallback } from "../readingBreadcrumbs";
 
 export function SessionSummaryRowComponent({ session }: { session: ReadingSessionSummary }) {
   const sessionName = session.name.trim() || "Unnamed session";
@@ -15,7 +17,7 @@ export function SessionSummaryRowComponent({ session }: { session: ReadingSessio
     </div>
     <div className="reading-session-row__body">
       <div className="reading-session-row__heading">
-        <h2>{sessionName}</h2>
+        <h2><Link to={`/reading/sessions/${encodeURIComponent(session.id)}`} state={breadcrumbNavigationState(readingSessionBreadcrumbFallback(sessionName))}>{sessionName}</Link></h2>
         <Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge>
       </div>
       {session.book.unavailable

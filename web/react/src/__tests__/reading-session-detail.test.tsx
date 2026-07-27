@@ -1,0 +1,102 @@
+import type { Page, ReadingAnnotation, ReadingSessionDetail } from "@second-pass/spl-api";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+
+import { appRoutes } from "../app/router";
+import { readingSessionBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
+import { ReadingSessionDetailPageRegion } from "../features/reading/regions/ReadingSessionDetailPageRegion";
+
+const session: ReadingSessionDetail = {
+  id: "session-sensitive-id",
+  name: "Imported history",
+  status: "completed",
+  isActive: false,
+  startedAt: "2026-01-01T00:00:00Z",
+  completedAt: "2026-01-03T00:00:00Z",
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-03T00:00:00Z",
+  notes: "Owned Session note",
+  progression: 0.5,
+  annotationCount: 2,
+  canOpen: true,
+  book: {
+    id: "book/id",
+    title: "Visible Book",
+    authors: [{ id: "author-1", name: "Visible Author" }],
+    series: { id: "series-1", name: "Visible Series" },
+    seriesIndex: "2.0",
+    coverUrl: "/media/cover.jpg",
+    unavailable: false,
+  },
+};
+
+const annotations: Page<ReadingAnnotation> = {
+  count: 2,
+  next: null,
+  previous: null,
+  items: [
+    { id: "annotation-1", kind: "highlight", highlightText: "Quoted passage", highlightColor: "yellow", commentText: "Reader note", hasComment: true, createdAt: "2026-01-02T00:00:00Z", updatedAt: "2026-01-02T00:00:00Z", selector: "epubcfi(/6/2)", xpath: "/html/body" } as ReadingAnnotation,
+    { id: "annotation-2", kind: "bookmark", highlightText: "", highlightColor: "", commentText: "", hasComment: false, createdAt: "2026-01-03T00:00:00Z", updatedAt: "2026-01-03T00:00:00Z" },
+  ],
+};
+
+function renderDetail(overrides: Partial<Parameters<typeof ReadingSessionDetailPageRegion>[0]> = {}) {
+  return renderToStaticMarkup(<MemoryRouter><ReadingSessionDetailPageRegion
+    session={session}
+    progress={{ loading: false, progress: { sessionId: session.id, progression: 0.5, createdAt: null, updatedAt: "2026-01-03T00:00:00Z" } }}
+    annotations={{ loading: false, page: annotations }}
+    annotationFilter="all"
+    annotationOrder="newest"
+    pageNumber={1}
+    pageSize={20}
+    onAnnotationFilterChange={vi.fn()}
+    onAnnotationOrderChange={vi.fn()}
+    onPageChange={vi.fn()}
+    onPageSizeChange={vi.fn()}
+    onRetryProgress={vi.fn()}
+    onRetryAnnotations={vi.fn()}
+    {...overrides}
+  /></MemoryRouter>);
+}
+
+describe("My Marginalia Session Detail", () => {
+  it("registers the detail route and builds a bounded breadcrumb without Session IDs", () => {
+    const children = appRoutes[0]?.children ?? [];
+    expect(children.some((route) => "path" in route && route.path === "reading/sessions/:sessionId")).toBe(true);
+    expect(readingSessionBreadcrumbFallback("Imported history")).toEqual([{ label: "My Marginalia", to: "/reading", resetTrail: true }, { label: "Imported history" }]);
+    expect(JSON.stringify(readingSessionBreadcrumbFallback(""))).not.toContain(session.id);
+  });
+
+  it("renders visible Book, progress, and annotation content without locator internals", () => {
+    const markup = renderDetail();
+    for (const value of ["Visible Book", "Visible Author", "Visible Series", "Owned Session note", "Quoted passage", "Reader note"]) expect(markup).toContain(value);
+    expect(markup).toContain('href="/library/books/book%2Fid"');
+    expect(markup).toContain("50%");
+    expect(markup).not.toContain("epubcfi");
+    expect(markup).not.toContain("/html/body");
+    expect(markup).not.toContain("session-sensitive-id");
+  });
+
+  it("keeps unavailable Book history inspectable without exposing a Book destination", () => {
+    const unavailable = { ...session, canOpen: false, book: { id: null, title: "", authors: [], series: null, seriesIndex: null, coverUrl: null, unavailable: true } };
+    const markup = renderDetail({ session: unavailable });
+    expect(markup).toContain("Owned Session note");
+    expect(markup).not.toContain('href="/library/books/');
+    expect(markup).not.toContain("book/id");
+  });
+
+  it("keeps annotation failures bounded while retaining Session content", () => {
+    const markup = renderDetail({ annotations: { loading: false, error: new Error("Annotation load failed") } });
+    expect(markup).toContain("Owned Session note");
+    expect(markup).toContain('role="alert"');
+    expect(markup).toContain("Annotation load failed");
+  });
+
+  it("renders annotation filter and paginated-list contracts", () => {
+    const markup = renderDetail({ annotations: { loading: false, page: { ...annotations, count: 40, next: "/next" } } });
+    expect(markup).toContain('id="reading-annotation-kind"');
+    expect(markup).toContain('aria-label="Marginalia pagination, top"');
+    expect(markup).toContain('aria-label="Marginalia pagination, bottom"');
+  });
+});

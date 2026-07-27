@@ -62,6 +62,7 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain("42% read");
     expect(markup).toContain("2 annotations");
     expect(markup).toContain('href="/library/books/visible-book"');
+    expect(markup).toContain(`href="/reading/sessions/${visibleSession.id}"`);
     expect(markup).toContain("View Book");
     expect(markup).not.toContain("Continue reading");
   });
@@ -70,7 +71,8 @@ describe("My Marginalia Session list", () => {
     const markup = renderRegion({ items: [hiddenSession], count: 1, next: null, previous: null });
     expect(markup).toContain("Unnamed session");
     expect(markup).toContain("Book unavailable");
-    expect(markup).not.toContain("79dc1581");
+    expect(markup).not.toContain(">79dc1581");
+    expect(markup).toContain(`href="/reading/sessions/${hiddenSession.id}"`);
     expect(markup).not.toContain("hidden-book</");
     expect(markup).not.toContain("View Book");
     expect(markup).not.toContain('href="/library/books/hidden-book"');
@@ -95,10 +97,10 @@ describe("My Marginalia Session list", () => {
     expect(failed).toContain("Retry");
   });
 
-  it("keeps Export and Session Detail absent while defining the Import destination", () => {
+  it("keeps Export absent while exposing Session Detail and the Import destination", () => {
     const markup = renderRegion({ items: [visibleSession], count: 1, next: null, previous: null });
     expect(markup).not.toContain('href="/reading/export"');
-    expect(markup).not.toContain(`/reading/sessions/${visibleSession.id}`);
+    expect(markup).toContain(`/reading/sessions/${visibleSession.id}`);
     expect(readingImportBreadcrumbFallback[0]).toMatchObject({ to: "/reading" });
   });
 });

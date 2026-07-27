@@ -65,16 +65,15 @@ describe("Dashboard", () => {
     expect(failed).toContain("View Shelves");
   });
 
-  it("renders recent session facts and links only to Book Detail", () => {
+  it("renders recent session facts and links to Session Detail", () => {
     const markup = renderDashboard({ status: "ready", items: [recentItem] });
     expect(markup).toContain("A Book");
     expect(markup).toContain("Evening read");
     expect(markup).toContain("42% read");
     expect(markup).toContain('dateTime="2026-07-27T18:30:00Z"');
     expect(markup).toContain('src="/media/cover.jpg"');
-    expect(markup).toContain('href="/library/books/book%2Fid"');
-    expect(markup).not.toContain('href="/reading');
-    expect(markup).not.toContain("session-1");
+    expect(markup).toContain('href="/reading/sessions/session-1"');
+    expect(markup).not.toContain('href="/library/books/book%2Fid"');
   });
 
   it("renders the cover fallback when a recent Book has no cover", () => {

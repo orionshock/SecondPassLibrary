@@ -33,6 +33,9 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   applyReadingImport,
+  getReadingProgress,
+  getReadingSession,
+  listReadingAnnotations,
   listReadingSessions,
   listRecentReadingSessions,
   previewReadingImport,
@@ -44,6 +47,12 @@ export {
   type ReadingImportSelectedBook,
   type ReadingImportSelectedSession,
   type ReadingImportSessionPreview,
+  type ReadingAnnotation,
+  type ReadingAnnotationKind,
+  type ReadingAnnotationOrdering,
+  type ReadingAnnotationsQuery,
+  type ReadingProgress,
+  type ReadingSessionDetail,
   type ReadingSessionStatus,
   type ReadingSessionSummary,
   type ReadingSessionsQuery,

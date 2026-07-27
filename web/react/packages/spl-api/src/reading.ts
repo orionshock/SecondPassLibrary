@@ -53,6 +53,86 @@ export interface ReadingSessionsQuery {
   pageSize?: number;
 }
 
+interface ReadingSessionDetailResponse extends ReadingSessionSummaryResponse {
+  created_at: string;
+  book: ReadingSessionSummaryResponse["book"] & {
+    authors: Array<{ id: string; name: string }>;
+    series: { id: string; name: string } | null;
+    series_index: string | null;
+  };
+}
+
+export interface ReadingSessionDetail {
+  id: string;
+  name: string;
+  status: ReadingSessionStatus;
+  isActive: boolean;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  notes: string;
+  progression: number | null;
+  annotationCount: number;
+  canOpen: boolean;
+  book: {
+    id: string | null;
+    title: string;
+    authors: Array<{ id: string; name: string }>;
+    series: { id: string; name: string } | null;
+    seriesIndex: string | null;
+    coverUrl: string | null;
+    unavailable: boolean;
+  };
+}
+
+interface ReadingProgressResponse {
+  session: string;
+  progression: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface ReadingProgress {
+  sessionId: string;
+  progression: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export type ReadingAnnotationKind = "highlight" | "bookmark";
+export type ReadingAnnotationOrdering = "created" | "-created" | "modified" | "-modified";
+
+interface ReadingAnnotationResponse {
+  id: string;
+  kind: ReadingAnnotationKind;
+  highlight_text: string;
+  highlight_color: string;
+  comment_text: string;
+  has_comment: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReadingAnnotation {
+  id: string;
+  kind: ReadingAnnotationKind;
+  highlightText: string;
+  highlightColor: string;
+  commentText: string;
+  hasComment: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReadingAnnotationsQuery {
+  sessionId: string;
+  kind?: ReadingAnnotationKind;
+  ordering?: ReadingAnnotationOrdering;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface ReadingImportCounts {
   books: number;
   sessions: number;
@@ -279,6 +359,62 @@ export async function listReadingSessions(
     `/api/v1/reading/sessions/${suffix}`,
   );
   return toPage(response, mapReadingSessionSummary);
+}
+
+export async function getReadingSession(sessionId: string, client: ApiClient = apiClient): Promise<ReadingSessionDetail> {
+  const item = await client.request<ReadingSessionDetailResponse>(`/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/`);
+  return {
+    id: item.id,
+    name: item.name,
+    status: item.status,
+    isActive: item.is_active,
+    startedAt: item.started_at,
+    completedAt: item.completed_at,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+    notes: item.notes,
+    progression: item.progression,
+    annotationCount: item.annotation_count,
+    canOpen: item.can_open,
+    book: {
+      id: item.can_open ? item.book.id : null,
+      title: item.book.title,
+      authors: item.book.authors.map((author) => ({ ...author })),
+      series: item.book.series ? { ...item.book.series } : null,
+      seriesIndex: item.book.series_index,
+      coverUrl: item.book.cover_url === null ? null : sameOriginUrl(item.book.cover_url),
+      unavailable: !item.can_open,
+    },
+  };
+}
+
+export async function getReadingProgress(sessionId: string, client: ApiClient = apiClient): Promise<ReadingProgress> {
+  const item = await client.request<ReadingProgressResponse>(`/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/progress/`);
+  return {
+    sessionId: item.session,
+    progression: item.progression,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  };
+}
+
+export async function listReadingAnnotations(query: ReadingAnnotationsQuery, client: ApiClient = apiClient): Promise<Page<ReadingAnnotation>> {
+  const parameters = new URLSearchParams({ session_id: query.sessionId });
+  if (query.kind !== undefined) parameters.set("kind", query.kind);
+  if (query.ordering !== undefined) parameters.set("ordering", query.ordering);
+  if (query.page !== undefined) parameters.set("page", String(query.page));
+  if (query.pageSize !== undefined) parameters.set("page_size", String(query.pageSize));
+  const response = await client.request<ApiPage<ReadingAnnotationResponse>>(`/api/v1/reading/annotations/?${parameters.toString()}`);
+  return toPage(response, (item) => ({
+    id: item.id,
+    kind: item.kind,
+    highlightText: item.highlight_text,
+    highlightColor: item.highlight_color,
+    commentText: item.comment_text,
+    hasComment: item.has_comment,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }));
 }
 
 function mapReadingSessionSummary(item: ReadingSessionSummaryResponse): ReadingSessionSummary {

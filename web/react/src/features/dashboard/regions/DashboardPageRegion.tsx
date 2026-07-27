@@ -2,6 +2,7 @@ import type { RecentReadingSession } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { Button, ErrorPanel, Surface } from "../../../components/ui";
+import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { ProductPageShellComponent } from "../../../shared/layout/ProductPageShellComponent";
 
@@ -67,7 +68,7 @@ function RecentReadingCardComponent({ item }: { item: RecentReadingSession }) {
   const progression = item.session.progression === null
     ? undefined
     : Math.round(Math.max(0, Math.min(1, item.session.progression)) * 100);
-  return <Link className="dashboard-reading-card" to={`/library/books/${encodeURIComponent(item.book.id)}`}>
+  return <Link className="dashboard-reading-card" to={`/reading/sessions/${encodeURIComponent(item.session.id)}`} state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/reading", resetTrail: true }, { label: item.session.name.trim() || "Session" }])}>
     <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
     <span className="dashboard-reading-card__body">
       <strong>{item.book.title}</strong>
