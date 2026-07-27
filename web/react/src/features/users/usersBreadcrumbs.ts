@@ -12,7 +12,7 @@ export function usersEditBreadcrumbTrail(username: string): BreadcrumbItem[] {
 export function usersEditBreadcrumbFallbackFor(username?: string): readonly BreadcrumbItem[] {
   return [
     { label: "Users", to: "/users", resetTrail: true, icon: "user" },
-    { label: username ? `@${username}` : "User", icon: "user" },
+    { label: username ?? "User", icon: "user" },
     { label: "Edit" },
   ];
 }

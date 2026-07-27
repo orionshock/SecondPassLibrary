@@ -114,6 +114,8 @@ Group Shelves; API `scope=all` is not exposed. Rows render only server-provided
 ownership, visibility, viewer-visible item count, description, and bounded
 previews. Group-scope rows use Group/Public owner pills, Shared by Others uses
 plain person-icon username identity, and Personal omits redundant ownership.
+The same identity rule now applies throughout the Product UI: usernames are
+plain person-icon text, while full-name surfaces use `First Last · username`.
 `ShelfDetailOrchestrator` owns `/shelves/:shelfId`, its
 read-only Shelf header, URL-backed item ordering, pagination, bounded recovery,
 and shared compact Book rows with contextual Shelf breadcrumbs. Separate Shelf

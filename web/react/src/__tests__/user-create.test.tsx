@@ -73,6 +73,8 @@ describe("User create workflow", () => {
     };
     const markup = renderToStaticMarkup(<MemoryRouter><UserCreateSuccessPageRegion result={result} /></MemoryRouter>);
     expect(markup).toContain("Temporary credentials");
+    expect(markup).toContain('aria-label="User new-reader"');
+    expect(markup).not.toContain("@new-reader");
     expect(markup).toContain("Username: new-reader");
     expect(markup).toContain("Password: one-time-secret");
     expect(markup).toContain("one-time-secret");

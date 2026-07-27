@@ -36,7 +36,8 @@ describe("Users list regions", () => {
   it("renders effective Owner role, inactive state, and the Edit destination", () => {
     const markup = renderList({ items: [owner], count: 1, next: null, previous: null }, { advanced: true });
     expect(markup).toContain("Ada Lovelace");
-    expect(markup).toContain("&lt;@owner&gt;");
+    expect(markup).toContain('aria-label="User owner"');
+    expect(markup).not.toContain("@owner");
     expect(markup).toContain("ada@example.test");
     expect(markup).toContain("Owner");
     expect(markup).toContain("Inactive");

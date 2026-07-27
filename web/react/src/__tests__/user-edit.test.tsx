@@ -22,7 +22,7 @@ const manager: CurrentUser = { ...owner, username: "manager", profileId: "manage
 
 describe("User Edit", () => {
   it("uses canonical identity breadcrumbs and permission-aware capitalized roles", () => {
-    expect(usersEditBreadcrumbFallbackFor("reader")).toEqual([{ label: "Users", to: "/users", resetTrail: true, icon: "user" }, { label: "@reader", icon: "user" }, { label: "Edit" }]);
+    expect(usersEditBreadcrumbFallbackFor("reader")).toEqual([{ label: "Users", to: "/users", resetTrail: true, icon: "user" }, { label: "reader", icon: "user" }, { label: "Edit" }]);
     expect(usersEditBreadcrumbTrail("reader")).toEqual(usersEditBreadcrumbFallbackFor("reader"));
     expect(editableUserRoles(owner, target)).toEqual(["manager", "librarian", "reader"]);
     expect(editableUserRoles(manager, target)).toEqual(["librarian", "reader"]);
@@ -50,11 +50,12 @@ describe("User Edit", () => {
   });
 
   it("requires reset confirmation and renders a read-only one-time password result", () => {
-    expect(confirmManagedPasswordReset("reader", vi.fn(() => false))).toBe(false);
+    expect(confirmManagedPasswordReset(vi.fn(() => false))).toBe(false);
     const result: ManagedPasswordResetResult = { username: "reader", temporaryPassword: "one-time", message: "show once" };
     const markup = renderToStaticMarkup(<MemoryRouter><UserPasswordPageRegion mustChangePassword canManage requirementState={{ pending: false }} resetState={{ pending: false, message: "Password reset." }} resetResult={result} onRequirementChange={vi.fn()} onReset={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain('readOnly=""');
     expect(markup).toContain("Username: reader");
+    expect(markup).toContain('aria-label="User reader"');
     expect(markup).toContain("Password: one-time");
     expect(markup.indexOf("one-time")).toBeLessThan(markup.indexOf("It will not be shown again"));
     expect(markup).toContain("Require password change on next login");

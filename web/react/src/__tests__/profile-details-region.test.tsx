@@ -10,6 +10,8 @@ describe("ProfileDetailsPageRegion", () => {
   it("renders success feedback without duplicating identity fields", () => {
     const markup = renderToStaticMarkup(<ProfileDetailsPageRegion user={user} state={{ pending: false, message: "Profile saved." }} onSave={vi.fn()} onClearStatus={vi.fn()} />);
     expect(markup).toContain("Profile saved.");
+    expect(markup).toContain('aria-label="User ada"');
+    expect(markup).not.toContain("@ada");
     expect(markup).toContain("check_circle");
     expect(markup).not.toContain("Profile details");
   });

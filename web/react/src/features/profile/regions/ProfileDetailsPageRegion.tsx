@@ -6,6 +6,7 @@ import { displayUserRole } from "../../../domain/users/presentation";
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";
 
 export interface ProfileDraft { email: string; firstName: string; lastName: string }
 type ProfileDraftAction = { type: "change"; field: keyof ProfileDraft; value: string } | { type: "reset"; value: ProfileDraft };
@@ -22,12 +23,12 @@ export function ProfileDetailsPageRegion({ user, state, onSave, onClearStatus }:
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void onSave(draft); }
   function edit() { onClearStatus(); setEditing(true); }
   function cancel() { dispatch({ type: "reset", value: profileDraftFromUser(user) }); onClearStatus(); setEditing(false); }
-  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username;
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
 
   return <Surface>
     <div className="profile-user-row">
       <span className="profile-row-label">User</span>
-      <span className="profile-user-summary"><span>{displayName}</span><span className="css-dot" aria-hidden="true" /><span>&lt;@{user.username}&gt;</span><Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge></span>
+      <span className="profile-user-summary"><UserInlineIdentityComponent username={user.username} displayName={displayName} /><Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge></span>
       {!editing ? <div className="profile-edit-actions"><ActionFeedbackComponent state={state} /><Button type="button" tone="secondary" onClick={edit}>Edit</Button></div> : null}
     </div>
     {editing ? <form className="form-grid profile-details-form" onSubmit={submit}>

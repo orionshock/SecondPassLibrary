@@ -226,7 +226,8 @@ describe("Group metadata lifecycle contracts", () => {
       onSearch={vi.fn()} onAdd={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
     />);
 
-    expect(custom).toContain("&lt;@reader&gt;");
+    expect(custom).toContain('aria-label="User reader"');
+    expect(custom).not.toContain("@reader");
     expect(custom).toContain("Curator");
     expect(custom).toContain("Remove curator");
     expect(custom).toContain("Membership update failed.");
@@ -234,7 +235,8 @@ describe("Group metadata lifecycle contracts", () => {
     expect(custom).not.toContain(">Member<");
     expect(publicGroupMembers).not.toContain("Remove curator");
     expect(publicGroupMembers).not.toContain("Make curator");
-    expect(choices).toContain("&lt;@new-reader&gt;");
+    expect(choices).toContain('aria-label="User new-reader"');
+    expect(choices).not.toContain("@new-reader");
     expect(blank).not.toContain("new-reader");
   });
 

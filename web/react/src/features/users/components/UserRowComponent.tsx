@@ -5,16 +5,17 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge } from "../../../components/ui";
 import { displayUserRole } from "../../../domain/users/presentation";
+import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";
 import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
 
 export function UserRowComponent({ user, showGroups }: { user: ManagedUser; showGroups: boolean }) {
-  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Not provided";
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
   const memberships = user.groups.filter((group) => !group.isCurator);
   const curates = user.groups.filter((group) => group.isCurator);
 
   return <tr className={`users-row${user.isActive ? "" : " users-row--inactive"}`}>
     <td className="users-identity">
-      <div className="users-identity__primary"><MaterialIcon name="person" size={16} /><strong>{displayName}</strong><span className="users-identity__dot" aria-hidden="true">•</span><span>{`<@${user.username}>`}</span></div>
+      <div className="users-identity__primary"><UserInlineIdentityComponent username={user.username} displayName={displayName} /></div>
       <div className={`users-identity__email${user.email ? "" : " muted"}`}>{user.email || "No email"}</div>
     </td>
     <td className="users-role-status"><div className="users-role-status__content"><Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge>{user.isActive ? null : <span className="users-status-pill users-status-pill--inactive">Inactive</span>}</div></td>

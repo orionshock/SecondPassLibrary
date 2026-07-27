@@ -27,11 +27,6 @@
   justify-content: flex-end;
 }
 
-.css-dot::before {
-  content: "·";
-  color: var(--muted);
-}
-
 .region-stack,
 .item-list {
   display: grid;

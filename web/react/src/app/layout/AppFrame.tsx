@@ -10,6 +10,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
 import type { BreadcrumbItem } from "../navigation/breadcrumbs";
+import { UserInlineIdentityComponent } from "../../shared/users/UserInlineIdentityComponent";
 import "./AppFrame.css";
 
 export interface AppOutletContext {
@@ -67,7 +68,7 @@ export function AppFrame({
         </nav>
 
         <div className="user-actions">
-          <Link className="profile-link" to="/profile">{user.username}</Link>
+          <Link className="profile-link" to="/profile"><UserInlineIdentityComponent username={user.username} /></Link>
           <a className="logout-link" href="/logout/">Logout</a>
         </div>
       </header>

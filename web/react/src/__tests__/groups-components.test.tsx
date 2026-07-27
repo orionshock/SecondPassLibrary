@@ -146,7 +146,8 @@ describe("Groups read-only regions", () => {
   it("renders username and curator state without membership internals", () => {
     const membership = { user: { profileId: "profile", username: "reader" }, isCurator: true };
     const row = renderToStaticMarkup(<GroupMemberRowComponent membership={membership} />);
-    expect(row).toContain("&lt;@reader&gt;");
+    expect(row).toContain('aria-label="User reader"');
+    expect(row).not.toContain("@reader");
     expect(row).toContain("Curator");
     expect(row).not.toContain("profile");
     const list = renderToStaticMarkup(<GroupMembersPageRegion

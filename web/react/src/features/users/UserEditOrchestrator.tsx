@@ -20,6 +20,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { UserInlineIdentityComponent } from "../../shared/users/UserInlineIdentityComponent";
 import { UserDetailsPageRegion } from "./regions/UserDetailsPageRegion";
 import { UserGroupMembershipsPageRegion } from "./regions/UserGroupMembershipsPageRegion";
 import { UserPasswordPageRegion } from "./regions/UserPasswordPageRegion";
@@ -94,7 +95,7 @@ export function UserEditOrchestrator() {
   }
 
   async function resetPassword() {
-    if (!user || !confirmManagedPasswordReset(user.username)) return;
+    if (!user || !confirmManagedPasswordReset()) return;
     setResetState({ pending: true });
     setResetResult(undefined);
     try {
@@ -122,8 +123,8 @@ export function UserEditOrchestrator() {
   if (load.loading && !user) return <div className="users-results-state" aria-busy="true">Loading user…</div>;
   if (load.error || !user) return <div className="users-results-state"><ErrorPanel>{load.error?.message ?? "User not found."}</ErrorPanel><button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</button><Link to="/users">Back to Users</Link></div>;
 
-  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username;
-  return <ProductPageShellComponent className="users-page user-edit-page" title={`Editing User: ${displayName} <@${user.username}>`} actions={<Link className="button button--secondary" to="/users">Back to Users</Link>}>
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
+  return <ProductPageShellComponent className="users-page user-edit-page" title={<span className="page-header__title-content"><span>Editing User:</span><UserInlineIdentityComponent username={user.username} displayName={displayName} /></span>} actions={<Link className="button button--secondary" to="/users">Back to Users</Link>}>
     <UserDetailsPageRegion
       user={user}
       roles={editableUserRoles(currentUser, user)}

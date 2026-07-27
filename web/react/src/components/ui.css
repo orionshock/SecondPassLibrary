@@ -151,6 +151,11 @@ button:disabled {
   margin-top: 0.45rem !important;
 }
 
+.css-dot::before {
+  content: "\00b7";
+  color: var(--muted);
+}
+
 .page-actions,
 .form-actions {
   display: flex;

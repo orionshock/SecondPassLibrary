@@ -1,9 +1,9 @@
 import type { Page, UserChoice } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
-import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";
 
 export function GroupMemberCandidatesPageRegion({ search, page, pageNumber, pageSize, loading, error, pendingProfileId, controlsDisabled, onSearchChange, onSearch, onAdd, onPageChange, onPageSizeChange, onRetry }: {
   search: string;
@@ -40,7 +40,7 @@ export function GroupMemberCandidatesPageRegion({ search, page, pageNumber, page
       {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
       {page.items.length === 0 ? <p className="muted">No matching users.</p> : <div className="group-member-candidate-rows">
         {page.items.map((choice) => <div className="group-member-candidate-row" key={choice.profileId}>
-          <span><MaterialIcon name="person" /> &lt;@{choice.username}&gt;</span>
+          <UserInlineIdentityComponent username={choice.username} />
           <Button type="button" disabled={controlsDisabled || Boolean(pendingProfileId)} onClick={() => onAdd(choice)}>
             {pendingProfileId === choice.profileId ? "Adding..." : "Add"}
           </Button>

@@ -19,7 +19,8 @@ describe("ShelfSummaryRowComponent", () => {
     expect(markup).toContain('href="/shelves/shelf%2Fid"');
     expect(markup).toContain("Favorites");
     expect(markup).toContain("Reader picks");
-    expect(markup).toContain("(2 books)");
+    expect(markup).toContain("2 books");
+    expect(markup.match(/class="css-dot"/g)).toHaveLength(1);
     expect(markup).toContain('aria-label="Book previews"');
     expect(markup).toContain('aria-label="Open Preview Book"');
     expect(markup).not.toContain('aria-label="User:');
@@ -41,7 +42,8 @@ describe("ShelfSummaryRowComponent", () => {
 
     expect(markup).toContain('aria-label="Public group: Common Room"');
     expect(markup).toContain("from");
-    expect(markup).toContain("(1 book)");
+    expect(markup).toContain("1 book");
+    expect(markup.match(/class="css-dot"/g)).toHaveLength(2);
     expect(markup).not.toContain("Edit");
     expect(markup).not.toContain("Manage");
   });
@@ -61,7 +63,8 @@ describe("ShelfSummaryRowComponent", () => {
     expect(markup).not.toContain("@reader");
     expect(markup).not.toContain('class="badge');
     expect(markup).toContain("shared by");
-    expect(markup).toContain("(3 books)");
+    expect(markup).toContain("3 books");
+    expect(markup.match(/class="css-dot"/g)).toHaveLength(2);
     expect(markup).not.toContain('href="/users/');
     expect(markup).not.toContain("Edit");
   });

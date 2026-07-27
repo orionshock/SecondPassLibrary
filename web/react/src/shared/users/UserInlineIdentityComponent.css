@@ -5,3 +5,8 @@
   color: var(--muted);
   font-size: inherit;
 }
+
+.user-inline-identity-component__display-name {
+  color: var(--text);
+  font-weight: 600;
+}

@@ -137,10 +137,6 @@
   color: var(--muted);
 }
 
-.users-identity__dot {
-  color: var(--muted);
-}
-
 .users-identity__email {
   margin-top: 0.2rem;
   padding-left: 1.35rem;

@@ -29,6 +29,8 @@ describe("app frame and router", () => {
     expect(markup).not.toContain("Dashboard only notice");
     expect(markup).toContain('href="/library"');
     expect(markup).toContain('href="/profile"');
+    expect(markup).toContain('aria-label="User owner"');
+    expect(markup).not.toContain("@owner");
     expect(markup).toContain('href="/logout/"');
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {

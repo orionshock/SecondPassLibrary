@@ -23,6 +23,7 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
     <div className="shelf-summary-row-component__identity">
       <div className="shelf-summary-row-component__title">
         <h2><Link to={detailPath} state={navigationState}>{name}</Link></h2>
+        <span className="css-dot" aria-hidden="true" />
         {owner ? <span className="shelf-summary-row-component__owner-relation">
           {owner.kind === "user" ? "shared by" : "from"}
         </span> : null}
@@ -31,8 +32,9 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
           isPublicGroup={owner.isPublicGroup}
         /> : null}
         {owner?.kind === "user" ? <UserInlineIdentityComponent username={owner.username} /> : null}
+        {owner ? <span className="css-dot" aria-hidden="true" /> : null}
         <span className="shelf-summary-row-component__count">
-          ({itemCount} {itemCount === 1 ? "book" : "books"})
+          {itemCount} {itemCount === 1 ? "book" : "books"}
         </span>
       </div>
       {description ? <p>{description}</p> : null}

@@ -22,7 +22,8 @@ describe("ProfileOrchestrator", () => {
     const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/profile"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="profile" element={<ProfileOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Ada Lovelace");
     expect(markup).toContain("ada@example.test");
-    expect(markup).toContain("&lt;@ada&gt;");
+    expect(markup).toContain('aria-label="User ada"');
+    expect(markup).not.toContain("@ada");
     expect(markup).toContain("Owner");
     expect(markup).toContain('href="/profile/password"');
     expect(markup).toContain("Device/API sessions");
