@@ -2,6 +2,7 @@ import { apiClient, type ApiClient } from "./client";
 import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { ApiError } from "./errors";
 import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";
+import { sameOriginUrl } from "./urls";
 
 export type BookOrdering =
   | "title" | "-title"
@@ -524,15 +525,6 @@ export function mapBookDetail(response: BookDetailResponse): BookDetail {
       isPublicGroup: is_public_group,
     })),
   };
-}
-
-function sameOriginUrl(value: string): string {
-  try {
-    const url = new URL(value, "http://second-pass.invalid");
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return value;
-  }
 }
 
 function mapCatalogTag(response: CatalogTagResponse): CatalogTag {

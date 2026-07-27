@@ -32,6 +32,10 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  listRecentReadingSessions,
+  type RecentReadingSession,
+} from "./reading";
+export {
   addGroupMember,
   addBookToGroup,
   createGroup,

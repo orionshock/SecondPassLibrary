@@ -1,23 +1,47 @@
+import {
+  canSeeImports,
+  canSeeServerSettings,
+  canSeeUsers,
+  listRecentReadingSessions,
+} from "@second-pass/spl-api";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
-import { Surface } from "../../components/ui";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { DashboardPageRegion, type RecentReadingState } from "./regions/DashboardPageRegion";
 import "./Dashboard.css";
 
-export function DashboardOrchestrator() {
-  const { serverInfo } = useOutletContext<AppOutletContext>();
+export const DASHBOARD_RECENT_READING_LIMIT = 10;
 
-  return (
-    <ProductPageShellComponent
-      eyebrow="Dashboard"
-      title="Your reading home"
-      description="The React dashboard foundation is ready for its future reading and library regions."
-    >
-      {serverInfo.bannerText ? <aside className="dashboard-banner">{serverInfo.bannerText}</aside> : null}
-      <Surface title="Dashboard preview">
-        <p className="muted">Metrics, recent reading, and activity have not been rebuilt yet.</p>
-      </Surface>
-    </ProductPageShellComponent>
-  );
+export function DashboardOrchestrator() {
+  const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
+  const [recentReading, setRecentReading] = useState<RecentReadingState>({ status: "loading" });
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setRecentReading({ status: "loading" });
+    listRecentReadingSessions({ limit: DASHBOARD_RECENT_READING_LIMIT })
+      .then((items) => {
+        if (active) setRecentReading({ status: "ready", items });
+      })
+      .catch((error: unknown) => {
+        if (active) setRecentReading({ status: "error", error: normalizeMutationError(error) });
+      });
+    return () => {
+      active = false;
+    };
+  }, [retry]);
+
+  return <DashboardPageRegion
+    description={serverInfo.description}
+    bannerText={serverInfo.bannerText}
+    recentReading={recentReading}
+    showGroups={serverInfo.advancedLibraryGroupsEnabled}
+    showImports={canSeeImports(currentUser)}
+    showUsers={canSeeUsers(currentUser)}
+    showServerSettings={canSeeServerSettings(currentUser)}
+    onRetryRecentReading={() => setRetry((value) => value + 1)}
+  />;
 }

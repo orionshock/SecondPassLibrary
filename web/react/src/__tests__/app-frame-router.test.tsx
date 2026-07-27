@@ -16,10 +16,11 @@ function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Pa
 }
 
 describe("app frame and router", () => {
-  it("renders the dashboard placeholder inside the frame", () => {
+  it("renders the Dashboard inside the frame", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Your reading home");
-    expect(markup).toContain("Dashboard preview");
+    expect(markup).toContain("Recent active reading");
+    expect(markup).toContain("Loading recent reading");
     expect(markup).toContain("Maintenance tonight");
     expect(markup).toContain("Family Library");
   });
