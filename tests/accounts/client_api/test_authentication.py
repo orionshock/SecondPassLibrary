@@ -29,9 +29,13 @@ class ClientApiAuthenticationTests(ClientApiTestCase):
         # Browser approves (authenticated session).
         self.client.force_login(user)
         approve = self.client.post(
-            "/client-api/authorize/",
-            data={"code": code, "action": "approve"},
-            follow=True,
+            "/api/v1/client-api/pairing/decision/",
+            data={
+                "code": code,
+                "action": "approve",
+                "client_name": "Second Pass Reader",
+            },
+            format="json",
         )
         self.assertEqual(approve.status_code, 200)
 

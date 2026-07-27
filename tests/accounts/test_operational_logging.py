@@ -196,8 +196,9 @@ class AccountOperationalLoggingTests(APITestCase):
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
             approved = self.client.post(
-                "/client-api/authorize/",
+                "/api/v1/client-api/pairing/decision/",
                 data={"code": code, "action": "approve", "client_name": "Phone Reader"},
+                format="json",
             )
             polled = assert_response(
                 self.client.get(f"/api/v1/client-api/login-requests/{request_id}/poll/")
@@ -222,8 +223,9 @@ class AccountOperationalLoggingTests(APITestCase):
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
             denied = self.client.post(
-                "/client-api/authorize/",
+                "/api/v1/client-api/pairing/decision/",
                 data={"code": code, "action": "deny", "client_name": "Phone Reader"},
+                format="json",
             )
 
         self.assertEqual(denied.status_code, status.HTTP_200_OK)

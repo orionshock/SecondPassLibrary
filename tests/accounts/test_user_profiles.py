@@ -120,7 +120,7 @@ class UserProfileAPITest(APITestCase):
         self.assertEqual(data["first_name"], "")
         self.assertEqual(data["last_name"], "")
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
-        self.assertFalse(data["must_change_password"])
+        self.assertNotIn("must_change_password", data)
         self.assertIn("profile_id", data)
 
     def test_anonymous_cannot_access_me(self):

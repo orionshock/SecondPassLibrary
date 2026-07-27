@@ -32,7 +32,13 @@ class ClientApiTokenTests(ClientApiTestCase):
 
         self.client.force_login(user)
         self.client.post(
-            "/client-api/authorize/", data={"code": code, "action": "approve"}
+            "/api/v1/client-api/pairing/decision/",
+            data={
+                "code": code,
+                "action": "approve",
+                "client_name": "Second Pass Reader",
+            },
+            format="json",
         )
 
         poll1 = assert_response(
