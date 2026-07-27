@@ -17,10 +17,19 @@ function navMarkup(overrides: Partial<CurrentUser> = {}): string {
 
 describe("app frame and router", () => {
   it("renders the dashboard placeholder inside the frame", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={{ ...user, bannerText: "Maintenance tonight" }} server={server} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Your reading home");
     expect(markup).toContain("Dashboard preview");
+    expect(markup).toContain("Maintenance tonight");
     expect(markup).toContain("Family Library");
+  });
+
+  it("keeps Dashboard banner content out of the global frame on other routes", () => {
+    const markup = navMarkup({ bannerText: "Dashboard only notice" });
+    expect(markup).not.toContain("Dashboard only notice");
+    expect(markup).toContain('href="/library"');
+    expect(markup).toContain('href="/profile"');
+    expect(markup).toContain('href="/logout/"');
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
     const markup = navMarkup({ advancedLibraryGroupsEnabled: true });

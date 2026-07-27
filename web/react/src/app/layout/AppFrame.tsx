@@ -72,8 +72,6 @@ export function AppFrame({
         </div>
       </header>
 
-      {user.bannerText ? <aside className="server-banner">{user.bannerText}</aside> : null}
-
       <BreadcrumbsComponent items={breadcrumbs} />
 
       <main className="app-content">
