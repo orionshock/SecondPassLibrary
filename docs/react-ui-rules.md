@@ -108,6 +108,8 @@ This is the running list of cross-page presentation and interaction rules that a
 
 - Shared text buttons use the `small` or `medium` size vocabulary and `primary`, `secondary`, or `danger` tone. Page-level create/save actions are medium primary, manage/edit and cancel actions are secondary, destructive text actions are danger, and compact row or pager actions are small.
 - Shared icon buttons use the same small/medium sizing; add/remove controls retain their established success/danger semantics.
+- Product UI text-like inputs, native selects, and textareas use the shared React-shell form-control treatment. Use medium controls for forms and search/action rows, and the small class only for intentionally compact controls such as the pager page-size select.
+- Keep native control semantics and keyboard behavior. File inputs, checkboxes, and radio buttons retain purpose-specific treatment rather than inheriting the text-control surface.
 - Form and workflow action rows are right-aligned unless a page-specific interaction explicitly calls for another placement.
 - Put secondary or canceling actions before the default/desirable primary action so the primary action is farthest right.
 - Put success, error, or other action status immediately left of the buttons and right-align it toward the controls. Reserve the feedback area where practical so status changes do not cause large layout jumps.

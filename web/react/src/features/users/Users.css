@@ -24,12 +24,6 @@
 .users-search input,
 .users-select-filters select {
   min-width: 0;
-  padding: 0.58rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 0.625rem;
-  color: var(--text);
-  background: var(--surface-raised);
-  font: inherit;
 }
 
 .users-filter-row,
@@ -236,12 +230,6 @@
 
 .user-create-form select {
   width: 100%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 0.625rem;
-  color: var(--text);
-  background: var(--surface-raised);
-  font: inherit;
 }
 
 .user-edit-page {
@@ -281,12 +269,6 @@
 .user-edit-form select,
 .user-membership-add select {
   width: 100%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 0.625rem;
-  color: var(--text);
-  background: var(--surface-raised);
-  font: inherit;
 }
 
 .user-password-reset,

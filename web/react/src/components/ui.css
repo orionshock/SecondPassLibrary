@@ -255,6 +255,93 @@ button:disabled {
   display: block;
 }
 
+.app-shell :where(
+  .form-control,
+  input:not([type]),
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="text"],
+  input[type="url"],
+  select,
+  textarea
+) {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.625rem;
+  color: var(--text);
+  background-color: var(--surface-raised);
+  font: inherit;
+}
+
+.app-shell :where(
+  .form-control,
+  input:not([type]),
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="text"],
+  input[type="url"],
+  select,
+  textarea
+):disabled {
+  color: rgb(232 238 246 / 65%);
+  background-color: rgb(255 255 255 / 3%);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.app-shell :where(
+  input:not([type]),
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="text"],
+  input[type="url"],
+  textarea
+)::placeholder {
+  color: rgb(168 179 194 / 72%);
+  opacity: 1;
+}
+
+.app-shell :where(.form-control--small) {
+  min-height: 2rem;
+  padding: 0.38rem 0.62rem;
+  border-radius: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.app-shell :where(.form-control--medium) {
+  min-height: 2.5rem;
+}
+
+.app-shell :where(select, .form-control--select) {
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a8b3c2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.9rem;
+  appearance: none;
+}
+
+.app-shell select option {
+  color: var(--text);
+  background: var(--surface-raised);
+}
+
+.app-shell :where(textarea, .form-control--textarea) {
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.app-shell :where(.form-control--invalid, [aria-invalid="true"]) {
+  border-color: rgb(251 113 133 / 70%);
+}
+
 .form-grid {
   display: grid;
   width: min(100%, 44rem);
@@ -278,17 +365,6 @@ button:disabled {
 .form-field select,
 .form-field textarea {
   width: 100%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 0.625rem;
-  color: var(--text);
-  background: var(--surface-raised);
-  font: inherit;
-}
-
-.form-field textarea {
-  line-height: 1.45;
-  resize: vertical;
 }
 
 .form-field .field-error {

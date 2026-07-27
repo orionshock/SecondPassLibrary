@@ -27,7 +27,7 @@ export function PagerComponent({ page, pageSize, count, hasPrevious, hasNext, it
   return <div className={`pager-component pager-component--${density}`} aria-label={ariaLabel ?? `${itemLabel} pagination`}>
     <span className="pager-component__range">Showing {start}{start ? `-${end}` : ""} of {count}</span>
     {density === "full" ? <label className="pager-component__size">Per page
-      <select aria-label={`${itemLabel} per page`} value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
+      <select className="form-control form-control--small form-control--select" aria-label={`${itemLabel} per page`} value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
         {pageSizes.map((size) => <option key={size} value={size}>{size}</option>)}
       </select>
     </label> : null}

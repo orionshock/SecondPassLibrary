@@ -21,15 +21,6 @@
   gap: 0.65rem;
 }
 
-.pager-component select {
-  padding: 0.45rem 1.8rem 0.45rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 0.625rem;
-  color: var(--text);
-  background: var(--surface-raised);
-  font: inherit;
-}
-
 @media (max-width: 42rem) {
   .pager-component {
     grid-template-columns: 1fr;
