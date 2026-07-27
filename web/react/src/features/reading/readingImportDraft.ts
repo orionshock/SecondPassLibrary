@@ -7,6 +7,7 @@ export interface ReadingImportSessionDraft {
 }
 
 export type ReadingImportDraft = Record<string, ReadingImportSessionDraft>;
+export type ReadingImportBookSelectionState = "none" | "some" | "all";
 
 export function createReadingImportDraft(preview: ReadingImportPreview): ReadingImportDraft {
   const draft: ReadingImportDraft = {};
@@ -22,6 +23,26 @@ export function createReadingImportDraft(preview: ReadingImportPreview): Reading
 
 export function readingImportSelectedCount(draft: ReadingImportDraft): number {
   return Object.values(draft).filter((session) => session.selected).length;
+}
+
+export function readingImportBookSelectionState(preview: ReadingImportPreview, draft: ReadingImportDraft, bookIndex: number): ReadingImportBookSelectionState {
+  const importable = preview.books[bookIndex]?.sessions.flatMap((session, sessionIndex) => (
+    session.willImport ? [draft[readingImportSessionKey(bookIndex, sessionIndex)]?.selected === true] : []
+  )) ?? [];
+  const selected = importable.filter(Boolean).length;
+  if (selected === 0) return "none";
+  return selected === importable.length ? "all" : "some";
+}
+
+export function withReadingImportBookSelection(preview: ReadingImportPreview, draft: ReadingImportDraft, bookIndex: number, selected: boolean): ReadingImportDraft {
+  const next = { ...draft };
+  preview.books[bookIndex]?.sessions.forEach((session, sessionIndex) => {
+    if (!session.willImport) return;
+    const key = readingImportSessionKey(bookIndex, sessionIndex);
+    const current = draft[key];
+    if (current) next[key] = { ...current, selected };
+  });
+  return next;
 }
 
 export function buildReadingImportApplyInput(preview: ReadingImportPreview, draft: ReadingImportDraft): ReadingImportApplyInput {

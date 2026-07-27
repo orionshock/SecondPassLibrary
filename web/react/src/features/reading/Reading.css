@@ -111,6 +111,32 @@
 
 .reading-import-page { min-width: 0; }
 
+.reading-import-page > .surface:first-child {
+  padding: 0.75rem 1rem;
+}
+
+.reading-import-page > .surface:first-child .surface-title {
+  margin-bottom: 0.55rem;
+}
+
+.reading-import-upload { gap: 0.4rem; }
+
+.reading-import-upload .form-action-row {
+  min-height: 2.5rem;
+  padding-top: 0;
+}
+
+.reading-import-upload__file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.reading-import-upload__file-row .form-action-row {
+  grid-template-columns: auto auto;
+}
+
 .reading-import-upload input[type="file"] {
   min-width: 0;
   color: var(--muted);
@@ -123,40 +149,110 @@
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.55rem;
 }
 
-.reading-import-warnings,
 .reading-import-warning {
   color: var(--warning, #facc15);
 }
 
-.reading-import-warnings ul { margin-bottom: 0; }
+.reading-import-summary__warnings {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.55rem;
+}
+
+.reading-import-summary__warning {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--warning, #facc15);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reading-import-review__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.reading-import-review__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.reading-import-review__header .reading-import-summary {
+  justify-content: flex-end;
+  margin: 0;
+}
 
 .reading-import-book {
-  padding-top: 0.8rem;
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: start;
+  gap: 0.7rem;
+  padding-top: 0.65rem;
   border-top: 1px solid var(--border);
 }
 
-.reading-import-book__header {
-  display: grid;
-  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.7rem;
-  margin-bottom: 0.65rem;
+.reading-import-book__content {
+  grid-column: 2;
+  min-width: 0;
 }
 
-.reading-import-book__header .book-cover-component {
+.reading-import-book__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-height: 1.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.reading-import-book__match {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.reading-import-book__cover .book-cover-component {
   width: 2.75rem;
   aspect-ratio: 2 / 3;
 }
 
-.reading-import-book__header h2,
-.reading-import-book__header p,
+.reading-import-book__identity {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.reading-import-book__identity > input[type="checkbox"] {
+  flex: none;
+  margin: 0;
+}
+
+.reading-import-book__identity h2,
 .reading-import-warning { margin: 0; }
 
-.reading-import-book__header h2 { font-size: 1rem; }
-.reading-import-book__header p { margin-top: 0.2rem; color: var(--muted); }
+.reading-import-book__identity h2 {
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.reading-import-book__authors {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .reading-import-warning { margin-bottom: 0.55rem; font-size: 0.85rem; }
 
 .reading-import-session {
@@ -182,8 +278,28 @@
   gap: 0.5rem;
 }
 
+.reading-import-session__summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .reading-import-session__select { font-weight: 700; }
 .reading-import-session__facts { color: var(--muted); font-size: 0.85rem; }
+.reading-import-session__annotation-count { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
+
+.reading-import-session__note {
+  display: -webkit-box;
+  margin: 0.35rem 0 0 1.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 
 .reading-import-session__edits {
   display: grid;
@@ -197,4 +313,8 @@
 
 @media (max-width: 700px) {
   .reading-import-session__edits { grid-template-columns: 1fr; }
+  .reading-import-book { grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem; gap: 0.55rem; }
+  .reading-import-book__cover .book-cover-component { width: 2.25rem; }
+  .reading-import-book__identity { flex-wrap: wrap; }
+  .reading-import-upload__file-row { grid-template-columns: 1fr; }
 }

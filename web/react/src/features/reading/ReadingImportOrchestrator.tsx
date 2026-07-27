@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { createReadingImportDraft, buildReadingImportApplyInput, readingImportSelectedCount, type ReadingImportDraft, type ReadingImportSessionDraft } from "./readingImportDraft";
+import { createReadingImportDraft, buildReadingImportApplyInput, readingImportSelectedCount, withReadingImportBookSelection, type ReadingImportDraft, type ReadingImportSessionDraft } from "./readingImportDraft";
 import { readingImportBreadcrumbFallback } from "./readingBreadcrumbs";
 import { ReadingImportPageRegion } from "./regions/ReadingImportPageRegion";
 
@@ -14,6 +14,7 @@ export function ReadingImportOrchestrator() {
   const [preview, setPreview] = useState<ReadingImportPreview>();
   const [draft, setDraft] = useState<ReadingImportDraft>({});
   const [result, setResult] = useState<ReadingImportResult>();
+  const [editingSessionKeys, setEditingSessionKeys] = useState<ReadonlySet<string>>(new Set());
   const [previewState, setPreviewState] = useState<MutationState>(idleMutationState);
   const [applyState, setApplyState] = useState<MutationState>(idleMutationState);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -23,6 +24,7 @@ export function ReadingImportOrchestrator() {
     setPreview(undefined);
     setDraft({});
     setResult(undefined);
+    setEditingSessionKeys(new Set());
     setPreviewState(idleMutationState);
     setApplyState(idleMutationState);
   }
@@ -35,6 +37,7 @@ export function ReadingImportOrchestrator() {
       setPreview(nextPreview);
       setDraft(createReadingImportDraft(nextPreview));
       setResult(undefined);
+      setEditingSessionKeys(new Set());
       setApplyState(idleMutationState);
       setPreviewState({ pending: false, message: "Preview ready." });
     } catch (error: unknown) {
@@ -55,7 +58,11 @@ export function ReadingImportOrchestrator() {
   }
 
   return <ProductPageShellComponent className="reading-import-shell" eyebrow="My Marginalia" title="Import">
-    <ReadingImportPageRegion fileName={file?.name} preview={preview} draft={draft} result={result} previewState={previewState} applyState={applyState} inputRef={inputRef} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: ReadingImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onApply={() => void applyImport()} />
+    <ReadingImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} inputRef={inputRef} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: ReadingImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookIndex, selected) => setDraft((current) => preview ? withReadingImportBookSelection(preview, current, bookIndex, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
+      const next = new Set(current);
+      if (editing) next.add(key); else next.delete(key);
+      return next;
+    })} onApply={() => void applyImport()} />
   </ProductPageShellComponent>;
 }
 

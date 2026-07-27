@@ -1,17 +1,18 @@
 import type { ReadingImportPreview, ReadingImportResult } from "@second-pass/spl-api";
-import type { FormEvent, RefObject } from "react";
+import { useEffect, useRef, type FormEvent, type RefObject } from "react";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, FormField, Surface } from "../../../components/ui";
+import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
-import { readingImportSelectedCount, readingImportSessionKey, type ReadingImportDraft, type ReadingImportSessionDraft } from "../readingImportDraft";
+import { readingImportBookSelectionState, readingImportSelectedCount, readingImportSessionKey, type ReadingImportBookSelectionState, type ReadingImportDraft, type ReadingImportSessionDraft } from "../readingImportDraft";
 
-export function ReadingImportPageRegion({ fileName, preview, draft, result, previewState, applyState, inputRef, onFileChange, onPreview, onDraftChange, onApply }: {
-  fileName?: string;
+export function ReadingImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, inputRef, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onApply }: {
   preview?: ReadingImportPreview;
   draft: ReadingImportDraft;
+  editingSessionKeys: ReadonlySet<string>;
   result?: ReadingImportResult;
   previewState: MutationState;
   applyState: MutationState;
@@ -19,70 +20,112 @@ export function ReadingImportPageRegion({ fileName, preview, draft, result, prev
   onFileChange: (file?: File) => void;
   onPreview: (event: FormEvent<HTMLFormElement>) => void;
   onDraftChange: (key: string, value: ReadingImportSessionDraft) => void;
+  onBookSelectionChange: (bookIndex: number, selected: boolean) => void;
+  onEditingChange: (key: string, editing: boolean) => void;
   onApply: () => void;
 }) {
   const selectedCount = readingImportSelectedCount(draft);
   return <div className="reading-import-page">
     <Surface title="Upload">
       <form className="reading-import-upload" encType="multipart/form-data" onSubmit={onPreview}>
-        <p className="muted">Choose a native Second Pass marginalia JSON archive. Nothing changes until you review the preview and apply it.</p>
-        <FormField label="Marginalia archive" htmlFor="reading-import-file" error={fieldError(previewState.error, "file")}>
-          <input ref={inputRef} id="reading-import-file" name="file" type="file" accept=".json,application/json" disabled={previewState.pending || applyState.pending} onChange={(event) => onFileChange(event.target.files?.[0])} />
-        </FormField>
-        {fileName ? <p className="muted">Selected: {fileName}</p> : null}
-        <ActionRowComponent state={previewState}><Button type="submit" disabled={previewState.pending || applyState.pending}>{previewState.pending ? "Previewing..." : "Preview"}</Button></ActionRowComponent>
+        <p className="muted">Choose a native Second Pass marginalia JSON archive. Nothing changes until Apply.</p>
+        <div className="reading-import-upload__file-row">
+          <FormField label="Marginalia archive" htmlFor="reading-import-file" error={fieldError(previewState.error, "file")}>
+            <input ref={inputRef} id="reading-import-file" name="file" type="file" accept=".json,application/json" disabled={previewState.pending || applyState.pending} onChange={(event) => onFileChange(event.target.files?.[0])} />
+          </FormField>
+          <ActionRowComponent state={previewState}><Button type="submit" disabled={previewState.pending || applyState.pending}>{previewState.pending ? "Previewing..." : "Preview"}</Button></ActionRowComponent>
+        </div>
       </form>
     </Surface>
-    {preview && !result ? <ReadingImportReview preview={preview} draft={draft} selectedCount={selectedCount} applyState={applyState} onDraftChange={onDraftChange} onApply={onApply} /> : null}
+    {preview && !result ? <ReadingImportReview preview={preview} draft={draft} editingSessionKeys={editingSessionKeys} selectedCount={selectedCount} applyState={applyState} onDraftChange={onDraftChange} onBookSelectionChange={onBookSelectionChange} onEditingChange={onEditingChange} onApply={onApply} /> : null}
     {result ? <ReadingImportResultRegion result={result} /> : null}
   </div>;
 }
 
-function ReadingImportReview({ preview, draft, selectedCount, applyState, onDraftChange, onApply }: {
+function ReadingImportReview({ preview, draft, editingSessionKeys, selectedCount, applyState, onDraftChange, onBookSelectionChange, onEditingChange, onApply }: {
   preview: ReadingImportPreview;
   draft: ReadingImportDraft;
+  editingSessionKeys: ReadonlySet<string>;
   selectedCount: number;
   applyState: MutationState;
   onDraftChange: (key: string, value: ReadingImportSessionDraft) => void;
+  onBookSelectionChange: (bookIndex: number, selected: boolean) => void;
+  onEditingChange: (key: string, editing: boolean) => void;
   onApply: () => void;
 }) {
-  return <Surface title="Review">
-    <div className="reading-import-summary" aria-label="Import preview summary">
-      <Badge>{preview.summary.books} books</Badge><Badge>{preview.summary.sessions} sessions</Badge><Badge>{preview.summary.annotations} annotations</Badge>
-    </div>
-    {preview.warnings.length ? <div className="reading-import-warnings"><strong>Warnings</strong><ul>{preview.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></div> : null}
-    {preview.unmatchedEntries ? <p className="muted">{preview.unmatchedEntries} {preview.unmatchedEntries === 1 ? "entry requires" : "entries require"} Reader-assisted import.</p> : null}
+  const summaryWarnings = preview.warnings.filter((warning) => !/(?:reader-assisted import|second pass reader import)/i.test(warning));
+  if (preview.unmatchedEntries) {
+    summaryWarnings.unshift(`${preview.unmatchedEntries} exported Book ${preview.unmatchedEntries === 1 ? "entry did" : "entries did"} not match a visible local Book and ${preview.unmatchedEntries === 1 ? "requires" : "require"} Second Pass Reader Import.`);
+  }
+
+  return <section className="reading-import-review" aria-labelledby="reading-import-review-heading">
+    <header className="reading-import-review__header">
+      <h2 id="reading-import-review-heading">Review</h2>
+      <div className="reading-import-summary" aria-label="Import preview summary">
+        <Badge>{preview.summary.books} books</Badge><Badge>{preview.summary.sessions} sessions</Badge><Badge>{preview.summary.annotations} annotations</Badge>
+      </div>
+    </header>
+    {summaryWarnings.length ? <div className="reading-import-summary__warnings">{summaryWarnings.map((warning, index) => <span className="reading-import-summary__warning" key={index}><span className="css-dot" aria-hidden="true" />{warning}</span>)}</div> : null}
     <div className="reading-import-books">
       {preview.books.map((book, bookIndex) => <section className="reading-import-book" key={bookIndex}>
-        <header className="reading-import-book__header">
+        <div className="reading-import-book__cover">
           <BookCoverComponent coverUrl={book.coverUrl} title={book.title || "Imported Book"} />
-          <div><h2>{book.title || "Untitled Book"}</h2>{book.authors.length ? <p>{book.authors.join(", ")}</p> : null}</div>
-          <Badge tone={book.matchStatus === "matched" ? "success" : "default"}>{book.matchStatus === "matched" ? "Matched" : "Unmatched"}</Badge>
-        </header>
-        {book.warning ? <p className="reading-import-warning">{book.warning}</p> : null}
-        <div className="reading-import-sessions">{book.sessions.map((session, sessionIndex) => {
+        </div>
+        <div className="reading-import-book__content">
+          <header className="reading-import-book__header">
+            <div className="reading-import-book__identity">
+              {book.matchStatus === "matched" && book.sessions.some((session) => session.willImport) ? <BookSelectionCheckbox label={book.title || "Untitled Book"} state={readingImportBookSelectionState(preview, draft, bookIndex)} disabled={applyState.pending} onChange={(selected) => onBookSelectionChange(bookIndex, selected)} /> : null}
+              <h2>{book.title || "Untitled Book"}</h2>{book.authors.length ? <><span className="css-dot" aria-hidden="true" /><span className="reading-import-book__authors">{book.authors.join(", ")}</span></> : null}
+            </div>
+            <span className="reading-import-book__match">
+              {book.matchStatus === "matched"
+                ? <Badge tone="success">Matched</Badge>
+                : book.warning
+                  ? <HelpPopoverComponent ariaLabel={`Why ${book.title || "this Book"} is unmatched`} icon="warning_amber" label="Unmatched" mouseoverText={book.warning} border borderColor="#d8b65a" color="#d8b65a" />
+                  : <Badge>Unmatched</Badge>}
+            </span>
+          </header>
+          {book.matchStatus === "matched" && book.warning ? <p className="reading-import-warning">{book.warning}</p> : null}
+          <div className="reading-import-sessions">{book.sessions.map((session, sessionIndex) => {
           const key = readingImportSessionKey(bookIndex, sessionIndex);
           const value = draft[key] ?? { selected: false, name: session.name, notes: session.notes };
+          const editing = editingSessionKeys.has(key);
+          const sessionIdentity = <><span>{value.name.trim() || "Unnamed session"}</span><span className="css-dot" aria-hidden="true" /><span className="reading-import-session__annotation-count">{session.annotationCount} annotations</span></>;
           return <article className="reading-import-session" key={key}>
-            <label className="reading-import-session__select">
-              <input type="checkbox" checked={value.selected} disabled={!session.willImport || applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} />
-              <span>{session.name.trim() || "Unnamed session"}</span>
-            </label>
-            <div className="reading-import-session__facts"><span>{session.annotationCount} annotations</span>{session.activeWillImportAsHistorical ? <><span className="css-dot" aria-hidden="true" /><span>Imports as historical</span></> : null}</div>
+            <div className="reading-import-session__summary">
+              <div>
+                {session.willImport ? <label className="reading-import-session__select">
+                  <input type="checkbox" checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} />
+                  {sessionIdentity}
+                </label> : <div className="reading-import-session__select">{sessionIdentity}</div>}
+                {session.activeWillImportAsHistorical ? <div className="reading-import-session__facts"><span>Imports as historical</span></div> : null}
+                {!editing && value.notes.trim() ? <p className="reading-import-session__note">{value.notes}</p> : null}
+              </div>
+              {session.willImport ? <Button type="button" size="small" tone="secondary" disabled={!value.selected || applyState.pending} onClick={() => onEditingChange(key, !editing)}>{editing ? "Done" : "Edit"}</Button> : null}
+            </div>
             {session.warning ? <p className="reading-import-warning">{session.warning}</p> : null}
-            {session.willImport ? <div className="reading-import-session__edits">
+            {session.willImport && editing ? <div className="reading-import-session__edits">
               <FormField label="Imported name" htmlFor={`reading-import-name-${bookIndex}-${sessionIndex}`}><input id={`reading-import-name-${bookIndex}-${sessionIndex}`} value={value.name} disabled={!value.selected || applyState.pending} onChange={(event) => onDraftChange(key, { ...value, name: event.target.value })} /></FormField>
-              <FormField label="Imported notes" htmlFor={`reading-import-notes-${bookIndex}-${sessionIndex}`}><textarea id={`reading-import-notes-${bookIndex}-${sessionIndex}`} rows={2} value={value.notes} disabled={!value.selected || applyState.pending} onChange={(event) => onDraftChange(key, { ...value, notes: event.target.value })} /></FormField>
+              <FormField label="Imported note" htmlFor={`reading-import-notes-${bookIndex}-${sessionIndex}`}><textarea id={`reading-import-notes-${bookIndex}-${sessionIndex}`} rows={2} value={value.notes} disabled={!value.selected || applyState.pending} onChange={(event) => onDraftChange(key, { ...value, notes: event.target.value })} /></FormField>
             </div> : null}
           </article>;
-        })}</div>
+          })}</div>
+        </div>
       </section>)}
     </div>
     <ActionRowComponent state={applyState}>
       <span className="muted">{selectedCount} {selectedCount === 1 ? "session" : "sessions"} selected</span>
       <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending} onClick={onApply}>{applyState.pending ? "Applying..." : "Apply selected"}</Button>
     </ActionRowComponent>
-  </Surface>;
+  </section>;
+}
+
+function BookSelectionCheckbox({ label, state, disabled, onChange }: { label: string; state: ReadingImportBookSelectionState; disabled: boolean; onChange: (selected: boolean) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = state === "some";
+  }, [state]);
+  return <input ref={inputRef} type="checkbox" checked={state === "all"} aria-checked={state === "some" ? "mixed" : state === "all"} aria-label={`Select all importable sessions from ${label}`} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />;
 }
 
 function ReadingImportResultRegion({ result }: { result: ReadingImportResult }) {

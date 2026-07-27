@@ -7,7 +7,7 @@ import { readingImportBreadcrumbFallback } from "../features/reading/readingBrea
 import { ReadingImportOrchestrator, previewSelectedReadingImport } from "../features/reading/ReadingImportOrchestrator";
 import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
 import { AppFrame } from "../app/layout/AppFrame";
-import { buildReadingImportApplyInput, createReadingImportDraft, readingImportSelectedCount, readingImportSessionKey } from "../features/reading/readingImportDraft";
+import { buildReadingImportApplyInput, createReadingImportDraft, readingImportBookSelectionState, readingImportSelectedCount, readingImportSessionKey, withReadingImportBookSelection } from "../features/reading/readingImportDraft";
 import { ReadingImportPageRegion } from "../features/reading/regions/ReadingImportPageRegion";
 import { LocalValidationError } from "../shared/feedback/mutationState";
 
@@ -39,17 +39,20 @@ const preview: ReadingImportPreview = {
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
-function renderImport(options: { preview?: ReadingImportPreview; result?: ReadingImportResult; draft?: ReturnType<typeof createReadingImportDraft>; previewError?: Error } = {}) {
+function renderImport(options: { preview?: ReadingImportPreview; result?: ReadingImportResult; draft?: ReturnType<typeof createReadingImportDraft>; previewError?: Error; editingSessionKeys?: ReadonlySet<string> } = {}) {
   return renderToStaticMarkup(<MemoryRouter><ReadingImportPageRegion
     preview={options.preview}
     result={options.result}
     draft={options.draft ?? {}}
+    editingSessionKeys={options.editingSessionKeys ?? new Set()}
     previewState={{ pending: false, error: options.previewError }}
     applyState={{ pending: false }}
     inputRef={{ current: null }}
     onFileChange={vi.fn()}
     onPreview={vi.fn()}
     onDraftChange={vi.fn()}
+    onBookSelectionChange={vi.fn()}
+    onEditingChange={vi.fn()}
     onApply={vi.fn()}
   /></MemoryRouter>);
 }
@@ -92,7 +95,30 @@ describe("My Marginalia import", () => {
     expect(edited).toEqual(before);
   });
 
-  it("renders matched, unmatched, selectable, warning, and optional edit states without raw identifiers", () => {
+  it("supports all, none, and partial Book-level Session selection", () => {
+    const all = createReadingImportDraft(preview);
+    expect(readingImportBookSelectionState(preview, all, 0)).toBe("all");
+    const none = withReadingImportBookSelection(preview, all, 0, false);
+    expect(readingImportBookSelectionState(preview, none, 0)).toBe("none");
+    expect(readingImportSelectedCount(none)).toBe(0);
+    const some = { ...none, "0:0": { ...none["0:0"]!, selected: true } };
+    expect(readingImportBookSelectionState(preview, some, 0)).toBe("some");
+    expect(readingImportSelectedCount(withReadingImportBookSelection(preview, some, 0, true))).toBe(2);
+    expect(readingImportBookSelectionState(preview, all, 1)).toBe("none");
+  });
+
+  it("renders the matched Book selector checked or mixed and omits unmatched selectors", () => {
+    const all = renderImport({ preview, draft: createReadingImportDraft(preview) });
+    expect(all).toContain('aria-label="Select all importable sessions from Matched Book"');
+    expect(all).not.toContain('aria-label="Select all importable sessions from Missing Book"');
+    expect(all.match(/type="checkbox"/g)).toHaveLength(3);
+    const draft = createReadingImportDraft(preview);
+    draft["0:1"] = { ...draft["0:1"]!, selected: false };
+    const partial = renderImport({ preview, draft });
+    expect(partial).toContain('aria-checked="mixed"');
+  });
+
+  it("renders compact matched, unmatched, selectable, warning, and note-preview states without raw identifiers", () => {
     const markup = renderImport({ preview, draft: createReadingImportDraft(preview) });
     expect(markup).toContain("Matched Book");
     expect(markup).toContain("Missing Book");
@@ -101,11 +127,27 @@ describe("My Marginalia import", () => {
     expect(markup).toContain("Imported session");
     expect(markup).toContain("Unnamed session");
     expect(markup).toContain("2 sessions selected");
-    expect(markup).toContain("Imported name");
-    expect(markup).toContain("Imported notes");
-    expect(markup).toContain("Reader-assisted import");
+    expect(markup).toContain("Remember this.");
+    expect(markup).toContain("3 annotations");
+    expect(markup).toContain("Imports as historical");
+    expect(markup).toContain(">Edit</button>");
+    expect(markup).not.toContain("Imported name");
+    expect(markup).not.toContain("Imported note");
+    expect(markup).toContain('aria-label="Why Missing Book is unmatched"');
+    expect(markup).toContain('role="tooltip"');
+    expect(markup.match(/No visible local book matched this export book\./g)).toHaveLength(1);
     expect(markup).not.toContain("export-session-");
     expect(markup).not.toContain("sha256:hidden");
+  });
+
+  it("reveals singular imported name and note controls only for the edited row", () => {
+    const markup = renderImport({ preview, draft: createReadingImportDraft(preview), editingSessionKeys: new Set(["0:0"]) });
+    expect(markup).toContain("Imported name");
+    expect(markup).toContain("Imported note");
+    expect(markup).not.toContain("Imported notes");
+    expect(markup).toContain(">Done</button>");
+    expect(markup).toContain('value="Imported session"');
+    expect(markup).toContain("Remember this.");
   });
 
   it("disables Apply when no Sessions are selected and keeps structured paths out of primary error prose", () => {

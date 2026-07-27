@@ -39,7 +39,7 @@ export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, 
           </div>
           <div className="user-membership-curator">
             {membership.isPublicGroup
-              ? <span className="user-membership-public-label">Public Group <HelpPopoverComponent label="Public Group curator help">Only Librarians/Managers may Curate the Public Group</HelpPopoverComponent></span>
+              ? <span className="user-membership-public-label">Public Group <HelpPopoverComponent ariaLabel="Public Group curator help" icon="help" mouseoverText="Only Librarians/Managers may Curate the Public Group" /></span>
               : <label><input type="checkbox" checked={membership.isCurator} onChange={(event) => onCuratorChange(membership, event.target.checked)} /> Curator</label>}
           </div>
         </div>;
