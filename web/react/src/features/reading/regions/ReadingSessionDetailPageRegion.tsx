@@ -2,6 +2,7 @@ import type { Page, ReadingAnnotation, ReadingProgress, ReadingSessionDetail } f
 import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
+import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
@@ -40,55 +41,46 @@ export function ReadingSessionDetailPageRegion({ session, progress, annotations,
   onRetryAnnotations: () => void;
 }) {
   return <div className="reading-session-detail">
-    <div className="reading-session-detail__summary-grid">
-      <SessionSummaryRegion session={session} />
-      <BookContextRegion session={session} />
-      <ProgressRegion state={progress} onRetry={onRetryProgress} />
-    </div>
+    <SessionSummaryRegion session={session} progress={progress} onRetryProgress={onRetryProgress} />
     <AnnotationsRegion state={annotations} filter={annotationFilter} order={annotationOrder} pageNumber={pageNumber} pageSize={pageSize} onFilterChange={onAnnotationFilterChange} onOrderChange={onAnnotationOrderChange} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetryAnnotations} />
   </div>;
 }
 
-function SessionSummaryRegion({ session }: { session: ReadingSessionDetail }) {
-  return <Surface title="Session">
-    <div className="reading-session-detail__heading-facts">
-      <Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge>
-      <span>{formatCount(session.annotationCount, "annotation")}</span>
-    </div>
-    <dl className="reading-session-detail__facts">
-      <div><dt>Started</dt><dd><time dateTime={session.startedAt}>{formatDate(session.startedAt)}</time></dd></div>
-      <div><dt>Updated</dt><dd><time dateTime={session.updatedAt}>{formatDate(session.updatedAt)}</time></dd></div>
-      {session.completedAt ? <div><dt>Completed</dt><dd><time dateTime={session.completedAt}>{formatDate(session.completedAt)}</time></dd></div> : null}
-    </dl>
-    {session.notes.trim() ? <p className="reading-session-detail__notes">{session.notes}</p> : null}
-  </Surface>;
-}
-
-function BookContextRegion({ session }: { session: ReadingSessionDetail }) {
-  if (session.book.unavailable || !session.book.id) {
-    return <Surface title="Book"><div className="reading-session-detail__unavailable"><BookCoverComponent coverUrl={null} title="Book unavailable" /><p>This reading history is still yours, but the related Book is not currently available.</p></div></Surface>;
-  }
-  return <Surface title="Book">
-    <div className="reading-session-detail__book">
-      <BookCoverComponent coverUrl={session.book.coverUrl} title={session.book.title || "Untitled Book"} />
-      <div>
-        <strong>{session.book.title || "Untitled Book"}</strong>
-        {session.book.authors.length ? <p>{session.book.authors.map((author) => author.name).join(", ")}</p> : null}
-        {session.book.series ? <p>{session.book.series.name}{session.book.seriesIndex ? ` ${session.book.seriesIndex}` : ""}</p> : null}
-        {session.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(session.book.id)}`}>View Book</Link> : null}
+function SessionSummaryRegion({ session, progress, onRetryProgress }: { session: ReadingSessionDetail; progress: ReadingProgressLoadState; onRetryProgress: () => void }) {
+  const bookAvailable = !session.book.unavailable && Boolean(session.book.id);
+  const sessionName = session.name.trim() || "Unnamed session";
+  return <Surface>
+    <div className="reading-session-summary">
+      <div className="reading-session-summary__cover"><BookCoverComponent coverUrl={bookAvailable ? session.book.coverUrl : null} title={bookAvailable ? session.book.title || "Untitled Book" : "Book unavailable"} /></div>
+      <div className="reading-session-summary__main">
+        <header className="reading-session-summary__book-header">
+          <div>
+            <p className="eyebrow">{bookAvailable ? "Book" : "Book unavailable"}</p>
+            {bookAvailable ? <>
+              <h2>{session.book.title || "Untitled Book"}</h2>
+              {session.book.authors.length ? <p className="reading-session-summary__book-meta">{session.book.authors.map((author) => author.name).join(", ")}</p> : null}
+              {session.book.series ? <p className="reading-session-summary__book-meta">{session.book.series.name}{session.book.seriesIndex ? ` ${session.book.seriesIndex}` : ""}</p> : null}
+            </> : <p className="reading-session-summary__unavailable">This reading history is still yours, but the related Book is not currently available.</p>}
+          </div>
+          {bookAvailable && session.canOpen && session.book.id ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(session.book.id)}`}>View Book</Link> : null}
+        </header>
+        <div className="reading-session-summary__session">
+          <div className="reading-session-summary__session-heading"><h3>{sessionName}</h3><Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge></div>
+          <div className="reading-session-summary__stats">
+            <span>{formatCount(session.annotationCount, "annotation")}</span>
+            {progress.loading && !progress.progress ? <span aria-live="polite" aria-busy="true">Loading progress...</span> : null}
+            {progress.progress ? <span aria-label={progress.progress.progression === null ? "Progress unavailable" : "Reading progress"}>{progress.progress.progression === null ? "No recorded percentage" : `${formatProgression(progress.progress.progression)} read`}</span> : null}
+          </div>
+          <dl className="reading-session-detail__facts">
+            <div><dt>Started</dt><dd><time dateTime={session.startedAt}>{formatDate(session.startedAt)}</time></dd></div>
+            <div><dt>Updated</dt><dd><time dateTime={session.updatedAt}>{formatDate(session.updatedAt)}</time></dd></div>
+            {session.completedAt ? <div><dt>Completed</dt><dd><time dateTime={session.completedAt}>{formatDate(session.completedAt)}</time></dd></div> : null}
+          </dl>
+          {progress.error ? <div className="reading-session-summary__progress-error"><ErrorPanel>{progress.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetryProgress}>Retry</Button></div> : null}
+        </div>
       </div>
+      {session.notes.trim() ? <div className="reading-session-detail__notes"><span className="eyebrow">Session note</span><p>{session.notes}</p></div> : null}
     </div>
-  </Surface>;
-}
-
-function ProgressRegion({ state, onRetry }: { state: ReadingProgressLoadState; onRetry: () => void }) {
-  return <Surface title="Progress">
-    {state.loading && !state.progress ? <p aria-live="polite" aria-busy="true">Loading progress...</p> : null}
-    {state.error ? <div><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
-    {state.progress ? <div className="reading-session-detail__progress">
-      <strong>{state.progress.progression === null ? "No recorded percentage" : `${formatProgression(state.progress.progression)} read`}</strong>
-      {state.progress.updatedAt ? <span>Updated <time dateTime={state.progress.updatedAt}>{formatDate(state.progress.updatedAt)}</time></span> : null}
-    </div> : null}
   </Surface>;
 }
 
@@ -121,12 +113,22 @@ function AnnotationsRegion({ state, filter, order, pageNumber, pageSize, onFilte
 }
 
 function AnnotationRowComponent({ annotation }: { annotation: ReadingAnnotation }) {
+  const highlightColor = safeHighlightColor(annotation.highlightColor);
   return <article className="reading-annotation-row">
-    <header><Badge>{annotation.kind === "highlight" ? "Highlight" : "Bookmark"}</Badge><time dateTime={annotation.createdAt}>{formatDate(annotation.createdAt)}</time></header>
-    {annotation.kind === "highlight" && annotation.highlightText.trim() ? <blockquote>{annotation.highlightText}</blockquote> : null}
-    {annotation.commentText.trim() ? <p className="reading-annotation-row__comment">{annotation.commentText}</p> : null}
-    {annotation.kind === "bookmark" && !annotation.commentText.trim() ? <p className="muted">Saved location</p> : null}
+    <div className="reading-annotation-row__marker"><MaterialIcon name={annotation.kind === "bookmark" ? "bookmark" : annotation.hasComment ? "chat_bubble" : "border_color"} /></div>
+    <div className="reading-annotation-row__content">
+      {annotation.kind === "bookmark" ? <strong>Bookmark</strong> : null}
+      {annotation.kind === "highlight" && annotation.highlightText.trim() ? <blockquote className={`reading-annotation-row__quote reading-annotation-row__quote--${highlightColor}`}>{annotation.highlightText}</blockquote> : null}
+      {annotation.commentText.trim() ? <p className="reading-annotation-row__comment">{annotation.commentText}</p> : null}
+      {annotation.kind === "bookmark" && !annotation.commentText.trim() ? <p className="muted">Saved location</p> : null}
+      <time dateTime={annotation.createdAt}>{formatDate(annotation.createdAt)}</time>
+    </div>
   </article>;
+}
+
+function safeHighlightColor(value: string): "yellow" | "green" | "blue" | "pink" | "purple" | "orange" {
+  const normalized = value.trim().toLowerCase();
+  return normalized === "green" || normalized === "blue" || normalized === "pink" || normalized === "purple" || normalized === "orange" ? normalized : "yellow";
 }
 
 function formatDate(value: string): string {

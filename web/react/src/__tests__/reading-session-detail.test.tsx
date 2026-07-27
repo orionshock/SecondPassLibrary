@@ -73,6 +73,7 @@ describe("My Marginalia Session Detail", () => {
     for (const value of ["Visible Book", "Visible Author", "Visible Series", "Owned Session note", "Quoted passage", "Reader note"]) expect(markup).toContain(value);
     expect(markup).toContain('href="/library/books/book%2Fid"');
     expect(markup).toContain("50%");
+    expect(markup).toContain('aria-label="Reading progress"');
     expect(markup).not.toContain("epubcfi");
     expect(markup).not.toContain("/html/body");
     expect(markup).not.toContain("session-sensitive-id");
@@ -91,6 +92,17 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain("Owned Session note");
     expect(markup).toContain('role="alert"');
     expect(markup).toContain("Annotation load failed");
+  });
+
+  it("renders the no-percentage state and keeps progress failures local to the summary", () => {
+    const unavailableProgress = renderDetail({ progress: { loading: false, progress: { sessionId: session.id, progression: null, createdAt: null, updatedAt: null } } });
+    expect(unavailableProgress).toContain('aria-label="Progress unavailable"');
+    expect(unavailableProgress).not.toContain("NaN");
+
+    const failed = renderDetail({ progress: { loading: false, error: new Error("Progress load failed") } });
+    expect(failed).toContain("Owned Session note");
+    expect(failed).toContain('role="alert"');
+    expect(failed).toContain("Progress load failed");
   });
 
   it("renders annotation filter and paginated-list contracts", () => {
