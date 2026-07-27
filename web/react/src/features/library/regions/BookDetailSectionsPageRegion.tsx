@@ -125,6 +125,7 @@ function BookDetailShelvesSection({ state, shelfNavigationState, shelfBookNaviga
         key={shelf.id}
         name={shelf.name}
         description={shelf.description}
+        itemCount={shelf.itemCount}
         detailPath={`/shelves/${encodeURIComponent(shelf.id)}`}
         navigationState={shelfNavigationState?.(shelf)}
         previewBooks={previewBooks}

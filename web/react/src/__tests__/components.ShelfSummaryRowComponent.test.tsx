@@ -9,6 +9,7 @@ describe("ShelfSummaryRowComponent", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
       name="Favorites"
       description="Reader picks"
+      itemCount={2}
       detailPath="/shelves/shelf%2Fid"
       previewBooks={[{
         id: "book", title: "Preview Book", coverUrl: null, href: "/library/books/book",
@@ -18,6 +19,7 @@ describe("ShelfSummaryRowComponent", () => {
     expect(markup).toContain('href="/shelves/shelf%2Fid"');
     expect(markup).toContain("Favorites");
     expect(markup).toContain("Reader picks");
+    expect(markup).toContain("(2 books)");
     expect(markup).toContain('aria-label="Book previews"');
     expect(markup).toContain('aria-label="Open Preview Book"');
     expect(markup).not.toContain('aria-label="User:');
@@ -31,12 +33,15 @@ describe("ShelfSummaryRowComponent", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
       name="Common picks"
       description=""
+      itemCount={1}
       detailPath="/shelves/public"
       previewBooks={[]}
       owner={{ kind: "group", label: "Common Room", isPublicGroup: true }}
     /></MemoryRouter>);
 
     expect(markup).toContain('aria-label="Public group: Common Room"');
+    expect(markup).toContain("from");
+    expect(markup).toContain("(1 book)");
     expect(markup).not.toContain("Edit");
     expect(markup).not.toContain("Manage");
   });
@@ -45,6 +50,7 @@ describe("ShelfSummaryRowComponent", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
       name="Shared favorites"
       description="A shared shelf"
+      itemCount={3}
       detailPath="/shelves/shared"
       previewBooks={[]}
       owner={{ kind: "user", label: "@reader" }}
@@ -52,6 +58,8 @@ describe("ShelfSummaryRowComponent", () => {
 
     expect(markup).toContain('aria-label="User: @reader"');
     expect(markup).toContain("@reader");
+    expect(markup).toContain("shared by");
+    expect(markup).toContain("(3 books)");
     expect(markup).not.toContain('href="/users/');
     expect(markup).not.toContain("Edit");
   });

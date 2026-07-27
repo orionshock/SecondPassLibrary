@@ -41,6 +41,7 @@ export function GroupShelvesPageRegion({ groupId, groupName, isPublicGroup, grou
           key={shelf.id}
           name={shelf.name}
           description={shelf.description}
+          itemCount={shelf.itemCount}
           detailPath={detailPath}
           navigationState={breadcrumbNavigationState(groupShelfBreadcrumbs(groupId, groupName, shelf.name, groupPath, isPublicGroup))}
           previewBooks={previewBooks}

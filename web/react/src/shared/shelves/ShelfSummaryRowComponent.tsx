@@ -10,9 +10,10 @@ export type ShelfOwnerBadge =
   | { kind: "group"; label: string; isPublicGroup?: boolean }
   | { kind: "user"; label: string };
 
-export function ShelfSummaryRowComponent({ name, description, detailPath, navigationState, previewBooks, owner }: {
+export function ShelfSummaryRowComponent({ name, description, itemCount, detailPath, navigationState, previewBooks, owner }: {
   name: string;
   description: string;
+  itemCount: number;
   detailPath: string;
   navigationState?: unknown;
   previewBooks: readonly BookCoverPreviewItem[];
@@ -23,6 +24,9 @@ export function ShelfSummaryRowComponent({ name, description, detailPath, naviga
     <div className="shelf-summary-row-component__identity">
       <div className="shelf-summary-row-component__title">
         <h2><Link to={detailPath} state={navigationState}>{name}</Link></h2>
+        {owner ? <span className="shelf-summary-row-component__owner-relation">
+          {owner.kind === "user" ? "shared by" : "from"}
+        </span> : null}
         {owner?.kind === "group" ? <GroupBadgeComponent
           name={owner.label}
           isPublicGroup={owner.isPublicGroup}
@@ -33,6 +37,9 @@ export function ShelfSummaryRowComponent({ name, description, detailPath, naviga
             {owner.label}
           </span>
         </Badge> : null}
+        <span className="shelf-summary-row-component__count">
+          ({itemCount} {itemCount === 1 ? "book" : "books"})
+        </span>
       </div>
       {description ? <p>{description}</p> : null}
     </div>

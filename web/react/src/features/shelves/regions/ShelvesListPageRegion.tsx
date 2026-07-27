@@ -73,6 +73,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
             key={shelf.id}
             name={shelf.name}
             description={shelf.description}
+            itemCount={shelf.itemCount}
             detailPath={detailPath}
             navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
             previewBooks={previewBooks}
