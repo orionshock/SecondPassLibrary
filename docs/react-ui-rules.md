@@ -111,6 +111,7 @@ This is the running list of cross-page presentation and interaction rules that a
 ## Group identity
 
 - Group identity pills use the shared structural `GroupBadgeComponent`. Public/Common Room receives the green Public treatment; ordinary groups receive the neutral group treatment.
+- User ownership uses plain person-icon username text without an `@` prefix or pill; Group/Public ownership retains its shared pill treatment.
 - Curator and membership state remain separate status badges. The group identity component has no permission or mutation behavior.
 
 ## Form actions

@@ -66,7 +66,7 @@ describe("Shelves read-only regions", () => {
     expect(personal).toContain('aria-label="Shelves pagination, bottom"');
     expect(personal).toContain('aria-label="Order shelves, current: Name A-Z"');
     expect(personal).not.toContain('href="/shelves/shelf/edit"');
-    expect(personal).not.toContain('aria-label="User: @reader"');
+    expect(personal).not.toContain('aria-label="User reader"');
 
     expect(renderList(personalShelf, "personal", "-name")).toContain("Name Z-A");
     expect(renderList(personalShelf, "personal", "-item_count")).toContain("Most Items");
@@ -77,7 +77,8 @@ describe("Shelves read-only regions", () => {
     expect(group).not.toContain('href="/shelves/group-shelf/edit"');
 
     const shared = renderList(personalShelf, "shared");
-    expect(shared).toContain('aria-label="User: @reader"');
+    expect(shared).toContain('aria-label="User reader"');
+    expect(shared).not.toContain("@reader");
     expect(shared).toContain('href="/shelves/shelf"');
     expect(shared).not.toContain('href="/shelves/shelf/edit"');
   });
@@ -85,7 +86,9 @@ describe("Shelves read-only regions", () => {
   it("renders a read-only detail header and compact Book rows", () => {
     const header = renderToStaticMarkup(<ShelfHeaderPageRegion shelf={personalShelf} loading={false} onRetry={vi.fn()} />);
     expect(header).toContain("Favorites");
-    expect(header).toContain("Shared by @reader");
+    expect(header).toContain("Shared by");
+    expect(header).toContain('aria-label="User reader"');
+    expect(header).not.toContain("@reader");
     expect(header).not.toContain("Edit");
 
     const renderItems = (ordering: ShelfItemOrdering) => renderToStaticMarkup(<MemoryRouter><ShelfItemsPageRegion

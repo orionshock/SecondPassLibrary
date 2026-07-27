@@ -119,7 +119,7 @@ function BookDetailShelvesSection({ state, shelfNavigationState, shelfBookNaviga
       const owner: ShelfOwnerBadge | undefined = shelf.ownerType === "group" && shelf.ownerGroup
         ? { kind: "group", label: shelf.ownerGroup.name, isPublicGroup: shelf.ownerGroup.isPublicGroup }
         : shelf.visibility === "listed" && shelf.ownerUser
-          ? { kind: "user", label: `@${shelf.ownerUser.username}` }
+          ? { kind: "user", username: shelf.ownerUser.username }
           : undefined;
       return <ShelfSummaryRowComponent
         key={shelf.id}

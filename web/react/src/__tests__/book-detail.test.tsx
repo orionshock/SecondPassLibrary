@@ -114,7 +114,8 @@ describe("Book Detail presentation", () => {
     />);
     expect(markup).toContain("Current Favorites");
     expect(markup).toContain("Reader picks");
-    expect(markup).toContain("@reader");
+    expect(markup).toContain('aria-label="User reader"');
+    expect(markup).not.toContain("@reader");
     expect(markup).toContain('aria-label="Open Preview Book"');
     expect(markup).toContain("Sci-Fi Stack");
     expect(markup).toContain("Common Room");

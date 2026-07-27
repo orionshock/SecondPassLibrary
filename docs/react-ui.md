@@ -113,7 +113,7 @@ Its URL-backed Product scopes are Personal (default), Shared by Others, and
 Group Shelves; API `scope=all` is not exposed. Rows render only server-provided
 ownership, visibility, viewer-visible item count, description, and bounded
 previews. Group-scope rows use Group/Public owner pills, Shared by Others uses
-the server-provided user owner pill, and Personal omits redundant ownership.
+plain person-icon username identity, and Personal omits redundant ownership.
 `ShelfDetailOrchestrator` owns `/shelves/:shelfId`, its
 read-only Shelf header, URL-backed item ordering, pagination, bounded recovery,
 and shared compact Book rows with contextual Shelf breadcrumbs. Separate Shelf

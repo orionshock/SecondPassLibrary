@@ -80,7 +80,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
             owner={scope === "group" && shelf.ownerGroup
               ? { kind: "group", label: shelf.ownerGroup.name, isPublicGroup: shelf.ownerGroup.isPublicGroup }
               : scope === "shared" && shelf.ownerUser
-                ? { kind: "user", label: `@${shelf.ownerUser.username}` }
+                ? { kind: "user", username: shelf.ownerUser.username }
                 : undefined}
           />;
         })}

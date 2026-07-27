@@ -46,18 +46,20 @@ describe("ShelfSummaryRowComponent", () => {
     expect(markup).not.toContain("Manage");
   });
 
-  it("renders an optional display-only user owner pill", () => {
+  it("renders optional user ownership as plain inline identity", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
       name="Shared favorites"
       description="A shared shelf"
       itemCount={3}
       detailPath="/shelves/shared"
       previewBooks={[]}
-      owner={{ kind: "user", label: "@reader" }}
+      owner={{ kind: "user", username: "reader" }}
     /></MemoryRouter>);
 
-    expect(markup).toContain('aria-label="User: @reader"');
-    expect(markup).toContain("@reader");
+    expect(markup).toContain('aria-label="User reader"');
+    expect(markup).toContain("reader");
+    expect(markup).not.toContain("@reader");
+    expect(markup).not.toContain('class="badge');
     expect(markup).toContain("shared by");
     expect(markup).toContain("(3 books)");
     expect(markup).not.toContain('href="/users/');

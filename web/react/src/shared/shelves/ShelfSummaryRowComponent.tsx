@@ -1,14 +1,13 @@
 import { Link } from "react-router-dom";
 
-import { MaterialIcon } from "../../components/icons/MaterialIcon";
-import { Badge } from "../../components/ui";
 import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../books/BookCoverPreviewStripComponent";
 import { GroupBadgeComponent } from "../groups/GroupBadgeComponent";
+import { UserInlineIdentityComponent } from "../users/UserInlineIdentityComponent";
 import "./ShelfComponents.css";
 
 export type ShelfOwnerBadge =
   | { kind: "group"; label: string; isPublicGroup?: boolean }
-  | { kind: "user"; label: string };
+  | { kind: "user"; username: string };
 
 export function ShelfSummaryRowComponent({ name, description, itemCount, detailPath, navigationState, previewBooks, owner }: {
   name: string;
@@ -31,12 +30,7 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
           name={owner.label}
           isPublicGroup={owner.isPublicGroup}
         /> : null}
-        {owner?.kind === "user" ? <Badge>
-          <span aria-label={`User: ${owner.label}`}>
-            <MaterialIcon name="person" size={15} />
-            {owner.label}
-          </span>
-        </Badge> : null}
+        {owner?.kind === "user" ? <UserInlineIdentityComponent username={owner.username} /> : null}
         <span className="shelf-summary-row-component__count">
           ({itemCount} {itemCount === 1 ? "book" : "books"})
         </span>

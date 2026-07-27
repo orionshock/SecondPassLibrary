@@ -2,6 +2,7 @@ import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
+import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";
 
 export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {
   shelf?: ShelfSummary;
@@ -25,15 +26,17 @@ export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNav
       actions={shelf.canEdit && editPath ? <Link className="button-link button--secondary" to={editPath} state={editNavigationState}>Edit Shelf</Link> : undefined}
     />
     <div className="shelf-detail-header__facts">
-      <span>{shelfOwnerLabel(shelf)}</span>
+      <ShelfOwnerIdentity shelf={shelf} />
       {shelf.ownerType === "user" ? <span>{shelf.visibility === "listed" ? "Listed" : "Private"}</span> : null}
       <span>{shelf.itemCount} {shelf.itemCount === 1 ? "item" : "items"}</span>
     </div>
   </div>;
 }
 
-function shelfOwnerLabel(shelf: ShelfSummary): string {
-  if (shelf.ownerType === "group") return shelf.ownerGroup?.name ?? "Library Group";
-  if (shelf.canEdit) return "Personal shelf";
-  return shelf.ownerUser ? `Shared by @${shelf.ownerUser.username}` : "Shared shelf";
+function ShelfOwnerIdentity({ shelf }: { shelf: ShelfSummary }) {
+  if (shelf.ownerType === "group") return <span>{shelf.ownerGroup?.name ?? "Library Group"}</span>;
+  if (shelf.canEdit) return <span>Personal shelf</span>;
+  return shelf.ownerUser
+    ? <span>Shared by <UserInlineIdentityComponent username={shelf.ownerUser.username} /></span>
+    : <span>Shared shelf</span>;
 }
