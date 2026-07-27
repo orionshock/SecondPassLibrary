@@ -257,6 +257,7 @@ Highlight color:
   - `?book_id=<book_id>`
   - `?session_id=<session_id>`
   - `?kind=highlight|bookmark` (may be repeated)
+  - `?category=bookmark|highlight|highlight_with_note` (may be repeated; categories are ORed). `highlight` excludes note-bearing highlights, while `highlight_with_note` requires nonblank `comment_text`.
   - `?ordering=created|-created|modified|-modified`
 - Soft-deleted annotations (`is_deleted=true`) are hidden by default; pass `?include_deleted=true` to include them.
 - Delete uses soft delete (`is_deleted=true`) instead of hard deletion.

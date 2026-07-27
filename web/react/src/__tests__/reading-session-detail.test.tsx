@@ -1,11 +1,13 @@
 import type { Page, ReadingAnnotation, ReadingSessionDetail } from "@second-pass/spl-api";
+import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "../app/router";
 import { readingSessionBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
-import { ReadingSessionDetailPageRegion } from "../features/reading/regions/ReadingSessionDetailPageRegion";
+import { AnnotationCategoryMenuOptionsComponent, ReadingSessionDetailPageRegion, annotationOrderOptions } from "../features/reading/regions/ReadingSessionDetailPageRegion";
+import { OrderMenuOptionsComponent } from "../shared/forms/OrderMenuComponent";
 
 const session: ReadingSessionDetail = {
   id: "session-sensitive-id",
@@ -46,11 +48,11 @@ function renderDetail(overrides: Partial<Parameters<typeof ReadingSessionDetailP
     session={session}
     progress={{ loading: false, progress: { sessionId: session.id, progression: 0.5, createdAt: null, updatedAt: "2026-01-03T00:00:00Z" } }}
     annotations={{ loading: false, page: annotations }}
-    annotationFilter="all"
+    annotationCategories={["highlight", "highlightWithNote"]}
     annotationOrder="newest"
     pageNumber={1}
     pageSize={20}
-    onAnnotationFilterChange={vi.fn()}
+    onAnnotationCategoriesChange={vi.fn()}
     onAnnotationOrderChange={vi.fn()}
     onPageChange={vi.fn()}
     onPageSizeChange={vi.fn()}
@@ -105,10 +107,24 @@ describe("My Marginalia Session Detail", () => {
     expect(failed).toContain("Progress load failed");
   });
 
-  it("renders annotation filter and paginated-list contracts", () => {
+  it("renders annotation controls and paginated-list contracts", () => {
     const markup = renderDetail({ annotations: { loading: false, page: { ...annotations, count: 40, next: "/next" } } });
-    expect(markup).toContain('id="reading-annotation-kind"');
+    expect(markup).toContain('aria-label="Show marginalia, current: Highlights"');
+    const orderMarkup = renderToStaticMarkup(<OrderMenuOptionsComponent value="newest" options={annotationOrderOptions} ariaLabel="Order marginalia" onSelect={vi.fn()} />);
+    expect((orderMarkup.match(/role="menuitem"/g) ?? [])).toHaveLength(4);
     expect(markup).toContain('aria-label="Marginalia pagination, top"');
     expect(markup).toContain('aria-label="Marginalia pagination, bottom"');
+  });
+
+  it("supports disjoint multi-category selections without deselecting the final category", () => {
+    const onChange = vi.fn();
+    const menu = AnnotationCategoryMenuOptionsComponent({ value: ["bookmark", "highlightWithNote"], onChange });
+    const options = (menu as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>).props.children;
+    options[1]!.props.onClick();
+    expect(onChange).toHaveBeenCalledWith(["bookmark", "highlight", "highlightWithNote"]);
+
+    const single = AnnotationCategoryMenuOptionsComponent({ value: ["bookmark"], onChange: vi.fn() });
+    const singleOptions = (single as ReactElement<{ children: ReactElement<{ disabled?: boolean }>[] }>).props.children;
+    expect(singleOptions[0]!.props.disabled).toBe(true);
   });
 });

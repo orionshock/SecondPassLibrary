@@ -101,6 +101,7 @@ export interface ReadingProgress {
 }
 
 export type ReadingAnnotationKind = "highlight" | "bookmark";
+export type ReadingAnnotationCategory = "bookmark" | "highlight" | "highlightWithNote";
 export type ReadingAnnotationOrdering = "created" | "-created" | "modified" | "-modified";
 
 interface ReadingAnnotationResponse {
@@ -128,6 +129,7 @@ export interface ReadingAnnotation {
 export interface ReadingAnnotationsQuery {
   sessionId: string;
   kind?: ReadingAnnotationKind;
+  categories?: readonly ReadingAnnotationCategory[];
   ordering?: ReadingAnnotationOrdering;
   page?: number;
   pageSize?: number;
@@ -401,6 +403,9 @@ export async function getReadingProgress(sessionId: string, client: ApiClient = 
 export async function listReadingAnnotations(query: ReadingAnnotationsQuery, client: ApiClient = apiClient): Promise<Page<ReadingAnnotation>> {
   const parameters = new URLSearchParams({ session_id: query.sessionId });
   if (query.kind !== undefined) parameters.set("kind", query.kind);
+  for (const category of query.categories ?? []) {
+    parameters.append("category", category === "highlightWithNote" ? "highlight_with_note" : category);
+  }
   if (query.ordering !== undefined) parameters.set("ordering", query.ordering);
   if (query.page !== undefined) parameters.set("page", String(query.page));
   if (query.pageSize !== undefined) parameters.set("page_size", String(query.pageSize));

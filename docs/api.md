@@ -1054,7 +1054,9 @@ and Product UI workflow. The designated Public group cannot be deleted.
 - Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/` (writes require current access to the session's book)
 - Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
   - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?kind=highlight|bookmark` (may be repeated)
+  - Product-category filter: repeat `?category=bookmark|highlight|highlight_with_note` for OR selection. `highlight` means a highlight without `comment_text`; `highlight_with_note` means a highlight with nonblank `comment_text`. This is separate from `kind=highlight`, which includes both highlight categories.
   - Ordering: `?ordering=created|-created|modified|-modified`
+  - Annotation location/CFI ordering is not supported.
   - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
   - `POST /api/v1/reading/annotations/batch/` accepts Django session or Client
     API bearer authentication and creates up to 100 annotations for one session

@@ -463,10 +463,77 @@
 
 .reading-session-detail__annotations h2 { margin: 0; }
 
-.reading-session-detail__annotation-controls label {
+.reading-annotation-category-menu {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.reading-annotation-category-menu__dropdown {
+  position: relative;
+}
+
+.reading-annotation-category-menu__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.32rem 0.5rem;
+  border-radius: 0.55rem;
+  color: #cbd8e7;
+  background: var(--surface-raised);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.reading-annotation-category-menu__button .material-icon,
+.reading-annotation-category-menu__options .material-icon {
+  color: #93a9bf;
+  font-size: 0.95rem;
+}
+
+.reading-annotation-category-menu__options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  width: max-content;
+  min-width: 12.5rem;
+  padding: 0.3rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.55rem;
+  background: var(--surface-raised);
+  box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 38%);
+}
+
+.reading-annotation-category-menu__options > button {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) 1rem;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.38rem 0.45rem;
+  border-color: transparent;
+  border-radius: 0.35rem;
+  color: #c3d0df;
+  background: transparent;
+  font-size: 0.79rem;
+  text-align: left;
+}
+
+.reading-annotation-category-menu__options > button:hover,
+.reading-annotation-category-menu__options > button:focus-visible,
+.reading-annotation-category-menu__options > button[aria-checked="true"] {
+  border-color: var(--border);
+  background: rgb(125 211 252 / 8%);
+}
+
+.reading-annotation-category-menu__options > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .reading-annotation-rows {

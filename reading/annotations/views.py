@@ -75,6 +75,30 @@ class AnnotationViewSet(viewsets.ModelViewSet):
                 q |= Q(anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT)
             queryset = queryset.filter(q)
 
+        categories = [
+            str(category).strip()
+            for category in request.query_params.getlist("category")
+            if str(category).strip()
+        ]
+        if categories:
+            allowed_categories = {"bookmark", "highlight", "highlight_with_note"}
+            if any(category not in allowed_categories for category in categories):
+                raise DRFValidationError({"category": "Invalid category."})
+            category_query = Q()
+            if "bookmark" in categories:
+                category_query |= Q(anchor_kind=Annotation.ANCHOR_KIND_BOOKMARK)
+            if "highlight" in categories:
+                category_query |= Q(
+                    anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+                    comment_text__regex=r"^\s*$",
+                )
+            if "highlight_with_note" in categories:
+                category_query |= Q(
+                    anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+                    comment_text__regex=r"\S",
+                )
+            queryset = queryset.filter(category_query)
+
         session_id = request.query_params.get("session_id")
         book_id = request.query_params.get("book_id")
         if session_id:

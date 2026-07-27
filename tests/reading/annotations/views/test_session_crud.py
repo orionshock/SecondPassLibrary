@@ -308,6 +308,73 @@ class ReadingAnnotationsSessionCrudTests(ReadingAPITestBase):
         )
         self.assertEqual(old_filter.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_annotations_list_filters_by_repeated_disjoint_categories(self):
+        self.client.login(username="u1", password="pass1")
+        session = ReadingSession.objects.create(user=self.user1, book=self.book)
+        bookmark = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_BOOKMARKING,
+            book=self.book,
+            selector_value="epubcfi(/6/2)",
+        )
+        highlight = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_HIGHLIGHTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+            book=self.book,
+            selector_value="epubcfi(/6/4)",
+            highlight_text="plain highlight",
+        )
+        highlight_with_note = Annotation.objects.create(
+            session=session,
+            motivation=Annotation.MOTIVATION_COMMENTING,
+            anchor_kind=Annotation.ANCHOR_KIND_HIGHLIGHT,
+            book=self.book,
+            selector_value="epubcfi(/6/6)",
+            highlight_text="noted highlight",
+            comment_text="reader note",
+        )
+
+        expectations = {
+            "bookmark": {str(bookmark.id)},
+            "highlight": {str(highlight.id)},
+            "highlight_with_note": {str(highlight_with_note.id)},
+        }
+        for category, expected in expectations.items():
+            response = assert_response(
+                self.client.get(
+                    f"/api/v1/reading/annotations/?session_id={session.id}&category={category}"
+                )
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, category)
+            self.assertEqual(
+                {row["id"] for row in response_data_list(response)}, expected
+            )
+
+        combined = assert_response(
+            self.client.get(
+                f"/api/v1/reading/annotations/?session_id={session.id}"
+                "&category=bookmark&category=highlight_with_note"
+            )
+        )
+        self.assertEqual(combined.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {row["id"] for row in response_data_list(combined)},
+            {str(bookmark.id), str(highlight_with_note.id)},
+        )
+        self.assertNotIn(
+            str(self.annotation2.id),
+            {row["id"] for row in response_data_list(combined)},
+        )
+
+        invalid = assert_response(
+            self.client.get(
+                f"/api/v1/reading/annotations/?session_id={session.id}&category=note"
+            )
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("category", response_data_dict(invalid))
+
     def test_annotations_list_ordering_created_and_modified(self):
         self.client.login(username="u1", password="pass1")
         session = ReadingSession.objects.create(user=self.user1, book=self.book)
@@ -381,4 +448,3 @@ class ReadingAnnotationsSessionCrudTests(ReadingAPITestBase):
             ),
         )
         self.assertEqual(ann.status_code, status.HTTP_400_BAD_REQUEST)
-

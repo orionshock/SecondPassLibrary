@@ -48,6 +48,7 @@ export {
   type ReadingImportSelectedSession,
   type ReadingImportSessionPreview,
   type ReadingAnnotation,
+  type ReadingAnnotationCategory,
   type ReadingAnnotationKind,
   type ReadingAnnotationOrdering,
   type ReadingAnnotationsQuery,

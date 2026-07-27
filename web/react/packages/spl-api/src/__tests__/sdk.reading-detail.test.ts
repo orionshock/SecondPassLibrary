@@ -45,7 +45,11 @@ describe("reading detail SDK", () => {
       ] } as T;
     } };
     const page = await listReadingAnnotations({ sessionId: "session/id", kind: "highlight", ordering: "created", page: 2, pageSize: 30 }, client);
-    expect(calls).toEqual(["/api/v1/reading/annotations/?session_id=session%2Fid&kind=highlight&ordering=created&page=2&page_size=30"]);
+    await listReadingAnnotations({ sessionId: "session/id", categories: ["bookmark", "highlightWithNote"], ordering: "-modified" }, client);
+    expect(calls).toEqual([
+      "/api/v1/reading/annotations/?session_id=session%2Fid&kind=highlight&ordering=created&page=2&page_size=30",
+      "/api/v1/reading/annotations/?session_id=session%2Fid&category=bookmark&category=highlight_with_note&ordering=-modified",
+    ]);
     expect(page.items[0]).toMatchObject({ kind: "highlight", highlightText: "Quoted text", commentText: "Comment", hasComment: true });
     expect(page.items[1]).toMatchObject({ kind: "bookmark", highlightText: "", commentText: "" });
     expect(page.items[0]).not.toHaveProperty("selector");

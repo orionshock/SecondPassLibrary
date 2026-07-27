@@ -1,4 +1,5 @@
-import type { Page, ReadingAnnotation, ReadingProgress, ReadingSessionDetail } from "@second-pass/spl-api";
+import type { Page, ReadingAnnotation, ReadingAnnotationCategory, ReadingProgress, ReadingSessionDetail } from "@second-pass/spl-api";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
@@ -6,11 +7,19 @@ import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
-import type { ReadingAnnotationFilter, ReadingAnnotationOrder } from "../readingSessionDetailQuery";
+import { allReadingAnnotationCategories, defaultReadingAnnotationCategories, type ReadingAnnotationOrder } from "../readingSessionDetailQuery";
 
-const annotationOrders: readonly OrderMenuOption<ReadingAnnotationOrder>[] = [
-  { value: "newest", label: "Newest", icon: "south" },
-  { value: "oldest", label: "Oldest", icon: "north" },
+export const annotationOrderOptions: readonly OrderMenuOption<ReadingAnnotationOrder>[] = [
+  { value: "newest", label: "Newest created", icon: "south" },
+  { value: "oldest", label: "Oldest created", icon: "north" },
+  { value: "recently-edited", label: "Recently edited", icon: "edit_calendar" },
+  { value: "oldest-edited", label: "Oldest edited", icon: "history" },
+];
+
+const annotationCategoryOptions: readonly { value: ReadingAnnotationCategory; label: string; icon: string }[] = [
+  { value: "bookmark", label: "Bookmarks", icon: "bookmark" },
+  { value: "highlight", label: "Highlights", icon: "border_color" },
+  { value: "highlightWithNote", label: "Highlights with notes", icon: "chat_bubble" },
 ];
 
 export interface ReadingProgressLoadState {
@@ -25,15 +34,15 @@ export interface ReadingAnnotationsLoadState {
   error?: Error;
 }
 
-export function ReadingSessionDetailPageRegion({ session, progress, annotations, annotationFilter, annotationOrder, pageNumber, pageSize, onAnnotationFilterChange, onAnnotationOrderChange, onPageChange, onPageSizeChange, onRetryProgress, onRetryAnnotations }: {
+export function ReadingSessionDetailPageRegion({ session, progress, annotations, annotationCategories, annotationOrder, pageNumber, pageSize, onAnnotationCategoriesChange, onAnnotationOrderChange, onPageChange, onPageSizeChange, onRetryProgress, onRetryAnnotations }: {
   session: ReadingSessionDetail;
   progress: ReadingProgressLoadState;
   annotations: ReadingAnnotationsLoadState;
-  annotationFilter: ReadingAnnotationFilter;
+  annotationCategories: readonly ReadingAnnotationCategory[];
   annotationOrder: ReadingAnnotationOrder;
   pageNumber: number;
   pageSize: number;
-  onAnnotationFilterChange: (filter: ReadingAnnotationFilter) => void;
+  onAnnotationCategoriesChange: (categories: ReadingAnnotationCategory[]) => void;
   onAnnotationOrderChange: (order: ReadingAnnotationOrder) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -42,7 +51,7 @@ export function ReadingSessionDetailPageRegion({ session, progress, annotations,
 }) {
   return <div className="reading-session-detail">
     <SessionSummaryRegion session={session} progress={progress} onRetryProgress={onRetryProgress} />
-    <AnnotationsRegion state={annotations} filter={annotationFilter} order={annotationOrder} pageNumber={pageNumber} pageSize={pageSize} onFilterChange={onAnnotationFilterChange} onOrderChange={onAnnotationOrderChange} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetryAnnotations} />
+    <AnnotationsRegion state={annotations} categories={annotationCategories} order={annotationOrder} pageNumber={pageNumber} pageSize={pageSize} onCategoriesChange={onAnnotationCategoriesChange} onOrderChange={onAnnotationOrderChange} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetryAnnotations} />
   </div>;
 }
 
@@ -84,13 +93,13 @@ function SessionSummaryRegion({ session, progress, onRetryProgress }: { session:
   </Surface>;
 }
 
-function AnnotationsRegion({ state, filter, order, pageNumber, pageSize, onFilterChange, onOrderChange, onPageChange, onPageSizeChange, onRetry }: {
+function AnnotationsRegion({ state, categories, order, pageNumber, pageSize, onCategoriesChange, onOrderChange, onPageChange, onPageSizeChange, onRetry }: {
   state: ReadingAnnotationsLoadState;
-  filter: ReadingAnnotationFilter;
+  categories: readonly ReadingAnnotationCategory[];
   order: ReadingAnnotationOrder;
   pageNumber: number;
   pageSize: number;
-  onFilterChange: (filter: ReadingAnnotationFilter) => void;
+  onCategoriesChange: (categories: ReadingAnnotationCategory[]) => void;
   onOrderChange: (order: ReadingAnnotationOrder) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -98,8 +107,8 @@ function AnnotationsRegion({ state, filter, order, pageNumber, pageSize, onFilte
 }) {
   return <section className="reading-session-detail__annotations" aria-labelledby="reading-session-annotations-heading">
     <header><h2 id="reading-session-annotations-heading">Marginalia</h2><div className="reading-session-detail__annotation-controls">
-      <label htmlFor="reading-annotation-kind">Show <select id="reading-annotation-kind" value={filter} onChange={(event) => onFilterChange(event.target.value as ReadingAnnotationFilter)}><option value="all">All</option><option value="highlight">Highlights</option><option value="bookmark">Bookmarks</option></select></label>
-      <OrderMenuComponent label="Order" value={order} options={annotationOrders} onChange={onOrderChange} size="small" />
+      <AnnotationCategoryMenuComponent value={categories} onChange={onCategoriesChange} />
+      <OrderMenuComponent label="Order" value={order} options={annotationOrderOptions} onChange={onOrderChange} size="small" />
     </div></header>
     {!state.page && state.loading ? <p aria-live="polite" aria-busy="true">Loading marginalia...</p> : null}
     {!state.page && state.error ? <div><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
@@ -110,6 +119,85 @@ function AnnotationsRegion({ state, filter, order, pageNumber, pageSize, onFilte
       </PaginatedListFrameComponent>
     </div> : null}
   </section>;
+}
+
+export function AnnotationCategoryMenuComponent({ value, onChange }: { value: readonly ReadingAnnotationCategory[]; onChange: (categories: ReadingAnnotationCategory[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const selectedLabel = value.length === allReadingAnnotationCategories.length
+    ? "All"
+    : value.length === defaultReadingAnnotationCategories.length && defaultReadingAnnotationCategories.every((category) => value.includes(category))
+      ? "Highlights"
+    : value.length === 1
+      ? annotationCategoryOptions.find((option) => option.value === value[0])?.label ?? "Selected"
+      : `${value.length} selected`;
+
+  useEffect(() => {
+    if (!open) return;
+    function dismissOutside(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", dismissOutside);
+    return () => document.removeEventListener("pointerdown", dismissOutside);
+  }, [open]);
+
+  return <div className="reading-annotation-category-menu">
+    <span>Show</span>
+    <div
+      className="reading-annotation-category-menu__dropdown"
+      ref={rootRef}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        setOpen(false);
+        buttonRef.current?.focus();
+      }}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        className="reading-annotation-category-menu__button"
+        aria-label={`Show marginalia, current: ${selectedLabel}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <MaterialIcon name="filter_list" />
+        <span>{selectedLabel}</span>
+        <MaterialIcon name={open ? "expand_less" : "expand_more"} />
+      </button>
+      {open ? <AnnotationCategoryMenuOptionsComponent id={menuId} value={value} onChange={onChange} /> : null}
+    </div>
+  </div>;
+}
+
+export function AnnotationCategoryMenuOptionsComponent({ id, value, onChange }: { id?: string; value: readonly ReadingAnnotationCategory[]; onChange: (categories: ReadingAnnotationCategory[]) => void }) {
+  return <div id={id} className="reading-annotation-category-menu__options" role="menu" aria-label="Show marginalia">
+    {annotationCategoryOptions.map((option) => {
+      const selected = value.includes(option.value);
+      return <button
+        key={option.value}
+        type="button"
+        role="menuitemcheckbox"
+        aria-checked={selected}
+        disabled={selected && value.length === 1}
+        onClick={() => {
+          const selectedValues = selected ? value.filter((category) => category !== option.value) : [...value, option.value];
+          onChange(allReadingAnnotationCategories.filter((category) => selectedValues.includes(category)));
+        }}
+      >
+        <MaterialIcon name={option.icon} />
+        <span>{option.label}</span>
+        {selected ? <MaterialIcon name="check" /> : null}
+      </button>;
+    })}
+  </div>;
 }
 
 function AnnotationRowComponent({ annotation }: { annotation: ReadingAnnotation }) {

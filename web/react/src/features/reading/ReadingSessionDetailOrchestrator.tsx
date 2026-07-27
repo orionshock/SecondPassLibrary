@@ -103,11 +103,11 @@ export function ReadingSessionDetailOrchestrator() {
       session={sessionLoad.session}
       progress={progressLoad}
       annotations={annotationsLoad}
-      annotationFilter={query.filter}
+      annotationCategories={query.categories}
       annotationOrder={query.order}
       pageNumber={query.page}
       pageSize={query.pageSize}
-      onAnnotationFilterChange={(filter) => changeQuery({ filter })}
+      onAnnotationCategoriesChange={(categories) => changeQuery({ categories })}
       onAnnotationOrderChange={(order) => changeQuery({ order })}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
