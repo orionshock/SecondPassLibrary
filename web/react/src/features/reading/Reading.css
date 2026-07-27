@@ -309,6 +309,12 @@
 
 .reading-import-session__edits textarea { min-height: 4.5rem; }
 
+.reading-import-review > .form-action-row {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
 .reading-import-result-actions { margin-top: 1rem; }
 
 @media (max-width: 700px) {

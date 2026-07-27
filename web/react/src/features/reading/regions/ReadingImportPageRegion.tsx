@@ -54,6 +54,7 @@ function ReadingImportReview({ preview, draft, editingSessionKeys, selectedCount
   onApply: () => void;
 }) {
   const summaryWarnings = preview.warnings.filter((warning) => !/(?:reader-assisted import|second pass reader import)/i.test(warning));
+  const unmatchedSessionCount = preview.books.reduce((count, book) => count + (book.matchStatus === "unmatched" ? book.sessionCount : book.sessions.filter((session) => session.needsReader).length), 0);
   if (preview.unmatchedEntries) {
     summaryWarnings.unshift(`${preview.unmatchedEntries} exported Book ${preview.unmatchedEntries === 1 ? "entry did" : "entries did"} not match a visible local Book and ${preview.unmatchedEntries === 1 ? "requires" : "require"} Second Pass Reader Import.`);
   }
@@ -114,8 +115,9 @@ function ReadingImportReview({ preview, draft, editingSessionKeys, selectedCount
       </section>)}
     </div>
     <ActionRowComponent state={applyState}>
+      {preview.unmatchedDownloadAvailable && unmatchedSessionCount ? <Button type="button" tone="secondary" disabled>Download Unmatched Sessions ({unmatchedSessionCount})</Button> : null}
       <span className="muted">{selectedCount} {selectedCount === 1 ? "session" : "sessions"} selected</span>
-      <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending} onClick={onApply}>{applyState.pending ? "Applying..." : "Apply selected"}</Button>
+      <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
     </ActionRowComponent>
   </section>;
 }
