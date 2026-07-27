@@ -9,6 +9,7 @@ import {
   bookBrowseDetailBreadcrumbs,
   bookDetailBreadcrumbFallback,
   bookEditBreadcrumbTrail,
+  bookEditRelatedBreadcrumbTrail,
   bookGroupBreadcrumbTrail,
   bookGroupPreviewBreadcrumbTrail,
   bookIdentifierLabel,
@@ -211,6 +212,18 @@ describe("Book Detail navigation", () => {
       { label: "Dresden Files", to: "/library?view=series&series=series-id", icon: "series" },
       { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
       { label: "Favorites", icon: "shelf" },
+    ]);
+  });
+
+  it("keeps Book Edit as the contextual parent for related Group and Shelf links", () => {
+    const editTrail = bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback("Storm Front"), book.id, "Storm Front");
+    expect(bookEditRelatedBreadcrumbTrail(
+      editTrail,
+      `/library/books/${book.id}/edit?tab=group-shelves`,
+      { label: "Group Shelf", icon: "shelf" },
+    ).slice(-2)).toEqual([
+      { label: "Edit", to: `/library/books/${book.id}/edit?tab=group-shelves` },
+      { label: "Group Shelf", icon: "shelf" },
     ]);
   });
 

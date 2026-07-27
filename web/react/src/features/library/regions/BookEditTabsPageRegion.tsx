@@ -7,6 +7,7 @@ export function BookEditTabsPageRegion({ active, showGroups = false, disabled = 
     { id: "catalog", label: "Catalog" },
     { id: "authors-series", label: "Authors & Series" },
     ...(showGroups ? [{ id: "groups" as const, label: "Library Groups" }] : []),
+    { id: "group-shelves", label: "Group Shelves" },
     { id: "identifiers", label: "Identifiers" },
   ];
   return <TabListComponent tabs={tabs} activeTab={active} onChange={onChange} ariaLabel="Book edit sections" disabled={disabled} idPrefix="book-edit" />;

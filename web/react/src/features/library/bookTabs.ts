@@ -1,7 +1,7 @@
 import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
 
 export type BookDetailTab = "shelves" | "groups" | "metadata";
-export type BookEditTab = "book" | "catalog" | "authors-series" | "groups" | "identifiers";
+export type BookEditTab = "book" | "catalog" | "authors-series" | "groups" | "group-shelves" | "identifiers";
 
 export interface BookTabQueryState<T extends string> {
   tab: T;
@@ -10,8 +10,8 @@ export interface BookTabQueryState<T extends string> {
 
 const bookDetailTabs: readonly BookDetailTab[] = ["shelves", "groups", "metadata"];
 const simpleBookDetailTabs: readonly BookDetailTab[] = ["shelves", "metadata"];
-const bookEditTabs: readonly BookEditTab[] = ["book", "catalog", "authors-series", "groups", "identifiers"];
-const simpleBookEditTabs: readonly BookEditTab[] = ["book", "catalog", "authors-series", "identifiers"];
+const bookEditTabs: readonly BookEditTab[] = ["book", "catalog", "authors-series", "groups", "group-shelves", "identifiers"];
+const simpleBookEditTabs: readonly BookEditTab[] = ["book", "catalog", "authors-series", "group-shelves", "identifiers"];
 
 export function bookDetailQueryFromSearchParams(
   parameters: URLSearchParams,

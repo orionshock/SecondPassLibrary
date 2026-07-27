@@ -243,6 +243,23 @@ export async function listAllShelvesForBook(
   );
 }
 
+export async function listAllGroupShelvesForBook(
+  bookId: string,
+  client: ApiClient = apiClient,
+): Promise<ShelfSummary[]> {
+  const parameters = new URLSearchParams({
+    scope: "group",
+    book: bookId,
+    ordering: "name",
+    page_size: "200",
+  });
+  return collectPaginatedResults(
+    `/api/v1/shelves/?${parameters.toString()}`,
+    (path) => client.request<ApiPage<ShelfSummaryResponse>>(path),
+    mapShelfSummary,
+  );
+}
+
 export async function createShelf(
   input: CreateShelfInput,
   client: ApiClient = apiClient,

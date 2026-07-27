@@ -62,6 +62,7 @@ export {
   createShelf,
   deleteShelf,
   getShelf,
+  listAllGroupShelvesForBook,
   listAllShelvesForBook,
   listShelfItems,
   listShelfEditorItems,

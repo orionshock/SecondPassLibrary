@@ -1,5 +1,6 @@
 import type { BookGroupSummary, LibraryGroup } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
@@ -15,6 +16,7 @@ export function BookEditGroupsPageRegion({
   pickerError,
   mutation,
   disabled,
+  groupNavigationState,
   onRetry,
   onSelectionChange,
   onAdd,
@@ -26,6 +28,7 @@ export function BookEditGroupsPageRegion({
   pickerError?: Error;
   mutation: MutationState;
   disabled: boolean;
+  groupNavigationState?: (group: BookGroupSummary) => unknown;
   onRetry: () => void;
   onSelectionChange: () => void;
   onAdd: (groupId: string) => void;
@@ -49,13 +52,15 @@ export function BookEditGroupsPageRegion({
     <h2 id="book-edit-groups-heading">Library Groups</h2>
     <ul className="book-edit-group-list">
       {currentGroups.map((group) => <li key={group.id} className="book-edit-group-row">
-        <span
+        <Link
           className={group.isPublicGroup ? "book-edit-group-assignment book-edit-group-assignment--public" : "book-edit-group-assignment"}
+          to={`/groups/${encodeURIComponent(group.id)}`}
+          state={groupNavigationState?.(group)}
           title={group.description || undefined}
         >
           <MaterialIcon name={group.isPublicGroup ? "public" : "group"} size={17} />
           <span>{group.name}</span>
-        </span>
+        </Link>
         {group.id !== solePublicId
           ? <RemoveIconButton type="button" label={`Remove ${group.name}`} disabled={disabled} onClick={() => onRemove(group)} />
           : <span className="book-edit-group-row__control-spacer" aria-hidden="true" />}

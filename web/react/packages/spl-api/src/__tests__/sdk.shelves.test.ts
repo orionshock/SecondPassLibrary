@@ -6,6 +6,7 @@ import {
   createShelf,
   deleteShelf,
   getShelf,
+  listAllGroupShelvesForBook,
   listAllShelvesForBook,
   listShelfEditorItems,
   listShelfItems,
@@ -149,6 +150,35 @@ describe("Shelves SDK", () => {
     expect(page.items[0]).not.toHaveProperty("created_at");
     expect(page.items[0]).not.toHaveProperty("updated_at");
     expect(page.items[0]).not.toHaveProperty("preview_books");
+  });
+
+  it("collects only server-filtered Group Shelves containing a Book", async () => {
+    const calls: string[] = [];
+    const groupShelf = {
+      ...personalShelf,
+      id: "group-shelf",
+      owner_type: "group",
+      owner_user: null,
+      owner_group: { id: "group", name: "Readers", is_public_group: false },
+      visibility: "private",
+    };
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 1, next: null, previous: null, results: [groupShelf] } as T;
+    } };
+
+    const shelves = await listAllGroupShelvesForBook("book/id", client);
+
+    expect(calls).toEqual([
+      "/api/v1/shelves/?scope=group&book=book%2Fid&ordering=name&page_size=200",
+    ]);
+    expect(shelves).toHaveLength(1);
+    expect(shelves[0]).toMatchObject({
+      id: "group-shelf",
+      ownerType: "group",
+      matchedItemId: "item",
+      canEdit: true,
+    });
   });
 
   it("serializes every added Shelf and item ordering value", async () => {

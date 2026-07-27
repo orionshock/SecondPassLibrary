@@ -69,6 +69,17 @@ export function bookEditBreadcrumbTrail(detailTrail: readonly BreadcrumbItem[], 
   return [...parent, { label: title, to: `/library/books/${encodeURIComponent(bookId)}`, icon: "book" }, { label: "Edit" }];
 }
 
+export function bookEditRelatedBreadcrumbTrail(
+  editTrail: readonly BreadcrumbItem[],
+  editPath: string,
+  item: BreadcrumbItem,
+): BreadcrumbItem[] {
+  const parent = editTrail.map((breadcrumb, index) => (
+    index === editTrail.length - 1 ? { ...breadcrumb, to: editPath } : { ...breadcrumb }
+  ));
+  return [...parent, item];
+}
+
 export function bookShelfBreadcrumbTrail(
   detailTrail: readonly BreadcrumbItem[],
   bookId: string,

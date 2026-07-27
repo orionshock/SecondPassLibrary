@@ -24,6 +24,8 @@ describe("Book Edit draft contract", () => {
     });
     expect(bookEditQueryFromSearchParams(new URLSearchParams("tab=unknown"), true)).toEqual({ tab: "book", query: "" });
     expect(bookEditQueryFromSearchParams(new URLSearchParams("tab=groups"), false)).toEqual({ tab: "book", query: "" });
+    expect(bookEditQueryFromSearchParams(new URLSearchParams("tab=group-shelves"), true)).toEqual({ tab: "group-shelves", query: "tab=group-shelves" });
+    expect(bookEditQueryFromSearchParams(new URLSearchParams("tab=group-shelves"), false)).toEqual({ tab: "group-shelves", query: "tab=group-shelves" });
     expect(bookEditSearchParams(new URLSearchParams("trail=context&tab=catalog"), "identifiers").toString())
       .toBe("trail=context&tab=identifiers");
 

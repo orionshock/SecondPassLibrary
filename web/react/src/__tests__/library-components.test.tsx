@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page } from "@second-pass/spl-api";
+import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page, ShelfSummary } from "@second-pass/spl-api";
 import { BookCoverEditorComponent } from "../features/library/components/BookCoverEditorComponent";
 import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
 import { CompactBookRowComponent } from "../shared/books/CompactBookRowComponent";
@@ -14,6 +14,7 @@ import { AuthorListPageRegion } from "../features/library/regions/AuthorListPage
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
 import { BookEditAuthorsSeriesPageRegion } from "../features/library/regions/BookEditAuthorsSeriesPageRegion";
 import { BookEditGroupsPageRegion } from "../features/library/regions/BookEditGroupsPageRegion";
+import { BookEditGroupShelvesPageRegion } from "../features/library/regions/BookEditGroupShelvesPageRegion";
 import { BookEditTabsPageRegion } from "../features/library/regions/BookEditTabsPageRegion";
 import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/regions/CatalogTagRailPageRegion";
 import { LibraryAxesPageRegion } from "../features/library/regions/LibraryAxesPageRegion";
@@ -46,9 +47,11 @@ describe("Library Books components", () => {
     expect(simpleTabs).toContain('role="tablist"');
     expect(simpleTabs).toContain('aria-controls="book-edit-book-panel"');
     expect(simpleTabs).not.toContain("Library Groups");
+    expect(simpleTabs).toContain("Group Shelves");
     expect(advancedTabs).toContain("Library Groups");
+    expect(advancedTabs).toContain("Group Shelves");
 
-    const solePublic = renderToStaticMarkup(<BookEditGroupsPageRegion
+    const solePublic = renderToStaticMarkup(<MemoryRouter><BookEditGroupsPageRegion
       currentGroups={[publicGroup]}
       availableGroups={[publicGroup, { id: "custom", name: "Readers", description: "", isPublicGroup: false }]}
       loading={false}
@@ -58,11 +61,44 @@ describe("Library Books components", () => {
       onSelectionChange={vi.fn()}
       onAdd={vi.fn()}
       onRemove={vi.fn()}
-    />);
+    /></MemoryRouter>);
     expect(solePublic).toContain("Common Room");
+    expect(solePublic).toContain('href="/groups/public"');
     expect(solePublic).not.toContain("Remove Common Room");
     expect(solePublic).toContain("Readers");
     expect(solePublic).toContain('aria-label="Add group"');
+  });
+
+  it("keeps Book Edit Group Shelves constrained to linked group rows and authorized removal", () => {
+    const shelf: ShelfSummary = {
+      id: "shelf/id",
+      name: "Editors' Picks",
+      description: "Group picks",
+      ownerType: "group",
+      ownerUser: null,
+      ownerGroup: { id: "group", name: "Editors", isPublicGroup: false },
+      visibility: "private",
+      itemCount: 3,
+      matchedItemId: "item/id",
+      canEdit: true,
+    };
+    const markup = renderToStaticMarkup(<MemoryRouter><BookEditGroupShelvesPageRegion
+      shelves={[shelf, { ...shelf, id: "readonly", name: "Read only", matchedItemId: "readonly-item", canEdit: false }]}
+      loading={false}
+      mutation={{ pending: false }}
+      disabled={false}
+      shelfNavigationState={() => ({ contextual: true })}
+      onRetry={vi.fn()}
+      onRemove={vi.fn()}
+    /></MemoryRouter>);
+
+    expect(markup).toContain("Only group-owned shelves are shown here.");
+    expect(markup).toContain('href="/shelves/shelf%2Fid"');
+    expect(markup).toContain("Editors");
+    expect(markup).toContain('aria-label="Remove Editors&#x27; Picks"');
+    expect(markup).not.toContain('aria-label="Remove Read only"');
+    expect(markup).not.toContain("Add to shelf");
+    expect(markup).not.toContain("Edit Shelf");
   });
 
   it("keeps Book Edit cover mutation behind one bounded editor trigger", () => {

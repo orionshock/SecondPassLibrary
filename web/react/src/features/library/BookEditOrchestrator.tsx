@@ -6,8 +6,10 @@ import {
   listAllAuthors,
   listAllCatalogTags,
   listAllLibraryGroups,
+  listAllGroupShelvesForBook,
   listAllSeries,
   removeBookFromGroup,
+  removeShelfItem,
   replaceBookCover,
   updateBook,
   type BookDetail,
@@ -15,6 +17,7 @@ import {
   type LibraryAuthor,
   type LibraryGroup,
   type LibrarySeries,
+  type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
@@ -27,7 +30,7 @@ import { idleMutationState, normalizeMutationError, type MutationState } from ".
 import { SaveCancelActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
-import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail } from "./bookDetailPresentation";
+import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookEditRelatedBreadcrumbTrail } from "./bookDetailPresentation";
 import { bookDetailWithUpdatedCover } from "./bookCoverMutation";
 import { bookDetailWithUpdatedGroups, canEditBookGroups } from "./bookGroupMutation";
 import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bookEditSearchParams, type BookEditTab } from "./bookTabs";
@@ -44,12 +47,17 @@ import { BookEditBookPageRegion } from "./regions/BookEditBookPageRegion";
 import { BookEditCatalogPageRegion } from "./regions/BookEditCatalogPageRegion";
 import { BookEditIdentifiersPageRegion } from "./regions/BookEditIdentifiersPageRegion";
 import { BookEditGroupsPageRegion } from "./regions/BookEditGroupsPageRegion";
+import { BookEditGroupShelvesPageRegion } from "./regions/BookEditGroupShelvesPageRegion";
 import { BookEditTabsPageRegion } from "./regions/BookEditTabsPageRegion";
 import { BookCoverEditorComponent } from "./components/BookCoverEditorComponent";
 import "./BookEdit.css";
 
 type BookLoad = { status: "loading" } | { status: "ready"; book: BookDetail } | { status: "not-found" } | { status: "error"; error: Error };
 type PickerLoad<T> = { loading: boolean; items: T[]; error?: Error };
+type GroupShelvesLoad =
+  | { status: "idle" | "loading" }
+  | { status: "ready"; shelves: ShelfSummary[] }
+  | { status: "error"; error: Error };
 
 export function BookEditOrchestrator() {
   const { bookId = "" } = useParams();
@@ -61,11 +69,13 @@ export function BookEditOrchestrator() {
   const [seriesRetry, setSeriesRetry] = useState(0);
   const [tagRetry, setTagRetry] = useState(0);
   const [groupRetry, setGroupRetry] = useState(0);
+  const [groupShelfRetry, setGroupShelfRetry] = useState(0);
   const [load, setLoad] = useState<BookLoad>({ status: "loading" });
   const [authors, setAuthors] = useState<PickerLoad<LibraryAuthor>>({ loading: true, items: [] });
   const [series, setSeries] = useState<PickerLoad<LibrarySeries>>({ loading: true, items: [] });
   const [tags, setTags] = useState<PickerLoad<CatalogTag>>({ loading: true, items: [] });
   const [groups, setGroups] = useState<PickerLoad<LibraryGroup>>({ loading: false, items: [] });
+  const [groupShelves, setGroupShelves] = useState<GroupShelvesLoad>({ status: "idle" });
   const [draft, setDraft] = useState<BookEditDraft>();
   const [baseline, setBaseline] = useState<BookEditDraft>();
   const [mutation, setMutation] = useState<MutationState>(idleMutationState);
@@ -74,20 +84,22 @@ export function BookEditOrchestrator() {
   const [selectedCoverFile, setSelectedCoverFile] = useState<File>();
   const [coverInputResetKey, setCoverInputResetKey] = useState(0);
   const [groupMutation, setGroupMutation] = useState<MutationState>(idleMutationState);
+  const [groupShelfMutation, setGroupShelfMutation] = useState<MutationState>(idleMutationState);
   const allowNavigation = useRef(false);
   const book = load.status === "ready" ? load.book : undefined;
   const dirty = Boolean(draft && baseline && !bookEditDraftsEqual(draft, baseline));
   const canEditGroups = canEditBookGroups(currentUser);
+  const immediateMutationPending = groupMutation.pending || groupShelfMutation.pending;
   const requestedEditQuery = useMemo(
     () => bookEditQueryFromSearchParams(new URLSearchParams(location.search), canEditGroups),
     [canEditGroups, location.search],
   );
   const stableEditQuery = useRef(requestedEditQuery);
-  if (!groupMutation.pending) stableEditQuery.current = requestedEditQuery;
+  if (!immediateMutationPending) stableEditQuery.current = requestedEditQuery;
   const editQuery = bookEditQueryDuringImmediateMutation(
     requestedEditQuery,
     stableEditQuery.current,
-    groupMutation.pending,
+    immediateMutationPending,
   );
   const tab = editQuery.tab;
   const blocker = useBlocker(({ currentLocation, nextLocation }) => !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname);
@@ -145,6 +157,17 @@ export function BookEditOrchestrator() {
     }
     return loadPicker(listAllLibraryGroups, setGroups);
   }, [canEditGroups, groupRetry]);
+  useEffect(() => {
+    if (tab !== "group-shelves" || !bookId) return;
+    let active = true;
+    setGroupShelves({ status: "loading" });
+    listAllGroupShelvesForBook(bookId).then((shelves) => {
+      if (active) setGroupShelves({ status: "ready", shelves });
+    }).catch((error: unknown) => {
+      if (active) setGroupShelves({ status: "error", error: normalizeMutationError(error) });
+    });
+    return () => { active = false; };
+  }, [bookId, groupShelfRetry, tab]);
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {
     setDraft((current) => current ? { ...current, [field]: value } : current);
     setMutation(idleMutationState);
@@ -195,7 +218,7 @@ export function BookEditOrchestrator() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft || !bookId || groupMutation.pending) return;
+    if (!draft || !bookId || immediateMutationPending) return;
     try {
       validateBookEditDraft(draft);
     } catch (error: unknown) {
@@ -257,6 +280,20 @@ export function BookEditOrchestrator() {
     }
   }
 
+  async function removeGroupShelf(shelf: ShelfSummary) {
+    if (!shelf.canEdit || !shelf.matchedItemId || mutation.pending || immediateMutationPending) return;
+    if (!window.confirm("Remove this book from the group shelf?")) return;
+    setGroupShelfMutation({ pending: true });
+    try {
+      await removeShelfItem(shelf.id, shelf.matchedItemId);
+      const shelves = await listAllGroupShelvesForBook(bookId);
+      setGroupShelves({ status: "ready", shelves });
+      setGroupShelfMutation({ pending: false, message: "Book removed from group shelf." });
+    } catch (error: unknown) {
+      setGroupShelfMutation({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
   function cancel() {
     if (dirty && !window.confirm("Discard unsaved Book changes?")) return;
     allowNavigation.current = true;
@@ -300,7 +337,7 @@ export function BookEditOrchestrator() {
         <p className="book-edit-context">{readyBook.authors.length ? `Authors: ${readyBook.authors.map(({ name }) => name).join(", ")}` : "No assigned Authors"}</p>
         {readyBook.series ? <p className="book-edit-context">Series: {readyBook.series.name}{readyBook.series.seriesIndex ? ` ${readyBook.series.seriesIndex}` : ""}</p> : null}
       </div>
-      <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={groupMutation.pending} onChange={changeTab} />
+      <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={immediateMutationPending} onChange={changeTab} />
       <div id={tabPanelId("book-edit", tab)} role="tabpanel" aria-labelledby={tabButtonId("book-edit", tab)}>
       {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}
       {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={tags.items} tagsLoading={tags.loading} tagsError={tags.error} onRetryTags={() => setTagRetry((value) => value + 1)} onChange={change} /> : null}
@@ -312,14 +349,33 @@ export function BookEditOrchestrator() {
         loading={groups.loading}
         pickerError={groups.error}
         mutation={groupMutation}
-        disabled={mutation.pending || groupMutation.pending}
+        disabled={mutation.pending || immediateMutationPending}
+        groupNavigationState={(group) => breadcrumbNavigationState(bookEditRelatedBreadcrumbTrail(
+          breadcrumbTrail,
+          `${location.pathname}${location.search}`,
+          { label: group.name, icon: group.isPublicGroup ? "public-group" : "group" },
+        ))}
         onRetry={() => setGroupRetry((value) => value + 1)}
         onSelectionChange={() => setGroupMutation(idleMutationState)}
         onAdd={addGroup}
         onRemove={removeGroup}
       /> : null}
+      {tab === "group-shelves" ? <BookEditGroupShelvesPageRegion
+        shelves={groupShelves.status === "ready" ? groupShelves.shelves : []}
+        loading={groupShelves.status === "idle" || groupShelves.status === "loading"}
+        error={groupShelves.status === "error" ? groupShelves.error : undefined}
+        mutation={groupShelfMutation}
+        disabled={mutation.pending || immediateMutationPending}
+        shelfNavigationState={(shelf) => breadcrumbNavigationState(bookEditRelatedBreadcrumbTrail(
+          breadcrumbTrail,
+          `${location.pathname}${location.search}`,
+          { label: shelf.name, icon: "shelf" },
+        ))}
+        onRetry={() => { setGroupShelfMutation(idleMutationState); setGroupShelfRetry((value) => value + 1); }}
+        onRemove={(shelf) => void removeGroupShelf(shelf)}
+      /> : null}
       </div>
-      <SaveCancelActionRowComponent state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={groupMutation.pending} onCancel={cancel} />
+      <SaveCancelActionRowComponent state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={immediateMutationPending} onCancel={cancel} />
     </main>
   </form></ProductPageShellComponent>;
 }
