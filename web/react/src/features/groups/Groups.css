@@ -305,8 +305,7 @@
   .groups-controls form,
   .group-books-controls form { flex-basis: 100%; }
 
-  .groups-ordering,
-  .group-books-controls > label { flex: 1 1 12rem; }
+  .group-books-controls > .order-menu-component { flex: 1 1 12rem; }
 
   .group-row-component { grid-template-columns: 1fr; }
 

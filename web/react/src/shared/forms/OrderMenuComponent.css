@@ -1,0 +1,106 @@
+.order-menu-component {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.order-menu-component__label {
+  flex: 0 0 auto;
+}
+
+.order-menu-component__dropdown {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.order-menu-component__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.55rem;
+  color: #cbd8e7;
+  background: var(--surface-raised);
+  white-space: nowrap;
+}
+
+.order-menu-component__button--small {
+  min-height: 2rem;
+  padding: 0.32rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.order-menu-component__button--medium {
+  min-height: 2.25rem;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.order-menu-component__button > .material-icon {
+  color: #93a9bf;
+  font-size: 1rem;
+}
+
+.order-menu-component__button > .order-menu-component__chevron {
+  margin-left: 0.05rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.order-menu-component__button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.order-menu-component__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  width: max-content;
+  min-width: 11.5rem;
+  padding: 0.3rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.55rem;
+  background: var(--surface-raised);
+  box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 38%);
+}
+
+.order-menu-component__menu > button {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) 1rem;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.38rem 0.45rem;
+  border-color: transparent;
+  border-radius: 0.35rem;
+  color: #c3d0df;
+  background: transparent;
+  font-size: 0.79rem;
+  text-align: left;
+}
+
+.order-menu-component__menu > button:hover,
+.order-menu-component__menu > button:focus-visible,
+.order-menu-component__menu > button.active {
+  border-color: var(--border);
+  background: rgb(125 211 252 / 8%);
+}
+
+.order-menu-component__menu > button.active {
+  color: var(--text);
+}
+
+.order-menu-component__menu .material-icon {
+  color: #8fa5bb;
+  font-size: 0.95rem;
+}
+
+.order-menu-component__menu .order-menu-component__check {
+  color: var(--link);
+}

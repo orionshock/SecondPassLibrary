@@ -5,14 +5,14 @@ import { Link } from "react-router-dom";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { OrderSelectComponent, type OrderSelectOption } from "../../../shared/forms/OrderSelectComponent";
+import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback } from "../groupsBreadcrumbs";
 import { GroupRowComponent } from "../components/GroupRowComponent";
 
 type GroupsListOrdering = "name" | "-name";
 
-const groupOrderingOptions: readonly OrderSelectOption<GroupsListOrdering>[] = [
+const groupOrderingOptions: readonly OrderMenuOption<GroupsListOrdering>[] = [
   { value: "name", label: "Name A-Z", icon: "sort_by_alpha" },
   { value: "-name", label: "Name Z-A", icon: "sort_by_alpha" },
 ];
@@ -110,7 +110,7 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, orderin
       hasPrevious={Boolean(page.previous)}
       hasNext={Boolean(page.next)}
       itemLabel="Groups"
-      topControls={<OrderSelectComponent aria-label="Order groups" size="small" value={ordering} options={groupOrderingOptions} onChange={onOrderingChange} />}
+      topControls={<OrderMenuComponent label="Order" ariaLabel="Order groups" size="small" value={ordering} options={groupOrderingOptions} onChange={onOrderingChange} />}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
     >

@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 
 import { Button } from "../../../components/ui";
-import { LibrarySortDropdownComponent } from "../components/LibrarySortDropdownComponent";
+import { OrderMenuComponent } from "../../../shared/forms/OrderMenuComponent";
 import { libraryOrderingOptions, type LibrarySelectedContextKind, type LibraryUiOrdering, type LibraryView } from "../libraryQuery";
 
 const labels = {
@@ -28,11 +28,12 @@ export function LibraryAxisControlsPageRegion({ view, selectedContext, search, o
       <input id="library-search" value={search} placeholder={copy.placeholder} onChange={(event) => onSearchChange(event.target.value)} />
       <Button type="submit">Search</Button>
     </form>
-    <LibrarySortDropdownComponent
-      ordering={ordering}
+    <OrderMenuComponent
+      label="Order"
+      ariaLabel={`Sort ${copy.item}`}
+      value={ordering}
       options={libraryOrderingOptions(view, selectedContext)}
-      itemLabel={copy.item}
-      onOrderingChange={onOrderingChange}
+      onChange={onOrderingChange}
     />
   </section>;
 }

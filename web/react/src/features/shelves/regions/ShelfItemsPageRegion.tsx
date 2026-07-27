@@ -3,11 +3,11 @@ import type { Page, ShelfItem, ShelfItemOrdering } from "@second-pass/spl-api";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { OrderSelectComponent, type OrderSelectOption } from "../../../shared/forms/OrderSelectComponent";
+import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
-const shelfItemOrderingOptions: readonly OrderSelectOption<ShelfItemOrdering>[] = [
+const shelfItemOrderingOptions: readonly OrderMenuOption<ShelfItemOrdering>[] = [
   { value: "position", label: "Shelf Order", icon: "format_list_numbered" },
   { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
   { value: "author", label: "Author A-Z", icon: "person" },
@@ -30,7 +30,7 @@ export function ShelfItemsPageRegion({ shelfId, shelfName, shelfPath, page, page
 }) {
   return <section className="shelf-items-region" aria-label="Shelf books">
     <div className="shelf-items-controls">
-      <OrderSelectComponent aria-label="Order shelf books" value={ordering} options={shelfItemOrderingOptions} onChange={onOrderingChange} />
+      <OrderMenuComponent label="Order" ariaLabel="Order shelf books" value={ordering} options={shelfItemOrderingOptions} onChange={onOrderingChange} />
     </div>
     <ShelfItemResults shelfId={shelfId} shelfName={shelfName} shelfPath={shelfPath} page={page} pageNumber={pageNumber} pageSize={pageSize} loading={loading} error={error} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetry} />
   </section>;

@@ -64,7 +64,7 @@ describe("Shelves read-only regions", () => {
     expect(personal).toContain('aria-label="Open Visible Book"');
     expect(personal).toContain('aria-label="Shelves pagination, top"');
     expect(personal).toContain('aria-label="Shelves pagination, bottom"');
-    expect(personal).toContain('aria-label="Order shelves"');
+    expect(personal).toContain('aria-label="Order shelves, current: Name A-Z"');
     expect(personal).not.toContain("Reverse Shelf Order");
     expect(personal).not.toContain('href="/shelves/shelf/edit"');
 
@@ -95,7 +95,7 @@ describe("Shelves read-only regions", () => {
     /></MemoryRouter>);
     expect(items).toContain("Visible Book");
     expect(items).toContain('href="/library/books/book"');
-    expect(items).toContain('aria-label="Order shelf books"');
+    expect(items).toContain('aria-label="Order shelf books, current: Shelf Order"');
     expect(items).not.toContain("Reverse Shelf Order");
     expect(items).not.toContain("adder");
     for (const absent of ["Add book", "Remove book", "Move up", "Move down"]) expect(items).not.toContain(absent);

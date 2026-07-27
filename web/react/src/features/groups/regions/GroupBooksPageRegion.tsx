@@ -4,12 +4,12 @@ import type { FormEvent } from "react";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { OrderSelectComponent, type OrderSelectOption } from "../../../shared/forms/OrderSelectComponent";
+import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";
 import type { GroupBookOrdering } from "../groupsQuery";
 
-const groupBookOrderingOptions: readonly OrderSelectOption<GroupBookOrdering>[] = [
+const groupBookOrderingOptions: readonly OrderMenuOption<GroupBookOrdering>[] = [
   { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
   { value: "-title", label: "Title Z-A", icon: "sort_by_alpha" },
   { value: "author", label: "Author A-Z", icon: "person" },
@@ -67,7 +67,7 @@ export function GroupBooksPageRegion({
         <input id="group-books-search" value={search} placeholder="Book title..." onChange={(event) => onSearchChange(event.target.value)} />
         <Button type="submit">Search</Button>
       </form>
-      <OrderSelectComponent aria-label="Order group books" value={ordering} options={groupBookOrderingOptions} onChange={onOrderingChange} />
+      <OrderMenuComponent label="Order" ariaLabel="Order group books" value={ordering} options={groupBookOrderingOptions} onChange={onOrderingChange} />
     </div>
     <GroupBooksResults
       groupId={groupId}
