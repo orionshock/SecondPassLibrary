@@ -6,6 +6,8 @@ import type {
   ShelvesQuery,
 } from "@second-pass/spl-api";
 
+import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
+
 export type GroupBookOrdering = Extract<BookOrdering,
   "title" | "-title" | "author" | "-author" | "series" | "-series">;
 export type GroupDetailTab = "books" | "members" | "shelves";
@@ -30,6 +32,7 @@ const groupOrderings = new Set(["name", "-name"] as const);
 const bookOrderings = new Set<GroupBookOrdering>([
   "title", "-title", "author", "-author", "series", "-series",
 ]);
+const groupDetailTabs: readonly GroupDetailTab[] = ["books", "members", "shelves"];
 
 export function groupsListStateFromSearchParams(parameters: URLSearchParams): GroupsListUrlState {
   const rawOrdering = parameters.get("ordering") as GroupsListUrlState["ordering"] | null;
@@ -73,8 +76,7 @@ export function withGroupsListChange(
 }
 
 export function groupDetailStateFromSearchParams(parameters: URLSearchParams): GroupDetailUrlState {
-  const rawTab = parameters.get("tab");
-  const tab: GroupDetailTab = rawTab === "members" || rawTab === "shelves" ? rawTab : "books";
+  const { tab } = resolveTabQuery(parameters, groupDetailTabs, "books");
   const rawOrdering = parameters.get("ordering") as GroupBookOrdering | null;
   return {
     tab,
@@ -88,8 +90,7 @@ export function groupDetailStateFromSearchParams(parameters: URLSearchParams): G
 }
 
 export function groupDetailSearchParams(state: GroupDetailUrlState): URLSearchParams {
-  const parameters = new URLSearchParams();
-  if (state.tab !== "books") parameters.set("tab", state.tab);
+  const parameters = withTabQuery(new URLSearchParams(), state.tab, "books");
   if (state.tab === "books" && state.ordering !== "title") parameters.set("ordering", state.ordering);
   if (state.page > 1) parameters.set("page", String(state.page));
   if (state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));

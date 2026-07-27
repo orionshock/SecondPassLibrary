@@ -51,6 +51,11 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain("Books");
     expect(markup).toContain("Members");
     expect(markup).toContain("Shelves");
+    expect(markup).toContain('role="tablist"');
+    expect((markup.match(/role="tab"/g) ?? [])).toHaveLength(3);
+    expect(markup).toContain('id="group-detail-books-tab"');
+    expect(markup).toContain('aria-controls="group-detail-books-panel"');
+    expect(markup).toContain('aria-selected="true"');
     expect(markup).not.toContain("href=");
   });
 

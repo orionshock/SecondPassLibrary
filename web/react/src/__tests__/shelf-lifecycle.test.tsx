@@ -180,6 +180,8 @@ describe("Shelf lifecycle contracts", () => {
 
     expect(tabs).toContain("Books");
     expect(tabs).toContain("Add Books");
+    expect(tabs).toContain('role="tablist"');
+    expect(tabs).toContain('aria-selected="true"');
     expect(books).toContain("Unavailable item");
     expect(books).toContain('aria-label="Remove unavailable item"');
     expect(books).not.toContain("hidden_book_id");
@@ -193,5 +195,16 @@ describe("Shelf lifecycle contracts", () => {
     expect(books).toMatch(/aria-label="Move Book C down"[^>]*disabled/);
     expect(candidates).toContain("Add");
     expect(books).not.toContain("Move to position");
+  });
+
+  it("disables Shelf Edit tab activation while an immediate item mutation is pending", () => {
+    const markup = renderToStaticMarkup(<ShelfEditTabsPageRegion
+      activeTab="books"
+      disabled
+      onTabChange={vi.fn()}
+    />);
+    const buttons = markup.match(/<button\b[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(3);
+    expect(buttons.every((button) => button.includes("disabled"))).toBe(true);
   });
 });

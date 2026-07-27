@@ -2,7 +2,14 @@ import type { LibraryGroup } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
+import { TabListComponent, type TabItem } from "../../../shared/tabs/TabListComponent";
 import type { GroupDetailTab } from "../groupsQuery";
+
+const groupDetailTabs: readonly TabItem<GroupDetailTab>[] = [
+  { id: "books", label: "Books" },
+  { id: "members", label: "Members" },
+  { id: "shelves", label: "Shelves" },
+];
 
 export function GroupHeaderPageRegion({
   group,
@@ -39,10 +46,12 @@ export function GroupHeaderPageRegion({
       description={group.description || undefined}
       actions={editPath ? <Link className="button button--secondary" to={editPath} state={editNavigationState}>Manage</Link> : undefined}
     />
-    <nav className="group-detail-tabs" aria-label="Group sections">
-      <Button type="button" aria-current={activeTab === "books" ? "page" : undefined} onClick={() => onTabChange("books")}>Books</Button>
-      <Button type="button" aria-current={activeTab === "members" ? "page" : undefined} onClick={() => onTabChange("members")}>Members</Button>
-      <Button type="button" aria-current={activeTab === "shelves" ? "page" : undefined} onClick={() => onTabChange("shelves")}>Shelves</Button>
-    </nav>
+    <TabListComponent
+      tabs={groupDetailTabs}
+      activeTab={activeTab}
+      onChange={onTabChange}
+      ariaLabel="Group sections"
+      idPrefix="group-detail"
+    />
   </>;
 }

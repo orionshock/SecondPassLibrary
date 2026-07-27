@@ -6,6 +6,8 @@ import type {
   ShelvesQuery,
 } from "@second-pass/spl-api";
 
+import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
+
 export interface ShelvesListUrlState {
   scope: ShelfScope;
   ordering: ShelfOrdering;
@@ -32,7 +34,7 @@ const pageSizes = new Set([20, 30, 40, 50]);
 const scopes = new Set<ShelfScope>(["personal", "shared", "group"]);
 const shelfOrderings = new Set<ShelfOrdering>(["name", "-name", "item_count", "-item_count"]);
 const itemOrderings = new Set<ShelfItemOrdering>(["position", "-position", "title", "-title", "author", "-author"]);
-const shelfEditTabs = new Set<ShelfEditTab>(["details", "books", "add-books"]);
+const shelfEditTabs: readonly ShelfEditTab[] = ["details", "books", "add-books"];
 
 export function shelvesListStateFromSearchParams(parameters: URLSearchParams): ShelvesListUrlState {
   const rawScope = parameters.get("scope") as ShelfScope | null;
@@ -110,8 +112,7 @@ export function withShelfDetailChange(
 }
 
 export function shelfEditStateFromSearchParams(parameters: URLSearchParams): ShelfEditUrlState {
-  const rawTab = parameters.get("tab") as ShelfEditTab | null;
-  const tab = rawTab && shelfEditTabs.has(rawTab) ? rawTab : "details";
+  const { tab } = resolveTabQuery(parameters, shelfEditTabs, "details");
   return {
     tab,
     page: tab === "details" ? 1 : positiveInteger(parameters.get("page"), 1),
@@ -121,8 +122,7 @@ export function shelfEditStateFromSearchParams(parameters: URLSearchParams): She
 }
 
 export function shelfEditSearchParams(state: ShelfEditUrlState): URLSearchParams {
-  const parameters = new URLSearchParams();
-  if (state.tab !== "details") parameters.set("tab", state.tab);
+  const parameters = withTabQuery(new URLSearchParams(), state.tab, "details");
   if (state.tab !== "details" && state.page > 1) parameters.set("page", String(state.page));
   if (state.tab !== "details" && state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));
   if (state.tab === "add-books" && state.q) parameters.set("q", state.q.trim());
@@ -151,6 +151,14 @@ export function withShelfEditPage(
     ...changes,
     page: changes.pageSize === undefined ? changes.page ?? current.page : 1,
   };
+}
+
+export function shelfEditStateDuringItemMutation(
+  requested: ShelfEditUrlState,
+  stable: ShelfEditUrlState,
+  pending: boolean,
+): ShelfEditUrlState {
+  return pending ? stable : requested;
 }
 
 function validPageSize(raw: string | null): number {

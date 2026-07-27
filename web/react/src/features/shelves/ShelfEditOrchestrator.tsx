@@ -26,6 +26,7 @@ import {
   type MutationState,
 } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
 import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
 import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
@@ -48,7 +49,7 @@ import {
 } from "./shelfLifecycle";
 import {
   shelfEditPathWithState,
-  shelfEditSearchParams,
+  shelfEditStateDuringItemMutation,
   shelfEditStateFromSearchParams,
   withShelfEditPage,
   withShelfEditTab,
@@ -91,17 +92,25 @@ export function ShelfEditOrchestrator() {
       : {}),
   }));
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
-  const editState = useMemo(
+  const requestedEditState = useMemo(
     () => shelfEditStateFromSearchParams(new URLSearchParams(location.search)),
     [location.search],
   );
-  const [searchDraft, setSearchDraft] = useState(editState.q);
+  const [searchDraft, setSearchDraft] = useState(requestedEditState.q);
   const [itemsLoad, setItemsLoad] = useState<PageLoad<ShelfEditorItem> & { page?: ShelfEditorItemsPage }>({ loading: false });
   const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<CompactBook>>({ loading: false });
   const [itemMutation, setItemMutation] = useState<RowMutation>({});
   const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
   const [itemsVersion, setItemsVersion] = useState(0);
   const [candidatesVersion, setCandidatesVersion] = useState(0);
+  const immediateItemMutationPending = Boolean(itemMutation.pendingId || candidateMutation.pendingId);
+  const stableEditState = useRef(requestedEditState);
+  if (!immediateItemMutationPending) stableEditState.current = requestedEditState;
+  const editState = shelfEditStateDuringItemMutation(
+    requestedEditState,
+    stableEditState.current,
+    immediateItemMutationPending,
+  );
   const allowNavigation = useRef(false);
   const shelf = load.status === "ready" || load.status === "not-allowed" ? load.shelf : undefined;
   const dirty = !shelfDraftsEqual(draft, baseline);
@@ -264,6 +273,7 @@ export function ShelfEditOrchestrator() {
   }
 
   function navigateEditState(next: ShelfEditUrlState, replace = false) {
+    if (immediateItemMutationPending) return;
     navigate(shelfEditPathWithState(shelfId, next), { replace, state: location.state });
   }
 
@@ -344,9 +354,14 @@ export function ShelfEditOrchestrator() {
   return <ProductPageShellComponent className="shelf-lifecycle-page" eyebrow="Editing Shelf" title={draft.name || editableShelf.name || "Shelf"}>
     <ShelfEditTabsPageRegion
       activeTab={editState.tab}
+      disabled={immediateItemMutationPending}
       onTabChange={(tab) => navigateEditState(withShelfEditTab(editState, tab))}
     />
-    {editState.tab === "details" ? <ShelfDetailsEditPageRegion
+    {editState.tab === "details" ? <div
+      id={tabPanelId("shelf-edit", "details")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("shelf-edit", "details")}
+    ><ShelfDetailsEditPageRegion
       mode="edit"
       shelf={editableShelf}
       draft={draft}
@@ -354,14 +369,18 @@ export function ShelfEditOrchestrator() {
       groupsLoading={false}
       mutation={mutation}
       deleteMutation={deleteMutation}
-      itemMutationPending={Boolean(itemMutation.pendingId || candidateMutation.pendingId)}
+      itemMutationPending={immediateItemMutationPending}
       onChange={change}
       onOwnerTypeChange={() => undefined}
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
       onDelete={() => void removeShelf()}
-    /> : null}
-    {editState.tab === "books" ? <>
+    /></div> : null}
+    {editState.tab === "books" ? <div
+      id={tabPanelId("shelf-edit", "books")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("shelf-edit", "books")}
+    >
       {itemMutation.message ? <p className="shelf-edit-section-feedback" aria-live="polite">{itemMutation.message}</p> : null}
       <ShelfEditBooksPageRegion
         shelfId={editableShelf.id}
@@ -380,8 +399,12 @@ export function ShelfEditOrchestrator() {
         onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
         onRetry={() => setItemsVersion((value) => value + 1)}
       />
-    </> : null}
-    {editState.tab === "add-books" ? <>
+    </div> : null}
+    {editState.tab === "add-books" ? <div
+      id={tabPanelId("shelf-edit", "add-books")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("shelf-edit", "add-books")}
+    >
       {candidateMutation.message ? <p className="shelf-edit-section-feedback" aria-live="polite">{candidateMutation.message}</p> : null}
       <ShelfEditAddBooksPageRegion
         shelfId={editableShelf.id}
@@ -401,6 +424,6 @@ export function ShelfEditOrchestrator() {
         onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
         onRetry={() => setCandidatesVersion((value) => value + 1)}
       />
-    </> : null}
+    </div> : null}
   </ProductPageShellComponent>;
 }

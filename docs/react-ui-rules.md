@@ -64,6 +64,13 @@ This is the running list of cross-page presentation and interaction rules that a
 - Values returned by an API payload may be rendered as ordinary escaped React text. Never render API strings as raw HTML. Boundary checks protect communication and wire-name mechanics; they do not impose additional payload distrust or client-side redaction.
 - PageRegions and Components may import stable SDK types, but SDK operations belong in App or feature Orchestrators.
 - Production feature branches do not import one another. Promote genuinely shared code to `app`, `shared`, or `components`; tests may compose subjects across features.
+
+## Page-section tabs
+
+- Real page-section tabs use the controlled, server-blind `TabListComponent`; callers own panels, data loading, and available content.
+- Meaningful tab selection is URL-backed with `?tab=` through feature query helpers. Default tabs are omitted, invalid tabs normalize to the page default, and contextual Router state is preserved.
+- Dirty editing and navigation confirmation remain page responsibilities. Immediate mutations may disable tab selection until they settle.
+- Library axes, Shelf scopes, Catalog Tags, search, ordering, pagination, and other filters are navigation/filter controls rather than tabs.
 - When current role facts clearly cannot access Users, Imports, or Server Settings, the route falls back to Dashboard before mounting the feature Orchestrator. Backend authorization remains authoritative for allowed roles and unexpected permission failures remain visible.
 
 ## Server settings

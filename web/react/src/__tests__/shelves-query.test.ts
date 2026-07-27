@@ -6,6 +6,7 @@ import {
   shelfDetailStateFromSearchParams,
   shelfEditPathWithState,
   shelfEditSearchParams,
+  shelfEditStateDuringItemMutation,
   shelfEditStateFromSearchParams,
   shelfItemsSdkQuery,
   shelvesListPath,
@@ -77,5 +78,9 @@ describe("Shelves URL state", () => {
     );
     expect(withShelfEditTab(addBooks, "books")).toEqual({ tab: "books", page: 1, pageSize: 30, q: "" });
     expect(withShelfEditPage(addBooks, { pageSize: 40 })).toMatchObject({ page: 1, pageSize: 40 });
+
+    const requestedDuringMutation = shelfEditStateFromSearchParams(new URLSearchParams("tab=details"));
+    expect(shelfEditStateDuringItemMutation(requestedDuringMutation, addBooks, true)).toBe(addBooks);
+    expect(shelfEditStateDuringItemMutation(requestedDuringMutation, addBooks, false)).toBe(requestedDuringMutation);
   });
 });

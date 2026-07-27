@@ -8,19 +8,6 @@
   gap: 1rem;
 }
 
-.shelf-edit-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.shelf-edit-tabs [aria-current="page"] {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
 .shelf-edit-books-region,
 .shelf-edit-add-books-region {
   display: grid;

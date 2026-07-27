@@ -19,6 +19,7 @@ import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
 import { groupEditNavigationState, groupEditPath } from "./groupsBreadcrumbs";
 import { canManageGroup } from "./groupMetadataAuthority";
@@ -176,7 +177,11 @@ export function GroupDetailOrchestrator() {
       onTabChange={(tab) => changeQuery({ tab })}
       onRetry={() => setDetailRetry((value) => value + 1)}
     />
-    {group && queryState.tab === "books" ? <GroupBooksPageRegion
+    {group && queryState.tab === "books" ? <div
+      id={tabPanelId("group-detail", "books")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-detail", "books")}
+    ><GroupBooksPageRegion
       groupId={group.id}
       groupName={group.name}
       isPublicGroup={group.isPublicGroup}
@@ -194,8 +199,12 @@ export function GroupDetailOrchestrator() {
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setPageRetry((value) => value + 1)}
-    /> : null}
-    {group && queryState.tab === "members" ? <GroupMembersPageRegion
+    /></div> : null}
+    {group && queryState.tab === "members" ? <div
+      id={tabPanelId("group-detail", "members")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-detail", "members")}
+    ><GroupMembersPageRegion
       page={members.page}
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}
@@ -204,8 +213,12 @@ export function GroupDetailOrchestrator() {
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setPageRetry((value) => value + 1)}
-    /> : null}
-    {group && queryState.tab === "shelves" ? <GroupShelvesPageRegion
+    /></div> : null}
+    {group && queryState.tab === "shelves" ? <div
+      id={tabPanelId("group-detail", "shelves")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-detail", "shelves")}
+    ><GroupShelvesPageRegion
       groupId={group.id}
       groupName={group.name}
       isPublicGroup={group.isPublicGroup}
@@ -218,6 +231,6 @@ export function GroupDetailOrchestrator() {
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setPageRetry((value) => value + 1)}
-    /> : null}
+    /></div> : null}
   </ProductPageShellComponent>;
 }

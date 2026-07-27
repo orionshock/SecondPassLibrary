@@ -254,18 +254,6 @@
   background: var(--surface);
 }
 
-.group-detail-tabs {
-  display: flex;
-  gap: 0.45rem;
-  padding-block: 0.7rem;
-  border-block: 1px solid var(--border);
-}
-
-.group-detail-tabs [aria-current="page"] {
-  border-color: var(--focus);
-  background: var(--surface-raised);
-}
-
 .group-detail-page .page-description { white-space: pre-wrap; }
 
 .group-books-region,
