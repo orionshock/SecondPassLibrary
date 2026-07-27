@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
 import { shelfNewBreadcrumbs, shelfNewPath } from "../shelfLifecycle";
@@ -25,7 +25,7 @@ export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, order
   onRetry: () => void;
 }) {
   return <div className="shelves-list-page">
-    <PageHeader title="Shelves" actions={<Link className="button-link button--secondary" to={shelfNewPath()} state={breadcrumbNavigationState(shelfNewBreadcrumbs())}>New Shelf</Link>} />
+    <PageHeader title="Shelves" actions={<Link className="button-link" to={shelfNewPath()} state={breadcrumbNavigationState(shelfNewBreadcrumbs())}>New Shelf</Link>} />
     <div className="shelves-list-toolbar">
       <ShelfScopesPageRegion activeScope={scope} onScopeChange={onScopeChange} />
       <label className="shelves-ordering">Order
@@ -56,26 +56,27 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, loading, error,
 
   return <section className={`shelves-results${loading ? " shelves-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="shelves-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    {page.items.length === 0 ? <p className="shelves-state muted">{emptyLabel(scope)}</p> : <div className="shelves-list-rows">
-      {page.items.map((shelf) => {
-        const detailPath = `/shelves/${encodeURIComponent(shelf.id)}`;
-        const previewBooks: BookCoverPreviewItem[] = (shelf.previewBooks ?? []).map((book) => ({
-          ...book,
-          href: `/library/books/${encodeURIComponent(book.id)}`,
-          navigationState: breadcrumbNavigationState(shelfBookBreadcrumbs(shelf.id, shelf.name, book.title)),
-        }));
-        return <ShelfSummaryRowComponent
-          key={shelf.id}
-          name={shelf.name}
-          description={shelf.description}
-          detailPath={detailPath}
-          navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
-          previewBooks={previewBooks}
-          group={scope === "group" ? shelf.ownerGroup ?? undefined : undefined}
-        />;
-      })}
-    </div>}
-    <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Shelves" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+    <PaginatedListFrameComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Shelves" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+      {page.items.length === 0 ? <p className="shelves-state muted">{emptyLabel(scope)}</p> : <div className="shelves-list-rows">
+        {page.items.map((shelf) => {
+          const detailPath = `/shelves/${encodeURIComponent(shelf.id)}`;
+          const previewBooks: BookCoverPreviewItem[] = (shelf.previewBooks ?? []).map((book) => ({
+            ...book,
+            href: `/library/books/${encodeURIComponent(book.id)}`,
+            navigationState: breadcrumbNavigationState(shelfBookBreadcrumbs(shelf.id, shelf.name, book.title)),
+          }));
+          return <ShelfSummaryRowComponent
+            key={shelf.id}
+            name={shelf.name}
+            description={shelf.description}
+            detailPath={detailPath}
+            navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
+            previewBooks={previewBooks}
+            group={scope === "group" ? shelf.ownerGroup ?? undefined : undefined}
+          />;
+        })}
+      </div>}
+    </PaginatedListFrameComponent>
   </section>;
 }
 

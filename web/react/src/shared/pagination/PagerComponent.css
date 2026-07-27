@@ -8,6 +8,12 @@
   font-size: 0.85rem;
 }
 
+.pager-component--compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 2.25rem;
+  font-size: 0.8rem;
+}
+
 .pager-component__size,
 .pager-component__actions {
   display: flex;

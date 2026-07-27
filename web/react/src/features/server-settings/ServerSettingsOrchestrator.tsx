@@ -135,9 +135,9 @@ export function ServerSettingsOrchestrator() {
   const formId = serverSettingsFormId(tab);
   const headerActions = <ActionRowComponent state={state}>
     {editing ? <>
-      <Button type="button" className="button--secondary" disabled={state.pending} onClick={cancel}>Cancel</Button>
+      <Button type="button" tone="secondary" disabled={state.pending} onClick={cancel}>Cancel</Button>
       {formId ? <Button type="submit" form={formId} disabled={state.pending}>{state.pending ? "Saving..." : "Save"}</Button> : null}
-    </> : <Button type="button" onClick={() => { setState(idleMutationState); setEditing(true); }}>Edit</Button>}
+    </> : <Button type="button" tone="secondary" onClick={() => { setState(idleMutationState); setEditing(true); }}>Edit</Button>}
   </ActionRowComponent>;
 
   return <div className="page-stack server-settings-page">

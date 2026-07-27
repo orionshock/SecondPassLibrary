@@ -36,7 +36,7 @@ export function GroupHeaderPageRegion({
         {group.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
         {isCurator ? <Badge tone="accent">Curator</Badge> : null}
       </div>
-      {editPath ? <Link className="button group-detail-header__edit" to={editPath} state={editNavigationState}>Manage</Link> : null}
+      {editPath ? <Link className="button button--secondary group-detail-header__edit" to={editPath} state={editNavigationState}>Manage</Link> : null}
       {group.description ? <p>{group.description}</p> : null}
     </header>
     <nav className="group-detail-tabs" aria-label="Group sections">

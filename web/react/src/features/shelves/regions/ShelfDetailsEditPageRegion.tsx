@@ -86,7 +86,7 @@ export function ShelfDetailsEditPageRegion({
         <p>Deletes this shelf and its shelf items. Books and files are not deleted.</p>
         {deleteMutation.error ? <ErrorPanel>{deleteMutation.error.message}</ErrorPanel> : null}
       </div>
-      <Button type="button" className="button--danger" disabled={mutation.pending || deleteMutation.pending} onClick={onDelete}>
+      <Button type="button" tone="danger" disabled={mutation.pending || deleteMutation.pending} onClick={onDelete}>
         {deleteMutation.pending ? "Deleting..." : "Delete Shelf"}
       </Button>
     </section> : null}

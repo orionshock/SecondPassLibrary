@@ -61,7 +61,10 @@ describe("Users list regions", () => {
 
   it("shows page size 20 as the selected default", () => {
     const markup = renderList({ items: [owner], count: 1, next: null, previous: null });
+    expect(markup).toContain('aria-label="Users pagination, top"');
+    expect(markup).toContain('aria-label="Users pagination, bottom"');
     expect(markup).toContain('<option value="20" selected="">20</option>');
+    expect(markup).toContain('<option value="200">200</option>');
   });
 
   it("renders bounded loading, empty, and retryable error states", () => {

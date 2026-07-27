@@ -87,6 +87,31 @@ describe("Groups read-only regions", () => {
     expect(list(false)).not.toContain('href="/groups/new"');
   });
 
+  it("frames the main Group rows with lean top and full bottom pagination", () => {
+    const markup = renderToStaticMarkup(<MemoryRouter><GroupsListPageRegion
+      page={{ items: [group], count: 21, next: "/next", previous: null }}
+      pageNumber={1}
+      pageSize={20}
+      search="room"
+      ordering="name"
+      loading={false}
+      curatorGroupIds={new Set<string>()}
+      canCreate={false}
+      onSearchChange={vi.fn()}
+      onSearch={vi.fn()}
+      onOrderingChange={vi.fn()}
+      onPageChange={vi.fn()}
+      onPageSizeChange={vi.fn()}
+      onRetry={vi.fn()}
+    /></MemoryRouter>);
+
+    expect(markup).toContain('aria-label="Groups pagination, top"');
+    expect(markup).toContain('aria-label="Groups pagination, bottom"');
+    expect(markup).toContain('value="room"');
+    expect(markup).toContain("Name A-Z");
+    expect(markup).toContain('href="/groups/group"');
+  });
+
   it("reuses compact Book rows without assignment controls", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><GroupBooksPageRegion
       groupId="group"

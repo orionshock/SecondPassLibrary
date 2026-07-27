@@ -12,7 +12,7 @@ export function GroupDangerZonePageRegion({ state, controlsDisabled, onDelete }:
       <p>Removes memberships, Book assignments, and Group-owned Shelves. Users, Books, and files are not deleted.</p>
       {state.error ? <ErrorPanel>{state.error.message}</ErrorPanel> : null}
     </div>
-    <Button type="button" className="button--danger" disabled={controlsDisabled || state.pending} onClick={onDelete}>
+    <Button type="button" tone="danger" disabled={controlsDisabled || state.pending} onClick={onDelete}>
       {state.pending ? "Deleting..." : "Delete Group"}
     </Button>
   </section>;

@@ -34,20 +34,31 @@ export function Surface({ title, children }: { title?: string; children: ReactNo
   );
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function Button(
-  { className = "", ...props },
+type ButtonSize = "small" | "medium";
+type ButtonTone = "primary" | "secondary" | "danger";
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  size?: ButtonSize;
+  tone?: ButtonTone;
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className = "", size = "medium", tone = "primary", ...props },
   ref,
 ) {
-  return <button ref={ref} className={`button ${className}`.trim()} {...props} />;
+  return <button ref={ref} className={`button button--${size} button--${tone} ${className}`.trim()} {...props} />;
 });
 
 export function IconButton({
   className = "",
-  tone = "default",
+  size = "small",
+  tone = "secondary",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "default" | "danger" | "success" }) {
-  const toneClass = tone === "danger" ? " icon-button--danger" : tone === "success" ? " icon-button--success" : "";
-  return <button className={`icon-button${toneClass} ${className}`.trim()} {...props} />;
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  size?: ButtonSize;
+  tone?: ButtonTone | "success";
+}) {
+  return <button className={`icon-button icon-button--${size} icon-button--${tone} ${className}`.trim()} {...props} />;
 }
 
 export function FormField({

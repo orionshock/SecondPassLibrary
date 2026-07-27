@@ -21,7 +21,7 @@ export function PasswordChangePageRegion({ draft, state, mustChangePassword, onS
       <PasswordField id="new-password" label="New password" field="newPassword" value={draft.newPassword} state={state} onChange={onChange} autoComplete="new-password" />
       <PasswordField id="confirm-password" label="Confirm password" field="confirmPassword" value={draft.confirmPassword} state={state} onChange={onChange} autoComplete="new-password" />
       <ActionRowComponent state={state}>
-        {passwordCancelVisible(mustChangePassword) ? <Button type="button" className="button--secondary" disabled={state.pending} onClick={onCancel}>Cancel</Button> : null}
+        {passwordCancelVisible(mustChangePassword) ? <Button type="button" tone="secondary" disabled={state.pending} onClick={onCancel}>Cancel</Button> : null}
         <Button type="submit" disabled={state.pending}>{state.pending ? "Changing..." : "Change password"}</Button>
       </ActionRowComponent>
     </form>

@@ -51,6 +51,7 @@ This is the running list of cross-page presentation and interaction rules that a
 - Row Components render the returned page. They do not re-filter or re-sort server results.
 - Promote paging controls only when their inputs are stable page metadata and callbacks; shared pagers must remain server-blind.
 - Product list pagers offer 20/30/40/50 by default. A feature with an established different contract supplies its own sizes explicitly.
+- Main list frames use a lean top pager without page-size selection and a full bottom pager. Nested detail and mutation lists remain free to use a single pager when duplicate controls would add clutter.
 - Library Books search is title/sort-title search through the Book list endpoint. Broad Library search is reserved for picker and Add Books workflows.
 - Product language and app-facing fields use Catalog Tags. Compact Book wire `catalog_tags` is normalized to `catalogTags` by the SDK; row Components never inspect wire names.
 
@@ -104,6 +105,8 @@ This is the running list of cross-page presentation and interaction rules that a
 
 ## Form actions
 
+- Shared text buttons use the `small` or `medium` size vocabulary and `primary`, `secondary`, or `danger` tone. Page-level create/save actions are medium primary, manage/edit and cancel actions are secondary, destructive text actions are danger, and compact row or pager actions are small.
+- Shared icon buttons use the same small/medium sizing; add/remove controls retain their established success/danger semantics.
 - Form and workflow action rows are right-aligned unless a page-specific interaction explicitly calls for another placement.
 - Put secondary or canceling actions before the default/desirable primary action so the primary action is farthest right.
 - Put success, error, or other action status immediately left of the buttons and right-align it toward the controls. Reserve the feedback area where practical so status changes do not cause large layout jumps.

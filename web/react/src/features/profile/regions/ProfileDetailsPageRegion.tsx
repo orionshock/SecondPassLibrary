@@ -28,7 +28,7 @@ export function ProfileDetailsPageRegion({ user, state, onSave, onClearStatus }:
     <div className="profile-user-row">
       <span className="profile-row-label">User</span>
       <span className="profile-user-summary"><span>{displayName}</span><span className="css-dot" aria-hidden="true" /><span>&lt;@{user.username}&gt;</span><Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge></span>
-      {!editing ? <div className="profile-edit-actions"><ActionFeedbackComponent state={state} /><Button type="button" onClick={edit}>Edit</Button></div> : null}
+      {!editing ? <div className="profile-edit-actions"><ActionFeedbackComponent state={state} /><Button type="button" tone="secondary" onClick={edit}>Edit</Button></div> : null}
     </div>
     {editing ? <form className="form-grid profile-details-form" onSubmit={submit}>
       <FormField label="First Name" htmlFor="profile-first-name" error={fieldError(state.error, "firstName")}><input id="profile-first-name" value={draft.firstName} autoComplete="given-name" onChange={(event) => dispatch({ type: "change", field: "firstName", value: event.target.value })} /></FormField>

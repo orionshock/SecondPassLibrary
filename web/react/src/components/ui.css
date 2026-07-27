@@ -13,6 +13,21 @@ button,
   text-decoration: none;
 }
 
+.button--medium {
+  padding: 0.55rem 0.8rem;
+}
+
+.button--small {
+  padding: 0.38rem 0.62rem;
+  border-radius: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.button--primary {
+  color: var(--text);
+  background: rgb(255 255 255 / 6%);
+}
+
 button:hover,
 .button-link:hover,
 .button:hover {
@@ -38,12 +53,35 @@ button:disabled {
 }
 
 .icon-button {
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
   background: rgb(255 255 255 / 4%);
   line-height: 1;
+}
+
+.icon-button--small {
+  width: 2rem;
+  height: 2rem;
+}
+
+.icon-button--medium {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.icon-button--primary {
+  border-color: rgb(125 211 252 / 50%);
+  background: rgb(125 211 252 / 10%);
+}
+
+.icon-button--secondary {
+  color: var(--text);
+  background: rgb(255 255 255 / 4%);
 }
 
 .icon-button .material-symbols-outlined {

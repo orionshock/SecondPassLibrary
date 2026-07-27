@@ -25,7 +25,7 @@ export function PairingRequestPageRegion({ code, pairing, clientName, pending, e
       <p className="pairing-subheading">Request</p>
       <FormField label="Device/client name" htmlFor="pairing-client-name"><div className="control-stack"><input id="pairing-client-name" value={clientName} required onChange={(event) => onClientNameChange(event.target.value)} /><span className="field-help">This is how this client will appear in your Profile session list.</span></div></FormField>
       <div className="form-field pairing-readonly-row"><span>Client type</span><span>{pairing.clientType}</span></div>
-      <ActionRowComponent state={actionState}><Button type="button" className="button--secondary" disabled={pending} onClick={() => onDecision("deny")}>Deny</Button><Button type="button" disabled={pending || !clientName.trim()} onClick={() => onDecision("approve")}>Approve</Button></ActionRowComponent>
+      <ActionRowComponent state={actionState}><Button type="button" tone="secondary" disabled={pending} onClick={() => onDecision("deny")}>Deny</Button><Button type="button" disabled={pending || !clientName.trim()} onClick={() => onDecision("approve")}>Approve</Button></ActionRowComponent>
     </> : null}
   </form></PairingPageFrameComponent>;
 }

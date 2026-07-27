@@ -16,7 +16,7 @@ export function SaveCancelActionRowComponent({ state, submitLabel, pendingLabel,
   onCancel: () => void;
 }) {
   return <ActionRowComponent state={state}>
-    <Button type="button" className="button--secondary" disabled={state.pending || disabled} onClick={onCancel}>Cancel</Button>
+    <Button type="button" tone="secondary" disabled={state.pending || disabled} onClick={onCancel}>Cancel</Button>
     <Button type="submit" disabled={state.pending || disabled}>{state.pending ? pendingLabel : submitLabel}</Button>
   </ActionRowComponent>;
 }

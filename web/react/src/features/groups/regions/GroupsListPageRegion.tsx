@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback } from "../groupsBreadcrumbs";
 import { GroupRowComponent } from "../components/GroupRowComponent";
 
@@ -97,26 +97,7 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, curator
 
   return <section className={`groups-results${loading ? " groups-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    {page.items.length === 0 ? <p className="groups-state muted">No groups match this search.</p> : <div className="groups-list-rows">
-      {page.items.map((group) => {
-        const detailPath = `/groups/${encodeURIComponent(group.id)}`;
-        const detailTrail = groupDetailBreadcrumbFallback(group.name);
-        const previewBooks: BookCoverPreviewItem[] = (group.previewBooks ?? []).map((book) => ({
-          ...book,
-          href: `/library/books/${encodeURIComponent(book.id)}`,
-          navigationState: breadcrumbNavigationState(groupBookBreadcrumbs(group.id, group.name, book.title)),
-        }));
-        return <GroupRowComponent
-          key={group.id}
-          group={group}
-          detailPath={detailPath}
-          navigationState={breadcrumbNavigationState(detailTrail)}
-          isCurator={curatorGroupIds.has(group.id)}
-          previewBooks={previewBooks}
-        />;
-      })}
-    </div>}
-    <PagerComponent
+    <PaginatedListFrameComponent
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}
@@ -125,6 +106,26 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, curator
       itemLabel="Groups"
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
-    />
+    >
+      {page.items.length === 0 ? <p className="groups-state muted">No groups match this search.</p> : <div className="groups-list-rows">
+        {page.items.map((group) => {
+          const detailPath = `/groups/${encodeURIComponent(group.id)}`;
+          const detailTrail = groupDetailBreadcrumbFallback(group.name);
+          const previewBooks: BookCoverPreviewItem[] = (group.previewBooks ?? []).map((book) => ({
+            ...book,
+            href: `/library/books/${encodeURIComponent(book.id)}`,
+            navigationState: breadcrumbNavigationState(groupBookBreadcrumbs(group.id, group.name, book.title)),
+          }));
+          return <GroupRowComponent
+            key={group.id}
+            group={group}
+            detailPath={detailPath}
+            navigationState={breadcrumbNavigationState(detailTrail)}
+            isCurator={curatorGroupIds.has(group.id)}
+            previewBooks={previewBooks}
+          />;
+        })}
+      </div>}
+    </PaginatedListFrameComponent>
   </section>;
 }

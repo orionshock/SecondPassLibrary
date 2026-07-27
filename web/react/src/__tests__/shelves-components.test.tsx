@@ -62,6 +62,8 @@ describe("Shelves read-only regions", () => {
     expect(personal).toContain("Favorites");
     expect(personal).toContain("&lt;b&gt;Reader picks&lt;/b&gt;");
     expect(personal).toContain('aria-label="Open Visible Book"');
+    expect(personal).toContain('aria-label="Shelves pagination, top"');
+    expect(personal).toContain('aria-label="Shelves pagination, bottom"');
     expect(personal).not.toContain('href="/shelves/shelf/edit"');
 
     const group = renderList(groupShelf, "group");
