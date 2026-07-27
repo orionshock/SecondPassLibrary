@@ -1,17 +1,17 @@
-import type { LibraryGroup } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
-import { Badge } from "../../../components/ui";
-import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
+import { Badge } from "../../components/ui";
+import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../books/BookCoverPreviewStripComponent";
+import "./GroupRowComponent.css";
 
-export function GroupRowComponent({
-  group,
-  detailPath,
-  navigationState,
-  isCurator,
-  previewBooks,
-}: {
-  group: LibraryGroup;
+export interface GroupRowIdentity {
+  name: string;
+  description: string;
+  isPublicGroup: boolean;
+}
+
+export function GroupRowComponent({ group, detailPath, navigationState, isCurator, previewBooks }: {
+  group: GroupRowIdentity;
   detailPath: string;
   navigationState?: unknown;
   isCurator: boolean;

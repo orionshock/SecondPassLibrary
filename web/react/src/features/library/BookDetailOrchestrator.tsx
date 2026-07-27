@@ -2,6 +2,7 @@ import {
   ApiError,
   getBook,
   isAtLeastLibrarian,
+  listAllGroupsForBook,
   listAllShelvesForBook,
   type BookDetail,
 } from "@second-pass/spl-api";
@@ -17,6 +18,7 @@ import {
   bookDetailBreadcrumbFallback,
   bookEditBreadcrumbTrail,
   bookGroupBreadcrumbTrail,
+  bookGroupPreviewBreadcrumbTrail,
   bookShelfBreadcrumbTrail,
   bookShelfPreviewBreadcrumbTrail,
 } from "./bookDetailPresentation";
@@ -24,6 +26,7 @@ import { bookDetailQueryFromSearchParams, bookDetailSearchParams, type BookDetai
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
 import {
   BookDetailSectionsPageRegion,
+  type BookGroupsState,
   type BookShelvesState,
 } from "./regions/BookDetailSectionsPageRegion";
 import { BookDetailStatePageRegion } from "./regions/BookDetailStatePageRegion";
@@ -50,8 +53,11 @@ export function BookDetailOrchestrator() {
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<BookDetailLoadState>({ status: "loading" });
   const [shelvesLoad, setShelvesLoad] = useState<BookShelvesState>({ status: "idle" });
+  const [groupsLoad, setGroupsLoad] = useState<BookGroupsState>({ status: "idle" });
   const shelvesRequestActive = useRef(false);
+  const groupsRequestActive = useRef(false);
   const shelvesBookId = useRef<string | undefined>(bookId);
+  const groupsBookId = useRef<string | undefined>(bookId);
   const book = load.status === "ready" ? load.book : undefined;
   const breadcrumbFallback = useMemo(
     () => bookDetailBreadcrumbFallback(book?.title ?? "Book"),
@@ -70,8 +76,11 @@ export function BookDetailOrchestrator() {
 
   useEffect(() => {
     shelvesBookId.current = bookId;
+    groupsBookId.current = bookId;
     shelvesRequestActive.current = false;
+    groupsRequestActive.current = false;
     setShelvesLoad({ status: "idle" });
+    setGroupsLoad({ status: "idle" });
     if (!bookId) {
       setLoad({ status: "not-found" });
       return;
@@ -88,6 +97,7 @@ export function BookDetailOrchestrator() {
     return () => {
       active = false;
       if (shelvesBookId.current === bookId) shelvesBookId.current = undefined;
+      if (groupsBookId.current === bookId) groupsBookId.current = undefined;
     };
   }, [bookId, retry]);
 
@@ -110,9 +120,32 @@ export function BookDetailOrchestrator() {
       });
   }, [bookId, shelvesLoad.status]);
 
+  const loadGroups = useCallback(() => {
+    if (!bookId || groupsRequestActive.current || groupsLoad.status === "ready") return;
+    const requestedBookId = bookId;
+    groupsRequestActive.current = true;
+    setGroupsLoad({ status: "loading" });
+    listAllGroupsForBook(requestedBookId)
+      .then((groups) => {
+        if (groupsBookId.current === requestedBookId) setGroupsLoad({ status: "ready", groups });
+      })
+      .catch((error: unknown) => {
+        if (groupsBookId.current === requestedBookId) {
+          setGroupsLoad({ status: "error", error: normalizeMutationError(error) });
+        }
+      })
+      .finally(() => {
+        if (groupsBookId.current === requestedBookId) groupsRequestActive.current = false;
+      });
+  }, [bookId, groupsLoad.status]);
+
   useEffect(() => {
     if (load.status === "ready" && detailQuery.tab === "shelves" && shelvesLoad.status === "idle") loadShelves();
   }, [detailQuery.tab, load.status, loadShelves, shelvesLoad.status]);
+
+  useEffect(() => {
+    if (load.status === "ready" && detailQuery.tab === "groups" && groupsLoad.status === "idle") loadGroups();
+  }, [detailQuery.tab, groupsLoad.status, load.status, loadGroups]);
 
   function changeSection(tab: BookDetailTab) {
     const parameters = bookDetailSearchParams(new URLSearchParams(location.search), tab);
@@ -136,6 +169,7 @@ export function BookDetailOrchestrator() {
       advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
       activeSection={detailQuery.tab}
       shelvesState={shelvesLoad}
+      groupsState={groupsLoad}
       shelfNavigationState={(shelf) => breadcrumbNavigationState(bookShelfBreadcrumbTrail(
         resolveBreadcrumbTrail(location.state, breadcrumbFallback),
         load.book.id,
@@ -157,8 +191,18 @@ export function BookDetailOrchestrator() {
         group.name,
         group.isPublicGroup,
       ))}
+      groupBookNavigationState={(group, preview) => breadcrumbNavigationState(bookGroupPreviewBreadcrumbTrail(
+        resolveBreadcrumbTrail(location.state, breadcrumbFallback),
+        load.book.id,
+        load.book.title,
+        group.id,
+        group.name,
+        preview.title,
+        group.isPublicGroup,
+      ))}
       onSectionChange={changeSection}
       onRetryShelves={loadShelves}
+      onRetryGroups={loadGroups}
     />
   </article></ProductPageShellComponent>;
 }

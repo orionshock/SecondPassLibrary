@@ -169,21 +169,11 @@
 }
 
 .book-detail-sections-region__groups {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+  display: grid;
+  gap: 0.55rem;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.book-detail-sections-region__groups li {
-  display: inline-flex;
-}
-
-.book-detail-sections-region__groups a {
-  display: inline-flex;
-  text-decoration: none;
 }
 
 .book-detail-sections-region__shelves {
@@ -194,7 +184,8 @@
   list-style: none;
 }
 
-.book-detail-sections-region__shelves-error {
+.book-detail-sections-region__shelves-error,
+.book-detail-sections-region__groups-error {
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;

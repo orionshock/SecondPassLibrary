@@ -117,6 +117,30 @@ export function bookGroupBreadcrumbTrail(
   ];
 }
 
+export function bookGroupPreviewBreadcrumbTrail(
+  detailTrail: readonly BreadcrumbItem[],
+  bookId: string,
+  bookTitle: string,
+  groupId: string,
+  groupName: string,
+  previewTitle: string,
+  isPublicGroup = false,
+): BreadcrumbItem[] {
+  const trail = bookGroupBreadcrumbTrail(
+    detailTrail,
+    bookId,
+    bookTitle,
+    groupName,
+    isPublicGroup,
+  );
+  trail[trail.length - 1] = {
+    label: groupName,
+    to: `/groups/${encodeURIComponent(groupId)}`,
+    icon: isPublicGroup ? "public-group" : "group",
+  };
+  return [...trail, { label: previewTitle, icon: "book" }];
+}
+
 export function bookBrowseDetailBreadcrumbs({
   title,
   libraryPath,

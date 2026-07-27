@@ -37,6 +37,7 @@ export {
   createGroup,
   deleteGroup,
   getGroup,
+  listAllGroupsForBook,
   listAllLibraryGroups,
   listGroupBooks,
   listGroupMembers,

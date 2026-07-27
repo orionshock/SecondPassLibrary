@@ -262,6 +262,23 @@ export async function listAllLibraryGroups(client: ApiClient = apiClient): Promi
   );
 }
 
+export async function listAllGroupsForBook(
+  bookId: string,
+  client: ApiClient = apiClient,
+): Promise<LibraryGroup[]> {
+  const parameters = new URLSearchParams({
+    book: bookId,
+    ordering: "name",
+    include_preview_books: "true",
+    page_size: "200",
+  });
+  return collectPaginatedResults(
+    `/api/v1/library/groups/?${parameters.toString()}`,
+    (path) => client.request<ApiPage<LibraryGroupResponse>>(path),
+    mapLibraryGroup,
+  );
+}
+
 export async function addBookToGroup(
   groupId: string,
   bookId: string,

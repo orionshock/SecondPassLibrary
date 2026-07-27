@@ -8,6 +8,7 @@ import {
   deleteGroup,
   getGroup,
   listAllLibraryGroups,
+  listAllGroupsForBook,
   listGroupBooks,
   listGroupMembers,
   listGroups,
@@ -118,6 +119,37 @@ describe("Library Groups SDK", () => {
 
     expect(calls).toEqual([
       "/api/v1/library/groups/?q=readers&book=book%2Fid&ordering=-name&include_preview_books=true&page=2&page_size=30",
+    ]);
+  });
+
+  it("collects every preview-bearing Group page for a Book", async () => {
+    const calls: string[] = [];
+    const responses = [
+      {
+        count: 2,
+        next: "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&page=2&page_size=200",
+        previous: null,
+        results: [{ id: "g1", name: "First", description: "", is_public_group: false, preview_books: [] }],
+      },
+      {
+        count: 2,
+        next: null,
+        previous: "previous",
+        results: [{ id: "g2", name: "Second", description: "", is_public_group: false, preview_books: [{ id: "preview", title: "Preview", cover_url: null }] }],
+      },
+    ];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return responses.shift() as T;
+    } };
+
+    await expect(listAllGroupsForBook("book-id", client)).resolves.toEqual([
+      { id: "g1", name: "First", description: "", isPublicGroup: false, previewBooks: [] },
+      { id: "g2", name: "Second", description: "", isPublicGroup: false, previewBooks: [{ id: "preview", title: "Preview", coverUrl: null }] },
+    ]);
+    expect(calls).toEqual([
+      "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&page_size=200",
+      "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&page=2&page_size=200",
     ]);
   });
 

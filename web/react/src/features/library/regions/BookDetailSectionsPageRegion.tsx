@@ -1,9 +1,8 @@
-import type { BookDetail, BookGroupSummary, BookPreview, ShelfSummary } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import type { BookDetail, BookPreview, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 
 import { ErrorPanel } from "../../../components/ui";
-import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
+import { GroupRowComponent } from "../../../shared/groups/GroupRowComponent";
 import { ShelfSummaryRowComponent, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { TabListComponent, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabListComponent";
 import { BookIdentifierListComponent } from "../components/BookIdentifierListComponent";
@@ -16,26 +15,38 @@ export type BookShelvesState =
   | { status: "ready"; shelves: ShelfSummary[] }
   | { status: "error"; error: Error };
 
+export type BookGroupsState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; groups: LibraryGroup[] }
+  | { status: "error"; error: Error };
+
 export function BookDetailSectionsPageRegion({
   book,
   advancedGroupsEnabled,
   activeSection,
   shelvesState = { status: "idle" },
+  groupsState = { status: "idle" },
   shelfNavigationState,
   shelfBookNavigationState,
   groupNavigationState,
+  groupBookNavigationState,
   onSectionChange,
   onRetryShelves,
+  onRetryGroups,
 }: {
   book: BookDetail;
   advancedGroupsEnabled: boolean;
   activeSection: BookDetailTab;
   shelvesState?: BookShelvesState;
+  groupsState?: BookGroupsState;
   shelfNavigationState?: (shelf: ShelfSummary) => unknown;
   shelfBookNavigationState?: (shelf: ShelfSummary, book: BookPreview) => unknown;
-  groupNavigationState?: (group: BookGroupSummary) => unknown;
+  groupNavigationState?: (group: LibraryGroup) => unknown;
+  groupBookNavigationState?: (group: LibraryGroup, book: BookPreview) => unknown;
   onSectionChange: (section: BookDetailTab) => void;
   onRetryShelves?: () => void;
+  onRetryGroups?: () => void;
 }) {
   const sections: readonly TabItem<BookDetailTab>[] = [
     { id: "shelves", label: "Shelves" },
@@ -49,10 +60,13 @@ export function BookDetailSectionsPageRegion({
     activeSection={activeSection}
     onSectionChange={onSectionChange}
     shelvesState={shelvesState}
+    groupsState={groupsState}
     shelfNavigationState={shelfNavigationState}
     shelfBookNavigationState={shelfBookNavigationState}
     groupNavigationState={groupNavigationState}
+    groupBookNavigationState={groupBookNavigationState}
     onRetryShelves={onRetryShelves}
+    onRetryGroups={onRetryGroups}
   />;
 }
 
@@ -62,20 +76,26 @@ function BookDetailSectionsComponent({
   activeSection,
   onSectionChange,
   shelvesState,
+  groupsState,
   shelfNavigationState,
   shelfBookNavigationState,
   groupNavigationState,
+  groupBookNavigationState,
   onRetryShelves,
+  onRetryGroups,
 }: {
   book: BookDetail;
   sections: readonly TabItem<BookDetailTab>[];
   activeSection: BookDetailTab;
   onSectionChange: (section: BookDetailTab) => void;
   shelvesState: BookShelvesState;
+  groupsState: BookGroupsState;
   shelfNavigationState?: (shelf: ShelfSummary) => unknown;
   shelfBookNavigationState?: (shelf: ShelfSummary, book: BookPreview) => unknown;
-  groupNavigationState?: (group: BookGroupSummary) => unknown;
+  groupNavigationState?: (group: LibraryGroup) => unknown;
+  groupBookNavigationState?: (group: LibraryGroup, book: BookPreview) => unknown;
   onRetryShelves?: () => void;
+  onRetryGroups?: () => void;
 }) {
   return <section className="book-detail-sections-region" aria-label="Book relationships and metadata">
     <TabListComponent tabs={sections} activeTab={activeSection} onChange={onSectionChange} ariaLabel="Book detail sections" idPrefix="book-detail" />
@@ -86,7 +106,7 @@ function BookDetailSectionsComponent({
       aria-labelledby={tabButtonId("book-detail", activeSection)}
     >
       {activeSection === "shelves" ? <BookDetailShelvesSection state={shelvesState} shelfNavigationState={shelfNavigationState} shelfBookNavigationState={shelfBookNavigationState} onRetry={onRetryShelves} /> : null}
-      {activeSection === "groups" ? <BookDetailGroupsSection book={book} groupNavigationState={groupNavigationState} /> : null}
+      {activeSection === "groups" ? <BookDetailGroupsSection state={groupsState} groupNavigationState={groupNavigationState} groupBookNavigationState={groupBookNavigationState} onRetry={onRetryGroups} /> : null}
       {activeSection === "metadata" ? <BookDetailMetadataSection book={book} /> : null}
     </div>
   </section>;
@@ -135,18 +155,36 @@ function BookDetailShelvesSection({ state, shelfNavigationState, shelfBookNaviga
   </div>;
 }
 
-function BookDetailGroupsSection({ book, groupNavigationState }: {
-  book: BookDetail;
-  groupNavigationState?: (group: BookGroupSummary) => unknown;
+function BookDetailGroupsSection({ state, groupNavigationState, groupBookNavigationState, onRetry }: {
+  state: BookGroupsState;
+  groupNavigationState?: (group: LibraryGroup) => unknown;
+  groupBookNavigationState?: (group: LibraryGroup, book: BookPreview) => unknown;
+  onRetry?: () => void;
 }) {
-  if (book.groups.length === 0) return <p className="muted">No visible groups.</p>;
-  return <ul className="book-detail-sections-region__groups" aria-label="Book groups">
-    {book.groups.map((group) => <li key={group.id} title={group.description || undefined}>
-      <Link to={`/groups/${encodeURIComponent(group.id)}`} state={groupNavigationState?.(group)}>
-        <GroupBadgeComponent name={group.name} isPublicGroup={group.isPublicGroup} size="medium" />
-      </Link>
-    </li>)}
-  </ul>;
+  if (state.status === "idle" || state.status === "loading") {
+    return <p className="muted" aria-busy="true">Loading groups...</p>;
+  }
+  if (state.status === "error") {
+    return <div className="book-detail-sections-region__groups-error">
+      <ErrorPanel>{state.error.message}</ErrorPanel>
+      <button type="button" onClick={onRetry}>Retry</button>
+    </div>;
+  }
+  if (state.groups.length === 0) return <p className="muted">No visible groups.</p>;
+  return <div className="book-detail-sections-region__groups" aria-label="Book groups">
+    {state.groups.map((group) => <GroupRowComponent
+      key={group.id}
+      group={group}
+      detailPath={`/groups/${encodeURIComponent(group.id)}`}
+      navigationState={groupNavigationState?.(group)}
+      isCurator={false}
+      previewBooks={(group.previewBooks ?? []).map((preview) => ({
+        ...preview,
+        href: `/library/books/${encodeURIComponent(preview.id)}`,
+        navigationState: groupBookNavigationState?.(group, preview),
+      }))}
+    />)}
+  </div>;
 }
 
 function BookDetailMetadataSection({ book }: { book: BookDetail }) {

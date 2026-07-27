@@ -43,54 +43,6 @@
   gap: 0.45rem;
 }
 
-.group-row-component {
-  display: grid;
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 0.8rem;
-  min-height: 5.1rem;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 0.55rem;
-  background: rgb(18 25 34 / 82%);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-
-.group-row-component:hover,
-.group-row-component:focus-within {
-  border-color: color-mix(in srgb, var(--focus), transparent 55%);
-  background: var(--surface-raised);
-}
-
-.group-row-component__identity { min-width: 0; }
-
-.group-row-component__title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.group-row-component h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.group-row-component h2 a { color: #72d1fa; }
-
-.group-row-component p {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.4;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.group-row-component .book-cover-preview-strip-component { justify-content: flex-end; }
-
 .groups-results > .pager-component,
 .group-books-results > .pager-component,
 .group-members-region > .pager-component {
@@ -282,9 +234,6 @@
 
   .group-books-controls > .order-menu-component { flex: 1 1 12rem; }
 
-  .group-row-component { grid-template-columns: 1fr; }
-
-  .group-row-component .book-cover-preview-strip-component { justify-content: flex-start; }
 }
 
 @media (max-width: 520px) {

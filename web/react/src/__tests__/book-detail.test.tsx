@@ -3,13 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
-import type { BookDetail, ShelfSummary } from "@second-pass/spl-api";
+import type { BookDetail, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 import { breadcrumbLinkState, resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
   bookBrowseDetailBreadcrumbs,
   bookDetailBreadcrumbFallback,
   bookEditBreadcrumbTrail,
   bookGroupBreadcrumbTrail,
+  bookGroupPreviewBreadcrumbTrail,
   bookIdentifierLabel,
   bookSeriesDisplay,
   bookShelfBreadcrumbTrail,
@@ -59,6 +60,14 @@ const shelves: ShelfSummary[] = [
   },
 ];
 
+const groups: LibraryGroup[] = [
+  {
+    id: "group", name: "Common Room", description: "Everyone reads here", isPublicGroup: true,
+    previewBooks: [{ id: "preview", title: "Preview Book", coverUrl: "/cover.jpg" }],
+  },
+  { id: "editors", name: "Editors", description: "Selected readers", isPublicGroup: false, previewBooks: [] },
+];
+
 function render(element: ReactElement): string {
   return renderToStaticMarkup(<MemoryRouter>{element}</MemoryRouter>);
 }
@@ -93,14 +102,16 @@ describe("Book Detail presentation", () => {
 
   it("uses the server-provided advanced-groups mode to gate visible groups", () => {
     const simple = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} activeSection="shelves" onSectionChange={() => undefined} />);
-    const advanced = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled activeSection="groups" onSectionChange={() => undefined} />);
+    const advanced = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled activeSection="groups" groupsState={{ status: "ready", groups }} onSectionChange={() => undefined} />);
     expect(simple).not.toContain('id="book-detail-groups-tab"');
     expect(simple).not.toContain("Common Room");
     expect(advanced).toContain("Common Room");
     expect(advanced).toContain("Editors");
     expect(advanced).toContain('href="/groups/group"');
     expect(advanced).toContain('href="/groups/editors"');
-    expect(advanced).toContain("group-badge-component--medium");
+    expect(advanced).toContain("group-row-component");
+    expect(advanced).toContain("Everyone reads here");
+    expect(advanced).toContain('aria-label="Open Preview Book"');
     expect(advanced).not.toContain("Manage");
   });
 
@@ -216,6 +227,14 @@ describe("Book Detail navigation", () => {
       { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
       { label: "Groups", to: `/library/books/${book.id}?tab=groups`, icon: "group" },
       { label: "Common Room", icon: "public-group" },
+    ]);
+    expect(bookGroupPreviewBreadcrumbTrail(
+      detailTrail, book.id, "Storm Front", "group-id", "Common Room", "Preview Book", true,
+    ).slice(-4)).toEqual([
+      { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
+      { label: "Groups", to: `/library/books/${book.id}?tab=groups`, icon: "group" },
+      { label: "Common Room", to: "/groups/group-id", icon: "public-group" },
+      { label: "Preview Book", icon: "book" },
     ]);
   });
 

@@ -6,9 +6,9 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
 import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
+import { GroupRowComponent } from "../../../shared/groups/GroupRowComponent";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback } from "../groupsBreadcrumbs";
-import { GroupRowComponent } from "../components/GroupRowComponent";
 
 type GroupsListOrdering = "name" | "-name";
 
