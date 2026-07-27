@@ -32,7 +32,11 @@ export {
 } from "./errors";
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
+  listReadingSessions,
   listRecentReadingSessions,
+  type ReadingSessionStatus,
+  type ReadingSessionSummary,
+  type ReadingSessionsQuery,
   type RecentReadingSession,
 } from "./reading";
 export {

@@ -15,6 +15,7 @@ import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
 import { AuthorSeriesEditOrchestrator } from "../features/library/AuthorSeriesEditOrchestrator";
 import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
+import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
@@ -27,9 +28,7 @@ import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator
 import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 import { ProductPageShellComponent } from "../shared/layout/ProductPageShellComponent";
 
-export const sectionRoutes = [
-  { path: "reading", title: "My Marginalia" },
-] as const;
+export const sectionRoutes = [] as const;
 
 const advancedGroupsRouteAvailable = (_user: CurrentUser, server: ServerInfo) => server.advancedLibraryGroupsEnabled;
 const groupCreationRouteAvailable = (user: CurrentUser, server: ServerInfo) => (
@@ -58,6 +57,7 @@ export const appRoutes = [
     element: <App />,
     children: [
       { index: true, element: <DashboardOrchestrator /> },
+      { path: "reading", element: <ReadingSessionsOrchestrator /> },
       ...sectionRoutes.map(({ path, title }) => ({
         path,
         element: <PlaceholderPageRegion title={title} />,

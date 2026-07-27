@@ -7,6 +7,7 @@ import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
+import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
@@ -73,8 +74,11 @@ describe("app frame and router", () => {
       { isOwner: false, isReader: true },
     ]) expect(navMarkup(facts, { advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
   });
-  it("defines placeholder and not-found routes", () => {
-    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual(["/reading"]);
+  it("defines implemented Product routes separately from placeholders", () => {
+    expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual([]);
+    const readingRoute = appRoutes[0].children.find((route) => route.path === "reading");
+    expect(isValidElement(readingRoute?.element)).toBe(true);
+    if (isValidElement(readingRoute?.element)) expect(readingRoute.element.type).toBe(ReadingSessionsOrchestrator);
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId/edit")).toBe(true);
@@ -97,7 +101,7 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "users/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "users/:profileId/edit")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
-    expect(renderToStaticMarkup(<PlaceholderPageRegion title="My Marginalia" />)).toContain("My Marginalia");
+    expect(renderToStaticMarkup(<PlaceholderPageRegion title="Future section" />)).toContain("Future section");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
   });
 
