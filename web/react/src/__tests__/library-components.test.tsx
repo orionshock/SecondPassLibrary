@@ -239,6 +239,12 @@ describe("Library Author and Series components", () => {
       series={[series]}
       authorsLoading={false}
       seriesLoading={false}
+      breadcrumbTrail={[
+        { label: "Library", to: "/library", icon: "library" },
+        { label: "Books", to: "/library", icon: "book" },
+        { label: "Book", to: "/library/books/book", icon: "book" },
+        { label: "Edit" },
+      ]}
       returnTo="/library/books/book/edit"
       onRetryAuthors={vi.fn()}
       onRetrySeries={vi.fn()}

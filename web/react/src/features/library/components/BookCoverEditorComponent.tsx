@@ -60,7 +60,7 @@ export function BookCoverEditorComponent({
   }
 
   return <section className="book-cover-editor" aria-label="Book cover controls">
-    <Button ref={changeButton} type="button" tone="secondary" className="book-cover-editor__trigger" disabled={controlsDisabled} onClick={() => setOpen(true)}>
+    <Button ref={changeButton} type="button" tone="primary" className="book-cover-editor__trigger" disabled={controlsDisabled} onClick={() => setOpen(true)}>
       Change Cover
     </Button>
     {open ? <div className="book-cover-dialog-backdrop">

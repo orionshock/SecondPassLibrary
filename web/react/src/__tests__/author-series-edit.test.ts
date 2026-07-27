@@ -12,9 +12,12 @@ import {
 } from "../features/library/authorSeriesEditDraft";
 import {
   libraryEntityBreadcrumbs,
+  libraryEntityContextBreadcrumbs,
   libraryEntityContextPath,
   libraryEntityEditPath,
   libraryEntityNavigationState,
+  libraryEntityParentBreadcrumbs,
+  libraryEntitySavedBreadcrumbs,
   readLibraryEntityReturnTo,
 } from "../features/library/authorSeriesLifecycle";
 import { LocalValidationError } from "../shared/feedback/mutationState";
@@ -56,5 +59,28 @@ describe("Author and Series lifecycle draft contract", () => {
     const unsafe = libraryEntityNavigationState({ breadcrumbs: [{ label: "Author" }], returnTo: "https://example.com" });
     expect(readLibraryEntityReturnTo(safe)).toBe("/library?view=authors");
     expect(readLibraryEntityReturnTo(unsafe)).toBeUndefined();
+  });
+
+  it("preserves a Book Edit breadcrumb context through lifecycle navigation", () => {
+    const parent = [
+      { label: "Library", to: "/library", icon: "library" as const },
+      { label: "Books", to: "/library", icon: "book" as const },
+      { label: "Battle Ground", to: "/library/books/book", icon: "book" as const },
+      { label: "Edit" },
+    ];
+    const returnTo = "/library/books/book/edit?tab=authors-series";
+    const createTrail = libraryEntityContextBreadcrumbs(parent, "author", "new", returnTo);
+    expect(createTrail.at(-2)).toEqual({ label: "Edit", to: returnTo });
+    expect(createTrail.at(-1)).toEqual({ label: "New Author", icon: "author" });
+
+    const savedTrail = libraryEntitySavedBreadcrumbs(createTrail, "author", "Ada", "author/id");
+    expect(savedTrail.slice(-3)).toEqual([
+      { label: "Edit", to: returnTo },
+      { label: "Ada", to: "/library?view=authors&author=author%2Fid", icon: "author" },
+      { label: "Edit" },
+    ]);
+    expect(libraryEntityParentBreadcrumbs(savedTrail, "author", "edit")).toEqual(parent.map((item, index) => (
+      index === parent.length - 1 ? { ...item, to: returnTo } : item
+    )));
   });
 });

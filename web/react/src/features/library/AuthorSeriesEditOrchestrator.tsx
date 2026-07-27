@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
 
+import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
@@ -31,6 +32,8 @@ import {
   libraryEntityBreadcrumbs,
   libraryEntityEditPath,
   libraryEntityNavigationState,
+  libraryEntityParentBreadcrumbs,
+  libraryEntitySavedBreadcrumbs,
   readLibraryEntityReturnTo,
   readLibraryEntitySuccessMessage,
   titleKind,
@@ -139,6 +142,12 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
       setDraft(next);
       setBaseline(next);
       const message = `${titleKind(kind)} saved.`;
+      const savedBreadcrumbs = libraryEntitySavedBreadcrumbs(
+        resolveBreadcrumbTrail(location.state, breadcrumbs),
+        kind,
+        saved.name,
+        saved.id,
+      );
       if (mode === "new") {
         setMutation({ pending: false, message });
         allowNavigation.current = true;
@@ -146,7 +155,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         navigate(target, {
           replace: true,
           state: libraryEntityNavigationState({
-            breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", saved.name, saved.id),
+            breadcrumbs: savedBreadcrumbs,
             returnTo: readLibraryEntityReturnTo(location.state) ?? libraryEntityAxisPath(kind),
             successMessage: message,
           }),
@@ -156,7 +165,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         navigate(location.pathname, {
           replace: true,
           state: libraryEntityNavigationState({
-            breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", saved.name, saved.id),
+            breadcrumbs: savedBreadcrumbs,
             returnTo: readLibraryEntityReturnTo(location.state),
           }),
         });
@@ -169,7 +178,13 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   function cancel() {
     if (dirty && !window.confirm(`Discard unsaved ${titleKind(kind)} changes?`)) return;
     allowNavigation.current = true;
-    navigate(readLibraryEntityReturnTo(location.state) ?? libraryEntityAxisPath(kind));
+    const returnTo = readLibraryEntityReturnTo(location.state) ?? libraryEntityAxisPath(kind);
+    const parentBreadcrumbs = libraryEntityParentBreadcrumbs(
+      resolveBreadcrumbTrail(location.state, breadcrumbs),
+      kind,
+      mode,
+    );
+    navigate(returnTo, { state: breadcrumbNavigationState(parentBreadcrumbs) });
   }
 
   const entityTitle = titleKind(kind);
