@@ -87,6 +87,6 @@ describe("User create workflow", () => {
     const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/users"]}><Routes><Route element={<AppFrame user={owner} server={server} onCurrentUserChange={vi.fn()} />}><Route path="users" element={<UsersListOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain('href="/users/new"');
     expect(usersListBreadcrumbFallback).toEqual([]);
-    expect(usersCreateBreadcrumbFallback).toEqual([{ label: "Users", to: "/users", resetTrail: true }, { label: "New" }]);
+    expect(usersCreateBreadcrumbFallback).toEqual([{ label: "Users", to: "/users", resetTrail: true, icon: "user" }, { label: "New" }]);
   });
 });

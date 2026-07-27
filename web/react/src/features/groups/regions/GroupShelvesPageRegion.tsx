@@ -7,9 +7,10 @@ import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
 import { groupShelfBookBreadcrumbs, groupShelfBreadcrumbs } from "../groupsBreadcrumbs";
 
-export function GroupShelvesPageRegion({ groupId, groupName, groupPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
+export function GroupShelvesPageRegion({ groupId, groupName, isPublicGroup, groupPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
   groupId: string;
   groupName: string;
+  isPublicGroup?: boolean;
   groupPath: string;
   page?: Page<ShelfSummary>;
   pageNumber: number;
@@ -33,7 +34,7 @@ export function GroupShelvesPageRegion({ groupId, groupName, groupPath, page, pa
           ...book,
           href: `/library/books/${encodeURIComponent(book.id)}`,
           navigationState: breadcrumbNavigationState(groupShelfBookBreadcrumbs(
-            groupId, groupName, shelf.id, shelf.name, book.title, groupPath,
+            groupId, groupName, shelf.id, shelf.name, book.title, groupPath, isPublicGroup,
           )),
         }));
         return <ShelfSummaryRowComponent
@@ -41,7 +42,7 @@ export function GroupShelvesPageRegion({ groupId, groupName, groupPath, page, pa
           name={shelf.name}
           description={shelf.description}
           detailPath={detailPath}
-          navigationState={breadcrumbNavigationState(groupShelfBreadcrumbs(groupId, groupName, shelf.name, groupPath))}
+          navigationState={breadcrumbNavigationState(groupShelfBreadcrumbs(groupId, groupName, shelf.name, groupPath, isPublicGroup))}
           previewBooks={previewBooks}
         />;
       })}

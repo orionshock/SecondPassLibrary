@@ -104,8 +104,8 @@ export function GroupEditOrchestrator() {
     !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
   ));
   const breadcrumbs = useMemo(
-    () => groupEditBreadcrumbFallback(groupId, group?.name),
-    [group?.name, groupId],
+    () => groupEditBreadcrumbFallback(groupId, group?.name, group?.isPublicGroup),
+    [group?.isPublicGroup, group?.name, groupId],
   );
   usePageBreadcrumbs(breadcrumbs);
 
@@ -313,6 +313,7 @@ export function GroupEditOrchestrator() {
       <GroupBooksEditPageRegion
         groupId={load.group.id}
         groupName={load.group.name}
+        isPublicGroup={load.group.isPublicGroup}
         page={booksLoad.page}
         pageNumber={booksPage}
         pageSize={booksPageSize}
@@ -331,6 +332,7 @@ export function GroupEditOrchestrator() {
       <GroupBookCandidatesPageRegion
         groupId={load.group.id}
         groupName={load.group.name}
+        isPublicGroup={load.group.isPublicGroup}
         search={candidateSearch}
         page={candidatesLoad.page}
         pageNumber={candidatePage}

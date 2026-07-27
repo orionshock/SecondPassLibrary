@@ -7,9 +7,10 @@ import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowCom
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";
 
-export function GroupBookCandidatesPageRegion({ groupId, groupName, search, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onSearchChange, onSearch, onAdd, onPageChange, onPageSizeChange, onRetry }: {
+export function GroupBookCandidatesPageRegion({ groupId, groupName, isPublicGroup, search, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onSearchChange, onSearch, onAdd, onPageChange, onPageSizeChange, onRetry }: {
   groupId: string;
   groupName: string;
+  isPublicGroup?: boolean;
   search: string;
   page?: Page<CompactBook>;
   pageNumber: number;
@@ -46,7 +47,7 @@ export function GroupBookCandidatesPageRegion({ groupId, groupName, search, page
           key={book.id}
           book={book}
           detailPath={`/library/books/${encodeURIComponent(book.id)}`}
-          navigationState={breadcrumbNavigationState(groupBookBreadcrumbs(groupId, groupName, book.title))}
+          navigationState={breadcrumbNavigationState(groupBookBreadcrumbs(groupId, groupName, book.title, undefined, isPublicGroup))}
           actions={<Button type="button" disabled={controlsDisabled || Boolean(pendingBookId)} onClick={() => onAdd(book.id)}>
             {pendingBookId === book.id ? "Adding..." : "Add"}
           </Button>}

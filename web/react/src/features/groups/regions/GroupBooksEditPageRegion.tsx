@@ -7,9 +7,10 @@ import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowCom
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";
 
-export function GroupBooksEditPageRegion({ groupId, groupName, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onRemove, onPageChange, onPageSizeChange, onRetry }: {
+export function GroupBooksEditPageRegion({ groupId, groupName, isPublicGroup, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onRemove, onPageChange, onPageSizeChange, onRetry }: {
   groupId: string;
   groupName: string;
+  isPublicGroup?: boolean;
   page?: Page<CompactBook>;
   pageNumber: number;
   pageSize: number;
@@ -33,7 +34,7 @@ export function GroupBooksEditPageRegion({ groupId, groupName, page, pageNumber,
         key={book.id}
         book={book}
         detailPath={`/library/books/${encodeURIComponent(book.id)}`}
-        navigationState={breadcrumbNavigationState(groupBookBreadcrumbs(groupId, groupName, book.title))}
+        navigationState={breadcrumbNavigationState(groupBookBreadcrumbs(groupId, groupName, book.title, undefined, isPublicGroup))}
         actions={<RemoveIconButton
           type="button"
           label={`Remove ${book.title} from group`}

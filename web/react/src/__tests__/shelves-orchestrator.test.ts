@@ -8,13 +8,13 @@ describe("Shelves orchestrator contracts", () => {
   it("uses no base breadcrumb and canonical detail and Book trails", () => {
     expect(shelvesListBreadcrumbFallback).toEqual([]);
     expect(shelfDetailBreadcrumbFallback("Favorites")).toEqual([
-      { label: "Shelves", to: "/shelves", resetTrail: true },
-      { label: "Favorites" },
+      { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+      { label: "Favorites", icon: "shelf" },
     ]);
     expect(shelfBookBreadcrumbs("shelf/id", "Favorites", "Book", "/shelves/shelf%2Fid?ordering=title")).toEqual([
-      { label: "Shelves", to: "/shelves", resetTrail: true },
-      { label: "Favorites", to: "/shelves/shelf%2Fid?ordering=title" },
-      { label: "Book" },
+      { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+      { label: "Favorites", to: "/shelves/shelf%2Fid?ordering=title", icon: "shelf" },
+      { label: "Book", icon: "book" },
     ]);
   });
 

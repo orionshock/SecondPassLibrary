@@ -11,6 +11,7 @@ import type { GroupBookOrdering } from "../groupsQuery";
 export function GroupBooksPageRegion({
   groupId,
   groupName,
+  isPublicGroup,
   groupPath,
   page,
   pageNumber,
@@ -28,6 +29,7 @@ export function GroupBooksPageRegion({
 }: {
   groupId: string;
   groupName: string;
+  isPublicGroup?: boolean;
   groupPath: string;
   page?: Page<CompactBook>;
   pageNumber: number;
@@ -69,6 +71,7 @@ export function GroupBooksPageRegion({
     <GroupBooksResults
       groupId={groupId}
       groupName={groupName}
+      isPublicGroup={isPublicGroup}
       groupPath={groupPath}
       page={page}
       pageNumber={pageNumber}
@@ -82,9 +85,10 @@ export function GroupBooksPageRegion({
   </section>;
 }
 
-function GroupBooksResults({ groupId, groupName, groupPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
+function GroupBooksResults({ groupId, groupName, isPublicGroup, groupPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
   groupId: string;
   groupName: string;
+  isPublicGroup?: boolean;
   groupPath: string;
   page?: Page<CompactBook>;
   pageNumber: number;
@@ -108,7 +112,7 @@ function GroupBooksResults({ groupId, groupName, groupPath, page, pageNumber, pa
           key={book.id}
           book={book}
           detailPath={detailPath}
-          navigationState={breadcrumbNavigationState(groupBookBreadcrumbs(groupId, groupName, book.title, groupPath))}
+          navigationState={breadcrumbNavigationState(groupBookBreadcrumbs(groupId, groupName, book.title, groupPath, isPublicGroup))}
         />;
       })}
     </div>}

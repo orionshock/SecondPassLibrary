@@ -57,16 +57,16 @@ export function bookIdentifierLabel(scheme: string): string {
 
 export function bookDetailBreadcrumbFallback(title = "Book"): BreadcrumbItem[] {
   return [
-    { label: "Library", to: "/library", resetTrail: true },
-    { label: "Books", to: "/library", resetTrail: true },
-    { label: title },
+    { label: "Library", to: "/library", resetTrail: true, icon: "library" },
+    { label: "Books", to: "/library", resetTrail: true, icon: "book" },
+    { label: title, icon: "book" },
   ];
 }
 
 export function bookEditBreadcrumbTrail(detailTrail: readonly BreadcrumbItem[], bookId: string, title: string): BreadcrumbItem[] {
   const withoutEdit = detailTrail.at(-1)?.label === "Edit" ? detailTrail.slice(0, -1) : [...detailTrail];
   const parent = withoutEdit.length > 0 ? withoutEdit.slice(0, -1) : bookDetailBreadcrumbFallback(title).slice(0, -1);
-  return [...parent, { label: title, to: `/library/books/${encodeURIComponent(bookId)}` }, { label: "Edit" }];
+  return [...parent, { label: title, to: `/library/books/${encodeURIComponent(bookId)}`, icon: "book" }, { label: "Edit" }];
 }
 
 export function bookShelfBreadcrumbTrail(
@@ -78,8 +78,8 @@ export function bookShelfBreadcrumbTrail(
   const resolvedDetailTrail = detailTrail.length > 0 ? detailTrail : bookDetailBreadcrumbFallback(bookTitle);
   return [
     ...resolvedDetailTrail.slice(0, -1),
-    { label: bookTitle, to: `/library/books/${encodeURIComponent(bookId)}` },
-    { label: shelfName },
+    { label: bookTitle, to: `/library/books/${encodeURIComponent(bookId)}`, icon: "book" },
+    { label: shelfName, icon: "shelf" },
   ];
 }
 
@@ -87,23 +87,25 @@ export function bookBrowseDetailBreadcrumbs({
   title,
   libraryPath,
   contextLabel,
+  contextKind,
   parentLibraryPath = libraryPath,
 }: {
   title: string;
   libraryPath: string;
   contextLabel?: string;
+  contextKind?: "author" | "series";
   parentLibraryPath?: string;
 }): BreadcrumbItem[] {
   if (contextLabel) {
     return [
-      { label: "Library", to: parentLibraryPath, resetTrail: true },
-      { label: contextLabel, to: libraryPath },
-      { label: title },
+      { label: "Library", to: parentLibraryPath, resetTrail: true, icon: "library" },
+      { label: contextLabel, to: libraryPath, ...(contextKind ? { icon: contextKind } : {}) },
+      { label: title, icon: "book" },
     ];
   }
   return [
-    { label: "Library", to: "/library", resetTrail: true },
-    { label: "Books", to: libraryPath, resetTrail: true },
-    { label: title },
+    { label: "Library", to: "/library", resetTrail: true, icon: "library" },
+    { label: "Books", to: libraryPath, resetTrail: true, icon: "book" },
+    { label: title, icon: "book" },
   ];
 }

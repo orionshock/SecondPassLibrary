@@ -35,6 +35,7 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
           title: book.title,
           libraryPath,
           contextLabel: selectedContext?.label,
+          contextKind: selectedContext?.kind,
           parentLibraryPath: parentLibraryPath ?? libraryPath,
         }));
         return <CompactBookRowComponent key={book.id} book={book} detailPath={detailPath} navigationState={navigationState} />;

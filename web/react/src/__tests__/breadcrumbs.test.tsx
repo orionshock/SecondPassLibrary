@@ -18,7 +18,7 @@ import {
 } from "../app/navigation/accountBreadcrumbs";
 
 function breadcrumbText(items: readonly BreadcrumbItem[]): string {
-  return renderBreadcrumbs(items).replace(/<[^>]+>/g, "");
+  return items.map(({ label }) => label).join("");
 }
 
 function renderBreadcrumbs(items: readonly BreadcrumbItem[]): string {
@@ -28,9 +28,21 @@ function renderBreadcrumbs(items: readonly BreadcrumbItem[]): string {
 describe("contextual breadcrumbs", () => {
   it("renders linked ancestors and a non-linked current item with CSS-only separators", () => {
     const markup = renderBreadcrumbs(passwordBreadcrumbFallback);
-    expect(markup).toMatch(/<a href="\/profile"[^>]*>Profile<\/a>/);
-    expect(markup).toContain('<span aria-current="page">Password</span>');
+    expect(markup).toContain('href="/profile"');
+    expect(markup).toContain("Profile");
+    expect(markup).toContain('aria-current="page"');
+    expect(markup).toContain("Password");
     expect(breadcrumbText(passwordBreadcrumbFallback)).toBe("ProfilePassword");
+  });
+
+  it("renders validated semantic icons decoratively and leaves text-only items icon-free", () => {
+    const withIcon = renderBreadcrumbs([{ label: "Library", icon: "library" }]);
+    const withoutIcon = renderBreadcrumbs([{ label: "Edit" }]);
+    expect(withIcon).toContain("local_library");
+    expect(withIcon).toContain('aria-hidden="true"');
+    expect(withIcon).toContain("Library");
+    expect(withoutIcon).not.toContain("material-symbols-outlined");
+    expect(withoutIcon).toContain("Edit");
   });
 
   it("suppresses breadcrumbs on the base Profile route and provides child fallbacks", () => {
@@ -51,17 +63,24 @@ describe("contextual breadcrumbs", () => {
 
   it("preserves breadcrumb context by default and resets only explicit branch links", () => {
     const trail: BreadcrumbItem[] = [
-      { label: "Library", to: "/library", resetTrail: true },
-      { label: "Dresden Files", to: "/library?view=series&series=id" },
-      { label: "Storm Front", to: "/library/books/id" },
+      { label: "Library", to: "/library", resetTrail: true, icon: "library" },
+      { label: "Dresden Files", to: "/library?view=series&series=id", icon: "series" },
+      { label: "Storm Front", to: "/library/books/id", icon: "book" },
       { label: "Edit" },
     ];
     expect(breadcrumbLinkState(trail, 0)).toBeUndefined();
     expect(resolveBreadcrumbTrail(breadcrumbLinkState(trail, 2), [])).toEqual([
-      { label: "Library", to: "/library" },
-      { label: "Dresden Files", to: "/library?view=series&series=id" },
-      { label: "Storm Front", to: "/library/books/id" },
+      { label: "Library", to: "/library", icon: "library" },
+      { label: "Dresden Files", to: "/library?view=series&series=id", icon: "series" },
+      { label: "Storm Front", to: "/library/books/id", icon: "book" },
     ]);
+  });
+
+  it("rejects location state containing an unknown semantic icon", () => {
+    const state = breadcrumbNavigationState([{ label: "Library", icon: "library" }]);
+    state.breadcrumbTrail[0] = { label: "Library", icon: "raw_material_token" as "library" };
+    expect(readIncomingBreadcrumbTrail(state)).toBeUndefined();
+    expect(resolveBreadcrumbTrail(state, passwordBreadcrumbFallback)).toEqual(passwordBreadcrumbFallback);
   });
 
   it("falls back when incoming location state is malformed", () => {

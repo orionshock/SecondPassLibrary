@@ -36,8 +36,8 @@ export function previewBooksForLibrary(books: readonly BookPreview[] | undefined
     ...book,
     href: `/library/books/${encodeURIComponent(book.id)}`,
     navigationState: breadcrumbNavigationState([
-      { label: "Library", to: libraryPath },
-      { label: book.title },
+      { label: "Library", to: libraryPath, icon: "library" },
+      { label: book.title, icon: "book" },
     ]),
   }));
 }

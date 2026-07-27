@@ -108,12 +108,12 @@ describe("Shelf lifecycle contracts", () => {
 
   it("uses explicit lifecycle breadcrumbs and confirmation", () => {
     expect(shelfNewBreadcrumbs()).toEqual([
-      { label: "Shelves", to: "/shelves", resetTrail: true },
+      { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
       { label: "New Shelf" },
     ]);
     expect(shelfEditBreadcrumbs("shelf/id", "Favorites")).toEqual([
-      { label: "Shelves", to: "/shelves", resetTrail: true },
-      { label: "Favorites", to: "/shelves/shelf%2Fid" },
+      { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+      { label: "Favorites", to: "/shelves/shelf%2Fid", icon: "shelf" },
       { label: "Edit" },
     ]);
     const confirm = vi.fn(() => true);

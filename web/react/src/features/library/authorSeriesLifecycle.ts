@@ -30,13 +30,14 @@ export function libraryEntityBreadcrumbs(
   axisPath = libraryEntityAxisPath(kind),
 ): BreadcrumbItem[] {
   const axis = kind === "author" ? "Authors" : "Series";
+  const icon = kind === "author" ? "author" : "series";
   if (mode === "new") {
-    return [{ label: "Library", to: "/library", resetTrail: true }, { label: axis, to: axisPath, resetTrail: true }, { label: `New ${titleKind(kind)}` }];
+    return [{ label: "Library", to: "/library", resetTrail: true, icon: "library" }, { label: axis, to: axisPath, resetTrail: true, icon }, { label: `New ${titleKind(kind)}` }];
   }
   return [
-    { label: "Library", to: "/library", resetTrail: true },
-    { label: axis, to: axisPath, resetTrail: true },
-    { label: name?.trim() || titleKind(kind), ...(entityId ? { to: libraryEntityContextPath(kind, entityId) } : {}) },
+    { label: "Library", to: "/library", resetTrail: true, icon: "library" },
+    { label: axis, to: axisPath, resetTrail: true, icon },
+    { label: name?.trim() || titleKind(kind), ...(entityId ? { to: libraryEntityContextPath(kind, entityId) } : {}), icon },
     { label: "Edit" },
   ];
 }

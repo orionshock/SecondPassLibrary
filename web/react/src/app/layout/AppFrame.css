@@ -138,6 +138,17 @@
   color: var(--muted);
 }
 
+.app-breadcrumbs a,
+.app-breadcrumbs [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.app-breadcrumbs .material-icon {
+  color: rgb(168 179 194 / 72%);
+}
+
 .app-breadcrumbs [aria-current="page"] {
   color: var(--text);
 }

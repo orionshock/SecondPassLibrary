@@ -29,15 +29,15 @@ export function shelfDetailPathForId(shelfId: string): string {
 
 export function shelfNewBreadcrumbs(): BreadcrumbItem[] {
   return [
-    { label: "Shelves", to: "/shelves", resetTrail: true },
+    { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
     { label: "New Shelf" },
   ];
 }
 
 export function shelfEditBreadcrumbs(shelfId: string, name = "Shelf"): BreadcrumbItem[] {
   return [
-    { label: "Shelves", to: "/shelves", resetTrail: true },
-    { label: name, to: shelfDetailPathForId(shelfId) },
+    { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+    { label: name, to: shelfDetailPathForId(shelfId), icon: "shelf" },
     { label: "Edit" },
   ];
 }
@@ -47,10 +47,10 @@ export function shelfEditNavigationState(
   shelf: Pick<ShelfSummary, "id" | "name">,
 ): object {
   const incoming = readIncomingBreadcrumbTrail(currentState);
-  const trail = incoming?.length
+  const trail: BreadcrumbItem[] = incoming?.length
     ? [
       ...incoming.slice(0, -1),
-      { label: shelf.name, to: shelfDetailPathForId(shelf.id) },
+      { label: shelf.name, to: shelfDetailPathForId(shelf.id), icon: "shelf" },
       { label: "Edit" },
     ]
     : shelfEditBreadcrumbs(shelf.id, shelf.name);
@@ -65,7 +65,7 @@ export function shelfDetailNavigationStateFromEdit(
   if (incoming && incoming.at(-1)?.label === "Edit") {
     const detailTrail = incoming.slice(0, -1);
     const last = detailTrail.length - 1;
-    detailTrail[last] = { label: shelf.name };
+    detailTrail[last] = { label: shelf.name, icon: "shelf" };
     return breadcrumbNavigationState(detailTrail);
   }
   return breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name));

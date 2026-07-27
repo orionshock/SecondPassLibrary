@@ -68,7 +68,7 @@ export function GroupDetailOrchestrator() {
   const [shelves, setShelves] = useState<PageLoad<ShelfSummary>>({ loading: true });
   const recoveredPageKeys = useRef(new Set<string>());
   const group = detail.status === "ready" ? detail.group : undefined;
-  const breadcrumbs = useMemo(() => groupDetailBreadcrumbFallback(group?.name), [group?.name]);
+  const breadcrumbs = useMemo(() => groupDetailBreadcrumbFallback(group?.name, group?.isPublicGroup), [group?.isPublicGroup, group?.name]);
   usePageBreadcrumbs(breadcrumbs);
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
@@ -178,6 +178,7 @@ export function GroupDetailOrchestrator() {
     {group && queryState.tab === "books" ? <GroupBooksPageRegion
       groupId={group.id}
       groupName={group.name}
+      isPublicGroup={group.isPublicGroup}
       groupPath={currentPath}
       page={books.page}
       pageNumber={queryState.page}
@@ -206,6 +207,7 @@ export function GroupDetailOrchestrator() {
     {group && queryState.tab === "shelves" ? <GroupShelvesPageRegion
       groupId={group.id}
       groupName={group.name}
+      isPublicGroup={group.isPublicGroup}
       groupPath={currentPath}
       page={shelves.page}
       pageNumber={queryState.page}

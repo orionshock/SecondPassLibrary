@@ -110,11 +110,11 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, curator
       {page.items.length === 0 ? <p className="groups-state muted">No groups match this search.</p> : <div className="groups-list-rows">
         {page.items.map((group) => {
           const detailPath = `/groups/${encodeURIComponent(group.id)}`;
-          const detailTrail = groupDetailBreadcrumbFallback(group.name);
+          const detailTrail = groupDetailBreadcrumbFallback(group.name, group.isPublicGroup);
           const previewBooks: BookCoverPreviewItem[] = (group.previewBooks ?? []).map((book) => ({
             ...book,
             href: `/library/books/${encodeURIComponent(book.id)}`,
-            navigationState: breadcrumbNavigationState(groupBookBreadcrumbs(group.id, group.name, book.title)),
+            navigationState: breadcrumbNavigationState(groupBookBreadcrumbs(group.id, group.name, book.title, undefined, group.isPublicGroup)),
           }));
           return <GroupRowComponent
             key={group.id}

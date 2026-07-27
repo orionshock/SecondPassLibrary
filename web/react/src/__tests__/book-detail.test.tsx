@@ -124,15 +124,15 @@ describe("Book Detail navigation", () => {
   it("builds direct, Books, selected Author, and selected Series breadcrumb trails", () => {
     expect(bookDetailBreadcrumbFallback("Battle Ground").map(({ label }) => label)).toEqual(["Library", "Books", "Battle Ground"]);
     expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?q=battle" })).toEqual([
-      { label: "Library", to: "/library", resetTrail: true },
-      { label: "Books", to: "/library?q=battle", resetTrail: true },
-      { label: "Battle Ground" },
+      { label: "Library", to: "/library", resetTrail: true, icon: "library" },
+      { label: "Books", to: "/library?q=battle", resetTrail: true, icon: "book" },
+      { label: "Battle Ground", icon: "book" },
     ]);
-    expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=authors&author=id", contextLabel: "Jim Butcher", parentLibraryPath: "/library?view=authors" }).map(({ label }) => label)).toEqual(["Library", "Jim Butcher", "Battle Ground"]);
-    expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=series&series=id", contextLabel: "Dresden Files", parentLibraryPath: "/library?view=series" }).map(({ label }) => label)).toEqual(["Library", "Dresden Files", "Battle Ground"]);
+    expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=authors&author=id", contextLabel: "Jim Butcher", contextKind: "author", parentLibraryPath: "/library?view=authors" })[1]?.icon).toBe("author");
+    expect(bookBrowseDetailBreadcrumbs({ title: "Battle Ground", libraryPath: "/library?view=series&series=id", contextLabel: "Dresden Files", contextKind: "series", parentLibraryPath: "/library?view=series" })[1]?.icon).toBe("series");
     expect(bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback("Old title"), book.id, "New title")).toEqual([
-      { label: "Library", to: "/library", resetTrail: true }, { label: "Books", to: "/library", resetTrail: true },
-      { label: "New title", to: `/library/books/${book.id}` }, { label: "Edit" },
+      { label: "Library", to: "/library", resetTrail: true, icon: "library" }, { label: "Books", to: "/library", resetTrail: true, icon: "book" },
+      { label: "New title", to: `/library/books/${book.id}`, icon: "book" }, { label: "Edit" },
     ]);
   });
 
@@ -142,15 +142,16 @@ describe("Book Detail navigation", () => {
         title: "Storm Front",
         libraryPath: "/library?view=series&series=series-id",
         contextLabel: "Dresden Files",
+        contextKind: "series",
         parentLibraryPath: "/library?view=series",
       }),
       book.id,
       "Storm Front",
     );
     expect(resolveBreadcrumbTrail(breadcrumbLinkState(editTrail, editTrail.length - 2), [])).toEqual([
-      { label: "Library", to: "/library?view=series" },
-      { label: "Dresden Files", to: "/library?view=series&series=series-id" },
-      { label: "Storm Front", to: `/library/books/${book.id}` },
+      { label: "Library", to: "/library?view=series", icon: "library" },
+      { label: "Dresden Files", to: "/library?view=series&series=series-id", icon: "series" },
+      { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
     ]);
   });
 
@@ -160,16 +161,17 @@ describe("Book Detail navigation", () => {
         title: "Storm Front",
         libraryPath: "/library?view=series&series=series-id",
         contextLabel: "Dresden Files",
+        contextKind: "series",
         parentLibraryPath: "/library?view=series",
       }),
       book.id,
       "Storm Front",
       "Favorites",
     )).toEqual([
-      { label: "Library", to: "/library?view=series", resetTrail: true },
-      { label: "Dresden Files", to: "/library?view=series&series=series-id" },
-      { label: "Storm Front", to: `/library/books/${book.id}` },
-      { label: "Favorites" },
+      { label: "Library", to: "/library?view=series", resetTrail: true, icon: "library" },
+      { label: "Dresden Files", to: "/library?view=series&series=series-id", icon: "series" },
+      { label: "Storm Front", to: `/library/books/${book.id}`, icon: "book" },
+      { label: "Favorites", icon: "shelf" },
     ]);
   });
 

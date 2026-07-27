@@ -50,6 +50,7 @@ describe("Author and Series lifecycle draft contract", () => {
     expect(libraryEntityBreadcrumbs("author", "edit", "Ada", "author/id")[2]).toEqual({
       label: "Ada",
       to: "/library?view=authors&author=author%2Fid",
+      icon: "author",
     });
     const safe = libraryEntityNavigationState({ breadcrumbs: [{ label: "Author" }], returnTo: "/library?view=authors" });
     const unsafe = libraryEntityNavigationState({ breadcrumbs: [{ label: "Author" }], returnTo: "https://example.com" });

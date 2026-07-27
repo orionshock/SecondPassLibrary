@@ -131,12 +131,12 @@ describe("Group metadata lifecycle contracts", () => {
   it("builds canonical create/edit routes and fallback breadcrumbs", () => {
     expect(groupEditPath("group/id")).toBe("/groups/group%2Fid/edit");
     expect(groupNewBreadcrumbs()).toEqual([
-      { label: "Groups", to: "/groups", resetTrail: true },
+      { label: "Groups", to: "/groups", resetTrail: true, icon: "group" },
       { label: "New Group" },
     ]);
     expect(groupEditBreadcrumbFallback("group/id", "Readers")).toEqual([
-      { label: "Groups", to: "/groups", resetTrail: true },
-      { label: "Readers", to: "/groups/group%2Fid" },
+      { label: "Groups", to: "/groups", resetTrail: true, icon: "group" },
+      { label: "Readers", to: "/groups/group%2Fid", icon: "group" },
       { label: "Edit" },
     ]);
   });
