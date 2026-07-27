@@ -42,18 +42,7 @@
 .book-edit-content > h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); }
 .book-edit-context { margin: 0.45rem 0 0; color: var(--muted); }
 
-.book-edit-tabs {
-  display: flex;
-  gap: 0.45rem;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 1.25rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.book-edit-tabs button { padding: 0.35rem 0.65rem; font-size: 0.8rem; }
-.book-edit-tabs button.active { border-color: color-mix(in srgb, var(--focus), transparent 45%); background: var(--surface-raised); }
+.book-edit-content > .tab-list-component { margin-top: 1.25rem; }
 .book-edit-panel { display: grid; gap: 0.65rem; padding: 0.9rem 0 0.35rem; }
 .book-edit-panel .form-field { grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr); }
 .book-edit-panel textarea { min-height: 10rem; }

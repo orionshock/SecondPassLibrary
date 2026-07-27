@@ -1,3 +1,5 @@
+import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
+
 export type ServerSettingsTab = "general" | "public-library" | "library-groups";
 
 export const serverSettingsTabs: readonly { id: ServerSettingsTab; label: string }[] = [
@@ -7,12 +9,14 @@ export const serverSettingsTabs: readonly { id: ServerSettingsTab; label: string
 ];
 
 export function serverSettingsTabFromSearchParams(parameters: URLSearchParams): ServerSettingsTab {
-  const value = parameters.get("tab");
-  return serverSettingsTabs.some(({ id }) => id === value) ? value as ServerSettingsTab : "general";
+  return resolveTabQuery(parameters, serverSettingsTabs.map(({ id }) => id), "general").tab;
 }
 
-export function serverSettingsSearchParams(tab: ServerSettingsTab): URLSearchParams {
-  return new URLSearchParams({ tab });
+export function serverSettingsSearchParams(
+  parameters: URLSearchParams,
+  tab: ServerSettingsTab,
+): URLSearchParams {
+  return withTabQuery(parameters, tab, "general");
 }
 
 export function serverSettingsFormId(tab: ServerSettingsTab): string | undefined {

@@ -23,9 +23,11 @@ describe("Server Settings", () => {
     expect(sectionRoutes.map(({ path }) => path)).not.toContain("server");
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
     expect(serverSettingsBreadcrumbFallback).toEqual([]);
+    expect(serverSettingsTabFromSearchParams(new URLSearchParams())).toBe("general");
     expect(serverSettingsTabFromSearchParams(new URLSearchParams("tab=public-library"))).toBe("public-library");
     expect(serverSettingsTabFromSearchParams(new URLSearchParams("tab=invalid"))).toBe("general");
-    expect(serverSettingsSearchParams("library-groups").toString()).toBe("tab=library-groups");
+    expect(serverSettingsSearchParams(new URLSearchParams("trail=context&tab=general"), "general").toString()).toBe("trail=context");
+    expect(serverSettingsSearchParams(new URLSearchParams("trail=context"), "library-groups").toString()).toBe("trail=context&tab=library-groups");
   });
 
   it("renders General read and bounded label/control edit states", () => {

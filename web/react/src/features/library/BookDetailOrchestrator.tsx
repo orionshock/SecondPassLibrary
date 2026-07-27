@@ -6,7 +6,7 @@ import {
   type BookDetail,
 } from "@second-pass/spl-api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useOutletContext, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
@@ -14,6 +14,7 @@ import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/nav
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookShelfBreadcrumbTrail } from "./bookDetailPresentation";
+import { bookDetailQueryFromSearchParams, bookDetailSearchParams, type BookDetailTab } from "./bookTabs";
 import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
 import {
   BookDetailSectionsPageRegion,
@@ -32,6 +33,14 @@ export function BookDetailOrchestrator() {
   const { bookId } = useParams();
   const { currentUser } = useOutletContext<AppOutletContext>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const detailQuery = useMemo(
+    () => bookDetailQueryFromSearchParams(
+      new URLSearchParams(location.search),
+      currentUser.advancedLibraryGroupsEnabled,
+    ),
+    [currentUser.advancedLibraryGroupsEnabled, location.search],
+  );
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<BookDetailLoadState>({ status: "loading" });
   const [shelvesLoad, setShelvesLoad] = useState<BookShelvesState>({ status: "idle" });
@@ -43,6 +52,15 @@ export function BookDetailOrchestrator() {
     [book?.title],
   );
   usePageBreadcrumbs(breadcrumbFallback);
+
+  useEffect(() => {
+    const currentQuery = location.search.startsWith("?") ? location.search.slice(1) : location.search;
+    if (currentQuery === detailQuery.query) return;
+    navigate({ pathname: location.pathname, search: detailQuery.query }, {
+      replace: true,
+      state: location.state,
+    });
+  }, [detailQuery.query, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     shelvesBookId.current = bookId;
@@ -86,6 +104,17 @@ export function BookDetailOrchestrator() {
       });
   }, [bookId, shelvesLoad.status]);
 
+  useEffect(() => {
+    if (load.status === "ready" && detailQuery.tab === "shelves" && shelvesLoad.status === "idle") loadShelves();
+  }, [detailQuery.tab, load.status, loadShelves, shelvesLoad.status]);
+
+  function changeSection(tab: BookDetailTab) {
+    const parameters = bookDetailSearchParams(new URLSearchParams(location.search), tab);
+    navigate({ pathname: location.pathname, search: parameters.toString() }, {
+      state: location.state,
+    });
+  }
+
   if (load.status === "loading") return <ProductPageShellComponent><BookDetailStatePageRegion state="loading" /></ProductPageShellComponent>;
   if (load.status === "not-found") return <ProductPageShellComponent><BookDetailStatePageRegion state="not-found" /></ProductPageShellComponent>;
   if (load.status === "error") return <ProductPageShellComponent><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setRetry((value) => value + 1)} /></ProductPageShellComponent>;
@@ -99,6 +128,7 @@ export function BookDetailOrchestrator() {
     <BookDetailSectionsPageRegion
       book={load.book}
       advancedGroupsEnabled={currentUser.advancedLibraryGroupsEnabled}
+      activeSection={detailQuery.tab}
       shelvesState={shelvesLoad}
       shelfNavigationState={(shelfName) => breadcrumbNavigationState(bookShelfBreadcrumbTrail(
         resolveBreadcrumbTrail(location.state, breadcrumbFallback),
@@ -106,7 +136,7 @@ export function BookDetailOrchestrator() {
         load.book.title,
         shelfName,
       ))}
-      onLoadShelves={loadShelves}
+      onSectionChange={changeSection}
       onRetryShelves={loadShelves}
     />
   </article></ProductPageShellComponent>;

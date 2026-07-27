@@ -5,6 +5,7 @@ import { LocalValidationError } from "../shared/feedback/mutationState";
 import { bookDetailWithUpdatedCover } from "../features/library/bookCoverMutation";
 import { bookDetailWithUpdatedGroups, canEditBookGroups } from "../features/library/bookGroupMutation";
 import { bookEditDraftFromBook, bookEditDraftsEqual, bookEditInputFromDraft, validateBookEditDraft } from "../features/library/bookEditDraft";
+import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bookEditSearchParams } from "../features/library/bookTabs";
 
 const book: BookDetail = {
   id: "book", title: "Book", sortTitle: "Book, The", subtitle: "Sub", description: "Text",
@@ -16,6 +17,22 @@ const book: BookDetail = {
 };
 
 describe("Book Edit draft contract", () => {
+  it("keeps Book Edit tabs canonical while preserving unrelated query state", () => {
+    expect(bookEditQueryFromSearchParams(new URLSearchParams(), true)).toEqual({ tab: "book", query: "" });
+    expect(bookEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=authors-series"), true)).toEqual({
+      tab: "authors-series", query: "trail=context&tab=authors-series",
+    });
+    expect(bookEditQueryFromSearchParams(new URLSearchParams("tab=unknown"), true)).toEqual({ tab: "book", query: "" });
+    expect(bookEditQueryFromSearchParams(new URLSearchParams("tab=groups"), false)).toEqual({ tab: "book", query: "" });
+    expect(bookEditSearchParams(new URLSearchParams("trail=context&tab=catalog"), "identifiers").toString())
+      .toBe("trail=context&tab=identifiers");
+
+    const stable = bookEditQueryFromSearchParams(new URLSearchParams("tab=groups"), true);
+    const requested = bookEditQueryFromSearchParams(new URLSearchParams("tab=catalog"), true);
+    expect(bookEditQueryDuringImmediateMutation(requested, stable, true)).toBe(stable);
+    expect(bookEditQueryDuringImmediateMutation(requested, stable, false)).toBe(requested);
+  });
+
   it("initializes ordered relationship and date state and builds the explicit replacement payload", () => {
     const draft = bookEditDraftFromBook(book);
     expect(draft).toMatchObject({

@@ -8,25 +8,9 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid var(--border);
 }
 
-.server-settings-tab-list {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.server-settings-tab-list button {
-  padding: 0.42rem 0.7rem;
-}
-
-.server-settings-tab-list button[aria-selected="true"] {
-  border-color: rgb(125 211 252 / 50%);
-  background: rgb(125 211 252 / 10%);
-}
+.server-settings-tabs .tab-list-component { flex: 1 1 auto; }
 
 .server-settings-tab-actions {
   margin-left: auto;

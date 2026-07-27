@@ -26,9 +26,11 @@ import { BookCoverComponent } from "../../shared/books/BookCoverComponent";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { SaveCancelActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail } from "./bookDetailPresentation";
 import { bookDetailWithUpdatedCover } from "./bookCoverMutation";
 import { bookDetailWithUpdatedGroups, canEditBookGroups } from "./bookGroupMutation";
+import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bookEditSearchParams, type BookEditTab } from "./bookTabs";
 import {
   bookEditDraftFromBook,
   bookEditDraftsEqual,
@@ -42,7 +44,7 @@ import { BookEditBookPageRegion } from "./regions/BookEditBookPageRegion";
 import { BookEditCatalogPageRegion } from "./regions/BookEditCatalogPageRegion";
 import { BookEditIdentifiersPageRegion } from "./regions/BookEditIdentifiersPageRegion";
 import { BookEditGroupsPageRegion } from "./regions/BookEditGroupsPageRegion";
-import { BookEditTabsPageRegion, type BookEditTab } from "./regions/BookEditTabsPageRegion";
+import { BookEditTabsPageRegion } from "./regions/BookEditTabsPageRegion";
 import { BookCoverEditorComponent } from "./components/BookCoverEditorComponent";
 import "./BookEdit.css";
 
@@ -66,7 +68,6 @@ export function BookEditOrchestrator() {
   const [groups, setGroups] = useState<PickerLoad<LibraryGroup>>({ loading: false, items: [] });
   const [draft, setDraft] = useState<BookEditDraft>();
   const [baseline, setBaseline] = useState<BookEditDraft>();
-  const [tab, setTab] = useState<BookEditTab>("book");
   const [mutation, setMutation] = useState<MutationState>(idleMutationState);
   const [coverMutation, setCoverMutation] = useState<MutationState>(idleMutationState);
   const [coverPendingAction, setCoverPendingAction] = useState<"replace" | "clear">();
@@ -77,9 +78,30 @@ export function BookEditOrchestrator() {
   const book = load.status === "ready" ? load.book : undefined;
   const dirty = Boolean(draft && baseline && !bookEditDraftsEqual(draft, baseline));
   const canEditGroups = canEditBookGroups(currentUser);
+  const requestedEditQuery = useMemo(
+    () => bookEditQueryFromSearchParams(new URLSearchParams(location.search), canEditGroups),
+    [canEditGroups, location.search],
+  );
+  const stableEditQuery = useRef(requestedEditQuery);
+  if (!groupMutation.pending) stableEditQuery.current = requestedEditQuery;
+  const editQuery = bookEditQueryDuringImmediateMutation(
+    requestedEditQuery,
+    stableEditQuery.current,
+    groupMutation.pending,
+  );
+  const tab = editQuery.tab;
   const blocker = useBlocker(({ currentLocation, nextLocation }) => !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname);
   const fallback = useMemo(() => bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback(book?.title ?? "Book"), bookId, book?.title ?? "Book"), [book?.title, bookId]);
   usePageBreadcrumbs(fallback);
+
+  useEffect(() => {
+    const currentQuery = location.search.startsWith("?") ? location.search.slice(1) : location.search;
+    if (currentQuery === editQuery.query) return;
+    navigate({ pathname: location.pathname, search: editQuery.query }, {
+      replace: true,
+      state: location.state,
+    });
+  }, [editQuery.query, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
@@ -122,10 +144,6 @@ export function BookEditOrchestrator() {
     }
     return loadPicker(listAllLibraryGroups, setGroups);
   }, [canEditGroups, groupRetry]);
-  useEffect(() => {
-    if (!canEditGroups && tab === "groups") setTab("book");
-  }, [canEditGroups, tab]);
-
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {
     setDraft((current) => current ? { ...current, [field]: value } : current);
     setMutation(idleMutationState);
@@ -190,7 +208,7 @@ export function BookEditOrchestrator() {
       setLoad({ status: "ready", book: updated }); setDraft(next); setBaseline(next);
       setMutation({ pending: false, message: "Book saved." });
       const currentTrail = resolveBreadcrumbTrail(location.state, fallback);
-      navigate(location.pathname, { replace: true, state: breadcrumbNavigationState(bookEditBreadcrumbTrail(currentTrail, bookId, updated.title)) });
+      navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: breadcrumbNavigationState(bookEditBreadcrumbTrail(currentTrail, bookId, updated.title)) });
     } catch (error: unknown) {
       setMutation({ pending: false, error: normalizeMutationError(error) });
     }
@@ -246,6 +264,13 @@ export function BookEditOrchestrator() {
     navigate(`/library/books/${encodeURIComponent(bookId)}`, { state: breadcrumbNavigationState(detailTrail) });
   }
 
+  function changeTab(nextTab: BookEditTab) {
+    const parameters = bookEditSearchParams(new URLSearchParams(location.search), nextTab);
+    navigate({ pathname: location.pathname, search: parameters.toString() }, {
+      state: location.state,
+    });
+  }
+
   if (load.status === "not-found") return <ProductPageShellComponent><BookDetailStatePageRegion state="not-found" /></ProductPageShellComponent>;
   if (load.status === "error") return <ProductPageShellComponent><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setBookRetry((value) => value + 1)} /></ProductPageShellComponent>;
   if (load.status === "loading" || !draft) return <ProductPageShellComponent><BookDetailStatePageRegion state="loading" /></ProductPageShellComponent>;
@@ -272,7 +297,8 @@ export function BookEditOrchestrator() {
       <h1>{draft.title || readyBook.title}</h1>
       <p className="book-edit-context">{readyBook.authors.length ? `Authors: ${readyBook.authors.map(({ name }) => name).join(", ")}` : "No assigned Authors"}</p>
       {readyBook.series ? <p className="book-edit-context">Series: {readyBook.series.name}{readyBook.series.seriesIndex ? ` ${readyBook.series.seriesIndex}` : ""}</p> : null}
-      <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} onChange={setTab} />
+      <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={groupMutation.pending} onChange={changeTab} />
+      <div id={tabPanelId("book-edit", tab)} role="tabpanel" aria-labelledby={tabButtonId("book-edit", tab)}>
       {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}
       {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={tags.items} tagsLoading={tags.loading} tagsError={tags.error} onRetryTags={() => setTagRetry((value) => value + 1)} onChange={change} /> : null}
       {tab === "authors-series" ? <BookEditAuthorsSeriesPageRegion draft={draft} error={mutation.error} authors={authors.items} series={series.items} authorsLoading={authors.loading} seriesLoading={series.loading} authorsError={authors.error} seriesError={series.error} returnTo={location.pathname} onRetryAuthors={() => setAuthorRetry((value) => value + 1)} onRetrySeries={() => setSeriesRetry((value) => value + 1)} onChange={change} /> : null}
@@ -289,6 +315,7 @@ export function BookEditOrchestrator() {
         onAdd={addGroup}
         onRemove={removeGroup}
       /> : null}
+      </div>
       <SaveCancelActionRowComponent state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={groupMutation.pending} onCancel={cancel} />
     </main>
   </form></ProductPageShellComponent>;

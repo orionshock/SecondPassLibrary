@@ -1,13 +1,13 @@
 import type { BookDetail, ShelfSummary } from "@second-pass/spl-api";
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ErrorPanel } from "../../../components/ui";
 import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
+import { TabListComponent, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabListComponent";
 import { BookIdentifierListComponent } from "../components/BookIdentifierListComponent";
 import { formatBookFileSize, formatBookPublishedDate } from "../bookDetailPresentation";
+import type { BookDetailTab } from "../bookTabs";
 
-export type BookDetailSection = "shelves" | "groups" | "metadata";
 export type BookShelvesState =
   | { status: "idle" }
   | { status: "loading" }
@@ -17,37 +17,31 @@ export type BookShelvesState =
 export function BookDetailSectionsPageRegion({
   book,
   advancedGroupsEnabled,
-  initialSection = "shelves",
+  activeSection,
   shelvesState = { status: "idle" },
   shelfNavigationState,
-  onLoadShelves,
+  onSectionChange,
   onRetryShelves,
 }: {
   book: BookDetail;
   advancedGroupsEnabled: boolean;
-  initialSection?: BookDetailSection;
+  activeSection: BookDetailTab;
   shelvesState?: BookShelvesState;
   shelfNavigationState?: (shelfName: string) => unknown;
-  onLoadShelves?: () => void;
+  onSectionChange: (section: BookDetailTab) => void;
   onRetryShelves?: () => void;
 }) {
-  const allowedInitialSection = initialSection === "groups" && !advancedGroupsEnabled ? "shelves" : initialSection;
-  const [activeSection, setActiveSection] = useState<BookDetailSection>(allowedInitialSection);
-  const sections: Array<{ id: BookDetailSection; label: string }> = [
+  const sections: readonly TabItem<BookDetailTab>[] = [
     { id: "shelves", label: "Shelves" },
     ...(advancedGroupsEnabled ? [{ id: "groups" as const, label: "Groups" }] : []),
     { id: "metadata", label: "Metadata" },
   ];
 
-  useEffect(() => {
-    if (activeSection === "shelves" && shelvesState.status === "idle") onLoadShelves?.();
-  }, [activeSection, onLoadShelves, shelvesState]);
-
   return <BookDetailSectionsComponent
     book={book}
     sections={sections}
     activeSection={activeSection}
-    onSectionChange={setActiveSection}
+    onSectionChange={onSectionChange}
     shelvesState={shelvesState}
     shelfNavigationState={shelfNavigationState}
     onRetryShelves={onRetryShelves}
@@ -64,38 +58,25 @@ function BookDetailSectionsComponent({
   onRetryShelves,
 }: {
   book: BookDetail;
-  sections: Array<{ id: BookDetailSection; label: string }>;
-  activeSection: BookDetailSection;
-  onSectionChange: (section: BookDetailSection) => void;
+  sections: readonly TabItem<BookDetailTab>[];
+  activeSection: BookDetailTab;
+  onSectionChange: (section: BookDetailTab) => void;
   shelvesState: BookShelvesState;
   shelfNavigationState?: (shelfName: string) => unknown;
   onRetryShelves?: () => void;
 }) {
   return <section className="book-detail-sections-region" aria-label="Book relationships and metadata">
-    <div className="book-detail-sections-region__tabs" role="tablist" aria-label="Book detail sections">
-      {sections.map((section) => <button
-        key={section.id}
-        type="button"
-        role="tab"
-        id={`book-detail-${section.id}-tab`}
-        aria-controls={`book-detail-${section.id}-panel`}
-        aria-selected={activeSection === section.id}
-        className={activeSection === section.id ? "active" : undefined}
-        onClick={() => onSectionChange(section.id)}
-      >{section.label}</button>)}
-    </div>
-    {sections.map((section) => <div
-      key={section.id}
+    <TabListComponent tabs={sections} activeTab={activeSection} onChange={onSectionChange} ariaLabel="Book detail sections" idPrefix="book-detail" />
+    <div
       className="book-detail-sections-region__panel"
-      id={`book-detail-${section.id}-panel`}
+      id={tabPanelId("book-detail", activeSection)}
       role="tabpanel"
-      aria-labelledby={`book-detail-${section.id}-tab`}
-      hidden={activeSection !== section.id}
+      aria-labelledby={tabButtonId("book-detail", activeSection)}
     >
-      {activeSection === section.id && section.id === "shelves" ? <BookDetailShelvesSection state={shelvesState} shelfNavigationState={shelfNavigationState} onRetry={onRetryShelves} /> : null}
-      {activeSection === section.id && section.id === "groups" ? <BookDetailGroupsSection book={book} /> : null}
-      {activeSection === section.id && section.id === "metadata" ? <BookDetailMetadataSection book={book} /> : null}
-    </div>)}
+      {activeSection === "shelves" ? <BookDetailShelvesSection state={shelvesState} shelfNavigationState={shelfNavigationState} onRetry={onRetryShelves} /> : null}
+      {activeSection === "groups" ? <BookDetailGroupsSection book={book} /> : null}
+      {activeSection === "metadata" ? <BookDetailMetadataSection book={book} /> : null}
+    </div>
   </section>;
 }
 

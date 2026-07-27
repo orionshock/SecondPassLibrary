@@ -77,7 +77,7 @@ This is the running list of cross-page presentation and interaction rules that a
 
 - Server Settings is Owner-only. Public Library identity is managed there and not through normal Group editing.
 - `/me` capability flags may be omitted when false. `@second-pass/spl-api` normalizes them to stable app-facing booleans; React uses those booleans and never implements sparse-wire semantics itself.
-- `/server` uses the `?tab=general`, `?tab=public-library`, and `?tab=library-groups` states. Editing is inline; tabs do not create separate routes.
+- `/server` represents General without a tab query; Public Library and Library Groups use `?tab=public-library` and `?tab=library-groups`. Editing is inline; tabs do not create separate routes.
 - Enabling advanced groups is shown only in Library Groups edit mode and requires deliberate confirmation. The normal React UI does not offer a disable action; disabling is a Django Admin Service Hatch recovery operation.
 - Expose the Django Admin/Service Hatch link only when `CurrentUser.canAccessDjangoAdmin` is true. React does not probe `/admin/`.
 

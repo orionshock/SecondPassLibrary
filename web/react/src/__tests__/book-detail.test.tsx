@@ -17,6 +17,7 @@ import {
 } from "../features/library/bookDetailPresentation";
 import { BookDetailHeroPageRegion } from "../features/library/regions/BookDetailHeroPageRegion";
 import { BookDetailSectionsPageRegion } from "../features/library/regions/BookDetailSectionsPageRegion";
+import { bookDetailQueryFromSearchParams, bookDetailSearchParams } from "../features/library/bookTabs";
 
 const book: BookDetail = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -78,14 +79,16 @@ describe("Book Detail presentation", () => {
   });
 
   it("uses mapped file and identifier data in the Metadata section", () => {
-    const metadata = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} initialSection="metadata" />);
+    const metadata = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} activeSection="metadata" onSectionChange={() => undefined} />);
     expect(metadata).toContain("DO-NOT-RENDER");
     expect(metadata).toContain("9781234567890");
+    expect(metadata).toContain('role="tabpanel"');
   });
 
   it("uses the server-provided advanced-groups mode to gate visible groups", () => {
-    const simple = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} initialSection="groups" />);
-    const advanced = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled initialSection="groups" />);
+    const simple = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled={false} activeSection="shelves" onSectionChange={() => undefined} />);
+    const advanced = render(<BookDetailSectionsPageRegion book={book} advancedGroupsEnabled activeSection="groups" onSectionChange={() => undefined} />);
+    expect(simple).not.toContain('id="book-detail-groups-tab"');
     expect(simple).not.toContain("Common Room");
     expect(advanced).toContain("Common Room");
   });
@@ -94,7 +97,9 @@ describe("Book Detail presentation", () => {
     const markup = render(<BookDetailSectionsPageRegion
       book={book}
       advancedGroupsEnabled
+      activeSection="shelves"
       shelvesState={{ status: "ready", shelves }}
+      onSectionChange={() => undefined}
     />);
     expect(markup).toContain("Current Favorites");
     expect(markup).toContain("@reader");
@@ -105,6 +110,16 @@ describe("Book Detail presentation", () => {
     expect(markup).toContain('href="/shelves/public-shelf"');
     expect(markup).not.toContain("Remove");
     expect(markup).not.toContain("Edit Shelf");
+  });
+
+  it("keeps Book Detail sections canonical and direct-linkable", () => {
+    expect(bookDetailQueryFromSearchParams(new URLSearchParams(), true)).toEqual({ tab: "shelves", query: "" });
+    expect(bookDetailQueryFromSearchParams(new URLSearchParams("trail=context&tab=metadata"), true)).toEqual({
+      tab: "metadata", query: "trail=context&tab=metadata",
+    });
+    expect(bookDetailQueryFromSearchParams(new URLSearchParams("tab=unknown"), true)).toEqual({ tab: "shelves", query: "" });
+    expect(bookDetailQueryFromSearchParams(new URLSearchParams("tab=groups"), false)).toEqual({ tab: "shelves", query: "" });
+    expect(bookDetailSearchParams(new URLSearchParams("trail=context&tab=metadata"), "shelves").toString()).toBe("trail=context");
   });
 
   it("uses a null file projection to show repair state and suppress download", () => {

@@ -43,6 +43,8 @@ describe("Library Books components", () => {
     const publicGroup = { id: "public", name: "Common Room", description: "Public", isPublicGroup: true };
     const simpleTabs = renderToStaticMarkup(<BookEditTabsPageRegion active="book" onChange={vi.fn()} />);
     const advancedTabs = renderToStaticMarkup(<BookEditTabsPageRegion active="groups" showGroups onChange={vi.fn()} />);
+    expect(simpleTabs).toContain('role="tablist"');
+    expect(simpleTabs).toContain('aria-controls="book-edit-book-panel"');
     expect(simpleTabs).not.toContain("Library Groups");
     expect(advancedTabs).toContain("Library Groups");
 

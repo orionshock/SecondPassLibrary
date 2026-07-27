@@ -112,34 +112,10 @@
   min-width: 0;
 }
 
-.book-detail-sections-region__tabs {
-  display: flex;
-  gap: 0.45rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.book-detail-sections-region__tabs button {
-  padding: 0.35rem 0.65rem;
-  border-radius: 0.55rem;
-  color: #c4ceda;
-  background: rgb(255 255 255 / 4%);
-  font-size: 0.79rem;
-}
-
-.book-detail-sections-region__tabs button:hover,
-.book-detail-sections-region__tabs button:focus-visible,
-.book-detail-sections-region__tabs button.active {
-  border-color: color-mix(in srgb, var(--focus), transparent 55%);
-  color: var(--text);
-  background: var(--surface-raised);
-}
-
 .book-detail-sections-region__panel {
   min-height: 4.5rem;
   margin-top: 0.65rem;
   padding: 0.85rem 0.1rem 0.25rem;
-  border-top: 1px solid var(--border);
 }
 
 .book-detail-sections-region__panel > p {

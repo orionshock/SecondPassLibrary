@@ -9,7 +9,7 @@ import {
   type ServerSettings,
 } from "@second-pass/spl-api";
 import { useEffect, useState, type FormEvent } from "react";
-import { useOutletContext, useSearchParams } from "react-router-dom";
+import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
@@ -17,6 +17,7 @@ import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { TabListComponent, tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { GeneralSettingsPageRegion } from "./regions/GeneralSettingsPageRegion";
 import { LibraryGroupsPageRegion } from "./regions/LibraryGroupsPageRegion";
 import { PublicLibraryPageRegion } from "./regions/PublicLibraryPageRegion";
@@ -37,8 +38,10 @@ interface SettingsLoadState {
 export function ServerSettingsOrchestrator() {
   usePageBreadcrumbs(serverSettingsBreadcrumbFallback);
   const { currentUser, serverInfo, onServerInfoChange, refreshCurrentUser } = useOutletContext<AppOutletContext>();
+  const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const tab = serverSettingsTabFromSearchParams(searchParameters);
+  const canonicalSearchParameters = serverSettingsSearchParams(searchParameters, tab);
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<SettingsLoadState>({ loading: canAccessServerSettings(currentUser.isOwner), forbidden: !canAccessServerSettings(currentUser.isOwner) });
   const [editing, setEditing] = useState(false);
@@ -47,8 +50,9 @@ export function ServerSettingsOrchestrator() {
   const [publicDraft, setPublicDraft] = useState<PublicLibrarySettings>({ name: "", description: "" });
 
   useEffect(() => {
-    if (searchParameters.get("tab") !== tab) setSearchParameters(serverSettingsSearchParams(tab), { replace: true });
-  }, [searchParameters, setSearchParameters, tab]);
+    if (searchParameters.toString() === canonicalSearchParameters.toString()) return;
+    setSearchParameters(canonicalSearchParameters, { replace: true, state: location.state });
+  }, [canonicalSearchParameters, location.state, searchParameters, setSearchParameters]);
 
   useEffect(() => {
     if (!canAccessServerSettings(currentUser.isOwner)) { setLoad({ loading: false, forbidden: true }); return; }
@@ -78,7 +82,7 @@ export function ServerSettingsOrchestrator() {
   }, [tab]);
 
   function selectTab(nextTab: typeof tab) {
-    setSearchParameters(serverSettingsSearchParams(nextTab));
+    setSearchParameters(serverSettingsSearchParams(searchParameters, nextTab), { state: location.state });
   }
 
   function cancel() {
@@ -143,11 +147,10 @@ export function ServerSettingsOrchestrator() {
 
   return <ProductPageShellComponent className="server-settings-page" title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />}>
     <div className="server-settings-tabs">
-      <div className="server-settings-tab-list" role="tablist" aria-label="Server settings sections">
-        {serverSettingsTabs.map(({ id, label }) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => selectTab(id)}>{label}</button>)}
-      </div>
+      <TabListComponent tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" idPrefix="server-settings" />
       <div className="server-settings-tab-actions">{headerActions}</div>
     </div>
+    <div id={tabPanelId("server-settings", tab)} role="tabpanel" aria-labelledby={tabButtonId("server-settings", tab)}>
     {tab === "general" ? <GeneralSettingsPageRegion
       settings={settings.general}
       draft={generalDraft}
@@ -165,6 +168,7 @@ export function ServerSettingsOrchestrator() {
       onSubmit={(event) => void savePublicLibrary(event)}
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}
+    </div>
   </ProductPageShellComponent>;
 }
 
