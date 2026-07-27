@@ -1,19 +1,19 @@
 import type { ReadingSessionsQuery } from "@second-pass/spl-api";
 
-export type ReadingStatusFilter = "all" | "active" | "historical";
+export type MarginaliaStatusFilter = "all" | "active" | "historical";
 
-export interface ReadingListUrlState {
+export interface MarginaliaListUrlState {
   q: string;
-  status: ReadingStatusFilter;
+  status: MarginaliaStatusFilter;
   page: number;
   pageSize: number;
 }
 
 const pageSizes = new Set([20, 30, 40, 50]);
-const statuses = new Set<ReadingStatusFilter>(["all", "active", "historical"]);
+const statuses = new Set<MarginaliaStatusFilter>(["all", "active", "historical"]);
 
-export function readingListStateFromSearchParams(parameters: URLSearchParams): ReadingListUrlState {
-  const rawStatus = parameters.get("status") as ReadingStatusFilter | null;
+export function marginaliaListStateFromSearchParams(parameters: URLSearchParams): MarginaliaListUrlState {
+  const rawStatus = parameters.get("status") as MarginaliaStatusFilter | null;
   return {
     q: (parameters.get("q") ?? "").trim(),
     status: rawStatus && statuses.has(rawStatus) ? rawStatus : "all",
@@ -22,7 +22,7 @@ export function readingListStateFromSearchParams(parameters: URLSearchParams): R
   };
 }
 
-export function readingListSearchParams(state: ReadingListUrlState): URLSearchParams {
+export function marginaliaListSearchParams(state: MarginaliaListUrlState): URLSearchParams {
   const parameters = new URLSearchParams();
   if (state.status !== "all") parameters.set("status", state.status);
   if (state.page > 1) parameters.set("page", String(state.page));
@@ -31,7 +31,7 @@ export function readingListSearchParams(state: ReadingListUrlState): URLSearchPa
   return parameters;
 }
 
-export function readingListSdkQuery(state: ReadingListUrlState): ReadingSessionsQuery {
+export function marginaliaListSdkQuery(state: MarginaliaListUrlState): ReadingSessionsQuery {
   return {
     ...(state.q ? { q: state.q } : {}),
     ...(state.status === "active" ? { isActive: true } : {}),
@@ -41,11 +41,11 @@ export function readingListSdkQuery(state: ReadingListUrlState): ReadingSessions
   };
 }
 
-export function withReadingListChange(
-  current: ReadingListUrlState,
-  changes: Partial<ReadingListUrlState>,
+export function withMarginaliaListChange(
+  current: MarginaliaListUrlState,
+  changes: Partial<MarginaliaListUrlState>,
   resetPage = true,
-): ReadingListUrlState {
+): MarginaliaListUrlState {
   return { ...current, ...changes, page: resetPage ? 1 : changes.page ?? current.page };
 }
 

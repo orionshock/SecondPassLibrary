@@ -7,30 +7,30 @@ import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { readingExportBreadcrumbFallback } from "./readingBreadcrumbs";
-import { ReadingSectionActionsComponent } from "./components/ReadingSectionActionsComponent";
-import { readingExportSelectedBookCount, readingExportSelectedSessions, withReadingExportPageSelection, withReadingExportSessionSelection, type ReadingExportSelectionMap } from "./readingExportSelection";
-import { readingListSdkQuery, readingListSearchParams, readingListStateFromSearchParams, withReadingListChange } from "./readingQuery";
-import { ReadingExportPageRegion } from "./regions/ReadingExportPageRegion";
-import "./Reading.css";
+import { marginaliaExportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
+import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
+import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessions, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
+import { marginaliaListSdkQuery, marginaliaListSearchParams, marginaliaListStateFromSearchParams, withMarginaliaListChange } from "./marginaliaQuery";
+import { MarginaliaExportPageRegion } from "./regions/MarginaliaExportPageRegion";
+import "./Marginalia.css";
 
-interface ReadingExportLoadState {
+interface MarginaliaExportLoadState {
   page?: Page<ReadingSessionSummary>;
   loading: boolean;
   error?: Error;
 }
 
-export function ReadingExportOrchestrator() {
-  usePageBreadcrumbs(readingExportBreadcrumbFallback);
+export function MarginaliaExportOrchestrator() {
+  usePageBreadcrumbs(marginaliaExportBreadcrumbFallback);
   const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const queryKey = searchParameters.toString();
-  const query = useMemo(() => readingListStateFromSearchParams(new URLSearchParams(queryKey)), [queryKey]);
-  const canonicalQuery = readingListSearchParams(query).toString();
+  const query = useMemo(() => marginaliaListStateFromSearchParams(new URLSearchParams(queryKey)), [queryKey]);
+  const canonicalQuery = marginaliaListSearchParams(query).toString();
   const [searchDraft, setSearchDraft] = useState(query.q);
   const [retry, setRetry] = useState(0);
-  const [load, setLoad] = useState<ReadingExportLoadState>({ loading: true });
-  const [selection, setSelection] = useState<ReadingExportSelectionMap>(new Map());
+  const [load, setLoad] = useState<MarginaliaExportLoadState>({ loading: true });
+  const [selection, setSelection] = useState<MarginaliaExportSelectionMap>(new Map());
   const [completeState, setCompleteState] = useState<MutationState>(idleMutationState);
   const [selectedState, setSelectedState] = useState<MutationState>(idleMutationState);
   const recoveredPageKeys = useRef(new Set<string>());
@@ -46,14 +46,14 @@ export function ReadingExportOrchestrator() {
     if (queryKey !== canonicalQuery) return;
     let active = true;
     setLoad((current) => ({ page: current.page, loading: true }));
-    const sdkQuery = readingListSdkQuery(query);
+    const sdkQuery = marginaliaListSdkQuery(query);
     loadPageWithRecovery({
       requestedPage: query.page,
       pageSize: query.pageSize,
-      recoveryKey: `reading-export:${canonicalQuery}`,
+      recoveryKey: `marginalia-export:${canonicalQuery}`,
       recoveredKeys: recoveredPageKeys.current,
       fetchPage: (page) => listReadingSessions({ ...sdkQuery, page }),
-      buildRecoveredLocation: (page) => readingListSearchParams(withReadingListChange(query, { page }, false)).toString(),
+      buildRecoveredLocation: (page) => marginaliaListSearchParams(withMarginaliaListChange(query, { page }, false)).toString(),
       replaceLocation: (nextQuery) => {
         if (!active) return false;
         setSearchParameters(new URLSearchParams(nextQuery), { replace: true, state: location.state });
@@ -68,8 +68,8 @@ export function ReadingExportOrchestrator() {
     return () => { active = false; };
   }, [canonicalQuery, location.state, query.page, query.pageSize, query.q, query.status, queryKey, retry, setSearchParameters]);
 
-  function changeQuery(changes: Parameters<typeof withReadingListChange>[1], resetPage = true) {
-    setSearchParameters(readingListSearchParams(withReadingListChange(query, changes, resetPage)), { state: location.state });
+  function changeQuery(changes: Parameters<typeof withMarginaliaListChange>[1], resetPage = true) {
+    setSearchParameters(marginaliaListSearchParams(withMarginaliaListChange(query, changes, resetPage)), { state: location.state });
   }
 
   async function exportComplete() {
@@ -86,7 +86,7 @@ export function ReadingExportOrchestrator() {
     if (!selection.size) return;
     setSelectedState({ pending: true });
     try {
-      saveDownloadedFile(await downloadSelectedReadingExport({ sessions: readingExportSelectedSessions(selection) }));
+      saveDownloadedFile(await downloadSelectedReadingExport({ sessions: marginaliaExportSelectedSessions(selection) }));
       setSelectedState({ pending: false, message: "Selected Sessions downloaded." });
     } catch (error: unknown) {
       setSelectedState({ pending: false, error: normalizeMutationError(error) });
@@ -94,8 +94,8 @@ export function ReadingExportOrchestrator() {
   }
 
   const selectedSessionIds = new Set(selection.keys());
-  return <ProductPageShellComponent title="Export Marginalia" actions={<ReadingSectionActionsComponent activeSection="export" />}>
-    <ReadingExportPageRegion
+  return <ProductPageShellComponent title="Export Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="export" />}>
+    <MarginaliaExportPageRegion
       page={load.page}
       pageNumber={query.page}
       pageSize={query.pageSize}
@@ -106,7 +106,7 @@ export function ReadingExportOrchestrator() {
       completeState={completeState}
       selectedState={selectedState}
       selectedSessionIds={selectedSessionIds}
-      selectedBookCount={readingExportSelectedBookCount(selection)}
+      selectedBookCount={marginaliaExportSelectedBookCount(selection)}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onStatusChange={(status) => changeQuery({ status })}
@@ -114,8 +114,8 @@ export function ReadingExportOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setRetry((value) => value + 1)}
       onCompleteExport={() => void exportComplete()}
-      onSessionSelectionChange={(session, selected) => setSelection((current) => withReadingExportSessionSelection(current, session, selected))}
-      onSelectPage={() => setSelection((current) => withReadingExportPageSelection(current, load.page?.items ?? [], true))}
+      onSessionSelectionChange={(session, selected) => setSelection((current) => withMarginaliaExportSessionSelection(current, session, selected))}
+      onSelectPage={() => setSelection((current) => withMarginaliaExportPageSelection(current, load.page?.items ?? [], true))}
       onClearSelection={() => setSelection(new Map())}
       onSelectedExport={() => void exportSelected()}
     />

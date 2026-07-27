@@ -69,9 +69,10 @@ matches the product need when implementation begins. Do not restore
 
 ### My Marginalia
 
-The parked reading UI remains useful migration guidance because the React
-branch is not yet rebuilt. Its core behavior was owner-scoped reading history,
-not general Library browsing.
+The parked reading UI remains useful historical guidance for understanding
+owner-scoped reading history, not general Library browsing. The React Product
+UI implements this area under `/marginalia`; the backend API remains under
+`/api/v1/reading/`.
 
 #### Session and Book browse
 
@@ -105,12 +106,6 @@ not general Library browsing.
   warnings, matched/unmatched Books, and bounded errors.
 - Do not invent background jobs, polling, or persistent import history unless a
   separate product decision introduces them.
-
-Before implementing selective export inventory, re-audit the current API. The
-legacy migration audit found no dedicated grouped JSON inventory endpoint;
-walking all owner-scoped Session pages was possible but potentially wasteful.
-That observation is guidance, not permission to scrape an export archive or
-add an endpoint without a focused contract decision.
 
 ### Library, Groups, and Shelves
 
@@ -242,19 +237,13 @@ These differences from the parked UI are deliberate and should not be
 
 Only genuinely unresolved legacy-derived work belongs here:
 
-1. **Dashboard implementation.** The route and Dashboard-only banner exist, but
-   recent reading and useful entry regions remain to be designed against the
-   current reading API.
-2. **My Marginalia.** Session/Book history, Session detail, and reading-data
-   import/export remain placeholder work. Re-audit current APIs before using the
-   legacy plan, especially selective-export inventory.
-3. **Author and Series deletion.** React create/edit exists; deletion and its
+1. **Author and Series deletion.** React create/edit exists; deletion and its
    attached-Book conflict workflow remain an explicit future product decision.
-4. **Additional Book lifecycle actions.** EPUB/file replacement, Book deletion,
+2. **Additional Book lifecycle actions.** EPUB/file replacement, Book deletion,
    and Reader/Open integration remain outside the current Book editor/detail
    scope. Treat each as a focused product/API decision, not automatic legacy
    parity.
-5. **Arbitrary Shelf positioning.** Current up/down mutation is the supported
+3. **Arbitrary Shelf positioning.** Current up/down mutation is the supported
    workflow. Move-to-position and drag/drop remain deferred until unavailable
    placeholder semantics can be preserved without frontend fiction.
 

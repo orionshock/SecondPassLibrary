@@ -7,9 +7,9 @@ import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
-import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
-import { ReadingExportOrchestrator } from "../features/reading/ReadingExportOrchestrator";
-import { ReadingImportOrchestrator } from "../features/reading/ReadingImportOrchestrator";
+import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
+import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
+import { MarginaliaImportOrchestrator } from "../features/marginalia/MarginaliaImportOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
@@ -39,7 +39,7 @@ describe("app frame and router", () => {
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
     const markup = navMarkup({}, { advancedLibraryGroupsEnabled: true });
-    for (const path of ["/reading", "/library", "/groups", "/shelves", "/imports", "/users", "/server", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
+    for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
     expect(markup).toMatch(/aria-current="page" class="active" href="\/library"/);
   });
 
@@ -63,7 +63,7 @@ describe("app frame and router", () => {
   it("shows only general branches to Readers and allows Groups only in advanced mode", () => {
     const reader = { isOwner: false, isReader: true };
     const markup = navMarkup(reader);
-    for (const path of ["/reading", "/library", "/shelves", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
+    for (const path of ["/marginalia", "/library", "/shelves", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
     for (const path of ["/groups", "/imports", "/users", "/server"]) expect(markup).not.toContain(`href="${path}"`);
     expect(navMarkup(reader, { advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
   });
@@ -78,15 +78,16 @@ describe("app frame and router", () => {
   });
   it("defines implemented Product routes separately from placeholders", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual([]);
-    const readingRoute = appRoutes[0].children.find((route) => route.path === "reading");
-    expect(isValidElement(readingRoute?.element)).toBe(true);
-    if (isValidElement(readingRoute?.element)) expect(readingRoute.element.type).toBe(ReadingSessionsOrchestrator);
-    const readingImportRoute = appRoutes[0].children.find((route) => route.path === "reading/import");
-    expect(isValidElement(readingImportRoute?.element)).toBe(true);
-    if (isValidElement(readingImportRoute?.element)) expect(readingImportRoute.element.type).toBe(ReadingImportOrchestrator);
-    const readingExportRoute = appRoutes[0].children.find((route) => route.path === "reading/export");
-    expect(isValidElement(readingExportRoute?.element)).toBe(true);
-    if (isValidElement(readingExportRoute?.element)) expect(readingExportRoute.element.type).toBe(ReadingExportOrchestrator);
+    const marginaliaRoute = appRoutes[0].children.find((route) => route.path === "marginalia");
+    expect(isValidElement(marginaliaRoute?.element)).toBe(true);
+    if (isValidElement(marginaliaRoute?.element)) expect(marginaliaRoute.element.type).toBe(MarginaliaSessionsOrchestrator);
+    const marginaliaImportRoute = appRoutes[0].children.find((route) => route.path === "marginalia/import");
+    expect(isValidElement(marginaliaImportRoute?.element)).toBe(true);
+    if (isValidElement(marginaliaImportRoute?.element)) expect(marginaliaImportRoute.element.type).toBe(MarginaliaImportOrchestrator);
+    const marginaliaExportRoute = appRoutes[0].children.find((route) => route.path === "marginalia/export");
+    expect(isValidElement(marginaliaExportRoute?.element)).toBe(true);
+    if (isValidElement(marginaliaExportRoute?.element)) expect(marginaliaExportRoute.element.type).toBe(MarginaliaExportOrchestrator);
+    expect(appRoutes[0].children.some((route) => route.path?.startsWith("reading"))).toBe(false);
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/new")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/:groupId/edit")).toBe(true);

@@ -5,11 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes } from "../app/router";
-import { readingExportBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
-import { ReadingExportOrchestrator } from "../features/reading/ReadingExportOrchestrator";
-import { readingExportSelectedBookCount, readingExportSelectedSessions, withReadingExportPageSelection, withReadingExportSessionSelection } from "../features/reading/readingExportSelection";
-import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
-import { ReadingExportPageRegion } from "../features/reading/regions/ReadingExportPageRegion";
+import { marginaliaExportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
+import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
+import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessions, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../features/marginalia/marginaliaExportSelection";
+import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
+import { MarginaliaExportPageRegion } from "../features/marginalia/regions/MarginaliaExportPageRegion";
 
 const visibleSession: ReadingSessionSummary = {
   id: "session-sensitive-1", bookId: "book-sensitive-1", name: "Morning notes", status: "active", isActive: true,
@@ -25,7 +25,7 @@ const user: CurrentUser = { username: "reader", email: "", firstName: "", lastNa
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
 function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<ReadingSessionSummary>; loadError?: Error; selectedError?: Error; completeError?: Error } = {}) {
-  return renderToStaticMarkup(<MemoryRouter><ReadingExportPageRegion
+  return renderToStaticMarkup(<MemoryRouter><MarginaliaExportPageRegion
     page={options.page ?? page}
     pageNumber={1}
     pageSize={20}
@@ -53,11 +53,11 @@ function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), optio
 
 describe("My Marginalia Export", () => {
   it("registers the route, breadcrumb, and Session-list action", () => {
-    expect(appRoutes[0].children.some((route) => route.path === "reading/export")).toBe(true);
-    expect(readingExportBreadcrumbFallback).toEqual([{ label: "My Marginalia", to: "/reading", resetTrail: true }, { label: "Export" }]);
-    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading" element={<ReadingSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
-    expect(listMarkup).toContain('href="/reading/export"');
-    const exportMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading/export"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading/export" element={<ReadingExportOrchestrator />} /></Route></Routes></MemoryRouter>);
+    expect(appRoutes[0].children.some((route) => route.path === "marginalia/export")).toBe(true);
+    expect(marginaliaExportBreadcrumbFallback).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Export" }]);
+    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
+    expect(listMarkup).toContain('href="/marginalia/export"');
+    const exportMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/export"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/export" element={<MarginaliaExportOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(exportMarkup).toContain("<h1>Export Marginalia</h1>");
     expect(exportMarkup).toContain('aria-label="My Marginalia sections"');
     expect(exportMarkup).toContain("Complete archive");
@@ -77,14 +77,14 @@ describe("My Marginalia Export", () => {
   });
 
   it("keeps flat Session selection across page/filter-shaped updates", () => {
-    let selection = withReadingExportSessionSelection(new Map(), visibleSession, true);
-    selection = withReadingExportPageSelection(selection, [hiddenSession], true);
-    expect(readingExportSelectedSessions(selection)).toEqual([
+    let selection = withMarginaliaExportSessionSelection(new Map(), visibleSession, true);
+    selection = withMarginaliaExportPageSelection(selection, [hiddenSession], true);
+    expect(marginaliaExportSelectedSessions(selection)).toEqual([
       { sessionId: visibleSession.id, bookId: visibleSession.bookId },
       { sessionId: hiddenSession.id, bookId: hiddenSession.bookId },
     ]);
-    expect(readingExportSelectedBookCount(selection)).toBe(2);
-    expect(withReadingExportPageSelection(selection, [hiddenSession], false).has(visibleSession.id)).toBe(true);
+    expect(marginaliaExportSelectedBookCount(selection)).toBe(2);
+    expect(withMarginaliaExportPageSelection(selection, [hiddenSession], false).has(visibleSession.id)).toBe(true);
   });
 
   it("enables selected export for retained selection and keeps errors section-local", () => {

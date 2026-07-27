@@ -36,8 +36,8 @@ body names. The SPL Marginalia Profile is not a W3C compliance target.
 Product UI:
 
 ```text
-GET /reading/export/
-GET /reading/import/
+GET /marginalia/export/
+GET /marginalia/import/
 ```
 
 JSON downloads:

@@ -72,7 +72,7 @@ describe("Dashboard", () => {
     expect(markup).toContain("42% read");
     expect(markup).toContain('dateTime="2026-07-27T18:30:00Z"');
     expect(markup).toContain('src="/media/cover.jpg"');
-    expect(markup).toContain('href="/reading/sessions/session-1"');
+    expect(markup).toContain('href="/marginalia/sessions/session-1"');
     expect(markup).not.toContain('href="/library/books/book%2Fid"');
   });
 

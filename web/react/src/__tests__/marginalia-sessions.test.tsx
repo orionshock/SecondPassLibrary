@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { ReadingSessionsPageRegion } from "../features/reading/regions/ReadingSessionsPageRegion";
-import { readingExportBreadcrumbFallback, readingImportBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
+import { MarginaliaSessionsPageRegion } from "../features/marginalia/regions/MarginaliaSessionsPageRegion";
+import { marginaliaExportBreadcrumbFallback, marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
 
 const visibleSession: ReadingSessionSummary = {
   id: "9fdd6203-a111-4f17-a477-b9d7ddeec77d",
@@ -37,7 +37,7 @@ const hiddenSession: ReadingSessionSummary = {
 };
 
 function renderRegion(page?: Page<ReadingSessionSummary>, options: { loading?: boolean; error?: Error; search?: string; status?: "all" | "active" | "historical" } = {}) {
-  return renderToStaticMarkup(<MemoryRouter><ReadingSessionsPageRegion
+  return renderToStaticMarkup(<MemoryRouter><MarginaliaSessionsPageRegion
     page={page}
     pageNumber={1}
     pageSize={20}
@@ -62,7 +62,7 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain("42% read");
     expect(markup).toContain("2 annotations");
     expect(markup).toContain('href="/library/books/visible-book"');
-    expect(markup).toContain(`href="/reading/sessions/${visibleSession.id}"`);
+    expect(markup).toContain(`href="/marginalia/sessions/${visibleSession.id}"`);
     expect(markup).toContain("View Book");
     expect(markup).not.toContain("Continue reading");
   });
@@ -72,7 +72,7 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain("Unnamed session");
     expect(markup).toContain("Book unavailable");
     expect(markup).not.toContain(">79dc1581");
-    expect(markup).toContain(`href="/reading/sessions/${hiddenSession.id}"`);
+    expect(markup).toContain(`href="/marginalia/sessions/${hiddenSession.id}"`);
     expect(markup).not.toContain("hidden-book</");
     expect(markup).not.toContain("View Book");
     expect(markup).not.toContain('href="/library/books/hidden-book"');
@@ -99,8 +99,8 @@ describe("My Marginalia Session list", () => {
 
   it("exposes Session Detail and implemented Import/Export destinations", () => {
     const markup = renderRegion({ items: [visibleSession], count: 1, next: null, previous: null });
-    expect(markup).toContain(`/reading/sessions/${visibleSession.id}`);
-    expect(readingImportBreadcrumbFallback[0]).toMatchObject({ to: "/reading" });
-    expect(readingExportBreadcrumbFallback[0]).toMatchObject({ to: "/reading" });
+    expect(markup).toContain(`/marginalia/sessions/${visibleSession.id}`);
+    expect(marginaliaImportBreadcrumbFallback[0]).toMatchObject({ to: "/marginalia" });
+    expect(marginaliaExportBreadcrumbFallback[0]).toMatchObject({ to: "/marginalia" });
   });
 });

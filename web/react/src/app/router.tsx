@@ -15,10 +15,10 @@ import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
 import { AuthorSeriesEditOrchestrator } from "../features/library/AuthorSeriesEditOrchestrator";
 import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
-import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
-import { ReadingSessionDetailOrchestrator } from "../features/reading/ReadingSessionDetailOrchestrator";
-import { ReadingImportOrchestrator } from "../features/reading/ReadingImportOrchestrator";
-import { ReadingExportOrchestrator } from "../features/reading/ReadingExportOrchestrator";
+import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
+import { MarginaliaSessionDetailOrchestrator } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
+import { MarginaliaImportOrchestrator } from "../features/marginalia/MarginaliaImportOrchestrator";
+import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
 import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
 import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
 import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
@@ -60,10 +60,10 @@ export const appRoutes = [
     element: <App />,
     children: [
       { index: true, element: <DashboardOrchestrator /> },
-      { path: "reading", element: <ReadingSessionsOrchestrator /> },
-      { path: "reading/sessions/:sessionId", element: <ReadingSessionDetailOrchestrator /> },
-      { path: "reading/import", element: <ReadingImportOrchestrator /> },
-      { path: "reading/export", element: <ReadingExportOrchestrator /> },
+      { path: "marginalia", element: <MarginaliaSessionsOrchestrator /> },
+      { path: "marginalia/sessions/:sessionId", element: <MarginaliaSessionDetailOrchestrator /> },
+      { path: "marginalia/import", element: <MarginaliaImportOrchestrator /> },
+      { path: "marginalia/export", element: <MarginaliaExportOrchestrator /> },
       ...sectionRoutes.map(({ path, title }) => ({
         path,
         element: <PlaceholderPageRegion title={title} />,

@@ -3,12 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { readingImportBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
-import { ReadingImportOrchestrator, previewSelectedReadingImport } from "../features/reading/ReadingImportOrchestrator";
-import { ReadingSessionsOrchestrator } from "../features/reading/ReadingSessionsOrchestrator";
+import { marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
+import { MarginaliaImportOrchestrator, previewSelectedMarginaliaImport } from "../features/marginalia/MarginaliaImportOrchestrator";
+import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
 import { AppFrame } from "../app/layout/AppFrame";
-import { buildReadingImportApplyInput, createReadingImportDraft, readingImportBookSelectionState, readingImportSelectedCount, readingImportSessionKey, withReadingImportBookSelection } from "../features/reading/readingImportDraft";
-import { ReadingImportPageRegion } from "../features/reading/regions/ReadingImportPageRegion";
+import { buildMarginaliaImportApplyInput, createMarginaliaImportDraft, marginaliaImportBookSelectionState, marginaliaImportSelectedCount, marginaliaImportSessionKey, withMarginaliaImportBookSelection } from "../features/marginalia/marginaliaImportDraft";
+import { MarginaliaImportPageRegion } from "../features/marginalia/regions/MarginaliaImportPageRegion";
 import { LocalValidationError } from "../shared/feedback/mutationState";
 
 const preview: ReadingImportPreview = {
@@ -39,8 +39,8 @@ const preview: ReadingImportPreview = {
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
-function renderImport(options: { preview?: ReadingImportPreview; result?: ReadingImportResult; draft?: ReturnType<typeof createReadingImportDraft>; previewError?: Error; editingSessionKeys?: ReadonlySet<string> } = {}) {
-  return renderToStaticMarkup(<MemoryRouter><ReadingImportPageRegion
+function renderImport(options: { preview?: ReadingImportPreview; result?: ReadingImportResult; draft?: ReturnType<typeof createMarginaliaImportDraft>; previewError?: Error; editingSessionKeys?: ReadonlySet<string> } = {}) {
+  return renderToStaticMarkup(<MemoryRouter><MarginaliaImportPageRegion
     preview={options.preview}
     result={options.result}
     draft={options.draft ?? {}}
@@ -59,11 +59,11 @@ function renderImport(options: { preview?: ReadingImportPreview; result?: Readin
 
 describe("My Marginalia import", () => {
   it("links the Session list to the implemented Import route and renders that route", () => {
-    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading" element={<ReadingSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(listMarkup).toContain("<h1>My Marginalia</h1>");
     expect(listMarkup).toContain('aria-label="My Marginalia sections"');
-    expect(listMarkup).toContain('href="/reading/import"');
-    const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/reading/import"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="reading/import" element={<ReadingImportOrchestrator />} /></Route></Routes></MemoryRouter>);
+    expect(listMarkup).toContain('href="/marginalia/import"');
+    const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/import"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/import" element={<MarginaliaImportOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(importMarkup).toContain("<h1>Import Marginalia</h1>");
     expect(importMarkup).toContain('aria-label="My Marginalia sections"');
     expect(importMarkup).toContain('type="file"');
@@ -71,10 +71,10 @@ describe("My Marginalia import", () => {
 
   it("requires a file locally and delegates a selected file to the SDK", async () => {
     const upload = vi.fn<(file: File) => Promise<ReadingImportPreview>>().mockResolvedValue(preview);
-    await expect(previewSelectedReadingImport(undefined, upload)).rejects.toBeInstanceOf(LocalValidationError);
+    await expect(previewSelectedMarginaliaImport(undefined, upload)).rejects.toBeInstanceOf(LocalValidationError);
     expect(upload).not.toHaveBeenCalled();
     const file = new File(["{}"], "marginalia.json", { type: "application/json" });
-    await expect(previewSelectedReadingImport(file, upload)).resolves.toBe(preview);
+    await expect(previewSelectedMarginaliaImport(file, upload)).resolves.toBe(preview);
     expect(upload).toHaveBeenCalledWith(file);
   });
 
@@ -87,38 +87,38 @@ describe("My Marginalia import", () => {
   });
 
   it("defaults every importable Session to selected and builds exact edits without mutating the draft", () => {
-    const draft = createReadingImportDraft(preview);
-    expect(readingImportSelectedCount(draft)).toBe(2);
-    expect(draft[readingImportSessionKey(1, 0)]?.selected).toBe(false);
+    const draft = createMarginaliaImportDraft(preview);
+    expect(marginaliaImportSelectedCount(draft)).toBe(2);
+    expect(draft[marginaliaImportSessionKey(1, 0)]?.selected).toBe(false);
     const edited = { ...draft, "0:0": { ...draft["0:0"]!, name: "Edited name", notes: "Edited notes" }, "0:1": { ...draft["0:1"]!, selected: false } };
     const before = structuredClone(edited);
-    expect(buildReadingImportApplyInput(preview, edited)).toEqual({ importToken: "opaque-token", books: [{ selectionReference: { source: "book:source", fileHash: "sha256:hidden", title: "Matched Book" }, sessions: [{ exportSessionId: "export-session-1", name: "Edited name", notes: "Edited notes" }] }] });
+    expect(buildMarginaliaImportApplyInput(preview, edited)).toEqual({ importToken: "opaque-token", books: [{ selectionReference: { source: "book:source", fileHash: "sha256:hidden", title: "Matched Book" }, sessions: [{ exportSessionId: "export-session-1", name: "Edited name", notes: "Edited notes" }] }] });
     expect(edited).toEqual(before);
   });
 
   it("supports all, none, and partial Book-level Session selection", () => {
-    const all = createReadingImportDraft(preview);
-    expect(readingImportBookSelectionState(preview, all, 0)).toBe("all");
-    const none = withReadingImportBookSelection(preview, all, 0, false);
-    expect(readingImportBookSelectionState(preview, none, 0)).toBe("none");
-    expect(readingImportSelectedCount(none)).toBe(0);
+    const all = createMarginaliaImportDraft(preview);
+    expect(marginaliaImportBookSelectionState(preview, all, 0)).toBe("all");
+    const none = withMarginaliaImportBookSelection(preview, all, 0, false);
+    expect(marginaliaImportBookSelectionState(preview, none, 0)).toBe("none");
+    expect(marginaliaImportSelectedCount(none)).toBe(0);
     const some = { ...none, "0:0": { ...none["0:0"]!, selected: true } };
-    expect(readingImportBookSelectionState(preview, some, 0)).toBe("some");
-    expect(readingImportSelectedCount(withReadingImportBookSelection(preview, some, 0, true))).toBe(2);
-    expect(readingImportBookSelectionState(preview, all, 1)).toBe("none");
+    expect(marginaliaImportBookSelectionState(preview, some, 0)).toBe("some");
+    expect(marginaliaImportSelectedCount(withMarginaliaImportBookSelection(preview, some, 0, true))).toBe(2);
+    expect(marginaliaImportBookSelectionState(preview, all, 1)).toBe("none");
   });
 
   it("renders the matched Book selector checked or mixed and omits unmatched selectors", () => {
-    const all = renderImport({ preview, draft: createReadingImportDraft(preview) });
+    const all = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
     expect(all.match(/type="checkbox"/g)).toHaveLength(3);
-    const draft = createReadingImportDraft(preview);
+    const draft = createMarginaliaImportDraft(preview);
     draft["0:1"] = { ...draft["0:1"]!, selected: false };
     const partial = renderImport({ preview, draft });
     expect(partial).toContain('aria-checked="mixed"');
   });
 
   it("renders imported Book and note data without raw identifiers", () => {
-    const markup = renderImport({ preview, draft: createReadingImportDraft(preview) });
+    const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
     expect(markup).toContain("Matched Book");
     expect(markup).toContain("Missing Book");
     expect(markup).toContain("Imported session");
@@ -130,14 +130,14 @@ describe("My Marginalia import", () => {
   });
 
   it("reveals populated name and note controls only for the edited row", () => {
-    const markup = renderImport({ preview, draft: createReadingImportDraft(preview), editingSessionKeys: new Set(["0:0"]) });
+    const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview), editingSessionKeys: new Set(["0:0"]) });
     expect(markup).toContain("<textarea");
     expect(markup).toContain('value="Imported session"');
     expect(markup).toContain("Remember this.");
   });
 
   it("disables Apply when no Sessions are selected and keeps structured paths out of primary error prose", () => {
-    const draft = createReadingImportDraft(preview);
+    const draft = createMarginaliaImportDraft(preview);
     Object.values(draft).forEach((session) => { session.selected = false; });
     const markup = renderImport({ preview, draft, previewError: new LocalValidationError("The archive could not be previewed.", { "books[0].sessions[0]": ["target is required"] }) });
     expect(markup).toContain('disabled=""');
@@ -147,14 +147,14 @@ describe("My Marginalia import", () => {
 
   it("renders the apply result and returns to the Session list", () => {
     const result: ReadingImportResult = { applied: true, summary: { booksMatched: 1, booksSkipped: 0, sessionsCreated: 2, annotationsCreated: 5, bookmarksCreated: 2, highlightsCreated: 3, commentedHighlightsCreated: 1 }, warnings: [] };
-    const markup = renderImport({ preview, draft: createReadingImportDraft(preview), result });
-    expect(markup).toContain('href="/reading"');
+    const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview), result });
+    expect(markup).toContain('href="/marginalia"');
     expect(markup).not.toContain('type="checkbox"');
   });
 
   it("uses the canonical child breadcrumb trail", () => {
-    expect(readingImportBreadcrumbFallback).toEqual([
-      { label: "My Marginalia", to: "/reading", resetTrail: true },
+    expect(marginaliaImportBreadcrumbFallback).toEqual([
+      { label: "My Marginalia", to: "/marginalia", resetTrail: true },
       { label: "Import", icon: "import" },
     ]);
   });

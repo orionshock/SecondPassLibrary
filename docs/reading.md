@@ -305,8 +305,8 @@ The canonical Second Pass Library Marginalia Profile is documented in
 Product UI:
 
 ```text
-GET /reading/export
-GET /reading/import
+GET /marginalia/export
+GET /marginalia/import
 ```
 
 Session-authenticated API exports:

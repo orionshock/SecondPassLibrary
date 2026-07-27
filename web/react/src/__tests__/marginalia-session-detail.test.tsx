@@ -5,8 +5,8 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "../app/router";
-import { readingSessionBreadcrumbFallback } from "../features/reading/readingBreadcrumbs";
-import { AnnotationCategoryMenuOptionsComponent, ReadingSessionDetailPageRegion, annotationOrderOptions } from "../features/reading/regions/ReadingSessionDetailPageRegion";
+import { marginaliaSessionBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
+import { AnnotationCategoryMenuOptionsComponent, MarginaliaSessionDetailPageRegion, annotationOrderOptions } from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
 import { OrderMenuOptionsComponent } from "../shared/forms/OrderMenuComponent";
 
 const session: ReadingSessionDetail = {
@@ -43,8 +43,8 @@ const annotations: Page<ReadingAnnotation> = {
   ],
 };
 
-function renderDetail(overrides: Partial<Parameters<typeof ReadingSessionDetailPageRegion>[0]> = {}) {
-  return renderToStaticMarkup(<MemoryRouter><ReadingSessionDetailPageRegion
+function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDetailPageRegion>[0]> = {}) {
+  return renderToStaticMarkup(<MemoryRouter><MarginaliaSessionDetailPageRegion
     session={session}
     progress={{ loading: false, progress: { sessionId: session.id, progression: 0.5, createdAt: null, updatedAt: "2026-01-03T00:00:00Z" } }}
     annotations={{ loading: false, page: annotations }}
@@ -65,9 +65,9 @@ function renderDetail(overrides: Partial<Parameters<typeof ReadingSessionDetailP
 describe("My Marginalia Session Detail", () => {
   it("registers the detail route and builds a bounded breadcrumb without Session IDs", () => {
     const children = appRoutes[0]?.children ?? [];
-    expect(children.some((route) => "path" in route && route.path === "reading/sessions/:sessionId")).toBe(true);
-    expect(readingSessionBreadcrumbFallback("Imported history")).toEqual([{ label: "My Marginalia", to: "/reading", resetTrail: true }, { label: "Imported history" }]);
-    expect(JSON.stringify(readingSessionBreadcrumbFallback(""))).not.toContain(session.id);
+    expect(children.some((route) => "path" in route && route.path === "marginalia/sessions/:sessionId")).toBe(true);
+    expect(marginaliaSessionBreadcrumbFallback("Imported history")).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Imported history" }]);
+    expect(JSON.stringify(marginaliaSessionBreadcrumbFallback(""))).not.toContain(session.id);
   });
 
   it("renders visible Book, progress, and annotation content without locator internals", () => {

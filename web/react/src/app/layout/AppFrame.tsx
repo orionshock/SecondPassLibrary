@@ -24,7 +24,7 @@ export interface AppOutletContext {
 
 const navigation = [
   { to: "/", label: "Dashboard" },
-  { to: "/reading", label: "My Marginalia" },
+  { to: "/marginalia", label: "My Marginalia" },
   { to: "/library", label: "Library" },
   { to: "/groups", label: "Groups", visible: (_user: CurrentUser, server: ServerInfo) => server.advancedLibraryGroupsEnabled },
   { to: "/shelves", label: "Shelves" },
