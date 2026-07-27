@@ -1,24 +1,24 @@
-export type GroupEditTab = "details" | "books" | "add-books" | "members";
+import { TabListComponent, type TabItem } from "../../../shared/tabs/TabListComponent";
+import type { GroupEditTab } from "../groupsQuery";
 
-export function GroupEditTabsPageRegion({ activeTab, canMutateBooks, canMutateMembers, disabled = false, onTabChange }: {
+const groupEditTabs: readonly TabItem<GroupEditTab>[] = [
+  { id: "details", label: "Details" },
+  { id: "books", label: "Books" },
+  { id: "add-books", label: "Add Books" },
+  { id: "members", label: "Members" },
+];
+
+export function GroupEditTabsPageRegion({ activeTab, disabled = false, onTabChange }: {
   activeTab: GroupEditTab;
-  canMutateBooks: boolean;
-  canMutateMembers: boolean;
   disabled?: boolean;
   onTabChange: (tab: GroupEditTab) => void;
 }) {
-  const tabs: Array<readonly [GroupEditTab, string]> = [["details", "Details"]];
-  if (canMutateBooks) tabs.push(["books", "Books"], ["add-books", "Add Books"]);
-  if (canMutateMembers) tabs.push(["members", "Members"]);
-
-  return <nav className="group-edit-tabs" aria-label="Group edit sections">
-    {tabs.map(([tab, label]) => <button
-      key={tab}
-      type="button"
-      className="button--secondary"
-      aria-current={activeTab === tab ? "page" : undefined}
-      disabled={disabled}
-      onClick={() => onTabChange(tab)}
-    >{label}</button>)}
-  </nav>;
+  return <TabListComponent
+    tabs={groupEditTabs}
+    activeTab={activeTab}
+    onChange={onTabChange}
+    ariaLabel="Group management sections"
+    disabled={disabled}
+    idPrefix="group-edit"
+  />;
 }

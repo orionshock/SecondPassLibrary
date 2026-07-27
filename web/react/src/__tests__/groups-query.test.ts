@@ -5,6 +5,9 @@ import {
   groupDetailPath,
   groupDetailSearchParams,
   groupDetailStateFromSearchParams,
+  groupEditQueryDuringImmediateMutation,
+  groupEditQueryFromSearchParams,
+  groupEditSearchParams,
   groupMembersSdkQuery,
   groupShelvesSdkQuery,
   groupsListPath,
@@ -63,5 +66,32 @@ describe("Groups URL state", () => {
     expect(groupDetailStateFromSearchParams(new URLSearchParams("tab=shelves&q=hidden&ordering=-author"))).toMatchObject({
       tab: "shelves", q: "", ordering: "title",
     });
+  });
+
+  it("keeps Group management tabs URL-backed with one universal Details default", () => {
+    expect(groupEditQueryFromSearchParams(new URLSearchParams())).toEqual({
+      tab: "details", query: "",
+    });
+    expect(groupEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=books"))).toEqual({
+      tab: "books", query: "trail=context&tab=books",
+    });
+    expect(groupEditQueryFromSearchParams(new URLSearchParams("tab=add-books"))).toEqual({
+      tab: "add-books", query: "tab=add-books",
+    });
+    expect(groupEditQueryFromSearchParams(new URLSearchParams("tab=members"))).toEqual({
+      tab: "members", query: "tab=members",
+    });
+    expect(groupEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=unknown"))).toEqual({
+      tab: "details", query: "trail=context",
+    });
+    expect(groupEditSearchParams(new URLSearchParams("trail=context&tab=members"), "details").toString())
+      .toBe("trail=context");
+  });
+
+  it("freezes the last safe Group management query during immediate mutations", () => {
+    const stable = groupEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=members"));
+    const requested = groupEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=books"));
+    expect(groupEditQueryDuringImmediateMutation(requested, stable, true)).toBe(stable);
+    expect(groupEditQueryDuringImmediateMutation(requested, stable, false)).toBe(requested);
   });
 });

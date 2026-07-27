@@ -54,13 +54,3 @@ export function canManageGroup(
     || canMutateGroupMembers(user)
     || canDeleteGroup(user, group);
 }
-
-export function initialGroupEditTab(
-  user: CurrentUser,
-  group: Pick<LibraryGroup, "id" | "isPublicGroup">,
-): "details" | "books" | "members" {
-  if (!group.isPublicGroup) return "details";
-  if (canMutateGroupBooks(user, group)) return "books";
-  if (canMutateGroupMembers(user)) return "members";
-  return "details";
-}

@@ -53,7 +53,7 @@ Users list behavior is owned by `UsersListOrchestrator`; its PageRegions render 
 
 List ordering uses the shared inline `OrderMenuComponent`, promoted from Library's custom sort menu. Its closed button shows the active option's icon and label, while every opened menu row shows its own icon and selected state. Library, main Groups and Shelves lists, Group Books, and Shelf Detail items share this control; main Groups and Shelves ordering occupies the paginated frame's optional top-controls slot beside the compact pager. Users retains its table-heading sort controls. Shelf list name/item-count ordering and normal Shelf Detail position/title/author ordering are available in both directions; editor placeholder inventory remains stored-position-only.
 
-The shared controlled `TabListComponent` now supplies uniform section-tab semantics, manual keyboard activation, deterministic panel wiring, and narrow-screen horizontal overflow for Group Detail and Shelf Edit. Their existing feature-owned `?tab=` query state remains canonical and preserves Router breadcrumb context. Shelf Edit freezes its active query state and disables tab activation during immediate add/remove/move operations so Back/Forward cannot switch loaders mid-mutation. Group Manage, Book Detail/Edit, and Server Settings retain their existing local tab implementations for later focused adoption; Library axes and Shelf scopes remain navigation/filter controls rather than tabs.
+The shared controlled `TabListComponent` now supplies uniform section-tab semantics, manual keyboard activation, deterministic panel wiring, and narrow-screen horizontal overflow for Group Detail, Group Manage, and Shelf Edit. Their feature-owned `?tab=` query state remains canonical and preserves Router breadcrumb context. Shelf Edit and Group Manage freeze their active query state and disable tab activation during immediate mutations so Back/Forward cannot switch loaders mid-request. Book Detail/Edit and Server Settings retain their existing local tab implementations for later focused adoption; Library axes and Shelf scopes remain navigation/filter controls rather than tabs.
 
 `LibraryOrchestrator` owns axis-aware URL normalization, the active Books/Authors/Series list load, bounded out-of-range recovery, and independent Catalog Tag retry state. Selected contexts use `view=authors&author=<uuid>` or `view=series&series=<uuid>`; the entity parameter follows `view` before `tag`, optional `ordering`, `page`, `page_size`, and `q`. Default Books view, per-context ordering, page 1, and page size 20 are omitted. Entering or clearing a context preserves Catalog Tag and page size while clearing search, ordering, and page. Every axis button navigates to that axis's canonical base, including the already-active axis: selected context, Catalog Tag, search, ordering, and page are cleared, while non-default page size is preserved. Book search calls `/library/books/`, not broad Library search; Author and Series requests include bounded previews, while selected contexts send `author` or `series` to the compact Book endpoint. Selected contexts independently load the role-scoped Author or Series detail so direct loads render the real entity name and a three-line expandable plain-text biography or summary; Router state is only an optimistic loading fallback. Missing and unavailable entities share one bounded context state, and retryable detail failures do not block the filtered Book list. The Catalog Tag rail filters every top-level axis and selected context. Its counts remain role-scoped Book counts, not context-specific counts. The SDK maps compact wire `catalog_tags` to app-facing `catalogTags` and axis wire fields to stable camelCase summaries. Book rows display title, authors, series/index, publisher, and at most six Catalog Tag pills. Author and Series rows display name, role-scoped Book count, and up to six previews, but not biography or summary. Reader sessions and bearer clients receive visibility-scoped axes; Librarian+ sessions receive the complete Author/Series catalog through the same endpoints. Shared Book cover, metadata, and preview-strip components remain server-blind. App list pagers default to 20/30/40/50 unless a caller supplies an intentional exception; Users retains its established 20/50/100/200 sizes.
 
@@ -86,18 +86,20 @@ Group managers. Books reuse the shared compact Book row with contextual Group
 breadcrumbs; Members expose only username and curator state. Custom Group
 metadata editing at `/groups/:groupId/edit` is operation-specific: Manager/Owner
 may edit name and description, while Librarian and the exact custom-group
-curator may edit description. Authorized Group curators and Librarian+ sessions
-also receive immediate Books and Add Books tabs in Group Edit. Candidate search
+curator may edit description. Details, Books, Add Books, and Members are stable,
+URL-backed Group Manage sections for every authorized route user; authority
+controls each section's fields and actions rather than tab visibility. Authorized
+Group curators and Librarian+ sessions receive immediate Book controls. Candidate search
 uses Library search with `exclude_group`; add/remove operations remain independent
 from metadata Save. Removal is confirmed because it also removes the Book from
 Group-owned Shelves. A cleanup-conflict response leaves the assigned row intact
 and is shown as a persistent section-local error. Public metadata remains owned
 by Server Settings, while Librarian+ may curate Public Books. Manager/Owner
-sessions also receive the Group Edit Members tab, with explicit username search,
+sessions receive member controls with explicit username search,
 immediate add/remove, and custom-Group curator toggles. Membership operations
 never expose or edit global roles and remain independent from metadata Save;
-Public membership does not offer curator assignment. Public Group management
-opens on its first actionable tab and retains a neutral read-only Details view.
+Public membership does not offer curator assignment. Group management always
+opens on Details, including for Public, where Details is a neutral read-only view.
 Immediate Book and Member mutations keep the active tab mounted and disable
 tab changes and deletion until the request settles. Manager/Owner custom-Group
 Details also include an immediate Delete danger zone. Confirmation discloses

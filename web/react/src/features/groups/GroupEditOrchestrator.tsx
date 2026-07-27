@@ -23,6 +23,7 @@ import {
   type MutationState,
 } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import {
   emptyGroupDraft,
   groupDraftFromGroup,
@@ -33,7 +34,7 @@ import {
 } from "./groupDraft";
 import { confirmGroupBookRemoval } from "./groupBookMutation";
 import { confirmGroupDelete } from "./groupDelete";
-import { canDeleteGroup, canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority, initialGroupEditTab } from "./groupMetadataAuthority";
+import { canDeleteGroup, canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority } from "./groupMetadataAuthority";
 import { GroupMembersEditOrchestrator } from "./GroupMembersEditOrchestrator";
 import {
   groupDetailNavigationStateFromEdit,
@@ -45,7 +46,13 @@ import {
 import { GroupMetadataFormPageRegion } from "./regions/GroupMetadataFormPageRegion";
 import { GroupBookCandidatesPageRegion } from "./regions/GroupBookCandidatesPageRegion";
 import { GroupBooksEditPageRegion } from "./regions/GroupBooksEditPageRegion";
-import { GroupEditTabsPageRegion, type GroupEditTab } from "./regions/GroupEditTabsPageRegion";
+import {
+  groupEditQueryDuringImmediateMutation,
+  groupEditQueryFromSearchParams,
+  groupEditSearchParams,
+  type GroupEditTab,
+} from "./groupsQuery";
+import { GroupEditTabsPageRegion } from "./regions/GroupEditTabsPageRegion";
 import { GroupDangerZonePageRegion } from "./regions/GroupDangerZonePageRegion";
 import { GroupPublicDetailsPageRegion } from "./regions/GroupPublicDetailsPageRegion";
 import "./Groups.css";
@@ -84,7 +91,10 @@ export function GroupEditOrchestrator() {
       : {}),
   }));
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
-  const [activeTab, setActiveTab] = useState<GroupEditTab>("details");
+  const requestedEditQuery = useMemo(
+    () => groupEditQueryFromSearchParams(new URLSearchParams(location.search)),
+    [location.search],
+  );
   const [booksPage, setBooksPage] = useState(1);
   const [booksPageSize, setBooksPageSize] = useState(20);
   const [booksLoad, setBooksLoad] = useState<BookPageLoad>({ loading: false });
@@ -98,6 +108,16 @@ export function GroupEditOrchestrator() {
   const [candidatesVersion, setCandidatesVersion] = useState(0);
   const [candidateMutation, setCandidateMutation] = useState<BookMutation>({});
   const [memberMutationPending, setMemberMutationPending] = useState(false);
+  const bookMutationPending = Boolean(bookMutation.pendingBookId || candidateMutation.pendingBookId);
+  const immediateMutationPending = bookMutationPending || memberMutationPending;
+  const stableEditQuery = useRef(requestedEditQuery);
+  if (!immediateMutationPending) stableEditQuery.current = requestedEditQuery;
+  const editQuery = groupEditQueryDuringImmediateMutation(
+    requestedEditQuery,
+    stableEditQuery.current,
+    immediateMutationPending,
+  );
+  const activeTab = editQuery.tab;
   const allowNavigation = useRef(false);
   const group = load.status === "ready" ? load.group : undefined;
   const dirty = !groupDraftsEqual(draft, baseline);
@@ -109,6 +129,15 @@ export function GroupEditOrchestrator() {
     [group?.isPublicGroup, group?.name, groupId],
   );
   usePageBreadcrumbs(breadcrumbs);
+
+  useEffect(() => {
+    const currentQuery = location.search.startsWith("?") ? location.search.slice(1) : location.search;
+    if (currentQuery === editQuery.query) return;
+    navigate({ pathname: location.pathname, search: editQuery.query }, {
+      replace: true,
+      state: location.state,
+    });
+  }, [editQuery.query, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
@@ -137,7 +166,6 @@ export function GroupEditOrchestrator() {
         setLoad({ status: "ready", group: loadedGroup });
         setDraft(next);
         setBaseline(next);
-        setActiveTab(initialGroupEditTab(currentUser, loadedGroup));
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -152,9 +180,6 @@ export function GroupEditOrchestrator() {
   const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group) : false;
   const memberMutationAllowed = canMutateGroupMembers(currentUser);
   const deleteAllowed = group ? canDeleteGroup(currentUser, group) : false;
-  const bookMutationPending = Boolean(bookMutation.pendingBookId || candidateMutation.pendingBookId);
-  const immediateMutationPending = bookMutationPending || memberMutationPending;
-
   useEffect(() => {
     if (!group || !bookMutationAllowed || activeTab !== "books") return;
     let active = true;
@@ -209,7 +234,7 @@ export function GroupEditOrchestrator() {
       setDraft(next);
       setBaseline(next);
       setMutation({ pending: false, message: "Group saved." });
-      navigate(location.pathname, {
+      navigate({ pathname: location.pathname, search: location.search }, {
         replace: true,
         state: groupEditNavigationState(location.state, saved),
       });
@@ -229,7 +254,10 @@ export function GroupEditOrchestrator() {
 
   function changeTab(tab: GroupEditTab) {
     if (immediateMutationPending) return;
-    setActiveTab(tab);
+    const parameters = groupEditSearchParams(new URLSearchParams(location.search), tab);
+    navigate({ pathname: location.pathname, search: parameters.toString() }, {
+      state: location.state,
+    });
     setBookMutation({});
     setCandidateMutation({});
   }
@@ -289,11 +317,13 @@ export function GroupEditOrchestrator() {
   }
 
   return <ProductPageShellComponent className="groups-page group-lifecycle-page" eyebrow="Managing Group" title={draft.name || load.group.name}>
-    <GroupEditTabsPageRegion activeTab={activeTab} canMutateBooks={bookMutationAllowed} canMutateMembers={memberMutationAllowed} disabled={immediateMutationPending} onTabChange={changeTab} />
-    {activeTab === "details" && metadataAuthority === "none"
-      ? <GroupPublicDetailsPageRegion group={load.group} />
-      : null}
-    {activeTab === "details" && metadataAuthority !== "none" ? <GroupMetadataFormPageRegion
+    <GroupEditTabsPageRegion activeTab={activeTab} disabled={immediateMutationPending} onTabChange={changeTab} />
+    {activeTab === "details" ? <div
+      id={tabPanelId("group-edit", "details")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-edit", "details")}
+    >
+    {metadataAuthority === "none" ? <GroupPublicDetailsPageRegion group={load.group} /> : <GroupMetadataFormPageRegion
         mode="edit"
         draft={draft}
         nameEditable={metadataAuthority === "full"}
@@ -302,13 +332,18 @@ export function GroupEditOrchestrator() {
         onSubmit={(event) => void save(event)}
         onCancel={cancel}
         disabled={deleteMutation.pending}
-      /> : null}
-    {activeTab === "details" && deleteAllowed ? <GroupDangerZonePageRegion
+      />}
+    {deleteAllowed ? <GroupDangerZonePageRegion
       state={deleteMutation}
       controlsDisabled={mutation.pending || immediateMutationPending}
       onDelete={() => void removeGroup()}
     /> : null}
-    {activeTab === "books" && bookMutationAllowed ? <>
+    </div> : null}
+    {activeTab === "books" ? <div
+      id={tabPanelId("group-edit", "books")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-edit", "books")}
+    >{bookMutationAllowed ? <>
       {bookMutation.message ? <p className="group-edit-section-feedback" aria-live="polite">{bookMutation.message}</p> : null}
       <GroupBooksEditPageRegion
         groupId={load.group.id}
@@ -326,8 +361,12 @@ export function GroupEditOrchestrator() {
         onPageSizeChange={(pageSize) => { setBooksPageSize(pageSize); setBooksPage(1); }}
         onRetry={() => { setBookMutation({}); setBooksVersion((value) => value + 1); }}
       />
-    </> : null}
-    {activeTab === "add-books" && bookMutationAllowed ? <>
+    </> : <section className="group-edit-section-state" aria-label="Books unavailable"><p className="muted">Book curation is not available for this account.</p></section>}</div> : null}
+    {activeTab === "add-books" ? <div
+      id={tabPanelId("group-edit", "add-books")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-edit", "add-books")}
+    >{bookMutationAllowed ? <>
       {candidateMutation.message ? <p className="group-edit-section-feedback" aria-live="polite">{candidateMutation.message}</p> : null}
       <GroupBookCandidatesPageRegion
         groupId={load.group.id}
@@ -348,9 +387,13 @@ export function GroupEditOrchestrator() {
         onPageSizeChange={(pageSize) => { setCandidatePageSize(pageSize); setCandidatePage(1); }}
         onRetry={() => { setCandidateMutation({}); setCandidatesVersion((value) => value + 1); }}
       />
-    </> : null}
-    {activeTab === "members" && memberMutationAllowed
+    </> : <section className="group-edit-section-state" aria-label="Add Books unavailable"><p className="muted">Book curation is not available for this account.</p></section>}</div> : null}
+    {activeTab === "members" ? <div
+      id={tabPanelId("group-edit", "members")}
+      role="tabpanel"
+      aria-labelledby={tabButtonId("group-edit", "members")}
+    >{memberMutationAllowed
       ? <GroupMembersEditOrchestrator group={load.group} metadataPending={mutation.pending} onMutationPendingChange={setMemberMutationPending} />
-      : null}
+      : <section className="group-edit-section-state" aria-label="Members unavailable"><p className="muted">Membership management is not available for this account.</p></section>}</div> : null}
   </ProductPageShellComponent>;
 }

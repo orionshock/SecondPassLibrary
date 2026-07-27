@@ -115,19 +115,6 @@
 
 .groups-inline-error { margin-bottom: 0.7rem; }
 
-.group-edit-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  padding-block: 0.7rem;
-  border-block: 1px solid var(--border);
-}
-
-.group-edit-tabs [aria-current="page"] {
-  border-color: var(--focus);
-  background: var(--surface-raised);
-}
-
 .group-books-edit-region,
 .group-book-candidates-region,
 .group-members-edit-region,

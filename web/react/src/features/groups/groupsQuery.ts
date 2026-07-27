@@ -11,6 +11,7 @@ import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
 export type GroupBookOrdering = Extract<BookOrdering,
   "title" | "-title" | "author" | "-author" | "series" | "-series">;
 export type GroupDetailTab = "books" | "members" | "shelves";
+export type GroupEditTab = "details" | "books" | "add-books" | "members";
 
 export interface GroupsListUrlState {
   q: string;
@@ -27,12 +28,18 @@ export interface GroupDetailUrlState {
   pageSize: number;
 }
 
+export interface GroupEditQueryState {
+  tab: GroupEditTab;
+  query: string;
+}
+
 const pageSizes = new Set([20, 30, 40, 50]);
 const groupOrderings = new Set(["name", "-name"] as const);
 const bookOrderings = new Set<GroupBookOrdering>([
   "title", "-title", "author", "-author", "series", "-series",
 ]);
 const groupDetailTabs: readonly GroupDetailTab[] = ["books", "members", "shelves"];
+const groupEditTabs: readonly GroupEditTab[] = ["details", "books", "add-books", "members"];
 
 export function groupsListStateFromSearchParams(parameters: URLSearchParams): GroupsListUrlState {
   const rawOrdering = parameters.get("ordering") as GroupsListUrlState["ordering"] | null;
@@ -133,6 +140,29 @@ export function groupShelvesSdkQuery(groupId: string, state: GroupDetailUrlState
     page: state.page,
     pageSize: state.pageSize,
   };
+}
+
+export function groupEditQueryFromSearchParams(parameters: URLSearchParams): GroupEditQueryState {
+  const { tab } = resolveTabQuery(parameters, groupEditTabs, "details");
+  return {
+    tab,
+    query: withTabQuery(parameters, tab, "details").toString(),
+  };
+}
+
+export function groupEditSearchParams(
+  parameters: URLSearchParams,
+  tab: GroupEditTab,
+): URLSearchParams {
+  return withTabQuery(parameters, tab, "details");
+}
+
+export function groupEditQueryDuringImmediateMutation(
+  requested: GroupEditQueryState,
+  stable: GroupEditQueryState,
+  pending: boolean,
+): GroupEditQueryState {
+  return pending ? stable : requested;
 }
 
 function validPageSize(raw: string | null): number {

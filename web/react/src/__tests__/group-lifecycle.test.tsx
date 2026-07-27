@@ -18,7 +18,6 @@ import {
   canMutateGroupMembers,
   canCreateGroupMetadata,
   groupMetadataAuthority,
-  initialGroupEditTab,
 } from "../features/groups/groupMetadataAuthority";
 import {
   groupEditBreadcrumbFallback,
@@ -90,9 +89,6 @@ describe("Group metadata lifecycle contracts", () => {
     expect(canManageGroup(manager, publicGroup)).toBe(true);
     expect(canManageGroup(baseUser, customGroup)).toBe(false);
     expect(canManageGroup(baseUser, publicGroup)).toBe(false);
-    expect(initialGroupEditTab(librarian, publicGroup)).toBe("books");
-    expect(initialGroupEditTab(manager, publicGroup)).toBe("books");
-    expect(initialGroupEditTab(manager, customGroup)).toBe("details");
   });
 
   it("normalizes dirty comparison and mutation inputs while allowing duplicate names", () => {
@@ -141,31 +137,20 @@ describe("Group metadata lifecycle contracts", () => {
     ]);
   });
 
-  it("shows Book mutation tabs only with exact curation authority", () => {
-    const editable = renderToStaticMarkup(<GroupEditTabsPageRegion
+  it("keeps every predefined Group management section visible", () => {
+    const markup = renderToStaticMarkup(<GroupEditTabsPageRegion
       activeTab="details"
-      canMutateBooks
-      canMutateMembers
       onTabChange={vi.fn()}
     />);
-    const readOnly = renderToStaticMarkup(<GroupEditTabsPageRegion
-      activeTab="details"
-      canMutateBooks={false}
-      canMutateMembers={false}
-      onTabChange={vi.fn()}
-    />);
-    expect(editable).toContain("Books");
-    expect(editable).toContain("Add Books");
-    expect(editable).toContain("Members");
-    expect(readOnly).not.toContain("Books");
-    expect(readOnly).not.toContain("Members");
+    expect(markup).toContain('role="tablist"');
+    for (const label of ["Details", "Books", "Add Books", "Members"]) {
+      expect(markup).toContain(label);
+    }
   });
 
   it("disables all Group Edit tabs while an immediate mutation is pending", () => {
     const markup = renderToStaticMarkup(<GroupEditTabsPageRegion
       activeTab="books"
-      canMutateBooks
-      canMutateMembers
       disabled
       onTabChange={vi.fn()}
     />);
