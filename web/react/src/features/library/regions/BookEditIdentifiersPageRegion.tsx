@@ -30,6 +30,7 @@ export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
     <div className="book-edit-identifier-header" aria-hidden="true"><span>Scheme</span><span>Value</span><span>Remove</span></div>
     {draft.identifiers.map((identifier, index) => <div className="book-edit-identifier-row" key={identifier.key}>
       <div className="book-edit-identifier-field">
+        <label className="book-edit-identifier-field-label" htmlFor={`book-edit-identifier-scheme-${index}`}>Scheme</label>
         <select
           id={`book-edit-identifier-scheme-${index}`}
           aria-label={`Identifier ${index + 1} scheme`}
@@ -41,6 +42,7 @@ export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
         {fieldError(error, `identifiers.${index}.scheme`) ? <span className="field-error">{fieldError(error, `identifiers.${index}.scheme`)}</span> : null}
       </div>
       <div className="book-edit-identifier-field">
+        <label className="book-edit-identifier-field-label" htmlFor={`book-edit-identifier-value-${index}`}>Value</label>
         <input
           id={`book-edit-identifier-value-${index}`}
           aria-label={`Identifier ${index + 1} value`}

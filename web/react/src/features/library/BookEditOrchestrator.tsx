@@ -295,8 +295,10 @@ export function BookEditOrchestrator() {
     <main className="book-edit-content">
       <p className="eyebrow">Editing Book</p>
       <h1>{draft.title || readyBook.title}</h1>
-      <p className="book-edit-context">{readyBook.authors.length ? `Authors: ${readyBook.authors.map(({ name }) => name).join(", ")}` : "No assigned Authors"}</p>
-      {readyBook.series ? <p className="book-edit-context">Series: {readyBook.series.name}{readyBook.series.seriesIndex ? ` ${readyBook.series.seriesIndex}` : ""}</p> : null}
+      <div className="book-edit-summary">
+        <p className="book-edit-context">{readyBook.authors.length ? `Authors: ${readyBook.authors.map(({ name }) => name).join(", ")}` : "No assigned Authors"}</p>
+        {readyBook.series ? <p className="book-edit-context">Series: {readyBook.series.name}{readyBook.series.seriesIndex ? ` ${readyBook.series.seriesIndex}` : ""}</p> : null}
+      </div>
       <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={groupMutation.pending} onChange={changeTab} />
       <div id={tabPanelId("book-edit", tab)} role="tabpanel" aria-labelledby={tabButtonId("book-edit", tab)}>
       {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}

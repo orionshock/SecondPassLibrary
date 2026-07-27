@@ -49,9 +49,6 @@ export function BookEditGroupsPageRegion({
     <h2 id="book-edit-groups-heading">Library Groups</h2>
     <ul className="book-edit-group-list">
       {currentGroups.map((group) => <li key={group.id} className="book-edit-group-row">
-        {group.id !== solePublicId
-          ? <RemoveIconButton type="button" label={`Remove ${group.name}`} disabled={disabled} onClick={() => onRemove(group)} />
-          : <span className="book-edit-group-row__control-spacer" aria-hidden="true" />}
         <span
           className={group.isPublicGroup ? "book-edit-group-assignment book-edit-group-assignment--public" : "book-edit-group-assignment"}
           title={group.description || undefined}
@@ -59,13 +56,16 @@ export function BookEditGroupsPageRegion({
           <MaterialIcon name={group.isPublicGroup ? "public" : "group"} size={17} />
           <span>{group.name}</span>
         </span>
+        {group.id !== solePublicId
+          ? <RemoveIconButton type="button" label={`Remove ${group.name}`} disabled={disabled} onClick={() => onRemove(group)} />
+          : <span className="book-edit-group-row__control-spacer" aria-hidden="true" />}
       </li>)}
     </ul>
 
     <div className="book-edit-group-add">
       <label htmlFor="book-edit-add-group">Add to group</label>
       {loading ? <span className="book-edit-picker-status">Loading groups...</span> : null}
-      {pickerError ? <ErrorPanel><span>Groups could not be loaded.</span> <Button type="button" onClick={onRetry}>Retry</Button></ErrorPanel> : null}
+      {pickerError ? <ErrorPanel><span>Groups could not be loaded.</span> <Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></ErrorPanel> : null}
       {!loading && !pickerError ? <div className="book-edit-inline-control">
         <select id="book-edit-add-group" value={groupId} disabled={disabled || unassignedGroups.length === 0} onChange={(event) => { setGroupId(event.target.value); onSelectionChange(); }}>
           {unassignedGroups.length === 0 ? <option value="">No groups available</option> : null}

@@ -67,7 +67,7 @@ export function BookCoverEditorComponent({
       <div className="book-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="book-cover-dialog-title" onKeyDown={handleDialogKeyDown}>
         <header className="book-cover-dialog__header">
           <h2 id="book-cover-dialog-title">Change Cover</h2>
-          <Button ref={closeButton} type="button" tone="secondary" disabled={state.pending} onClick={close}>Close</Button>
+          <Button ref={closeButton} type="button" size="small" tone="secondary" disabled={state.pending} onClick={close}>Close</Button>
         </header>
         <div className="book-cover-dialog__body">
           <div className="book-cover-dialog__preview"><BookCoverComponent coverUrl={coverUrl} title={title} /></div>
@@ -81,12 +81,12 @@ export function BookCoverEditorComponent({
             {state.message ? <p className="book-cover-dialog__success" role="status">{state.message}</p> : null}
             {confirmingClear ? <div className="book-cover-dialog__confirmation">
               <span>Clear the current cover?</span>
-              <Button type="button" tone="danger" disabled={controlsDisabled} onClick={onClear}>{pendingAction === "clear" ? "Clearing..." : "Confirm Clear Cover"}</Button>
-              <Button type="button" tone="secondary" disabled={controlsDisabled} onClick={() => setConfirmingClear(false)}>Keep Cover</Button>
+              <Button type="button" size="small" tone="danger" disabled={controlsDisabled} onClick={onClear}>{pendingAction === "clear" ? "Clearing..." : "Confirm Clear Cover"}</Button>
+              <Button type="button" size="small" tone="secondary" disabled={controlsDisabled} onClick={() => setConfirmingClear(false)}>Keep Cover</Button>
             </div> : <div className="book-cover-editor__actions">
               <Button type="button" disabled={controlsDisabled || !selectedFile} onClick={() => selectedFile && onReplace(selectedFile)}>{pendingAction === "replace" ? "Replacing..." : "Replace Cover"}</Button>
               {coverUrl ? <Button type="button" tone="secondary" disabled={controlsDisabled} onClick={() => setConfirmingClear(true)}>Clear Cover</Button> : null}
-              <Button type="button" tone="secondary" disabled={state.pending} onClick={close}>Cancel</Button>
+              <Button type="button" size="small" tone="secondary" disabled={state.pending} onClick={close}>Cancel</Button>
             </div>}
           </div>
         </div>

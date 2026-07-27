@@ -5,7 +5,7 @@ import type { LibraryAuthor, LibrarySeries } from "@second-pass/spl-api";
 import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { FormField, IconButton } from "../../../components/ui";
+import { Button, FormField, IconButton } from "../../../components/ui";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import type { BookEditDraft } from "../bookEditDraft";
 import { libraryEntityBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState, libraryEntityNewPath } from "../authorSeriesLifecycle";
@@ -34,11 +34,11 @@ export function BookEditAuthorsSeriesPageRegion({ draft, error, authors, series,
   return <section className="book-edit-panel book-edit-relationships" role="tabpanel">
     <div className="book-edit-relationship-group">
       <div className="book-edit-relationship-heading"><h2>Authors</h2><Link
-        className="button button--secondary"
+        className="button button--small button--secondary"
         to={libraryEntityNewPath("author")}
         state={libraryEntityNavigationState({ breadcrumbs: libraryEntityBreadcrumbs("author", "new"), returnTo })}
       >New Author</Link></div>
-      {authorsLoading ? <p className="book-edit-picker-status">Loading Authors...</p> : authorsError ? <div className="book-edit-picker-error"><span>{authorsError.message}</span><button type="button" onClick={onRetryAuthors}>Retry</button></div> : <>
+      {authorsLoading ? <p className="book-edit-picker-status">Loading Authors...</p> : authorsError ? <div className="book-edit-picker-error"><span>{authorsError.message}</span><Button type="button" size="small" tone="secondary" onClick={onRetryAuthors}>Retry</Button></div> : <>
         <ol className="book-edit-author-list">{draft.authorIds.map((id, index) => <li key={id}>
           <span>{authorById.get(id)?.name ?? "Assigned author"}</span>
           <div className="book-edit-author-actions">
@@ -47,20 +47,23 @@ export function BookEditAuthorsSeriesPageRegion({ draft, error, authors, series,
             <RemoveIconButton type="button" label={`Remove ${authorById.get(id)?.name ?? "Author"}`} onClick={() => onChange("authorIds", draft.authorIds.filter((value) => value !== id))} />
           </div>
         </li>)}</ol>
-        <div className="book-edit-inline-control book-edit-author-add">
-          <select aria-label="Add existing Author" value={authorId} onChange={(event) => setAuthorId(event.target.value)}><option value="">Choose Author</option>{authors.filter(({ id }) => !draft.authorIds.includes(id)).map((author) => <option key={author.id} value={author.id}>{author.name}</option>)}</select>
-          <AddIconButton type="button" label="Add author" disabled={!authorId} onClick={() => { if (authorId) onChange("authorIds", [...draft.authorIds, authorId]); setAuthorId(""); }} />
+        <div className="book-edit-author-add">
+          <label htmlFor="book-edit-add-author">Add existing Author</label>
+          <div className="book-edit-inline-control">
+            <select id="book-edit-add-author" value={authorId} onChange={(event) => setAuthorId(event.target.value)}><option value="">Choose Author</option>{authors.filter(({ id }) => !draft.authorIds.includes(id)).map((author) => <option key={author.id} value={author.id}>{author.name}</option>)}</select>
+            <AddIconButton type="button" label="Add author" disabled={!authorId} onClick={() => { if (authorId) onChange("authorIds", [...draft.authorIds, authorId]); setAuthorId(""); }} />
+          </div>
         </div>
       </>}
       {fieldError(error, "authorIds") ? <span className="field-error">{fieldError(error, "authorIds")}</span> : null}
     </div>
     <div className="book-edit-relationship-group book-edit-series-fields">
       <div className="book-edit-relationship-heading"><h2>Series</h2><Link
-        className="button button--secondary"
+        className="button button--small button--secondary"
         to={libraryEntityNewPath("series")}
         state={libraryEntityNavigationState({ breadcrumbs: libraryEntityBreadcrumbs("series", "new"), returnTo })}
       >New Series</Link></div>
-      {seriesLoading ? <p className="book-edit-picker-status">Loading Series...</p> : seriesError ? <div className="book-edit-picker-error"><span>{seriesError.message}</span><button type="button" onClick={onRetrySeries}>Retry</button></div> : <>
+      {seriesLoading ? <p className="book-edit-picker-status">Loading Series...</p> : seriesError ? <div className="book-edit-picker-error"><span>{seriesError.message}</span><Button type="button" size="small" tone="secondary" onClick={onRetrySeries}>Retry</Button></div> : <>
         <FormField label="Assigned Series" htmlFor="book-edit-series" error={fieldError(error, "seriesId")}>
           <select id="book-edit-series" value={draft.seriesId ?? ""} onChange={(event) => { const id = event.target.value || null; onChange("seriesId", id); if (!id) onChange("seriesIndex", ""); }}><option value="">No Series</option>{series.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         </FormField>
