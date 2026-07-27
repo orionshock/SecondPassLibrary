@@ -93,7 +93,7 @@ export function ReadingExportOrchestrator() {
   }
 
   const selectedSessionIds = new Set(selection.keys());
-  return <ProductPageShellComponent eyebrow="My Marginalia" title="Export">
+  return <ProductPageShellComponent title="Export Marginalia">
     <ReadingExportPageRegion
       page={load.page}
       pageNumber={query.page}

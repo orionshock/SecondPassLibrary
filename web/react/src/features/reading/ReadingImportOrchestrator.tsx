@@ -57,7 +57,7 @@ export function ReadingImportOrchestrator() {
     }
   }
 
-  return <ProductPageShellComponent className="reading-import-shell" eyebrow="My Marginalia" title="Import">
+  return <ProductPageShellComponent className="reading-import-shell" title="Import Marginalia">
     <ReadingImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} inputRef={inputRef} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: ReadingImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookIndex, selected) => setDraft((current) => preview ? withReadingImportBookSelection(preview, current, bookIndex, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
       const next = new Set(current);
       if (editing) next.add(key); else next.delete(key);

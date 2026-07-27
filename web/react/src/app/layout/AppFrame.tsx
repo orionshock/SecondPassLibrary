@@ -73,7 +73,9 @@ export function AppFrame({
         </div>
       </header>
 
-      <BreadcrumbsComponent items={breadcrumbs} />
+      <div className="app-breadcrumb-slot">
+        <BreadcrumbsComponent items={breadcrumbs} />
+      </div>
 
       <main className="app-content">
         <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, refreshServerInfo: onRefreshServerInfo, setBreadcrumbs } satisfies AppOutletContext} />

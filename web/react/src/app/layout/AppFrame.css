@@ -1,6 +1,8 @@
 .app-shell {
   --page-max-width: 66rem;
   --page-gutter: 1rem;
+  --breadcrumb-line-height: 1.2rem;
+  --breadcrumb-content-gap: 0.75rem;
 
   display: flex;
   width: min(var(--page-max-width), calc(100% - (2 * var(--page-gutter))));
@@ -103,14 +105,19 @@
   flex: 1;
 }
 
-.app-breadcrumbs {
+.app-breadcrumb-slot {
+  min-height: calc(clamp(1.25rem, 3vw, 2rem) + var(--breadcrumb-line-height));
   padding-top: clamp(1.25rem, 3vw, 2rem);
-  color: var(--muted);
-  font-size: 0.8rem;
 }
 
-.app-breadcrumbs + .app-content {
-  padding-top: 0.75rem;
+.app-breadcrumbs {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: var(--breadcrumb-line-height);
+}
+
+.app-breadcrumb-slot + .app-content {
+  padding-top: var(--breadcrumb-content-gap);
 }
 
 .app-breadcrumbs ol {
