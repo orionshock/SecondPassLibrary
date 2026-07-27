@@ -168,6 +168,11 @@ export function BookEditOrchestrator() {
     });
     return () => { active = false; };
   }, [bookId, groupShelfRetry, tab]);
+  useEffect(() => {
+    if (tab !== "group-shelves" && groupShelfMutation.message) {
+      setGroupShelfMutation(idleMutationState);
+    }
+  }, [groupShelfMutation.message, tab]);
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {
     setDraft((current) => current ? { ...current, [field]: value } : current);
     setMutation(idleMutationState);

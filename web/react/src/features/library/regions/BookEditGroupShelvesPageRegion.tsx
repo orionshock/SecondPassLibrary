@@ -15,7 +15,7 @@ export function BookEditGroupShelvesPageRegion({
   disabled,
   shelfNavigationState,
   onRetry,
-  onRemove,
+    onRemove,
 }: {
   shelves: readonly ShelfSummary[];
   loading: boolean;
@@ -28,7 +28,6 @@ export function BookEditGroupShelvesPageRegion({
 }) {
   return <section className="book-edit-panel book-edit-group-shelves" aria-labelledby="book-edit-group-shelves-heading">
     <h2 id="book-edit-group-shelves-heading">Group Shelves</h2>
-    <p className="book-edit-group-shelves__note">Only group-owned shelves are shown here.</p>
     {loading ? <p className="book-edit-picker-status" aria-busy="true">Loading group shelves...</p> : null}
     {error ? <div className="book-edit-group-shelves__error">
       <ErrorPanel>{error.message}</ErrorPanel>
@@ -47,5 +46,6 @@ export function BookEditGroupShelvesPageRegion({
       </li>)}
     </ul> : null}
     <ActionFeedbackComponent state={mutation} />
+    <p className="book-edit-group-shelves__note">Only group-owned shelves are shown here.</p>
   </section>;
 }
