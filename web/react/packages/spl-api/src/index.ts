@@ -34,6 +34,7 @@ export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   downloadCompleteReadingExport,
   downloadSelectedReadingExport,
+  downloadUnmatchedReadingImport,
   applyReadingImport,
   getReadingProgress,
   getReadingSession,

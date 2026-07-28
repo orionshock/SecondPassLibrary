@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
+from io import BytesIO
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
@@ -23,6 +26,10 @@ class MarginaliaImportError(ValueError):
     def __init__(self, message: str, errors: list[dict[str, str]] | None = None):
         super().__init__(message)
         self.errors = errors or [{"path": "$", "message": message}]
+
+
+class NoDownloadableUnmatchedSessionsError(MarginaliaImportError):
+    pass
 
 
 def _format_import_size(byte_count: int) -> str:
@@ -116,6 +123,10 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
         if session.get("needs_reader")
     )
     unmatched_entries = unmatched_books + unmatched_sessions
+    downloadable_unmatched_session_count = sum(
+        len(book["sessions"])
+        for book in _downloadable_unmatched_books(plan["book_plans"])
+    )
     return {
         "valid": True,
         "type": payload.get("type"),
@@ -131,62 +142,125 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
         "unmatched_entries": unmatched_entries,
         "unmatched_books": unmatched_books,
         "unmatched_sessions": unmatched_sessions,
+        "unmatched_downloadable_session_count": downloadable_unmatched_session_count,
     }
 
 
-def unmatched_marginalia_export(*, user, payload: dict[str, Any]) -> dict[str, Any]:
+def unmatched_marginalia_zip(*, user, payload: dict[str, Any]) -> bytes:
     plan = plan_marginalia_import(user=user, payload=payload)
-    unmatched_books = []
-    for book_plan in plan["book_plans"]:
-        summary = book_plan["summary"]
-        if summary["match"]["status"] == "unmatched":
-            unmatched_books.append(book_plan["exported"])
-            continue
-        invalid_session_ids = {
-            session["export_session_id"]
-            for session in summary["sessions"]
-            if session.get("needs_reader")
-        }
-        if invalid_session_ids:
-            exported = deepcopy(book_plan["exported"])
-            exported["sessions"] = [
-                session
-                for session in exported.get("sessions") or []
-                if session.get("export_session_id") in invalid_session_ids
-            ]
-            unmatched_books.append(exported)
-    return {
-        "type": payload.get("type"),
-        "schema_version": payload.get("schema_version"),
-        "profile": payload.get("profile"),
-        "generated_at": payload.get("generated_at"),
-        "generator": payload.get("generator") or "Second Pass Library",
-        "scope": {
-            "type": "selected",
-            "books": [
+    unmatched_books = _downloadable_unmatched_books(plan["book_plans"])
+    if not unmatched_books:
+        raise NoDownloadableUnmatchedSessionsError(
+            "No unmatched Sessions with annotations are available to download.",
+            [
                 {
-                    "book": _exported_book_source(book),
-                    "session_filter": "all",
+                    "path": "$.import_token",
+                    "message": "No downloadable unmatched Sessions are available.",
                 }
-                for book in unmatched_books
             ],
-        },
-        "books": unmatched_books,
-    }
+        )
+
+    archive = BytesIO()
+    with ZipFile(archive, "w", compression=ZIP_DEFLATED) as output:
+        for book_number, book in enumerate(unmatched_books, start=1):
+            book_key = _archive_key(
+                book.get("id"),
+                book.get("book_id"),
+                book.get("title"),
+                fallback=f"book-{book_number}",
+            )
+            directory = f"{book_number:02d}-{book_key}"
+            for session_number, session in enumerate(book["sessions"], start=1):
+                session_key = _archive_key(
+                    session.get("id"),
+                    session.get("session_id"),
+                    session.get("started_at"),
+                    session.get("startedAt"),
+                    fallback=f"session-{session_number}",
+                )
+                filename = (
+                    f"{directory}/{book_number:02d}-{session_number:02d}-"
+                    f"{book_key}-{session_key}.json"
+                )
+                exported_book = deepcopy(book)
+                exported_book["sessions"] = [deepcopy(session)]
+                mini_export = {
+                    key: deepcopy(value)
+                    for key, value in payload.items()
+                    if key not in {"books", "scope"}
+                }
+                mini_export["scope"] = {
+                    "type": "selected",
+                    "books": [
+                        {
+                            "book": (
+                                str(exported_book.get("source") or "").strip()
+                                or str(exported_book.get("file_hash") or "").strip()
+                                or str(exported_book.get("title") or "").strip()
+                                or "unmatched"
+                            ),
+                            "session_filter": "selected",
+                        }
+                    ],
+                }
+                mini_export["books"] = [exported_book]
+                info = ZipInfo(filename, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                info.external_attr = 0o600 << 16
+                output.writestr(
+                    info,
+                    json.dumps(
+                        mini_export, indent=2, ensure_ascii=False, sort_keys=True
+                    ).encode("utf-8"),
+                )
+    return archive.getvalue()
+
+
+def _downloadable_unmatched_books(
+    book_plans: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    books = []
+    for book_plan in book_plans:
+        summary = book_plan["summary"]
+        exported_sessions = book_plan["exported"].get("sessions") or []
+        if summary["match"]["status"] == "unmatched":
+            sessions = [
+                session
+                for session in exported_sessions
+                if _session_has_annotations(session)
+            ]
+        else:
+            sessions = [
+                exported
+                for exported, session in zip(
+                    exported_sessions, summary["sessions"]
+                )
+                if session.get("needs_reader") and _session_has_annotations(exported)
+            ]
+        if sessions:
+            book = deepcopy(book_plan["exported"])
+            book["sessions"] = sessions
+            books.append(book)
+    return books
+
+
+def _session_has_annotations(session: dict[str, Any]) -> bool:
+    annotations = session.get("annotations")
+    return isinstance(annotations, list) and bool(annotations)
+
+
+def _archive_key(*values: object, fallback: str) -> str:
+    value = next((text for value in values if (text := str(value or "").strip())), fallback)
+    ascii_value = (
+        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    )
+    key = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_value).strip("-").lower()[:60].rstrip("-")
+    return key or fallback
 
 
 def _load_schema() -> dict[str, Any]:
     path = Path(settings.BASE_DIR) / "docs" / "specs" / "marginalia-export.schema.json"
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _exported_book_source(book: dict[str, Any]) -> str:
-    return (
-        str(book.get("source") or "").strip()
-        or str(book.get("file_hash") or "").strip()
-        or str(book.get("title") or "").strip()
-        or "unmatched"
-    )
 
 
 def _json_path(parts) -> str:

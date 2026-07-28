@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from io import BytesIO
+from zipfile import ZipFile
 
 from django.contrib.auth import get_user_model
 from django.utils.dateparse import parse_datetime
@@ -255,9 +257,9 @@ class MarginaliaImportPreviewApiTests(
             "1 session has malformed locators and needs Reader-assisted import.",
             r.data["warnings"],
         )
-        unmatched = json.loads(
-            self.client.get(r.data["unmatched_download_url"]).content.decode("utf-8")
-        )
+        download = self.client.get(r.data["unmatched_download_url"])
+        with ZipFile(BytesIO(download.content)) as archive:
+            unmatched = json.loads(archive.read(archive.namelist()[0]))
         self.assertEqual(
             [book["title"] for book in unmatched["books"]], ["Visible Match"]
         )
@@ -287,9 +289,9 @@ class MarginaliaImportPreviewApiTests(
         self.assertEqual(r.data["unmatched_sessions"], 1)
         self.assertFalse(r.data["books"][0]["sessions"][0]["will_import"])
         self.assertTrue(r.data["books"][0]["sessions"][0]["needs_reader"])
-        unmatched = json.loads(
-            self.client.get(r.data["unmatched_download_url"]).content.decode("utf-8")
-        )
+        download = self.client.get(r.data["unmatched_download_url"])
+        with ZipFile(BytesIO(download.content)) as archive:
+            unmatched = json.loads(archive.read(archive.namelist()[0]))
         self.assertEqual(
             unmatched["books"][0]["sessions"][0]["progress"]["current_location"]["cfi"],
             "not-a-cfi",

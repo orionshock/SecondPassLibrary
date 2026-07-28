@@ -18,7 +18,7 @@ const preview: ReadingImportPreview = {
   summary: { books: 2, sessions: 3, annotations: 5 },
   warnings: ["Active exported sessions will be imported as historical sessions."],
   unmatchedEntries: 1,
-  unmatchedDownloadAvailable: true,
+  unmatchedDownloadableSessionCount: 0,
   books: [
     {
       title: "Matched Book", authors: ["Author One"], selectionReference: { source: "book:source", fileHash: "sha256:hidden", title: "Matched Book" },
@@ -39,20 +39,22 @@ const preview: ReadingImportPreview = {
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
-function renderImport(options: { preview?: ReadingImportPreview; result?: ReadingImportResult; draft?: ReturnType<typeof createMarginaliaImportDraft>; previewError?: Error; editingSessionKeys?: ReadonlySet<string> } = {}) {
+function renderImport(options: { preview?: ReadingImportPreview; result?: ReadingImportResult; draft?: ReturnType<typeof createMarginaliaImportDraft>; previewError?: Error; applyState?: { pending: boolean; error?: Error; message?: string }; downloadState?: { pending: boolean; error?: Error; message?: string }; editingSessionKeys?: ReadonlySet<string> } = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaImportPageRegion
     preview={options.preview}
     result={options.result}
     draft={options.draft ?? {}}
     editingSessionKeys={options.editingSessionKeys ?? new Set()}
     previewState={{ pending: false, error: options.previewError }}
-    applyState={{ pending: false }}
+    applyState={options.applyState ?? { pending: false }}
+    downloadState={options.downloadState ?? { pending: false }}
     inputRef={{ current: null }}
     onFileChange={vi.fn()}
     onPreview={vi.fn()}
     onDraftChange={vi.fn()}
     onBookSelectionChange={vi.fn()}
     onEditingChange={vi.fn()}
+    onDownloadUnmatched={vi.fn()}
     onApply={vi.fn()}
   /></MemoryRouter>);
 }
@@ -143,6 +145,30 @@ describe("My Marginalia import", () => {
     expect(markup).toContain('disabled=""');
     expect(markup).toContain("The archive could not be previewed");
     expect(markup).not.toContain("books[0].sessions[0]");
+  });
+
+  it("uses the backend downloadable Session count and disables an empty unmatched download", () => {
+    const emptyMarkup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
+    expect(emptyMarkup).toMatch(/<button[^>]*disabled=""[^>]*>Download Unmatched Sessions \(0\)<\/button>/);
+
+    const downloadable = { ...preview, unmatchedDownloadableSessionCount: 1 };
+    const enabledMarkup = renderImport({ preview: downloadable, draft: createMarginaliaImportDraft(downloadable) });
+    expect(enabledMarkup).toContain("Download Unmatched Sessions (1)");
+    expect(enabledMarkup).not.toMatch(/<button[^>]*disabled=""[^>]*>Download Unmatched Sessions \(1\)<\/button>/);
+  });
+
+  it("keeps a bounded unmatched-download error beside intact review content", () => {
+    const downloadable = { ...preview, unmatchedDownloadableSessionCount: 1 };
+    const markup = renderImport({
+      preview: downloadable,
+      draft: createMarginaliaImportDraft(downloadable),
+      applyState: { pending: false, error: new Error("The import still needs attention.") },
+      downloadState: { pending: false, error: new Error("The ZIP could not be downloaded.") },
+    });
+    expect(markup).toContain("The ZIP could not be downloaded.");
+    expect(markup).toContain("The import still needs attention.");
+    expect(markup).toContain("Imported session");
+    expect(markup).toContain("Import Selected Sessions");
   });
 
   it("renders the apply result and returns to the Session list", () => {

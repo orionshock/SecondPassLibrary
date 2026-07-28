@@ -203,7 +203,7 @@ describe("marginalia import", () => {
     summary: { books: 2, sessions: 2, annotations: 3 },
     warnings: ["Active exported sessions will be imported as historical sessions."],
     unmatched_entries: 1,
-    unmatched_download_url: "/api/v1/reading/import/unmatched/?import_token=opaque-preview-token",
+    unmatched_downloadable_session_count: 0,
     books: [
       {
         title: "Matched Book", authors: ["Author One"], source: "book:source", file_hash: "sha256:hidden",
@@ -241,7 +241,7 @@ describe("marginalia import", () => {
     expect(Array.from((calls[0]?.init?.body as FormData).entries())).toEqual([["file", file]]);
     expect(preview).toMatchObject({
       importToken: "opaque-preview-token", canApply: true, summary: { books: 2, sessions: 2, annotations: 3 },
-      unmatchedEntries: 1, unmatchedDownloadAvailable: true,
+      unmatchedEntries: 1, unmatchedDownloadableSessionCount: 0,
       books: [
         { title: "Matched Book", authors: ["Author One"], matchStatus: "matched", matchedBookTitle: "Local Book", coverUrl: "/media/covers/matched.jpg", sessions: [{ exportSessionId: "export-session-1", willImport: true, activeWillImportAsHistorical: true }] },
         { title: "Missing Book", matchStatus: "unmatched", matchedBookTitle: null, coverUrl: null, sessions: [{ exportSessionId: "export-session-2", willImport: false }] },

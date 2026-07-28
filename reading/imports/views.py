@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from django.http import HttpResponse
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -12,9 +10,10 @@ from rest_framework.views import APIView
 from .apply import apply_marginalia_import
 from .services import (
     MarginaliaImportError,
+    NoDownloadableUnmatchedSessionsError,
     preview_marginalia_import,
     read_uploaded_marginalia_json,
-    unmatched_marginalia_export,
+    unmatched_marginalia_zip,
 )
 from .staging import (
     delete_staged_marginalia_import,
@@ -36,7 +35,7 @@ class MarginaliaImportPreviewView(APIView):
                 user=request.user,
                 payload=payload,
             )
-            if preview.get("unmatched_entries"):
+            if preview.get("unmatched_downloadable_session_count"):
                 preview["unmatched_download_url"] = (
                     f"/api/v1/reading/import/unmatched/?import_token={preview['import_token']}"
                 )
@@ -86,7 +85,12 @@ class MarginaliaImportUnmatchedView(APIView):
         token = request.query_params.get("import_token")
         try:
             payload = load_staged_marginalia_import(user=request.user, token=token)
-            unmatched = unmatched_marginalia_export(user=request.user, payload=payload)
+            archive = unmatched_marginalia_zip(user=request.user, payload=payload)
+        except NoDownloadableUnmatchedSessionsError as exc:
+            return Response(
+                {"valid": False, "errors": exc.errors},
+                status=409,
+            )
         except MarginaliaImportError as exc:
             return Response(
                 {"valid": False, "errors": exc.errors},
@@ -94,8 +98,10 @@ class MarginaliaImportUnmatchedView(APIView):
             )
 
         response = HttpResponse(
-            json.dumps(unmatched, indent=2),
-            content_type="application/json",
+            archive,
+            content_type="application/zip",
         )
-        response["Content-Disposition"] = 'attachment; filename="second-pass-unmatched-marginalia.json"'
+        response["Content-Disposition"] = (
+            'attachment; filename="secondpass-marginalia-sessions.zip"'
+        )
         return response

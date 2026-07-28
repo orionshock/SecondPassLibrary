@@ -190,7 +190,7 @@ export interface ReadingImportPreview {
   books: ReadingImportBookPreview[];
   warnings: string[];
   unmatchedEntries: number;
-  unmatchedDownloadAvailable: boolean;
+  unmatchedDownloadableSessionCount: number;
 }
 
 export interface ReadingImportSelectedSession {
@@ -230,7 +230,7 @@ interface ReadingImportPreviewResponse {
   summary: { books: number; sessions: number; annotations: number };
   warnings: string[];
   unmatched_entries: number;
-  unmatched_download_url?: string;
+  unmatched_downloadable_session_count: number;
   books: Array<{
     title: string;
     authors: string[];
@@ -287,7 +287,7 @@ export async function previewReadingImport(file: File, client: ApiClient = apiCl
     summary: { ...response.summary },
     warnings: [...response.warnings],
     unmatchedEntries: response.unmatched_entries,
-    unmatchedDownloadAvailable: Boolean(response.unmatched_download_url),
+    unmatchedDownloadableSessionCount: response.unmatched_downloadable_session_count,
     books: response.books.map((book) => ({
       title: book.title,
       authors: [...book.authors],
@@ -433,6 +433,15 @@ export async function listReadingAnnotations(query: ReadingAnnotationsQuery, cli
 
 export function downloadCompleteReadingExport(client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
   return client.requestAttachment("/api/v1/reading/export/", undefined, "second-pass-marginalia.json");
+}
+
+export function downloadUnmatchedReadingImport(importToken: string, client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
+  const parameters = new URLSearchParams({ import_token: importToken });
+  return client.requestAttachment(
+    `/api/v1/reading/import/unmatched/?${parameters.toString()}`,
+    undefined,
+    "secondpass-marginalia-sessions.zip",
+  );
 }
 
 export function downloadSelectedReadingExport(selection: ReadingExportSelection, client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {

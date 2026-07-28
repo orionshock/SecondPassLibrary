@@ -5,23 +5,26 @@ import { Link } from "react-router-dom";
 import { Badge, Button, FormField, Surface } from "../../../components/ui";
 import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
 import { marginaliaImportBookSelectionState, marginaliaImportSelectedCount, marginaliaImportSessionKey, type MarginaliaImportBookSelectionState, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "../marginaliaImportDraft";
 
-export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, inputRef, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onApply }: {
+export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, downloadState, inputRef, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
   preview?: ReadingImportPreview;
   draft: MarginaliaImportDraft;
   editingSessionKeys: ReadonlySet<string>;
   result?: ReadingImportResult;
   previewState: MutationState;
   applyState: MutationState;
+  downloadState: MutationState;
   inputRef: RefObject<HTMLInputElement | null>;
   onFileChange: (file?: File) => void;
   onPreview: (event: FormEvent<HTMLFormElement>) => void;
   onDraftChange: (key: string, value: MarginaliaImportSessionDraft) => void;
   onBookSelectionChange: (bookIndex: number, selected: boolean) => void;
   onEditingChange: (key: string, editing: boolean) => void;
+  onDownloadUnmatched: () => void;
   onApply: () => void;
 }) {
   const selectedCount = marginaliaImportSelectedCount(draft);
@@ -37,24 +40,25 @@ export function MarginaliaImportPageRegion({ preview, draft, result, editingSess
         </div>
       </form>
     </Surface>
-    {preview && !result ? <MarginaliaImportReview preview={preview} draft={draft} editingSessionKeys={editingSessionKeys} selectedCount={selectedCount} applyState={applyState} onDraftChange={onDraftChange} onBookSelectionChange={onBookSelectionChange} onEditingChange={onEditingChange} onApply={onApply} /> : null}
+    {preview && !result ? <MarginaliaImportReview preview={preview} draft={draft} editingSessionKeys={editingSessionKeys} selectedCount={selectedCount} applyState={applyState} downloadState={downloadState} onDraftChange={onDraftChange} onBookSelectionChange={onBookSelectionChange} onEditingChange={onEditingChange} onDownloadUnmatched={onDownloadUnmatched} onApply={onApply} /> : null}
     {result ? <MarginaliaImportResultRegion result={result} /> : null}
   </div>;
 }
 
-function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCount, applyState, onDraftChange, onBookSelectionChange, onEditingChange, onApply }: {
+function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCount, applyState, downloadState, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
   preview: ReadingImportPreview;
   draft: MarginaliaImportDraft;
   editingSessionKeys: ReadonlySet<string>;
   selectedCount: number;
   applyState: MutationState;
+  downloadState: MutationState;
   onDraftChange: (key: string, value: MarginaliaImportSessionDraft) => void;
   onBookSelectionChange: (bookIndex: number, selected: boolean) => void;
   onEditingChange: (key: string, editing: boolean) => void;
+  onDownloadUnmatched: () => void;
   onApply: () => void;
 }) {
   const summaryWarnings = preview.warnings.filter((warning) => !/(?:reader-assisted import|second pass reader import)/i.test(warning));
-  const unmatchedSessionCount = preview.books.reduce((count, book) => count + (book.matchStatus === "unmatched" ? book.sessionCount : book.sessions.filter((session) => session.needsReader).length), 0);
   if (preview.unmatchedEntries) {
     summaryWarnings.unshift(`${preview.unmatchedEntries} exported Book ${preview.unmatchedEntries === 1 ? "entry did" : "entries did"} not match a visible local Book and ${preview.unmatchedEntries === 1 ? "requires" : "require"} Second Pass Reader Import.`);
   }
@@ -115,9 +119,9 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
       </section>)}
     </div>
     <ActionRowComponent state={applyState}>
-      {preview.unmatchedDownloadAvailable && unmatchedSessionCount ? <Button type="button" tone="secondary" disabled>Download Unmatched Sessions ({unmatchedSessionCount})</Button> : null}
+      <span className="marginalia-import-download-action"><ActionFeedbackComponent state={downloadState} /><Button type="button" tone="secondary" disabled={preview.unmatchedDownloadableSessionCount === 0 || downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${preview.unmatchedDownloadableSessionCount})`}</Button></span>
       <span className="muted">{selectedCount} {selectedCount === 1 ? "session" : "sessions"} selected</span>
-      <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
+      <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending || downloadState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
     </ActionRowComponent>
   </section>;
 }

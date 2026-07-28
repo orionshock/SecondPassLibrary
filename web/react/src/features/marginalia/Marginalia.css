@@ -327,6 +327,14 @@
   border-top: 1px solid var(--border);
 }
 
+.marginalia-import-download-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.marginalia-import-download-action .action-feedback:empty { display: none; }
+
 .marginalia-import-result-actions { margin-top: 1rem; }
 
 .marginalia-export-page,

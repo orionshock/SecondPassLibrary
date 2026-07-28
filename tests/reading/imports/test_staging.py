@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any, cast
+from zipfile import ZipFile
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -128,17 +129,18 @@ class MarginaliaImportPreviewApiTests(
         )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertTrue(r["Content-Type"].startswith("application/json"))
+        self.assertEqual(r["Content-Type"], "application/zip")
         self.assertEqual(
             r["Content-Disposition"],
-            'attachment; filename="second-pass-unmatched-marginalia.json"',
+            'attachment; filename="secondpass-marginalia-sessions.zip"',
         )
-        self.assertFalse(r.content.lstrip().startswith(b"<!DOCTYPE html>"))
-        parsed = json.loads(r.content.decode("utf-8"))
+        with ZipFile(BytesIO(r.content)) as archive:
+            self.assertEqual(len(archive.namelist()), 1)
+            parsed = json.loads(archive.read(archive.namelist()[0]))
         self.assertEqual(parsed["type"], "SecondPassMarginaliaExport")
         self.assertEqual(parsed["schema_version"], "0.1.0")
         self.assertEqual(parsed["scope"]["type"], "selected")
-        self.assertEqual(parsed["scope"]["books"][0]["session_filter"], "all")
+        self.assertEqual(parsed["scope"]["books"][0]["session_filter"], "selected")
         self.assertEqual([book["title"] for book in parsed["books"]], ["Missing Book"])
         self.assertNotIn("Visible Match", str(parsed))
 

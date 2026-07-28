@@ -1069,7 +1069,8 @@ and Product UI workflow. The designated Public group cannot be deleted.
   - `POST /api/v1/reading/export/` exports selected owned books/sessions, including owned sessions for books the user can no longer view.
 - Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
   - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches by file hash only.
-  - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads a native SPL JSON subset containing staged preview books that could not be matched to visible local books plus malformed-locator sessions from matched books.
+  - Preview includes `unmatched_downloadable_session_count`, counting only unmatched/Reader-required Sessions with at least one annotation.
+  - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads `secondpass-marginalia-sessions.zip`. The ZIP has numbered Book directories and one native SPL mini-export JSON file per downloadable Session; each file contains exactly one Book and one Session. Zero-annotation Sessions and resulting empty Book directories are excluded. A valid token with no downloadable Sessions returns `409`; downloading does not consume the token or change later apply behavior.
 - Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
   - `POST /api/v1/reading/import/apply/` requires an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not accept direct file uploads or foreign/provider formats.
   - Optional multipart `selection` JSON limits import to selected export-local sessions and may override imported session `name`/`notes`.
@@ -1097,7 +1098,7 @@ Reading payload notes:
   Marginalia Profile shape first.
 - Marginalia apply imports visible local books matched by file hash only, skips unmatched books, creates new historical/imported sessions, never imports exported active sessions as active local sessions, and treats duplicate findings as warnings rather than blockers. ISBN and title/author fallback matching are intentionally not used for server-side locator import.
 - Server-side apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`; the server does not resolve CFIs against EPUB content. Sessions with malformed locators are excluded from server apply and preserved for Reader-assisted import. The import unit is a session; annotation-level selection is not supported. Session selection uses export-local session ids, not SPL database ids.
-- Unmatched import download is Product UI/session-authenticated, tied to the current user's staged preview token, and intended for Reader-assisted re-anchoring when the original book file is missing, different, or has malformed locators.
+- Unmatched import download is Product UI/session-authenticated, tied to the current user's staged preview token, and intended for Second Pass Reader re-anchoring when the original book file is missing, different, or has malformed locators. It is separate from, and does not change, complete or selected Marginalia export.
 - Export JSON follows the Second Pass Library Marginalia Profile and is nested
   as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session
   context from nesting, annotations belong to reading sessions, and marginalia
