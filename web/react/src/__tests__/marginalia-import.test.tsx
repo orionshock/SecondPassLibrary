@@ -131,6 +131,13 @@ describe("My Marginalia import", () => {
     expect(markup).not.toContain("sha256:hidden");
   });
 
+  it("renders duplicate status on the affected Session while preserving the Book match", () => {
+    const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
+    expect(markup).toContain(">Possible Duplicate Session</span>");
+    expect(markup).toContain(">Matched Book</span>");
+    expect(markup).toContain('role="tooltip"');
+  });
+
   it("reveals populated name and note controls only for the edited row", () => {
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview), editingSessionKeys: new Set(["0:0"]) });
     expect(markup).toContain("<textarea");

@@ -298,6 +298,7 @@
 }
 
 .marginalia-import-session__select { font-weight: 700; }
+.marginalia-import-session__select > label { display: inline-flex; align-items: center; gap: 0.5rem; }
 .marginalia-import-session__facts { color: var(--muted); font-size: 0.85rem; }
 .marginalia-import-session__annotation-count { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
 

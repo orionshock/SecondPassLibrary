@@ -58,7 +58,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
   onDownloadUnmatched: () => void;
   onApply: () => void;
 }) {
-  const summaryWarnings = preview.warnings.filter((warning) => !/(?:reader-assisted import|second pass reader import)/i.test(warning));
+  const summaryWarnings = preview.warnings.filter((warning) => !/(?:reader-assisted import|second pass reader import|possible duplicate)/i.test(warning));
   if (preview.unmatchedEntries) {
     summaryWarnings.unshift(`${preview.unmatchedEntries} exported Book ${preview.unmatchedEntries === 1 ? "entry did" : "entries did"} not match a visible local Book and ${preview.unmatchedEntries === 1 ? "requires" : "require"} Second Pass Reader Import.`);
   }
@@ -84,7 +84,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
             </div>
             <span className="marginalia-import-book__match">
               {book.matchStatus === "matched"
-                ? <Badge tone="success">Matched</Badge>
+                ? <Badge tone="success">Matched Book</Badge>
                 : book.warning
                   ? <HelpPopoverComponent ariaLabel={`Why ${book.title || "this Book"} is unmatched`} icon="warning_amber" label="Unmatched" mouseoverText={book.warning} border borderColor="#d8b65a" color="#d8b65a" />
                   : <Badge>Unmatched</Badge>}
@@ -95,20 +95,22 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
           const key = marginaliaImportSessionKey(bookIndex, sessionIndex);
           const value = draft[key] ?? { selected: false, name: session.name, notes: session.notes };
           const editing = editingSessionKeys.has(key);
-          const sessionIdentity = <><span>{value.name.trim() || "Unnamed session"}</span><span className="css-dot" aria-hidden="true" /><span className="marginalia-import-session__annotation-count">{session.annotationCount} annotations</span></>;
+          const sessionName = value.name.trim() || "Unnamed session";
+          const sessionFacts = <><span className="css-dot" aria-hidden="true" /><span className="marginalia-import-session__annotation-count">{session.annotationCount} annotations</span></>;
           return <article className="marginalia-import-session" key={key}>
             <div className="marginalia-import-session__summary">
               <div>
-                {session.willImport ? <label className="marginalia-import-session__select">
-                  <input type="checkbox" checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} />
-                  {sessionIdentity}
-                </label> : <div className="marginalia-import-session__select">{sessionIdentity}</div>}
+                {session.willImport ? <div className="marginalia-import-session__select">
+                  <label><input type="checkbox" checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} /><span>{sessionName}</span></label>
+                  {session.possibleDuplicate && session.warning ? <HelpPopoverComponent ariaLabel={`Why ${sessionName} may be a duplicate Session`} label="Possible Duplicate Session" mouseoverText={session.warning} border borderColor="#8f783f" color="#c2a85f" /> : null}
+                  {sessionFacts}
+                </div> : <div className="marginalia-import-session__select"><span>{sessionName}</span>{sessionFacts}</div>}
                 {session.activeWillImportAsHistorical ? <div className="marginalia-import-session__facts"><span>Imports as historical</span></div> : null}
                 {!editing && value.notes.trim() ? <p className="marginalia-import-session__note">{value.notes}</p> : null}
               </div>
               {session.willImport ? <Button type="button" size="small" tone="secondary" disabled={!value.selected || applyState.pending} onClick={() => onEditingChange(key, !editing)}>{editing ? "Done" : "Edit"}</Button> : null}
             </div>
-            {session.warning ? <p className="marginalia-import-warning">{session.warning}</p> : null}
+            {session.warning && !session.possibleDuplicate ? <p className="marginalia-import-warning">{session.warning}</p> : null}
             {session.willImport && editing ? <div className="marginalia-import-session__edits">
               <FormField label="Imported name" htmlFor={`marginalia-import-name-${bookIndex}-${sessionIndex}`}><input id={`marginalia-import-name-${bookIndex}-${sessionIndex}`} value={value.name} disabled={!value.selected || applyState.pending} onChange={(event) => onDraftChange(key, { ...value, name: event.target.value })} /></FormField>
               <FormField label="Imported note" htmlFor={`marginalia-import-notes-${bookIndex}-${sessionIndex}`}><textarea id={`marginalia-import-notes-${bookIndex}-${sessionIndex}`} rows={2} value={value.notes} disabled={!value.selected || applyState.pending} onChange={(event) => onDraftChange(key, { ...value, notes: event.target.value })} /></FormField>
