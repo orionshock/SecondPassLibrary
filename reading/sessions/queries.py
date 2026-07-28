@@ -103,6 +103,7 @@ def apply_session_filters(
     status: str = "",
     is_active: str = "",
     q: str = "",
+    has_annotations: str = "",
 ) -> QuerySet[ReadingSession]:
     if book is not None:
         queryset = queryset.filter(book_id=book.id)
@@ -124,6 +125,15 @@ def apply_session_filters(
             queryset = queryset.filter(is_active=False)
         else:
             raise DRFValidationError({"is_active": "Invalid boolean."})
+
+    raw_has_annotations = (has_annotations or "").strip().lower()
+    if raw_has_annotations:
+        if raw_has_annotations in {"1", "true", "t", "yes", "y", "on"}:
+            queryset = queryset.filter(annotation_count__gt=0)
+        elif raw_has_annotations in {"0", "false", "f", "no", "n", "off"}:
+            queryset = queryset.filter(annotation_count=0)
+        else:
+            raise DRFValidationError({"has_annotations": "Invalid boolean."})
 
     return queryset.distinct().order_by("-started_at")
 

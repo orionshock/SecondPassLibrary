@@ -29,13 +29,16 @@ class StagedImportCleanupResult:
     cleanup_failures: int
 
 
-def stage_marginalia_import(*, user, payload: dict[str, Any]) -> str:
+def stage_marginalia_import(
+    *, user, payload: dict[str, Any], include_empty_sessions: bool = False
+) -> str:
     cleanup_staged_imports()
     token = secrets.token_urlsafe(32)
     data = {
         "staged_at": timezone.now().isoformat(),
         "user_id": user.id,
         "payload": payload,
+        "include_empty_sessions": include_empty_sessions,
     }
     path = staged_import_path(token)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -43,7 +46,9 @@ def stage_marginalia_import(*, user, payload: dict[str, Any]) -> str:
     return token
 
 
-def load_staged_marginalia_import(*, user, token: str) -> dict[str, Any]:
+def load_staged_marginalia_import(
+    *, user, token: str
+) -> tuple[dict[str, Any], bool]:
     cleanup_staged_imports()
     path = staged_import_path(token)
     if not path.exists():
@@ -61,7 +66,7 @@ def load_staged_marginalia_import(*, user, token: str) -> dict[str, Any]:
     payload = data.get("payload")
     if not isinstance(payload, dict):
         raise _expired()
-    return payload
+    return payload, data.get("include_empty_sessions") is True
 
 
 def delete_staged_marginalia_import(*, token: str) -> None:

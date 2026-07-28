@@ -184,8 +184,8 @@ describe("reading session list", () => {
   it("serializes supported filters and pagination without inventing defaults", async () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return { count: 0, next: null, previous: null, results: [] } as T; } };
-    await listReadingSessions({ q: "storm notes", isActive: false, status: "archived", page: 3, pageSize: 40 }, client);
-    expect(calls).toEqual(["/api/v1/reading/sessions/?q=storm+notes&is_active=false&status=archived&page=3&page_size=40"]);
+    await listReadingSessions({ q: "storm notes", isActive: false, status: "archived", page: 3, pageSize: 40, hasAnnotations: true }, client);
+    expect(calls).toEqual(["/api/v1/reading/sessions/?q=storm+notes&is_active=false&status=archived&page=3&page_size=40&has_annotations=true"]);
   });
 
   it("preserves structured SDK errors", async () => {
@@ -204,6 +204,7 @@ describe("marginalia import", () => {
     warnings: ["Active exported sessions will be imported as historical sessions."],
     unmatched_entries: 1,
     unmatched_downloadable_session_count: 0,
+    include_empty_sessions: true,
     books: [
       {
         title: "Matched Book", authors: ["Author One"], source: "book:source", file_hash: "sha256:hidden",
@@ -234,14 +235,21 @@ describe("marginalia import", () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => { calls.push({ path, init }); return previewResponse as T; } };
     const file = new File(["{}"], "marginalia.json", { type: "application/json" });
-    const preview = await previewReadingImport(file, client);
+    const preview = await previewReadingImport(
+      file,
+      { includeEmptySessions: true },
+      client,
+    );
 
     expect(calls[0]?.path).toBe("/api/v1/reading/import/preview/");
     expect(calls[0]?.init?.method).toBe("POST");
-    expect(Array.from((calls[0]?.init?.body as FormData).entries())).toEqual([["file", file]]);
+    expect(Array.from((calls[0]?.init?.body as FormData).entries())).toEqual([
+      ["file", file],
+      ["include_empty_sessions", "true"],
+    ]);
     expect(preview).toMatchObject({
       importToken: "opaque-preview-token", canApply: true, summary: { books: 2, sessions: 2, annotations: 3 },
-      unmatchedEntries: 1, unmatchedDownloadableSessionCount: 0,
+      unmatchedEntries: 1, unmatchedDownloadableSessionCount: 0, includeEmptySessions: true,
       books: [
         { title: "Matched Book", authors: ["Author One"], matchStatus: "matched", matchedBookTitle: "Local Book", coverUrl: "/media/covers/matched.jpg", sessions: [{ exportSessionId: "export-session-1", willImport: true, activeWillImportAsHistorical: true }] },
         { title: "Missing Book", matchStatus: "unmatched", matchedBookTitle: null, coverUrl: null, sessions: [{ exportSessionId: "export-session-2", willImport: false }] },
@@ -267,7 +275,7 @@ describe("marginalia import", () => {
   it("preserves preview and apply SDK errors", async () => {
     const error = new ApiError("The server could not complete the request.", 400, { fields: { importToken: ["Import preview expired."] } });
     const client: ApiClient = { request: async () => Promise.reject(error) };
-    await expect(previewReadingImport(new File(["{}"], "bad.json"), client)).rejects.toBe(error);
+    await expect(previewReadingImport(new File(["{}"], "bad.json"), {}, client)).rejects.toBe(error);
     await expect(applyReadingImport({ importToken: "expired", books: [] }, client)).rejects.toBe(error);
   });
 });

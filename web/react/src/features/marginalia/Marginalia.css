@@ -140,9 +140,22 @@
 
 .marginalia-import-upload__file-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: end;
   gap: 0.75rem;
+}
+
+.marginalia-empty-sessions-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.marginalia-export-empty-sessions {
+  justify-self: end;
 }
 
 .marginalia-import-upload__file-row .form-action-row {

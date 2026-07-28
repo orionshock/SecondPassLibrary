@@ -5,6 +5,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import serializers
 from rest_framework.views import APIView
 
 from .apply import apply_marginalia_import
@@ -29,11 +30,19 @@ class MarginaliaImportPreviewView(APIView):
 
     def post(self, request):
         try:
+            include_empty_sessions = serializers.BooleanField(default=False).run_validation(
+                request.data.get("include_empty_sessions", False)
+            )
             payload = read_uploaded_marginalia_json(request.FILES.get("file"))
-            preview = preview_marginalia_import(user=request.user, payload=payload)
+            preview = preview_marginalia_import(
+                user=request.user,
+                payload=payload,
+                include_empty_sessions=include_empty_sessions,
+            )
             preview["import_token"] = stage_marginalia_import(
                 user=request.user,
                 payload=payload,
+                include_empty_sessions=include_empty_sessions,
             )
             if preview.get("unmatched_downloadable_session_count"):
                 preview["unmatched_download_url"] = (
@@ -61,11 +70,14 @@ class MarginaliaImportApplyView(APIView):
                     "import_token is required.",
                     [{"path": "$.import_token", "message": "import_token is required."}],
                 )
-            payload = load_staged_marginalia_import(user=request.user, token=token)
+            payload, include_empty_sessions = load_staged_marginalia_import(
+                user=request.user, token=token
+            )
             result = apply_marginalia_import(
                 user=request.user,
                 payload=payload,
                 selection_raw=request.data.get("selection"),
+                include_empty_sessions=include_empty_sessions,
             )
             delete_staged_marginalia_import(token=token)
         except MarginaliaImportError as exc:
@@ -84,8 +96,14 @@ class MarginaliaImportUnmatchedView(APIView):
     def get(self, request):
         token = request.query_params.get("import_token")
         try:
-            payload = load_staged_marginalia_import(user=request.user, token=token)
-            archive = unmatched_marginalia_zip(user=request.user, payload=payload)
+            payload, include_empty_sessions = load_staged_marginalia_import(
+                user=request.user, token=token
+            )
+            archive = unmatched_marginalia_zip(
+                user=request.user,
+                payload=payload,
+                include_empty_sessions=include_empty_sessions,
+            )
         except NoDownloadableUnmatchedSessionsError as exc:
             return Response(
                 {"valid": False, "errors": exc.errors},

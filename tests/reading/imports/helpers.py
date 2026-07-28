@@ -39,10 +39,13 @@ class MarginaliaImportFixtureMixin(IsolatedMediaRootMixin):
             "marginalia.json", content, content_type="application/json"
         )
 
-    def post_preview_payload(self, payload: Any):
+    def post_preview_payload(self, payload: Any, *, include_empty_sessions=False):
+        data = {"file": self.upload_payload(payload)}
+        if include_empty_sessions:
+            data["include_empty_sessions"] = True
         return self.client.post(
             "/api/v1/reading/import/preview/",
-            {"file": self.upload_payload(payload)},
+            data,
             format="multipart",
         )
 
@@ -57,10 +60,18 @@ class MarginaliaImportFixtureMixin(IsolatedMediaRootMixin):
         )
 
     def post_apply_staged_payload(
-        self, payload: dict[str, Any], *, selection: Any = None
+        self,
+        payload: dict[str, Any],
+        *,
+        selection: Any = None,
+        include_empty_sessions=False,
     ):
         return self.post_apply_token(
-            stage_marginalia_import(user=self.user, payload=payload),
+            stage_marginalia_import(
+                user=self.user,
+                payload=payload,
+                include_empty_sessions=include_empty_sessions,
+            ),
             selection=selection,
         )
 

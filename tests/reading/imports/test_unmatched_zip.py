@@ -25,8 +25,12 @@ class MarginaliaImportUnmatchedZipTests(
         self.set_up_import_books()
         self.client.force_login(self.user)
 
-    def _download(self, payload, *, user=None):
-        token = stage_marginalia_import(user=user or self.user, payload=payload)
+    def _download(self, payload, *, user=None, include_empty_sessions=False):
+        token = stage_marginalia_import(
+            user=user or self.user,
+            payload=payload,
+            include_empty_sessions=include_empty_sessions,
+        )
         response = self.client.get(
             "/api/v1/reading/import/unmatched/", {"import_token": token}
         )
@@ -139,6 +143,18 @@ class MarginaliaImportUnmatchedZipTests(
         preview = self.post_preview_payload(payload)
         self.assertEqual(preview.data["unmatched_downloadable_session_count"], 0)
         self.assertNotIn("unmatched_download_url", preview.data)
+
+    def test_opt_in_includes_empty_sessions_in_preview_count_and_zip(self):
+        payload = self.preview_marginalia_payload(file_hash="1" * 64)
+        payload["books"][0]["sessions"][0]["annotations"] = []
+
+        preview = self.post_preview_payload(payload, include_empty_sessions=True)
+        _, download = self._download(payload, include_empty_sessions=True)
+
+        self.assertEqual(preview.data["unmatched_downloadable_session_count"], 1)
+        with ZipFile(BytesIO(download.content)) as archive:
+            exported = json.loads(archive.read(archive.namelist()[0]))
+        self.assertEqual(exported["books"][0]["sessions"][0]["annotations"], [])
 
     def test_invalid_expired_and_wrong_user_tokens_use_bounded_import_errors(self):
         missing = self.client.get(

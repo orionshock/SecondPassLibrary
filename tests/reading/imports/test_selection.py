@@ -91,6 +91,33 @@ class MarginaliaImportApplyApiTests(
         self.assertEqual(ReadingSession.objects.count(), 0)
         self.assertEqual(Annotation.objects.count(), 0)
 
+    def test_staged_empty_session_policy_blocks_hidden_selection_and_allows_opt_in(self):
+        payload = self.marginalia_payload()
+        payload["books"][0]["sessions"][0]["annotations"] = []
+        selection = {
+            "books": [
+                {
+                    "source": payload["books"][0]["source"],
+                    "sessions": [
+                        {"export_session_id": "session-1", "selected": True}
+                    ],
+                }
+            ]
+        }
+        self.client.force_login(self.user)
+
+        hidden = self.post_apply_staged_payload(payload, selection=selection)
+        included = self.post_apply_staged_payload(
+            payload,
+            selection=selection,
+            include_empty_sessions=True,
+        )
+
+        self.assertEqual(hidden.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(included.status_code, status.HTTP_200_OK)
+        self.assertEqual(included.data["summary"]["sessions_created"], 1)
+        self.assertEqual(ReadingSession.objects.count(), 1)
+
     def test_apply_selected_unmatched_book_returns_400_and_no_writes(self):
         payload = self.marginalia_payload(checksum="0" * 64, title="Missing Book")
         selection = {

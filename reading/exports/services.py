@@ -11,6 +11,7 @@ from library.models import Book, BookIdentifier
 
 from ..profile.marginalia import profile_annotation_from_model
 from ..models import ReadingSession
+from ..marginalia_policy import include_marginalia_session
 from ..profile.validation import CURRENT_READING_PROFILE_ID
 
 
@@ -181,7 +182,9 @@ def _book_payload_with_sessions(book: Book, sessions: list[ReadingSession]) -> d
     return book_payload
 
 
-def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict[str, Any]:
+def export_selected_marginalia(
+    *, user, selection: list[dict[str, Any]], include_empty_sessions: bool = False
+) -> dict[str, Any]:
     scope_books: list[dict[str, str]] = []
     payload = _base_export({"type": "selected", "books": scope_books})
 
@@ -194,6 +197,18 @@ def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict
         else:
             resolved_sessions = list(sessions)
             session_filter = "selected"
+        resolved_sessions = [
+            session
+            for session in resolved_sessions
+            if include_marginalia_session(
+                annotation_count=sum(
+                    1 for annotation in session.annotations.all() if not annotation.is_deleted
+                ),
+                include_empty_sessions=include_empty_sessions,
+            )
+        ]
+        if not resolved_sessions:
+            continue
         scope_books.append(
             {
                 "book": _book_source(book) or str(book.id),
@@ -202,6 +217,8 @@ def export_selected_marginalia(*, user, selection: list[dict[str, Any]]) -> dict
         )
         payload["books"].append(_book_payload_with_sessions(book, resolved_sessions))
 
+    if not payload["books"]:
+        raise ValueError("No Sessions are available to export.")
     _log_export_completed(user=user, scope_type="selected", payload=payload)
     return payload
 
@@ -220,7 +237,7 @@ def export_book_marginalia(
     return payload
 
 
-def export_all_marginalia(*, user) -> dict[str, Any]:
+def export_all_marginalia(*, user, include_empty_sessions: bool = False) -> dict[str, Any]:
     payload = _base_export({"type": "all"})
     sessions = (
         ReadingSession.objects.select_related(
@@ -239,6 +256,13 @@ def export_all_marginalia(*, user) -> dict[str, Any]:
     books_by_id: dict[str, dict[str, Any]] = {}
     session_counts: dict[str, int] = {}
     for session in sessions:
+        if not include_marginalia_session(
+            annotation_count=sum(
+                1 for annotation in session.annotations.all() if not annotation.is_deleted
+            ),
+            include_empty_sessions=include_empty_sessions,
+        ):
+            continue
         book = session.book
         book_key = str(book.id)
         if book_key not in books_by_id:
@@ -251,6 +275,8 @@ def export_all_marginalia(*, user) -> dict[str, Any]:
             _session_payload(session, f"session-{session_counts[book_key]}")
         )
 
+    if not payload["books"]:
+        raise ValueError("No Sessions are available to export.")
     _log_export_completed(user=user, scope_type="all", payload=payload)
     return payload
 

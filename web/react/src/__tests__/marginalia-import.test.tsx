@@ -19,6 +19,7 @@ const preview: ReadingImportPreview = {
   warnings: ["Active exported sessions will be imported as historical sessions."],
   unmatchedEntries: 1,
   unmatchedDownloadableSessionCount: 0,
+  includeEmptySessions: false,
   books: [
     {
       title: "Matched Book", authors: ["Author One"], selectionReference: { source: "book:source", fileHash: "sha256:hidden", title: "Matched Book" },
@@ -49,6 +50,8 @@ function renderImport(options: { preview?: ReadingImportPreview; result?: Readin
     applyState={options.applyState ?? { pending: false }}
     downloadState={options.downloadState ?? { pending: false }}
     inputRef={{ current: null }}
+    includeEmptySessions={false}
+    onIncludeEmptySessionsChange={vi.fn()}
     onFileChange={vi.fn()}
     onPreview={vi.fn()}
     onDraftChange={vi.fn()}
@@ -72,12 +75,12 @@ describe("My Marginalia import", () => {
   });
 
   it("requires a file locally and delegates a selected file to the SDK", async () => {
-    const upload = vi.fn<(file: File) => Promise<ReadingImportPreview>>().mockResolvedValue(preview);
-    await expect(previewSelectedMarginaliaImport(undefined, upload)).rejects.toBeInstanceOf(LocalValidationError);
+    const upload = vi.fn<(file: File, options: { includeEmptySessions?: boolean }) => Promise<ReadingImportPreview>>().mockResolvedValue(preview);
+    await expect(previewSelectedMarginaliaImport(undefined, false, upload)).rejects.toBeInstanceOf(LocalValidationError);
     expect(upload).not.toHaveBeenCalled();
     const file = new File(["{}"], "marginalia.json", { type: "application/json" });
-    await expect(previewSelectedMarginaliaImport(file, upload)).resolves.toBe(preview);
-    expect(upload).toHaveBeenCalledWith(file);
+    await expect(previewSelectedMarginaliaImport(file, true, upload)).resolves.toBe(preview);
+    expect(upload).toHaveBeenCalledWith(file, { includeEmptySessions: true });
   });
 
   it("renders a bounded upload and preview-before-apply explanation", () => {
@@ -85,7 +88,8 @@ describe("My Marginalia import", () => {
     expect(markup).toContain('type="file"');
     expect(markup).toContain('accept=".json,application/json"');
     expect(markup).toContain('type="submit"');
-    expect(markup).not.toContain('type="checkbox"');
+    expect(markup).toContain('type="checkbox"');
+    expect(markup).toContain("Include empty sessions");
   });
 
   it("defaults every importable Session to selected and builds exact edits without mutating the draft", () => {
@@ -112,7 +116,8 @@ describe("My Marginalia import", () => {
 
   it("renders the matched Book selector checked or mixed and omits unmatched selectors", () => {
     const all = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
-    expect(all.match(/type="checkbox"/g)).toHaveLength(3);
+    expect(all).toContain('aria-label="Select all importable sessions from Matched Book"');
+    expect(all).not.toContain('aria-label="Select all importable sessions from Missing Book"');
     const draft = createMarginaliaImportDraft(preview);
     draft["0:1"] = { ...draft["0:1"]!, selected: false };
     const partial = renderImport({ preview, draft });
@@ -182,7 +187,7 @@ describe("My Marginalia import", () => {
     const result: ReadingImportResult = { applied: true, summary: { booksMatched: 1, booksSkipped: 0, sessionsCreated: 2, annotationsCreated: 5, bookmarksCreated: 2, highlightsCreated: 3, commentedHighlightsCreated: 1 }, warnings: [] };
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview), result });
     expect(markup).toContain('href="/marginalia"');
-    expect(markup).not.toContain('type="checkbox"');
+    expect(markup).not.toContain("Select all importable sessions");
   });
 
   it("uses the canonical child breadcrumb trail", () => {

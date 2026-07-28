@@ -51,6 +51,7 @@ export interface ReadingSessionsQuery {
   status?: ReadingSessionStatus;
   page?: number;
   pageSize?: number;
+  hasAnnotations?: boolean;
 }
 
 interface ReadingSessionDetailResponse extends ReadingSessionSummaryResponse {
@@ -142,6 +143,7 @@ export interface ReadingExportSessionSelection {
 
 export interface ReadingExportSelection {
   sessions: readonly ReadingExportSessionSelection[];
+  includeEmptySessions?: boolean;
 }
 
 export interface ReadingImportCounts {
@@ -191,6 +193,7 @@ export interface ReadingImportPreview {
   warnings: string[];
   unmatchedEntries: number;
   unmatchedDownloadableSessionCount: number;
+  includeEmptySessions: boolean;
 }
 
 export interface ReadingImportSelectedSession {
@@ -231,6 +234,7 @@ interface ReadingImportPreviewResponse {
   warnings: string[];
   unmatched_entries: number;
   unmatched_downloadable_session_count: number;
+  include_empty_sessions: boolean;
   books: Array<{
     title: string;
     authors: string[];
@@ -276,9 +280,14 @@ interface ReadingImportResultResponse {
   warnings: string[];
 }
 
-export async function previewReadingImport(file: File, client: ApiClient = apiClient): Promise<ReadingImportPreview> {
+export async function previewReadingImport(
+  file: File,
+  options: { includeEmptySessions?: boolean } = {},
+  client: ApiClient = apiClient,
+): Promise<ReadingImportPreview> {
   const body = new FormData();
   body.append("file", file);
+  body.append("include_empty_sessions", String(options.includeEmptySessions ?? false));
   const response = await client.request<ReadingImportPreviewResponse>("/api/v1/reading/import/preview/", { method: "POST", body });
   return {
     importToken: response.import_token,
@@ -288,6 +297,7 @@ export async function previewReadingImport(file: File, client: ApiClient = apiCl
     warnings: [...response.warnings],
     unmatchedEntries: response.unmatched_entries,
     unmatchedDownloadableSessionCount: response.unmatched_downloadable_session_count,
+    includeEmptySessions: response.include_empty_sessions,
     books: response.books.map((book) => ({
       title: book.title,
       authors: [...book.authors],
@@ -365,6 +375,7 @@ export async function listReadingSessions(
   if (query.status !== undefined) parameters.set("status", query.status);
   if (query.page !== undefined) parameters.set("page", String(query.page));
   if (query.pageSize !== undefined) parameters.set("page_size", String(query.pageSize));
+  if (query.hasAnnotations !== undefined) parameters.set("has_annotations", String(query.hasAnnotations));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
   const response = await client.request<ApiPage<ReadingSessionSummaryResponse>>(
     `/api/v1/reading/sessions/${suffix}`,
@@ -431,8 +442,18 @@ export async function listReadingAnnotations(query: ReadingAnnotationsQuery, cli
   }));
 }
 
-export function downloadCompleteReadingExport(client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
-  return client.requestAttachment("/api/v1/reading/export/", undefined, "second-pass-marginalia.json");
+export function downloadCompleteReadingExport(
+  options: { includeEmptySessions?: boolean } = {},
+  client: AttachmentApiClient = apiClient,
+): Promise<AttachmentDownload> {
+  const parameters = new URLSearchParams({
+    include_empty_sessions: String(options.includeEmptySessions ?? false),
+  });
+  return client.requestAttachment(
+    `/api/v1/reading/export/?${parameters.toString()}`,
+    undefined,
+    "second-pass-marginalia.json",
+  );
 }
 
 export function downloadUnmatchedReadingImport(importToken: string, client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
@@ -456,6 +477,7 @@ export function downloadSelectedReadingExport(selection: ReadingExportSelection,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       books: [...sessionsByBook].map(([bookId, sessions]) => ({ book_id: bookId, sessions })),
+      include_empty_sessions: selection.includeEmptySessions ?? false,
     }),
   }, "second-pass-marginalia.json");
 }

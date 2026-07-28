@@ -37,6 +37,8 @@ function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), optio
     selectedState={{ pending: false, error: options.selectedError }}
     selectedSessionIds={selectedSessionIds}
     selectedBookCount={selectedSessionIds.size}
+    includeEmptySessions={false}
+    onIncludeEmptySessionsChange={vi.fn()}
     onSearchChange={vi.fn()}
     onSearch={vi.fn()}
     onStatusChange={vi.fn()}
@@ -72,6 +74,7 @@ describe("My Marginalia Export", () => {
     expect(markup).not.toContain("session-sensitive");
     expect(markup).not.toContain("book-sensitive");
     expect(markup).toContain("Select this page");
+    expect(markup).toContain("Include empty sessions");
     expect(markup).toMatch(/Export selected Sessions<\/button>/);
     expect(markup).toMatch(/disabled=""[^>]*>Export selected Sessions/);
   });

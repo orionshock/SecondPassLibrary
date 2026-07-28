@@ -14,6 +14,8 @@ from tests.reading.exports.helpers import (
     AllExportFixtureMixin,
     SelectedExportFixtureMixin,
     SingleBookExportFixtureMixin,
+    book_selection,
+    selected_export_payload,
 )
 from tests.reading.exports.schema_assertions import (
     assert_valid_marginalia_export,
@@ -119,7 +121,14 @@ class ReadingExportApiTests(
         self.client.force_login(self.user)
         blank_session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-        r = self._post_book(sessions=[str(blank_session.id)])
+        r = self.client.post(
+            self._book_url(),
+            selected_export_payload(
+                book_selection(self.book, [str(blank_session.id)]),
+                include_empty_sessions=True,
+            ),
+            format="json",
+        )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(
             r["Content-Disposition"],
@@ -150,6 +159,16 @@ class ReadingExportApiTests(
         r = self.client.post(
             self._book_url(),
             {"books": [{"book_id": str(hidden.id), "sessions": "all"}]},
+            format="json",
+        )
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+        r = self.client.post(
+            self._book_url(),
+            {
+                "books": [{"book_id": str(hidden.id), "sessions": "all"}],
+                "include_empty_sessions": True,
+            },
             format="json",
         )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
@@ -194,7 +213,9 @@ class AllMarginaliaExportApiTests(
 
     def test_all_export_download_header_and_scope(self):
         self.client.force_login(self.user)
-        r = assert_response(self.client.get(self._url()))
+        r = assert_response(
+            self.client.get(self._url(), {"include_empty_sessions": "true"})
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         assert_valid_marginalia_export(r.data)
@@ -206,9 +227,25 @@ class AllMarginaliaExportApiTests(
         self.assertIn(b'\n  "type"', r.content)
         self.assertEqual(r.data["scope"], {"type": "all"})
 
+    def test_all_export_excludes_empty_sessions_by_default(self):
+        self.client.force_login(self.user)
+
+        default = assert_response(self.client.get(self._url()))
+        included = assert_response(
+            self.client.get(self._url(), {"include_empty_sessions": "true"})
+        )
+
+        self.assertEqual([book["title"] for book in default.data["books"]], ["Alpha Book"])
+        self.assertEqual(
+            [book["title"] for book in included.data["books"]],
+            ["Alpha Book", "Beta Book"],
+        )
+
     def test_all_export_includes_current_user_visible_books_with_sessions(self):
         self.client.force_login(self.user)
-        r = assert_response(self.client.get(self._url()))
+        r = assert_response(
+            self.client.get(self._url(), {"include_empty_sessions": "true"})
+        )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
         books = r.data["books"]
@@ -233,7 +270,9 @@ class AllMarginaliaExportApiTests(
         ReadingSession.objects.create(user=self.user, book=hidden, name="Hidden pass")
 
         self.client.force_login(self.user)
-        r = assert_response(self.client.get(self._url()))
+        r = assert_response(
+            self.client.get(self._url(), {"include_empty_sessions": "true"})
+        )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         books = r.data["books"]
@@ -326,7 +365,7 @@ class SelectedBookMarginaliaExportApiTests(
                 self._body(
                     {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]},
                     {"book_id": str(self.other_book.id), "sessions": "all"},
-                ),
+                ) | {"include_empty_sessions": True},
                 format="json",
             )
         )

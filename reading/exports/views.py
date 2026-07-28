@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import serializers
 
 from library.models import Book
 
@@ -36,12 +37,31 @@ class AllMarginaliaExportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        payload = export_all_marginalia(user=request.user)
+        include_empty_sessions = serializers.BooleanField(default=False).run_validation(
+            request.query_params.get("include_empty_sessions", False)
+        )
+        try:
+            payload = export_all_marginalia(
+                user=request.user,
+                include_empty_sessions=include_empty_sessions,
+            )
+        except ValueError as exc:
+            raise ValidationError({"sessions": [str(exc)]}) from None
         return _download_response(payload, "second-pass-marginalia.json")
 
     def post(self, request):
+        include_empty_sessions = serializers.BooleanField(default=False).run_validation(
+            request.data.get("include_empty_sessions", False)
+        )
         selection = _parse_selection(data=request.data, user=request.user)
-        payload = export_selected_marginalia(user=request.user, selection=selection)
+        try:
+            payload = export_selected_marginalia(
+                user=request.user,
+                selection=selection,
+                include_empty_sessions=include_empty_sessions,
+            )
+        except ValueError as exc:
+            raise ValidationError({"sessions": [str(exc)]}) from None
         return _download_response(payload, "second-pass-marginalia.json")
 
 

@@ -17,6 +17,7 @@ from library.models import Book
 from library.queries import visible_books_for_user
 from reading.profile.marginalia import count_profile_annotations, profile_selectors
 from reading.models import ReadingSession
+from reading.marginalia_policy import include_marginalia_session
 
 
 MAX_MARGINALIA_IMPORT_BYTES = 25 * 1024 * 1024
@@ -87,10 +88,20 @@ def validate_marginalia_export(payload: dict[str, Any]) -> None:
         )
 
 
-def plan_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
+def plan_marginalia_import(
+    *, user, payload: dict[str, Any], include_empty_sessions: bool = False
+) -> dict[str, Any]:
     validate_marginalia_export(payload)
     books = payload.get("books") or []
-    book_plans = [_book_plan(user=user, exported=book) for book in books]
+    book_plans = [
+        _book_plan(
+            user=user,
+            exported=book,
+            include_empty_sessions=include_empty_sessions,
+        )
+        for book in books
+    ]
+    book_plans = [book for book in book_plans if book["exported"].get("sessions")]
     book_summaries = [book["summary"] for book in book_plans]
 
     total_sessions = sum(book["session_count"] for book in book_summaries)
@@ -99,7 +110,7 @@ def plan_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
     warnings = _warnings(book_summaries, apply_plan)
     return {
         "summary": {
-            "books": len(books),
+            "books": len(book_plans),
             "sessions": total_sessions,
             "annotations": total_annotations,
         },
@@ -111,8 +122,14 @@ def plan_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any]:
-    plan = plan_marginalia_import(user=user, payload=payload)
+def preview_marginalia_import(
+    *, user, payload: dict[str, Any], include_empty_sessions: bool = False
+) -> dict[str, Any]:
+    plan = plan_marginalia_import(
+        user=user,
+        payload=payload,
+        include_empty_sessions=include_empty_sessions,
+    )
     unmatched_books = sum(
         1 for book in plan["books"] if book["match"]["status"] == "unmatched"
     )
@@ -143,15 +160,22 @@ def preview_marginalia_import(*, user, payload: dict[str, Any]) -> dict[str, Any
         "unmatched_books": unmatched_books,
         "unmatched_sessions": unmatched_sessions,
         "unmatched_downloadable_session_count": downloadable_unmatched_session_count,
+        "include_empty_sessions": include_empty_sessions,
     }
 
 
-def unmatched_marginalia_zip(*, user, payload: dict[str, Any]) -> bytes:
-    plan = plan_marginalia_import(user=user, payload=payload)
+def unmatched_marginalia_zip(
+    *, user, payload: dict[str, Any], include_empty_sessions: bool = False
+) -> bytes:
+    plan = plan_marginalia_import(
+        user=user,
+        payload=payload,
+        include_empty_sessions=include_empty_sessions,
+    )
     unmatched_books = _downloadable_unmatched_books(plan["book_plans"])
     if not unmatched_books:
         raise NoDownloadableUnmatchedSessionsError(
-            "No unmatched Sessions with annotations are available to download.",
+            "No unmatched Sessions are available to download.",
             [
                 {
                     "path": "$.import_token",
@@ -224,29 +248,20 @@ def _downloadable_unmatched_books(
         summary = book_plan["summary"]
         exported_sessions = book_plan["exported"].get("sessions") or []
         if summary["match"]["status"] == "unmatched":
-            sessions = [
-                session
-                for session in exported_sessions
-                if _session_has_annotations(session)
-            ]
+            sessions = list(exported_sessions)
         else:
             sessions = [
                 exported
                 for exported, session in zip(
                     exported_sessions, summary["sessions"]
                 )
-                if session.get("needs_reader") and _session_has_annotations(exported)
+                if session.get("needs_reader")
             ]
         if sessions:
             book = deepcopy(book_plan["exported"])
             book["sessions"] = sessions
             books.append(book)
     return books
-
-
-def _session_has_annotations(session: dict[str, Any]) -> bool:
-    annotations = session.get("annotations")
-    return isinstance(annotations, list) and bool(annotations)
 
 
 def _archive_key(*values: object, fallback: str) -> str:
@@ -273,8 +288,19 @@ def _json_path(parts) -> str:
     return path
 
 
-def _book_plan(*, user, exported: dict[str, Any]) -> dict[str, Any]:
-    sessions = exported.get("sessions") or []
+def _book_plan(
+    *, user, exported: dict[str, Any], include_empty_sessions: bool
+) -> dict[str, Any]:
+    exported = deepcopy(exported)
+    sessions = [
+        session
+        for session in exported.get("sessions") or []
+        if include_marginalia_session(
+            annotation_count=count_profile_annotations([session])["annotation_count"],
+            include_empty_sessions=include_empty_sessions,
+        )
+    ]
+    exported["sessions"] = sessions
     annotation_counts = count_profile_annotations(sessions)
     local_book, match = match_exported_book(user=user, exported=exported)
     book_matched = match["status"] == "matched"

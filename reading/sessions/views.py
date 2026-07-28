@@ -111,6 +111,7 @@ class ReadingSessionViewSet(
             status=request.query_params.get("status") or "",
             is_active=request.query_params.get("is_active") or "",
             q=request.query_params.get("q") or "",
+            has_annotations=request.query_params.get("has_annotations") or "",
         )
 
     def list(self, request, *args, **kwargs):

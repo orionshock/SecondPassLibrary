@@ -8,7 +8,7 @@ import type { MutationState } from "../../../shared/feedback/mutationState";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import type { MarginaliaStatusFilter } from "../marginaliaQuery";
 
-export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search, status, loading, loadError, completeState, selectedState, selectedSessionIds, selectedBookCount, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry, onCompleteExport, onSessionSelectionChange, onSelectPage, onClearSelection, onSelectedExport }: {
+export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search, status, loading, loadError, completeState, selectedState, selectedSessionIds, selectedBookCount, includeEmptySessions, onIncludeEmptySessionsChange, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry, onCompleteExport, onSessionSelectionChange, onSelectPage, onClearSelection, onSelectedExport }: {
   page?: Page<ReadingSessionSummary>;
   pageNumber: number;
   pageSize: number;
@@ -20,6 +20,8 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   selectedState: MutationState;
   selectedSessionIds: ReadonlySet<string>;
   selectedBookCount: number;
+  includeEmptySessions: boolean;
+  onIncludeEmptySessionsChange: (include: boolean) => void;
   onSearchChange: (value: string) => void;
   onSearch: () => void;
   onStatusChange: (value: MarginaliaStatusFilter) => void;
@@ -38,6 +40,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   }
 
   return <div className="marginalia-export-page">
+    <label className="marginalia-empty-sessions-toggle marginalia-export-empty-sessions"><input type="checkbox" checked={includeEmptySessions} disabled={completeState.pending || selectedState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty sessions</label>
     <Surface title="Complete archive">
       <div className="marginalia-export-complete">
         <p>Download all of your reading history, including Sessions tied to Books that are no longer available.</p>

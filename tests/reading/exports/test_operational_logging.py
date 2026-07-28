@@ -23,7 +23,12 @@ class MarginaliaExportOperationalLoggingTests(
 
         with self.assertLogs("reading.exports.services", level="INFO") as logs:
             with self.captureOnCommitCallbacks(execute=True):
-                response = assert_response(self.client.get("/api/v1/reading/export/"))
+                response = assert_response(
+                    self.client.get(
+                        "/api/v1/reading/export/",
+                        {"include_empty_sessions": "true"},
+                    )
+                )
 
         output = logs.output[0]
         self.assertEqual(response.status_code, 200)
@@ -51,6 +56,7 @@ class MarginaliaExportOperationalLoggingTests(
                         selected_export_payload(
                             session_selection(self.book, self.session2),
                             book_selection(self.other_book, "all"),
+                            include_empty_sessions=True,
                         ),
                         format="json",
                     )

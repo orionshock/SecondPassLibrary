@@ -59,6 +59,23 @@ class ReadingSessionSummarySessionAuthTests(SessionVisibilityFixtureMixin, APITe
             {s["id"] for s in response_data_list(r_active)},
         )
 
+    def test_has_annotations_filter_supports_export_candidate_lists(self):
+        empty = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            name="Empty",
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+
+        response = assert_response(
+            self.client.get("/api/v1/reading/sessions/?has_annotations=true")
+        )
+
+        ids = {session["id"] for session in response_data_list(response)}
+        self.assertIn(str(self.session_visible.id), ids)
+        self.assertNotIn(str(empty.id), ids)
+
     def test_session_list_defaults_to_ten_and_accepts_explicit_twenty(self):
         for index in range(24):
             ReadingSession.objects.create(

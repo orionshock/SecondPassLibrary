@@ -10,7 +10,7 @@ import { fieldError, type MutationState } from "../../../shared/feedback/mutatio
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
 import { marginaliaImportBookSelectionState, marginaliaImportSelectedCount, marginaliaImportSessionKey, type MarginaliaImportBookSelectionState, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "../marginaliaImportDraft";
 
-export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, downloadState, inputRef, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
+export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, downloadState, inputRef, includeEmptySessions, onIncludeEmptySessionsChange, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
   preview?: ReadingImportPreview;
   draft: MarginaliaImportDraft;
   editingSessionKeys: ReadonlySet<string>;
@@ -19,6 +19,8 @@ export function MarginaliaImportPageRegion({ preview, draft, result, editingSess
   applyState: MutationState;
   downloadState: MutationState;
   inputRef: RefObject<HTMLInputElement | null>;
+  includeEmptySessions: boolean;
+  onIncludeEmptySessionsChange: (include: boolean) => void;
   onFileChange: (file?: File) => void;
   onPreview: (event: FormEvent<HTMLFormElement>) => void;
   onDraftChange: (key: string, value: MarginaliaImportSessionDraft) => void;
@@ -36,6 +38,7 @@ export function MarginaliaImportPageRegion({ preview, draft, result, editingSess
           <FormField label="Marginalia archive" htmlFor="marginalia-import-file" error={fieldError(previewState.error, "file")}>
             <input ref={inputRef} id="marginalia-import-file" name="file" type="file" accept=".json,application/json" disabled={previewState.pending || applyState.pending} onChange={(event) => onFileChange(event.target.files?.[0])} />
           </FormField>
+          <label className="marginalia-empty-sessions-toggle"><input type="checkbox" checked={includeEmptySessions} disabled={previewState.pending || applyState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty sessions</label>
           <ActionRowComponent state={previewState}><Button type="submit" disabled={previewState.pending || applyState.pending}>{previewState.pending ? "Previewing..." : "Preview"}</Button></ActionRowComponent>
         </div>
       </form>

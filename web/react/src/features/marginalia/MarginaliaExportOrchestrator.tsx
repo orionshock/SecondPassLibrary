@@ -31,6 +31,7 @@ export function MarginaliaExportOrchestrator() {
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<MarginaliaExportLoadState>({ loading: true });
   const [selection, setSelection] = useState<MarginaliaExportSelectionMap>(new Map());
+  const [includeEmptySessions, setIncludeEmptySessions] = useState(false);
   const [completeState, setCompleteState] = useState<MutationState>(idleMutationState);
   const [selectedState, setSelectedState] = useState<MutationState>(idleMutationState);
   const recoveredPageKeys = useRef(new Set<string>());
@@ -52,7 +53,11 @@ export function MarginaliaExportOrchestrator() {
       pageSize: query.pageSize,
       recoveryKey: `marginalia-export:${canonicalQuery}`,
       recoveredKeys: recoveredPageKeys.current,
-      fetchPage: (page) => listReadingSessions({ ...sdkQuery, page }),
+      fetchPage: (page) => listReadingSessions({
+        ...sdkQuery,
+        page,
+        hasAnnotations: includeEmptySessions ? undefined : true,
+      }),
       buildRecoveredLocation: (page) => marginaliaListSearchParams(withMarginaliaListChange(query, { page }, false)).toString(),
       replaceLocation: (nextQuery) => {
         if (!active) return false;
@@ -66,7 +71,7 @@ export function MarginaliaExportOrchestrator() {
       if (active) setLoad((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) }));
     });
     return () => { active = false; };
-  }, [canonicalQuery, location.state, query.page, query.pageSize, query.q, query.status, queryKey, retry, setSearchParameters]);
+  }, [canonicalQuery, includeEmptySessions, location.state, query.page, query.pageSize, query.q, query.status, queryKey, retry, setSearchParameters]);
 
   function changeQuery(changes: Parameters<typeof withMarginaliaListChange>[1], resetPage = true) {
     setSearchParameters(marginaliaListSearchParams(withMarginaliaListChange(query, changes, resetPage)), { state: location.state });
@@ -75,7 +80,7 @@ export function MarginaliaExportOrchestrator() {
   async function exportComplete() {
     setCompleteState({ pending: true });
     try {
-      saveDownloadedFile(await downloadCompleteReadingExport());
+      saveDownloadedFile(await downloadCompleteReadingExport({ includeEmptySessions }));
       setCompleteState({ pending: false, message: "Complete archive downloaded." });
     } catch (error: unknown) {
       setCompleteState({ pending: false, error: normalizeMutationError(error) });
@@ -86,7 +91,10 @@ export function MarginaliaExportOrchestrator() {
     if (!selection.size) return;
     setSelectedState({ pending: true });
     try {
-      saveDownloadedFile(await downloadSelectedReadingExport({ sessions: marginaliaExportSelectedSessions(selection) }));
+      saveDownloadedFile(await downloadSelectedReadingExport({
+        sessions: marginaliaExportSelectedSessions(selection),
+        includeEmptySessions,
+      }));
       setSelectedState({ pending: false, message: "Selected Sessions downloaded." });
     } catch (error: unknown) {
       setSelectedState({ pending: false, error: normalizeMutationError(error) });
@@ -107,6 +115,13 @@ export function MarginaliaExportOrchestrator() {
       selectedState={selectedState}
       selectedSessionIds={selectedSessionIds}
       selectedBookCount={marginaliaExportSelectedBookCount(selection)}
+      includeEmptySessions={includeEmptySessions}
+      onIncludeEmptySessionsChange={(include) => {
+        setIncludeEmptySessions(include);
+        setSelection(new Map());
+        setCompleteState(idleMutationState);
+        setSelectedState(idleMutationState);
+      }}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onStatusChange={(status) => changeQuery({ status })}

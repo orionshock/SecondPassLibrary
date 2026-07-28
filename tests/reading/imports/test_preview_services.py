@@ -307,17 +307,23 @@ class MarginaliaImportPreviewApiTests(
             ["session-1"],
         )
 
-    def test_empty_session_without_locators_remains_importable(self):
+    def test_empty_session_is_hidden_by_default_and_importable_when_included(self):
         self.client.force_login(self.user)
         payload = self.preview_marginalia_payload()
         payload["books"][0]["sessions"][0]["progress"] = None
         payload["books"][0]["sessions"][0]["annotations"] = []
 
-        r = assert_response(self.post_preview_payload(payload))
+        default = assert_response(self.post_preview_payload(payload))
+        included = assert_response(
+            self.post_preview_payload(payload, include_empty_sessions=True)
+        )
 
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-        self.assertTrue(r.data["books"][0]["sessions"][0]["will_import"])
-        self.assertFalse(r.data["books"][0]["sessions"][0]["needs_reader"])
+        self.assertEqual(default.status_code, status.HTTP_200_OK)
+        self.assertEqual(default.data["summary"], {"books": 0, "sessions": 0, "annotations": 0})
+        self.assertFalse(default.data["include_empty_sessions"])
+        self.assertTrue(included.data["include_empty_sessions"])
+        self.assertTrue(included.data["books"][0]["sessions"][0]["will_import"])
+        self.assertFalse(included.data["books"][0]["sessions"][0]["needs_reader"])
 
     def test_active_exported_sessions_warn_but_can_apply(self):
         self.client.force_login(self.user)

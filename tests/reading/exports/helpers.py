@@ -23,8 +23,11 @@ def session_selection(book, *sessions):
     return book_selection(book, [str(session.id) for session in sessions])
 
 
-def selected_export_payload(*books):
-    return {"books": list(books)}
+def selected_export_payload(*books, include_empty_sessions=False):
+    return {
+        "books": list(books),
+        "include_empty_sessions": include_empty_sessions,
+    }
 
 
 class ExportUserMixin(IsolatedMediaRootMixin):

@@ -13,6 +13,7 @@ import { MarginaliaImportPageRegion } from "./regions/MarginaliaImportPageRegion
 export function MarginaliaImportOrchestrator() {
   usePageBreadcrumbs(marginaliaImportBreadcrumbFallback);
   const [file, setFile] = useState<File>();
+  const [includeEmptySessions, setIncludeEmptySessions] = useState(false);
   const [preview, setPreview] = useState<ReadingImportPreview>();
   const [draft, setDraft] = useState<MarginaliaImportDraft>({});
   const [result, setResult] = useState<ReadingImportResult>();
@@ -33,11 +34,25 @@ export function MarginaliaImportOrchestrator() {
     setDownloadState(idleMutationState);
   }
 
+  function changeIncludeEmptySessions(include: boolean) {
+    setIncludeEmptySessions(include);
+    setPreview(undefined);
+    setDraft({});
+    setResult(undefined);
+    setEditingSessionKeys(new Set());
+    setPreviewState(idleMutationState);
+    setApplyState(idleMutationState);
+    setDownloadState(idleMutationState);
+  }
+
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPreviewState({ pending: true });
     try {
-      const nextPreview = await previewSelectedMarginaliaImport(file);
+      const nextPreview = await previewSelectedMarginaliaImport(
+        file,
+        includeEmptySessions,
+      );
       setPreview(nextPreview);
       setDraft(createMarginaliaImportDraft(nextPreview));
       setResult(undefined);
@@ -74,7 +89,7 @@ export function MarginaliaImportOrchestrator() {
   }
 
   return <ProductPageShellComponent className="marginalia-import-shell" title="Import Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="import" />}>
-    <MarginaliaImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} downloadState={downloadState} inputRef={inputRef} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: MarginaliaImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookIndex, selected) => setDraft((current) => preview ? withMarginaliaImportBookSelection(preview, current, bookIndex, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
+    <MarginaliaImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} downloadState={downloadState} inputRef={inputRef} includeEmptySessions={includeEmptySessions} onIncludeEmptySessionsChange={changeIncludeEmptySessions} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: MarginaliaImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookIndex, selected) => setDraft((current) => preview ? withMarginaliaImportBookSelection(preview, current, bookIndex, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
       const next = new Set(current);
       if (editing) next.add(key); else next.delete(key);
       return next;
@@ -82,7 +97,14 @@ export function MarginaliaImportOrchestrator() {
   </ProductPageShellComponent>;
 }
 
-export function previewSelectedMarginaliaImport(file: File | undefined, preview: (file: File) => Promise<ReadingImportPreview> = previewReadingImport): Promise<ReadingImportPreview> {
+export function previewSelectedMarginaliaImport(
+  file: File | undefined,
+  includeEmptySessions = false,
+  preview: (
+    file: File,
+    options: { includeEmptySessions?: boolean },
+  ) => Promise<ReadingImportPreview> = previewReadingImport,
+): Promise<ReadingImportPreview> {
   if (!file) return Promise.reject(new LocalValidationError("Choose a marginalia archive to preview.", { file: ["Choose a marginalia archive to preview."] }));
-  return preview(file);
+  return preview(file, { includeEmptySessions });
 }

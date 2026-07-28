@@ -22,8 +22,18 @@ from ..profile.validation import CURRENT_READING_PROFILE_VERSION
 logger = logging.getLogger(__name__)
 
 
-def apply_marginalia_import(*, user, payload: dict[str, Any], selection_raw: object = None) -> dict[str, Any]:
-    plan = plan_marginalia_import(user=user, payload=payload)
+def apply_marginalia_import(
+    *,
+    user,
+    payload: dict[str, Any],
+    selection_raw: object = None,
+    include_empty_sessions: bool = False,
+) -> dict[str, Any]:
+    plan = plan_marginalia_import(
+        user=user,
+        payload=payload,
+        include_empty_sessions=include_empty_sessions,
+    )
     selection = parse_import_selection(raw_selection=selection_raw, plan=plan)
     result = _empty_result()
 
