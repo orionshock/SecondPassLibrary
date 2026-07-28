@@ -86,8 +86,8 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
               {book.matchStatus === "matched"
                 ? <Badge tone="success">Matched Book</Badge>
                 : book.warning
-                  ? <HelpPopoverComponent ariaLabel={`Why ${book.title || "this Book"} is unmatched`} icon="warning_amber" label="Unmatched" mouseoverText={book.warning} border borderColor="#d8b65a" color="#d8b65a" />
-                  : <Badge>Unmatched</Badge>}
+                  ? <HelpPopoverComponent ariaLabel={`Why ${book.title || "this Book"} is unmatched`} icon="warning_amber" label="Unmatched Book" mouseoverText={book.warning} border borderColor="#d8b65a" color="#d8b65a" />
+                  : <Badge>Unmatched Book</Badge>}
             </span>
           </header>
           {book.matchStatus === "matched" && book.warning ? <p className="marginalia-import-warning">{book.warning}</p> : null}
