@@ -81,6 +81,9 @@ RUNNING_TESTS = "test" in sys.argv or any(
 
 SECOND_PASS_SERVER_VERSION = SERVER_VERSION
 SECOND_PASS_SERVER_RELEASE_DATE = SERVER_RELEASE_DATE
+SECOND_PASS_READING_CLIENT_BASE_URL = env.str(
+    "SECOND_PASS_READING_CLIENT_BASE_URL", default=""
+).strip()
 
 # Ensure required directories exist
 (USERDATA_DIR / "db").mkdir(parents=True, exist_ok=True)

@@ -158,6 +158,16 @@ describe("Book Detail presentation", () => {
     expect(render(<BookDetailHeroPageRegion book={book} />)).not.toContain("/edit");
     expect(render(<BookDetailHeroPageRegion book={book} canEdit editNavigationState={{ safe: true }} />)).toContain(`/library/books/${book.id}/edit`);
   });
+
+  it("shows a configured Reader launcher only for an available EPUB", () => {
+    const configured = render(<BookDetailHeroPageRegion book={book} readingClientBookUrl={`https://reader.example.com/#/reader/${book.id}`} />);
+    expect(configured).toContain("Open in Reader");
+    expect(configured).toContain(`href="https://reader.example.com/#/reader/${book.id}"`);
+    expect(configured).toContain('target="_blank"');
+    expect(configured).toContain('rel="noopener noreferrer"');
+    expect(render(<BookDetailHeroPageRegion book={book} />)).not.toContain("Open in Reader");
+    expect(render(<BookDetailHeroPageRegion book={{ ...book, file: null }} />)).not.toContain("Open in Reader");
+  });
 });
 
 describe("Book Detail navigation", () => {

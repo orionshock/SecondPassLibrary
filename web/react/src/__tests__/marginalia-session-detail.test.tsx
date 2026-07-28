@@ -79,6 +79,7 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).not.toContain("epubcfi");
     expect(markup).not.toContain("/html/body");
     expect(markup).not.toContain("session-sensitive-id");
+    expect(markup).not.toContain("Open in Reader");
   });
 
   it("keeps unavailable Book history inspectable without exposing a Book destination", () => {

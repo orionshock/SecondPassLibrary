@@ -29,6 +29,10 @@ def _server_settings_payload() -> dict[str, Any]:
         "advanced_library_groups_enabled": (
             server_settings.get_advanced_library_groups_enabled()
         ),
+        "reading_client_base_url": server_settings.get_reading_client_base_url(),
+        "reading_client_base_url_locked": (
+            server_settings.reading_client_base_url_locked()
+        ),
     }
 
 
@@ -59,6 +63,7 @@ class ServerSettingsView(APIView):
             "server_name",
             "server_description",
             "server_banner_message",
+            "reading_client_base_url",
             "public_group_name",
             "public_group_description",
         }
@@ -89,6 +94,14 @@ class ServerSettingsView(APIView):
                 )
             except ValueError as exc:
                 errors.setdefault("server_banner_message", []).append(str(exc))
+
+        if "reading_client_base_url" in data:
+            try:
+                server_settings.set_reading_client_base_url(
+                    str(data.get("reading_client_base_url") or "")
+                )
+            except ValueError as exc:
+                errors.setdefault("reading_client_base_url", []).append(str(exc))
 
         public_name = data.get("public_group_name", None)
         public_description = data.get("public_group_description", None)

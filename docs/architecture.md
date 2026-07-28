@@ -27,6 +27,11 @@ Notes:
   and disables normal group mutation endpoints while off. Disabling after
   enablement is an operator recovery action through Django admin.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
+- The optional Reading Client root URL uses
+  `ServerSetting(reading_client_base_url)` unless the nonblank
+  `SECOND_PASS_READING_CLIENT_BASE_URL` environment hard override is present.
+  The effective non-secret value is authenticated server context; it is not
+  current-user identity or anonymous discovery data.
 
 ## Shelves
 

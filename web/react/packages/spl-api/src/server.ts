@@ -5,6 +5,7 @@ interface ServerInfoResponse {
   server_description: string;
   server_banner_message: string;
   advanced_library_groups_enabled: boolean;
+  reading_client_base_url: string | null;
   public_group: {
     id: string;
     name: string;
@@ -27,6 +28,7 @@ export interface ServerInfo {
   description: string;
   bannerText: string;
   advancedLibraryGroupsEnabled: boolean;
+  readingClientBaseUrl: string | null;
   publicGroup: {
     id: string;
     name: string;
@@ -51,6 +53,7 @@ export async function getServerInfo(client: ApiClient = apiClient): Promise<Serv
     description: response.server_description,
     bannerText: response.server_banner_message,
     advancedLibraryGroupsEnabled: response.advanced_library_groups_enabled,
+    readingClientBaseUrl: response.reading_client_base_url,
     publicGroup: {
       id: response.public_group.id,
       name: response.public_group.name,

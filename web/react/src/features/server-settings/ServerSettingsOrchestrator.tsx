@@ -48,7 +48,7 @@ export function ServerSettingsOrchestrator() {
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<MutationState>(idleMutationState);
   useAutoDismissMutationMessage(state, setState);
-  const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ name: "", description: "", bannerText: "" });
+  const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ name: "", description: "", bannerText: "", readingClientBaseUrl: "", readingClientBaseUrlLocked: false });
   const [publicDraft, setPublicDraft] = useState<PublicLibrarySettings>({ name: "", description: "" });
 
   useEffect(() => {
@@ -100,7 +100,12 @@ export function ServerSettingsOrchestrator() {
     event.preventDefault();
     setState({ pending: true });
     try {
-      const settings = await updateGeneralSettings(generalDraft);
+      const settings = await updateGeneralSettings({
+        ...generalDraft,
+        readingClientBaseUrl: generalDraft.readingClientBaseUrlLocked
+          ? undefined
+          : generalDraft.readingClientBaseUrl,
+      });
       setLoad({ loading: false, settings });
       setGeneralDraft(settings.general);
       void refreshServerInfo().catch(() => undefined);

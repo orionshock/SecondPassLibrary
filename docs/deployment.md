@@ -49,7 +49,12 @@ DJANGO_SECRET_KEY=<generated-secret>
 DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
 SECOND_PASS_USERDATA_DIR=/app/userdata
 SECOND_PASS_ENABLE_DJANGO_ADMIN=0
+SECOND_PASS_READING_CLIENT_BASE_URL=
 ```
+
+Set `SECOND_PASS_READING_CLIENT_BASE_URL` to an HTTP(S) Reading Client root URL
+only when deployment configuration should override and lock the editable Server
+Settings value. Leave it blank to use the stored setting.
 
 The image runs as the non-root `secondpass` user. Its default UID/GID is
 `1000:1000`; set `APP_UID` and `APP_GID` before building if the host requires

@@ -13,7 +13,7 @@ import { DjangoAdminActionComponent } from "../features/server-settings/DjangoAd
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams } from "../features/server-settings/serverSettingsTabs";
 
 const settings: ServerSettings = {
-  general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance" },
+  general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance", readingClientBaseUrl: "https://reader.example.com", readingClientBaseUrlLocked: false },
   publicLibrary: { name: "Common Room", description: "Shared books" },
   libraryGroups: { advancedGroupsEnabled: false },
 };
@@ -37,7 +37,17 @@ describe("Server Settings", () => {
     expect(read).not.toContain("server-settings-name");
     expect(edit).toContain('class="form-field"');
     expect(edit).toContain('id="server-settings-name"');
+    expect(edit).toContain('id="server-settings-reading-client"');
+    expect(edit).not.toContain("disabled");
     expect(serverSettingsFormId("general")).toBe("server-settings-general-form");
+  });
+
+  it("disables the Reading Client field when the environment owns it", () => {
+    const locked = { ...settings.general, readingClientBaseUrlLocked: true };
+    const edit = renderToStaticMarkup(<GeneralSettingsPageRegion settings={locked} draft={locked} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
+    expect(edit).toContain('id="server-settings-reading-client"');
+    expect(edit).toContain("disabled");
+    expect(edit).toContain("Configured by server environment.");
   });
 
   it("renders Public Library read/edit fields through its own form", () => {

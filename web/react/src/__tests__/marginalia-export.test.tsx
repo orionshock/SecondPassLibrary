@@ -22,7 +22,7 @@ const hiddenSession: ReadingSessionSummary = {
 };
 const page: Page<ReadingSessionSummary> = { items: [visibleSession, hiddenSession], count: 2, next: null, previous: null };
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
-const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
+const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
 function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<ReadingSessionSummary>; loadError?: Error; selectedError?: Error; completeError?: Error } = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaExportPageRegion

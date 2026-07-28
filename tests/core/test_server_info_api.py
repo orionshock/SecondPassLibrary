@@ -29,6 +29,7 @@ class ServerInfoApiTests(APITestCase):
         server_settings.set_server_description("Household books.")
         server_settings.set_server_banner_message("Maintenance tonight.")
         server_settings.set_advanced_library_groups_enabled(True)
+        server_settings.set_reading_client_base_url("https://reader.example.com/")
         public_group = configure_public_group(
             name="Common Room",
             description="Shared books.",
@@ -45,6 +46,7 @@ class ServerInfoApiTests(APITestCase):
                 "server_description": "Household books.",
                 "server_banner_message": "Maintenance tonight.",
                 "advanced_library_groups_enabled": True,
+                "reading_client_base_url": "https://reader.example.com",
                 "public_group": {
                     "id": str(public_group.id),
                     "name": "Common Room",
@@ -93,3 +95,11 @@ class ServerInfoApiTests(APITestCase):
                 format="json",
             )
             self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_blank_reading_client_url_projects_as_null(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/api/v1/server/info/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.json()["reading_client_base_url"])

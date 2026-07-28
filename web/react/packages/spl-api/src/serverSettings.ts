@@ -4,6 +4,8 @@ export interface GeneralServerSettings {
   name: string;
   description: string;
   bannerText: string;
+  readingClientBaseUrl: string;
+  readingClientBaseUrlLocked: boolean;
 }
 
 export interface PublicLibrarySettings {
@@ -25,6 +27,7 @@ export interface UpdateGeneralSettingsInput {
   name: string;
   description: string;
   bannerText: string;
+  readingClientBaseUrl?: string;
 }
 
 export interface UpdatePublicLibrarySettingsInput {
@@ -39,6 +42,8 @@ interface ServerSettingsResponse {
   public_group_name: string;
   public_group_description: string;
   advanced_library_groups_enabled: boolean;
+  reading_client_base_url: string;
+  reading_client_base_url_locked: boolean;
 }
 
 const settingsPath = "/api/v1/server/settings/";
@@ -51,11 +56,15 @@ export async function updateGeneralSettings(
   input: UpdateGeneralSettingsInput,
   client: ApiClient = apiClient,
 ): Promise<ServerSettings> {
-  return patchServerSettings({
+  const body: Record<string, string> = {
     server_name: input.name.trim(),
     server_description: input.description.trim(),
     server_banner_message: input.bannerText.trim(),
-  }, client);
+  };
+  if (input.readingClientBaseUrl !== undefined) {
+    body.reading_client_base_url = input.readingClientBaseUrl.trim();
+  }
+  return patchServerSettings(body, client);
 }
 
 export async function updatePublicLibrarySettings(
@@ -91,6 +100,8 @@ function mapServerSettings(response: ServerSettingsResponse): ServerSettings {
       name: response.server_name,
       description: response.server_description,
       bannerText: response.server_banner_message,
+      readingClientBaseUrl: response.reading_client_base_url,
+      readingClientBaseUrlLocked: response.reading_client_base_url_locked,
     },
     publicLibrary: {
       name: response.public_group_name,

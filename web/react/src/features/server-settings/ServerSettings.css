@@ -45,6 +45,11 @@
   font-size: 0.9rem;
 }
 
+.server-settings-help {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .server-settings-region .form-grid,
 .server-settings-region .key-value-list {
   width: min(100%, 46rem);

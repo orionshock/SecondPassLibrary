@@ -3,19 +3,22 @@ from __future__ import annotations
 import uuid
 
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
+from core.checks import reading_client_base_url_check
 from core.models import ServerSetting
 from core.server_settings import (
     advanced_library_groups_enabled,
     clear_server_settings_cache,
     enable_advanced_library_groups,
     get_server_banner_message,
+    get_reading_client_base_url,
     get_server_setting,
     get_server_settings_map,
     ensure_editable_server_settings,
     set_advanced_library_groups_enabled,
     set_server_banner_message,
+    set_reading_client_base_url,
     set_server_setting,
 )
 from library.models import LibraryGroup
@@ -50,6 +53,55 @@ class ServerSettingsServiceTests(TestCase):
     def test_server_banner_message_rejects_overlong_value(self):
         with self.assertRaises(ValueError):
             set_server_banner_message("x" * 501)
+
+    def test_reading_client_url_is_optional_and_normalized(self):
+        self.assertEqual(get_reading_client_base_url(), "")
+
+        set_reading_client_base_url("  http://localhost:5173/  ")
+
+        self.assertEqual(get_reading_client_base_url(), "http://localhost:5173")
+
+    def test_reading_client_url_rejects_non_root_or_unsafe_values(self):
+        invalid_values = (
+            "ftp://reader.example.com",
+            "https://reader.example.com/app",
+            "https://reader.example.com?theme=dark",
+            "https://reader.example.com/#/reader",
+            "https://user:password@reader.example.com",
+            "https://reader.example.com/{book_id}",
+            "https://reader example.com",
+            "https://reader.example.com\\invalid",
+            "https:///missing-host",
+            "x" * 2049,
+        )
+        for value in invalid_values:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                set_reading_client_base_url(value)
+
+    @override_settings(
+        SECOND_PASS_READING_CLIENT_BASE_URL=" https://reader.example.com/ "
+    )
+    def test_reading_client_environment_override_wins_and_locks_writes(self):
+        ServerSetting.objects.create(
+            key="reading_client_base_url",
+            value="https://stored.example.com",
+            description="",
+        )
+        clear_server_settings_cache()
+
+        self.assertEqual(
+            get_reading_client_base_url(), "https://reader.example.com"
+        )
+        with self.assertRaisesRegex(ValueError, "server environment"):
+            set_reading_client_base_url("https://other.example.com")
+
+    @override_settings(
+        SECOND_PASS_READING_CLIENT_BASE_URL="https://reader.example.com/app"
+    )
+    def test_invalid_reading_client_environment_override_fails_system_check(self):
+        messages = reading_client_base_url_check()
+
+        self.assertEqual([message.id for message in messages], ["secondpass.E001"])
 
     def test_ensure_editable_server_settings_creates_optional_banner_row(self):
         ensure_editable_server_settings()

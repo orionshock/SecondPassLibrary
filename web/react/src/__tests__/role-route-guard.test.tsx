@@ -6,7 +6,7 @@ import { canSeeImports, canSeeServerSettings, canSeeUsers, type CurrentUser, typ
 import { AppFrame } from "../app/layout/AppFrame";
 import { RoleRouteGuardComponent, unauthorizedRouteFallback } from "../app/navigation/RoleRouteGuardComponent";
 
-const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
+const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 const reader: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "reader", role: "reader",
   mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true,

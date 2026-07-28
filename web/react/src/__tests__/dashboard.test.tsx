@@ -74,6 +74,7 @@ describe("Dashboard", () => {
     expect(markup).toContain('src="/media/cover.jpg"');
     expect(markup).toContain('href="/marginalia/sessions/session-1"');
     expect(markup).not.toContain('href="/library/books/book%2Fid"');
+    expect(markup).not.toContain("Open in Reader");
   });
 
   it("renders the cover fallback when a recent Book has no cover", () => {

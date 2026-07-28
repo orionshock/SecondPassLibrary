@@ -17,6 +17,9 @@ def server_info_payload() -> dict[str, Any]:
         "advanced_library_groups_enabled": (
             server_settings.get_advanced_library_groups_enabled()
         ),
+        "reading_client_base_url": (
+            server_settings.get_reading_client_base_url() or None
+        ),
         "public_group": {
             "id": public_group.id,
             "name": public_group.name,

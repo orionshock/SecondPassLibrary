@@ -64,6 +64,7 @@ export {
   type RecentReadingSession,
 } from "./reading";
 export type { AttachmentDownload } from "./client";
+export { buildReadingClientBookUrl } from "./readingClient";
 export {
   addGroupMember,
   addBookToGroup,

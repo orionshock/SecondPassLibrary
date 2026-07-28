@@ -1117,6 +1117,7 @@ Reading payload notes:
   - `server_description`
   - `server_banner_message`
   - `advanced_library_groups_enabled`
+  - `reading_client_base_url` (normalized root URL or `null` when disabled)
   - `public_group` (`id`, `name`, `description`)
   - `server_version`
   - `server_release_date`
@@ -1137,6 +1138,15 @@ Reading payload notes:
   - `public_group_name`
   - `public_group_description`
   - `advanced_library_groups_enabled`
+  - `reading_client_base_url` (effective normalized value, blank when disabled)
+  - `reading_client_base_url_locked` (true when the environment override owns it)
+
+`reading_client_base_url` accepts only an HTTP(S) origin/root URL: a hostname is
+required, localhost and explicit ports are allowed, and paths, queries,
+fragments, user information, and placeholders are rejected. The nonblank
+`SECOND_PASS_READING_CLIENT_BASE_URL` environment setting overrides the stored
+value and makes the Owner setting read-only. Public discovery and `/me` do not
+include this value.
 
 Advanced library groups are off by default. Owners enable them with
 `POST /api/v1/server/settings/advanced-library-groups/enable/`. Normal
