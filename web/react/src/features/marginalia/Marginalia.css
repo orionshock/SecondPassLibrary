@@ -3,6 +3,46 @@
   min-width: 0;
 }
 
+.marginalia-session-title-editor {
+  max-width: min(42rem, 75vw);
+}
+
+.marginalia-session-title-editor__input {
+  min-width: min(26rem, 55vw);
+  font: inherit;
+  font-weight: inherit;
+}
+
+.marginalia-inline-edit-button {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+  opacity: 0.72;
+}
+
+.marginalia-inline-edit-button:hover,
+.marginalia-inline-edit-button:focus-visible {
+  border-color: var(--border);
+  color: var(--text);
+  background: rgb(255 255 255 / 5%);
+  opacity: 1;
+}
+
+.marginalia-inline-edit-button .material-symbols-outlined { font-size: 16px; }
+
+.marginalia-inline-editor-feedback {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.marginalia-inline-editor-feedback > * { margin: 0; }
+
 .marginalia-section-actions {
   display: flex;
   gap: 0.5rem;
@@ -476,8 +516,7 @@
   min-width: 0;
 }
 
-.marginalia-session-summary__book-header,
-.marginalia-session-summary__session-heading {
+.marginalia-session-summary__book-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -490,18 +529,15 @@
   border-bottom: 1px solid var(--border);
 }
 
-.marginalia-session-summary__book-header .eyebrow,
-.marginalia-session-detail__notes .eyebrow {
+.marginalia-session-summary__book-header .eyebrow {
   margin: 0 0 0.25rem;
 }
 
-.marginalia-session-summary__book-header h2,
-.marginalia-session-summary__session-heading h3 {
+.marginalia-session-summary__book-header h2 {
   margin: 0;
 }
 
 .marginalia-session-summary__book-header h2 { font-size: 1.2rem; }
-.marginalia-session-summary__session-heading h3 { font-size: 1rem; }
 
 .marginalia-session-summary__book-meta,
 .marginalia-session-summary__unavailable {
@@ -518,7 +554,10 @@
   padding-top: 0.85rem;
 }
 
-.marginalia-session-summary__session-heading { align-items: center; }
+.marginalia-session-summary__status {
+  display: flex;
+  justify-content: flex-end;
+}
 
 .marginalia-session-summary__stats {
   display: flex;
@@ -572,6 +611,32 @@
   border-top: 1px solid var(--border);
   white-space: pre-wrap;
 }
+
+.marginalia-session-detail__notes-heading,
+.marginalia-inline-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.marginalia-session-detail__notes-heading {
+  min-height: 1.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.marginalia-session-detail__notes-heading strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.marginalia-session-detail__notes textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+}
+
 
 .marginalia-session-summary__progress-error {
   display: grid;

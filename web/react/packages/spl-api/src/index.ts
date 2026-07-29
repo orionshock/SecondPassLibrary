@@ -38,6 +38,7 @@ export {
   applyReadingImport,
   getReadingProgress,
   getReadingSession,
+  updateReadingSession,
   listReadingAnnotations,
   listReadingSessions,
   listRecentReadingSessions,

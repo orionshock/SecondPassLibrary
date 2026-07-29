@@ -1,5 +1,5 @@
 import type { Page, ReadingAnnotation, ReadingAnnotationCategory, ReadingProgress, ReadingSessionDetail } from "@second-pass/spl-api";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
@@ -34,10 +34,11 @@ export interface MarginaliaAnnotationsLoadState {
   error?: Error;
 }
 
-export function MarginaliaSessionDetailPageRegion({ session, progress, annotations, annotationCategories, annotationOrder, pageNumber, pageSize, onAnnotationCategoriesChange, onAnnotationOrderChange, onPageChange, onPageSizeChange, onRetryProgress, onRetryAnnotations }: {
+export function MarginaliaSessionDetailPageRegion({ session, progress, annotations, sessionNote, annotationCategories, annotationOrder, pageNumber, pageSize, onAnnotationCategoriesChange, onAnnotationOrderChange, onPageChange, onPageSizeChange, onRetryProgress, onRetryAnnotations }: {
   session: ReadingSessionDetail;
   progress: MarginaliaProgressLoadState;
   annotations: MarginaliaAnnotationsLoadState;
+  sessionNote: ReactNode;
   annotationCategories: readonly ReadingAnnotationCategory[];
   annotationOrder: MarginaliaAnnotationOrder;
   pageNumber: number;
@@ -50,14 +51,13 @@ export function MarginaliaSessionDetailPageRegion({ session, progress, annotatio
   onRetryAnnotations: () => void;
 }) {
   return <div className="marginalia-session-detail">
-    <SessionSummaryRegion session={session} progress={progress} onRetryProgress={onRetryProgress} />
+    <SessionSummaryRegion session={session} progress={progress} sessionNote={sessionNote} onRetryProgress={onRetryProgress} />
     <AnnotationsRegion state={annotations} categories={annotationCategories} order={annotationOrder} pageNumber={pageNumber} pageSize={pageSize} onCategoriesChange={onAnnotationCategoriesChange} onOrderChange={onAnnotationOrderChange} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetryAnnotations} />
   </div>;
 }
 
-function SessionSummaryRegion({ session, progress, onRetryProgress }: { session: ReadingSessionDetail; progress: MarginaliaProgressLoadState; onRetryProgress: () => void }) {
+function SessionSummaryRegion({ session, progress, sessionNote, onRetryProgress }: { session: ReadingSessionDetail; progress: MarginaliaProgressLoadState; sessionNote: ReactNode; onRetryProgress: () => void }) {
   const bookAvailable = !session.book.unavailable && Boolean(session.book.id);
-  const sessionName = session.name.trim() || "Unnamed session";
   return <Surface>
     <div className="marginalia-session-summary">
       <div className="marginalia-session-summary__cover"><BookCoverComponent coverUrl={bookAvailable ? session.book.coverUrl : null} title={bookAvailable ? session.book.title || "Untitled Book" : "Book unavailable"} /></div>
@@ -74,7 +74,7 @@ function SessionSummaryRegion({ session, progress, onRetryProgress }: { session:
           {bookAvailable && session.canOpen && session.book.id ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(session.book.id)}`}>View Book</Link> : null}
         </header>
         <div className="marginalia-session-summary__session">
-          <div className="marginalia-session-summary__session-heading"><h3>{sessionName}</h3><Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge></div>
+          <div className="marginalia-session-summary__status"><Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge></div>
           <div className="marginalia-session-summary__stats">
             <span>{formatCount(session.annotationCount, "annotation")}</span>
             {progress.loading && !progress.progress ? <span aria-live="polite" aria-busy="true">Loading progress...</span> : null}
@@ -88,7 +88,7 @@ function SessionSummaryRegion({ session, progress, onRetryProgress }: { session:
           {progress.error ? <div className="marginalia-session-summary__progress-error"><ErrorPanel>{progress.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetryProgress}>Retry</Button></div> : null}
         </div>
       </div>
-      {session.notes.trim() ? <div className="marginalia-session-detail__notes"><span className="eyebrow">Session note</span><p>{session.notes}</p></div> : null}
+      {sessionNote}
     </div>
   </Surface>;
 }

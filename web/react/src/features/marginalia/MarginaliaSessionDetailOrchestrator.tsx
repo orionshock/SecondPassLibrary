@@ -1,13 +1,16 @@
-import { getReadingProgress, getReadingSession, listReadingAnnotations, type Page, type ReadingAnnotation, type ReadingSessionDetail } from "@second-pass/spl-api";
+import { getReadingProgress, getReadingSession, listReadingAnnotations, updateReadingSession, type Page, type ReadingAnnotation, type ReadingSessionDetail } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { Button, ErrorPanel } from "../../components/ui";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { marginaliaSessionBreadcrumbFallback } from "./marginaliaBreadcrumbs";
+import { MarginaliaSessionNoteEditorComponent } from "./components/MarginaliaSessionNoteEditorComponent";
+import { MarginaliaSessionTitleEditorComponent } from "./components/MarginaliaSessionTitleEditorComponent";
 import { marginaliaAnnotationsSdkQuery, marginaliaSessionDetailSearchParams, marginaliaSessionDetailStateFromSearchParams, withMarginaliaSessionDetailChange } from "./marginaliaSessionDetailQuery";
 import { MarginaliaSessionDetailPageRegion, type MarginaliaAnnotationsLoadState, type MarginaliaProgressLoadState } from "./regions/MarginaliaSessionDetailPageRegion";
 import "./Marginalia.css";
@@ -16,6 +19,32 @@ type SessionLoadState =
   | { status: "loading" }
   | { status: "ready"; session: ReadingSessionDetail }
   | { status: "error"; error: Error };
+
+export async function renameMarginaliaSession(
+  session: ReadingSessionDetail,
+  draft: string,
+  update: typeof updateReadingSession = updateReadingSession,
+): Promise<{ session: ReadingSessionDetail; changed: boolean }> {
+  const name = draft.trim();
+  if (name === session.name.trim()) return { session, changed: false };
+  return {
+    session: await update(session.id, { name }),
+    changed: true,
+  };
+}
+
+export async function updateMarginaliaSessionNote(
+  session: ReadingSessionDetail,
+  draft: string,
+  update: typeof updateReadingSession = updateReadingSession,
+): Promise<{ session: ReadingSessionDetail; changed: boolean }> {
+  const notes = draft.trim();
+  if (notes === session.notes.trim()) return { session, changed: false };
+  return {
+    session: await update(session.id, { notes }),
+    changed: true,
+  };
+}
 
 export function MarginaliaSessionDetailOrchestrator() {
   const { sessionId = "" } = useParams();
@@ -30,9 +59,17 @@ export function MarginaliaSessionDetailOrchestrator() {
   const [sessionLoad, setSessionLoad] = useState<SessionLoadState>({ status: "loading" });
   const [progressLoad, setProgressLoad] = useState<MarginaliaProgressLoadState>({ loading: true });
   const [annotationsLoad, setAnnotationsLoad] = useState<MarginaliaAnnotationsLoadState>({ loading: true });
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [renameState, setRenameState] = useState<MutationState>(idleMutationState);
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteState, setNoteState] = useState<MutationState>(idleMutationState);
   const recoveredPageKeys = useRef(new Set<string>());
   const breadcrumbFallback = useMemo(() => marginaliaSessionBreadcrumbFallback(sessionLoad.status === "ready" ? sessionLoad.session.name : undefined), [sessionLoad]);
   usePageBreadcrumbs(breadcrumbFallback);
+  useAutoDismissMutationMessage(renameState, setRenameState);
+  useAutoDismissMutationMessage(noteState, setNoteState);
 
   useEffect(() => {
     if (queryKey === canonicalQuery) return;
@@ -41,6 +78,12 @@ export function MarginaliaSessionDetailOrchestrator() {
 
   useEffect(() => {
     let active = true;
+    setEditingName(false);
+    setNameDraft("");
+    setRenameState(idleMutationState);
+    setEditingNote(false);
+    setNoteDraft("");
+    setNoteState(idleMutationState);
     setSessionLoad({ status: "loading" });
     setProgressLoad({ loading: true });
     setAnnotationsLoad({ loading: true });
@@ -94,15 +137,114 @@ export function MarginaliaSessionDetailOrchestrator() {
     setSearchParameters(marginaliaSessionDetailSearchParams(withMarginaliaSessionDetailChange(query, changes, resetPage)), { state: location.state });
   }
 
-  const title = sessionLoad.status === "ready" ? sessionLoad.session.name.trim() || "Unnamed session" : "Reading session";
-  if (sessionLoad.status === "loading") return <ProductPageShellComponent eyebrow="My Marginalia" title={title}><p aria-live="polite" aria-busy="true">Loading reading session...</p></ProductPageShellComponent>;
-  if (sessionLoad.status === "error") return <ProductPageShellComponent eyebrow="My Marginalia" title={title}><ErrorPanel>{sessionLoad.error.message}</ErrorPanel><Button type="button" tone="secondary" onClick={() => setSessionRetry((value) => value + 1)}>Retry</Button></ProductPageShellComponent>;
+  function startNameEdit() {
+    if (sessionLoad.status !== "ready" || !sessionLoad.session.isActive || sessionLoad.session.status !== "active") return;
+    setNameDraft(sessionLoad.session.name);
+    setRenameState(idleMutationState);
+    setEditingName(true);
+  }
 
-  return <ProductPageShellComponent eyebrow="My Marginalia" title={title}>
+  function cancelNameEdit() {
+    if (renameState.pending) return;
+    if (sessionLoad.status === "ready") setNameDraft(sessionLoad.session.name);
+    setRenameState(idleMutationState);
+    setEditingName(false);
+  }
+
+  async function saveName() {
+    if (sessionLoad.status !== "ready" || !sessionLoad.session.isActive || sessionLoad.session.status !== "active" || renameState.pending) return;
+    setRenameState({ pending: true });
+    try {
+      const { session, changed } = await renameMarginaliaSession(
+        sessionLoad.session,
+        nameDraft,
+      );
+      setSessionLoad((current) => current.status === "ready"
+        ? { status: "ready", session: { ...current.session, name: session.name, updatedAt: session.updatedAt } }
+        : current);
+      setNameDraft(session.name);
+      setEditingName(false);
+      setRenameState(changed ? { pending: false, message: "Session name saved." } : idleMutationState);
+    } catch (error: unknown) {
+      setRenameState({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
+  function startNoteEdit() {
+    if (sessionLoad.status !== "ready" || !sessionLoad.session.isActive || sessionLoad.session.status !== "active") return;
+    setNoteDraft(sessionLoad.session.notes);
+    setNoteState(idleMutationState);
+    setEditingNote(true);
+  }
+
+  function cancelNoteEdit() {
+    if (noteState.pending) return;
+    if (sessionLoad.status === "ready") setNoteDraft(sessionLoad.session.notes);
+    setNoteState(idleMutationState);
+    setEditingNote(false);
+  }
+
+  async function saveNote() {
+    if (sessionLoad.status !== "ready" || !sessionLoad.session.isActive || sessionLoad.session.status !== "active" || noteState.pending) return;
+    setNoteState({ pending: true });
+    try {
+      const { session, changed } = await updateMarginaliaSessionNote(sessionLoad.session, noteDraft);
+      setSessionLoad((current) => current.status === "ready"
+        ? { status: "ready", session: { ...current.session, notes: session.notes, updatedAt: session.updatedAt } }
+        : current);
+      setNoteDraft(session.notes);
+      setEditingNote(false);
+      setNoteState(changed ? { pending: false, message: "Session note saved." } : idleMutationState);
+    } catch (error: unknown) {
+      setNoteState({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
+  const title = sessionLoad.status === "ready" ? sessionLoad.session.name.trim() || "Unnamed session" : "Reading session";
+  if (sessionLoad.status === "loading") return <ProductPageShellComponent title={title}><p aria-live="polite" aria-busy="true">Loading reading session...</p></ProductPageShellComponent>;
+  if (sessionLoad.status === "error") return <ProductPageShellComponent title={title}><ErrorPanel>{sessionLoad.error.message}</ErrorPanel><Button type="button" tone="secondary" onClick={() => setSessionRetry((value) => value + 1)}>Retry</Button></ProductPageShellComponent>;
+
+  const renameFeedback = renameState.error
+    ? <span className="field-error" role="alert">{renameState.error.message}</span>
+    : renameState.message
+      ? <span className="success-message" role="status">{renameState.message}</span>
+      : undefined;
+  const noteFeedback = noteState.error
+    ? <span className="field-error" role="alert">{noteState.error.message}</span>
+    : noteState.message
+      ? <span className="success-message" role="status">{noteState.message}</span>
+      : undefined;
+  const titleEditor = <MarginaliaSessionTitleEditorComponent
+    displayName={title}
+    editable={sessionLoad.session.isActive && sessionLoad.session.status === "active"}
+    draft={nameDraft}
+    editing={editingName}
+    pending={renameState.pending}
+    feedback={renameFeedback}
+    onDraftChange={setNameDraft}
+    onEdit={startNameEdit}
+    onSave={() => void saveName()}
+    onCancel={cancelNameEdit}
+  />;
+  const noteEditor = <MarginaliaSessionNoteEditorComponent
+    note={sessionLoad.session.notes}
+    editable={sessionLoad.session.isActive && sessionLoad.session.status === "active"}
+    draft={noteDraft}
+    editing={editingNote}
+    pending={noteState.pending}
+    feedback={noteFeedback}
+    onDraftChange={setNoteDraft}
+    onEdit={startNoteEdit}
+    onSave={() => void saveNote()}
+    onCancel={cancelNoteEdit}
+  />;
+
+  return <ProductPageShellComponent title={titleEditor}>
     <MarginaliaSessionDetailPageRegion
       session={sessionLoad.session}
       progress={progressLoad}
       annotations={annotationsLoad}
+      sessionNote={noteEditor}
       annotationCategories={query.categories}
       annotationOrder={query.order}
       pageNumber={query.page}

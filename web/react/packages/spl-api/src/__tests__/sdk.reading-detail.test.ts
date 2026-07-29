@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getReadingProgress, getReadingSession, listReadingAnnotations } from "../reading";
+import { getReadingProgress, getReadingSession, listReadingAnnotations, updateReadingSession } from "../reading";
 
 describe("reading detail SDK", () => {
   it("maps visible and unavailable Session Book projections without exposing locator fields", async () => {
@@ -35,6 +35,36 @@ describe("reading detail SDK", () => {
     expect(progress).not.toHaveProperty("currentLocation");
   });
 
+  it("patches only Session name or notes and maps the updated detail", async () => {
+    const calls: Array<{ path: string; init?: RequestInit }> = [];
+    const client = { request: async <T>(path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return {
+        id: "session-1", book_id: "book-1", name: "Renamed", status: "completed", is_active: false,
+        started_at: "2026-01-01T00:00:00Z", completed_at: "2026-01-03T00:00:00Z", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-04T00:00:00Z",
+        notes: "Session note", progression: 0.4, annotation_count: 2, can_open: true,
+        book: { id: "book-1", title: "Visible Book", authors: [], series: null, series_index: null, cover_url: null },
+      } as T;
+    } };
+
+    const updated = await updateReadingSession("session/id", { name: "Renamed" }, client);
+    await updateReadingSession("session/id", { notes: "Changed note" }, client);
+
+    expect(calls).toEqual([
+      { path: "/api/v1/reading/sessions/session%2Fid/", init: {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Renamed" }),
+      } },
+      { path: "/api/v1/reading/sessions/session%2Fid/", init: {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: "Changed note" }),
+      } },
+    ]);
+    expect(updated).toMatchObject({ id: "session-1", name: "Renamed", isActive: false });
+  });
+
   it("serializes annotation filters and maps content without selector or quote internals", async () => {
     const calls: string[] = [];
     const client = { request: async <T>(path: string) => {
@@ -62,5 +92,6 @@ describe("reading detail SDK", () => {
     await expect(getReadingSession("missing", client)).rejects.toBe(error);
     await expect(getReadingProgress("missing", client)).rejects.toBe(error);
     await expect(listReadingAnnotations({ sessionId: "missing" }, client)).rejects.toBe(error);
+    await expect(updateReadingSession("missing", { name: "Renamed" }, client)).rejects.toBe(error);
   });
 });

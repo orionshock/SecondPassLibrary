@@ -385,6 +385,26 @@ export async function listReadingSessions(
 
 export async function getReadingSession(sessionId: string, client: ApiClient = apiClient): Promise<ReadingSessionDetail> {
   const item = await client.request<ReadingSessionDetailResponse>(`/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/`);
+  return mapReadingSessionDetail(item);
+}
+
+export async function updateReadingSession(
+  sessionId: string,
+  input: { name?: string; notes?: string },
+  client: ApiClient = apiClient,
+): Promise<ReadingSessionDetail> {
+  const item = await client.request<ReadingSessionDetailResponse>(
+    `/api/v1/reading/sessions/${encodeURIComponent(sessionId)}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  return mapReadingSessionDetail(item);
+}
+
+function mapReadingSessionDetail(item: ReadingSessionDetailResponse): ReadingSessionDetail {
   return {
     id: item.id,
     name: item.name,

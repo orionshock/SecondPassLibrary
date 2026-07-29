@@ -40,6 +40,9 @@ class ReadingSessionPatchActiveOnlyTests(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         payload = response_data_dict(resp)
         self.assertEqual(payload["name"], "Renamed")
+        self.assertEqual(payload["id"], str(session.id))
+        self.assertIn("book", payload)
+        self.assertIn("annotation_count", payload)
 
     def test_active_session_patch_notes_succeeds(self):
         session = ReadingSession.objects.create(
@@ -90,3 +93,46 @@ class ReadingSessionPatchActiveOnlyTests(IsolatedMediaRootMixin, APITestCase):
             ),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_session_name_is_trimmed_and_bounded(self):
+        session = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            status=ReadingSession.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+        renamed = assert_response(
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/",
+                data={"name": "  Renamed history  "},
+                format="json",
+            )
+        )
+        too_long = assert_response(
+            self.client.patch(
+                f"/api/v1/reading/sessions/{session.id}/",
+                data={"name": "x" * 256},
+                format="json",
+            )
+        )
+
+        self.assertEqual(response_data_dict(renamed)["name"], "Renamed history")
+        self.assertEqual(too_long.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_cannot_rename_another_users_session(self):
+        other = User.objects.create_user(username="other", password="pw")
+        session = ReadingSession.objects.create(
+            user=other,
+            book=self.book,
+            status=ReadingSession.STATUS_COMPLETED,
+            is_active=False,
+        )
+
+        response = self.client.patch(
+            f"/api/v1/reading/sessions/{session.id}/",
+            data={"name": "Nope"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

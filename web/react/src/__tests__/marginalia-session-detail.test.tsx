@@ -1,11 +1,14 @@
 import type { Page, ReadingAnnotation, ReadingSessionDetail } from "@second-pass/spl-api";
-import type { ReactElement } from "react";
+import { Children, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "../app/router";
 import { marginaliaSessionBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
+import { renameMarginaliaSession, updateMarginaliaSessionNote } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
+import { MarginaliaSessionNoteEditorComponent } from "../features/marginalia/components/MarginaliaSessionNoteEditorComponent";
+import { MarginaliaSessionTitleEditorComponent } from "../features/marginalia/components/MarginaliaSessionTitleEditorComponent";
 import { AnnotationCategoryMenuOptionsComponent, MarginaliaSessionDetailPageRegion, annotationOrderOptions } from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
 import { OrderMenuOptionsComponent } from "../shared/forms/OrderMenuComponent";
 
@@ -48,6 +51,17 @@ function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDeta
     session={session}
     progress={{ loading: false, progress: { sessionId: session.id, progression: 0.5, createdAt: null, updatedAt: "2026-01-03T00:00:00Z" } }}
     annotations={{ loading: false, page: annotations }}
+    sessionNote={<MarginaliaSessionNoteEditorComponent
+      note={session.notes}
+      editable={false}
+      draft={session.notes}
+      editing={false}
+      pending={false}
+      onDraftChange={vi.fn()}
+      onEdit={vi.fn()}
+      onSave={vi.fn()}
+      onCancel={vi.fn()}
+    />}
     annotationCategories={["highlight", "highlightWithNote"]}
     annotationOrder="newest"
     pageNumber={1}
@@ -68,6 +82,95 @@ describe("My Marginalia Session Detail", () => {
     expect(children.some((route) => "path" in route && route.path === "marginalia/sessions/:sessionId")).toBe(true);
     expect(marginaliaSessionBreadcrumbFallback("Imported history")).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Imported history" }]);
     expect(JSON.stringify(marginaliaSessionBreadcrumbFallback(""))).not.toContain(session.id);
+  });
+
+  it("exposes compact Session-name edit, save, cancel, and keyboard controls", () => {
+    const onEdit = vi.fn();
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+    const onDraftChange = vi.fn();
+    const resting = MarginaliaSessionTitleEditorComponent({
+      displayName: "Imported history", editable: true, draft: "Imported history", editing: false, pending: false,
+      onDraftChange, onEdit, onSave, onCancel,
+    }) as ReactElement<{ children: unknown }>;
+    const restingMarkup = renderToStaticMarkup(resting);
+    expect(restingMarkup).toContain('aria-label="Edit session name"');
+    const restingChildren = Children.toArray(resting.props.children as ReactNode) as ReactElement<{ onClick?: () => void }>[];
+    restingChildren.at(-1)?.props.onClick?.();
+    expect(onEdit).toHaveBeenCalledOnce();
+
+    const editing = MarginaliaSessionTitleEditorComponent({
+      displayName: "Imported history", editable: true, draft: "Changed name", editing: true, pending: false,
+      onDraftChange, onEdit, onSave, onCancel,
+    }) as ReactElement<{ children: unknown }>;
+    const editingMarkup = renderToStaticMarkup(editing);
+    expect(editingMarkup).toContain('aria-label="Session name"');
+    expect(editingMarkup).toContain('aria-label="Save session name"');
+    expect(editingMarkup).toContain('aria-label="Cancel editing session name"');
+    const input = Children.toArray(editing.props.children as ReactNode)[0] as ReactElement<{ onKeyDown: (event: { key: string; preventDefault: () => void }) => void }>;
+    input.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() });
+    input.props.onKeyDown({ key: "Escape", preventDefault: vi.fn() });
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onCancel).toHaveBeenCalledOnce();
+
+    const historical = renderToStaticMarkup(MarginaliaSessionTitleEditorComponent({
+      displayName: "Historical Session", editable: false, draft: "", editing: false, pending: false,
+      onDraftChange, onEdit, onSave, onCancel,
+    }));
+    expect(historical).not.toContain("Edit session name");
+  });
+
+  it("skips unchanged names and delegates changed names without hiding update errors", async () => {
+    const update = vi.fn().mockResolvedValue({ ...session, name: "Renamed history" });
+
+    await expect(renameMarginaliaSession(session, ` ${session.name} `, update)).resolves.toEqual({ session, changed: false });
+    expect(update).not.toHaveBeenCalled();
+
+    await expect(renameMarginaliaSession(session, "  Renamed history  ", update)).resolves.toMatchObject({
+      changed: true,
+      session: { name: "Renamed history" },
+    });
+    expect(update).toHaveBeenCalledWith(session.id, { name: "Renamed history" });
+
+    const error = new Error("Rename failed");
+    await expect(renameMarginaliaSession(session, "Another name", vi.fn().mockRejectedValue(error))).rejects.toBe(error);
+  });
+
+  it("edits active Session notes with textarea-safe keyboard controls", () => {
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+    const editor = MarginaliaSessionNoteEditorComponent({
+      note: "Current note", editable: true, draft: "Changed note", editing: true, pending: false,
+      onDraftChange: vi.fn(), onEdit: vi.fn(), onSave, onCancel,
+    }) as ReactElement<{ children: ReactNode }>;
+    const markup = renderToStaticMarkup(editor);
+    expect(markup).toContain('aria-label="Session Note"');
+    expect(markup).toContain('aria-label="Save session note"');
+    expect(markup).toContain('aria-label="Cancel editing session note"');
+    const textarea = Children.toArray(editor.props.children)[1] as ReactElement<{ onKeyDown: (event: { key: string; ctrlKey?: boolean; metaKey?: boolean; preventDefault: () => void }) => void }>;
+    textarea.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() });
+    expect(onSave).not.toHaveBeenCalled();
+    textarea.props.onKeyDown({ key: "Enter", ctrlKey: true, preventDefault: vi.fn() });
+    textarea.props.onKeyDown({ key: "Escape", preventDefault: vi.fn() });
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("keeps historical notes read-only and omits the duplicated Session title", () => {
+    const markup = renderDetail();
+    expect(markup).toContain("Owned Session note");
+    expect(markup).not.toContain('aria-label="Edit session note"');
+    expect(markup).not.toContain(session.name);
+  });
+
+  it("skips unchanged notes, saves changed notes, and preserves update errors", async () => {
+    const update = vi.fn().mockResolvedValue({ ...session, notes: "Changed note" });
+    await expect(updateMarginaliaSessionNote(session, ` ${session.notes} `, update)).resolves.toEqual({ session, changed: false });
+    expect(update).not.toHaveBeenCalled();
+    await expect(updateMarginaliaSessionNote(session, "  Changed note  ", update)).resolves.toMatchObject({ changed: true, session: { notes: "Changed note" } });
+    expect(update).toHaveBeenCalledWith(session.id, { notes: "Changed note" });
+    const error = new Error("Note update failed");
+    await expect(updateMarginaliaSessionNote(session, "Another note", vi.fn().mockRejectedValue(error))).rejects.toBe(error);
   });
 
   it("renders visible Book, progress, and annotation content without locator internals", () => {

@@ -155,10 +155,22 @@ class ReadingSessionViewSet(
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        # Session metadata is mutable only while the session is active/writable.
         session = self.get_object()
         assert_session_writable(session=session)
-        return super().partial_update(request, *args, **kwargs)
+
+        serializer = ReadingSessionPatchSerializer(
+            session,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        session = serializer.save()
+        return Response(
+            ReadingSessionSummarySerializer(
+                session,
+                context=self.get_serializer_context(),
+            ).data
+        )
 
 
 class ActiveSessionView(APIView):
