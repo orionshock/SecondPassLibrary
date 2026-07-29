@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { MarginaliaSessionsPageRegion } from "../features/marginalia/regions/MarginaliaSessionsPageRegion";
 import { marginaliaExportBreadcrumbFallback, marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
+import { marginaliaSessionNoteExcerpt } from "../features/marginalia/marginaliaSessionNoteExcerpt";
 import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 
 const visibleSession: ReadingSessionSummary = {
@@ -82,6 +83,25 @@ describe("My Marginalia Session list", () => {
   it("uses returned Session names unchanged and derives only blank display names", () => {
     expect(marginaliaSessionDisplayName(visibleSession)).toBe("Morning notes");
     expect(marginaliaSessionDisplayName(hiddenSession)).toBe("Unnamed Session 32618e");
+  });
+
+  it("renders a collapsed note excerpt between Session facts and the Book action", () => {
+    const rawNote = "  First line\n\tSecond line   with spacing  ";
+    const markup = renderRegion({ items: [{ ...visibleSession, notes: rawNote }], count: 1, next: null, previous: null });
+    const excerpt = "First line Second line with spacing";
+    expect(markup).toContain(excerpt);
+    expect(markup.indexOf("2 annotations")).toBeLessThan(markup.indexOf(excerpt));
+    expect(markup.indexOf(excerpt)).toBeLessThan(markup.indexOf("View Book"));
+    expect(rawNote).toBe("  First line\n\tSecond line   with spacing  ");
+  });
+
+  it("bounds note excerpts without decorating short or blank notes", () => {
+    const exact = "x".repeat(120);
+    expect(marginaliaSessionNoteExcerpt(exact)).toBe(exact);
+    expect(marginaliaSessionNoteExcerpt(`${exact}y`)).toBe(`${exact}…`);
+    expect(marginaliaSessionNoteExcerpt(" \n\t  ")).toBeUndefined();
+    const blankMarkup = renderRegion({ items: [{ ...visibleSession, notes: " \n\t " }], count: 1, next: null, previous: null });
+    expect(blankMarkup).not.toContain("…");
   });
 
   it("renders URL-backed filter controls and the shared pagination frame", () => {
