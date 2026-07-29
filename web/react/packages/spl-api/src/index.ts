@@ -105,6 +105,7 @@ export {
   listShelves,
   moveShelfItem,
   removeShelfItem,
+  setShelfItemPosition,
   updateShelf,
   type AddShelfItemInput,
   type CreateShelfInput,

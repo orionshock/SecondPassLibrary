@@ -48,6 +48,20 @@
   gap: 0.4rem;
 }
 
+.shelf-edit-move-to {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.shelf-edit-move-to select {
+  width: 4.25rem;
+  min-width: 0;
+}
+
 .shelf-edit-unavailable-row {
   grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 3.5rem;
@@ -151,4 +165,5 @@
   .shelf-edit-book-search label { grid-column: 1 / -1; }
   .shelf-edit-book-row { grid-template-columns: auto minmax(0, 1fr); }
   .shelf-edit-item-actions { grid-column: 2; justify-self: start; }
+  .shelf-edit-move-to { flex-wrap: wrap; }
 }

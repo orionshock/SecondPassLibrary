@@ -8,7 +8,7 @@ import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowCom
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
-export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber, pageSize, loading, error, pendingItemId, pendingAction, controlsDisabled, onMove, onRemove, onPageChange, onPageSizeChange, onRetry }: {
+export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber, pageSize, loading, error, pendingItemId, pendingAction, controlsDisabled, onMove, onMoveTo, onRemove, onPageChange, onPageSizeChange, onRetry }: {
   shelfId: string;
   shelfName: string;
   page?: ShelfEditorItemsPage;
@@ -20,6 +20,7 @@ export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber,
   pendingAction?: "move" | "remove";
   controlsDisabled?: boolean;
   onMove: (itemId: string, move: "up" | "down") => void;
+  onMoveTo: (itemId: string, position: number) => void;
   onRemove: (item: ShelfEditorItem) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -52,9 +53,13 @@ export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber,
           shelfName={shelfName}
           canMoveUp={hasVisibleBefore(item, visibleItems, page)}
           canMoveDown={hasVisibleAfter(item, visibleItems, page)}
+          positionCount={page.count}
+          directPositioningDisabled={page.unavailableItemCount > 0}
           disabled={controlsDisabled || Boolean(pendingItemId)}
+          moving={pendingItemId === item.id && pendingAction === "move"}
           removing={pendingItemId === item.id && pendingAction === "remove"}
           onMove={onMove}
+          onMoveTo={onMoveTo}
           onRemove={onRemove}
         />)}
     </div>}
@@ -62,30 +67,68 @@ export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber,
   </section>;
 }
 
-function VisibleShelfItemRow({ item, shelfId, shelfName, canMoveUp, canMoveDown, disabled, removing, onMove, onRemove }: {
+function VisibleShelfItemRow({ item, shelfId, shelfName, canMoveUp, canMoveDown, positionCount, directPositioningDisabled, disabled, moving, removing, onMove, onMoveTo, onRemove }: {
   item: Extract<ShelfEditorItem, { unavailable: false }>;
   shelfId: string;
   shelfName: string;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  positionCount: number;
+  directPositioningDisabled: boolean;
   disabled: boolean;
+  moving: boolean;
   removing: boolean;
   onMove: (itemId: string, move: "up" | "down") => void;
+  onMoveTo: (itemId: string, position: number) => void;
   onRemove: (item: ShelfEditorItem) => void;
 }) {
-  return <div className="shelf-edit-book-row">
+  return <div className="shelf-edit-book-row" aria-busy={moving || undefined}>
     <span className="shelf-edit-position" aria-label={`Shelf position ${item.position + 1}`}>#{item.position + 1}</span>
     <CompactBookRowComponent
       book={item.book}
       detailPath={`/library/books/${encodeURIComponent(item.book.id)}`}
       navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(shelfId, shelfName, item.book.title))}
       actions={<>
+        <ShelfPositionSelectComponent
+          bookTitle={item.book.title}
+          position={item.position}
+          positionCount={positionCount}
+          disabled={disabled || directPositioningDisabled}
+          onChange={(position) => onMoveTo(item.id, position)}
+        />
         <IconButton type="button" aria-label={`Move ${item.book.title} up`} title="Move up" disabled={disabled || !canMoveUp} onClick={() => onMove(item.id, "up")}><MaterialIcon name="arrow_upward" /></IconButton>
         <IconButton type="button" aria-label={`Move ${item.book.title} down`} title="Move down" disabled={disabled || !canMoveDown} onClick={() => onMove(item.id, "down")}><MaterialIcon name="arrow_downward" /></IconButton>
         <RemoveIconButton type="button" label={`Remove ${item.book.title} from shelf`} disabled={disabled} title={removing ? "Removing" : "Remove from shelf"} onClick={() => onRemove(item)} />
       </>}
     />
   </div>;
+}
+
+export function ShelfPositionSelectComponent({ bookTitle, position, positionCount, disabled, onChange }: {
+  bookTitle: string;
+  position: number;
+  positionCount: number;
+  disabled: boolean;
+  onChange: (position: number) => void;
+}) {
+  return <label className="shelf-edit-move-to">
+    <span>Move To</span>
+    <select
+      aria-label={`Move ${bookTitle} to position`}
+      value={position}
+      disabled={disabled}
+      onChange={(event) => {
+        const nextPosition = Number(event.target.value);
+        if (nextPosition !== position) onChange(nextPosition);
+      }}
+    >
+      {Array.from({ length: positionCount }, (_, optionPosition) => <option
+        key={optionPosition}
+        value={optionPosition}
+        disabled={optionPosition === position}
+      >{optionPosition + 1}</option>)}
+    </select>
+  </label>;
 }
 
 function UnavailableShelfItemRow({ item, disabled, removing, onRemove }: {

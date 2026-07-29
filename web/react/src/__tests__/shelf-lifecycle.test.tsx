@@ -22,7 +22,10 @@ import {
 } from "../features/shelves/shelfLifecycle";
 import { ShelfDetailsEditPageRegion } from "../features/shelves/regions/ShelfDetailsEditPageRegion";
 import { ShelfEditAddBooksPageRegion } from "../features/shelves/regions/ShelfEditAddBooksPageRegion";
-import { ShelfEditBooksPageRegion } from "../features/shelves/regions/ShelfEditBooksPageRegion";
+import {
+  ShelfEditBooksPageRegion,
+  ShelfPositionSelectComponent,
+} from "../features/shelves/regions/ShelfEditBooksPageRegion";
 import { ShelfEditTabsPageRegion } from "../features/shelves/regions/ShelfEditTabsPageRegion";
 import { ShelfHeaderPageRegion } from "../features/shelves/regions/ShelfHeaderPageRegion";
 import { LocalValidationError, idleMutationState } from "../shared/feedback/mutationState";
@@ -167,7 +170,7 @@ describe("Shelf lifecycle contracts", () => {
     const tabs = renderToStaticMarkup(<ShelfEditTabsPageRegion activeTab="details" onTabChange={vi.fn()} />);
     const books = renderToStaticMarkup(<MemoryRouter><ShelfEditBooksPageRegion
       shelfId="shelf" shelfName="Favorites" page={page} pageNumber={1} pageSize={20}
-      loading={false} onMove={vi.fn()} onRemove={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+      loading={false} onMove={vi.fn()} onMoveTo={vi.fn()} onRemove={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
     /></MemoryRouter>);
     const candidates = renderToStaticMarkup(<MemoryRouter><ShelfEditAddBooksPageRegion
       shelfId="shelf" shelfName="Favorites" search="Book"
@@ -191,8 +194,64 @@ describe("Shelf lifecycle contracts", () => {
     expect(books).not.toMatch(/aria-label="Move Book A down"[^>]*disabled/);
     expect(books).not.toMatch(/aria-label="Move Book C up"[^>]*disabled/);
     expect(books).toMatch(/aria-label="Move Book C down"[^>]*disabled/);
+    expect(books).toContain("Move To");
+    expect(books).toMatch(/aria-label="Move Book A to position"[^>]*disabled/);
     expect(candidates).toContain("Add");
-    expect(books).not.toContain("Move to position");
+  });
+
+  it("renders one-based Move To options and reports the selected zero-based position", () => {
+    const onChange = vi.fn();
+    const control = ShelfPositionSelectComponent({
+      bookTitle: "Book A",
+      position: 1,
+      positionCount: 4,
+      disabled: false,
+      onChange,
+    });
+    const markup = renderToStaticMarkup(control);
+    const select = control.props.children[1];
+
+    expect(markup).toContain("Move To");
+    expect(markup).toContain('<option value="0">1</option>');
+    expect(markup).toContain('<option value="1" disabled="" selected="">2</option>');
+    expect(markup).toContain('<option value="3">4</option>');
+
+    select.props.onChange({ target: { value: "3" } });
+    expect(onChange).toHaveBeenCalledWith(3);
+  });
+
+  it("keeps Move To controlled by the authoritative Shelf page during pending and failure states", () => {
+    const book = {
+      id: "book-a", title: "Book A", sortTitle: "Book A", subtitle: "", authors: [], series: null,
+      catalogTags: [], language: "", publisher: "", publishedYear: null, publishedMonth: null,
+      publishedDay: null, publishedDatePrecision: "" as const, coverUrl: null, fileFormat: "EPUB",
+    };
+    const page: ShelfEditorItemsPage = {
+      count: 2, visibleItemCount: 2, unavailableItemCount: 0, next: null, previous: null,
+      items: [
+        { id: "item-a", shelfId: "shelf", book, position: 0, unavailable: false, addedBy: null },
+        { id: "item-b", shelfId: "shelf", book: { ...book, id: "book-b", title: "Book B" }, position: 1, unavailable: false, addedBy: null },
+      ],
+    };
+    const renderBooks = (currentPage: ShelfEditorItemsPage, props: { pendingItemId?: string; error?: Error } = {}) => renderToStaticMarkup(
+      <MemoryRouter><ShelfEditBooksPageRegion
+        shelfId="shelf" shelfName="Favorites" page={currentPage} pageNumber={1} pageSize={20}
+        loading={false} {...props} onMove={vi.fn()} onMoveTo={vi.fn()} onRemove={vi.fn()}
+        onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
+      /></MemoryRouter>,
+    );
+
+    const pending = renderBooks(page, { pendingItemId: "item-a" });
+    const failed = renderBooks(page, { error: new Error("Move failed.") });
+    const authoritative = renderBooks({ ...page, items: [
+      { ...page.items[1], position: 0 },
+      { ...page.items[0], position: 1 },
+    ] });
+
+    expect(pending).toMatch(/aria-label="Move Book A to position"[^>]*disabled/);
+    expect(failed).toContain("Move failed.");
+    expect(failed).toMatch(/aria-label="Move Book A to position"[^>]*><option value="0" disabled="" selected="">1<\/option>/);
+    expect(authoritative.indexOf("Book B")).toBeLessThan(authoritative.indexOf("Book A"));
   });
 
   it("disables Shelf Edit tab activation while an immediate item mutation is pending", () => {

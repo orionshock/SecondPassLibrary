@@ -13,6 +13,7 @@ import {
   listShelves,
   moveShelfItem,
   removeShelfItem,
+  setShelfItemPosition,
   updateShelf,
 } from "@second-pass/spl-api";
 import type { ApiClient } from "../client";
@@ -337,6 +338,25 @@ describe("Shelves SDK", () => {
     });
     expect(JSON.parse(String(calls[1]?.options?.body))).toEqual({ move: "down" });
     expect(moved).toMatchObject({ id: "visible-item", unavailable: false, position: 2 });
+  });
+
+  it("sets a Shelf item to a zero-based position and maps the authoritative item", async () => {
+    const calls: Array<{ path: string; options?: RequestInit }> = [];
+    const client: ApiClient = { request: async <T>(path: string, options?: RequestInit) => {
+      calls.push({ path, options });
+      return {
+        id: "item", shelf: "shelf/id", book: compactBook, position: 3, added_by: null,
+      } as T;
+    } };
+
+    const moved = await setShelfItemPosition("shelf/id", "item/id", 3, client);
+
+    expect(calls[0]).toMatchObject({
+      path: "/api/v1/shelves/shelf%2Fid/items/item%2Fid/",
+      options: { method: "PATCH" },
+    });
+    expect(JSON.parse(String(calls[0]?.options?.body))).toEqual({ position: 3 });
+    expect(moved).toMatchObject({ id: "item", shelfId: "shelf/id", position: 3 });
   });
 
   it("maps group ownership and follows every shelves-for-Book page", async () => {

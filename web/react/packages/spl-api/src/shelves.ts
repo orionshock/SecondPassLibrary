@@ -352,6 +352,23 @@ export async function moveShelfItem(
   return mapVisibleShelfEditorItem(response);
 }
 
+export async function setShelfItemPosition(
+  shelfId: string,
+  itemId: string,
+  position: number,
+  client: ApiClient = apiClient,
+): Promise<ShelfEditorItem> {
+  const response = await client.request<ShelfItemResponse>(
+    `/api/v1/shelves/${encodeURIComponent(shelfId)}/items/${encodeURIComponent(itemId)}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ position }),
+    },
+  );
+  return mapVisibleShelfEditorItem(response);
+}
+
 function mapShelfSummary(response: ShelfSummaryResponse): ShelfSummary {
   return {
     id: response.id,

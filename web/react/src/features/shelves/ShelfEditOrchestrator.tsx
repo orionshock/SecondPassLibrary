@@ -8,6 +8,7 @@ import {
   moveShelfItem,
   removeShelfItem,
   searchLibraryBooks,
+  setShelfItemPosition,
   updateShelf,
   type CompactBook,
   type Page,
@@ -306,10 +307,14 @@ export function ShelfEditOrchestrator() {
     }
   }
 
-  async function moveItem(itemId: string, move: "up" | "down") {
+  async function moveItem(itemId: string, move: "up" | "down" | number) {
     setItemMutation({ pendingId: itemId, pendingAction: "move" });
     try {
-      await moveShelfItem(shelfId, itemId, move);
+      if (typeof move === "number") {
+        await setShelfItemPosition(shelfId, itemId, move);
+      } else {
+        await moveShelfItem(shelfId, itemId, move);
+      }
       setItemsVersion((value) => value + 1);
     } catch (error: unknown) {
       setItemMutation({ error: normalizeMutationError(error) });
@@ -398,6 +403,7 @@ export function ShelfEditOrchestrator() {
         pendingAction={itemMutation.pendingAction}
         controlsDisabled={mutation.pending || deleteMutation.pending}
         onMove={(itemId, move) => void moveItem(itemId, move)}
+        onMoveTo={(itemId, position) => void moveItem(itemId, position)}
         onRemove={(item) => void removeItem(item)}
         onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}
         onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}

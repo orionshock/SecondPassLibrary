@@ -142,7 +142,7 @@ remove, and reorder mutations are immediate and independent from metadata Save;
 adds remain append-only. Blank Add Books search performs no request;
 personal shelves use broad Library search while group shelves use their owning
 Group Books endpoint, both with `exclude_shelf`. Deleting a Shelf removes its
-ShelfItems but never Books or files. Drag/drop and move-to-position remain deferred.
+ShelfItems but never Books or files. Shelf Edit supports immediate Move up, Move down, and one-based Move To positioning through the stored zero-based ShelfItem order; direct positioning is unavailable when retained inaccessible items prevent a safe absolute move. Drag/drop remains deferred.
 
 The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
 
