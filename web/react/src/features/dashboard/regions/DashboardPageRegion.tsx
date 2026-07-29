@@ -5,6 +5,7 @@ import { Button, ErrorPanel, Surface } from "../../../components/ui";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { ProductPageShellComponent } from "../../../shared/layout/ProductPageShellComponent";
+import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 
 export type RecentReadingState =
   | { status: "loading" }
@@ -65,14 +66,15 @@ function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState
 }
 
 function RecentReadingCardComponent({ item }: { item: RecentReadingSession }) {
+  const sessionName = marginaliaSessionDisplayName(item.session);
   const progression = item.session.progression === null
     ? undefined
     : Math.round(Math.max(0, Math.min(1, item.session.progression)) * 100);
-  return <Link className="dashboard-reading-card" to={`/marginalia/sessions/${encodeURIComponent(item.session.id)}`} state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: item.session.name.trim() || "Session" }])}>
+  return <Link className="dashboard-reading-card" to={`/marginalia/sessions/${encodeURIComponent(item.session.id)}`} state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: sessionName }])}>
     <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
     <span className="dashboard-reading-card__body">
       <strong>{item.book.title}</strong>
-      {item.session.name ? <span>{item.session.name}</span> : null}
+      <span>{sessionName}</span>
       <time dateTime={item.lastActivityAt}>{formatRecentActivity(item.lastActivityAt)}</time>
       {progression === undefined ? null : <span>{progression}% read</span>}
     </span>

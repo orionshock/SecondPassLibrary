@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { MarginaliaSessionsPageRegion } from "../features/marginalia/regions/MarginaliaSessionsPageRegion";
 import { marginaliaExportBreadcrumbFallback, marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
+import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 
 const visibleSession: ReadingSessionSummary = {
   id: "9fdd6203-a111-4f17-a477-b9d7ddeec77d",
@@ -69,13 +70,18 @@ describe("My Marginalia Session list", () => {
 
   it("keeps unavailable owned history neutral without leaking identity or an open action", () => {
     const markup = renderRegion({ items: [hiddenSession], count: 1, next: null, previous: null });
-    expect(markup).toContain("Unnamed session");
+    expect(markup).toContain("Unnamed Session 32618e");
     expect(markup).toContain("Book unavailable");
     expect(markup).not.toContain(">79dc1581");
     expect(markup).toContain(`href="/marginalia/sessions/${hiddenSession.id}"`);
     expect(markup).not.toContain("hidden-book</");
     expect(markup).not.toContain("View Book");
     expect(markup).not.toContain('href="/library/books/hidden-book"');
+  });
+
+  it("uses returned Session names unchanged and derives only blank display names", () => {
+    expect(marginaliaSessionDisplayName(visibleSession)).toBe("Morning notes");
+    expect(marginaliaSessionDisplayName(hiddenSession)).toBe("Unnamed Session 32618e");
   });
 
   it("renders URL-backed filter controls and the shared pagination frame", () => {

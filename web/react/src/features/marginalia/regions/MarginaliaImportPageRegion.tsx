@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Badge, Button, FormField, Surface } from "../../../components/ui";
 import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
@@ -98,7 +99,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
           const key = marginaliaImportSessionKey(bookIndex, sessionIndex);
           const value = draft[key] ?? { selected: false, name: session.name, notes: session.notes };
           const editing = editingSessionKeys.has(key);
-          const sessionName = value.name.trim() || "Unnamed session";
+          const sessionName = marginaliaSessionDisplayName({ id: session.exportSessionId, name: value.name });
           const sessionFacts = <><span className="css-dot" aria-hidden="true" /><span className="marginalia-import-session__annotation-count">{session.annotationCount} annotations</span></>;
           return <article className="marginalia-import-session" key={key}>
             <div className="marginalia-import-session__summary">

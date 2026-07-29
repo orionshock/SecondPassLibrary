@@ -8,6 +8,7 @@ import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { marginaliaSessionDisplayName } from "../../shared/marginaliaSessionDisplayName";
 import { marginaliaSessionBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSessionNoteEditorComponent } from "./components/MarginaliaSessionNoteEditorComponent";
 import { MarginaliaSessionTitleEditorComponent } from "./components/MarginaliaSessionTitleEditorComponent";
@@ -66,7 +67,7 @@ export function MarginaliaSessionDetailOrchestrator() {
   const [noteDraft, setNoteDraft] = useState("");
   const [noteState, setNoteState] = useState<MutationState>(idleMutationState);
   const recoveredPageKeys = useRef(new Set<string>());
-  const breadcrumbFallback = useMemo(() => marginaliaSessionBreadcrumbFallback(sessionLoad.status === "ready" ? sessionLoad.session.name : undefined), [sessionLoad]);
+  const breadcrumbFallback = useMemo(() => marginaliaSessionBreadcrumbFallback(sessionLoad.status === "ready" ? sessionLoad.session : undefined), [sessionLoad]);
   usePageBreadcrumbs(breadcrumbFallback);
   useAutoDismissMutationMessage(renameState, setRenameState);
   useAutoDismissMutationMessage(noteState, setNoteState);
@@ -200,7 +201,7 @@ export function MarginaliaSessionDetailOrchestrator() {
     }
   }
 
-  const title = sessionLoad.status === "ready" ? sessionLoad.session.name.trim() || "Unnamed session" : "Reading session";
+  const title = sessionLoad.status === "ready" ? marginaliaSessionDisplayName(sessionLoad.session) : "Reading session";
   if (sessionLoad.status === "loading") return <ProductPageShellComponent title={title}><p aria-live="polite" aria-busy="true">Loading reading session...</p></ProductPageShellComponent>;
   if (sessionLoad.status === "error") return <ProductPageShellComponent title={title}><ErrorPanel>{sessionLoad.error.message}</ErrorPanel><Button type="button" tone="secondary" onClick={() => setSessionRetry((value) => value + 1)}>Retry</Button></ProductPageShellComponent>;
 

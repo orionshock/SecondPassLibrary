@@ -3,6 +3,7 @@ import type { Page, ReadingSessionSummary } from "@second-pass/spl-api";
 
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
@@ -87,7 +88,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
 }
 
 function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: { session: ReadingSessionSummary; selected: boolean; disabled: boolean; onChange: (selected: boolean) => void }) {
-  const sessionName = session.name.trim() || "Unnamed session";
+  const sessionName = marginaliaSessionDisplayName(session);
   const bookTitle = session.book.unavailable ? "Book unavailable" : session.book.title || "Untitled Book";
   const relevantDate = session.completedAt ?? session.updatedAt ?? session.startedAt;
   return <article className="marginalia-export-session-row">

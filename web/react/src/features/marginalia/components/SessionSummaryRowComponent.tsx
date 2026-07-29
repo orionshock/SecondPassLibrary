@@ -4,10 +4,11 @@ import { Link } from "react-router-dom";
 import { Badge } from "../../../components/ui";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
 
 export function SessionSummaryRowComponent({ session }: { session: ReadingSessionSummary }) {
-  const sessionName = session.name.trim() || "Unnamed session";
+  const sessionName = marginaliaSessionDisplayName(session);
   const bookTitle = session.book.unavailable ? "Book unavailable" : session.book.title || "Untitled book";
   const relevantDate = session.completedAt ?? session.updatedAt ?? session.startedAt;
 
@@ -17,7 +18,7 @@ export function SessionSummaryRowComponent({ session }: { session: ReadingSessio
     </div>
     <div className="marginalia-session-row__body">
       <div className="marginalia-session-row__heading">
-        <h2><Link to={`/marginalia/sessions/${encodeURIComponent(session.id)}`} state={breadcrumbNavigationState(marginaliaSessionBreadcrumbFallback(sessionName))}>{sessionName}</Link></h2>
+        <h2><Link to={`/marginalia/sessions/${encodeURIComponent(session.id)}`} state={breadcrumbNavigationState(marginaliaSessionBreadcrumbFallback(session))}>{sessionName}</Link></h2>
         <Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge>
       </div>
       {session.book.unavailable

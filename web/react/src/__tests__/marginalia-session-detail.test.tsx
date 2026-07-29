@@ -11,6 +11,7 @@ import { MarginaliaSessionNoteEditorComponent } from "../features/marginalia/com
 import { MarginaliaSessionTitleEditorComponent } from "../features/marginalia/components/MarginaliaSessionTitleEditorComponent";
 import { AnnotationCategoryMenuOptionsComponent, MarginaliaSessionDetailPageRegion, annotationOrderOptions } from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
 import { OrderMenuOptionsComponent } from "../shared/forms/OrderMenuComponent";
+import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 
 const session: ReadingSessionDetail = {
   id: "session-sensitive-id",
@@ -77,11 +78,24 @@ function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDeta
 }
 
 describe("My Marginalia Session Detail", () => {
-  it("registers the detail route and builds a bounded breadcrumb without Session IDs", () => {
+  it("registers the detail route and uses the same named or fallback breadcrumb label", () => {
     const children = appRoutes[0]?.children ?? [];
     expect(children.some((route) => "path" in route && route.path === "marginalia/sessions/:sessionId")).toBe(true);
-    expect(marginaliaSessionBreadcrumbFallback("Imported history")).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Imported history" }]);
-    expect(JSON.stringify(marginaliaSessionBreadcrumbFallback(""))).not.toContain(session.id);
+    expect(marginaliaSessionBreadcrumbFallback(session)).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Imported history" }]);
+    const unnamed = { ...session, id: "7f0c9ea5-2c36-4a84-b55b-447e57c24736", name: "" };
+    expect(marginaliaSessionBreadcrumbFallback(unnamed).at(-1)?.label).toBe("Unnamed Session c24736");
+  });
+
+  it("uses the display-only unnamed title without submitting it as a rename", async () => {
+    const unnamed = { ...session, id: "7f0c9ea5-2c36-4a84-b55b-447e57c24736", name: "" };
+    const title = marginaliaSessionDisplayName(unnamed);
+    expect(renderToStaticMarkup(MarginaliaSessionTitleEditorComponent({
+      displayName: title, editable: true, draft: unnamed.name, editing: false, pending: false,
+      onDraftChange: vi.fn(), onEdit: vi.fn(), onSave: vi.fn(), onCancel: vi.fn(),
+    }))).toContain("Unnamed Session c24736");
+    const update = vi.fn();
+    await expect(renameMarginaliaSession(unnamed, unnamed.name, update)).resolves.toEqual({ session: unnamed, changed: false });
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("exposes compact Session-name edit, save, cancel, and keyboard controls", () => {
