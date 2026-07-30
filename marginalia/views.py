@@ -7,16 +7,24 @@ from rest_framework.permissions import IsAuthenticated
 
 from accounts.authentication import ClientBearerAuthentication
 
-from .queries import marginalia_books_for_user, marginalia_sessions_for_book
+from .queries import (
+    marginalia_books_for_user,
+    marginalia_sessions_for_book,
+    marginalia_sessions_for_user,
+)
 from .serializers import (
     MarginaliaBookSummarySerializer,
+    MarginaliaGlobalSessionSummarySerializer,
     MarginaliaSessionSummarySerializer,
 )
 
 
-class MarginaliaBookReadMixin:
+class MarginaliaReadMixin:
     authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
     permission_classes = [IsAuthenticated]
+
+
+class MarginaliaBookReadMixin(MarginaliaReadMixin):
     serializer_class = MarginaliaBookSummarySerializer
 
     def get_queryset(self):
@@ -68,3 +76,14 @@ class MarginaliaBookSessionListView(MarginaliaBookReadMixin, ListAPIView):
         }
         response.data["results"] = results
         return response
+
+
+class MarginaliaSessionListView(MarginaliaReadMixin, ListAPIView):
+    serializer_class = MarginaliaGlobalSessionSummarySerializer
+
+    def get_queryset(self):
+        return marginalia_sessions_for_user(
+            user=self.request.user,
+            status=self.request.query_params.get("status", ""),
+            q=self.request.query_params.get("q", ""),
+        )

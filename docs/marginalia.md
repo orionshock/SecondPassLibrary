@@ -22,6 +22,7 @@ bearer tokens:
 - `GET /api/v1/marginalia/books/`
 - `GET /api/v1/marginalia/books/<book_id>/`
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
+- `GET /api/v1/marginalia/sessions/`
 
 A Book is present only when the caller owns at least one Marginalia
 `ReadingSession` for it. This historical ownership is independent of current
@@ -116,6 +117,46 @@ exclude other users' Sessions.
 Current Library visibility remains unnecessary. The caller must own a Session
 for the parent Book, and missing or unowned parents use the same no-leakage
 `404` response as Marginalia Book detail.
+
+## All Sessions
+
+`GET /api/v1/marginalia/sessions/` returns the caller's Sessions across all
+Books. It uses the same bounded Session fields, activity calculation, status
+filtering, and page-number pagination as the nested Book route. Omitted
+`status` means all Sessions; accepted values are `active` and `closed`.
+
+Global `q` search covers Session name and notes plus bounded Book identity:
+Book title, author names, and Series name. The Session ownership filter is
+applied before these joins, so another user's Sessions and Books cannot match.
+
+Each row adds only the Book reference needed by the Marginalia Session card:
+
+```json
+{
+  "id": "<session-uuid>",
+  "name": "Second pass",
+  "notes": "Session note",
+  "status": "closed",
+  "started_at": "2026-07-01T12:00:00Z",
+  "closed_at": "2026-07-20T12:00:00Z",
+  "updated_at": "2026-07-20T12:00:00Z",
+  "last_activity_at": "2026-07-21T12:00:00Z",
+  "annotation_count": 12,
+  "progression": 0.75,
+  "book": {
+    "id": "<book-uuid>",
+    "title": "Book title",
+    "cover_url": "http://example.test/media/covers/example.jpg",
+    "can_open": false
+  }
+}
+```
+
+The Book reference deliberately excludes authors, Series, Session aggregates,
+EPUB/file fields, download URLs, identifiers, Groups, Shelves, and unrelated
+catalog metadata. Owned Marginalia keeps title and public cover identity
+available for an inaccessible historical Book, while `can_open=false` prevents
+that history from implying current Book Detail, Reader, or download authority.
 
 ## Session lifecycle
 

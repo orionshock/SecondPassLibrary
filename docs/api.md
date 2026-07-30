@@ -100,6 +100,7 @@ projection:
 - `GET /api/v1/marginalia/books/`
 - `GET /api/v1/marginalia/books/<book_id>/`
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
+- `GET /api/v1/marginalia/sessions/`
 
 Both accept Django session or Client API bearer authentication. The caller must
 own at least one Marginalia Reading Session for a Book; current Library
@@ -128,6 +129,13 @@ The new Marginalia lifecycle has only `active` and `closed`. Opening a Book's
 Session returns the existing active Session when present and never closes it
 automatically. Creating a later Session requires a prior explicit close; having
 only closed Sessions and no active Session is valid.
+
+The flat Sessions route returns caller-owned Sessions across all Books with
+normal Session-level pagination. It supports `status=active|closed` and `q`
+over Session name/notes plus Book title, author names, and Series name. Each row
+contains only a bounded Book reference: `id`, `title`, public `cover_url`, and
+independently computed `can_open`. It does not repeat the canonical full
+Marginalia Book summary or expose Library file/download data.
 
 ## Accounts
 

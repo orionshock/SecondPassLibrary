@@ -93,24 +93,62 @@ def marginalia_sessions_for_book(
     status: str = "",
     q: str = "",
 ) -> QuerySet[ReadingSession]:
-    raw_status = (status or "").strip()
-    allowed_statuses = {choice[0] for choice in ReadingSession.STATUS_CHOICES}
-    if raw_status and raw_status not in allowed_statuses:
-        raise ValidationError({"status": "Invalid status."})
-
     queryset = ReadingSession.objects.filter(user=user, book=book)
     search = (q or "").strip()
     if search:
         queryset = queryset.filter(Q(name__icontains=search) | Q(notes__icontains=search))
+    queryset = _filter_session_status(queryset, status=status)
+    return _session_summary_queryset(queryset, user=user)
+
+
+def marginalia_sessions_for_user(
+    *,
+    user,
+    status: str = "",
+    q: str = "",
+) -> QuerySet[ReadingSession]:
+    queryset = ReadingSession.objects.filter(user=user)
+    search = (q or "").strip()
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search)
+            | Q(notes__icontains=search)
+            | Q(book__title__icontains=search)
+            | Q(book__book_authors__author__name__icontains=search)
+            | Q(book__book_series__series__name__icontains=search)
+        )
+    queryset = _filter_session_status(queryset, status=status)
+    return _session_summary_queryset(queryset, user=user)
+
+
+def _filter_session_status(
+    queryset: QuerySet[ReadingSession],
+    *,
+    status: str,
+) -> QuerySet[ReadingSession]:
+    raw_status = (status or "").strip()
+    allowed_statuses = {choice[0] for choice in ReadingSession.STATUS_CHOICES}
+    if raw_status and raw_status not in allowed_statuses:
+        raise ValidationError({"status": "Invalid status."})
     if raw_status:
         queryset = queryset.filter(status=raw_status)
+    return queryset
 
+
+def _session_summary_queryset(
+    queryset: QuerySet[ReadingSession],
+    *,
+    user,
+) -> QuerySet[ReadingSession]:
     latest_annotation_activity = Max(
         "annotations__updated_at",
         filter=Q(annotations__is_deleted=False),
     )
+    visible_books = visible_books_for_user(user, cached=False).filter(
+        pk=OuterRef("book_id")
+    )
     return (
-        queryset.select_related("progress")
+        queryset.select_related("book", "progress")
         .annotate(
             progression=Max("progress__progression"),
             annotation_count=Count(
@@ -124,6 +162,7 @@ def marginalia_sessions_for_book(
                 Coalesce(latest_annotation_activity, "updated_at"),
                 output_field=DateTimeField(),
             ),
+            can_open=Exists(visible_books),
         )
         .order_by("-last_activity_at", "-started_at", "-id")
     )

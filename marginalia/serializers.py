@@ -78,3 +78,36 @@ class MarginaliaSessionSummarySerializer(serializers.ModelSerializer):
             "progression",
         ]
         read_only_fields = fields
+
+
+class MarginaliaSessionBookReferenceSerializer(serializers.ModelSerializer):
+    cover_url = serializers.SerializerMethodField()
+    can_open = serializers.SerializerMethodField()
+
+    def get_cover_url(self, book: Book) -> str | None:
+        return book_cover_url(book, request=self.context.get("request"))
+
+    def get_can_open(self, _book: Book) -> bool:
+        return bool(self.context.get("can_open", False))
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "cover_url", "can_open"]
+        read_only_fields = fields
+
+
+class MarginaliaGlobalSessionSummarySerializer(MarginaliaSessionSummarySerializer):
+    book = serializers.SerializerMethodField()
+
+    def get_book(self, session: ReadingSession) -> dict:
+        return MarginaliaSessionBookReferenceSerializer(
+            session.book,
+            context={
+                "request": self.context.get("request"),
+                "can_open": session.can_open,
+            },
+        ).data
+
+    class Meta(MarginaliaSessionSummarySerializer.Meta):
+        fields = [*MarginaliaSessionSummarySerializer.Meta.fields, "book"]
+        read_only_fields = fields
