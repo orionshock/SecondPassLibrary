@@ -1,0 +1,72 @@
+{
+  "type": "SecondPassMarginaliaExport",
+  "schema_version": "0.1.0",
+  "profile": "https://secondpasslibrary.local/specs/marginalia/0.1.0",
+  "generated_at": "2026-07-29T12:00:00Z",
+  "generator": "Second Pass Library",
+  "scope": {
+    "type": "all"
+  },
+  "books": [
+    {
+      "source": "secondpass:book:7152f4b8-ad35-4dd6-9e40-8ae68678e76e",
+      "file_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "title": "The Example Book",
+      "subtitle": "A Portable Marginalia Example",
+      "authors": [
+        "Example Author"
+      ],
+      "series": "Example Series",
+      "series_index": "8",
+      "language": "en",
+      "isbn": "9780000000000",
+      "epub_unique_identifier": "urn:uuid:12345678-1234-1234-1234-123456789abc",
+      "sessions": [
+        {
+          "id": "session-1",
+          "name": "Current pass",
+          "notes": "",
+          "status": "active",
+          "startedAt": "2026-07-20T12:00:00Z",
+          "closedAt": null,
+          "createdAt": "2026-07-20T12:00:00Z",
+          "updatedAt": "2026-07-29T12:00:00Z",
+          "progress": {
+            "location": {
+              "cfi": "epubcfi(/6/8!/4/2)",
+              "locationLabel": "Chapter 08 · 42%"
+            },
+            "updatedAt": "2026-07-29T12:00:00Z"
+          },
+          "annotations": [
+            {
+              "kind": "highlight",
+              "location": {
+                "cfi": "epubcfi(/6/8!/4/4)",
+                "locationLabel": "Chapter 08 · 43% · The Blackstaff"
+              },
+              "body": {
+                "text": "The selected passage",
+                "prefix": "Text immediately before ",
+                "suffix": " text immediately after.",
+                "color": "yellow",
+                "note": "A note on this highlight."
+              },
+              "createdAt": "2026-07-28T12:00:00Z",
+              "updatedAt": "2026-07-28T12:00:00Z"
+            },
+            {
+              "kind": "bookmark",
+              "location": {
+                "cfi": "epubcfi(/6/10!/4/2)",
+                "locationLabel": "Chapter 09 · 47%"
+              },
+              "createdAt": "2026-07-29T11:00:00Z",
+              "updatedAt": "2026-07-29T11:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

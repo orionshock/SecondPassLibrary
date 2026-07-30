@@ -165,6 +165,21 @@ class MarginaliaFoundationTests(TestCase):
                 cfi="epubcfi(/6/4)",
                 comment_text="Not valid bookmark content.",
             )
+        for field in (
+            "highlight_text",
+            "quote_prefix",
+            "quote_suffix",
+            "highlight_color",
+        ):
+            with self.subTest(field=field), self.assertRaises(
+                IntegrityError
+            ), transaction.atomic():
+                Annotation.objects.create(
+                    session=session,
+                    kind=Annotation.KIND_BOOKMARK,
+                    cfi="epubcfi(/6/4)",
+                    **{field: "not allowed"},
+                )
         with self.assertRaises(IntegrityError), transaction.atomic():
             SessionProgress.objects.create(session=session, progression=1.1)
 

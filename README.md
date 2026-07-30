@@ -89,7 +89,10 @@ Marginalia export is available for:
 - Selected sessions for one book
 - One reading session
 
-The export format is documented in [docs/specs/marginalia-export.md](docs/specs/marginalia-export.md), with a JSON Schema in [docs/specs/marginalia-export.schema.json](docs/specs/marginalia-export.schema.json).
+The canonical Marginalia interchange profile is documented in
+[docs/specs/reading-session-annotation-profile/](docs/specs/reading-session-annotation-profile/).
+The export-only envelope is documented in
+[docs/specs/marginalia-export.md](docs/specs/marginalia-export.md).
 
 Importing marginalia back into the system supports SPL native marginalia exports. The product UI previews the file, stages the validated payload with a short-lived import token, and can apply selected sessions as historical reading sessions. Foreign annotation formats should be normalized by a client through the normal reading APIs or converted by an external tool into SPL native format first.
 

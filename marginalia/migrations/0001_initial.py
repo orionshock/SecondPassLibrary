@@ -110,7 +110,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='annotation',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('kind', 'bookmark'), _negated=True), models.Q(('comment_text', ''), ('highlight_color', ''), ('highlight_text', '')), _connector='OR'), name='marginalia_bookmark_has_no_content'),
+            constraint=models.CheckConstraint(condition=models.Q(models.Q(('kind', 'bookmark'), _negated=True), models.Q(('comment_text', ''), ('highlight_color', ''), ('highlight_text', ''), ('quote_prefix', ''), ('quote_suffix', '')), _connector='OR'), name='marginalia_bookmark_has_no_content'),
         ),
         migrations.AddConstraint(
             model_name='sessionprogress',

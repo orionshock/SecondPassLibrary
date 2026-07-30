@@ -5,9 +5,10 @@ reading-session-centered model. The live annotation API uses compact
 SPL-native fields; the portable export/import format is documented separately
 as the Second Pass Library Marginalia Profile.
 
-This document is design direction for reading sessions, progress, and annotations. The canonical portable exchange profile lives in:
+This document is design direction for Reading Sessions, progress, and
+annotations. The canonical interchange profile lives in:
 
-- `docs/specs/marginalia-export.md`
+- `docs/specs/reading-session-annotation-profile/`
   - Current profile version: `0.1.0`
 
 For practical current REST payload examples for reader-client development, see:
@@ -48,9 +49,9 @@ Internally, annotations are stored in compact/queryable columns:
 - `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
-The live REST API uses `kind`, `selector`, optional `quote`, `highlight_text`,
-`highlight_color`, and `comment_text`. The canonical export/import profile is
-the session-centered Second Pass Library Marginalia Profile.
+The canonical Marginalia profile keeps the location separate from a native
+highlight body containing selected text, quote context, color, and optional
+note. Field adaptation belongs at the API boundary.
 
 Anchor immutability:
 
@@ -79,7 +80,6 @@ Highlight color:
 - A user may have one active session per book.
 - Closed sessions are immutable (not reopened/mutated).
 - New sessions may layer previous sessions as read-only overlays.
-- There is no cross-session annotation promotion/linking in the current implementation. Re-highlighting in a new session creates a separate annotation.
 
 ### Ownership and durability
 
@@ -88,9 +88,9 @@ Highlight color:
 
 ## Export/import direction
 
-Second Pass Library's current server export/import contract is the canonical
-Second Pass Library Marginalia Profile documented in
-`docs/specs/marginalia-export.md`.
+Second Pass Library's canonical Server/Reader and archive object contract is
+documented in `docs/specs/reading-session-annotation-profile/`. The export-only
+Book/scope envelope is documented in `docs/specs/marginalia-export.md`.
 
 Server-side marginalia import supports SPL Marginalia Profile files only.
 Preview validates and stages the native export with a short-lived import token;

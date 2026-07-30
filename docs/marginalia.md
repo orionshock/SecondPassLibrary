@@ -194,7 +194,7 @@ Session. They do not duplicate a Book foreign key. Located annotations require
 a nonempty CFI and use soft deletion. The only annotation kinds are `highlight`
 and `bookmark`. A note is `comment_text` attached to a highlight, not a separate
 annotation kind. Highlights require selected text; bookmarks carry neither
-highlight nor comment content.
+highlight text, quote context, color, nor comment content.
 
 Request idempotency remains an API concern and is deliberately not domain model
 state. External client correlation and import/export profile mapping are

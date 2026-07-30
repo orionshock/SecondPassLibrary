@@ -1084,9 +1084,10 @@ and Product UI workflow. The designated Public group cannot be deleted.
 
 ## Reading
 
-- Reading annotation APIs use compact SPL-native payload fields. The canonical
-  portable exchange format is the session-centered Second Pass Library
-  Marginalia Profile documented in `docs/specs/marginalia-export.md`.
+- Marginalia uses the canonical native Session, location, progress, highlight,
+  and bookmark shapes documented in
+  `docs/specs/reading-session-annotation-profile/`. The archive envelope is
+  documented separately in `docs/specs/marginalia-export.md`.
 - Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
 - Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
 - Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)

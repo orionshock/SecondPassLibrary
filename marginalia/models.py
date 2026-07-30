@@ -200,7 +200,13 @@ class Annotation(TimeStampedModel):
             ),
             models.CheckConstraint(
                 condition=~Q(kind="bookmark")
-                | Q(highlight_text="", comment_text="", highlight_color=""),
+                | Q(
+                    highlight_text="",
+                    quote_prefix="",
+                    quote_suffix="",
+                    comment_text="",
+                    highlight_color="",
+                ),
                 name="marginalia_bookmark_has_no_content",
             ),
         ]
@@ -226,9 +232,15 @@ class Annotation(TimeStampedModel):
             if not self.highlight_color:
                 self.highlight_color = HIGHLIGHT_COLOR_YELLOW
         elif self.kind == self.KIND_BOOKMARK:
-            if self.highlight_text or self.comment_text or self.highlight_color:
+            if (
+                self.highlight_text
+                or self.quote_prefix
+                or self.quote_suffix
+                or self.comment_text
+                or self.highlight_color
+            ):
                 raise ValidationError(
-                    {"kind": "Bookmarks cannot carry highlight or note content."}
+                    {"kind": "Bookmarks cannot carry highlight content."}
                 )
 
     def __str__(self) -> str:

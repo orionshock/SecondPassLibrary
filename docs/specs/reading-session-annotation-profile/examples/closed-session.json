@@ -1,0 +1,12 @@
+{
+  "id": "session-2",
+  "name": "Previous pass",
+  "notes": "Finished before starting the current pass.",
+  "status": "closed",
+  "startedAt": "2026-06-01T12:00:00Z",
+  "closedAt": "2026-06-30T12:00:00Z",
+  "createdAt": "2026-06-01T12:00:00Z",
+  "updatedAt": "2026-06-30T12:00:00Z",
+  "progress": null,
+  "annotations": []
+}

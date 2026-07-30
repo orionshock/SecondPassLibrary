@@ -240,9 +240,9 @@ The live annotation API uses compact SPL-native fields:
 - `quote_prefix` / `quote_suffix` (optional quote context for highlight repair/export; each <= 500 chars)
 - `comment_text`
 
-The canonical portable exchange format remains the session-centered Second Pass
-Library Marginalia Profile documented in
-`docs/specs/marginalia-export.md`.
+The canonical Server/Reader and archive object contract is documented in
+`docs/specs/reading-session-annotation-profile/`. The export-specific envelope
+is documented in `docs/specs/marginalia-export.md`.
 
 Highlight color:
 
@@ -274,7 +274,6 @@ Annotation payloads use these API fields:
 Notes:
 
 - Annotations belong to exactly one reading session.
-- The current implementation does not support cross-session promotion/linking (no `derivedFrom` / `sourceSession` behavior).
 - Annotation anchors are immutable after creation:
   - `selector`
   - optional `quote` context (`exact`/`prefix`/`suffix`)
@@ -299,8 +298,9 @@ Future possibilities:
 
 Current export support includes a complete archive plus selected archive exports. Import support includes preview plus a minimal native apply path for matched visible books.
 
-The canonical Second Pass Library Marginalia Profile is documented in
-`docs/specs/marginalia-export.md`.
+The canonical Marginalia objects are documented in
+`docs/specs/reading-session-annotation-profile/`; the export envelope is
+documented in `docs/specs/marginalia-export.md`.
 
 Product UI:
 
