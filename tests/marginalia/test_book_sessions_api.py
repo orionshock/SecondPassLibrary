@@ -64,11 +64,13 @@ class MarginaliaBookSessionAPITests(APITestCase):
     def test_returns_only_caller_owned_sessions_with_bounded_summary(self):
         annotation = Annotation.objects.create(
             session=self.active,
+            client_id="visible-bookmark",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/2)",
         )
         Annotation.objects.create(
             session=self.active,
+            client_id="deleted-bookmark",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/4)",
             is_deleted=True,
@@ -181,6 +183,7 @@ class MarginaliaBookSessionAPITests(APITestCase):
         )
         annotation = Annotation.objects.create(
             session=self.closed,
+            client_id="closed-activity",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/8)",
         )

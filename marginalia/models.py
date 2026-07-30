@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 
 MAX_CFI_LENGTH = 8 * 1024
 MAX_LOCATION_LABEL_LENGTH = 255
+MAX_ANNOTATION_CLIENT_ID_LENGTH = 255
+MAX_ANNOTATION_BODY_LENGTH = 64 * 1024
+MAX_QUOTE_CONTEXT_LENGTH = 500
 HIGHLIGHT_COLOR_YELLOW = "yellow"
 HIGHLIGHT_COLOR_GREEN = "green"
 HIGHLIGHT_COLOR_BLUE = "blue"
@@ -147,6 +150,7 @@ class Annotation(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="annotations",
     )
+    client_id = models.CharField(max_length=MAX_ANNOTATION_CLIENT_ID_LENGTH)
     kind = models.CharField(max_length=16, choices=KIND_CHOICES)
     cfi = models.TextField(max_length=MAX_CFI_LENGTH)
     location_label = models.CharField(
@@ -154,10 +158,26 @@ class Annotation(TimeStampedModel):
         blank=True,
         default="",
     )
-    highlight_text = models.TextField(blank=True, default="")
-    comment_text = models.TextField(blank=True, default="")
-    quote_prefix = models.TextField(blank=True, default="")
-    quote_suffix = models.TextField(blank=True, default="")
+    highlight_text = models.TextField(
+        max_length=MAX_ANNOTATION_BODY_LENGTH,
+        blank=True,
+        default="",
+    )
+    comment_text = models.TextField(
+        max_length=MAX_ANNOTATION_BODY_LENGTH,
+        blank=True,
+        default="",
+    )
+    quote_prefix = models.TextField(
+        max_length=MAX_QUOTE_CONTEXT_LENGTH,
+        blank=True,
+        default="",
+    )
+    quote_suffix = models.TextField(
+        max_length=MAX_QUOTE_CONTEXT_LENGTH,
+        blank=True,
+        default="",
+    )
     highlight_color = models.CharField(
         max_length=16,
         choices=HIGHLIGHT_COLOR_CHOICES,
@@ -182,6 +202,14 @@ class Annotation(TimeStampedModel):
             models.CheckConstraint(
                 condition=Q(kind__in=["bookmark", "highlight"]),
                 name="marginalia_annotation_kind_is_valid",
+            ),
+            models.CheckConstraint(
+                condition=~Q(client_id=""),
+                name="marginalia_annotation_has_client_id",
+            ),
+            models.UniqueConstraint(
+                fields=["session", "client_id"],
+                name="marginalia_annotation_client_id_per_session",
             ),
             models.CheckConstraint(
                 condition=~Q(cfi=""),
@@ -214,6 +242,10 @@ class Annotation(TimeStampedModel):
 
     def clean(self) -> None:
         super().clean()
+        if not self.client_id:
+            raise ValidationError(
+                {"client_id": "A client correlation id is required."}
+            )
         if not self.cfi:
             raise ValidationError({"cfi": "A located annotation requires a CFI."})
 

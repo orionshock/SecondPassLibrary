@@ -137,6 +137,7 @@ class MarginaliaBookAPITests(APITestCase):
         )
         annotation = Annotation.objects.create(
             session=self.hidden_closed,
+            client_id="book-activity",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/2)",
         )

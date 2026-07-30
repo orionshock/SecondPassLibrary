@@ -85,6 +85,7 @@ class MarginaliaFoundationTests(TestCase):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         annotation = Annotation.objects.create(
             session=session,
+            client_id="owned-bookmark",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/2)",
         )
@@ -162,12 +163,14 @@ class MarginaliaFoundationTests(TestCase):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         bookmark = Annotation.objects.create(
             session=session,
+            client_id="unlabeled-bookmark",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/2)",
         )
         label = "Location 008 · 42% · Appendix B"
         noted_highlight = Annotation.objects.create(
             session=session,
+            client_id="labeled-highlight",
             kind=Annotation.KIND_HIGHLIGHT,
             cfi="epubcfi(/6/4)",
             location_label=label,
@@ -181,6 +184,7 @@ class MarginaliaFoundationTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
+                client_id="null-location-label",
                 kind=Annotation.KIND_BOOKMARK,
                 cfi="epubcfi(/6/6)",
                 location_label=None,
@@ -192,18 +196,21 @@ class MarginaliaFoundationTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
+                client_id="missing-cfi",
                 kind=Annotation.KIND_BOOKMARK,
                 cfi="",
             )
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
+                client_id="missing-highlight-text",
                 kind=Annotation.KIND_HIGHLIGHT,
                 cfi="epubcfi(/6/2)",
             )
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
+                client_id="bookmark-with-note",
                 kind=Annotation.KIND_BOOKMARK,
                 cfi="epubcfi(/6/4)",
                 comment_text="Not valid bookmark content.",
@@ -219,10 +226,45 @@ class MarginaliaFoundationTests(TestCase):
             ), transaction.atomic():
                 Annotation.objects.create(
                     session=session,
+                    client_id=f"bookmark-with-{field}",
                     kind=Annotation.KIND_BOOKMARK,
                     cfi="epubcfi(/6/4)",
                     **{field: "not allowed"},
                 )
+
+    def test_annotation_client_id_is_required_and_unique_within_session(self):
+        session = ReadingSession.objects.create(user=self.user, book=self.book)
+        other_session = ReadingSession.objects.create(
+            user=self.user,
+            book=Book.objects.create(title="Other Book"),
+        )
+        Annotation.objects.create(
+            session=session,
+            client_id="reader-annotation-1",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/2)",
+        )
+        Annotation.objects.create(
+            session=other_session,
+            client_id="reader-annotation-1",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/2)",
+        )
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Annotation.objects.create(
+                session=session,
+                client_id="reader-annotation-1",
+                kind=Annotation.KIND_BOOKMARK,
+                cfi="epubcfi(/6/4)",
+            )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Annotation.objects.create(
+                session=session,
+                client_id="",
+                kind=Annotation.KIND_BOOKMARK,
+                cfi="epubcfi(/6/6)",
+            )
 
     def test_closed_session_progress_is_immutable(self):
         session = ReadingSession.objects.create(

@@ -108,6 +108,7 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         )
         annotation = Annotation.objects.create(
             session=self.active,
+            client_id="detail-activity",
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/10)",
         )

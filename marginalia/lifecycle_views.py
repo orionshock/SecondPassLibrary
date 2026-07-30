@@ -5,8 +5,11 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .api import MarginaliaReadMixin
-from .api_errors import book_access_required_response, session_closed_response
+from .api import (
+    MarginaliaReadMixin,
+    book_access_required_response,
+    session_closed_response,
+)
 from .detail_views import session_detail_response
 from .exceptions import BookAccessRequiredError, SessionClosedError
 from .lifecycle_services import (
