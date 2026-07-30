@@ -26,6 +26,7 @@ bearer tokens:
 - `GET /api/v1/marginalia/books/<book_id>/active-session/`
 - `POST /api/v1/marginalia/books/<book_id>/start-over/`
 - `GET /api/v1/marginalia/sessions/`
+- `GET /api/v1/marginalia/sessions/recent/`
 - `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
 - `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
 - `POST /api/v1/marginalia/sessions/<session_id>/close/`
@@ -225,6 +226,21 @@ EPUB/file fields, download URLs, identifiers, Groups, Shelves, and unrelated
 catalog metadata. Owned Marginalia keeps title and public cover identity
 available for an inaccessible historical Book, while `can_open=false` prevents
 that history from implying current Book Detail, Reader, or download authority.
+
+## Recent Sessions
+
+`GET /api/v1/marginalia/sessions/recent/` returns a bounded, unpaginated
+Dashboard collection. Omitted `include_closed`, or `include_closed=false`,
+returns active Sessions only; `include_closed=true` also includes closed
+Sessions. `limit` defaults to 10 and accepts values from 1 through 50.
+
+The ownership filter and limit are applied in the database. Results are not
+deduplicated by Book and retain the server-authoritative activity order used by
+the other Session collections: newest Session metadata, saved progress, or
+non-deleted Annotation update first. Each result contains only `id`, `name`,
+`status`, `last_activity_at`, and the bounded `id`, `title`, `cover_url`, and
+`can_open` Book reference. Inaccessible Books remain identifiable while
+`can_open=false` prevents a Library action.
 
 ## Session detail and metadata
 

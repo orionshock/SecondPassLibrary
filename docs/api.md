@@ -104,6 +104,7 @@ projection:
 - `GET /api/v1/marginalia/books/<book_id>/active-session/`
 - `POST /api/v1/marginalia/books/<book_id>/start-over/`
 - `GET /api/v1/marginalia/sessions/`
+- `GET /api/v1/marginalia/sessions/recent/`
 - `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
 - `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
 - `POST /api/v1/marginalia/sessions/<session_id>/close/`
@@ -205,6 +206,14 @@ over Session name/notes plus Book title, author names, and Series name. Each row
 contains only a bounded Book reference: `id`, `title`, public `cover_url`, and
 independently computed `can_open`. It does not repeat the canonical full
 Marginalia Book summary or expose Library file/download data.
+
+The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
+`{"results": [...]}` without pagination. It defaults to the 10 most recently
+active caller-owned Sessions; `limit` is bounded from 1 through 50 and
+`include_closed=true` includes closed Sessions. Activity ordering uses Session,
+progress, and non-deleted Annotation updates before applying the database
+limit. Rows are not deduplicated by Book and expose only Session id, name,
+status, last activity, and the bounded Book id/title/cover/`can_open` reference.
 
 ## Accounts
 

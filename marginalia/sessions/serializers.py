@@ -72,6 +72,35 @@ class MarginaliaGlobalSessionSummarySerializer(MarginaliaSessionSummarySerialize
         read_only_fields = fields
 
 
+class MarginaliaRecentSessionSerializer(serializers.ModelSerializer):
+    last_activity_at = serializers.DateTimeField(read_only=True)
+    book = serializers.SerializerMethodField()
+
+    def get_book(self, session: ReadingSession) -> dict:
+        return MarginaliaSessionBookReferenceSerializer(
+            session.book,
+            context={
+                "request": self.context.get("request"),
+                "can_open": session.can_open,
+            },
+        ).data
+
+    class Meta:
+        model = ReadingSession
+        fields = ["id", "name", "status", "last_activity_at", "book"]
+        read_only_fields = fields
+
+
+class MarginaliaRecentSessionsQuerySerializer(serializers.Serializer):
+    limit = serializers.IntegerField(
+        min_value=1,
+        max_value=50,
+        default=10,
+        required=False,
+    )
+    include_closed = serializers.BooleanField(default=False, required=False)
+
+
 class MarginaliaSessionDetailSerializer(serializers.ModelSerializer):
     annotation_count = serializers.IntegerField(read_only=True)
     last_activity_at = serializers.DateTimeField(read_only=True)

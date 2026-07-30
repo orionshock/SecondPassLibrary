@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { ApiClient } from "../client";
+import { ApiError } from "../errors";
 import {
   getMarginaliaBook,
   listMarginaliaBooks,
   listMarginaliaBookSessions,
   listMarginaliaSessions,
+  listRecentMarginaliaSessions,
 } from "../marginalia";
 
 const book = {
@@ -131,5 +133,67 @@ describe("Marginalia Session list SDK", () => {
     });
     expect(page.items[0]?.book).not.toHaveProperty("authors");
     expect(page.items[0]?.book).not.toHaveProperty("sessionCount");
+  });
+});
+
+describe("Marginalia recent Session SDK", () => {
+  it("maps the bounded Dashboard projection and defaults to active-only", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return {
+        results: [{
+          id: "session-1",
+          name: "Current pass",
+          status: "active",
+          last_activity_at: "2026-07-30T12:00:00Z",
+          book: {
+            id: "book-1",
+            title: "Remembered Book",
+            cover_url: "http://testserver/media/covers/book.jpg",
+            can_open: false,
+          },
+        }],
+      } as T;
+    } };
+
+    const results = await listRecentMarginaliaSessions({}, client);
+
+    expect(calls).toEqual(["/api/v1/marginalia/sessions/recent/"]);
+    expect(results).toEqual([{
+      id: "session-1",
+      name: "Current pass",
+      status: "active",
+      lastActivityAt: "2026-07-30T12:00:00Z",
+      book: {
+        id: "book-1",
+        title: "Remembered Book",
+        coverUrl: "/media/covers/book.jpg",
+        canOpen: false,
+      },
+    }]);
+  });
+
+  it("maps the optional limit and closed inclusion query", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { results: [] } as T;
+    } };
+
+    await listRecentMarginaliaSessions({ limit: 10, includeClosed: true }, client);
+
+    expect(calls).toEqual([
+      "/api/v1/marginalia/sessions/recent/?limit=10&include_closed=true",
+    ]);
+  });
+
+  it("preserves the central SDK error abstraction", async () => {
+    const error = new ApiError("Unavailable.", 409, { code: "INVALID_REQUEST" });
+    const client: ApiClient = {
+      request: async <T>() => Promise.reject(error) as Promise<T>,
+    };
+
+    await expect(listRecentMarginaliaSessions({}, client)).rejects.toBe(error);
   });
 });

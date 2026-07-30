@@ -2,23 +2,20 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import type { RecentReadingSession } from "@second-pass/spl-api";
-import { DASHBOARD_RECENT_READING_LIMIT } from "../features/dashboard/DashboardOrchestrator";
+import type { RecentMarginaliaSession } from "@second-pass/spl-api";
+import { DASHBOARD_RECENT_QUERY, DASHBOARD_RECENT_READING_LIMIT } from "../features/dashboard/DashboardOrchestrator";
 import { DashboardPageRegion, type RecentReadingState } from "../features/dashboard/regions/DashboardPageRegion";
 
-const recentItem: RecentReadingSession = {
+const recentItem: RecentMarginaliaSession = {
+  id: "session-1",
+  name: "Evening read",
+  status: "active",
   lastActivityAt: "2026-07-27T18:30:00Z",
-  session: {
-    id: "session-1",
-    name: "Evening read",
-    status: "active",
-    isActive: true,
-    progression: 0.42,
-  },
   book: {
     id: "book/id",
     title: "A Book",
     coverUrl: "/media/cover.jpg",
+    canOpen: true,
   },
 };
 
@@ -40,8 +37,10 @@ function renderDashboard(
 }
 
 describe("Dashboard", () => {
-  it("uses the bounded recent-reading request contract", () => {
+  it("uses the canonical bounded active-only recent Marginalia request", () => {
     expect(DASHBOARD_RECENT_READING_LIMIT).toBe(10);
+    expect(DASHBOARD_RECENT_QUERY).toEqual({ limit: 10 });
+    expect(DASHBOARD_RECENT_QUERY).not.toHaveProperty("includeClosed");
   });
 
   it("renders server description and a nonblank Dashboard-only banner", () => {
@@ -69,12 +68,40 @@ describe("Dashboard", () => {
     const markup = renderDashboard({ status: "ready", items: [recentItem] });
     expect(markup).toContain("A Book");
     expect(markup).toContain("Evening read");
-    expect(markup).toContain("42% read");
     expect(markup).toContain('dateTime="2026-07-27T18:30:00Z"');
     expect(markup).toContain('src="/media/cover.jpg"');
     expect(markup).toContain('href="/marginalia/sessions/session-1"');
-    expect(markup).not.toContain('href="/library/books/book%2Fid"');
+    expect(markup).toContain('href="/library/books/book%2Fid"');
     expect(markup).not.toContain("Open in Reader");
+  });
+
+  it("keeps inaccessible Book identity without a dead Library action", () => {
+    const markup = renderDashboard({ status: "ready", items: [{
+      ...recentItem,
+      book: { ...recentItem.book, title: "Remembered Book", canOpen: false },
+    }] });
+    expect(markup).toContain("Remembered Book");
+    expect(markup).toContain('src="/media/cover.jpg"');
+    expect(markup).not.toContain('href="/library/books/book%2Fid"');
+  });
+
+  it("keeps the UUID fallback display-only for unnamed Sessions", () => {
+    const markup = renderDashboard({ status: "ready", items: [{
+      ...recentItem,
+      id: "7f0c9ea5-2c36-4a84-b55b-447e57c24736",
+      name: "",
+    }] });
+    expect(markup).toContain("Unnamed Session c24736");
+    expect(markup).toContain("/marginalia/sessions/7f0c9ea5-2c36-4a84-b55b-447e57c24736");
+  });
+
+  it("renders the authoritative order without deduplicating Sessions by Book", () => {
+    const markup = renderDashboard({ status: "ready", items: [
+      { ...recentItem, id: "session-2", name: "Newer pass" },
+      { ...recentItem, id: "session-1", name: "Older pass" },
+    ] });
+    expect(markup.indexOf("Newer pass")).toBeLessThan(markup.indexOf("Older pass"));
+    expect(markup.match(/A Book/g)).toHaveLength(4);
   });
 
   it("renders the cover fallback when a recent Book has no cover", () => {

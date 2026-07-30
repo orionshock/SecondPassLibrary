@@ -2,7 +2,7 @@ import {
   canSeeImports,
   canSeeServerSettings,
   canSeeUsers,
-  listRecentReadingSessions,
+  listRecentMarginaliaSessions,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -13,6 +13,7 @@ import { DashboardPageRegion, type RecentReadingState } from "./regions/Dashboar
 import "./Dashboard.css";
 
 export const DASHBOARD_RECENT_READING_LIMIT = 10;
+export const DASHBOARD_RECENT_QUERY = { limit: DASHBOARD_RECENT_READING_LIMIT } as const;
 
 export function DashboardOrchestrator() {
   const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
@@ -22,7 +23,7 @@ export function DashboardOrchestrator() {
   useEffect(() => {
     let active = true;
     setRecentReading({ status: "loading" });
-    listRecentReadingSessions({ limit: DASHBOARD_RECENT_READING_LIMIT })
+    listRecentMarginaliaSessions(DASHBOARD_RECENT_QUERY)
       .then((items) => {
         if (active) setRecentReading({ status: "ready", items });
       })

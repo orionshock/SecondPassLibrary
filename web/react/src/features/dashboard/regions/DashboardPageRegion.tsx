@@ -1,4 +1,4 @@
-import type { RecentReadingSession } from "@second-pass/spl-api";
+import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { Button, ErrorPanel, Surface } from "../../../components/ui";
@@ -9,7 +9,7 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 
 export type RecentReadingState =
   | { status: "loading" }
-  | { status: "ready"; items: RecentReadingSession[] }
+  | { status: "ready"; items: RecentMarginaliaSession[] }
   | { status: "error"; error: Error };
 
 export function DashboardPageRegion({
@@ -60,25 +60,24 @@ function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState
       <Link className="button button--small button--secondary" to="/library">Browse Library</Link>
     </div> : null}
     {state.status === "ready" && state.items.length > 0 ? <div className="dashboard-recent-list">
-      {state.items.map((item) => <RecentReadingCardComponent key={item.session.id} item={item} />)}
+      {state.items.map((item) => <RecentReadingCardComponent key={item.id} item={item} />)}
     </div> : null}
   </Surface>;
 }
 
-function RecentReadingCardComponent({ item }: { item: RecentReadingSession }) {
-  const sessionName = marginaliaSessionDisplayName(item.session);
-  const progression = item.session.progression === null
-    ? undefined
-    : Math.round(Math.max(0, Math.min(1, item.session.progression)) * 100);
-  return <Link className="dashboard-reading-card" to={`/marginalia/sessions/${encodeURIComponent(item.session.id)}`} state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: sessionName }])}>
-    <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
-    <span className="dashboard-reading-card__body">
-      <strong>{item.book.title}</strong>
-      <span>{sessionName}</span>
-      <time dateTime={item.lastActivityAt}>{formatRecentActivity(item.lastActivityAt)}</time>
-      {progression === undefined ? null : <span>{progression}% read</span>}
-    </span>
-  </Link>;
+function RecentReadingCardComponent({ item }: { item: RecentMarginaliaSession }) {
+  const sessionName = marginaliaSessionDisplayName(item);
+  return <article className="dashboard-reading-card">
+    <Link className="dashboard-reading-card__session" to={`/marginalia/sessions/${encodeURIComponent(item.id)}`} state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: sessionName }])}>
+      <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
+      <span className="dashboard-reading-card__body">
+        <strong>{item.book.title}</strong>
+        <span>{sessionName}</span>
+        <time dateTime={item.lastActivityAt}>{formatRecentActivity(item.lastActivityAt)}</time>
+      </span>
+    </Link>
+    {item.book.canOpen ? <Link className="button button--small button--secondary dashboard-reading-card__book" to={`/library/books/${encodeURIComponent(item.book.id)}`}>View Book</Link> : null}
+  </article>;
 }
 
 function DashboardShortcutsPageRegion({ showGroups, showImports, showUsers, showServerSettings }: {

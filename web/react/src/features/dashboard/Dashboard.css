@@ -26,23 +26,38 @@
 }
 
 .dashboard-reading-card {
-  display: flex;
+  display: grid;
   min-height: 7rem;
-  gap: 0.75rem;
-  padding: 0.7rem;
   border: 1px solid var(--border);
   border-radius: 0.65rem;
   color: var(--text);
   background: rgb(255 255 255 / 3%);
-  text-decoration: none;
   transition: border-color 120ms ease, background 120ms ease;
 }
 
 .dashboard-reading-card:hover,
-.dashboard-reading-card:focus-visible {
+.dashboard-reading-card:focus-within {
   border-color: color-mix(in srgb, var(--focus), transparent 55%);
   background: var(--surface-raised);
   text-decoration: none;
+}
+
+.dashboard-reading-card__session {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.dashboard-reading-card__session:hover,
+.dashboard-reading-card__session:focus-visible {
+  text-decoration: none;
+}
+
+.dashboard-reading-card__book {
+  justify-self: end;
+  margin: 0 0.7rem 0.7rem;
 }
 
 .dashboard-reading-card .book-cover-component {

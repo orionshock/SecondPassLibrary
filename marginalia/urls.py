@@ -10,6 +10,7 @@ from .sessions.lifecycle_views import (
 )
 from .sessions.views import (
     MarginaliaBookSessionListView,
+    MarginaliaRecentSessionListView,
     MarginaliaSessionDetailView,
     MarginaliaSessionListView,
     MarginaliaSessionProgressView,
@@ -19,6 +20,11 @@ from .sessions.views import (
 app_name = "marginalia"
 
 urlpatterns = [
+    path(
+        "sessions/recent/",
+        MarginaliaRecentSessionListView.as_view(),
+        name="session-recent",
+    ),
     path("sessions/", MarginaliaSessionListView.as_view(), name="session-list"),
     path(
         "sessions/<uuid:session_id>/",

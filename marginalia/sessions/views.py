@@ -22,10 +22,13 @@ from .queries import (
     marginalia_session_for_user,
     marginalia_sessions_for_book,
     marginalia_sessions_for_user,
+    recent_marginalia_sessions_for_user,
 )
 from .serializers import (
     MarginaliaGlobalSessionSummarySerializer,
     MarginaliaProgressPutSerializer,
+    MarginaliaRecentSessionsQuerySerializer,
+    MarginaliaRecentSessionSerializer,
     MarginaliaSessionMetadataPatchSerializer,
     MarginaliaSessionSummarySerializer,
     progress_envelope,
@@ -80,6 +83,25 @@ class MarginaliaSessionListView(MarginaliaReadMixin, ListAPIView):
             user=self.request.user,
             status=self.request.query_params.get("status", ""),
             q=self.request.query_params.get("q", ""),
+        )
+
+
+class MarginaliaRecentSessionListView(MarginaliaReadMixin, APIView):
+    def get(self, request):
+        query = MarginaliaRecentSessionsQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        sessions = recent_marginalia_sessions_for_user(
+            user=request.user,
+            **query.validated_data,
+        )
+        return Response(
+            {
+                "results": MarginaliaRecentSessionSerializer(
+                    sessions,
+                    many=True,
+                    context={"request": request},
+                ).data
+            }
         )
 
 

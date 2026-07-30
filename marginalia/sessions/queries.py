@@ -44,6 +44,19 @@ def marginalia_sessions_for_user(
     return _session_summary_queryset(queryset, user=user)
 
 
+def recent_marginalia_sessions_for_user(
+    *,
+    user,
+    include_closed: bool = False,
+    limit: int = 10,
+) -> QuerySet[ReadingSession]:
+    """Return the bounded, server-ordered Dashboard Session collection."""
+    queryset = ReadingSession.objects.filter(user=user)
+    if not include_closed:
+        queryset = queryset.filter(status=ReadingSession.STATUS_ACTIVE)
+    return _session_summary_queryset(queryset, user=user)[:limit]
+
+
 def marginalia_session_for_user(*, user, session_id) -> QuerySet[ReadingSession]:
     return _session_summary_queryset(
         ReadingSession.objects.filter(user=user, pk=session_id),

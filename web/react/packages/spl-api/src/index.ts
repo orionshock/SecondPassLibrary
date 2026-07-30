@@ -39,6 +39,7 @@ export {
   listMarginaliaBookSessions,
   listMarginaliaSessionAnnotations,
   listMarginaliaSessions,
+  listRecentMarginaliaSessions,
   updateMarginaliaSession,
   type MarginaliaAnnotation,
   type MarginaliaAuthor,
@@ -60,6 +61,8 @@ export {
   type MarginaliaSessionsQuery,
   type MarginaliaSessionStatus,
   type MarginaliaSessionSummary,
+  type RecentMarginaliaSession,
+  type RecentMarginaliaSessionsQuery,
 } from "./marginalia";
 export {
   downloadCompleteReadingExport,
