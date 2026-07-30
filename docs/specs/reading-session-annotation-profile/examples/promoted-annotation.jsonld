@@ -17,19 +17,16 @@
     "selector": {
       "type": "FragmentSelector",
       "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-      "value": "epubcfi(/6/14!/4/2/8,/1:0,/1:42)"
+      "value": "epubcfi(/6/14!/4/2/8,/1:0,/1:42)",
+      "locationLabel": "Chapter 08 · 42% · The Blackstaff"
     }
   },
   "body": [
     {
       "type": "TextualBody",
       "purpose": "describing",
-      "value": "Selected text snapshot from the EPUB."
-    },
-    {
-      "type": "TextualBody",
-      "purpose": "highlighting",
-      "value": "yellow"
+      "value": "Selected text snapshot from the EPUB.",
+      "color": "yellow"
     }
   ]
 }

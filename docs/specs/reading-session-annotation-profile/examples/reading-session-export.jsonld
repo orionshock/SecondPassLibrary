@@ -50,6 +50,7 @@
       "type": "FragmentSelector",
       "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
       "value": "epubcfi(/6/24!/4/2/10)",
+      "locationLabel": "Chapter 08 · 50%",
       "updated": "2026-05-10T12:30:00Z"
     },
     "layeredSession": [
@@ -73,26 +74,26 @@
         "selector": {
           "type": "FragmentSelector",
           "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-          "value": "epubcfi(/6/14!/4/2/8,/1:0,/1:42)"
+          "value": "epubcfi(/6/14!/4/2/8,/1:0,/1:42)",
+          "locationLabel": "Chapter 08 · 42% · The Blackstaff"
         }
       },
       "body": [
         {
           "type": "TextualBody",
           "purpose": "describing",
-          "value": "Selected text snapshot from the EPUB."
-        },
-        {
-          "type": "TextualBody",
-          "purpose": "highlighting",
-          "value": "yellow"
+          "value": "Selected text snapshot from the EPUB.",
+          "color": "yellow"
         }
       ]
     },
     {
       "id": "urn:uuid:22222222-2222-4222-8222-222222222222",
       "type": "Annotation",
-      "motivation": "commenting",
+      "motivation": [
+        "highlighting",
+        "commenting"
+      ],
       "created": "2026-05-10T12:05:00Z",
       "modified": "2026-05-10T12:05:00Z",
       "sessionId": "urn:uuid:session-current",
@@ -104,14 +105,23 @@
         "selector": {
           "type": "FragmentSelector",
           "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-          "value": "epubcfi(/6/18!/4/2/12,/1:3,/1:31)"
+          "value": "epubcfi(/6/18!/4/2/12,/1:3,/1:31)",
+          "locationLabel": "Chapter 08 · 45%"
         }
       },
-      "body": {
-        "type": "TextualBody",
-        "purpose": "commenting",
-        "value": "This is the reader's note."
-      }
+      "body": [
+        {
+          "type": "TextualBody",
+          "purpose": "describing",
+          "value": "Selected text carrying the reader's note.",
+          "color": "yellow"
+        },
+        {
+          "type": "TextualBody",
+          "purpose": "commenting",
+          "value": "This is the reader's note."
+        }
+      ]
     },
     {
       "id": "urn:uuid:33333333-3333-4333-8333-333333333333",
@@ -128,7 +138,8 @@
         "selector": {
           "type": "FragmentSelector",
           "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-          "value": "epubcfi(/6/22!/4/2/4)"
+          "value": "epubcfi(/6/22!/4/2/4)",
+          "locationLabel": "Chapter 08 · 47%"
         }
       }
     },
@@ -147,19 +158,16 @@
         "selector": {
           "type": "FragmentSelector",
           "conformsTo": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html",
-          "value": "epubcfi(/6/14!/4/2/8,/1:0,/1:42)"
+          "value": "epubcfi(/6/14!/4/2/8,/1:0,/1:42)",
+          "locationLabel": "Chapter 08 · 42% · The Blackstaff"
         }
       },
       "body": [
         {
           "type": "TextualBody",
           "purpose": "describing",
-          "value": "Selected text snapshot from the EPUB."
-        },
-        {
-          "type": "TextualBody",
-          "purpose": "highlighting",
-          "value": "yellow"
+          "value": "Selected text snapshot from the EPUB.",
+          "color": "yellow"
         }
       ]
     }

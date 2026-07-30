@@ -38,6 +38,7 @@
       "@type": "xsd:dateTime"
     },
     "currentLocation": "reader:currentLocation",
+    "locationLabel": "reader:locationLabel",
     "layeredSession": {
       "@id": "reader:layeredSession",
       "@type": "@id"

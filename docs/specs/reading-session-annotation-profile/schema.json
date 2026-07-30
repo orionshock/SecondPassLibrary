@@ -2,7 +2,7 @@
   "$id": "https://secondpasslibrary.local/specs/reading-session-annotations/schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Reading Session Annotation Collection",
-  "description": "Draft W3C Web Annotation JSON-LD profile for EPUB reading sessions (future export/import). Note: the current Second Pass Library reading REST APIs are stricter and reject unknown fields; this schema is for JSON-LD portability work and may evolve.",
+  "description": "Draft W3C Web Annotation JSON-LD profile for EPUB reading sessions (future export/import). locationLabel is an optional opaque Second Pass Library extension on an EPUB CFI selector. Note: the current Second Pass Library reading REST APIs are stricter and reject unknown fields; this schema is for JSON-LD portability work and may evolve.",
   "type": "object",
   "required": [
     "@context",
@@ -476,6 +476,11 @@
         "value": {
           "type": "string",
           "pattern": "^epubcfi\\("
+        },
+        "locationLabel": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Opaque Reader-generated display and sorting companion to the CFI. Preserve unchanged."
         },
         "updated": {
           "type": "string",

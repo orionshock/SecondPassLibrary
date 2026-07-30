@@ -5,10 +5,18 @@ export type EpubCfiSelector = {
   type: "FragmentSelector"
   conformsTo: "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
   value: `epubcfi(${string}`
+  locationLabel?: string
   updated?: string
 }
 
 export type ReadingSessionStatus = "active" | "closed"
+
+export type TextQuoteSelector = {
+  type: "TextQuoteSelector"
+  exact: string
+  prefix?: string
+  suffix?: string
+}
 
 export type ReadingSession = {
   id: string
@@ -35,6 +43,7 @@ export type TextualBody = {
   value?: string
   format?: string
   language?: string
+  color?: "yellow" | "green" | "blue" | "pink" | "purple" | "orange"
 }
 
 export type AnnotationTarget = {
@@ -44,7 +53,7 @@ export type AnnotationTarget = {
         id: string
         type?: "Text" | "Book"
       }
-  selector: EpubCfiSelector
+  selector: EpubCfiSelector | [EpubCfiSelector, TextQuoteSelector]
 }
 
 export type W3CReadingAnnotation = {

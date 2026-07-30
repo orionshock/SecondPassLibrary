@@ -28,6 +28,11 @@ fields such as `kind`, `selector`, `quote`, `highlight_text`,
 `highlight_color`, and `comment_text`; it does not use this draft JSON-LD
 shape.
 
+The new Marginalia domain foundation stores an optional `location_label`
+beside the CFI on Session progress and annotations. In this draft JSON-LD
+profile, the equivalent application term is `locationLabel` on the primary
+EPUB CFI selector.
+
 The canonical server import/export contract is the Second Pass Library
 Marginalia Profile in `../marginalia-export.md`. JSON-LD serialization using
 this draft profile is not the current server import/export contract.
@@ -49,6 +54,9 @@ W3C Web Annotation concepts may influence annotation shape, but Second Pass
 Library is not targeting W3C compliance.
 
 Use EPUB CFI as the selector format for EPUB text targets.
+
+`locationLabel` is an optional Reader-generated display and sorting companion
+to that CFI. It is opaque, bounded text and is not part of the CFI itself.
 
 ## Source Import Metadata (Future)
 
