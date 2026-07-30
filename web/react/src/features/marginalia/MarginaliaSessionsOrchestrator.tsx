@@ -1,4 +1,4 @@
-import { listReadingSessions, type Page, type ReadingSessionSummary } from "@second-pass/spl-api";
+import { listMarginaliaSessions, type MarginaliaSessionListItem, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -13,7 +13,7 @@ import { marginaliaListBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import "./Marginalia.css";
 
 interface MarginaliaLoadState {
-  page?: Page<ReadingSessionSummary>;
+  page?: Page<MarginaliaSessionListItem>;
   loading: boolean;
   error?: Error;
 }
@@ -46,7 +46,7 @@ export function MarginaliaSessionsOrchestrator() {
       pageSize: queryState.pageSize,
       recoveryKey: `marginalia:${canonicalQuery}`,
       recoveredKeys: recoveredPageKeys.current,
-      fetchPage: (page) => listReadingSessions({ ...sdkQuery, page }),
+      fetchPage: (page) => listMarginaliaSessions({ ...sdkQuery, page }),
       buildRecoveredLocation: (page) => marginaliaListSearchParams(withMarginaliaListChange(queryState, { page }, false)).toString(),
       replaceLocation: (location) => {
         if (!active) return false;

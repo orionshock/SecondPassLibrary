@@ -141,7 +141,6 @@
   color: var(--text);
 }
 
-.marginalia-session-row__book--unavailable,
 .marginalia-session-row__facts {
   color: var(--muted);
 }

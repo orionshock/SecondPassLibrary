@@ -7,14 +7,14 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
-import type { MarginaliaStatusFilter } from "../marginaliaQuery";
+import type { MarginaliaExportStatusFilter } from "../marginaliaExportQuery";
 
 export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search, status, loading, loadError, completeState, selectedState, selectedSessionIds, selectedBookCount, includeEmptySessions, onIncludeEmptySessionsChange, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry, onCompleteExport, onSessionSelectionChange, onSelectPage, onClearSelection, onSelectedExport }: {
   page?: Page<ReadingSessionSummary>;
   pageNumber: number;
   pageSize: number;
   search: string;
-  status: MarginaliaStatusFilter;
+  status: MarginaliaExportStatusFilter;
   loading: boolean;
   loadError?: Error;
   completeState: MutationState;
@@ -25,7 +25,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   onIncludeEmptySessionsChange: (include: boolean) => void;
   onSearchChange: (value: string) => void;
   onSearch: () => void;
-  onStatusChange: (value: MarginaliaStatusFilter) => void;
+  onStatusChange: (value: MarginaliaExportStatusFilter) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
@@ -62,7 +62,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
           <Button type="submit">Search</Button>
         </form>
         <label className="marginalia-status-filter" htmlFor="marginalia-export-status">Status
-          <select id="marginalia-export-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaStatusFilter)}>
+          <select id="marginalia-export-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaExportStatusFilter)}>
             <option value="all">All</option><option value="active">Active</option><option value="historical">Historical</option>
           </select>
         </label>

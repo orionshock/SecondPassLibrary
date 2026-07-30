@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { Page, ReadingSessionSummary } from "@second-pass/spl-api";
+import type { MarginaliaSessionListItem, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/ui";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
@@ -7,7 +7,7 @@ import { SessionSummaryRowComponent } from "../components/SessionSummaryRowCompo
 import type { MarginaliaStatusFilter } from "../marginaliaQuery";
 
 export function MarginaliaSessionsPageRegion({ page, pageNumber, pageSize, search, status, loading, error, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry }: {
-  page?: Page<ReadingSessionSummary>;
+  page?: Page<MarginaliaSessionListItem>;
   pageNumber: number;
   pageSize: number;
   search: string;
@@ -37,7 +37,7 @@ export function MarginaliaSessionsPageRegion({ page, pageNumber, pageSize, searc
         <select id="marginalia-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaStatusFilter)}>
           <option value="all">All</option>
           <option value="active">Active</option>
-          <option value="historical">Historical</option>
+          <option value="closed">Closed</option>
         </select>
       </label>
     </section>
@@ -46,7 +46,7 @@ export function MarginaliaSessionsPageRegion({ page, pageNumber, pageSize, searc
 }
 
 function ReadingSessionResults({ page, pageNumber, pageSize, hasFilters, loading, error, onPageChange, onPageSizeChange, onRetry }: {
-  page?: Page<ReadingSessionSummary>;
+  page?: Page<MarginaliaSessionListItem>;
   pageNumber: number;
   pageSize: number;
   hasFilters: boolean;

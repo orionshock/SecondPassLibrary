@@ -1,19 +1,19 @@
-import type { MarginaliaSessionsQuery } from "@second-pass/spl-api";
+import type { ReadingSessionsQuery } from "@second-pass/spl-api";
 
-export type MarginaliaStatusFilter = "all" | "active" | "closed";
+export type MarginaliaExportStatusFilter = "all" | "active" | "historical";
 
-export interface MarginaliaListUrlState {
+export interface MarginaliaExportUrlState {
   q: string;
-  status: MarginaliaStatusFilter;
+  status: MarginaliaExportStatusFilter;
   page: number;
   pageSize: number;
 }
 
 const pageSizes = new Set([20, 30, 40, 50]);
-const statuses = new Set<MarginaliaStatusFilter>(["all", "active", "closed"]);
+const statuses = new Set<MarginaliaExportStatusFilter>(["all", "active", "historical"]);
 
-export function marginaliaListStateFromSearchParams(parameters: URLSearchParams): MarginaliaListUrlState {
-  const rawStatus = parameters.get("status") as MarginaliaStatusFilter | null;
+export function marginaliaExportStateFromSearchParams(parameters: URLSearchParams): MarginaliaExportUrlState {
+  const rawStatus = parameters.get("status") as MarginaliaExportStatusFilter | null;
   return {
     q: (parameters.get("q") ?? "").trim(),
     status: rawStatus && statuses.has(rawStatus) ? rawStatus : "all",
@@ -22,7 +22,7 @@ export function marginaliaListStateFromSearchParams(parameters: URLSearchParams)
   };
 }
 
-export function marginaliaListSearchParams(state: MarginaliaListUrlState): URLSearchParams {
+export function marginaliaExportSearchParams(state: MarginaliaExportUrlState): URLSearchParams {
   const parameters = new URLSearchParams();
   if (state.status !== "all") parameters.set("status", state.status);
   if (state.page > 1) parameters.set("page", String(state.page));
@@ -31,20 +31,21 @@ export function marginaliaListSearchParams(state: MarginaliaListUrlState): URLSe
   return parameters;
 }
 
-export function marginaliaListSdkQuery(state: MarginaliaListUrlState): MarginaliaSessionsQuery {
+export function marginaliaExportSdkQuery(state: MarginaliaExportUrlState): ReadingSessionsQuery {
   return {
     ...(state.q ? { q: state.q } : {}),
-    ...(state.status !== "all" ? { status: state.status } : {}),
+    ...(state.status === "active" ? { isActive: true } : {}),
+    ...(state.status === "historical" ? { isActive: false } : {}),
     page: state.page,
     pageSize: state.pageSize,
   };
 }
 
-export function withMarginaliaListChange(
-  current: MarginaliaListUrlState,
-  changes: Partial<MarginaliaListUrlState>,
+export function withMarginaliaExportChange(
+  current: MarginaliaExportUrlState,
+  changes: Partial<MarginaliaExportUrlState>,
   resetPage = true,
-): MarginaliaListUrlState {
+): MarginaliaExportUrlState {
   return { ...current, ...changes, page: resetPage ? 1 : changes.page ?? current.page };
 }
 

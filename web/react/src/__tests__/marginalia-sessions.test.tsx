@@ -1,4 +1,4 @@
-import type { Page, ReadingSessionSummary } from "@second-pass/spl-api";
+import type { MarginaliaSessionListItem, Page } from "@second-pass/spl-api";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -8,37 +8,30 @@ import { marginaliaExportBreadcrumbFallback, marginaliaImportBreadcrumbFallback 
 import { marginaliaSessionNoteExcerpt } from "../features/marginalia/marginaliaSessionNoteExcerpt";
 import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 
-const visibleSession: ReadingSessionSummary = {
+const visibleSession: MarginaliaSessionListItem = {
   id: "9fdd6203-a111-4f17-a477-b9d7ddeec77d",
-  bookId: "visible-book",
   name: "Morning notes",
   status: "active",
-  isActive: true,
   startedAt: "2026-07-20T12:00:00Z",
-  completedAt: null,
+  closedAt: null,
   updatedAt: "2026-07-21T12:00:00Z",
+  lastActivityAt: "2026-07-21T12:00:00Z",
   notes: "",
-  progression: 0.42,
   annotationCount: 2,
-  canOpen: true,
-  book: { id: "visible-book", title: "Visible Book", coverUrl: "/media/cover.jpg", unavailable: false },
+  book: { id: "visible-book", title: "Visible Book", coverUrl: "/media/cover.jpg", canOpen: true },
 };
 
-const hiddenSession: ReadingSessionSummary = {
+const hiddenSession: MarginaliaSessionListItem = {
   ...visibleSession,
   id: "79dc1581-5bc4-45ba-81aa-b9198632618e",
-  bookId: "hidden-book",
   name: "",
-  status: "completed",
-  isActive: false,
-  completedAt: "2026-07-22T12:00:00Z",
-  progression: null,
+  status: "closed",
+  closedAt: "2026-07-22T12:00:00Z",
   annotationCount: 0,
-  canOpen: false,
-  book: { id: "hidden-book", title: "", coverUrl: null, unavailable: true },
+  book: { id: "hidden-book", title: "Remembered Book", coverUrl: "/media/remembered.jpg", canOpen: false },
 };
 
-function renderRegion(page?: Page<ReadingSessionSummary>, options: { loading?: boolean; error?: Error; search?: string; status?: "all" | "active" | "historical" } = {}) {
+function renderRegion(page?: Page<MarginaliaSessionListItem>, options: { loading?: boolean; error?: Error; search?: string; status?: "all" | "active" | "closed" } = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaSessionsPageRegion
     page={page}
     pageNumber={1}
@@ -61,7 +54,6 @@ describe("My Marginalia Session list", () => {
     const markup = renderRegion({ items: [visibleSession], count: 1, next: null, previous: null });
     expect(markup).toContain("Morning notes");
     expect(markup).toContain("Visible Book");
-    expect(markup).toContain("42% read");
     expect(markup).toContain("2 annotations");
     expect(markup).toContain('href="/library/books/visible-book"');
     expect(markup).toContain(`href="/marginalia/sessions/${visibleSession.id}"`);
@@ -69,13 +61,13 @@ describe("My Marginalia Session list", () => {
     expect(markup).not.toContain("Continue reading");
   });
 
-  it("keeps unavailable owned history neutral without leaking identity or an open action", () => {
+  it("keeps inaccessible owned Book identity visible without offering a Library action", () => {
     const markup = renderRegion({ items: [hiddenSession], count: 1, next: null, previous: null });
     expect(markup).toContain("Unnamed Session 32618e");
-    expect(markup).toContain("Book unavailable");
+    expect(markup).toContain("Remembered Book");
+    expect(markup).toContain('/media/remembered.jpg');
     expect(markup).not.toContain(">79dc1581");
     expect(markup).toContain(`href="/marginalia/sessions/${hiddenSession.id}"`);
-    expect(markup).not.toContain("hidden-book</");
     expect(markup).not.toContain("View Book");
     expect(markup).not.toContain('href="/library/books/hidden-book"');
   });
@@ -105,10 +97,10 @@ describe("My Marginalia Session list", () => {
   });
 
   it("renders URL-backed filter controls and the shared pagination frame", () => {
-    const markup = renderRegion({ items: [visibleSession], count: 40, next: "/next", previous: null }, { search: "notes", status: "historical" });
+    const markup = renderRegion({ items: [visibleSession], count: 40, next: "/next", previous: null }, { search: "notes", status: "closed" });
     expect(markup).toContain('role="search"');
     expect(markup).toContain('value="notes"');
-    expect(markup).toContain('<option value="historical" selected="">Historical</option>');
+    expect(markup).toContain('<option value="closed" selected="">Closed</option>');
     expect(markup).toContain('aria-label="Reading sessions pagination, top"');
     expect(markup).toContain('aria-label="Reading sessions pagination, bottom"');
   });
