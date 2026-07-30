@@ -1,19 +1,18 @@
 from django.urls import path
 
 from .annotations.views import SessionAnnotationBatchView, SessionAnnotationListView
-from .detail_views import MarginaliaSessionDetailView
-from .lifecycle_views import (
+from .books.views import MarginaliaBookDetailView, MarginaliaBookListView
+from .sessions.lifecycle_views import (
     MarginaliaBookActiveSessionView,
     MarginaliaBookOpenView,
     MarginaliaBookStartOverView,
     MarginaliaSessionCloseView,
-    MarginaliaSessionProgressView,
 )
-from .views import (
-    MarginaliaBookDetailView,
-    MarginaliaBookListView,
+from .sessions.views import (
     MarginaliaBookSessionListView,
+    MarginaliaSessionDetailView,
     MarginaliaSessionListView,
+    MarginaliaSessionProgressView,
 )
 
 

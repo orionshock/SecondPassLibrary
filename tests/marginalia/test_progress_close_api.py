@@ -17,7 +17,7 @@ from library.models import (
     LibraryGroupMembership,
 )
 from marginalia.exceptions import SessionClosedError
-from marginalia.lifecycle_services import replace_progress
+from marginalia.sessions.services import replace_progress
 from marginalia.models import ReadingSession
 
 

@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from library.models import Book
 from library.queries import visible_books_for_user
+from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
+from marginalia.models import ReadingSession
 
-from .exceptions import (
-    BookAccessRequiredError,
-    FinalizationWithoutActiveSessionError,
-    SessionClosedError,
-)
-from .models import ReadingSession
+from .queries import active_session_for_user_book
+
+
+class ClosedSessionMutationError(Exception):
+    pass
+
+
+class FinalizationWithoutActiveSessionError(Exception):
+    pass
 
 
 def _locked_owned_session(*, user, session_id) -> ReadingSession:
@@ -32,6 +39,69 @@ def _locked_accessible_book(*, user, book_id) -> Book:
     book = Book.objects.select_for_update().get(pk=book_id)
     _require_book_access(user=user, book_id=book.pk)
     return book
+
+
+@transaction.atomic
+def update_session_metadata(
+    *,
+    session: ReadingSession,
+    changes: Mapping[str, str],
+) -> ReadingSession:
+    unsupported = set(changes) - {"name", "notes"}
+    if unsupported:
+        raise ValueError("Session metadata changes may contain only name and notes.")
+
+    locked = ReadingSession.objects.select_for_update().get(pk=session.pk)
+    if not locked.is_active:
+        raise ClosedSessionMutationError
+    if not changes:
+        return locked
+
+    for field, value in changes.items():
+        setattr(locked, field, value)
+    locked.save(update_fields=[*changes, "updated_at"])
+    return locked
+
+
+@transaction.atomic
+def assign_session_progress(
+    *,
+    session: ReadingSession,
+    cfi: str,
+    location_label: str = "",
+    updated_at: datetime | None = None,
+) -> ReadingSession:
+    if not cfi:
+        raise ValidationError({"cfi": "Saved progress requires a CFI."})
+    _update_active_session(
+        session=session,
+        progress_cfi=cfi,
+        progress_location_label=location_label,
+        progress_updated_at=updated_at or timezone.now(),
+    )
+    return session
+
+
+@transaction.atomic
+def clear_session_progress(*, session: ReadingSession) -> ReadingSession:
+    _update_active_session(
+        session=session,
+        progress_cfi="",
+        progress_location_label="",
+        progress_updated_at=None,
+    )
+    return session
+
+
+def _update_active_session(*, session: ReadingSession, **values) -> None:
+    updated = ReadingSession.objects.filter(
+        pk=session.pk,
+        status=ReadingSession.STATUS_ACTIVE,
+    ).update(**values)
+    if not updated:
+        raise ValidationError("Closed Sessions cannot update progress.")
+    for field, value in values.items():
+        setattr(session, field, value)
 
 
 @transaction.atomic
@@ -92,11 +162,7 @@ def start_over_session(
 
 def active_session_for_accessible_book(*, user, book_id) -> ReadingSession | None:
     _require_book_access(user=user, book_id=book_id)
-    return ReadingSession.objects.filter(
-        user=user,
-        book_id=book_id,
-        status=ReadingSession.STATUS_ACTIVE,
-    ).first()
+    return active_session_for_user_book(user=user, book_id=book_id)
 
 
 def _finalize_for_start_over(*, session: ReadingSession, finalization: Mapping) -> None:

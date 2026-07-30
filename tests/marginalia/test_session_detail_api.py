@@ -11,10 +11,11 @@ from rest_framework.test import APIClient, APITestCase
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from library.models import Book
-from marginalia.detail_serializers import MarginaliaSessionDetailEnvelopeSerializer
+from marginalia.sessions.serializers import MarginaliaSessionDetailEnvelopeSerializer
 from marginalia.models import Annotation, ReadingSession
-from marginalia.progress_services import assign_session_progress
-from marginalia.queries import marginalia_books_for_user, marginalia_session_for_user
+from marginalia.books.queries import marginalia_books_for_user
+from marginalia.sessions.queries import marginalia_session_for_user
+from marginalia.sessions.services import assign_session_progress
 
 
 User = get_user_model()

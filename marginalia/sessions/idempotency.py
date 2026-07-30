@@ -10,7 +10,13 @@ from django.utils import timezone
 
 from core.models import IdempotencyRecord
 
-from .exceptions import IdempotencyConflictError, IdempotencyInProgressError
+
+class IdempotencyConflictError(Exception):
+    pass
+
+
+class IdempotencyInProgressError(Exception):
+    pass
 
 
 def validate_idempotency_key(raw_key: str | None) -> str:

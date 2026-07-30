@@ -5,8 +5,6 @@ from rest_framework import serializers
 from library.catalog.serializers import book_cover_url
 from library.models import Book
 
-from .models import ReadingSession
-
 
 class MarginaliaBookSeriesSerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series_id")
@@ -58,26 +56,6 @@ class MarginaliaBookSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class MarginaliaSessionSummarySerializer(serializers.ModelSerializer):
-    annotation_count = serializers.IntegerField(read_only=True)
-    last_activity_at = serializers.DateTimeField(read_only=True)
-
-    class Meta:
-        model = ReadingSession
-        fields = [
-            "id",
-            "name",
-            "notes",
-            "status",
-            "started_at",
-            "closed_at",
-            "updated_at",
-            "last_activity_at",
-            "annotation_count",
-        ]
-        read_only_fields = fields
-
-
 class MarginaliaSessionBookReferenceSerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField()
     can_open = serializers.SerializerMethodField()
@@ -91,21 +69,4 @@ class MarginaliaSessionBookReferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = ["id", "title", "cover_url", "can_open"]
-        read_only_fields = fields
-
-
-class MarginaliaGlobalSessionSummarySerializer(MarginaliaSessionSummarySerializer):
-    book = serializers.SerializerMethodField()
-
-    def get_book(self, session: ReadingSession) -> dict:
-        return MarginaliaSessionBookReferenceSerializer(
-            session.book,
-            context={
-                "request": self.context.get("request"),
-                "can_open": session.can_open,
-            },
-        ).data
-
-    class Meta(MarginaliaSessionSummarySerializer.Meta):
-        fields = [*MarginaliaSessionSummarySerializer.Meta.fields, "book"]
         read_only_fields = fields

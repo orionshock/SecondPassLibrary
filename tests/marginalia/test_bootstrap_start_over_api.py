@@ -15,7 +15,7 @@ from library.models import (
     LibraryGroupMembership,
 )
 from marginalia.models import Annotation, ReadingSession
-from marginalia.idempotency import normalized_request_hash
+from marginalia.sessions.idempotency import normalized_request_hash
 
 
 User = get_user_model()

@@ -15,7 +15,7 @@ from library.models import (
     LibraryGroupMembership,
 )
 from marginalia.models import Annotation, ReadingSession
-from marginalia.bootstrap import bootstrap_envelope
+from marginalia.sessions.bootstrap import bootstrap_envelope
 
 
 User = get_user_model()

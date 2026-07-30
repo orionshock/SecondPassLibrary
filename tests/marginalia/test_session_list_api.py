@@ -21,8 +21,8 @@ from library.models import (
     Series,
 )
 from marginalia.models import Annotation, ReadingSession
-from marginalia.queries import marginalia_sessions_for_user
-from marginalia.serializers import MarginaliaGlobalSessionSummarySerializer
+from marginalia.sessions.queries import marginalia_sessions_for_user
+from marginalia.sessions.serializers import MarginaliaGlobalSessionSummarySerializer
 
 
 User = get_user_model()

@@ -1,78 +1,40 @@
 from __future__ import annotations
 
-from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import NotFound
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from library.models import Book
-
-from .api import (
+from marginalia.api import (
     MarginaliaReadMixin,
     book_access_required_response,
     invalid_request_response,
     session_closed_response,
 )
-from .bootstrap import bootstrap_envelope
-from .bootstrap_serializers import MarginaliaOpenSerializer, MarginaliaStartOverSerializer
-from .detail_views import session_detail_response
-from .exceptions import (
-    BookAccessRequiredError,
-    FinalizationWithoutActiveSessionError,
+from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
+from marginalia.models import ReadingSession
+
+from .bootstrap import bootstrap_envelope, session_detail_envelope
+from .idempotency import (
     IdempotencyConflictError,
     IdempotencyInProgressError,
-    SessionClosedError,
-)
-from .idempotency import (
     execute_idempotent,
     normalized_request_hash,
     validate_idempotency_key,
 )
-from .lifecycle_services import (
+from .serializers import (
+    MarginaliaOpenSerializer,
+    MarginaliaSessionCloseSerializer,
+    MarginaliaStartOverSerializer,
+)
+from .services import (
+    FinalizationWithoutActiveSessionError,
     active_session_for_accessible_book,
     close_owned_session,
     open_or_create_session,
-    replace_progress,
     start_over_session,
 )
-from .models import ReadingSession
-from .progress_serializers import (
-    MarginaliaProgressPutSerializer,
-    MarginaliaSessionCloseSerializer,
-    progress_envelope,
-)
-
-
-class MarginaliaSessionProgressView(MarginaliaReadMixin, APIView):
-    def get(self, request, session_id):
-        session = get_object_or_404(
-            ReadingSession.objects.only(
-                "progress_cfi",
-                "progress_location_label",
-                "progress_updated_at",
-            ),
-            pk=session_id,
-            user=request.user,
-        )
-        return Response(progress_envelope(session))
-
-    def put(self, request, session_id):
-        serializer = MarginaliaProgressPutSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            session = replace_progress(
-                user=request.user,
-                session_id=session_id,
-                **serializer.validated_data,
-            )
-        except ReadingSession.DoesNotExist as exc:
-            raise NotFound from exc
-        except SessionClosedError:
-            return session_closed_response()
-        except BookAccessRequiredError:
-            return book_access_required_response()
-        return Response(progress_envelope(session))
 
 
 class MarginaliaSessionCloseView(MarginaliaReadMixin, APIView):
@@ -98,7 +60,7 @@ class MarginaliaSessionCloseView(MarginaliaReadMixin, APIView):
             return session_closed_response()
         except BookAccessRequiredError:
             return book_access_required_response()
-        return session_detail_response(request=request, session_id=session.pk)
+        return Response(session_detail_envelope(request=request, session_id=session.pk))
 
 
 class MarginaliaBookOpenView(MarginaliaReadMixin, APIView):

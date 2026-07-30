@@ -2,22 +2,38 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
 from core.pagination import DefaultPageNumberPagination
-
-from .annotations.collection import annotation_collection
-from .detail_serializers import MarginaliaSessionDetailSerializer
-from .models import ReadingSession
-from .queries import (
+from marginalia.annotations.collection import annotation_collection
+from marginalia.books.queries import (
     marginalia_book_context_for_user,
-    marginalia_session_for_user,
-    marginalia_sessions_for_book,
+    marginalia_books_for_user,
 )
+from marginalia.books.serializers import MarginaliaBookSummarySerializer
+from marginalia.models import ReadingSession
+
+from .queries import marginalia_session_for_user, marginalia_sessions_for_book
 from .serializers import (
-    MarginaliaBookSummarySerializer,
+    MarginaliaSessionDetailEnvelopeSerializer,
+    MarginaliaSessionDetailSerializer,
     MarginaliaSessionSummarySerializer,
 )
+
+
+def session_detail_envelope(*, request, session_id) -> dict:
+    session = get_object_or_404(
+        marginalia_session_for_user(user=request.user, session_id=session_id)
+    )
+    book = get_object_or_404(
+        marginalia_books_for_user(user=request.user),
+        pk=session.book_id,
+    )
+    return MarginaliaSessionDetailEnvelopeSerializer(
+        {"context": {"book": book}, "session": session},
+        context={"request": request},
+    ).data
 
 
 def bootstrap_envelope(*, request, book_id, session_id=None, created: bool) -> dict:

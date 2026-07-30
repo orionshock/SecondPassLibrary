@@ -12,8 +12,9 @@ from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from library.models import Book
 from marginalia.models import Annotation, ReadingSession
-from marginalia.queries import marginalia_books_for_user, marginalia_sessions_for_book
-from marginalia.serializers import (
+from marginalia.books.queries import marginalia_books_for_user
+from marginalia.sessions.queries import marginalia_sessions_for_book
+from marginalia.sessions.serializers import (
     MarginaliaBookSummarySerializer,
     MarginaliaSessionSummarySerializer,
 )
