@@ -89,7 +89,7 @@
     },
     "book": {
       "type": "object",
-      "required": ["title", "authors", "source", "file_hash", "sessions"],
+      "required": ["title", "authors", "file_hash", "sessions"],
       "properties": {
         "title": { "type": "string" },
         "subtitle": { "type": "string" },
@@ -102,7 +102,6 @@
         "language": { "type": "string" },
         "isbn": { "type": "string" },
         "epub_unique_identifier": { "type": "string" },
-        "source": { "type": "string", "minLength": 1 },
         "file_hash": { "type": "string", "minLength": 1 },
         "sessions": {
           "type": "array",

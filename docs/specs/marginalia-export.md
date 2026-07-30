@@ -86,7 +86,7 @@ Sessions:
   "type": "selected",
   "books": [
     {
-      "book": "book:sha256:<hash>",
+      "book": "sha256:<hash>",
       "session_filter": "selected"
     }
   ]
@@ -99,13 +99,12 @@ export profile.
 
 ## Book identity
 
-Every exported Book requires both:
-
-- `source`: the stable source identity, normally `book:sha256:<hash>`.
-- `file_hash`: the content identity, normally `sha256:<hash>`.
+Every exported Book requires `file_hash`, its content identity, normally
+`sha256:<hash>`. Scope references use that same value.
 
 Missing hashes are invalid export data and must be repaired upstream. Importers
-must not normalize a missing hash into an alternate identity.
+must not normalize a missing hash into an alternate identity. The archive does
+not duplicate the hash in a separate source-identity field.
 
 Descriptive Book fields include title, authors, and optional Series/catalog
 context. Sessions are nested under their Book. The schema is strict and does

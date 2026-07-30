@@ -27,7 +27,6 @@ Second Pass Library note:
 - W3C/Web Annotation is historical design influence only.
 - Server-side marginalia import preview supports SPL Marginalia Profile files
   only, not arbitrary foreign/provider-specific formats.
-- The current server implementation does not support cross-session annotation promotion/linking (`derivedFrom` / `sourceSession`). If a user re-highlights in a later session, it is stored as a separate annotation.
 
 It represents:
 
@@ -39,7 +38,6 @@ It represents:
 - book metadata
 - immutable previous sessions
 - read-only layered previous sessions
-- promoted annotations derived from older sessions (future)
 
 The goal is to keep the application data model portable without tying it to a specific EPUB renderer such as epub.js.
 
@@ -67,7 +65,6 @@ Rules:
 - Closed sessions are immutable.
 - Closed sessions cannot be reopened.
 - A new session may layer previous sessions as read-only overlays.
-- Cross-session promotion/linking is future profile direction and is not implemented on the server today.
 
 ### Annotation
 
@@ -200,18 +197,6 @@ Layered sessions are referenced by ID.
 Layered annotations are read-only overlays.
 
 The active session owns only its own annotations.
-
-### Promoting Old Annotations (Future)
-
-When/if a previous annotation is promoted into a current session in the future, create a new annotation and point to the old one:
-
-```json
-{
-  "derivedFrom": "urn:uuid:old-annotation-id"
-}
-```
-
-The old annotation remains immutable.
 
 ## Export And Import Policy
 
