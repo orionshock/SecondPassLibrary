@@ -92,6 +92,29 @@ Response shape:
 }
 ```
 
+## Marginalia Books
+
+The new Marginalia API currently exposes one bounded historical Book
+projection:
+
+- `GET /api/v1/marginalia/books/`
+- `GET /api/v1/marginalia/books/<book_id>/`
+
+Both accept Django session or Client API bearer authentication. The caller must
+own at least one Marginalia Reading Session for a Book; current Library
+visibility is not required. The projection contains only `id`, `title`, ordered
+`authors`, optional `series` (including `series_index`), public `cover_url`,
+`can_open`, caller-scoped `session_count` and `active_session_count`, and
+`last_activity_at`. `can_open` independently reflects current Library
+visibility. A historical projection with `can_open=false` can still include the
+public cover display URL, but never includes EPUB/file data or download access.
+
+The list uses normal `page`/`page_size` pagination and accepts `q` over title,
+author names, and Series name. Default ordering is newest caller-owned
+Marginalia activity first. Books without caller-owned Sessions and missing
+Books use the same no-leakage `404` detail behavior. See `docs/marginalia.md`
+for the full field and ownership contract.
+
 ## Accounts
 
 - `GET /api/v1/accounts/me/`

@@ -7,8 +7,8 @@ Current apps:
 - `core`: shared base models, server settings, utilities
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
-- `marginalia`: new Marginalia domain foundation for Reading Sessions, Session
-  progress, and located annotations; API routes are not implemented yet
+- `marginalia`: new Marginalia domain for Reading Sessions, Session progress,
+  located annotations, and the bounded owned-Marginalia Book read projection
 - `reading`: reading sessions, progress, annotations
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
 

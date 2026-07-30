@@ -64,6 +64,10 @@ urlpatterns = [
         "api/v1/accounts/", include(("accounts.urls", "accounts"), namespace="accounts")
     ),
     path("api/v1/reading/", include(("reading.urls", "reading"), namespace="reading")),
+    path(
+        "api/v1/marginalia/",
+        include(("marginalia.urls", "marginalia"), namespace="marginalia"),
+    ),
     path("api/v1/shelves/", include(("shelves.urls", "shelves"), namespace="shelves")),
     path("api/v1/", include(("core.urls", "core"), namespace="core")),
 ]

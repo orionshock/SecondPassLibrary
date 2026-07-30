@@ -8,10 +8,60 @@ records are:
 - `Annotation`: a located bookmark or highlight belonging to a Reading Session;
   highlights may also carry a user note/comment.
 
-The foundation models live in the `marginalia` Django app. No
-`/api/v1/marginalia/` routes exist yet. The existing `reading` app and
-`/api/v1/reading/` routes remain the old runtime implementation while the new
-domain is built route by route; the new app does not depend on them.
+The foundation models live in the `marginalia` Django app. The first read-only
+API slice exposes owned-Marginalia Books under `/api/v1/marginalia/books/`.
+The existing `reading` app and `/api/v1/reading/` routes remain the old runtime
+implementation while the new domain is built route by route; the new app does
+not depend on them.
+
+## Owned-Marginalia Books
+
+These authenticated read endpoints support Django sessions and Client API
+bearer tokens:
+
+- `GET /api/v1/marginalia/books/`
+- `GET /api/v1/marginalia/books/<book_id>/`
+
+A Book is present only when the caller owns at least one Marginalia
+`ReadingSession` for it. This historical ownership is independent of current
+Library visibility. It authorizes only the bounded Marginalia Book projection;
+it does not grant EPUB access, download or Reader access, Book mutation, Group
+or Shelf access, or broader Library visibility. Missing Books and Books without
+caller-owned Sessions both return the normal no-leakage `404` response.
+
+List responses use normal page-number pagination (`page`, `page_size`; default
+20, maximum 200). `q` searches only Book title, author names, and Series name.
+Results are distinct Books ordered by newest caller-owned Marginalia activity,
+then title and id. Activity is the newest update among the caller's Sessions,
+their progress, and their non-deleted annotations.
+
+List and detail use the same projection:
+
+```json
+{
+  "id": "<book-uuid>",
+  "title": "Book title",
+  "authors": [{"id": "<author-uuid>", "name": "Author name"}],
+  "series": {
+    "id": "<series-uuid>",
+    "name": "Series name",
+    "series_index": "2.5"
+  },
+  "cover_url": "http://example.test/media/covers/example.jpg",
+  "can_open": false,
+  "session_count": 2,
+  "active_session_count": 0,
+  "last_activity_at": "2026-07-29T12:00:00Z"
+}
+```
+
+`series` and `cover_url` may be `null`. Counts include only the authenticated
+user's Sessions. `can_open` is computed separately from current Library
+visibility and is not implied by Marginalia ownership. Cover images remain
+available when `can_open` is false because covers are public display assets in
+the existing media security model; the projection never contains EPUB/file
+metadata, download URLs, checksums, identifiers, Groups, Shelves, or permission
+internals.
 
 ## Session lifecycle
 
