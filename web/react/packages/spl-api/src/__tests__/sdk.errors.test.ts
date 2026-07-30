@@ -38,6 +38,22 @@ describe("apiErrorFromPayload", () => {
     expect(error.fields).toEqual({ email: ["Enter a valid email address."] });
   });
 
+  it("normalizes the bounded project error envelope", () => {
+    const error = apiErrorFromPayload(409, {
+      error: {
+        code: "SESSION_CLOSED",
+        message: "The Reading Session is closed.",
+        detail: "",
+        hint: "",
+      },
+    });
+
+    expect(error.status).toBe(409);
+    expect(error.message).toBe("The Reading Session is closed.");
+    expect(error.code).toBe("SESSION_CLOSED");
+    expect(error.fields).toBeUndefined();
+  });
+
   it("classifies authentication, validation, network, and unknown failures", () => {
     expect(classifyApiError(new ApiError("Signed out", 401))).toBe("authentication");
     expect(classifyApiError(new ApiError("Forbidden", 403))).toBe("authentication");
