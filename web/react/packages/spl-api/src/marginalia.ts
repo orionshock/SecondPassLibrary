@@ -100,44 +100,6 @@ export interface MarginaliaBookmark extends MarginaliaAnnotationBase {
 
 export type MarginaliaAnnotation = MarginaliaHighlight | MarginaliaBookmark;
 
-export interface MarginaliaHighlightInput {
-  clientId: string;
-  kind: "highlight";
-  location: { cfi: string; locationLabel?: string };
-  body: {
-    text: string;
-    prefix?: string;
-    suffix?: string;
-    color?: MarginaliaHighlightColor;
-    note?: string;
-  };
-}
-
-export interface MarginaliaBookmarkInput {
-  clientId: string;
-  kind: "bookmark";
-  location: { cfi: string; locationLabel?: string };
-}
-
-export type MarginaliaAnnotationInput = MarginaliaHighlightInput | MarginaliaBookmarkInput;
-
-/** The backend accepts between 1 and 100 operations per batch. */
-export type MarginaliaAnnotationOperation =
-  | { action: "upsert"; annotation: MarginaliaAnnotationInput }
-  | { action: "delete"; clientId: string };
-
-export interface MarginaliaBootstrap {
-  created: boolean;
-  book: MarginaliaBookSummary;
-  session: MarginaliaSessionDetail | null;
-  annotations: MarginaliaAnnotation[];
-  closedSessions: Page<MarginaliaSessionSummary>;
-}
-
-export interface MarginaliaSessionBootstrap extends MarginaliaBootstrap {
-  session: MarginaliaSessionDetail;
-}
-
 export interface MarginaliaPageQuery {
   q?: string;
   page?: number;
@@ -148,19 +110,12 @@ export interface MarginaliaSessionsQuery extends MarginaliaPageQuery {
   status?: MarginaliaSessionStatus;
 }
 
-export interface MarginaliaProgressInput {
-  cfi: string;
-  locationLabel?: string;
-}
-
 export interface MarginaliaSessionMetadataInput {
   name?: string;
   notes?: string;
 }
 
-export interface MarginaliaSessionCloseInput extends MarginaliaSessionMetadataInput {
-  progress?: MarginaliaProgressInput;
-}
+export type MarginaliaSessionCloseInput = MarginaliaSessionMetadataInput;
 
 interface BookSummaryResponse {
   id: string;
@@ -250,14 +205,6 @@ interface AnnotationCollectionResponse {
   annotations: AnnotationResponse[];
 }
 
-interface BootstrapResponse {
-  created: boolean;
-  context: { book: BookSummaryResponse };
-  session: SessionDetailResponse | null;
-  annotations: AnnotationResponse[];
-  closed_sessions: ApiPage<SessionSummaryResponse>;
-}
-
 export async function listMarginaliaBooks(
   query: MarginaliaPageQuery = {},
   client: ApiClient = apiClient,
@@ -318,26 +265,6 @@ export async function updateMarginaliaSession(
   return mapSessionEnvelope(response);
 }
 
-export async function getMarginaliaProgress(
-  sessionId: string,
-  client: ApiClient = apiClient,
-): Promise<MarginaliaProgress | null> {
-  const response = await client.request<{ progress: ProgressResponse | null }>(`${sessionPath(sessionId)}progress/`);
-  return response.progress ? mapProgress(response.progress) : null;
-}
-
-export async function replaceMarginaliaProgress(
-  sessionId: string,
-  input: MarginaliaProgressInput,
-  client: ApiClient = apiClient,
-): Promise<MarginaliaProgress> {
-  const response = await client.request<{ progress: ProgressResponse }>(
-    `${sessionPath(sessionId)}progress/`,
-    jsonRequest("PUT", mapProgressInput(input)),
-  );
-  return mapProgress(response.progress);
-}
-
 export async function closeMarginaliaSession(
   sessionId: string,
   input: MarginaliaSessionCloseInput = {},
@@ -345,7 +272,7 @@ export async function closeMarginaliaSession(
 ): Promise<MarginaliaSessionEnvelope> {
   const response = await client.request<SessionEnvelopeResponse>(
     `${sessionPath(sessionId)}close/`,
-    jsonRequest("POST", mapCloseInput(input)),
+    jsonRequest("POST", input),
   );
   return mapSessionEnvelope(response);
 }
@@ -356,50 +283,6 @@ export async function listMarginaliaSessionAnnotations(
 ): Promise<MarginaliaAnnotation[]> {
   const response = await client.request<AnnotationCollectionResponse>(`${sessionPath(sessionId)}annotations/`);
   return response.annotations.map(mapAnnotation);
-}
-
-export async function syncMarginaliaSessionAnnotations(
-  sessionId: string,
-  operations: readonly MarginaliaAnnotationOperation[],
-  client: ApiClient = apiClient,
-): Promise<MarginaliaAnnotation[]> {
-  const response = await client.request<AnnotationCollectionResponse>(
-    `${sessionPath(sessionId)}annotations/batch/`,
-    jsonRequest("POST", { operations: operations.map(mapAnnotationOperation) }),
-  );
-  return response.annotations.map(mapAnnotation);
-}
-
-export async function openMarginaliaBook(
-  bookId: string,
-  defaults: MarginaliaSessionMetadataInput = {},
-  client: ApiClient = apiClient,
-): Promise<MarginaliaSessionBootstrap> {
-  const response = await client.request<BootstrapResponse>(
-    `${bookPath(bookId)}open/`,
-    jsonRequest("POST", defaults),
-  );
-  return mapRequiredSessionBootstrap(response);
-}
-
-export async function getActiveMarginaliaSession(
-  bookId: string,
-  client: ApiClient = apiClient,
-): Promise<MarginaliaBootstrap> {
-  return mapBootstrap(await client.request<BootstrapResponse>(`${bookPath(bookId)}active-session/`));
-}
-
-export async function startOverMarginaliaBook(
-  bookId: string,
-  input: MarginaliaSessionCloseInput,
-  idempotencyKey: string,
-  client: ApiClient = apiClient,
-): Promise<MarginaliaSessionBootstrap> {
-  const response = await client.request<BootstrapResponse>(
-    `${bookPath(bookId)}start-over/`,
-    jsonRequest("POST", mapCloseInput(input), { "Idempotency-Key": idempotencyKey }),
-  );
-  return mapRequiredSessionBootstrap(response);
 }
 
 function mapBookSummary(item: BookSummaryResponse): MarginaliaBookSummary {
@@ -478,56 +361,6 @@ function mapAnnotation(item: AnnotationResponse): MarginaliaAnnotation {
     : { ...base, kind: "highlight", body: { ...item.body } };
 }
 
-function mapBootstrap(item: BootstrapResponse): MarginaliaBootstrap {
-  return {
-    created: item.created,
-    book: mapBookSummary(item.context.book),
-    session: item.session ? mapSessionDetail(item.session) : null,
-    annotations: item.annotations.map(mapAnnotation),
-    closedSessions: toPage(item.closed_sessions, mapSessionSummary),
-  };
-}
-
-function mapRequiredSessionBootstrap(item: BootstrapResponse): MarginaliaSessionBootstrap {
-  const mapped = mapBootstrap(item);
-  if (!mapped.session) throw new Error("The server returned a bootstrap response without a Session.");
-  return { ...mapped, session: mapped.session };
-}
-
-function mapProgressInput(input: MarginaliaProgressInput) {
-  return {
-    cfi: input.cfi,
-    ...(input.locationLabel !== undefined ? { location_label: input.locationLabel } : {}),
-  };
-}
-
-function mapCloseInput(input: MarginaliaSessionCloseInput) {
-  return {
-    ...(input.name !== undefined ? { name: input.name } : {}),
-    ...(input.notes !== undefined ? { notes: input.notes } : {}),
-    ...(input.progress !== undefined ? { progress: mapProgressInput(input.progress) } : {}),
-  };
-}
-
-function mapAnnotationOperation(operation: MarginaliaAnnotationOperation) {
-  if (operation.action === "delete") return { action: "delete", client_id: operation.clientId };
-  const annotation = operation.annotation;
-  return {
-    action: "upsert",
-    annotation: {
-      client_id: annotation.clientId,
-      kind: annotation.kind,
-      location: {
-        cfi: annotation.location.cfi,
-        ...(annotation.location.locationLabel !== undefined
-          ? { location_label: annotation.location.locationLabel }
-          : {}),
-      },
-      ...(annotation.kind === "highlight" ? { body: { ...annotation.body } } : {}),
-    },
-  };
-}
-
 function pageQuery(query: MarginaliaPageQuery): URLSearchParams {
   const parameters = new URLSearchParams();
   if (query.q !== undefined) parameters.set("q", query.q);
@@ -554,10 +387,10 @@ function sessionPath(sessionId: string): string {
   return `/api/v1/marginalia/sessions/${encodeURIComponent(sessionId)}/`;
 }
 
-function jsonRequest(method: string, body: unknown, headers: Record<string, string> = {}): RequestInit {
+function jsonRequest(method: string, body: unknown): RequestInit {
   return {
     method,
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   };
 }

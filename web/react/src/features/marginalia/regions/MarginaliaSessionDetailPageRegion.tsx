@@ -1,91 +1,79 @@
-import type { Page, ReadingAnnotation, ReadingAnnotationCategory, ReadingProgress, ReadingSessionDetail } from "@second-pass/spl-api";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import type { MarginaliaAnnotation, MarginaliaSessionEnvelope } from "@second-pass/spl-api";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
+import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
+import type { MutationState } from "../../../shared/feedback/mutationState";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
-import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
-import { allMarginaliaAnnotationCategories, defaultMarginaliaAnnotationCategories, type MarginaliaAnnotationOrder } from "../marginaliaSessionDetailQuery";
-
-export const annotationOrderOptions: readonly OrderMenuOption<MarginaliaAnnotationOrder>[] = [
-  { value: "newest", label: "Newest created", icon: "south" },
-  { value: "oldest", label: "Oldest created", icon: "north" },
-  { value: "recently-edited", label: "Recently edited", icon: "edit_calendar" },
-  { value: "oldest-edited", label: "Oldest edited", icon: "history" },
-];
-
-const annotationCategoryOptions: readonly { value: ReadingAnnotationCategory; label: string; icon: string }[] = [
-  { value: "bookmark", label: "Bookmarks", icon: "bookmark" },
-  { value: "highlight", label: "Highlights", icon: "border_color" },
-  { value: "highlightWithNote", label: "Highlights with notes", icon: "chat_bubble" },
-];
-
-export interface MarginaliaProgressLoadState {
-  progress?: ReadingProgress;
-  loading: boolean;
-  error?: Error;
-}
 
 export interface MarginaliaAnnotationsLoadState {
-  page?: Page<ReadingAnnotation>;
+  items?: MarginaliaAnnotation[];
   loading: boolean;
   error?: Error;
 }
 
-export function MarginaliaSessionDetailPageRegion({ session, progress, annotations, sessionNote, annotationCategories, annotationOrder, pageNumber, pageSize, onAnnotationCategoriesChange, onAnnotationOrderChange, onPageChange, onPageSizeChange, onRetryProgress, onRetryAnnotations }: {
-  session: ReadingSessionDetail;
-  progress: MarginaliaProgressLoadState;
+export function MarginaliaSessionDetailPageRegion({
+  detail,
+  annotations,
+  sessionNote,
+  closeState,
+  onClose,
+  onRetryAnnotations,
+}: {
+  detail: MarginaliaSessionEnvelope;
   annotations: MarginaliaAnnotationsLoadState;
   sessionNote: ReactNode;
-  annotationCategories: readonly ReadingAnnotationCategory[];
-  annotationOrder: MarginaliaAnnotationOrder;
-  pageNumber: number;
-  pageSize: number;
-  onAnnotationCategoriesChange: (categories: ReadingAnnotationCategory[]) => void;
-  onAnnotationOrderChange: (order: MarginaliaAnnotationOrder) => void;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  onRetryProgress: () => void;
+  closeState: MutationState;
+  onClose: () => void;
   onRetryAnnotations: () => void;
 }) {
   return <div className="marginalia-session-detail">
-    <SessionSummaryRegion session={session} progress={progress} sessionNote={sessionNote} onRetryProgress={onRetryProgress} />
-    <AnnotationsRegion state={annotations} categories={annotationCategories} order={annotationOrder} pageNumber={pageNumber} pageSize={pageSize} onCategoriesChange={onAnnotationCategoriesChange} onOrderChange={onAnnotationOrderChange} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetryAnnotations} />
+    <SessionSummaryRegion detail={detail} sessionNote={sessionNote} closeState={closeState} onClose={onClose} />
+    <AnnotationsRegion state={annotations} onRetry={onRetryAnnotations} />
   </div>;
 }
 
-function SessionSummaryRegion({ session, progress, sessionNote, onRetryProgress }: { session: ReadingSessionDetail; progress: MarginaliaProgressLoadState; sessionNote: ReactNode; onRetryProgress: () => void }) {
-  const bookAvailable = !session.book.unavailable && Boolean(session.book.id);
+function SessionSummaryRegion({ detail, sessionNote, closeState, onClose }: {
+  detail: MarginaliaSessionEnvelope;
+  sessionNote: ReactNode;
+  closeState: MutationState;
+  onClose: () => void;
+}) {
+  const { book, session } = detail;
+  const progressLabel = session.progress
+    ? session.progress.locationLabel.trim() ? session.progress.locationLabel : "Saved location"
+    : "No saved progress";
+
   return <Surface>
     <div className="marginalia-session-summary">
-      <div className="marginalia-session-summary__cover"><BookCoverComponent coverUrl={bookAvailable ? session.book.coverUrl : null} title={bookAvailable ? session.book.title || "Untitled Book" : "Book unavailable"} /></div>
+      <div className="marginalia-session-summary__cover"><BookCoverComponent coverUrl={book.coverUrl} title={book.title || "Untitled Book"} /></div>
       <div className="marginalia-session-summary__main">
         <header className="marginalia-session-summary__book-header">
           <div>
-            <p className="eyebrow">{bookAvailable ? "Book" : "Book unavailable"}</p>
-            {bookAvailable ? <>
-              <h2>{session.book.title || "Untitled Book"}</h2>
-              {session.book.authors.length ? <p className="marginalia-session-summary__book-meta">{session.book.authors.map((author) => author.name).join(", ")}</p> : null}
-              {session.book.series ? <p className="marginalia-session-summary__book-meta">{session.book.series.name}{session.book.seriesIndex ? ` ${session.book.seriesIndex}` : ""}</p> : null}
-            </> : <p className="marginalia-session-summary__unavailable">This reading history is still yours, but the related Book is not currently available.</p>}
+            <p className="eyebrow">Book</p>
+            <h2>{book.title || "Untitled Book"}</h2>
+            {book.authors.length ? <p className="marginalia-session-summary__book-meta">{book.authors.map((author) => author.name).join(", ")}</p> : null}
+            {book.series ? <p className="marginalia-session-summary__book-meta">{book.series.name}{book.series.seriesIndex ? ` ${book.series.seriesIndex}` : ""}</p> : null}
           </div>
-          {bookAvailable && session.canOpen && session.book.id ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(session.book.id)}`}>View Book</Link> : null}
+          {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
         </header>
         <div className="marginalia-session-summary__session">
-          <div className="marginalia-session-summary__status"><Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge></div>
+          <div className="marginalia-session-summary__status-actions">
+            <Badge tone={session.status === "active" ? "success" : "default"}>{session.status === "active" ? "Active" : "Closed"}</Badge>
+            {session.status === "active" ? <Button type="button" size="small" tone="danger" disabled={closeState.pending} onClick={onClose}>{closeState.pending ? "Closing..." : "Close Session"}</Button> : null}
+            {closeState.error ? <span className="field-error" role="alert">{closeState.error.message}</span> : null}
+            {closeState.message ? <span className="success-message" role="status">{closeState.message}</span> : null}
+          </div>
           <div className="marginalia-session-summary__stats">
             <span>{formatCount(session.annotationCount, "annotation")}</span>
-            {progress.loading && !progress.progress ? <span aria-live="polite" aria-busy="true">Loading progress...</span> : null}
-            {progress.progress ? <span aria-label={progress.progress.progression === null ? "Progress unavailable" : "Reading progress"}>{progress.progress.progression === null ? "No recorded percentage" : `${formatProgression(progress.progress.progression)} read`}</span> : null}
+            <span aria-label="Saved progress">{progressLabel}</span>
           </div>
           <dl className="marginalia-session-detail__facts">
             <div><dt>Started</dt><dd><time dateTime={session.startedAt}>{formatDate(session.startedAt)}</time></dd></div>
             <div><dt>Updated</dt><dd><time dateTime={session.updatedAt}>{formatDate(session.updatedAt)}</time></dd></div>
-            {session.completedAt ? <div><dt>Completed</dt><dd><time dateTime={session.completedAt}>{formatDate(session.completedAt)}</time></dd></div> : null}
+            {session.closedAt ? <div><dt>Closed</dt><dd><time dateTime={session.closedAt}>{formatDate(session.closedAt)}</time></dd></div> : null}
           </dl>
-          {progress.error ? <div className="marginalia-session-summary__progress-error"><ErrorPanel>{progress.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetryProgress}>Retry</Button></div> : null}
         </div>
       </div>
       {sessionNote}
@@ -93,140 +81,43 @@ function SessionSummaryRegion({ session, progress, sessionNote, onRetryProgress 
   </Surface>;
 }
 
-function AnnotationsRegion({ state, categories, order, pageNumber, pageSize, onCategoriesChange, onOrderChange, onPageChange, onPageSizeChange, onRetry }: {
-  state: MarginaliaAnnotationsLoadState;
-  categories: readonly ReadingAnnotationCategory[];
-  order: MarginaliaAnnotationOrder;
-  pageNumber: number;
-  pageSize: number;
-  onCategoriesChange: (categories: ReadingAnnotationCategory[]) => void;
-  onOrderChange: (order: MarginaliaAnnotationOrder) => void;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  onRetry: () => void;
-}) {
+function AnnotationsRegion({ state, onRetry }: { state: MarginaliaAnnotationsLoadState; onRetry: () => void }) {
   return <section className="marginalia-session-detail__annotations" aria-labelledby="marginalia-session-annotations-heading">
-    <header><h2 id="marginalia-session-annotations-heading">Marginalia</h2><div className="marginalia-session-detail__annotation-controls">
-      <AnnotationCategoryMenuComponent value={categories} onChange={onCategoriesChange} />
-      <OrderMenuComponent label="Order" value={order} options={annotationOrderOptions} onChange={onOrderChange} size="small" />
-    </div></header>
-    {!state.page && state.loading ? <p aria-live="polite" aria-busy="true">Loading marginalia...</p> : null}
-    {!state.page && state.error ? <div><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
-    {state.page ? <div aria-busy={state.loading}>
+    <header><h2 id="marginalia-session-annotations-heading">Marginalia</h2></header>
+    {!state.items && state.loading ? <p aria-live="polite" aria-busy="true">Loading marginalia...</p> : null}
+    {!state.items && state.error ? <div><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
+    {state.items ? <div aria-busy={state.loading}>
       {state.error ? <div className="marginalia-inline-error"><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
-      <PaginatedListFrameComponent page={pageNumber} pageSize={pageSize} count={state.page.count} hasPrevious={Boolean(state.page.previous)} hasNext={Boolean(state.page.next)} itemLabel="Marginalia" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
-        {state.page.items.length ? <div className="marginalia-annotation-rows">{state.page.items.map((annotation) => <AnnotationRowComponent key={annotation.id} annotation={annotation} />)}</div> : <p className="marginalia-empty">No marginalia found.</p>}
-      </PaginatedListFrameComponent>
+      {state.items.length ? <div className="marginalia-annotation-rows">{state.items.map((annotation) => <AnnotationRowComponent key={annotation.id} annotation={annotation} />)}</div> : <p className="marginalia-empty">No marginalia found.</p>}
     </div> : null}
   </section>;
 }
 
-export function AnnotationCategoryMenuComponent({ value, onChange }: { value: readonly ReadingAnnotationCategory[]; onChange: (categories: ReadingAnnotationCategory[]) => void }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-  const selectedLabel = value.length === allMarginaliaAnnotationCategories.length
-    ? "All"
-    : value.length === defaultMarginaliaAnnotationCategories.length && defaultMarginaliaAnnotationCategories.every((category) => value.includes(category))
-      ? "Highlights"
-    : value.length === 1
-      ? annotationCategoryOptions.find((option) => option.value === value[0])?.label ?? "Selected"
-      : `${value.length} selected`;
-
-  useEffect(() => {
-    if (!open) return;
-    function dismissOutside(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", dismissOutside);
-    return () => document.removeEventListener("pointerdown", dismissOutside);
-  }, [open]);
-
-  return <div className="marginalia-annotation-category-menu">
-    <span>Show</span>
-    <div
-      className="marginalia-annotation-category-menu__dropdown"
-      ref={rootRef}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== "Escape") return;
-        event.preventDefault();
-        setOpen(false);
-        buttonRef.current?.focus();
-      }}
-    >
-      <button
-        ref={buttonRef}
-        type="button"
-        className="marginalia-annotation-category-menu__button"
-        aria-label={`Show marginalia, current: ${selectedLabel}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <MaterialIcon name="filter_list" />
-        <span>{selectedLabel}</span>
-        <MaterialIcon name={open ? "expand_less" : "expand_more"} />
-      </button>
-      {open ? <AnnotationCategoryMenuOptionsComponent id={menuId} value={value} onChange={onChange} /> : null}
-    </div>
-  </div>;
-}
-
-export function AnnotationCategoryMenuOptionsComponent({ id, value, onChange }: { id?: string; value: readonly ReadingAnnotationCategory[]; onChange: (categories: ReadingAnnotationCategory[]) => void }) {
-  return <div id={id} className="marginalia-annotation-category-menu__options" role="menu" aria-label="Show marginalia">
-    {annotationCategoryOptions.map((option) => {
-      const selected = value.includes(option.value);
-      return <button
-        key={option.value}
-        type="button"
-        role="menuitemcheckbox"
-        aria-checked={selected}
-        disabled={selected && value.length === 1}
-        onClick={() => {
-          const selectedValues = selected ? value.filter((category) => category !== option.value) : [...value, option.value];
-          onChange(allMarginaliaAnnotationCategories.filter((category) => selectedValues.includes(category)));
-        }}
-      >
-        <MaterialIcon name={option.icon} />
-        <span>{option.label}</span>
-        {selected ? <MaterialIcon name="check" /> : null}
-      </button>;
-    })}
-  </div>;
-}
-
-function AnnotationRowComponent({ annotation }: { annotation: ReadingAnnotation }) {
-  const highlightColor = safeHighlightColor(annotation.highlightColor);
+function AnnotationRowComponent({ annotation }: { annotation: MarginaliaAnnotation }) {
+  const locationLabel = annotation.location.locationLabel.trim() ? annotation.location.locationLabel : null;
   return <article className="marginalia-annotation-row">
-    <div className="marginalia-annotation-row__marker"><MaterialIcon name={annotation.kind === "bookmark" ? "bookmark" : annotation.hasComment ? "chat_bubble" : "border_color"} /></div>
+    <div className="marginalia-annotation-row__marker"><MaterialIcon name={annotation.kind === "bookmark" ? "bookmark" : annotation.body.note.trim() ? "chat_bubble" : "border_color"} /></div>
     <div className="marginalia-annotation-row__content">
-      {annotation.kind === "bookmark" ? <strong>Bookmark</strong> : null}
-      {annotation.kind === "highlight" && annotation.highlightText.trim() ? <blockquote className={`marginalia-annotation-row__quote marginalia-annotation-row__quote--${highlightColor}`}>{annotation.highlightText}</blockquote> : null}
-      {annotation.commentText.trim() ? <p className="marginalia-annotation-row__comment">{annotation.commentText}</p> : null}
-      {annotation.kind === "bookmark" && !annotation.commentText.trim() ? <p className="muted">Saved location</p> : null}
+      {locationLabel ? <p className="marginalia-annotation-row__location">{locationLabel}</p> : null}
+      {annotation.kind === "bookmark"
+        ? !locationLabel ? <strong>Saved location</strong> : null
+        : <>
+          <blockquote className={`marginalia-annotation-row__quote marginalia-annotation-row__quote--${annotation.body.color}`}>
+            {annotation.body.prefix ? <span className="marginalia-annotation-row__quote-context">{annotation.body.prefix}</span> : null}
+            <strong className="marginalia-annotation-row__quote-text">{annotation.body.text}</strong>
+            {annotation.body.suffix ? <span className="marginalia-annotation-row__quote-context">{annotation.body.suffix}</span> : null}
+          </blockquote>
+          {annotation.body.note.trim() ? <p className="marginalia-annotation-row__comment">{annotation.body.note}</p> : null}
+        </>}
       <time dateTime={annotation.createdAt}>{formatDate(annotation.createdAt)}</time>
     </div>
   </article>;
-}
-
-function safeHighlightColor(value: string): "yellow" | "green" | "blue" | "pink" | "purple" | "orange" {
-  const normalized = value.trim().toLowerCase();
-  return normalized === "green" || normalized === "blue" || normalized === "pink" || normalized === "purple" || normalized === "orange" ? normalized : "yellow";
 }
 
 function formatDate(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "Unknown date";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(parsed);
-}
-
-function formatProgression(value: number): string {
-  return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`;
 }
 
 function formatCount(count: number, singular: string): string {

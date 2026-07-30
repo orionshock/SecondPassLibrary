@@ -531,7 +531,6 @@
   gap: 1rem;
 }
 
-.marginalia-session-detail__annotation-controls,
 .marginalia-session-detail__annotations > header {
   display: flex;
   align-items: center;
@@ -593,9 +592,13 @@
   padding-top: 0.85rem;
 }
 
-.marginalia-session-summary__status {
+.marginalia-session-summary__status-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 2rem;
 }
 
 .marginalia-session-summary__stats {
@@ -677,13 +680,6 @@
 }
 
 
-.marginalia-session-summary__progress-error {
-  display: grid;
-  justify-items: start;
-  gap: 0.45rem;
-  margin-top: 0.8rem;
-}
-
 .marginalia-session-detail__annotations {
   display: grid;
   gap: 0.75rem;
@@ -696,79 +692,6 @@
 }
 
 .marginalia-session-detail__annotations h2 { margin: 0; }
-
-.marginalia-annotation-category-menu {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.marginalia-annotation-category-menu__dropdown {
-  position: relative;
-}
-
-.marginalia-annotation-category-menu__button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 2rem;
-  padding: 0.32rem 0.5rem;
-  border-radius: 0.55rem;
-  color: #cbd8e7;
-  background: var(--surface-raised);
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-
-.marginalia-annotation-category-menu__button .material-icon,
-.marginalia-annotation-category-menu__options .material-icon {
-  color: #93a9bf;
-  font-size: 0.95rem;
-}
-
-.marginalia-annotation-category-menu__options {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 0.35rem);
-  right: 0;
-  display: grid;
-  width: max-content;
-  min-width: 12.5rem;
-  padding: 0.3rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 0.55rem;
-  background: var(--surface-raised);
-  box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 38%);
-}
-
-.marginalia-annotation-category-menu__options > button {
-  display: grid;
-  grid-template-columns: 1.1rem minmax(0, 1fr) 1rem;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.38rem 0.45rem;
-  border-color: transparent;
-  border-radius: 0.35rem;
-  color: #c3d0df;
-  background: transparent;
-  font-size: 0.79rem;
-  text-align: left;
-}
-
-.marginalia-annotation-category-menu__options > button:hover,
-.marginalia-annotation-category-menu__options > button:focus-visible,
-.marginalia-annotation-category-menu__options > button[aria-checked="true"] {
-  border-color: var(--border);
-  background: rgb(125 211 252 / 8%);
-}
-
-.marginalia-annotation-category-menu__options > button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
 
 .marginalia-annotation-rows {
   display: grid;
@@ -811,6 +734,11 @@
   margin: 0;
 }
 
+.marginalia-annotation-row__location {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .marginalia-annotation-row__quote {
   padding: 0.65rem 0.75rem;
   border-left: 3px solid rgb(250 204 21 / 60%);
@@ -826,6 +754,8 @@
 .marginalia-annotation-row__quote--pink { border-left-color: rgb(244 114 182 / 60%); background: rgb(244 114 182 / 8%); }
 .marginalia-annotation-row__quote--purple { border-left-color: rgb(167 139 250 / 60%); background: rgb(167 139 250 / 8%); }
 .marginalia-annotation-row__quote--orange { border-left-color: rgb(251 146 60 / 60%); background: rgb(251 146 60 / 8%); }
+.marginalia-annotation-row__quote-context { color: var(--muted); }
+.marginalia-annotation-row__quote-text { color: var(--text); }
 .marginalia-annotation-row__comment { color: var(--muted); font-style: italic; white-space: pre-wrap; }
 
 @media (max-width: 700px) {
@@ -843,5 +773,4 @@
   .marginalia-session-summary { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.85rem; }
   .marginalia-session-summary__cover .book-cover-component { width: 5rem; }
   .marginalia-session-detail__annotations > header { align-items: flex-start; flex-direction: column; }
-  .marginalia-session-detail__annotation-controls { width: 100%; flex-wrap: wrap; }
 }
