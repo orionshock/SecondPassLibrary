@@ -1,6 +1,8 @@
 from django.urls import path
 
+from .annotations.views import SessionAnnotationBatchView, SessionAnnotationListView
 from .detail_views import MarginaliaSessionDetailView
+from .lifecycle_views import MarginaliaSessionCloseView, MarginaliaSessionProgressView
 from .views import (
     MarginaliaBookDetailView,
     MarginaliaBookListView,
@@ -17,6 +19,26 @@ urlpatterns = [
         "sessions/<uuid:session_id>/",
         MarginaliaSessionDetailView.as_view(),
         name="session-detail",
+    ),
+    path(
+        "sessions/<uuid:session_id>/progress/",
+        MarginaliaSessionProgressView.as_view(),
+        name="session-progress",
+    ),
+    path(
+        "sessions/<uuid:session_id>/close/",
+        MarginaliaSessionCloseView.as_view(),
+        name="session-close",
+    ),
+    path(
+        "sessions/<uuid:session_id>/annotations/",
+        SessionAnnotationListView.as_view(),
+        name="session-annotation-list",
+    ),
+    path(
+        "sessions/<uuid:session_id>/annotations/batch/",
+        SessionAnnotationBatchView.as_view(),
+        name="session-annotation-batch",
     ),
     path("books/", MarginaliaBookListView.as_view(), name="book-list"),
     path(

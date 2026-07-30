@@ -24,6 +24,10 @@ bearer tokens:
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
 - `GET /api/v1/marginalia/sessions/`
 - `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
+- `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
+- `POST /api/v1/marginalia/sessions/<session_id>/close/`
+- `GET /api/v1/marginalia/sessions/<session_id>/annotations/`
+- `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
 
 A Book is present only when the caller owns at least one Marginalia
 `ReadingSession` for it. This historical ownership is independent of current
@@ -197,6 +201,154 @@ remain readable but reject metadata changes without altering stored data.
 Reading detail never changes activity; a successful metadata update changes
 the Session timestamp and therefore participates in normal activity ordering.
 
+## Progress read and write
+
+`GET /api/v1/marginalia/sessions/<session_id>/progress/` returns
+`{"progress": null}` or the stored `{cfi, location_label, updated_at}` object.
+The owner may read progress for active or closed Sessions even after losing
+current Library access. Reading progress never creates state or changes a
+timestamp.
+
+`PUT` completely replaces the active Session's saved location. It requires a
+nonblank `cfi`, accepts an optional `location_label`, rejects unknown fields,
+and assigns `updated_at` on the server. The opaque CFI and label are stored
+unchanged. A write requires ownership, an active Session, and current Library
+authority for the Book. Marginalia delegates that authority decision to the
+Library policy; it does not inspect, serve, or diagnose the Book asset. There
+is no progress `PATCH` or `DELETE` operation.
+
+## Explicit close
+
+`POST /api/v1/marginalia/sessions/<session_id>/close/` explicitly closes one
+owned active Session. The optional body may contain `name`, `notes`, and a
+complete final `progress` location:
+
+```json
+{
+  "name": "Finished first read",
+  "notes": "Final thoughts",
+  "progress": {
+    "cfi": "epubcfi(/6/42)",
+    "location_label": "Chapter 42 · 100%"
+  }
+}
+```
+
+Final metadata, final progress, and closure commit together under a Session row
+lock. Live progress and close timestamps are server-assigned; a future
+canonical import may preserve a separately validated source timestamp. Close
+without final progress does not require current Library access. Final progress
+does, because it is a live location write. The response is the normal Session
+detail envelope and close never creates another Session.
+
+An empty retry against an already closed Session returns its unchanged detail.
+A retry whose supplied values equal the stored final values also succeeds.
+Attempts to change closed metadata or progress return a bounded
+`SESSION_CLOSED` conflict. Failed validation or authorization changes nothing.
+
+## Session annotations
+
+`GET /api/v1/marginalia/sessions/<session_id>/annotations/` returns the
+complete current non-deleted Annotation collection for one owned Session. It
+is deliberately not paginated so a Reading Client can replace its local
+Session state from one response. Active and closed Sessions remain readable
+without current Library access. Missing and foreign Sessions use the normal
+no-leakage `404`.
+
+Highlights and bookmarks use distinct canonical shapes. A highlight has one
+body; a bookmark has none:
+
+```json
+{
+  "id": "<server-uuid>",
+  "client_id": "reader-highlight-1",
+  "kind": "highlight",
+  "location": {
+    "cfi": "epubcfi(/6/8!/4/2)",
+    "location_label": "Chapter 08 · 42%"
+  },
+  "body": {
+    "text": "Selected passage",
+    "prefix": "Before ",
+    "suffix": " after.",
+    "color": "yellow",
+    "note": "Optional user note."
+  },
+  "created_at": "2026-07-30T12:00:00Z",
+  "updated_at": "2026-07-30T12:00:00Z"
+}
+```
+
+```json
+{
+  "id": "<server-uuid>",
+  "client_id": "reader-bookmark-1",
+  "kind": "bookmark",
+  "location": {
+    "cfi": "epubcfi(/6/10!/4/2)",
+    "location_label": "Chapter 09 · 47%"
+  },
+  "created_at": "2026-07-30T12:05:00Z",
+  "updated_at": "2026-07-30T12:05:00Z"
+}
+```
+
+Results use stable reading order: nonblank `location_label` values sort first
+and lexically ascending, followed by blank labels using CFI, creation time, and
+server id as deterministic fallbacks. Marginalia does not parse either the
+label or CFI.
+
+## Annotation batch synchronization
+
+`POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/` accepts one
+to 100 operations. Every `client_id` must be nonblank, at most 255 characters,
+and unique within the request:
+
+```json
+{
+  "operations": [
+    {
+      "action": "upsert",
+      "annotation": {
+        "client_id": "reader-highlight-1",
+        "kind": "highlight",
+        "location": {
+          "cfi": "epubcfi(/6/8!/4/2)",
+          "location_label": "Chapter 08 · 42%"
+        },
+        "body": {
+          "text": "Selected passage",
+          "prefix": "Before ",
+          "suffix": " after.",
+          "color": "yellow",
+          "note": ""
+        }
+      }
+    },
+    {"action": "delete", "client_id": "reader-bookmark-1"}
+  ]
+}
+```
+
+`client_id` is unique within a Reading Session, not globally. Upsert creates or
+updates that row and explicitly restores it when soft-deleted. Delete by an
+unknown or already-deleted id is a retry-safe no-op. An identical upsert does
+not create a duplicate or change its authoritative timestamps. Live creates
+and actual changes receive server timestamps.
+
+The entire request is strictly validated before mutation and commits in one
+transaction. A duplicate `client_id` within one batch is rejected rather than
+making operation order significant. The Session is locked and its active state
+and current Library Book authority are rechecked inside the transaction.
+Marginalia uses that Library policy without inspecting or serving the asset.
+Closed Sessions return `SESSION_CLOSED`; access loss returns the normal bounded
+permission error. Any failure leaves the complete batch unapplied.
+
+Success returns the same complete authoritative non-deleted `annotations`
+collection and reading order as GET. The reusable collection assembler is also
+the source intended for the later open, active-session, and start-over
+bootstrap envelopes.
+
 ## Session lifecycle
 
 Session `status` is authoritative. It is either `active` or `closed`; there is
@@ -226,7 +378,7 @@ is represented by blank CFI and label fields plus a null timestamp. A saved
 location requires a nonempty CFI and timestamp; its label remains optional.
 The three fields are assigned or cleared atomically.
 
-Future detail APIs will project saved progress as `null` or:
+Session detail and progress APIs project saved progress as `null` or:
 
 ```json
 {
@@ -249,15 +401,16 @@ location display data, not annotation text or user-authored prose.
 
 Annotations derive their user and Book context solely from their Reading
 Session. They do not duplicate a Book foreign key. Located annotations require
-a nonempty CFI and use soft deletion. The only annotation kinds are `highlight`
-and `bookmark`. A note is `comment_text` attached to a highlight, not a separate
+a nonempty CFI and use soft deletion. Their durable client correlation id is
+unique within the Session. The only annotation kinds are `highlight` and
+`bookmark`. A note is `comment_text` attached to a highlight, not a separate
 annotation kind. Highlights require selected text; bookmarks carry neither
 highlight text, quote context, color, nor comment content.
 
-The future progress-write boundary requires that the caller own an active
-Session and currently have access to its Book asset. Closed Sessions and
-inaccessible Books remain readable under their normal ownership rules, but
-their progress cannot be updated.
+The progress-write boundary requires that the caller own an active Session and
+have current Library authority for its Book. Closed Sessions and inaccessible
+Books remain readable under their normal ownership rules, but their progress
+cannot be updated.
 
 The supported interchange contract is identified once at application level by
 `https://secondpasslibrary.local/specs/marginalia/0.1.0`; it is not persisted

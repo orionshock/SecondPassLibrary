@@ -102,6 +102,10 @@ projection:
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
 - `GET /api/v1/marginalia/sessions/`
 - `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
+- `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
+- `POST /api/v1/marginalia/sessions/<session_id>/close/`
+- `GET /api/v1/marginalia/sessions/<session_id>/annotations/`
+- `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
 
 Both accept Django session or Client API bearer authentication. The caller must
 own at least one Marginalia Reading Session for a Book; current Library
@@ -134,8 +138,8 @@ only closed Sessions and no active Session is valid.
 Saved progress is held atomically on its Reading Session as an opaque CFI,
 optional Reader-generated location label, and update timestamp. There is no
 numeric progression field or separate progress record. Current list responses
-use the progress timestamp for activity ordering but do not expose progress;
-future detail projections will use `progress: null` or a bounded
+use the progress timestamp for activity ordering but do not expose progress.
+Detail and progress responses use `progress: null` or a bounded
 `{cfi, location_label, updated_at}` object.
 
 Session detail returns the canonical Marginalia Book summary in `context.book`
@@ -144,6 +148,41 @@ current Library visibility is not required. `PATCH` accepts only `name` and
 `notes`, only for active Sessions, and returns the same envelope. Closed
 Sessions are immutable, and foreign or missing Sessions use the same
 no-leakage `404` response.
+
+Progress `GET` is owner-readable for active and closed Sessions without a
+current Library-access requirement and never creates state. Progress `PUT`
+atomically replaces the complete `{cfi, location_label}` location and assigns
+its timestamp on the server. Writes require an active Session plus current
+Library authority for the Book. Unknown fields are rejected; progress has no
+`PATCH` or `DELETE` route.
+
+Close accepts optional final `name`, `notes`, and complete `progress`, commits
+them with the lifecycle change under one row lock, and returns the normal
+Session detail envelope. Close without final progress remains available after
+Library access loss; final progress requires current Library authority.
+Marginalia checks that Library policy but never serves or diagnoses the Book
+asset. Empty or identical retries are idempotent, while attempts to alter an
+already closed Session return a bounded `SESSION_CLOSED` conflict. Live
+timestamps are server-assigned; canonical import may later preserve validated
+source timestamps.
+
+Session Annotation GET returns all current non-deleted Annotations without
+pagination in `{"annotations": [...]}`. It is owner-readable for active and
+closed Sessions without current Library access. Canonical rows use
+`id`, Session-scoped `client_id`, `kind`, opaque `{cfi, location_label}`
+location, timestamps, and a highlight-only body containing `text`, `prefix`,
+`suffix`, `color`, and `note`. Bookmarks have no body. Results order nonblank
+location labels lexically, then use CFI, creation time, and id as stable
+fallbacks for blank labels.
+
+The Session-scoped batch route accepts one to 100 strict `upsert` or `delete`
+operations. Upsert creates, updates, or restores by `client_id`; delete
+soft-deletes by `client_id`. Session/client-id uniqueness and a transaction
+make retries duplicate-safe. The complete batch validates before mutation,
+requires an active owned Session and current Library Book authority, and
+returns the complete authoritative non-deleted collection in reading order.
+Duplicate client ids within one request are rejected. Marginalia consults
+Library authority but never inspects or serves the Book asset.
 
 The flat Sessions route returns caller-owned Sessions across all Books with
 normal Session-level pagination. It supports `status=active|closed` and `q`

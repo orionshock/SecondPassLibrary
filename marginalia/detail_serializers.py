@@ -3,13 +3,8 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from .models import ReadingSession
+from .progress_serializers import MarginaliaProgressSerializer
 from .serializers import MarginaliaBookSummarySerializer
-
-
-class MarginaliaProgressSerializer(serializers.Serializer):
-    cfi = serializers.CharField(source="progress_cfi")
-    location_label = serializers.CharField(source="progress_location_label")
-    updated_at = serializers.DateTimeField(source="progress_updated_at")
 
 
 class MarginaliaSessionDetailSerializer(serializers.ModelSerializer):

@@ -15,6 +15,21 @@ from .metadata_services import ClosedSessionMutationError, update_session_metada
 from .queries import marginalia_books_for_user, marginalia_session_for_user
 
 
+def session_detail_response(*, request, session_id) -> Response:
+    session = get_object_or_404(
+        marginalia_session_for_user(user=request.user, session_id=session_id)
+    )
+    book = get_object_or_404(
+        marginalia_books_for_user(user=request.user),
+        pk=session.book_id,
+    )
+    serializer = MarginaliaSessionDetailEnvelopeSerializer(
+        {"context": {"book": book}, "session": session},
+        context={"request": request},
+    )
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class MarginaliaSessionDetailView(MarginaliaReadMixin, APIView):
     def get_session(self):
         return get_object_or_404(
@@ -24,19 +39,11 @@ class MarginaliaSessionDetailView(MarginaliaReadMixin, APIView):
             )
         )
 
-    def response_for(self, session) -> Response:
-        book = get_object_or_404(
-            marginalia_books_for_user(user=self.request.user),
-            pk=session.book_id,
-        )
-        serializer = MarginaliaSessionDetailEnvelopeSerializer(
-            {"context": {"book": book}, "session": session},
-            context={"request": self.request},
-        )
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
     def get(self, request, *args, **kwargs):
-        return self.response_for(self.get_session())
+        return session_detail_response(
+            request=request,
+            session_id=self.kwargs["session_id"],
+        )
 
     def patch(self, request, *args, **kwargs):
         session = self.get_session()
@@ -55,10 +62,7 @@ class MarginaliaSessionDetailView(MarginaliaReadMixin, APIView):
                 {"detail": "Closed Sessions are read-only."}
             ) from exc
 
-        refreshed = get_object_or_404(
-            marginalia_session_for_user(
-                user=request.user,
-                session_id=session.pk,
-            )
+        return session_detail_response(
+            request=request,
+            session_id=session.pk,
         )
-        return self.response_for(refreshed)
