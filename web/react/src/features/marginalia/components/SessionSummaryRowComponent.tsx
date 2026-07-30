@@ -1,4 +1,4 @@
-import type { MarginaliaSessionListItem } from "@second-pass/spl-api";
+import type { MarginaliaBookReference, MarginaliaSessionSummary } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
@@ -7,15 +7,15 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
 import { marginaliaSessionNoteExcerpt } from "../marginaliaSessionNoteExcerpt";
 
-export function SessionSummaryRowComponent({ session }: { session: MarginaliaSessionListItem }) {
+export function SessionSummaryRowComponent({ session, book }: { session: MarginaliaSessionSummary; book: MarginaliaBookReference }) {
   const sessionName = marginaliaSessionDisplayName(session);
-  const bookTitle = session.book.title || "Untitled book";
+  const bookTitle = book.title || "Untitled book";
   const relevantDate = session.closedAt ?? session.updatedAt;
   const noteExcerpt = marginaliaSessionNoteExcerpt(session.notes);
 
   return <article className="marginalia-session-row">
     <div className="marginalia-session-row__cover">
-      <BookCoverComponent coverUrl={session.book.coverUrl} title={bookTitle} />
+      <BookCoverComponent coverUrl={book.coverUrl} title={bookTitle} />
     </div>
     <div className="marginalia-session-row__body">
       <div className="marginalia-session-row__heading">
@@ -30,7 +30,7 @@ export function SessionSummaryRowComponent({ session }: { session: MarginaliaSes
           </div>
         </div>
         {noteExcerpt ? <blockquote className="marginalia-session-row__note">{noteExcerpt}</blockquote> : null}
-        {session.book.canOpen ? <Link className="button button--small button--secondary marginalia-session-row__book-link" to={`/library/books/${encodeURIComponent(session.book.id)}`}>View Book</Link> : null}
+        {book.canOpen ? <Link className="button button--small button--secondary marginalia-session-row__book-link" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
       </div>
     </div>
   </article>;
