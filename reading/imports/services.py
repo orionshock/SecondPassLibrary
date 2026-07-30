@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from jsonschema import Draft202012Validator
 
@@ -274,7 +273,7 @@ def _archive_key(*values: object, fallback: str) -> str:
 
 
 def _load_schema() -> dict[str, Any]:
-    path = Path(settings.BASE_DIR) / "docs" / "specs" / "marginalia-export.schema.json"
+    path = Path(__file__).with_name("schema.json")
     return json.loads(path.read_text(encoding="utf-8"))
 
 

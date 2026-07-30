@@ -1,115 +1,90 @@
-# Second Pass Library Marginalia Profile
+# Second Pass Library Marginalia Export Profile
 
-This is the canonical Second Pass Library Marginalia Profile: the portable
-import/export contract for user-owned reading sessions, progress, annotations,
-notes, highlights, and bookmarks.
+This document defines the canonical portable archive for user-owned Marginalia.
+It is a nested snapshot of Books, Reading Sessions, progress, highlights, notes
+on highlights, and bookmarks. It is not a live API response shape.
 
-It is distinct from the normal Reading API annotation response shape. The normal
-API is optimized for live client CRUD. This profile is a portable, nested
-snapshot of user-owned reading data, including owned marginalia for books the
-user can no longer currently view.
-
-The machine-readable JSON Schema for this contract lives in `docs/specs/marginalia-export.schema.json`.
-
-Current support includes export, import preview, and native import apply for exact file-hash-matched visible books. Preview stages the validated payload with a short-lived import token; apply imports selected valid sessions as historical sessions.
-
-This SPL nested marginalia profile is the native server import format. The
-server should not import foreign/provider-specific annotation formats directly.
-Foreign imports should be normalized by a reader client and sent through the
-normal reading session/progress/annotation APIs, or converted by an external tool
-into this SPL native format before server import.
-
-The profile is reading-session-centered:
-
-- Marginalia belongs to the user.
-- Books contain reading sessions.
-- Sessions contain progress and annotations.
-- Annotations belong to reading sessions.
-- Annotations inherit book/session context from nesting and do not repeat full
-  book or source metadata.
-
-W3C/Web Annotation vocabulary influenced the current `motivation`, selector, and
-body names. The SPL Marginalia Profile is not a W3C compliance target.
-
-## Routes
-
-Product UI:
+Profile URI:
 
 ```text
-GET /marginalia/export/
-GET /marginalia/import/
+https://secondpasslibrary.local/specs/marginalia-export/0.1.0
 ```
 
-JSON downloads:
+The machine-readable contract is
+[`marginalia-export.schema.json`](marginalia-export.schema.json). A complete
+example is in [`examples/marginalia-export.json`](examples/marginalia-export.json).
 
-```text
-GET /api/v1/reading/export/
-POST /api/v1/reading/export/
-POST /api/v1/reading/import/preview/
-POST /api/v1/reading/import/apply/
-```
+The older `reading-session-annotation-profile/` package is historical,
+non-canonical JSON-LD exploration.
 
-`GET /api/v1/reading/export/` exports all current-user marginalia. `POST /api/v1/reading/export/` exports selected books/sessions using this request body:
+## Domain and server boundary
 
-```json
-{
-  "books": [
-    { "book_id": "<uuid>", "sessions": "all" },
-    { "book_id": "<uuid>", "sessions": ["<session_uuid>", "<session_uuid>"] }
-  ]
-}
-```
+- Marginalia belongs to a user.
+- Books contain Reading Sessions.
+- Reading Sessions contain one located progress record and annotations.
+- Session states are only `active` and `closed`.
+- Highlights and bookmarks are the annotation kinds. A note is optional text
+  attached to a highlight, not a separate annotation kind.
 
-The export API is Django session-authenticated only. Client API bearer tokens are rejected. Export includes only sessions owned by the requesting user, including owned sessions for books the user can no longer currently view. Other-user or mismatched sessions return 404.
+The Library server stores portable locations but is not an EPUB renderer. It
+does not parse CFIs or inspect EPUB content during normal runtime to derive a
+display location.
 
-Server-side import is intentionally stricter than export. It matches exported books to visible local books by file hash only; ISBN and title/author metadata are descriptive and are not used as fallback matching for locator import. Apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`, but the server does not resolve CFIs against EPUB contents. Missing/different book files and malformed locator sessions belong in Reader-assisted import via the unmatched download.
+The Reader supplies two location values:
 
-## Top-Level Object
+- `value`: the EPUB CFI, treated as an opaque machine anchor.
+- `locationLabel`: opaque Reader-generated display and sorting text.
+
+The server stores, returns, and exports `locationLabel` unchanged. Within the
+same Book and Reading Session, a Reader must generate labels that are stable and
+string-sortable in reading order. A label may append decorative context, for
+example `Chapter 08 · 42% · The Blackstaff`.
+
+`locationLabel` belongs to the location layer. It is not selected text, a note,
+a title, a color/category, or other user-authored content. The server must not
+parse, normalize, infer, or reconstruct it from the CFI or EPUB.
+
+## Marginalia API namespace
+
+The new domain uses `/api/v1/marginalia/`. Live Marginalia and Reader-client
+responses may use shapes optimized for their operations; the archive shape in
+this document remains the canonical import/export interchange format.
+
+This profile does not specify transport routes or authentication. Implemented
+routes are documented in the API documentation rather than inferred from the
+archive schema.
+
+## Top-level object
 
 ```json
 {
   "type": "SecondPassMarginaliaExport",
   "schema_version": "0.1.0",
-  "profile": "https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0",
-  "generated_at": "2026-06-06T12:00:00+00:00",
+  "profile": "https://secondpasslibrary.local/specs/marginalia-export/0.1.0",
+  "generated_at": "2026-07-29T12:00:00Z",
   "generator": "Second Pass Library",
-  "scope": {},
+  "scope": { "type": "all" },
   "books": []
 }
 ```
 
-Fields:
-
-- `type`: always `SecondPassMarginaliaExport`.
-- `schema_version`: export schema version; current value is `0.1.0`.
-- `profile`: SPL Marginalia Profile URI used by annotation/progress payloads.
-- `generated_at`: export generation timestamp.
-- `generator`: exporting application name.
-- `scope`: describes the export route scope.
-- `books`: exported books. Books with no exported sessions are omitted.
+Books with no exported Sessions are omitted.
 
 ## Scope
 
-All marginalia export:
+An all-user archive uses:
 
 ```json
-{
-  "type": "all"
-}
+{ "type": "all" }
 ```
 
-The all export includes current-user sessions grouped under their related books, including books the user can no longer currently view.
-
-Selected export:
+A selective archive records whether each Book included all or selected
+Sessions:
 
 ```json
 {
   "type": "selected",
   "books": [
-    {
-      "book": "book:sha256:<hash>",
-      "session_filter": "all"
-    },
     {
       "book": "book:sha256:<hash>",
       "session_filter": "selected"
@@ -118,100 +93,87 @@ Selected export:
 }
 ```
 
-Selected exports preserve request book order and explicit session order. `sessions: "all"` uses the normal per-book session ordering.
+Single-Book and single-Session mini-archives use the same canonical Book and
+Session objects with a `book` or `session` scope. They do not define a different
+export profile.
 
-When a book file checksum is not available, `book` may fall back to an internal book identifier. Importers should prefer `book:sha256:<hash>` when present.
+## Book identity
 
-## Book Object
+Every exported Book requires both:
 
-Book objects contain book-level context once. Annotations inherit book context from nesting and do not repeat full book metadata.
+- `source`: the stable source identity, normally `book:sha256:<hash>`.
+- `file_hash`: the content identity, normally `sha256:<hash>`.
 
-Fields:
+Missing hashes are invalid export data and must be repaired upstream. Importers
+must not normalize a missing hash into an alternate identity.
 
-- `title`
-- `subtitle`
-- `authors`
-- `series`
-- `series_index`
-- `language`
-- `isbn`
-- `epub_unique_identifier`
-- `source`: `book:sha256:<hash>` when available
-- `file_hash`: `sha256:<hash>` when available
-- `sessions`
+Descriptive Book fields include title, authors, and optional Series/catalog
+context. Sessions are nested under their Book. The schema is strict and does
+not permit arbitrary Book metadata.
 
-`source` and `file_hash` appear before `sessions` when present.
+## Reading Session
 
-## Session Object
+A Reading Session contains:
 
-Sessions use export-local identifiers, not SPL database ids.
-
-Fields:
-
-- `export_session_id`: `session-1`, `session-2`, etc.
-- `name`
-- `status`
-- `started_at`
-- `completed_at`
-- `created_at`
-- `updated_at`
-- `notes`
-- `progress`
+- export-local `export_session_id`
+- `name` and `notes`
+- `status`: `active` or `closed`
+- `started_at`, `closed_at`, `created_at`, and `updated_at`
+- `progress`: a located progress object or `null`
 - `annotations`
 
-`progress` is either a progress object or `null`.
+An active Session has `closed_at: null`. A closed Session has a `closed_at`
+timestamp.
 
-## Progress Object
+## Located progress
 
-Fields:
+Progress is a location, not a standalone percentage:
 
-- `current_location`
-- `progression`
-- `profile_version`
-- `updated_at`
+```json
+{
+  "location": {
+    "type": "FragmentSelector",
+    "value": "epubcfi(/6/8!/4/2)",
+    "locationLabel": "Chapter 08 · 42%"
+  },
+  "updated_at": "2026-07-29T12:00:00Z"
+}
+```
 
-`current_location` is the server's stored EPUB locator JSON. `progression` is a derived/display scalar, not a substitute for the canonical current location.
+Both the CFI and `locationLabel` are required for exported progress. The label
+provides the human-readable location; the server does not recreate a percentage
+or label by parsing the CFI.
 
-## Annotation Object
+## Annotations and selectors
 
-Annotations do not include SPL database annotation ids and do not include a database session id. They inherit book and session context from nesting.
+Deleted annotations are omitted from an export. Exported annotations remain
+nested under their Reading Session and do not repeat Book or Session database
+identifiers.
 
-Deleted annotations are excluded from exports. Exported annotation objects still include `is_deleted`, currently `false`, for explicit state.
-
-Fields:
-
-- `motivation`: array of SPL annotation motivations, currently using
-  W3C-influenced names.
-- `target.selector`: selector object or selector array.
-- `body`: body objects for selected text and notes/comments.
-- `is_deleted`
-- `created_at`
-- `updated_at`
-
-## Selectors
-
-EPUB CFI is the default selector format for this profile.
-
-When only an EPUB CFI exists:
+The primary EPUB selector may include `locationLabel`:
 
 ```json
 {
   "type": "FragmentSelector",
-  "value": "epubcfi(...)"
+  "value": "epubcfi(/6/8!/4/2)",
+  "locationLabel": "Chapter 08 · 42% · The Blackstaff"
 }
 ```
 
-The export intentionally omits repetitive `conformsTo` on EPUB CFI
-FragmentSelectors. EPUB CFI is retained as the SPL anchoring format, not as W3C
-compliance machinery.
+`locationLabel` is optional on an annotation only to permit imported historical
+records that predate the field. New Reader writes should supply it for every
+located highlight and bookmark. A note uses the location of its containing
+highlight; it does not define a separate selector.
 
-When quote context exists, `target.selector` is an array:
+When quote repair context exists, `target.selector` is an array whose first
+item is the primary FragmentSelector:
 
 ```json
 [
   {
     "type": "FragmentSelector",
-    "value": "epubcfi(...)"
+    "value": "epubcfi(/6/8!/4/2)",
+    "locationLabel": "Chapter 08 · 42%"
   },
   {
     "type": "TextQuoteSelector",
@@ -222,30 +184,9 @@ When quote context exists, `target.selector` is an array:
 ]
 ```
 
-`TextQuoteSelector` context is an anchoring/repair hint. It is retained for EPUB
-re-anchoring support and is not a separate annotation body.
+The quote selector is a repair hint, not annotation content.
 
-## Bodies
-
-Highlight text exports as:
-
-```json
-{
-  "type": "TextualBody",
-  "purpose": "describing",
-  "value": "selected text",
-  "color": "yellow"
-}
-```
-
-Notes/comments export as:
-
-```json
-{
-  "type": "TextualBody",
-  "purpose": "commenting",
-  "value": "note text"
-}
-```
-
-Bookmarks may have an empty `body` array.
+Highlight text uses a `TextualBody` with purpose `describing`. An optional note
+on that highlight uses purpose `commenting`. A bookmark has an empty body; its
+`locationLabel` supplies the human-readable location. Bookmarks do not acquire
+note, title, color, or category fields.

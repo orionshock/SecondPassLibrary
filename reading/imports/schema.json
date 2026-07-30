@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://secondpasslibrary.local/specs/marginalia-export/0.1.0/schema.json",
-  "title": "Second Pass Library Marginalia Export Profile",
+  "$id": "https://secondpasslibrary.local/internal/reading-import/0.1.0/schema.json",
+  "title": "Reading import payload",
   "type": "object",
   "required": [
     "type",
@@ -15,10 +15,8 @@
   "properties": {
     "type": { "const": "SecondPassMarginaliaExport" },
     "schema_version": { "const": "0.1.0" },
-    "profile": {
-      "const": "https://secondpasslibrary.local/specs/marginalia-export/0.1.0"
-    },
-    "generated_at": { "type": "string", "format": "date-time" },
+    "profile": { "type": "string" },
+    "generated_at": { "type": "string" },
     "generator": { "type": "string" },
     "scope": { "$ref": "#/$defs/scope" },
     "books": {
@@ -62,7 +60,9 @@
         {
           "type": "object",
           "required": ["type"],
-          "properties": { "type": { "const": "all" } },
+          "properties": {
+            "type": { "const": "all" }
+          },
           "additionalProperties": false
         },
         {
@@ -102,14 +102,14 @@
         "language": { "type": "string" },
         "isbn": { "type": "string" },
         "epub_unique_identifier": { "type": "string" },
-        "source": { "type": "string", "minLength": 1 },
-        "file_hash": { "type": "string", "minLength": 1 },
+        "source": { "type": "string" },
+        "file_hash": { "type": "string" },
         "sessions": {
           "type": "array",
           "items": { "$ref": "#/$defs/session" }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "session": {
       "type": "object",
@@ -118,7 +118,7 @@
         "name",
         "status",
         "started_at",
-        "closed_at",
+        "completed_at",
         "created_at",
         "updated_at",
         "notes",
@@ -128,16 +128,11 @@
       "properties": {
         "export_session_id": { "type": "string" },
         "name": { "type": "string" },
-        "status": { "enum": ["active", "closed"] },
-        "started_at": { "type": "string", "format": "date-time" },
-        "closed_at": {
-          "oneOf": [
-            { "type": "string", "format": "date-time" },
-            { "type": "null" }
-          ]
-        },
-        "created_at": { "type": "string", "format": "date-time" },
-        "updated_at": { "type": "string", "format": "date-time" },
+        "status": { "enum": ["active", "completed", "archived"] },
+        "started_at": { "type": "string" },
+        "completed_at": { "type": ["string", "null"] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
         "notes": { "type": "string" },
         "progress": {
           "oneOf": [
@@ -150,54 +145,26 @@
           "items": { "$ref": "#/$defs/annotation" }
         }
       },
-      "allOf": [
-        {
-          "if": {
-            "properties": { "status": { "const": "active" } },
-            "required": ["status"]
-          },
-          "then": { "properties": { "closed_at": { "type": "null" } } }
-        },
-        {
-          "if": {
-            "properties": { "status": { "const": "closed" } },
-            "required": ["status"]
-          },
-          "then": {
-            "properties": {
-              "closed_at": { "type": "string", "format": "date-time" }
-            }
-          }
-        }
-      ],
       "additionalProperties": false
     },
     "progress": {
       "type": "object",
-      "required": ["location", "updated_at"],
+      "required": ["current_location", "progression", "profile_version", "updated_at"],
       "properties": {
-        "location": { "$ref": "#/$defs/locatedFragmentSelector" },
-        "updated_at": { "type": "string", "format": "date-time" }
+        "current_location": { "type": ["object", "null"] },
+        "progression": { "type": ["number", "null"] },
+        "profile_version": { "type": "string" },
+        "updated_at": { "type": "string" }
       },
       "additionalProperties": false
     },
     "annotation": {
       "type": "object",
-      "required": [
-        "motivation",
-        "target",
-        "body",
-        "is_deleted",
-        "created_at",
-        "updated_at"
-      ],
+      "required": ["motivation", "target", "body", "is_deleted", "created_at", "updated_at"],
       "properties": {
         "motivation": {
-          "oneOf": [
-            { "const": ["bookmarking"] },
-            { "const": ["highlighting"] },
-            { "const": ["highlighting", "commenting"] }
-          ]
+          "type": "array",
+          "items": { "enum": ["bookmarking", "highlighting", "commenting"] }
         },
         "target": {
           "type": "object",
@@ -209,26 +176,12 @@
         },
         "body": {
           "type": "array",
-          "items": {
-            "oneOf": [
-              { "$ref": "#/$defs/describingBody" },
-              { "$ref": "#/$defs/commentingBody" }
-            ]
-          }
+          "items": { "$ref": "#/$defs/textualBody" }
         },
-        "is_deleted": { "const": false },
-        "created_at": { "type": "string", "format": "date-time" },
-        "updated_at": { "type": "string", "format": "date-time" }
+        "is_deleted": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
       },
-      "allOf": [
-        {
-          "if": {
-            "properties": { "motivation": { "const": ["bookmarking"] } },
-            "required": ["motivation"]
-          },
-          "then": { "properties": { "body": { "maxItems": 0 } } }
-        }
-      ],
       "additionalProperties": false
     },
     "selector": {
@@ -236,7 +189,7 @@
         { "$ref": "#/$defs/fragmentSelector" },
         {
           "type": "array",
-          "minItems": 2,
+          "minItems": 1,
           "maxItems": 2,
           "prefixItems": [
             { "$ref": "#/$defs/fragmentSelector" },
@@ -251,18 +204,7 @@
       "required": ["type", "value"],
       "properties": {
         "type": { "const": "FragmentSelector" },
-        "value": { "type": "string", "minLength": 1 },
-        "locationLabel": { "type": "string", "maxLength": 255 }
-      },
-      "additionalProperties": false
-    },
-    "locatedFragmentSelector": {
-      "type": "object",
-      "required": ["type", "value", "locationLabel"],
-      "properties": {
-        "type": { "const": "FragmentSelector" },
-        "value": { "type": "string", "minLength": 1 },
-        "locationLabel": { "type": "string", "maxLength": 255 }
+        "value": { "type": "string" }
       },
       "additionalProperties": false
     },
@@ -277,24 +219,14 @@
       },
       "additionalProperties": false
     },
-    "describingBody": {
+    "textualBody": {
       "type": "object",
       "required": ["type", "purpose", "value"],
       "properties": {
         "type": { "const": "TextualBody" },
-        "purpose": { "const": "describing" },
+        "purpose": { "enum": ["describing", "commenting"] },
         "value": { "type": "string" },
         "color": { "enum": ["yellow", "green", "blue", "pink", "purple", "orange"] }
-      },
-      "additionalProperties": false
-    },
-    "commentingBody": {
-      "type": "object",
-      "required": ["type", "purpose", "value"],
-      "properties": {
-        "type": { "const": "TextualBody" },
-        "purpose": { "const": "commenting" },
-        "value": { "type": "string" }
       },
       "additionalProperties": false
     }

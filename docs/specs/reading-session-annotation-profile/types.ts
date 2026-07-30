@@ -67,7 +67,7 @@ export type W3CReadingAnnotation = {
   target: AnnotationTarget
   sessionId?: string
   // Second Pass Library note: cross-session promotion/linking is not implemented
-  // in the current server reading APIs. Keep future fields out of the current
+  // in the live Marginalia APIs. Keep future fields out of the current
   // draft TypeScript helpers to avoid overpromising.
 }
 

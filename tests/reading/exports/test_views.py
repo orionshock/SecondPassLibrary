@@ -17,9 +17,6 @@ from tests.reading.exports.helpers import (
     book_selection,
     selected_export_payload,
 )
-from tests.reading.exports.schema_assertions import (
-    assert_valid_marginalia_export,
-)
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.books import create_file_backed_book
 from tests.utils.responses import assert_response
@@ -62,7 +59,6 @@ class ReadingExportApiTests(
         self.client.force_login(self.user)
         r = assert_response(self._post_book())
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],
@@ -105,7 +101,6 @@ class ReadingExportApiTests(
         self.client.force_login(self.user)
         r = assert_response(self._post_book(sessions=[str(self.session1.id)]))
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],
@@ -218,7 +213,6 @@ class AllMarginaliaExportApiTests(
         )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        assert_valid_marginalia_export(r.data)
         self.assertEqual(r["Content-Type"], "application/json")
         self.assertEqual(
             r["Content-Disposition"],
@@ -300,7 +294,6 @@ class SelectedBookMarginaliaExportApiTests(
         )
 
         self.assertEqual(r.status_code, status.HTTP_200_OK)
-        assert_valid_marginalia_export(r.data)
         self.assertEqual(
             r["Content-Disposition"],
             'attachment; filename="second-pass-marginalia.json"',

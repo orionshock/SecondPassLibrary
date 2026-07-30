@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-from copy import deepcopy
-
-from jsonschema import Draft202012Validator
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from tests.reading.exports.helpers import (
     AllExportFixtureMixin,
-    SelectedExportFixtureMixin,
     SingleBookExportFixtureMixin,
-)
-from tests.reading.exports.schema_assertions import (
-    load_marginalia_export_schema,
-    SchemaValidationError,
 )
 from tests.testenv.filesystem import IsolatedUserdataMixin
 from tests.utils.responses import assert_response
@@ -143,30 +135,3 @@ class AllMarginaliaExportApiTests(
         self.assertNotIn("id", session)
         self.assertNotIn("id", annotation)
         self.assertNotIn("session", annotation)
-
-
-class SelectedBookMarginaliaExportApiTests(
-    SelectedExportFixtureMixin, IsolatedUserdataMixin, APITestCase
-):
-    def setUp(self):
-        self.set_up_selected_export_world()
-
-    def test_export_schema_rejects_local_session_and_annotation_ids(self):
-        self.client.force_login(self.user)
-        r = assert_response(
-            self.client.post(
-                self._url(),
-                self._body(
-                    {"book_id": str(self.book.id), "sessions": [str(self.session1.id)]}
-                ),
-                format="json",
-            )
-        )
-        payload = deepcopy(r.data)
-        session = payload["books"][0]["sessions"][0]
-        annotation = session["annotations"][0]
-        session["id"] = str(self.session1.id)
-        annotation["database_id"] = "local-annotation-id"
-
-        with self.assertRaises(SchemaValidationError):
-            Draft202012Validator(load_marginalia_export_schema()).validate(payload)

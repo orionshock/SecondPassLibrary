@@ -215,18 +215,16 @@ The old annotation remains immutable.
 
 ## Export And Import Policy
 
-The implemented server export/import format is the canonical Second Pass Library
-Marginalia Profile, not this draft JSON-LD profile. See
+The canonical Second Pass Library Marginalia export format is not this draft
+JSON-LD profile. See
 `../marginalia-export.md`.
 
-Server-side marginalia import supports SPL Marginalia Profile files only.
-Preview validates and stages the native export with a short-lived import token;
-apply imports matched visible books as historical sessions, optionally limited
-to selected export-local sessions.
+Marginalia import uses the canonical archive shape. This historical JSON-LD
+profile is not an alternate import contract.
 
 Foreign/provider-specific formats should be normalized outside the server:
 
-- A reader client can convert foreign annotations into normal reading session/progress/annotation API writes.
+- A Reader client can convert foreign annotations into live Marginalia writes.
 - An external tool can convert foreign annotations into the SPL Marginalia
   Profile shape before server import.
 
@@ -314,7 +312,9 @@ These terms are defined in `context.jsonld`.
 
 ## Source Import Metadata (Future)
 
-When annotations originate from an external provider, provenance may be useful in a future server-managed import flow. It is not accepted through the current public reading APIs.
+When annotations originate from an external provider, provenance may be useful
+in a future server-managed import flow. It is not a normal public Marginalia
+field.
 
 Recommended shape:
 

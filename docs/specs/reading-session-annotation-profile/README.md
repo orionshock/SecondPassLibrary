@@ -20,13 +20,11 @@ https://secondpasslibrary.local/specs/reading-session-annotations/0.1.0
 - `types.ts` - TypeScript helper types (draft)
 - `examples/` - example annotations and a full reading-session export (draft)
 
-## Current Implementation (Server)
+## Historical implementation context
 
-Second Pass Library currently stores reading data in a compact
-reading-session-centered model. The live annotation REST API uses SPL-native
-fields such as `kind`, `selector`, `quote`, `highlight_text`,
-`highlight_color`, and `comment_text`; it does not use this draft JSON-LD
-shape.
+Second Pass Library stores Marginalia in a Reading-Session-centered model. Live
+Marginalia and Reader-client APIs use SPL-native fields; they do not use this
+draft JSON-LD shape.
 
 The new Marginalia domain foundation stores an optional `location_label`
 beside the CFI on Session progress and annotations. In this draft JSON-LD
@@ -37,16 +35,14 @@ The canonical server import/export contract is the Second Pass Library
 Marginalia Profile in `../marginalia-export.md`. JSON-LD serialization using
 this draft profile is not the current server import/export contract.
 
-## Server Import Policy
+## Archive boundary
 
-Server-side marginalia import supports Second Pass Library Marginalia Profile
-files only. Preview validates and stages the native export with a short-lived
-import token; apply imports matched visible books as historical sessions,
-optionally limited to selected export-local sessions.
+The canonical Marginalia archive is the supported native interchange shape.
+This historical JSON-LD profile is not an alternate import shape.
 
-Foreign/provider-specific formats should be normalized by a client and sent
-through the normal reading APIs, or converted by an external tool into the SPL
-Marginalia Profile before server import.
+Foreign/provider-specific formats should be normalized by a Reader client into
+live Marginalia writes, or converted by an external tool into the canonical
+Marginalia archive before import.
 
 ## Annotation Shape Direction
 
@@ -62,7 +58,8 @@ to that CFI. It is opaque, bounded text and is not part of the CFI itself.
 
 Future/profile-level direction: when highlights/notes are normalized from external providers (e.g. Kindle CSV exports) into portable profile documents, provenance may be attached to each annotation using `sourceImport`.
 
-In the current server implementation, import provenance is reserved for server-managed/internal use and is not accepted via normal public reading APIs.
+Import provenance is reserved for server-managed/internal use and is not a
+normal public Marginalia field.
 
 ## Validation
 
