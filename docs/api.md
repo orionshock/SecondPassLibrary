@@ -99,6 +99,7 @@ projection:
 
 - `GET /api/v1/marginalia/books/`
 - `GET /api/v1/marginalia/books/<book_id>/`
+- `GET /api/v1/marginalia/books/<book_id>/sessions/`
 
 Both accept Django session or Client API bearer authentication. The caller must
 own at least one Marginalia Reading Session for a Book; current Library
@@ -114,6 +115,19 @@ author names, and Series name. Default ordering is newest caller-owned
 Marginalia activity first. Books without caller-owned Sessions and missing
 Books use the same no-leakage `404` detail behavior. See `docs/marginalia.md`
 for the full field and ownership contract.
+
+The nested Sessions route returns a normally paginated `results` collection
+and the canonical selected Book summary in `context.book`. Omitted `status`
+means all caller-owned Sessions; `status=active` and `status=closed` select the
+two lifecycle states. `q` searches only Session name and notes. Results use
+newest Session/progress/non-deleted-annotation activity ordering. Empty filtered
+pages retain the Book context, while missing and unowned parent Books return
+the normal no-leakage `404`.
+
+The new Marginalia lifecycle has only `active` and `closed`. Opening a Book's
+Session returns the existing active Session when present and never closes it
+automatically. Creating a later Session requires a prior explicit close; having
+only closed Sessions and no active Session is valid.
 
 ## Accounts
 

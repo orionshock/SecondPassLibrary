@@ -21,6 +21,7 @@ bearer tokens:
 
 - `GET /api/v1/marginalia/books/`
 - `GET /api/v1/marginalia/books/<book_id>/`
+- `GET /api/v1/marginalia/books/<book_id>/sessions/`
 
 A Book is present only when the caller owns at least one Marginalia
 `ReadingSession` for it. This historical ownership is independent of current
@@ -63,13 +64,75 @@ the existing media security model; the projection never contains EPUB/file
 metadata, download URLs, checksums, identifiers, Groups, Shelves, or permission
 internals.
 
+## Sessions for one Book
+
+`GET /api/v1/marginalia/books/<book_id>/sessions/` returns only the caller's
+Sessions for an owned-Marginalia Book. The selected canonical Book summary is
+returned once as `context.book`; Session rows do not duplicate Book metadata:
+
+```json
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "context": {
+    "book": {
+      "id": "<book-uuid>",
+      "title": "Book title",
+      "authors": [{"id": "<author-uuid>", "name": "Author name"}],
+      "series": null,
+      "cover_url": null,
+      "can_open": false,
+      "session_count": 2,
+      "active_session_count": 0,
+      "last_activity_at": "2026-07-21T12:00:00Z"
+    }
+  },
+  "results": [
+    {
+      "id": "<session-uuid>",
+      "name": "Second pass",
+      "notes": "Session note",
+      "status": "closed",
+      "started_at": "2026-07-01T12:00:00Z",
+      "closed_at": "2026-07-20T12:00:00Z",
+      "updated_at": "2026-07-20T12:00:00Z",
+      "last_activity_at": "2026-07-21T12:00:00Z",
+      "annotation_count": 12,
+      "progression": 0.75
+    }
+  ]
+}
+```
+
+The list uses normal `page` and `page_size` pagination. Omitted `status` means
+all Sessions; accepted values are `active` and `closed`. `q` searches only the
+caller's Session name and notes because the parent Book is already fixed. Empty
+filtered results remain `200` and retain `context.book`. Results are ordered by
+the newest update across the Session, its progress, and its non-deleted
+annotations, then by start time and id. Counts, filtering, search, and activity
+exclude other users' Sessions.
+
+Current Library visibility remains unnecessary. The caller must own a Session
+for the parent Book, and missing or unowned parents use the same no-leakage
+`404` response as Marginalia Book detail.
+
 ## Session lifecycle
 
-Session `status` is authoritative. It is `active`, `completed`, or `archived`;
-there is no separate stored active flag. A database constraint permits at most
-one active Session for a user and Book while allowing any number of historical
-Sessions. Completed Sessions require a completion timestamp, and active
-Sessions cannot have one.
+Session `status` is authoritative. It is either `active` or `closed`; there is
+no archived state and no separate stored active flag. A database constraint
+permits at most one active Session for a user and Book while allowing any
+number of closed Sessions. Closed Sessions require `closed_at`, and active
+Sessions cannot have it. Closing is idempotent: an already-closed Session keeps
+its original state and timestamp. A Book may have only closed Sessions and no
+active Session.
+
+Opening is get-or-create behavior. If a Session is already active for the user
+and Book, opening returns that Session unchanged. Opening never closes or
+replaces an active Session. A new Session can be created only after the prior
+active Session has been closed through the explicit close workflow. Future
+metadata mutation services and API routes must reject changes to closed
+Sessions.
 
 A Book with Marginalia is protected from deletion. Deleting a user deletes that
 user's Sessions. Deleting a Session deletes its progress and annotations.

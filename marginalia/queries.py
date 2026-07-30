@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.db.models import Count, DateTimeField, Exists, Max, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Coalesce, Greatest
+from rest_framework.exceptions import ValidationError
 
 from library.models import Book, BookAuthor
 from library.queries import visible_books_for_user
@@ -82,4 +83,47 @@ def marginalia_books_for_user(*, user, q: str = "") -> QuerySet[Book]:
             can_open=Exists(visible_books),
         )
         .order_by("-last_activity_at", "title", "id")
+    )
+
+
+def marginalia_sessions_for_book(
+    *,
+    user,
+    book: Book,
+    status: str = "",
+    q: str = "",
+) -> QuerySet[ReadingSession]:
+    raw_status = (status or "").strip()
+    allowed_statuses = {choice[0] for choice in ReadingSession.STATUS_CHOICES}
+    if raw_status and raw_status not in allowed_statuses:
+        raise ValidationError({"status": "Invalid status."})
+
+    queryset = ReadingSession.objects.filter(user=user, book=book)
+    search = (q or "").strip()
+    if search:
+        queryset = queryset.filter(Q(name__icontains=search) | Q(notes__icontains=search))
+    if raw_status:
+        queryset = queryset.filter(status=raw_status)
+
+    latest_annotation_activity = Max(
+        "annotations__updated_at",
+        filter=Q(annotations__is_deleted=False),
+    )
+    return (
+        queryset.select_related("progress")
+        .annotate(
+            progression=Max("progress__progression"),
+            annotation_count=Count(
+                "annotations",
+                filter=Q(annotations__is_deleted=False),
+                distinct=True,
+            ),
+            last_activity_at=Greatest(
+                "updated_at",
+                Coalesce("progress__updated_at", "updated_at"),
+                Coalesce(latest_annotation_activity, "updated_at"),
+                output_field=DateTimeField(),
+            ),
+        )
+        .order_by("-last_activity_at", "-started_at", "-id")
     )

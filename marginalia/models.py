@@ -39,12 +39,10 @@ HIGHLIGHT_COLOR_CHOICES = [
 
 class ReadingSession(TimeStampedModel):
     STATUS_ACTIVE = "active"
-    STATUS_COMPLETED = "completed"
-    STATUS_ARCHIVED = "archived"
+    STATUS_CLOSED = "closed"
     STATUS_CHOICES = [
         (STATUS_ACTIVE, "Active"),
-        (STATUS_COMPLETED, "Completed"),
-        (STATUS_ARCHIVED, "Archived"),
+        (STATUS_CLOSED, "Closed"),
     ]
 
     if TYPE_CHECKING:
@@ -71,13 +69,13 @@ class ReadingSession(TimeStampedModel):
         default=STATUS_ACTIVE,
     )
     started_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(blank=True, null=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ["-started_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=Q(status__in=["active", "completed", "archived"]),
+                condition=Q(status__in=["active", "closed"]),
                 name="marginalia_session_status_is_valid",
             ),
             models.UniqueConstraint(
@@ -86,14 +84,14 @@ class ReadingSession(TimeStampedModel):
                 name="marginalia_one_active_session_per_user_book",
             ),
             models.CheckConstraint(
-                condition=Q(status="completed", completed_at__isnull=False)
-                | ~Q(status="completed"),
-                name="marginalia_completed_session_has_timestamp",
+                condition=Q(status="closed", closed_at__isnull=False)
+                | ~Q(status="closed"),
+                name="marginalia_closed_session_has_timestamp",
             ),
             models.CheckConstraint(
-                condition=Q(status="active", completed_at__isnull=True)
+                condition=Q(status="active", closed_at__isnull=True)
                 | ~Q(status="active"),
-                name="marginalia_active_session_has_no_completion",
+                name="marginalia_active_session_has_no_closed_at",
             ),
         ]
 

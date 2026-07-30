@@ -50,16 +50,17 @@ class MarginaliaBookAPITests(APITestCase):
             user=self.user,
             book=self.visible,
         )
-        self.hidden_completed = ReadingSession.objects.create(
+        self.hidden_closed = ReadingSession.objects.create(
             user=self.user,
             book=self.hidden,
-            status=ReadingSession.STATUS_COMPLETED,
-            completed_at=timezone.now(),
+            status=ReadingSession.STATUS_CLOSED,
+            closed_at=timezone.now(),
         )
-        self.hidden_archived = ReadingSession.objects.create(
+        self.hidden_older_closed = ReadingSession.objects.create(
             user=self.user,
             book=self.hidden,
-            status=ReadingSession.STATUS_ARCHIVED,
+            status=ReadingSession.STATUS_CLOSED,
+            closed_at=timezone.now(),
         )
         ReadingSession.objects.create(user=self.other, book=self.hidden)
         ReadingSession.objects.create(user=self.other, book=self.other_only)
@@ -126,15 +127,17 @@ class MarginaliaBookAPITests(APITestCase):
         middle = now - timedelta(days=2)
         newest = now - timedelta(days=1)
         ReadingSession.objects.filter(pk=self.visible_session.pk).update(updated_at=middle)
-        ReadingSession.objects.filter(pk=self.hidden_completed.pk).update(updated_at=older)
-        ReadingSession.objects.filter(pk=self.hidden_archived.pk).update(updated_at=older)
+        ReadingSession.objects.filter(pk=self.hidden_closed.pk).update(updated_at=older)
+        ReadingSession.objects.filter(pk=self.hidden_older_closed.pk).update(
+            updated_at=older
+        )
         progress = SessionProgress.objects.create(
             session=self.visible_session,
             progression=0.5,
         )
         SessionProgress.objects.filter(pk=progress.pk).update(updated_at=middle)
         annotation = Annotation.objects.create(
-            session=self.hidden_completed,
+            session=self.hidden_closed,
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/2)",
         )

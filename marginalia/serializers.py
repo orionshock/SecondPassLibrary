@@ -5,6 +5,8 @@ from rest_framework import serializers
 from library.catalog.serializers import book_cover_url
 from library.models import Book
 
+from .models import ReadingSession
+
 
 class MarginaliaBookSeriesSerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series_id")
@@ -52,5 +54,27 @@ class MarginaliaBookSummarySerializer(serializers.ModelSerializer):
             "session_count",
             "active_session_count",
             "last_activity_at",
+        ]
+        read_only_fields = fields
+
+
+class MarginaliaSessionSummarySerializer(serializers.ModelSerializer):
+    progression = serializers.FloatField(read_only=True, allow_null=True)
+    annotation_count = serializers.IntegerField(read_only=True)
+    last_activity_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = ReadingSession
+        fields = [
+            "id",
+            "name",
+            "notes",
+            "status",
+            "started_at",
+            "closed_at",
+            "updated_at",
+            "last_activity_at",
+            "annotation_count",
+            "progression",
         ]
         read_only_fields = fields

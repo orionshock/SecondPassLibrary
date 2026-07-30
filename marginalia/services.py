@@ -8,13 +8,15 @@ from library.models import Book
 from .models import ReadingSession
 
 
-def get_or_create_active_session(*, user, book: Book) -> ReadingSession:
+def open_session(*, user, book: Book, name: str = "") -> ReadingSession:
+    """Return the open Session for a user/Book, creating it only when absent."""
     try:
         with transaction.atomic():
             session, _created = ReadingSession.objects.get_or_create(
                 user=user,
                 book=book,
                 status=ReadingSession.STATUS_ACTIVE,
+                defaults={"name": name},
             )
             return session
     except IntegrityError:
@@ -25,32 +27,11 @@ def get_or_create_active_session(*, user, book: Book) -> ReadingSession:
         )
 
 
-def start_new_session(
-    *,
-    user,
-    book: Book,
-    name: str = "",
-) -> ReadingSession:
-    with transaction.atomic():
-        ReadingSession.objects.select_for_update().filter(
-            user=user,
-            book=book,
-            status=ReadingSession.STATUS_ACTIVE,
-        ).update(status=ReadingSession.STATUS_ARCHIVED)
-        return ReadingSession.objects.create(
-            user=user,
-            book=book,
-            name=name,
-            status=ReadingSession.STATUS_ACTIVE,
-        )
-
-
 def close_session(*, session: ReadingSession) -> ReadingSession:
     if not session.is_active:
         return session
 
-    session.status = ReadingSession.STATUS_COMPLETED
-    session.completed_at = timezone.now()
-    session.save(update_fields=["status", "completed_at", "updated_at"])
+    session.status = ReadingSession.STATUS_CLOSED
+    session.closed_at = timezone.now()
+    session.save(update_fields=["status", "closed_at", "updated_at"])
     return session
-

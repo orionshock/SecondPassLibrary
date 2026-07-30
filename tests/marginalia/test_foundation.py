@@ -8,8 +8,7 @@ from library.models import Book
 from marginalia.models import Annotation, ReadingSession, SessionProgress
 from marginalia.services import (
     close_session,
-    get_or_create_active_session,
-    start_new_session,
+    open_session,
 )
 
 
@@ -30,18 +29,19 @@ class MarginaliaFoundationTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             ReadingSession.objects.create(user=self.user, book=self.book)
 
-    def test_multiple_historical_sessions_are_valid(self):
-        completed_at = timezone.now()
+    def test_multiple_closed_sessions_are_valid(self):
+        closed_at = timezone.now()
         first = ReadingSession.objects.create(
             user=self.user,
             book=self.book,
-            status=ReadingSession.STATUS_COMPLETED,
-            completed_at=completed_at,
+            status=ReadingSession.STATUS_CLOSED,
+            closed_at=closed_at,
         )
         second = ReadingSession.objects.create(
             user=self.user,
             book=self.book,
-            status=ReadingSession.STATUS_ARCHIVED,
+            status=ReadingSession.STATUS_CLOSED,
+            closed_at=closed_at,
         )
 
         self.assertFalse(first.is_active)
@@ -50,6 +50,34 @@ class MarginaliaFoundationTests(TestCase):
             ReadingSession.objects.filter(user=self.user, book=self.book).count(),
             2,
         )
+        self.assertFalse(
+            ReadingSession.objects.filter(
+                user=self.user,
+                book=self.book,
+                status=ReadingSession.STATUS_ACTIVE,
+            ).exists()
+        )
+
+    def test_database_enforces_the_two_state_lifecycle(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ReadingSession.objects.create(
+                user=self.user,
+                book=self.book,
+                status="archived",
+            )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ReadingSession.objects.create(
+                user=self.user,
+                book=self.book,
+                status=ReadingSession.STATUS_CLOSED,
+            )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ReadingSession.objects.create(
+                user=self.user,
+                book=self.book,
+                status=ReadingSession.STATUS_ACTIVE,
+                closed_at=timezone.now(),
+            )
 
     def test_session_protects_book_and_owns_dependent_records(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
@@ -146,28 +174,35 @@ class MarginaliaLifecycleServiceTests(TestCase):
         self.user = User.objects.create_user(username="reader", password="testpass")
         self.book = Book.objects.create(title="Service Book")
 
-    def test_active_session_service_reuses_the_one_active_session(self):
-        first = get_or_create_active_session(user=self.user, book=self.book)
-        second = get_or_create_active_session(user=self.user, book=self.book)
+    def test_open_session_reuses_the_existing_open_session_without_mutating_it(self):
+        first = open_session(user=self.user, book=self.book, name="First pass")
+        second = open_session(user=self.user, book=self.book, name="Replacement")
 
         self.assertEqual(second, first)
+        self.assertEqual(second.name, "First pass")
+        self.assertEqual(second.status, ReadingSession.STATUS_ACTIVE)
+        self.assertIsNone(second.closed_at)
 
-    def test_starting_again_archives_the_previous_session(self):
-        previous = get_or_create_active_session(user=self.user, book=self.book)
+    def test_new_session_requires_the_previous_session_to_be_deliberately_closed(self):
+        previous = open_session(user=self.user, book=self.book, name="First pass")
+        close_session(session=previous)
+        previous_closed_at = previous.closed_at
 
-        current = start_new_session(user=self.user, book=self.book, name="Second pass")
+        current = open_session(user=self.user, book=self.book, name="Second pass")
 
         previous.refresh_from_db()
-        self.assertEqual(previous.status, ReadingSession.STATUS_ARCHIVED)
+        self.assertEqual(previous.status, ReadingSession.STATUS_CLOSED)
+        self.assertEqual(previous.closed_at, previous_closed_at)
+        self.assertNotEqual(current, previous)
         self.assertEqual(current.status, ReadingSession.STATUS_ACTIVE)
         self.assertEqual(current.name, "Second pass")
 
     def test_closing_a_session_is_idempotent(self):
-        session = get_or_create_active_session(user=self.user, book=self.book)
+        session = open_session(user=self.user, book=self.book)
 
         closed = close_session(session=session)
-        completed_at = closed.completed_at
+        closed_at = closed.closed_at
         closed_again = close_session(session=closed)
 
-        self.assertEqual(closed_again.status, ReadingSession.STATUS_COMPLETED)
-        self.assertEqual(closed_again.completed_at, completed_at)
+        self.assertEqual(closed_again.status, ReadingSession.STATUS_CLOSED)
+        self.assertEqual(closed_again.closed_at, closed_at)
