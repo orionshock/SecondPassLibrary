@@ -100,6 +100,9 @@ projection:
 - `GET /api/v1/marginalia/books/`
 - `GET /api/v1/marginalia/books/<book_id>/`
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
+- `POST /api/v1/marginalia/books/<book_id>/open/`
+- `GET /api/v1/marginalia/books/<book_id>/active-session/`
+- `POST /api/v1/marginalia/books/<book_id>/start-over/`
 - `GET /api/v1/marginalia/sessions/`
 - `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
 - `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
@@ -121,6 +124,18 @@ author names, and Series name. Default ordering is newest caller-owned
 Marginalia activity first. Books without caller-owned Sessions and missing
 Books use the same no-leakage `404` detail behavior. See `docs/marginalia.md`
 for the full field and ownership contract.
+
+The Book lifecycle routes share a bootstrap response containing canonical Book
+context, active Session detail and progress, the complete active-Session
+Annotation collection, and the first normal page of closed Sessions. `open/`
+accepts optional `name` and `notes` creation defaults and returns `201` when it
+creates or `200` when it reuses. `active-session/` is read-only and returns a
+null Session when none is active. `start-over/` requires `Idempotency-Key`,
+accepts optional final `name`, `notes`, and complete `{cfi, location_label}`
+progress, and returns `201`; identical retries replay the stored response while
+key reuse with different input returns `409`. All require current Library
+authority but return no asset or file data. Library owns asset acquisition and
+failure behavior.
 
 The nested Sessions route returns a normally paginated `results` collection
 and the canonical selected Book summary in `context.book`. Omitted `status`

@@ -25,3 +25,11 @@ def book_access_required_response():
         message="Current Library access to the Book is required.",
         status_code=status.HTTP_403_FORBIDDEN,
     )
+
+
+def invalid_request_response(*, message: str, status_code=status.HTTP_400_BAD_REQUEST):
+    return api_error_response(
+        code=ErrorCode.INVALID_REQUEST,
+        message=message,
+        status_code=status_code,
+    )

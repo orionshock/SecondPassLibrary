@@ -23,6 +23,23 @@ def marginalia_books_for_user(*, user, q: str = "") -> QuerySet[Book]:
             | Q(book_series__series__name__icontains=search)
         )
 
+    return _marginalia_book_summary_queryset(queryset, user=user)
+
+
+def marginalia_book_context_for_user(*, user, book_id) -> QuerySet[Book]:
+    """Return the canonical Book summary without requiring existing Sessions."""
+    return _marginalia_book_summary_queryset(
+        Book.objects.filter(pk=book_id),
+        user=user,
+    )
+
+
+def _marginalia_book_summary_queryset(
+    queryset: QuerySet[Book],
+    *,
+    user,
+) -> QuerySet[Book]:
+    owned_sessions = Q(marginalia_sessions__user=user)
     latest_session_activity = Max(
         "marginalia_sessions__updated_at",
         filter=owned_sessions,

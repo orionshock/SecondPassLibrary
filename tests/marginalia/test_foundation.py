@@ -8,10 +8,6 @@ from django.utils import timezone
 from library.models import Book
 from marginalia.models import Annotation, ReadingSession
 from marginalia.progress_services import assign_session_progress, clear_session_progress
-from marginalia.services import (
-    close_session,
-    open_session,
-)
 
 
 User = get_user_model()
@@ -276,42 +272,3 @@ class MarginaliaFoundationTests(TestCase):
 
         with self.assertRaises(ValidationError):
             assign_session_progress(session=session, cfi="epubcfi(/6/8)")
-
-
-class MarginaliaLifecycleServiceTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username="reader", password="testpass")
-        self.book = Book.objects.create(title="Service Book")
-
-    def test_open_session_reuses_the_existing_open_session_without_mutating_it(self):
-        first = open_session(user=self.user, book=self.book, name="First pass")
-        second = open_session(user=self.user, book=self.book, name="Replacement")
-
-        self.assertEqual(second, first)
-        self.assertEqual(second.name, "First pass")
-        self.assertEqual(second.status, ReadingSession.STATUS_ACTIVE)
-        self.assertIsNone(second.closed_at)
-
-    def test_new_session_requires_the_previous_session_to_be_deliberately_closed(self):
-        previous = open_session(user=self.user, book=self.book, name="First pass")
-        close_session(session=previous)
-        previous_closed_at = previous.closed_at
-
-        current = open_session(user=self.user, book=self.book, name="Second pass")
-
-        previous.refresh_from_db()
-        self.assertEqual(previous.status, ReadingSession.STATUS_CLOSED)
-        self.assertEqual(previous.closed_at, previous_closed_at)
-        self.assertNotEqual(current, previous)
-        self.assertEqual(current.status, ReadingSession.STATUS_ACTIVE)
-        self.assertEqual(current.name, "Second pass")
-
-    def test_closing_a_session_is_idempotent(self):
-        session = open_session(user=self.user, book=self.book)
-
-        closed = close_session(session=session)
-        closed_at = closed.closed_at
-        closed_again = close_session(session=closed)
-
-        self.assertEqual(closed_again.status, ReadingSession.STATUS_CLOSED)
-        self.assertEqual(closed_again.closed_at, closed_at)

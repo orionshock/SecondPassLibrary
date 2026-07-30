@@ -22,6 +22,9 @@ bearer tokens:
 - `GET /api/v1/marginalia/books/`
 - `GET /api/v1/marginalia/books/<book_id>/`
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
+- `POST /api/v1/marginalia/books/<book_id>/open/`
+- `GET /api/v1/marginalia/books/<book_id>/active-session/`
+- `POST /api/v1/marginalia/books/<book_id>/start-over/`
 - `GET /api/v1/marginalia/sessions/`
 - `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
 - `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
@@ -69,6 +72,68 @@ available when `can_open` is false because covers are public display assets in
 the existing media security model; the projection never contains EPUB/file
 metadata, download URLs, checksums, identifiers, Groups, Shelves, or permission
 internals.
+
+## Live-reading lifecycle bootstrap
+
+The three Book lifecycle routes return one bounded bootstrap envelope. It
+contains the canonical Marginalia Book summary, active Session detail and
+progress, every current non-deleted Annotation for that active Session in
+stable reading order, and the ordinary first page of the Book's closed
+Sessions:
+
+```json
+{
+  "created": false,
+  "context": {"book": {"id": "<book-uuid>", "title": "Book title"}},
+  "session": {"id": "<session-uuid>", "status": "active", "progress": null},
+  "annotations": [],
+  "closed_sessions": {
+    "count": 3,
+    "next": null,
+    "previous": null,
+    "results": []
+  }
+}
+```
+
+Annotations are complete and unpaginated. Closed history uses the normal
+20-row page size and its pagination links target
+`GET /api/v1/marginalia/books/<book_id>/sessions/?status=closed`. Bootstrap
+does not repeat the profile URI from `/server/info` and contains no Book asset,
+file, download, hash, or storage data. Library separately owns asset
+acquisition and asset failures; Marginalia checks only current Library
+authority.
+
+`POST /api/v1/marginalia/books/<book_id>/open/` accepts optional `name` and
+`notes` creation defaults. It creates an active Session only when none exists
+(`201`, `created=true`), otherwise returns the existing Session unchanged
+(`200`, `created=false`). Open never closes or replaces a Session.
+
+`GET /api/v1/marginalia/books/<book_id>/active-session/` is strictly
+read-only. When no active Session exists, it returns `session=null`, an empty
+Annotation collection, and the closed history page. It never creates a
+Session or changes activity timestamps.
+
+`POST /api/v1/marginalia/books/<book_id>/start-over/` requires a valid
+`Idempotency-Key`. In one transaction it optionally finalizes the active
+Session's `name`, `notes`, and complete progress location, explicitly closes
+that Session, and creates one blank active Session. The new Session has no
+progress or Annotations; all previous progress and Annotations remain with the
+closed Session. With no active Session, an empty request creates the blank
+Session while finalization fields are rejected. The route always returns
+`201` and `created=true` on success.
+
+Start-over keys are user-scoped and retained for 24 hours using the existing
+short-lived idempotency store. The normalized request and complete successful
+response are recorded in the same transaction as the lifecycle change. An
+identical replay returns that stored response without another Session; reuse
+for a different request or a still-processing request returns a bounded
+`409` conflict.
+
+All three routes support session and Client API bearer authentication and
+require current Library authority for the Book. Missing and inaccessible Books
+use the same no-leakage `404`. They do not inspect whether the authorized Book
+asset is healthy or present.
 
 ## Sessions for one Book
 
