@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 from django.shortcuts import get_object_or_404
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import IsAuthenticated
 
-from accounts.authentication import ClientBearerAuthentication
-
+from .api import MarginaliaReadMixin
 from .queries import (
     marginalia_books_for_user,
     marginalia_sessions_for_book,
@@ -17,11 +14,6 @@ from .serializers import (
     MarginaliaGlobalSessionSummarySerializer,
     MarginaliaSessionSummarySerializer,
 )
-
-
-class MarginaliaReadMixin:
-    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
-    permission_classes = [IsAuthenticated]
 
 
 class MarginaliaBookReadMixin(MarginaliaReadMixin):

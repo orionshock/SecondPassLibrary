@@ -23,6 +23,7 @@ bearer tokens:
 - `GET /api/v1/marginalia/books/<book_id>/`
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
 - `GET /api/v1/marginalia/sessions/`
+- `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
 
 A Book is present only when the caller owns at least one Marginalia
 `ReadingSession` for it. This historical ownership is independent of current
@@ -155,6 +156,46 @@ EPUB/file fields, download URLs, identifiers, Groups, Shelves, and unrelated
 catalog metadata. Owned Marginalia keeps title and public cover identity
 available for an inaccessible historical Book, while `can_open=false` prevents
 that history from implying current Book Detail, Reader, or download authority.
+
+## Session detail and metadata
+
+`GET /api/v1/marginalia/sessions/<session_id>/` returns one caller-owned
+Session independently of current Library visibility. Missing and foreign
+Sessions use the same no-leakage `404`. The canonical Marginalia Book summary
+is returned once in `context.book`; the bounded Session detail is returned in
+`session`:
+
+```json
+{
+  "context": {"book": {"id": "<book-uuid>", "title": "Book title"}},
+  "session": {
+    "id": "<session-uuid>",
+    "name": "Second pass",
+    "notes": "Session note",
+    "status": "active",
+    "started_at": "2026-07-30T12:00:00Z",
+    "closed_at": null,
+    "updated_at": "2026-07-30T12:00:00Z",
+    "last_activity_at": "2026-07-30T12:00:00Z",
+    "annotation_count": 0,
+    "progress": {
+      "cfi": "epubcfi(/6/8!/4/2)",
+      "location_label": "Chapter 08 · 42%",
+      "updated_at": "2026-07-30T12:00:00Z"
+    }
+  }
+}
+```
+
+`progress` is `null` when the Session has no saved location. It is read
+directly from the Session's opaque progress fields; there is no numeric
+progression or row-level profile version.
+
+`PATCH` accepts only `name` and `notes`, supports partial updates, and returns
+the same detail envelope. Only active Sessions are mutable. Closed Sessions
+remain readable but reject metadata changes without altering stored data.
+Reading detail never changes activity; a successful metadata update changes
+the Session timestamp and therefore participates in normal activity ordering.
 
 ## Session lifecycle
 

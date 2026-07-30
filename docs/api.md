@@ -101,6 +101,7 @@ projection:
 - `GET /api/v1/marginalia/books/<book_id>/`
 - `GET /api/v1/marginalia/books/<book_id>/sessions/`
 - `GET /api/v1/marginalia/sessions/`
+- `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
 
 Both accept Django session or Client API bearer authentication. The caller must
 own at least one Marginalia Reading Session for a Book; current Library
@@ -136,6 +137,13 @@ numeric progression field or separate progress record. Current list responses
 use the progress timestamp for activity ordering but do not expose progress;
 future detail projections will use `progress: null` or a bounded
 `{cfi, location_label, updated_at}` object.
+
+Session detail returns the canonical Marginalia Book summary in `context.book`
+and the bounded detail projection in `session`. Only the owner may read it;
+current Library visibility is not required. `PATCH` accepts only `name` and
+`notes`, only for active Sessions, and returns the same envelope. Closed
+Sessions are immutable, and foreign or missing Sessions use the same
+no-leakage `404` response.
 
 The flat Sessions route returns caller-owned Sessions across all Books with
 normal Session-level pagination. It supports `status=active|closed` and `q`
