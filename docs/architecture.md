@@ -7,8 +7,15 @@ Current apps:
 - `core`: shared base models, server settings, utilities
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
+- `marginalia`: new Marginalia domain foundation for Reading Sessions, Session
+  progress, and located annotations; API routes are not implemented yet
 - `reading`: reading sessions, progress, annotations
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
+
+The existing `reading` app remains the active legacy API implementation while
+the new `marginalia` domain is rebuilt route by route. New Marginalia code does
+not import or depend on `reading`; the old app is reference material pending its
+eventual removal.
 
 Operator recovery workflows in the Django admin are documented in
 `docs/admin.md`.

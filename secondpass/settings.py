@@ -129,6 +129,7 @@ INSTALLED_APPS = [
     "core.apps.CoreConfig",
     "accounts",
     "library.apps.LibraryConfig",
+    "marginalia.apps.MarginaliaConfig",
     "reading",
     "shelves",
 ]
@@ -259,7 +260,15 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         }
-        for logger_name in ("accounts", "core", "library", "reading", "shelves", "web")
+        for logger_name in (
+            "accounts",
+            "core",
+            "library",
+            "marginalia",
+            "reading",
+            "shelves",
+            "web",
+        )
     },
 }
 
