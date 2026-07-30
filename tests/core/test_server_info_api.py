@@ -47,6 +47,9 @@ class ServerInfoApiTests(APITestCase):
                 "server_banner_message": "Maintenance tonight.",
                 "advanced_library_groups_enabled": True,
                 "reading_client_base_url": "https://reader.example.com",
+                "marginalia_profile_uri": (
+                    "https://secondpasslibrary.local/specs/marginalia/0.1.0"
+                ),
                 "public_group": {
                     "id": str(public_group.id),
                     "name": "Common Room",

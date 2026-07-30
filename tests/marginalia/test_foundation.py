@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django.utils import timezone
 
 from library.models import Book
-from marginalia.models import Annotation, ReadingSession, SessionProgress
+from marginalia.models import Annotation, ReadingSession
+from marginalia.progress_services import assign_session_progress, clear_session_progress
 from marginalia.services import (
     close_session,
     open_session,
@@ -81,14 +83,12 @@ class MarginaliaFoundationTests(TestCase):
 
     def test_session_protects_book_and_owns_dependent_records(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        progress = SessionProgress.objects.create(session=session)
         annotation = Annotation.objects.create(
             session=session,
             kind=Annotation.KIND_BOOKMARK,
             cfi="epubcfi(/6/2)",
         )
 
-        self.assertEqual(progress.session, session)
         self.assertEqual(annotation.session, session)
         self.assertEqual(annotation.user, self.user)
         self.assertEqual(annotation.book, self.book)
@@ -96,24 +96,67 @@ class MarginaliaFoundationTests(TestCase):
             self.book.delete()
 
         session.delete()
-        self.assertFalse(SessionProgress.objects.filter(pk=progress.pk).exists())
         self.assertFalse(Annotation.objects.filter(pk=annotation.pk).exists())
 
-    def test_progress_is_one_to_one_and_preserves_locations(self):
+    def test_session_can_exist_without_saved_progress(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        label = "  Chapter 08 · 42% · The Blackstaff  "
-        progress = SessionProgress.objects.create(
-            session=session,
-            cfi="  epubcfi(/6/8)  ",
-            location_label=label,
-            progression=0.42,
-        )
 
-        progress.refresh_from_db()
-        self.assertEqual(progress.cfi, "  epubcfi(/6/8)  ")
-        self.assertEqual(progress.location_label, label)
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            SessionProgress.objects.create(session=session)
+        self.assertEqual(session.progress_cfi, "")
+        self.assertEqual(session.progress_location_label, "")
+        self.assertIsNone(session.progress_updated_at)
+
+    def test_progress_assignment_preserves_location_and_clears_atomically(self):
+        session = ReadingSession.objects.create(user=self.user, book=self.book)
+        cfi = "  epubcfi(/6/8)  "
+        label = "  Chapter 08 · 42% · The Blackstaff  "
+        updated_at = timezone.now()
+
+        assign_session_progress(
+            session=session,
+            cfi=cfi,
+            location_label=label,
+            updated_at=updated_at,
+        )
+        session.refresh_from_db()
+        self.assertEqual(session.progress_cfi, cfi)
+        self.assertEqual(session.progress_location_label, label)
+        self.assertEqual(session.progress_updated_at, updated_at)
+
+        clear_session_progress(session=session)
+        session.refresh_from_db()
+        self.assertEqual(session.progress_cfi, "")
+        self.assertEqual(session.progress_location_label, "")
+        self.assertIsNone(session.progress_updated_at)
+
+    def test_progress_database_constraint_rejects_incomplete_state(self):
+        invalid_values = (
+            {"progress_location_label": "Chapter 1"},
+            {"progress_updated_at": timezone.now()},
+            {"progress_cfi": "epubcfi(/6/8)"},
+        )
+        for values in invalid_values:
+            with self.subTest(values=values), self.assertRaises(
+                IntegrityError
+            ), transaction.atomic():
+                ReadingSession.objects.create(
+                    user=self.user,
+                    book=self.book,
+                    **values,
+                )
+
+    def test_progress_label_is_optional(self):
+        session = ReadingSession.objects.create(user=self.user, book=self.book)
+
+        assign_session_progress(session=session, cfi="epubcfi(/6/8)")
+
+        self.assertEqual(session.progress_location_label, "")
+
+    def test_profile_uri_is_not_stored_per_row(self):
+        for model in (ReadingSession, Annotation):
+            with self.subTest(model=model.__name__), self.assertRaises(
+                FieldDoesNotExist
+            ):
+                model._meta.get_field("profile_version")
 
     def test_location_labels_are_optional_and_preserved_on_annotations(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
@@ -180,8 +223,17 @@ class MarginaliaFoundationTests(TestCase):
                     cfi="epubcfi(/6/4)",
                     **{field: "not allowed"},
                 )
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            SessionProgress.objects.create(session=session, progression=1.1)
+
+    def test_closed_session_progress_is_immutable(self):
+        session = ReadingSession.objects.create(
+            user=self.user,
+            book=self.book,
+            status=ReadingSession.STATUS_CLOSED,
+            closed_at=timezone.now(),
+        )
+
+        with self.assertRaises(ValidationError):
+            assign_session_progress(session=session, cfi="epubcfi(/6/8)")
 
 
 class MarginaliaLifecycleServiceTests(TestCase):

@@ -20,7 +20,7 @@ from library.models import (
     LibraryGroupMembership,
     Series,
 )
-from marginalia.models import Annotation, ReadingSession, SessionProgress
+from marginalia.models import Annotation, ReadingSession
 from marginalia.queries import marginalia_sessions_for_user
 from marginalia.serializers import MarginaliaGlobalSessionSummarySerializer
 
@@ -157,8 +157,10 @@ class MarginaliaSessionListAPITests(APITestCase):
         ReadingSession.objects.filter(
             pk__in=[self.active.pk, self.closed.pk, self.older_closed.pk]
         ).update(updated_at=oldest)
-        progress = SessionProgress.objects.create(session=self.active, progression=0.3)
-        SessionProgress.objects.filter(pk=progress.pk).update(updated_at=middle)
+        ReadingSession.objects.filter(pk=self.active.pk).update(
+            progress_cfi="epubcfi(/6/4)",
+            progress_updated_at=middle,
+        )
         annotation = Annotation.objects.create(
             session=self.closed,
             kind=Annotation.KIND_BOOKMARK,
@@ -200,7 +202,6 @@ class MarginaliaSessionListAPITests(APITestCase):
                 "updated_at",
                 "last_activity_at",
                 "annotation_count",
-                "progression",
                 "book",
             },
         )

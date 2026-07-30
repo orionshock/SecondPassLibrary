@@ -11,7 +11,7 @@ from rest_framework.test import APIClient, APITestCase
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from library.models import Book
-from marginalia.models import Annotation, ReadingSession, SessionProgress
+from marginalia.models import Annotation, ReadingSession
 from marginalia.queries import marginalia_books_for_user, marginalia_sessions_for_book
 from marginalia.serializers import (
     MarginaliaBookSummarySerializer,
@@ -73,7 +73,6 @@ class MarginaliaBookSessionAPITests(APITestCase):
             cfi="epubcfi(/6/4)",
             is_deleted=True,
         )
-        SessionProgress.objects.create(session=self.active, progression=0.42)
 
         response = self.client.get(self.url)
 
@@ -84,7 +83,6 @@ class MarginaliaBookSessionAPITests(APITestCase):
         self.assertNotIn(str(self.other_session.id), rows)
         active = rows[str(self.active.id)]
         self.assertEqual(active["annotation_count"], 1)
-        self.assertEqual(active["progression"], 0.42)
         self.assertEqual(
             set(active),
             {
@@ -97,7 +95,6 @@ class MarginaliaBookSessionAPITests(APITestCase):
                 "updated_at",
                 "last_activity_at",
                 "annotation_count",
-                "progression",
             },
         )
         self.assertNotIn("book", active)
@@ -178,8 +175,10 @@ class MarginaliaBookSessionAPITests(APITestCase):
         ReadingSession.objects.filter(
             pk__in=[self.active.pk, self.closed.pk, self.older_closed.pk]
         ).update(updated_at=oldest)
-        progress = SessionProgress.objects.create(session=self.active, progression=0.2)
-        SessionProgress.objects.filter(pk=progress.pk).update(updated_at=middle)
+        ReadingSession.objects.filter(pk=self.active.pk).update(
+            progress_cfi="epubcfi(/6/4)",
+            progress_updated_at=middle,
+        )
         annotation = Annotation.objects.create(
             session=self.closed,
             kind=Annotation.KIND_BOOKMARK,

@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 
 MAX_CFI_LENGTH = 8 * 1024
 MAX_LOCATION_LABEL_LENGTH = 255
-MARGINALIA_PROFILE_VERSION = "0.1.0"
-
 HIGHLIGHT_COLOR_YELLOW = "yellow"
 HIGHLIGHT_COLOR_GREEN = "green"
 HIGHLIGHT_COLOR_BLUE = "blue"
@@ -70,6 +68,13 @@ class ReadingSession(TimeStampedModel):
     )
     started_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(blank=True, null=True)
+    progress_cfi = models.TextField(max_length=MAX_CFI_LENGTH, blank=True, default="")
+    progress_location_label = models.CharField(
+        max_length=MAX_LOCATION_LABEL_LENGTH,
+        blank=True,
+        default="",
+    )
+    progress_updated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ["-started_at", "-id"]
@@ -93,48 +98,40 @@ class ReadingSession(TimeStampedModel):
                 | ~Q(status="active"),
                 name="marginalia_active_session_has_no_closed_at",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        progress_cfi="",
+                        progress_location_label="",
+                        progress_updated_at__isnull=True,
+                    )
+                    | (~Q(progress_cfi="") & Q(progress_updated_at__isnull=False))
+                ),
+                name="marginalia_session_progress_is_complete",
+            ),
         ]
 
     @property
     def is_active(self) -> bool:
         return self.status == self.STATUS_ACTIVE
 
+    def clean(self) -> None:
+        super().clean()
+        if not self.progress_cfi and (
+            self.progress_location_label or self.progress_updated_at is not None
+        ):
+            raise ValidationError(
+                {"progress_cfi": "A progress label or timestamp requires a CFI."}
+            )
+        if self.progress_cfi and self.progress_updated_at is None:
+            raise ValidationError(
+                {"progress_updated_at": "Saved progress requires an update timestamp."}
+            )
+
     def __str__(self) -> str:
         label = self.name.strip() if self.name else ""
         suffix = f" ({label})" if label else ""
         return f"{self.user.get_username()}: {self.book.title}{suffix}"
-
-
-class SessionProgress(TimeStampedModel):
-    session = models.OneToOneField(
-        ReadingSession,
-        on_delete=models.CASCADE,
-        related_name="progress",
-    )
-    cfi = models.TextField(max_length=MAX_CFI_LENGTH, blank=True, default="")
-    location_label = models.CharField(
-        max_length=MAX_LOCATION_LABEL_LENGTH,
-        blank=True,
-        default="",
-    )
-    progression = models.FloatField(blank=True, null=True)
-    profile_version = models.CharField(
-        max_length=16,
-        default=MARGINALIA_PROFILE_VERSION,
-    )
-
-    class Meta:
-        ordering = ["-updated_at", "-id"]
-        constraints = [
-            models.CheckConstraint(
-                condition=Q(progression__isnull=True)
-                | Q(progression__gte=0.0, progression__lte=1.0),
-                name="marginalia_progression_in_unit_interval",
-            )
-        ]
-
-    def __str__(self) -> str:
-        return f"Progress: {self.session}"
 
 
 class Annotation(TimeStampedModel):
@@ -166,10 +163,6 @@ class Annotation(TimeStampedModel):
         choices=HIGHLIGHT_COLOR_CHOICES,
         blank=True,
         default="",
-    )
-    profile_version = models.CharField(
-        max_length=16,
-        default=MARGINALIA_PROFILE_VERSION,
     )
     is_deleted = models.BooleanField(default=False)
 

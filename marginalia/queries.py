@@ -28,7 +28,7 @@ def marginalia_books_for_user(*, user, q: str = "") -> QuerySet[Book]:
         filter=owned_sessions,
     )
     latest_progress_activity = Max(
-        "marginalia_sessions__progress__updated_at",
+        "marginalia_sessions__progress_updated_at",
         filter=owned_sessions,
     )
     latest_annotation_activity = Max(
@@ -121,6 +121,13 @@ def marginalia_sessions_for_user(
     return _session_summary_queryset(queryset, user=user)
 
 
+def marginalia_session_for_user(*, user, session_id) -> QuerySet[ReadingSession]:
+    return _session_summary_queryset(
+        ReadingSession.objects.filter(user=user, pk=session_id),
+        user=user,
+    )
+
+
 def _filter_session_status(
     queryset: QuerySet[ReadingSession],
     *,
@@ -148,9 +155,8 @@ def _session_summary_queryset(
         pk=OuterRef("book_id")
     )
     return (
-        queryset.select_related("book", "progress")
+        queryset.select_related("book")
         .annotate(
-            progression=Max("progress__progression"),
             annotation_count=Count(
                 "annotations",
                 filter=Q(annotations__is_deleted=False),
@@ -158,7 +164,7 @@ def _session_summary_queryset(
             ),
             last_activity_at=Greatest(
                 "updated_at",
-                Coalesce("progress__updated_at", "updated_at"),
+                Coalesce("progress_updated_at", "updated_at"),
                 Coalesce(latest_annotation_activity, "updated_at"),
                 output_field=DateTimeField(),
             ),

@@ -59,7 +59,6 @@ class MarginaliaBookSummarySerializer(serializers.ModelSerializer):
 
 
 class MarginaliaSessionSummarySerializer(serializers.ModelSerializer):
-    progression = serializers.FloatField(read_only=True, allow_null=True)
     annotation_count = serializers.IntegerField(read_only=True)
     last_activity_at = serializers.DateTimeField(read_only=True)
 
@@ -75,7 +74,6 @@ class MarginaliaSessionSummarySerializer(serializers.ModelSerializer):
             "updated_at",
             "last_activity_at",
             "annotation_count",
-            "progression",
         ]
         read_only_fields = fields
 

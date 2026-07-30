@@ -19,8 +19,8 @@ For practical current REST payload examples for reader-client development, see:
 
 - Reader clients must adapt to the server format if they want to save user data.
 - The server does not maintain per-reader proprietary annotation formats.
-- Progress/location payloads are versioned via `profile_version`; annotation
-  API payloads are SPL-native and do not include `profile_version`.
+- The supported Marginalia profile URI is application-level ServerInfo, not a
+  version copied onto individual Session, progress, or Annotation rows.
 - Unknown/unsupported fields are rejected.
 - Reading payloads are also size-limited as a coarse abuse guard (the server is not arbitrary client blob storage).
 - For REST clients, `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` (recommended) so clients can safely retry create requests without duplicating annotations.

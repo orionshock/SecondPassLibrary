@@ -4,7 +4,7 @@ Marginalia is the domain root for user-owned Book reading history. Its core
 records are:
 
 - `ReadingSession`: one user's reading pass through one Book;
-- `SessionProgress`: the single located progress record for a Reading Session;
+- progress fields on `ReadingSession`: its current saved location;
 - `Annotation`: a located bookmark or highlight belonging to a Reading Session;
   highlights may also carry a user note/comment.
 
@@ -99,8 +99,7 @@ returned once as `context.book`; Session rows do not duplicate Book metadata:
       "closed_at": "2026-07-20T12:00:00Z",
       "updated_at": "2026-07-20T12:00:00Z",
       "last_activity_at": "2026-07-21T12:00:00Z",
-      "annotation_count": 12,
-      "progression": 0.75
+      "annotation_count": 12
     }
   ]
 }
@@ -142,7 +141,6 @@ Each row adds only the Book reference needed by the Marginalia Session card:
   "updated_at": "2026-07-20T12:00:00Z",
   "last_activity_at": "2026-07-21T12:00:00Z",
   "annotation_count": 12,
-  "progression": 0.75,
   "book": {
     "id": "<book-uuid>",
     "title": "Book title",
@@ -176,14 +174,33 @@ metadata mutation services and API routes must reject changes to closed
 Sessions.
 
 A Book with Marginalia is protected from deletion. Deleting a user deletes that
-user's Sessions. Deleting a Session deletes its progress and annotations.
+user's Sessions. Deleting a Session deletes its annotations.
 
-## Located records
+## Saved progress and located records
 
-`SessionProgress` and `Annotation` store a `cfi` machine anchor adjacent to an
-optional `location_label` display companion. Both values are opaque to the
-Marginalia models. They are stored unchanged; the models do not parse,
-normalize, infer, reconstruct, or derive either value.
+Progress is the Reading Session's current saved location, stored directly as
+`progress_cfi`, `progress_location_label`, and `progress_updated_at`. There is
+no separate progress row and no numeric progression field. No saved progress
+is represented by blank CFI and label fields plus a null timestamp. A saved
+location requires a nonempty CFI and timestamp; its label remains optional.
+The three fields are assigned or cleared atomically.
+
+Future detail APIs will project saved progress as `null` or:
+
+```json
+{
+  "progress": {
+    "cfi": "epubcfi(/6/8!/4/2)",
+    "location_label": "Chapter 08 · 42%",
+    "updated_at": "2026-07-30T12:00:00Z"
+  }
+}
+```
+
+Progress and `Annotation` store a `cfi` machine anchor adjacent to an optional
+location-label display companion. Both values are opaque to the Marginalia
+models. They are stored unchanged; the models do not parse, normalize, infer,
+reconstruct, or derive either value.
 
 `location_label` is a bounded string of at most 255 characters. Its absent
 storage value is the empty string rather than `null`. It is Reader-generated
@@ -195,6 +212,16 @@ a nonempty CFI and use soft deletion. The only annotation kinds are `highlight`
 and `bookmark`. A note is `comment_text` attached to a highlight, not a separate
 annotation kind. Highlights require selected text; bookmarks carry neither
 highlight text, quote context, color, nor comment content.
+
+The future progress-write boundary requires that the caller own an active
+Session and currently have access to its Book asset. Closed Sessions and
+inaccessible Books remain readable under their normal ownership rules, but
+their progress cannot be updated.
+
+The supported interchange contract is identified once at application level by
+`https://secondpasslibrary.local/specs/marginalia/0.1.0`; it is not persisted
+on Sessions or Annotations. Authenticated `/api/v1/server/info/` exposes it as
+`marginalia_profile_uri`.
 
 Request idempotency remains an API concern and is deliberately not domain model
 state. External client correlation and import/export profile mapping are

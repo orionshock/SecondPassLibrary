@@ -130,6 +130,13 @@ Session returns the existing active Session when present and never closes it
 automatically. Creating a later Session requires a prior explicit close; having
 only closed Sessions and no active Session is valid.
 
+Saved progress is held atomically on its Reading Session as an opaque CFI,
+optional Reader-generated location label, and update timestamp. There is no
+numeric progression field or separate progress record. Current list responses
+use the progress timestamp for activity ordering but do not expose progress;
+future detail projections will use `progress: null` or a bounded
+`{cfi, location_label, updated_at}` object.
+
 The flat Sessions route returns caller-owned Sessions across all Books with
 normal Session-level pagination. It supports `status=active|closed` and `q`
 over Session name/notes plus Book title, author names, and Series name. Each row
@@ -1166,6 +1173,7 @@ Reading payload notes:
   - `server_banner_message`
   - `advanced_library_groups_enabled`
   - `reading_client_base_url` (normalized root URL or `null` when disabled)
+  - `marginalia_profile_uri` (canonical supported Marginalia interchange profile)
   - `public_group` (`id`, `name`, `description`)
   - `server_version`
   - `server_release_date`

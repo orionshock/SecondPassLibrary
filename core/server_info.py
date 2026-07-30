@@ -6,6 +6,7 @@ from django.conf import settings
 
 from core import server_settings
 from library.groups.public_group import get_public_group
+from marginalia.profile import MARGINALIA_PROFILE_URI
 
 
 def server_info_payload() -> dict[str, Any]:
@@ -20,6 +21,7 @@ def server_info_payload() -> dict[str, Any]:
         "reading_client_base_url": (
             server_settings.get_reading_client_base_url() or None
         ),
+        "marginalia_profile_uri": MARGINALIA_PROFILE_URI,
         "public_group": {
             "id": public_group.id,
             "name": public_group.name,

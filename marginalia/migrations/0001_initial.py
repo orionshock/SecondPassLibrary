@@ -27,6 +27,9 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('active', 'Active'), ('closed', 'Closed')], default='active', max_length=16)),
                 ('started_at', models.DateTimeField(auto_now_add=True)),
                 ('closed_at', models.DateTimeField(blank=True, null=True)),
+                ('progress_cfi', models.TextField(blank=True, default='', max_length=8192)),
+                ('progress_location_label', models.CharField(blank=True, default='', max_length=255)),
+                ('progress_updated_at', models.DateTimeField(blank=True, null=True)),
                 ('book', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='marginalia_sessions', to='library.book')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='marginalia_sessions', to=settings.AUTH_USER_MODEL)),
             ],
@@ -48,28 +51,11 @@ class Migration(migrations.Migration):
                 ('quote_prefix', models.TextField(blank=True, default='')),
                 ('quote_suffix', models.TextField(blank=True, default='')),
                 ('highlight_color', models.CharField(blank=True, choices=[('yellow', 'Yellow'), ('green', 'Green'), ('blue', 'Blue'), ('pink', 'Pink'), ('purple', 'Purple'), ('orange', 'Orange')], default='', max_length=16)),
-                ('profile_version', models.CharField(default='0.1.0', max_length=16)),
                 ('is_deleted', models.BooleanField(default=False)),
                 ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='annotations', to='marginalia.readingsession')),
             ],
             options={
                 'ordering': ['-created_at', '-id'],
-            },
-        ),
-        migrations.CreateModel(
-            name='SessionProgress',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('cfi', models.TextField(blank=True, default='', max_length=8192)),
-                ('location_label', models.CharField(blank=True, default='', max_length=255)),
-                ('progression', models.FloatField(blank=True, null=True)),
-                ('profile_version', models.CharField(default='0.1.0', max_length=16)),
-                ('session', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='progress', to='marginalia.readingsession')),
-            ],
-            options={
-                'ordering': ['-updated_at', '-id'],
             },
         ),
         migrations.AddConstraint(
@@ -87,6 +73,10 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='readingsession',
             constraint=models.CheckConstraint(condition=models.Q(models.Q(('closed_at__isnull', True), ('status', 'active')), models.Q(('status', 'active'), _negated=True), _connector='OR'), name='marginalia_active_session_has_no_closed_at'),
+        ),
+        migrations.AddConstraint(
+            model_name='readingsession',
+            constraint=models.CheckConstraint(condition=models.Q(models.Q(('progress_cfi', ''), ('progress_location_label', ''), ('progress_updated_at__isnull', True)), models.Q(models.Q(('progress_cfi', ''), _negated=True), ('progress_updated_at__isnull', False)), _connector='OR'), name='marginalia_session_progress_is_complete'),
         ),
         migrations.AddIndex(
             model_name='annotation',
@@ -111,9 +101,5 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='annotation',
             constraint=models.CheckConstraint(condition=models.Q(models.Q(('kind', 'bookmark'), _negated=True), models.Q(('comment_text', ''), ('highlight_color', ''), ('highlight_text', ''), ('quote_prefix', ''), ('quote_suffix', '')), _connector='OR'), name='marginalia_bookmark_has_no_content'),
-        ),
-        migrations.AddConstraint(
-            model_name='sessionprogress',
-            constraint=models.CheckConstraint(condition=models.Q(('progression__isnull', True), models.Q(('progression__gte', 0.0), ('progression__lte', 1.0)), _connector='OR'), name='marginalia_progression_in_unit_interval'),
         ),
     ]
