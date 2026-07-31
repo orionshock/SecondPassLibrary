@@ -136,16 +136,6 @@ export interface ReadingAnnotationsQuery {
   pageSize?: number;
 }
 
-export interface ReadingExportSessionSelection {
-  sessionId: string;
-  bookId: string;
-}
-
-export interface ReadingExportSelection {
-  sessions: readonly ReadingExportSessionSelection[];
-  includeEmptySessions?: boolean;
-}
-
 export interface ReadingImportCounts {
   books: number;
   sessions: number;
@@ -462,20 +452,6 @@ export async function listReadingAnnotations(query: ReadingAnnotationsQuery, cli
   }));
 }
 
-export function downloadCompleteReadingExport(
-  options: { includeEmptySessions?: boolean } = {},
-  client: AttachmentApiClient = apiClient,
-): Promise<AttachmentDownload> {
-  const parameters = new URLSearchParams({
-    include_empty_sessions: String(options.includeEmptySessions ?? false),
-  });
-  return client.requestAttachment(
-    `/api/v1/reading/export/?${parameters.toString()}`,
-    undefined,
-    "second-pass-marginalia.json",
-  );
-}
-
 export function downloadUnmatchedReadingImport(importToken: string, client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
   const parameters = new URLSearchParams({ import_token: importToken });
   return client.requestAttachment(
@@ -483,23 +459,6 @@ export function downloadUnmatchedReadingImport(importToken: string, client: Atta
     undefined,
     "secondpass-marginalia-sessions.zip",
   );
-}
-
-export function downloadSelectedReadingExport(selection: ReadingExportSelection, client: AttachmentApiClient = apiClient): Promise<AttachmentDownload> {
-  const sessionsByBook = new Map<string, string[]>();
-  for (const selected of selection.sessions) {
-    const sessions = sessionsByBook.get(selected.bookId) ?? [];
-    if (!sessions.includes(selected.sessionId)) sessions.push(selected.sessionId);
-    sessionsByBook.set(selected.bookId, sessions);
-  }
-  return client.requestAttachment("/api/v1/reading/export/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      books: [...sessionsByBook].map(([bookId, sessions]) => ({ book_id: bookId, sessions })),
-      include_empty_sessions: selection.includeEmptySessions ?? false,
-    }),
-  }, "second-pass-marginalia.json");
 }
 
 function mapReadingSessionSummary(item: ReadingSessionSummaryResponse): ReadingSessionSummary {

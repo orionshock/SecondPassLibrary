@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from "./client";
+import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "./client";
 import { toPage, type ApiPage, type Page } from "./pagination";
 import { sameOriginUrl } from "./urls";
 
@@ -116,6 +116,15 @@ export interface MarginaliaPageQuery {
 
 export interface MarginaliaSessionsQuery extends MarginaliaPageQuery {
   status?: MarginaliaSessionStatus;
+  hasAnnotations?: boolean;
+}
+
+export interface CompleteMarginaliaExportInput {
+  includeEmptySessions?: boolean;
+}
+
+export interface SelectedMarginaliaExportInput extends CompleteMarginaliaExportInput {
+  readingSessionIds: string[];
 }
 
 export interface RecentMarginaliaSessionsQuery {
@@ -329,6 +338,29 @@ export async function listMarginaliaSessionAnnotations(
   return response.annotations.map(mapAnnotation);
 }
 
+export function downloadCompleteMarginaliaExport(
+  input: CompleteMarginaliaExportInput = {},
+  client: AttachmentApiClient = apiClient,
+): Promise<AttachmentDownload> {
+  const parameters = new URLSearchParams();
+  if (input.includeEmptySessions) parameters.set("include_empty_sessions", "true");
+  return client.requestAttachment(
+    withQuery("/api/v1/marginalia/export/", parameters),
+    undefined,
+    "second-pass-marginalia.json",
+  );
+}
+
+export function downloadSelectedMarginaliaExport(
+  input: SelectedMarginaliaExportInput,
+  client: AttachmentApiClient = apiClient,
+): Promise<AttachmentDownload> {
+  return client.requestAttachment("/api/v1/marginalia/export/", jsonRequest("POST", {
+    reading_session_ids: input.readingSessionIds,
+    include_empty_sessions: input.includeEmptySessions ?? false,
+  }), "second-pass-marginalia.json");
+}
+
 function mapBookSummary(item: BookSummaryResponse): MarginaliaBookSummary {
   return {
     id: item.id,
@@ -416,6 +448,7 @@ function pageQuery(query: MarginaliaPageQuery): URLSearchParams {
 function sessionQuery(query: MarginaliaSessionsQuery): URLSearchParams {
   const parameters = pageQuery(query);
   if (query.status !== undefined) parameters.set("status", query.status);
+  if (query.hasAnnotations !== undefined) parameters.set("has_annotations", String(query.hasAnnotations));
   return parameters;
 }
 

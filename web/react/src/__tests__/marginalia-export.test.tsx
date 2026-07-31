@@ -1,4 +1,4 @@
-import type { CurrentUser, Page, ReadingSessionSummary, ServerInfo } from "@second-pass/spl-api";
+import type { CurrentUser, MarginaliaSessionListItem, Page, ServerInfo } from "@second-pass/spl-api";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -7,24 +7,26 @@ import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes } from "../app/router";
 import { marginaliaExportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
 import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
-import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessions, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../features/marginalia/marginaliaExportSelection";
+import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../features/marginalia/marginaliaExportSelection";
 import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
 import { MarginaliaExportPageRegion } from "../features/marginalia/regions/MarginaliaExportPageRegion";
 
-const visibleSession: ReadingSessionSummary = {
-  id: "session-sensitive-1", bookId: "book-sensitive-1", name: "Morning notes", status: "active", isActive: true,
-  startedAt: "2026-07-20T12:00:00Z", completedAt: null, updatedAt: "2026-07-21T12:00:00Z", notes: "", progression: 0.42,
-  annotationCount: 2, canOpen: true, book: { id: "book-sensitive-1", title: "Visible Book", coverUrl: "/media/cover.jpg", unavailable: false },
+const visibleSession: MarginaliaSessionListItem = {
+  id: "session-sensitive-1", name: "Morning notes", status: "active",
+  startedAt: "2026-07-20T12:00:00Z", closedAt: null, updatedAt: "2026-07-21T12:00:00Z",
+  lastActivityAt: "2026-07-21T12:00:00Z", notes: "", annotationCount: 2,
+  book: { id: "book-sensitive-1", title: "Visible Book", coverUrl: "/media/cover.jpg", canOpen: true },
 };
-const hiddenSession: ReadingSessionSummary = {
-  ...visibleSession, id: "session-sensitive-2", bookId: "book-sensitive-2", name: "Recovered history", isActive: false, status: "completed",
-  completedAt: "2026-07-22T12:00:00Z", progression: null, canOpen: false, book: { id: null, title: "", coverUrl: null, unavailable: true },
+const hiddenSession: MarginaliaSessionListItem = {
+  ...visibleSession, id: "session-sensitive-2", name: "Recovered history", status: "closed",
+  closedAt: "2026-07-22T12:00:00Z",
+  book: { id: "book-sensitive-2", title: "Remembered Book", coverUrl: null, canOpen: false },
 };
-const page: Page<ReadingSessionSummary> = { items: [visibleSession, hiddenSession], count: 2, next: null, previous: null };
+const page: Page<MarginaliaSessionListItem> = { items: [visibleSession, hiddenSession], count: 2, next: null, previous: null };
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
-function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<ReadingSessionSummary>; loadError?: Error; selectedError?: Error; completeError?: Error } = {}) {
+function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<MarginaliaSessionListItem>; loadError?: Error; selectedError?: Error; completeError?: Error } = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaExportPageRegion
     page={options.page ?? page}
     pageNumber={1}
@@ -65,12 +67,15 @@ describe("My Marginalia Export", () => {
     expect(exportMarkup).toContain("Complete archive");
   });
 
-  it("renders complete and selective export with safe unavailable-Book rows", () => {
+  it("renders canonical active/closed candidates and keeps inaccessible Book identity", () => {
     const markup = renderExport();
     expect(markup).toContain("Morning notes");
     expect(markup).toContain("Visible Book");
     expect(markup).toContain("Recovered history");
-    expect(markup).toContain("Book unavailable");
+    expect(markup).toContain("Remembered Book");
+    expect(markup).toContain("Closed");
+    expect(markup).not.toContain("% read");
+    expect(markup).not.toContain(`/library/books/${hiddenSession.book.id}`);
     expect(markup).not.toContain("session-sensitive");
     expect(markup).not.toContain("book-sensitive");
     expect(markup).toContain("Select this page");
@@ -82,10 +87,7 @@ describe("My Marginalia Export", () => {
   it("keeps flat Session selection across page/filter-shaped updates", () => {
     let selection = withMarginaliaExportSessionSelection(new Map(), visibleSession, true);
     selection = withMarginaliaExportPageSelection(selection, [hiddenSession], true);
-    expect(marginaliaExportSelectedSessions(selection)).toEqual([
-      { sessionId: visibleSession.id, bookId: visibleSession.bookId },
-      { sessionId: hiddenSession.id, bookId: hiddenSession.bookId },
-    ]);
+    expect(marginaliaExportSelectedSessionIds(selection)).toEqual([visibleSession.id, hiddenSession.id]);
     expect(marginaliaExportSelectedBookCount(selection)).toBe(2);
     expect(withMarginaliaExportPageSelection(selection, [hiddenSession], false).has(visibleSession.id)).toBe(true);
   });

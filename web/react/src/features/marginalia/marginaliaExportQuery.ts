@@ -1,6 +1,6 @@
-import type { ReadingSessionsQuery } from "@second-pass/spl-api";
+import type { MarginaliaSessionsQuery } from "@second-pass/spl-api";
 
-export type MarginaliaExportStatusFilter = "all" | "active" | "historical";
+export type MarginaliaExportStatusFilter = "all" | "active" | "closed";
 
 export interface MarginaliaExportUrlState {
   q: string;
@@ -10,7 +10,7 @@ export interface MarginaliaExportUrlState {
 }
 
 const pageSizes = new Set([20, 30, 40, 50]);
-const statuses = new Set<MarginaliaExportStatusFilter>(["all", "active", "historical"]);
+const statuses = new Set<MarginaliaExportStatusFilter>(["all", "active", "closed"]);
 
 export function marginaliaExportStateFromSearchParams(parameters: URLSearchParams): MarginaliaExportUrlState {
   const rawStatus = parameters.get("status") as MarginaliaExportStatusFilter | null;
@@ -31,13 +31,22 @@ export function marginaliaExportSearchParams(state: MarginaliaExportUrlState): U
   return parameters;
 }
 
-export function marginaliaExportSdkQuery(state: MarginaliaExportUrlState): ReadingSessionsQuery {
+export function marginaliaExportSdkQuery(state: MarginaliaExportUrlState): MarginaliaSessionsQuery {
   return {
     ...(state.q ? { q: state.q } : {}),
-    ...(state.status === "active" ? { isActive: true } : {}),
-    ...(state.status === "historical" ? { isActive: false } : {}),
+    ...(state.status !== "all" ? { status: state.status } : {}),
     page: state.page,
     pageSize: state.pageSize,
+  };
+}
+
+export function marginaliaExportCandidateQuery(
+  state: MarginaliaExportUrlState,
+  includeEmptySessions: boolean,
+): MarginaliaSessionsQuery {
+  return {
+    ...marginaliaExportSdkQuery(state),
+    ...(includeEmptySessions ? {} : { hasAnnotations: true }),
   };
 }
 

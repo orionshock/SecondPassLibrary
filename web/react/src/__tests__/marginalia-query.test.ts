@@ -14,7 +14,7 @@ import {
   withMarginaliaView,
   withSelectedMarginaliaBook,
 } from "../features/marginalia/marginaliaQuery";
-import { marginaliaExportSdkQuery, marginaliaExportStateFromSearchParams } from "../features/marginalia/marginaliaExportQuery";
+import { marginaliaExportCandidateQuery, marginaliaExportSdkQuery, marginaliaExportStateFromSearchParams } from "../features/marginalia/marginaliaExportQuery";
 
 describe("My Marginalia list query", () => {
   it("canonicalizes defaults and invalid values", () => {
@@ -95,9 +95,23 @@ describe("My Marginalia list query", () => {
   });
 });
 
-describe("Marginalia Export legacy query isolation", () => {
-  it("preserves the existing Export status mapping while its backend remains on reading.ts", () => {
-    const historical = marginaliaExportStateFromSearchParams(new URLSearchParams("status=historical"));
-    expect(marginaliaExportSdkQuery(historical)).toEqual({ isActive: false, page: 1, pageSize: 20 });
+describe("Marginalia Export query", () => {
+  it("maps All, Active, and Closed to the canonical Session contract", () => {
+    expect(marginaliaExportSdkQuery(marginaliaExportStateFromSearchParams(new URLSearchParams())))
+      .toEqual({ page: 1, pageSize: 20 });
+    expect(marginaliaExportSdkQuery(marginaliaExportStateFromSearchParams(new URLSearchParams("status=active"))))
+      .toEqual({ status: "active", page: 1, pageSize: 20 });
+    expect(marginaliaExportSdkQuery(marginaliaExportStateFromSearchParams(new URLSearchParams("status=closed&q=notes&page=2"))))
+      .toEqual({ q: "notes", status: "closed", page: 2, pageSize: 20 });
+  });
+
+  it("requests annotated candidates by default and all candidates when empty Sessions are included", () => {
+    const state = marginaliaExportStateFromSearchParams(new URLSearchParams("status=closed&page=3"));
+    expect(marginaliaExportCandidateQuery(state, false)).toEqual({
+      status: "closed", page: 3, pageSize: 20, hasAnnotations: true,
+    });
+    expect(marginaliaExportCandidateQuery(state, true)).toEqual({
+      status: "closed", page: 3, pageSize: 20,
+    });
   });
 });

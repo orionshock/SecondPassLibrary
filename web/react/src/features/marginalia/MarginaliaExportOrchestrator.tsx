@@ -1,4 +1,4 @@
-import { downloadCompleteReadingExport, downloadSelectedReadingExport, listReadingSessions, type Page, type ReadingSessionSummary } from "@second-pass/spl-api";
+import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, listMarginaliaSessions, type MarginaliaSessionListItem, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 
@@ -9,13 +9,13 @@ import { idleMutationState, normalizeMutationError, type MutationState } from ".
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { marginaliaExportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
-import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessions, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
-import { marginaliaExportSdkQuery, marginaliaExportSearchParams, marginaliaExportStateFromSearchParams, withMarginaliaExportChange } from "./marginaliaExportQuery";
+import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
+import { marginaliaExportCandidateQuery, marginaliaExportSearchParams, marginaliaExportStateFromSearchParams, withMarginaliaExportChange } from "./marginaliaExportQuery";
 import { MarginaliaExportPageRegion } from "./regions/MarginaliaExportPageRegion";
 import "./Marginalia.css";
 
 interface MarginaliaExportLoadState {
-  page?: Page<ReadingSessionSummary>;
+  page?: Page<MarginaliaSessionListItem>;
   loading: boolean;
   error?: Error;
 }
@@ -47,17 +47,13 @@ export function MarginaliaExportOrchestrator() {
     if (queryKey !== canonicalQuery) return;
     let active = true;
     setLoad((current) => ({ page: current.page, loading: true }));
-    const sdkQuery = marginaliaExportSdkQuery(query);
+    const sdkQuery = marginaliaExportCandidateQuery(query, includeEmptySessions);
     loadPageWithRecovery({
       requestedPage: query.page,
       pageSize: query.pageSize,
       recoveryKey: `marginalia-export:${canonicalQuery}`,
       recoveredKeys: recoveredPageKeys.current,
-      fetchPage: (page) => listReadingSessions({
-        ...sdkQuery,
-        page,
-        hasAnnotations: includeEmptySessions ? undefined : true,
-      }),
+      fetchPage: (page) => listMarginaliaSessions({ ...sdkQuery, page }),
       buildRecoveredLocation: (page) => marginaliaExportSearchParams(withMarginaliaExportChange(query, { page }, false)).toString(),
       replaceLocation: (nextQuery) => {
         if (!active) return false;
@@ -80,7 +76,7 @@ export function MarginaliaExportOrchestrator() {
   async function exportComplete() {
     setCompleteState({ pending: true });
     try {
-      saveDownloadedFile(await downloadCompleteReadingExport({ includeEmptySessions }));
+      saveDownloadedFile(await downloadCompleteMarginaliaExport({ includeEmptySessions }));
       setCompleteState({ pending: false, message: "Complete archive downloaded." });
     } catch (error: unknown) {
       setCompleteState({ pending: false, error: normalizeMutationError(error) });
@@ -91,8 +87,8 @@ export function MarginaliaExportOrchestrator() {
     if (!selection.size) return;
     setSelectedState({ pending: true });
     try {
-      saveDownloadedFile(await downloadSelectedReadingExport({
-        sessions: marginaliaExportSelectedSessions(selection),
+      saveDownloadedFile(await downloadSelectedMarginaliaExport({
+        readingSessionIds: marginaliaExportSelectedSessionIds(selection),
         includeEmptySessions,
       }));
       setSelectedState({ pending: false, message: "Selected Sessions downloaded." });
@@ -121,6 +117,7 @@ export function MarginaliaExportOrchestrator() {
         setSelection(new Map());
         setCompleteState(idleMutationState);
         setSelectedState(idleMutationState);
+        changeQuery({ page: 1 }, false);
       }}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}

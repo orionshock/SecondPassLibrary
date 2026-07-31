@@ -33,6 +33,8 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   closeMarginaliaSession,
+  downloadCompleteMarginaliaExport,
+  downloadSelectedMarginaliaExport,
   getMarginaliaBook,
   getMarginaliaSession,
   listMarginaliaBooks,
@@ -61,12 +63,12 @@ export {
   type MarginaliaSessionsQuery,
   type MarginaliaSessionStatus,
   type MarginaliaSessionSummary,
+  type CompleteMarginaliaExportInput,
+  type SelectedMarginaliaExportInput,
   type RecentMarginaliaSession,
   type RecentMarginaliaSessionsQuery,
 } from "./marginalia";
 export {
-  downloadCompleteReadingExport,
-  downloadSelectedReadingExport,
   downloadUnmatchedReadingImport,
   applyReadingImport,
   getReadingProgress,
@@ -84,8 +86,6 @@ export {
   type ReadingImportSelectedBook,
   type ReadingImportSelectedSession,
   type ReadingImportSessionPreview,
-  type ReadingExportSelection,
-  type ReadingExportSessionSelection,
   type ReadingAnnotation,
   type ReadingAnnotationCategory,
   type ReadingAnnotationKind,

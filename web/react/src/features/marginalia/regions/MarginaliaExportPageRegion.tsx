@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { Page, ReadingSessionSummary } from "@second-pass/spl-api";
+import type { MarginaliaSessionListItem, Page } from "@second-pass/spl-api";
 
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
@@ -10,7 +10,7 @@ import { PaginatedListFrameComponent } from "../../../shared/pagination/Paginate
 import type { MarginaliaExportStatusFilter } from "../marginaliaExportQuery";
 
 export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search, status, loading, loadError, completeState, selectedState, selectedSessionIds, selectedBookCount, includeEmptySessions, onIncludeEmptySessionsChange, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry, onCompleteExport, onSessionSelectionChange, onSelectPage, onClearSelection, onSelectedExport }: {
-  page?: Page<ReadingSessionSummary>;
+  page?: Page<MarginaliaSessionListItem>;
   pageNumber: number;
   pageSize: number;
   search: string;
@@ -30,7 +30,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
   onCompleteExport: () => void;
-  onSessionSelectionChange: (session: ReadingSessionSummary, selected: boolean) => void;
+  onSessionSelectionChange: (session: MarginaliaSessionListItem, selected: boolean) => void;
   onSelectPage: () => void;
   onClearSelection: () => void;
   onSelectedExport: () => void;
@@ -63,7 +63,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
         </form>
         <label className="marginalia-status-filter" htmlFor="marginalia-export-status">Status
           <select id="marginalia-export-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaExportStatusFilter)}>
-            <option value="all">All</option><option value="active">Active</option><option value="historical">Historical</option>
+            <option value="all">All</option><option value="active">Active</option><option value="closed">Closed</option>
           </select>
         </label>
       </section>
@@ -87,17 +87,17 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   </div>;
 }
 
-function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: { session: ReadingSessionSummary; selected: boolean; disabled: boolean; onChange: (selected: boolean) => void }) {
+function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: { session: MarginaliaSessionListItem; selected: boolean; disabled: boolean; onChange: (selected: boolean) => void }) {
   const sessionName = marginaliaSessionDisplayName(session);
-  const bookTitle = session.book.unavailable ? "Book unavailable" : session.book.title || "Untitled Book";
-  const relevantDate = session.completedAt ?? session.updatedAt ?? session.startedAt;
+  const bookTitle = session.book.title || "Untitled Book";
+  const relevantDate = session.closedAt ?? session.updatedAt;
   return <article className="marginalia-export-session-row">
     <div className="marginalia-export-session-row__selection"><input type="checkbox" aria-label={`Select ${sessionName}`} checked={selected} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /></div>
     <div className="marginalia-export-session-row__cover"><BookCoverComponent coverUrl={session.book.coverUrl} title={bookTitle} /></div>
     <div className="marginalia-export-session-row__body">
-      <div className="marginalia-export-session-row__heading"><strong>{sessionName}</strong><Badge tone={session.isActive ? "success" : "default"}>{session.isActive ? "Active" : "Historical"}</Badge></div>
-      <p className={session.book.unavailable ? "muted" : ""}>{bookTitle}</p>
-      <div className="marginalia-session-row__facts"><span>{formatCount(session.annotationCount, "annotation")}</span>{session.progression !== null ? <><span className="css-dot" aria-hidden="true" /><span>{formatProgression(session.progression)} read</span></> : null}<span className="css-dot" aria-hidden="true" /><time dateTime={relevantDate}>{formatDate(relevantDate)}</time></div>
+      <div className="marginalia-export-session-row__heading"><strong>{sessionName}</strong><Badge tone={session.status === "active" ? "success" : "default"}>{session.status === "active" ? "Active" : "Closed"}</Badge></div>
+      <p>{bookTitle}</p>
+      <div className="marginalia-session-row__facts"><span>{formatCount(session.annotationCount, "annotation")}</span><span className="css-dot" aria-hidden="true" /><time dateTime={relevantDate}>{formatDate(relevantDate)}</time></div>
     </div>
   </article>;
 }
@@ -105,10 +105,6 @@ function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: {
 function formatDate(value: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? "Unknown date" : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(parsed);
-}
-
-function formatProgression(value: number): string {
-  return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`;
 }
 
 function formatCount(count: number, singular: string): string {

@@ -122,9 +122,9 @@ describe("Marginalia Session list SDK", () => {
       } as T;
     } };
 
-    const page = await listMarginaliaSessions({ status: "active" }, client);
+    const page = await listMarginaliaSessions({ status: "active", hasAnnotations: true }, client);
 
-    expect(calls).toEqual(["/api/v1/marginalia/sessions/?status=active"]);
+    expect(calls).toEqual(["/api/v1/marginalia/sessions/?status=active&has_annotations=true"]);
     expect(page.items[0]?.book).toEqual({
       id: "book-1",
       title: "The Book",
@@ -133,6 +133,22 @@ describe("Marginalia Session list SDK", () => {
     });
     expect(page.items[0]?.book).not.toHaveProperty("authors");
     expect(page.items[0]?.book).not.toHaveProperty("sessionCount");
+  });
+
+  it("maps both values of the annotation-presence filter and omits it by default", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+
+    await listMarginaliaSessions({ hasAnnotations: false }, client);
+    await listMarginaliaSessions({}, client);
+
+    expect(calls).toEqual([
+      "/api/v1/marginalia/sessions/?has_annotations=false",
+      "/api/v1/marginalia/sessions/",
+    ]);
   });
 });
 
