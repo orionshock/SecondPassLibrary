@@ -40,10 +40,8 @@ sessions** choice. Missing Book checksums and duplicate hashes across distinct
 Books fail the complete serialization as integrity errors.
 
 The session-authenticated Export API uses this codec for complete and selected
-JSON attachments. Future staged Import will retain this policy in a user-bound token with an
-intended two-hour lifetime. Its cleanup command will be repeat-safe for
-periodic operator or cron execution; Django does not provide or schedule that
-job. Staging, cleanup, matching, and Apply are not part of the codec foundation.
+JSON attachments. Import preview uses the same codec before creating a
+user-bound stage. Apply remains deferred.
 
 ## Owned-Marginalia Books
 
@@ -64,6 +62,7 @@ bearer tokens:
 - `GET /api/v1/marginalia/sessions/<session_id>/annotations/`
 - `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
 - `GET/POST /api/v1/marginalia/export/` (Django session authentication only)
+- `POST /api/v1/marginalia/import/preview/` (Django session authentication only)
 
 A Book is present only when the caller owns at least one Marginalia
 `ReadingSession` for it. This historical ownership is independent of current
@@ -284,6 +283,45 @@ The codec supplies canonical ordering and the precise `generatedAt` timestamp.
 Missing checksums and conflicting duplicate Book hashes fail the entire request
 with a bounded integrity conflict before an attachment is emitted. The archive
 contains no selection-scope field; its Books and Sessions are authoritative.
+
+## Import preview and staging
+
+`POST /api/v1/marginalia/import/preview/` accepts multipart `file` and optional
+`include_empty_sessions` fields. The upload is limited to 25 MiB and must be a
+UTF-8 canonical Marginalia archive. Preview parses the runtime-owned archive
+schema, creates no Sessions or Annotations, and returns an opaque import token
+plus deterministic `book-000001` and `reading-session-000001` candidate
+identities.
+
+Book matching uses only exact canonical `fileHash` values against Books the
+caller can currently access through Library policy. There is no title, author,
+ISBN, CFI, or EPUB fallback. No match is reported as unmatched. Multiple
+accessible Library rows with the same checksum fail the complete preview as a
+Library integrity error. A conservative same-Book/name/start-time duplicate
+check produces a warning only; it does not suppress a matched Session.
+
+Empty Sessions have no non-deleted Annotations. They are omitted by default;
+`include_empty_sessions=true` includes them. The choice is stored on the stage
+and is the future authority for Apply and unmatched download. Source `active`
+and `closed` Sessions are reviewable, but both report `will_import_as_status`
+as `closed`. Unmatched Sessions remain reviewable and counted for a future
+download, but cannot be selected for Apply. `can_apply` is true only when a
+matched Session survives the staged policy.
+
+Successful preview stores canonical archive bytes under
+`userdata/imports/staged/marginalia/<token-digest>.json` and one database stage
+record containing only the token digest, owner, exact two-hour expiry, staged
+policy, ready state, storage key, and bounded preview metadata. Uploaded names
+are not retained in storage paths. Runtime token lookup rejects missing,
+foreign, malformed, expired, or file-inconsistent stages through the same
+no-leakage boundary. Expired stages are unusable immediately even if their
+abandoned files await operator cleanup.
+
+`python manage.py cleanup_marginalia_import_stages` removes expired stages and
+safe digest-named orphan files; `--dry-run` reports bounded counts without
+deleting. The command is repeat-safe and suitable for periodic host scheduling.
+Django does not schedule it. A weekly run is acceptable because runtime access
+enforces the two-hour expiry independently.
 
 ## Recent Sessions
 

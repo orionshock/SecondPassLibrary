@@ -181,6 +181,21 @@ Replace the directory with the repository directory containing
 The scheduler account must be allowed to use Docker. Windows deployments can
 invoke the equivalent command from Task Scheduler.
 
+## Marginalia import-stage cleanup
+
+Canonical Marginalia import previews store protected temporary archives under
+`userdata/imports/staged/marginalia/`. Runtime access expires after exactly two
+hours. Cleanup controls only how long abandoned files remain on disk.
+
+```bash
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_marginalia_import_stages --dry-run
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_marginalia_import_stages
+```
+
+The command is repeat-safe and prints counts only. A weekly host cron entry is
+adequate and may run alongside Shelf cleanup. Django does not include a job
+runner; schedule this through the host cron or Windows Task Scheduler.
+
 ## Windows local production-mode helper
 
 For localhost production-mode checks:

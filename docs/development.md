@@ -405,6 +405,17 @@ the exact Compose service name shown above; see `docs/deployment.md` for the
 sample cron entry and operational logging expectations. A future Celery-based
 scheduler is optional architecture, not a current dependency.
 
+Inspect or remove expired canonical Marginalia import stages:
+
+```powershell
+python manage.py cleanup_marginalia_import_stages --dry-run
+python manage.py cleanup_marginalia_import_stages
+```
+
+Stages live under `userdata/imports/staged/marginalia/`. Runtime token access
+expires after exactly two hours; this command only reclaims abandoned files
+and records. It is repeat-safe and may be scheduled weekly by the host.
+
 Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):
 

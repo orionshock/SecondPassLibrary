@@ -38,6 +38,36 @@ HIGHLIGHT_COLOR_CHOICES = [
 ]
 
 
+class ImportStage(TimeStampedModel):
+    STATE_READY = "ready"
+    STATE_CHOICES = [(STATE_READY, "Ready")]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="marginalia_import_stages",
+    )
+    token_digest = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField(db_index=True)
+    include_empty_sessions = models.BooleanField(default=False)
+    state = models.CharField(
+        max_length=16,
+        choices=STATE_CHOICES,
+        default=STATE_READY,
+    )
+    storage_name = models.CharField(max_length=255, unique=True)
+    preview = models.JSONField()
+
+    class Meta:
+        ordering = ["expires_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(state="ready"),
+                name="marginalia_import_stage_state_is_valid",
+            )
+        ]
+
+
 class ReadingSession(TimeStampedModel):
     STATUS_ACTIVE = "active"
     STATUS_CLOSED = "closed"

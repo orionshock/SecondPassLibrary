@@ -112,6 +112,7 @@ projection:
 - `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
 - `GET /api/v1/marginalia/export/`
 - `POST /api/v1/marginalia/export/`
+- `POST /api/v1/marginalia/import/preview/`
 
 Marginalia read and lifecycle routes accept Django session or Client API
 bearer authentication. Export is session-authenticated only. The caller must
@@ -235,6 +236,56 @@ Successful responses use `application/json; charset=utf-8` and attachment
 filename `YYYYMMDD-second-pass-marginalia.json`, with the server-local date.
 Archive `generatedAt` remains precise. The canonical archive has no scope field
 and contains no file/download projection.
+
+`POST /api/v1/marginalia/import/preview/` is session-authenticated only and
+accepts multipart `file` plus optional `include_empty_sessions` (default
+`false`). Uploads are bounded at 25 MiB and validated by the canonical runtime
+archive codec. A successful response is not an import; it creates no Marginalia
+records and returns an opaque two-hour `import_token`, the staged policy,
+summary and matched/unmatched counts, bounded warnings, and explicit Book and
+Reading Session candidate identities. Example candidate structure:
+
+```json
+{
+  "import_token": "<opaque-token>",
+  "include_empty_sessions": false,
+  "can_apply": true,
+  "summary": {
+    "book_count": 1,
+    "reading_session_count": 1,
+    "annotation_count": 12
+  },
+  "matched_book_count": 1,
+  "unmatched_book_count": 0,
+  "unmatched_reading_session_count": 0,
+  "unmatched_downloadable_reading_session_count": 0,
+  "warnings": [],
+  "books": [{
+    "candidate_id": "book-000001",
+    "file_hash": "sha256:<checksum>",
+    "title": "Book title",
+    "authors": ["Author"],
+    "match": {"status": "matched", "book_id": "<local-book-uuid>"},
+    "reading_sessions": [{
+      "candidate_id": "reading-session-000001",
+      "source_reading_session_id": "source-session-1",
+      "source_status": "active",
+      "will_import_as_status": "closed",
+      "annotation_count": 12,
+      "will_import": true,
+      "possible_duplicate": false
+    }]
+  }]
+}
+```
+
+Matching is exact `fileHash` against currently accessible Library Books. No
+metadata fallback or EPUB/CFI inspection occurs. Empty Sessions are omitted
+unless explicitly included; that stored choice governs future Apply and
+unmatched-download behavior. Multiple accessible Books with one checksum, no
+surviving Sessions, malformed archives, and staging failures return bounded
+errors without leaving a stage. Apply and unmatched download are not yet
+exposed under the canonical Marginalia API.
 
 The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
 `{"results": [...]}` without pagination. It defaults to the 10 most recently

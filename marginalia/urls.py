@@ -3,6 +3,7 @@ from django.urls import path
 from .annotations.views import SessionAnnotationBatchView, SessionAnnotationListView
 from .books.views import MarginaliaBookDetailView, MarginaliaBookListView
 from .exports.views import MarginaliaExportView
+from .imports.views import MarginaliaImportPreviewView
 from .sessions.lifecycle_views import (
     MarginaliaBookActiveSessionView,
     MarginaliaBookOpenView,
@@ -21,6 +22,11 @@ from .sessions.views import (
 app_name = "marginalia"
 
 urlpatterns = [
+    path(
+        "import/preview/",
+        MarginaliaImportPreviewView.as_view(),
+        name="import-preview",
+    ),
     path("export/", MarginaliaExportView.as_view(), name="export"),
     path(
         "sessions/recent/",
