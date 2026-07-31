@@ -149,6 +149,45 @@ class MarginaliaSessionListAPITests(APITestCase):
         self.assertEqual(len(first.json()["results"]), 1)
         self.assertEqual(len(second.json()["results"]), 1)
 
+    def test_annotation_presence_filter_is_non_deleted_and_precedes_pagination(self):
+        Annotation.objects.create(
+            session=self.active,
+            client_id="present",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/2)",
+        )
+        Annotation.objects.create(
+            session=self.closed,
+            client_id="deleted-only",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/4)",
+            is_deleted=True,
+        )
+
+        present = self.client.get(
+            self.url,
+            {"has_annotations": "true", "page_size": 1},
+        ).json()
+        empty = self.client.get(
+            self.url,
+            {"has_annotations": "false"},
+        ).json()
+        omitted = self.client.get(self.url).json()
+
+        self.assertEqual(present["count"], 1)
+        self.assertEqual(present["results"][0]["id"], str(self.active.id))
+        self.assertEqual(
+            {row["id"] for row in empty["results"]},
+            {str(self.closed.id), str(self.older_closed.id)},
+        )
+        self.assertEqual(omitted["count"], 3)
+
+    def test_annotation_presence_filter_rejects_unsupported_boolean(self):
+        response = self.client.get(self.url, {"has_annotations": "sometimes"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("has_annotations", response.json())
+
     def test_default_order_uses_session_progress_and_annotation_activity(self):
         now = timezone.now()
         oldest = now - timedelta(days=4)

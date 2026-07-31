@@ -107,7 +107,7 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
             with self.subTest(payload=payload), self.assertRaises(ArchiveValidationError):
                 parse_archive(json.dumps(payload))
 
-    def test_duplicate_explicit_identities_follow_archive_scope_rules(self):
+    def test_duplicate_explicit_identities_follow_archive_identity_rules(self):
         duplicate_book = _valid_archive()
         duplicate_book["books"].append(copy.deepcopy(duplicate_book["books"][0]))
 
@@ -148,7 +148,6 @@ def _valid_archive():
         "profile": MARGINALIA_PROFILE_URI,
         "generatedAt": "2026-07-30T12:00:00Z",
         "generator": "Second Pass Library",
-        "scope": {"type": "all"},
         "books": [
             {
                 "fileHash": f"sha256:{'a' * 64}",

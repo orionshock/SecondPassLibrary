@@ -4,13 +4,7 @@ from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
 
-ArchiveScopeType = Literal["all", "selected"]
 SessionStatus = Literal["active", "closed"]
-
-
-@dataclass(frozen=True, slots=True)
-class ArchiveScope:
-    type: ArchiveScopeType
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,5 +76,4 @@ class MarginaliaArchive:
     profile: str
     generated_at: str
     generator: str
-    scope: ArchiveScope
     books: tuple[ArchiveBook, ...]

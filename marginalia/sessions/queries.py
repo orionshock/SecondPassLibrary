@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 
 from library.models import Book
 from library.queries import visible_books_for_user
-from marginalia.models import ReadingSession
+from marginalia.models import Annotation, ReadingSession
 
 
 def marginalia_sessions_for_book(
@@ -29,6 +29,7 @@ def marginalia_sessions_for_user(
     user,
     status: str = "",
     q: str = "",
+    has_annotations: bool | None = None,
 ) -> QuerySet[ReadingSession]:
     queryset = ReadingSession.objects.filter(user=user)
     search = (q or "").strip()
@@ -41,6 +42,14 @@ def marginalia_sessions_for_user(
             | Q(book__book_series__series__name__icontains=search)
         )
     queryset = _filter_session_status(queryset, status=status)
+    if has_annotations is not None:
+        annotation_exists = Annotation.objects.filter(
+            session_id=OuterRef("pk"),
+            is_deleted=False,
+        )
+        queryset = queryset.annotate(
+            _has_annotations=Exists(annotation_exists)
+        ).filter(_has_annotations=has_annotations)
     return _session_summary_queryset(queryset, user=user)
 
 

@@ -26,6 +26,7 @@ from .queries import (
 )
 from .serializers import (
     MarginaliaGlobalSessionSummarySerializer,
+    MarginaliaAnnotationPresenceQuerySerializer,
     MarginaliaProgressPutSerializer,
     MarginaliaRecentSessionsQuerySerializer,
     MarginaliaRecentSessionSerializer,
@@ -79,10 +80,19 @@ class MarginaliaSessionListView(MarginaliaReadMixin, ListAPIView):
     serializer_class = MarginaliaGlobalSessionSummarySerializer
 
     def get_queryset(self):
+        presence = MarginaliaAnnotationPresenceQuerySerializer(
+            data={
+                "has_annotations": self.request.query_params.get("has_annotations")
+            }
+            if "has_annotations" in self.request.query_params
+            else {}
+        )
+        presence.is_valid(raise_exception=True)
         return marginalia_sessions_for_user(
             user=self.request.user,
             status=self.request.query_params.get("status", ""),
             q=self.request.query_params.get("q", ""),
+            has_annotations=presence.validated_data.get("has_annotations"),
         )
 
 

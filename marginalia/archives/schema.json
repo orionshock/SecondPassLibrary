@@ -9,7 +9,6 @@
     "profile",
     "generatedAt",
     "generator",
-    "scope",
     "books"
   ],
   "properties": {
@@ -20,7 +19,6 @@
     },
     "generatedAt": { "type": "string", "format": "date-time" },
     "generator": { "type": "string", "minLength": 1, "maxLength": 255 },
-    "scope": { "$ref": "#/$defs/scope" },
     "books": {
       "type": "array",
       "maxItems": 10000,
@@ -29,14 +27,6 @@
   },
   "additionalProperties": false,
   "$defs": {
-    "scope": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": { "enum": ["all", "selected"] }
-      },
-      "additionalProperties": false
-    },
     "location": {
       "type": "object",
       "required": ["cfi"],

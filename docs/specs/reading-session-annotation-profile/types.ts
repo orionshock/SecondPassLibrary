@@ -61,7 +61,6 @@ export type MarginaliaArchive = {
   profile: "https://secondpasslibrary.local/specs/marginalia/0.1.0"
   generatedAt: string
   generator: string
-  scope: { type: "all" | "selected" }
   books: Array<{
     fileHash: string
     title: string

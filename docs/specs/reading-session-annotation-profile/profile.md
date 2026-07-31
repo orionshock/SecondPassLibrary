@@ -10,9 +10,8 @@ Marginalia contains Reading Sessions; Reading Sessions own progress and
 annotations.
 
 The native objects in this profile are used for Server/Reader communication and
-inside portable archives wherever practical. An export adds a Book envelope and
-archive scope, but does not translate Sessions or annotations into a competing
-shape.
+inside portable archives wherever practical. An export adds a Book envelope,
+but does not translate Sessions or annotations into a competing shape.
 
 The API namespace is `/api/v1/marginalia/`. Exact implemented routes and
 authentication are documented in the API reference.
@@ -198,5 +197,5 @@ Import and export exclude Sessions without non-deleted Annotations by default.
 The workflow-level `Include empty sessions` option includes them explicitly;
 it does not change the canonical Session object.
 
-Archive-only Book identity, scope, envelope, and packaging rules are documented
+Archive-only Book identity, envelope, and packaging rules are documented
 in `../marginalia-export.md`.

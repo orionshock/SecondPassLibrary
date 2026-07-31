@@ -10,7 +10,6 @@ from .types import (
     ArchiveHighlight,
     ArchiveProgress,
     ArchiveReadingSession,
-    ArchiveScope,
     MarginaliaArchive,
 )
 from .validation import (
@@ -26,7 +25,6 @@ __all__ = [
     "ArchiveHighlight",
     "ArchiveProgress",
     "ArchiveReadingSession",
-    "ArchiveScope",
     "ArchiveValidationError",
     "DuplicateBookHashError",
     "MalformedArchiveError",

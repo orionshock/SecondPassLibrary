@@ -18,8 +18,6 @@ from .types import (
     ArchiveHighlightBody,
     ArchiveProgress,
     ArchiveReadingSession,
-    ArchiveScope,
-    ArchiveScopeType,
     MarginaliaArchive,
     SessionStatus,
 )
@@ -198,7 +196,6 @@ def _archive_from_wire(value: dict[str, Any]) -> MarginaliaArchive:
         profile=value["profile"],
         generated_at=value["generatedAt"],
         generator=value["generator"],
-        scope=ArchiveScope(type=cast(ArchiveScopeType, value["scope"]["type"])),
         books=tuple(_book_from_wire(book) for book in value["books"]),
     )
 

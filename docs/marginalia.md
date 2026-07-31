@@ -39,11 +39,11 @@ set `include_empty_sessions` explicitly for the Product UI's **Include empty
 sessions** choice. Missing Book checksums and duplicate hashes across distinct
 Books fail the complete serialization as integrity errors.
 
-Future staged Import will retain this policy in a user-bound token with an
+The session-authenticated Export API uses this codec for complete and selected
+JSON attachments. Future staged Import will retain this policy in a user-bound token with an
 intended two-hour lifetime. Its cleanup command will be repeat-safe for
 periodic operator or cron execution; Django does not provide or schedule that
-job. Staging, cleanup, matching, Apply, and HTTP attachment routes are not part
-of the codec foundation.
+job. Staging, cleanup, matching, and Apply are not part of the codec foundation.
 
 ## Owned-Marginalia Books
 
@@ -63,6 +63,7 @@ bearer tokens:
 - `POST /api/v1/marginalia/sessions/<session_id>/close/`
 - `GET /api/v1/marginalia/sessions/<session_id>/annotations/`
 - `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
+- `GET/POST /api/v1/marginalia/export/` (Django session authentication only)
 
 A Book is present only when the caller owns at least one Marginalia
 `ReadingSession` for it. This historical ownership is independent of current
@@ -230,6 +231,11 @@ Global `q` search covers Session name and notes plus bounded Book identity:
 Book title, author names, and Series name. The Session ownership filter is
 applied before these joins, so another user's Sessions and Books cannot match.
 
+`has_annotations=true` keeps Sessions with at least one non-deleted
+Annotation; `has_annotations=false` keeps Sessions with none. Omission applies
+no annotation-presence filter. Filtering occurs before pagination, and
+soft-deleted Annotations do not count.
+
 Each row adds only the Book reference needed by the Marginalia Session card:
 
 ```json
@@ -257,6 +263,27 @@ EPUB/file fields, download URLs, identifiers, Groups, Shelves, and unrelated
 catalog metadata. Owned Marginalia keeps title and public cover identity
 available for an inaccessible historical Book, while `can_open=false` prevents
 that history from implying current Book Detail, Reader, or download authority.
+
+## Export
+
+`GET /api/v1/marginalia/export/` exports all caller-owned Sessions.
+`POST /api/v1/marginalia/export/` exports an explicit nonempty
+`reading_session_ids` array. Both routes require Django session authentication;
+Client API bearer tokens are rejected. Selected IDs must be unique and all
+must belong to the caller. Missing and foreign IDs use the same no-leakage
+`404`, and no partial archive is returned.
+
+Both methods accept `include_empty_sessions`, defaulting to `false`. Empty
+means no non-deleted Annotations. If the policy leaves no Sessions, the route
+returns a bounded `409`. Current Library access is not required, so owned
+historical Marginalia remains exportable.
+
+The response is a canonical UTF-8 JSON attachment named
+`YYYYMMDD-second-pass-marginalia.json`, using the server-local request date.
+The codec supplies canonical ordering and the precise `generatedAt` timestamp.
+Missing checksums and conflicting duplicate Book hashes fail the entire request
+with a bounded integrity conflict before an attachment is emitted. The archive
+contains no selection-scope field; its Books and Sessions are authoritative.
 
 ## Recent Sessions
 

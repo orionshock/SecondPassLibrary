@@ -101,6 +101,10 @@ class MarginaliaRecentSessionsQuerySerializer(serializers.Serializer):
     include_closed = serializers.BooleanField(default=False, required=False)
 
 
+class MarginaliaAnnotationPresenceQuerySerializer(serializers.Serializer):
+    has_annotations = serializers.BooleanField(required=False, allow_null=True)
+
+
 class MarginaliaSessionDetailSerializer(serializers.ModelSerializer):
     annotation_count = serializers.IntegerField(read_only=True)
     last_activity_at = serializers.DateTimeField(read_only=True)

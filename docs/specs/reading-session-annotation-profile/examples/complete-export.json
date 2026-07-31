@@ -4,9 +4,6 @@
   "profile": "https://secondpasslibrary.local/specs/marginalia/0.1.0",
   "generatedAt": "2026-07-29T12:00:00Z",
   "generator": "Second Pass Library",
-  "scope": {
-    "type": "all"
-  },
   "books": [
     {
       "fileHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",

@@ -110,8 +110,11 @@ projection:
 - `POST /api/v1/marginalia/sessions/<session_id>/close/`
 - `GET /api/v1/marginalia/sessions/<session_id>/annotations/`
 - `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
+- `GET /api/v1/marginalia/export/`
+- `POST /api/v1/marginalia/export/`
 
-Both accept Django session or Client API bearer authentication. The caller must
+Marginalia read and lifecycle routes accept Django session or Client API
+bearer authentication. Export is session-authenticated only. The caller must
 own at least one Marginalia Reading Session for a Book; current Library
 visibility is not required. The projection contains only `id`, `title`, ordered
 `authors`, optional `series` (including `series_index`), public `cover_url`,
@@ -207,6 +210,32 @@ contains only a bounded Book reference: `id`, `title`, public `cover_url`, and
 independently computed `can_open`. It does not repeat the canonical full
 Marginalia Book summary or expose Library file/download data.
 
+It also accepts `has_annotations=true|false`. `true` means at least one
+non-deleted Annotation; `false` means none; omission does not filter. Filtering
+occurs before pagination/counting, and soft-deleted rows do not count.
+
+Complete `GET /api/v1/marginalia/export/` and selective
+`POST /api/v1/marginalia/export/` return canonical JSON attachments. GET
+accepts optional `include_empty_sessions`; POST accepts:
+
+```json
+{
+  "reading_session_ids": ["<session-uuid>"],
+  "include_empty_sessions": false
+}
+```
+
+Selected IDs must be nonempty, unique, and caller-owned. Missing or foreign
+IDs return no-leakage `404` without partial output. Empty Sessions are excluded
+by default; explicit inclusion applies identically to complete and selective
+exports. No surviving Sessions, a missing Book checksum, or conflicting Book
+hashes returns bounded `409`. Current Library access is not required.
+
+Successful responses use `application/json; charset=utf-8` and attachment
+filename `YYYYMMDD-second-pass-marginalia.json`, with the server-local date.
+Archive `generatedAt` remains precise. The canonical archive has no scope field
+and contains no file/download projection.
+
 The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
 `{"results": [...]}` without pagination. It defaults to the 10 most recently
 active caller-owned Sessions; `limit` is bounded from 1 through 50 and
@@ -258,9 +287,8 @@ The Client API provides a pairing flow (human code + browser approval) and beare
 - Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
-They are also not enabled for marginalia import/export endpoints; reading
-import/export remains product UI/session-authenticated only in the current
-slice.
+They are also not enabled for Marginalia Export or the old reading
+import/export workflows; these remain Product UI/session-authenticated.
 
 Discovery:
 

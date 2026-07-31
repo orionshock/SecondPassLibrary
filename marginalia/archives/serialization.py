@@ -26,8 +26,6 @@ from .types import (
     ArchiveHighlightBody,
     ArchiveProgress,
     ArchiveReadingSession,
-    ArchiveScope,
-    ArchiveScopeType,
     MarginaliaArchive,
 )
 
@@ -56,7 +54,6 @@ def serialize_archive(
     sessions: QuerySet[ReadingSession] | Iterable[ReadingSession],
     *,
     generated_at: datetime,
-    scope: ArchiveScopeType = "all",
     include_empty_sessions: bool = False,
     generator: str = DEFAULT_GENERATOR,
 ) -> MarginaliaArchive:
@@ -115,7 +112,6 @@ def serialize_archive(
         profile=MARGINALIA_PROFILE_URI,
         generated_at=_timestamp(generated_at),
         generator=generator,
-        scope=ArchiveScope(type=scope),
         books=tuple(archive_books),
     )
     from .validation import validate_archive_value
@@ -146,7 +142,6 @@ def archive_to_wire(archive: MarginaliaArchive) -> dict[str, Any]:
         "profile": archive.profile,
         "generatedAt": archive.generated_at,
         "generator": archive.generator,
-        "scope": {"type": archive.scope.type},
         "books": [_book_to_wire(book) for book in archive.books],
     }
 

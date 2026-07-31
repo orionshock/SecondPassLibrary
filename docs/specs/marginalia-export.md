@@ -28,14 +28,12 @@ the runtime archive codec and neither runtime code nor tests load this copy.
   "profile": "https://secondpasslibrary.local/specs/marginalia/0.1.0",
   "generatedAt": "2026-07-29T12:00:00Z",
   "generator": "Second Pass Library",
-  "scope": { "type": "all" },
   "books": []
 }
 ```
 
-`scope.type` is `all` or `selected`. The contained Books and Sessions are the
-authoritative description of a selected archive, so scope does not duplicate
-their identities.
+The contained Books and Sessions fully describe complete and selected
+archives; the envelope does not duplicate that distinction.
 
 ## Book envelope
 
