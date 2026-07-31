@@ -1,5 +1,5 @@
 {
-  "id": "session-1",
+  "sourceReadingSessionId": "source-reading-session-000001",
   "name": "Current pass",
   "notes": "",
   "status": "active",
@@ -8,10 +8,8 @@
   "createdAt": "2026-07-20T12:00:00Z",
   "updatedAt": "2026-07-29T12:00:00Z",
   "progress": {
-    "location": {
-      "cfi": "epubcfi(/6/8!/4/2)",
-      "locationLabel": "Chapter 08 · 42%"
-    },
+    "cfi": "epubcfi(/6/8!/4/2)",
+    "locationLabel": "Chapter 08 · 42%",
     "updatedAt": "2026-07-29T12:00:00Z"
   },
   "annotations": []

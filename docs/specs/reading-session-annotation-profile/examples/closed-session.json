@@ -1,5 +1,5 @@
 {
-  "id": "session-2",
+  "sourceReadingSessionId": "source-reading-session-000002",
   "name": "Previous pass",
   "notes": "Finished before starting the current pass.",
   "status": "closed",

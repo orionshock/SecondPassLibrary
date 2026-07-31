@@ -1,10 +1,10 @@
 # Marginalia Export Archive
 
-This file defines only the portable archive envelope around the canonical
+This file defines the portable archive envelope around the canonical
 Marginalia objects in
 [`reading-session-annotation-profile/profile.md`](reading-session-annotation-profile/profile.md).
-It does not define alternate Session, progress, location, highlight, or bookmark
-shapes.
+It does not define alternate Session, progress, location, highlight, or
+bookmark shapes.
 
 Canonical profile URI:
 
@@ -13,83 +13,61 @@ https://secondpasslibrary.local/specs/marginalia/0.1.0
 ```
 
 The documentation schema is
-[`marginalia-export.schema.json`](marginalia-export.schema.json). It references
-the shared Reading Session definition from the canonical profile. A complete
+[`marginalia-export.schema.json`](marginalia-export.schema.json). A complete
 example is
 [`reading-session-annotation-profile/examples/complete-export.json`](reading-session-annotation-profile/examples/complete-export.json).
-
-Files under `docs/` are documentation only. Runtime validators belong beside
-the code that consumes them.
+Files under `docs/` are documentation only. The executable schema lives beside
+the runtime archive codec and neither runtime code nor tests load this copy.
 
 ## Envelope
 
 ```json
 {
   "type": "SecondPassMarginaliaExport",
-  "schema_version": "0.1.0",
+  "schemaVersion": "0.1.0",
   "profile": "https://secondpasslibrary.local/specs/marginalia/0.1.0",
-  "generated_at": "2026-07-29T12:00:00Z",
+  "generatedAt": "2026-07-29T12:00:00Z",
   "generator": "Second Pass Library",
   "scope": { "type": "all" },
   "books": []
 }
 ```
 
-The envelope is export-only. It records the generating application, archive
-scope, and Books needed to interpret the nested canonical Sessions.
-
-## Scope
-
-Complete archive:
-
-```json
-{ "type": "all" }
-```
-
-Selective archive:
-
-```json
-{
-  "type": "selected",
-  "books": [
-    {
-      "book": "secondpass:book:7152f4b8-ad35-4dd6-9e40-8ae68678e76e",
-      "session_filter": "selected"
-    }
-  ]
-}
-```
-
-Single-Book and single-Session archives use `book` and `session` scopes. They
-contain the same Book and Reading Session shapes as a complete archive.
+`scope.type` is `all` or `selected`. The contained Books and Sessions are the
+authoritative description of a selected archive, so scope does not duplicate
+their identities.
 
 ## Book envelope
 
-Every exported Book requires both:
+```json
+{
+  "fileHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "title": "The Example Book",
+  "authors": ["Example Author"],
+  "readingSessions": []
+}
+```
 
-- `source`: the source-system Book identity used by archive scope and tooling.
-- `file_hash`: the exact EPUB content identity, formatted as
-  `sha256:<64 hexadecimal characters>`.
+`fileHash` is the sole portable Book identity. It is the exact EPUB content
+checksum and is required because locations and quote context belong to those
+bytes. A missing hash is an export data-integrity failure. Distinct Books with
+the same hash are a Library integrity failure and must not be merged.
 
-The values have distinct jobs. `source` identifies the Book record in its
-source system; `file_hash` identifies the bytes against which CFIs and quote
-context were created. A missing file hash is invalid archive data and must be
-fixed upstream.
+Title and authors are bounded review metadata only. They are not matching
+fallbacks. The archive contains no source-system Book id, storage or download
+data, permission state, Groups, or Shelves.
 
-Book metadata is descriptive. Sessions are nested once under the Book and use
-the canonical shared Session shape unchanged. Annotations do not repeat Book
-identity.
+## Import and export policy
 
-## Import boundary
+Sessions with no non-deleted Annotations are excluded by default. Import and
+export workflows expose an explicit `Include empty sessions` option without
+changing the archive object shapes.
 
 Native import consumes this envelope and the canonical Marginalia objects.
 Foreign formats must be converted by a Reader client or dedicated tool. The
-Library server does not parse EPUB content to repair CFIs or produce
-`locationLabel` values during normal import.
+Library server does not parse EPUB content, repair CFIs, or produce
+`locationLabel` values.
 
-## Packaging
-
-A complete or selected archive is a JSON attachment. Workflows that split
-unmatched Sessions may package one complete single-Session archive per JSON
-file inside a ZIP; the contained JSON still uses this envelope and canonical
-Session shape.
+A complete or selected archive is a JSON attachment. A future unmatched
+workflow may package one complete single-Session archive per JSON file inside
+a ZIP; each contained JSON document uses this same envelope and contract.

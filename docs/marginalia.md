@@ -14,6 +14,37 @@ The existing `reading` app and `/api/v1/reading/` routes remain the old runtime
 implementation while the new domain is built route by route; the new app does
 not depend on them.
 
+## Canonical archive codec
+
+`marginalia.archives` owns the strict executable contract shared by future
+Marginalia Import and Export. Its runtime schema lives beside that code; the
+application and tests do not load documentation schemas from `docs/`.
+
+Archive JSON uses camelCase and explicit portable identities:
+
+- `fileHash` is the sole Book identity and has the form `sha256:<checksum>`;
+- `sourceReadingSessionId` is deterministic within the source archive and is
+  not a destination `ReadingSession` primary key;
+- `clientAnnotationId` is the Reader-generated identity stored as
+  `Annotation.client_id` and is not the local Annotation primary key.
+
+The codec serializes an explicitly supplied, already-authorized Session set.
+It groups Sessions by Book, includes inaccessible historical Books, reads
+progress directly from the Session, excludes soft-deleted Annotations, and
+uses the canonical highlight/bookmark union. It does not match Books, inspect
+assets, parse CFIs, infer labels, authorize callers, or write database rows.
+
+Sessions without non-deleted Annotations are excluded by default. Callers may
+set `include_empty_sessions` explicitly for the Product UI's **Include empty
+sessions** choice. Missing Book checksums and duplicate hashes across distinct
+Books fail the complete serialization as integrity errors.
+
+Future staged Import will retain this policy in a user-bound token with an
+intended two-hour lifetime. Its cleanup command will be repeat-safe for
+periodic operator or cron execution; Django does not provide or schedule that
+job. Staging, cleanup, matching, Apply, and HTTP attachment routes are not part
+of the codec foundation.
+
 ## Owned-Marginalia Books
 
 These authenticated read endpoints support Django sessions and Client API
@@ -499,5 +530,6 @@ on Sessions or Annotations. Authenticated `/api/v1/server/info/` exposes it as
 `marginalia_profile_uri`.
 
 Request idempotency remains an API concern and is deliberately not domain model
-state. External client correlation and import/export profile mapping are
-deferred until their routes are rebuilt.
+state. The archive codec maps `Annotation.client_id` to
+`clientAnnotationId`; database Import and HTTP attachment routes remain
+deferred.

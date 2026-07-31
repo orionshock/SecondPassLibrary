@@ -4,7 +4,8 @@ export type Location = {
 }
 
 export type SessionProgress = {
-  location: Location
+  cfi: string
+  locationLabel?: string
   updatedAt: string
 }
 
@@ -17,7 +18,7 @@ export type HighlightColor =
   | "orange"
 
 export type Highlight = {
-  id?: string
+  clientAnnotationId: string
   kind: "highlight"
   location: Location
   body: {
@@ -32,7 +33,7 @@ export type Highlight = {
 }
 
 export type Bookmark = {
-  id?: string
+  clientAnnotationId: string
   kind: "bookmark"
   location: Location
   createdAt: string
@@ -42,7 +43,7 @@ export type Bookmark = {
 export type MarginaliaAnnotation = Highlight | Bookmark
 
 export type ReadingSession = {
-  id: string
+  sourceReadingSessionId: string
   name: string
   notes: string
   status: "active" | "closed"
@@ -52,4 +53,19 @@ export type ReadingSession = {
   updatedAt: string
   progress: SessionProgress | null
   annotations: MarginaliaAnnotation[]
+}
+
+export type MarginaliaArchive = {
+  type: "SecondPassMarginaliaExport"
+  schemaVersion: "0.1.0"
+  profile: "https://secondpasslibrary.local/specs/marginalia/0.1.0"
+  generatedAt: string
+  generator: string
+  scope: { type: "all" | "selected" }
+  books: Array<{
+    fileHash: string
+    title: string
+    authors: string[]
+    readingSessions: ReadingSession[]
+  }>
 }

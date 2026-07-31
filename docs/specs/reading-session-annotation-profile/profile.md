@@ -32,7 +32,7 @@ Canonical Session shape:
 
 ```json
 {
-  "id": "session-1",
+  "sourceReadingSessionId": "source-reading-session-000001",
   "name": "Current pass",
   "notes": "",
   "status": "active",
@@ -41,17 +41,19 @@ Canonical Session shape:
   "createdAt": "2026-07-20T12:00:00Z",
   "updatedAt": "2026-07-29T12:00:00Z",
   "progress": {
-    "location": {
-      "cfi": "epubcfi(/6/8!/4/2)",
-      "locationLabel": "Chapter 08 · 42%"
-    },
+    "cfi": "epubcfi(/6/8!/4/2)",
+    "locationLabel": "Chapter 08 · 42%",
     "updatedAt": "2026-07-29T12:00:00Z"
   },
   "annotations": []
 }
 ```
 
-Live APIs use server UUIDs for `id`. Archives may use stable export-local IDs.
+`sourceReadingSessionId` is a stable identity within one source archive. It is
+used for archive structure, diagnostics, selection, and deterministic
+filenames. It is not a destination database primary key. Live contracts should
+use explicit local names such as `reading_session_id` when exposing server
+identity; the archive never uses a bare `id` property.
 
 ## Location
 
@@ -76,8 +78,9 @@ Every located record uses the same object:
 - `locationLabel` is not selected text, a title, note, category, or other
   user-authored annotation content.
 
-The same object locates progress, highlights, highlights with notes, and
-bookmarks. EPUB page numbers are not durable anchors.
+The same `cfi` and optional `locationLabel` pair locates progress, highlights,
+highlights with notes, and bookmarks. Progress carries the pair directly;
+annotations carry it in `location`. EPUB page numbers are not durable anchors.
 
 ## Progress
 
@@ -85,10 +88,8 @@ Progress is the current located state of a Reading Session:
 
 ```json
 {
-  "location": {
-    "cfi": "epubcfi(/6/8!/4/2)",
-    "locationLabel": "Chapter 08 · 42%"
-  },
+  "cfi": "epubcfi(/6/8!/4/2)",
+  "locationLabel": "Chapter 08 · 42%",
   "updatedAt": "2026-07-29T12:00:00Z"
 }
 ```
@@ -109,6 +110,7 @@ one Reading Session and inherits its user and Book context.
 
 ```json
 {
+  "clientAnnotationId": "reader-highlight-42",
   "kind": "highlight",
   "location": {
     "cfi": "epubcfi(/6/8!/4/2)",
@@ -143,6 +145,7 @@ There is no selector/body duplication and no standalone note annotation kind.
 
 ```json
 {
+  "clientAnnotationId": "reader-bookmark-17",
   "kind": "bookmark",
   "location": {
     "cfi": "epubcfi(/6/10!/4/2)",
@@ -165,6 +168,11 @@ The Django model uses snake_case columns while JSON interchange uses camelCase:
 
 | Interchange | Model field |
 | --- | --- |
+| `sourceReadingSessionId` | archive-local only; never a destination primary key |
+| `clientAnnotationId` | `client_id` |
+| `progress.cfi` | `progress_cfi` |
+| `progress.locationLabel` | `progress_location_label` |
+| `progress.updatedAt` | `progress_updated_at` |
 | `location.cfi` | `cfi` |
 | `location.locationLabel` | `location_label` |
 | `body.text` | `highlight_text` |
@@ -174,8 +182,10 @@ The Django model uses snake_case columns while JSON interchange uses camelCase:
 | `body.note` | `comment_text` |
 
 Soft deletion is server state. Deleted annotations are omitted from archives.
-Client correlation and idempotency are API concerns rather than extra
-annotation content.
+`clientAnnotationId` is the stable Reader-generated identity used for client
+correlation and retry-safe synchronization. It is unique within one Reading
+Session and maps to `Annotation.client_id`; it is not the local Annotation
+database primary key.
 
 ## Import and export
 
@@ -183,6 +193,10 @@ Native import/export preserves the objects above. Foreign provider formats must
 be converted outside the Library server by a Reader client or dedicated tool.
 The Library server does not repair EPUBs, resolve CFIs, or infer locations while
 importing Marginalia.
+
+Import and export exclude Sessions without non-deleted Annotations by default.
+The workflow-level `Include empty sessions` option includes them explicitly;
+it does not change the canonical Session object.
 
 Archive-only Book identity, scope, envelope, and packaging rules are documented
 in `../marginalia-export.md`.

@@ -1,14 +1,42 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://secondpasslibrary.local/specs/marginalia/0.1.0/schema.json",
-  "title": "Second Pass Library Marginalia Interchange Profile",
-  "oneOf": [
-    { "$ref": "#/$defs/readingSession" },
-    { "$ref": "#/$defs/progress" },
-    { "$ref": "#/$defs/highlight" },
-    { "$ref": "#/$defs/bookmark" }
+  "$id": "https://secondpasslibrary.local/specs/marginalia/0.1.0/archive-schema.json",
+  "title": "Second Pass Library Marginalia Archive",
+  "type": "object",
+  "required": [
+    "type",
+    "schemaVersion",
+    "profile",
+    "generatedAt",
+    "generator",
+    "scope",
+    "books"
   ],
+  "properties": {
+    "type": { "const": "SecondPassMarginaliaExport" },
+    "schemaVersion": { "const": "0.1.0" },
+    "profile": {
+      "const": "https://secondpasslibrary.local/specs/marginalia/0.1.0"
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "generator": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "scope": { "$ref": "#/$defs/scope" },
+    "books": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "#/$defs/book" }
+    }
+  },
+  "additionalProperties": false,
   "$defs": {
+    "scope": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["all", "selected"] }
+      },
+      "additionalProperties": false
+    },
     "location": {
       "type": "object",
       "required": ["cfi"],
@@ -158,6 +186,28 @@
           }
         }
       ],
+      "additionalProperties": false
+    },
+    "book": {
+      "type": "object",
+      "required": ["fileHash", "title", "authors", "readingSessions"],
+      "properties": {
+        "fileHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "title": { "type": "string", "maxLength": 512 },
+        "authors": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "type": "string", "maxLength": 255 }
+        },
+        "readingSessions": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": { "$ref": "#/$defs/readingSession" }
+        }
+      },
       "additionalProperties": false
     }
   }

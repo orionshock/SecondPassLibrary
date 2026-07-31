@@ -13,7 +13,7 @@ Files:
 
 - `profile.md` — normative domain and interchange contract.
 - `schema.json` — documentation schema for shared Session, progress, location,
-  highlight, and bookmark shapes.
+  highlight, and bookmark shapes, including explicit portable identities.
 - `types.ts` — matching TypeScript reference types.
 - `examples/` — concise canonical examples, including a complete archive.
 
