@@ -414,7 +414,10 @@ python manage.py cleanup_marginalia_import_stages
 
 Stages live under `userdata/imports/staged/marginalia/`. Runtime token access
 expires after exactly two hours; this command only reclaims abandoned files
-and records. It is repeat-safe and may be scheduled weekly by the host.
+and records. Successful Apply deletes its staged file after database commit;
+if that deletion fails, the applied database result remains authoritative and
+this command removes the safe digest-named leftover. It is repeat-safe and may
+be scheduled weekly by the host.
 
 Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):

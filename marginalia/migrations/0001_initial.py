@@ -166,11 +166,23 @@ class Migration(migrations.Migration):
                 (
                     "state",
                     models.CharField(
-                        choices=[("ready", "Ready")], default="ready", max_length=16
+                        choices=[
+                            ("ready", "Ready"),
+                            ("applying", "Applying"),
+                            ("applied", "Applied"),
+                        ],
+                        default="ready",
+                        max_length=16,
                     ),
                 ),
                 ("storage_name", models.CharField(max_length=255, unique=True)),
                 ("preview", models.JSONField()),
+                (
+                    "request_fingerprint",
+                    models.CharField(blank=True, default="", max_length=64),
+                ),
+                ("result", models.JSONField(blank=True, null=True)),
+                ("applied_at", models.DateTimeField(blank=True, null=True)),
                 (
                     "user",
                     models.ForeignKey(
@@ -184,9 +196,29 @@ class Migration(migrations.Migration):
                 "ordering": ["expires_at", "id"],
                 "constraints": [
                     models.CheckConstraint(
-                        condition=models.Q(("state", "ready")),
+                        condition=models.Q(
+                            ("state__in", ["ready", "applying", "applied"])
+                        ),
                         name="marginalia_import_stage_state_is_valid",
-                    )
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            models.Q(
+                                ("applied_at__isnull", True),
+                                ("request_fingerprint", ""),
+                                ("result__isnull", True),
+                                ("state__in", ["ready", "applying"]),
+                            ),
+                            models.Q(
+                                ("applied_at__isnull", False),
+                                ("state", "applied"),
+                                models.Q(("request_fingerprint", ""), _negated=True),
+                                ("result__isnull", False),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="marginalia_import_stage_result_is_complete",
+                    ),
                 ],
             },
         ),

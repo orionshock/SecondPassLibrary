@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.errors import ErrorCode, api_error_response
 from marginalia.api import invalid_request_response
 from marginalia.archives import (
     ArchiveValidationError,
@@ -11,14 +12,23 @@ from marginalia.archives import (
     UnsupportedArchiveProfileError,
 )
 
-from .serializers import MarginaliaImportPreviewSerializer
+from .apply import (
+    ImportCandidateError,
+    ImportReplayConflictError,
+    StagedArchiveInvalidError,
+    apply_import,
+)
+from .serializers import (
+    MarginaliaImportApplySerializer,
+    MarginaliaImportPreviewSerializer,
+)
 from .services import (
     DuplicateLibraryBookHashError,
     ImportUploadTooLargeError,
     NoImportCandidatesError,
     preview_import,
 )
-from .staging import ImportStageStorageError
+from .staging import ImportStageStorageError, ImportStageUnavailableError
 
 
 class MarginaliaImportPreviewView(APIView):
@@ -62,3 +72,35 @@ class MarginaliaImportPreviewView(APIView):
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response(preview)
+
+
+class MarginaliaImportApplyView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = MarginaliaImportApplySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = apply_import(user=request.user, **serializer.validated_data)
+        except ImportStageUnavailableError:
+            return api_error_response(
+                code=ErrorCode.NOT_FOUND,
+                message="The import stage is unavailable.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        except ImportCandidateError:
+            return invalid_request_response(
+                message="A selected Reading Session is not importable."
+            )
+        except ImportReplayConflictError:
+            return invalid_request_response(
+                message="The import stage was already applied with a different request.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        except StagedArchiveInvalidError:
+            return invalid_request_response(
+                message="The staged import archive is no longer usable.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        return Response(result)

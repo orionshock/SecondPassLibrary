@@ -40,7 +40,13 @@ HIGHLIGHT_COLOR_CHOICES = [
 
 class ImportStage(TimeStampedModel):
     STATE_READY = "ready"
-    STATE_CHOICES = [(STATE_READY, "Ready")]
+    STATE_APPLYING = "applying"
+    STATE_APPLIED = "applied"
+    STATE_CHOICES = [
+        (STATE_READY, "Ready"),
+        (STATE_APPLYING, "Applying"),
+        (STATE_APPLIED, "Applied"),
+    ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -57,14 +63,33 @@ class ImportStage(TimeStampedModel):
     )
     storage_name = models.CharField(max_length=255, unique=True)
     preview = models.JSONField()
+    request_fingerprint = models.CharField(max_length=64, blank=True, default="")
+    result = models.JSONField(blank=True, null=True)
+    applied_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ["expires_at", "id"]
         constraints = [
             models.CheckConstraint(
-                condition=Q(state="ready"),
+                condition=Q(state__in=["ready", "applying", "applied"]),
                 name="marginalia_import_stage_state_is_valid",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        state__in=["ready", "applying"],
+                        request_fingerprint="",
+                        result__isnull=True,
+                        applied_at__isnull=True,
+                    )
+                    | (
+                        Q(state="applied", applied_at__isnull=False)
+                        & ~Q(request_fingerprint="")
+                        & Q(result__isnull=False)
+                    )
+                ),
+                name="marginalia_import_stage_result_is_complete",
+            ),
         ]
 
 
@@ -273,9 +298,7 @@ class Annotation(TimeStampedModel):
     def clean(self) -> None:
         super().clean()
         if not self.client_id:
-            raise ValidationError(
-                {"client_id": "A client correlation id is required."}
-            )
+            raise ValidationError({"client_id": "A client correlation id is required."})
         if not self.cfi:
             raise ValidationError({"cfi": "A located annotation requires a CFI."})
 

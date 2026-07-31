@@ -311,11 +311,48 @@ matched Session survives the staged policy.
 Successful preview stores canonical archive bytes under
 `userdata/imports/staged/marginalia/<token-digest>.json` and one database stage
 record containing only the token digest, owner, exact two-hour expiry, staged
-policy, ready state, storage key, and bounded preview metadata. Uploaded names
-are not retained in storage paths. Runtime token lookup rejects missing,
-foreign, malformed, expired, or file-inconsistent stages through the same
-no-leakage boundary. Expired stages are unusable immediately even if their
-abandoned files await operator cleanup.
+policy, state, storage key, bounded preview metadata, and—after Apply—a request
+fingerprint and bounded replay result. Uploaded names are not retained in
+storage paths. Runtime token lookup rejects missing, foreign, malformed, or
+expired stages through the same no-leakage boundary; a ready stage also
+requires its staged file. Applied replay uses the stored result and therefore
+does not require that deleted file. Expired stages are unusable immediately
+even if their abandoned files await operator cleanup.
+
+## Import Apply
+
+`POST /api/v1/marginalia/import/apply/` is session-authenticated and accepts an
+opaque `import_token` plus a nonempty `reading_sessions` selection. Each row
+uses its staged `candidate_id` and may override `name` and `notes`. Candidate
+IDs must be unique. Only matched candidates persisted as importable by that
+stage can be selected; unmatched candidates and empty Sessions excluded by the
+staged policy cannot be introduced at Apply time.
+
+Apply locks the stage and validates the complete selection and staged canonical
+archive before creating data. All selected Sessions, direct progress fields,
+and Annotations are created in one database transaction with fresh local UUIDs.
+Archive `clientAnnotationId` values become Session-scoped `Annotation.client_id`
+values. Location strings and Annotation content are preserved unchanged; the
+server does not parse CFI or inspect EPUB content.
+
+Every imported Session is closed. A source closed Session retains `closedAt`.
+A source active Session uses its canonical `updatedAt` as the deterministic
+imported `closed_at`. Source Session, progress, and Annotation timestamps are
+otherwise preserved. Import never creates, replaces, reopens, closes, or
+mutates the user's active Session. Preview duplicate warnings remain warnings;
+an explicitly selected candidate is imported.
+
+On success, the stage stores a SHA-256 fingerprint of the effective selection
+and overrides, its applied timestamp, and the bounded candidate-to-new-Session
+result. Candidate order does not affect the fingerprint. An identical retry
+returns that stored result without creating duplicates, including after the
+staged file is gone. A changed selection or override returns `409`.
+
+The stage is the consumption authority. Its file is deleted only after the
+database transaction commits. A cleanup failure does not undo the import; it
+is logged without user data and the periodic cleanup command can remove the
+digest-named orphan later. Validation or transaction failure leaves the stage
+ready and retains its file for a corrected retry.
 
 `python manage.py cleanup_marginalia_import_stages` removes expired stages and
 safe digest-named orphan files; `--dry-run` reports bounded counts without

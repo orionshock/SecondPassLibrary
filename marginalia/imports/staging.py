@@ -102,6 +102,46 @@ def load_import_stage(*, user, token: str) -> ImportStage:
     return stage
 
 
+def claim_import_stage(*, user, token: str) -> ImportStage:
+    if not isinstance(token, str) or not TOKEN_PATTERN.fullmatch(token):
+        raise ImportStageUnavailableError
+    digest = _token_digest(token)
+    now = timezone.now()
+    ImportStage.objects.filter(
+        user=user,
+        token_digest=digest,
+        expires_at__gt=now,
+        state=ImportStage.STATE_READY,
+    ).update(state=ImportStage.STATE_APPLYING)
+    stage = (
+        ImportStage.objects.select_for_update()
+        .filter(user=user, token_digest=digest)
+        .first()
+    )
+    if stage is None or stage.expires_at <= now:
+        raise ImportStageUnavailableError
+    if (
+        stage.state == ImportStage.STATE_APPLYING
+        and not stage_file_path(stage.storage_name).is_file()
+    ):
+        raise ImportStageUnavailableError
+    return stage
+
+
+def read_staged_archive(stage: ImportStage) -> bytes:
+    try:
+        return stage_file_path(stage.storage_name).read_bytes()
+    except (OSError, ImportStageStorageError) as exc:
+        raise ImportStageUnavailableError from exc
+
+
+def delete_applied_stage_file(storage_name: str) -> None:
+    try:
+        stage_file_path(storage_name).unlink(missing_ok=True)
+    except (OSError, ImportStageStorageError):
+        logger.warning("Marginalia import apply could not delete its staged archive.")
+
+
 def cleanup_import_stages(*, dry_run: bool = False) -> CleanupResult:
     expired = list(ImportStage.objects.filter(expires_at__lte=timezone.now()))
     records_deleted = 0

@@ -284,8 +284,57 @@ metadata fallback or EPUB/CFI inspection occurs. Empty Sessions are omitted
 unless explicitly included; that stored choice governs future Apply and
 unmatched-download behavior. Multiple accessible Books with one checksum, no
 surviving Sessions, malformed archives, and staging failures return bounded
-errors without leaving a stage. Apply and unmatched download are not yet
-exposed under the canonical Marginalia API.
+errors without leaving a stage.
+
+`POST /api/v1/marginalia/import/apply/` is session-authenticated only and
+accepts JSON:
+
+```json
+{
+  "import_token": "<opaque-token>",
+  "reading_sessions": [{
+    "candidate_id": "reading-session-000001",
+    "name": "Optional override",
+    "notes": "Optional override"
+  }]
+}
+```
+
+The selection is required, nonempty, unique by `candidate_id`, and limited to
+matched importable candidates persisted in that exact preview. Unknown,
+unmatched, or policy-hidden candidates are rejected before writes. Invalid,
+expired, foreign, and missing-file stages share the same no-leakage `404`.
+
+All selected Sessions, progress, and Annotations are imported atomically.
+Imported Sessions always have status `closed`; source closed Sessions preserve
+`closedAt`, while source active Sessions use source `updatedAt` as their
+deterministic close timestamp. Import preserves other canonical timestamps and
+opaque location/content fields and never changes an active local Session.
+
+Success returns a bounded result without echoing the token:
+
+```json
+{
+  "imported_reading_session_count": 1,
+  "imported_annotation_count": 12,
+  "reading_sessions": [{
+    "candidate_id": "reading-session-000001",
+    "reading_session_id": "<new-local-uuid>",
+    "status": "closed",
+    "name": "Optional override",
+    "annotation_count": 12
+  }],
+  "warnings": []
+}
+```
+
+The applied stage stores a cryptographic fingerprint and this bounded result.
+An identical request, regardless of candidate ordering, replays the result;
+changed selection or override values return `409`. The staged file is removed
+after commit. Failure before commit leaves the ready stage and file intact.
+Post-commit deletion failure does not roll back imported data and is recovered
+by the operator cleanup command. Unmatched download is not yet exposed under
+the canonical Marginalia API.
 
 The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
 `{"results": [...]}` without pagination. It defaults to the 10 most recently
