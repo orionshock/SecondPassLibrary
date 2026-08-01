@@ -125,6 +125,7 @@ body.login-page .login-submit {
 .setup-form {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 .setup-layout {
   display: grid;
@@ -135,10 +136,12 @@ body.login-page .login-submit {
     "owner advanced";
   gap: 14px;
   align-items: start;
+  min-width: 0;
 }
 .setup-section {
   display: grid;
   gap: 14px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -155,6 +158,7 @@ body.login-page .login-submit {
 .setup-field {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 .setup-field--checkbox {
   grid-template-columns: auto 1fr;
@@ -173,11 +177,25 @@ body.login-page .login-submit {
 .setup-field--checkbox .error {
   grid-column: 2;
 }
-.setup-field input {
+.setup-field input:not([type="checkbox"]):not([type="radio"]),
+.setup-field select,
+.setup-field textarea {
+  min-width: 0;
   width: 100%;
+}
+.setup-field textarea {
+  resize: vertical;
 }
 .setup-help {
   font-size: 12px;
+}
+.setup-help,
+.setup-field .error,
+.setup-advanced-summary,
+.setup-advanced-status,
+.setup-dialog__panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .setup-advanced-summary {
   display: grid;
@@ -229,6 +247,7 @@ body.login-page .login-submit {
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  flex-wrap: wrap;
   margin-top: 14px;
 }
 .setup-help ul,
@@ -237,7 +256,7 @@ body.login-page .login-submit {
   padding-left: 20px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .setup-shell {
     padding-top: 20px;
   }

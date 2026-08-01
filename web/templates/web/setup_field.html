@@ -4,7 +4,7 @@
   </label>
   {{ field }}
   {% if field.help_text %}
-    <div class="muted setup-help">{{ field.help_text|safe }}</div>
+    <div id="{{ field.auto_id }}_helptext" class="muted setup-help">{{ field.help_text|safe }}</div>
   {% endif %}
   {% if field.errors %}
     <div class="error" role="alert">{{ field.errors }}</div>

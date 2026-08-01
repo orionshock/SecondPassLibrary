@@ -75,7 +75,9 @@
           </div>
 
           <div class="form-actions">
-            <button class="button" type="submit">Complete setup</button>
+            <button class="button" type="submit" data-setup-submit data-pending-label="Completing setup...">
+              Complete setup
+            </button>
           </div>
         </form>
       </section>
@@ -107,7 +109,15 @@
         const openButton = document.querySelector("#setup-advanced-groups-open");
         const disableButton = document.querySelector("#setup-advanced-groups-disable");
         const enabledStatus = document.querySelector("#setup-advanced-groups-enabled-status");
+        const submitButton = form?.querySelector("[data-setup-submit]");
         if (!form || !checkbox) return;
+
+        const firstInvalidField = form.querySelector('[aria-invalid="true"]');
+        if (firstInvalidField) {
+          const autofocusField = form.querySelector("[autofocus]");
+          if (autofocusField !== firstInvalidField) autofocusField?.removeAttribute("autofocus");
+          firstInvalidField.focus();
+        }
 
         const renderAdvancedGroupsState = () => {
           const enabled = checkbox.checked;
@@ -118,6 +128,7 @@
         if (openButton && dialog) {
           openButton.addEventListener("click", () => {
             if (typeof dialog.showModal === "function") {
+              dialog.returnValue = "";
               dialog.showModal();
               return;
             }
@@ -144,9 +155,18 @@
         }
 
         form.addEventListener("submit", (event) => {
-          if (!checkbox.checked) return;
-          if (window.confirm(form.dataset.advancedGroupsConfirm || "Enable advanced library groups?")) return;
-          event.preventDefault();
+          if (
+            checkbox.checked &&
+            !window.confirm(form.dataset.advancedGroupsConfirm || "Enable advanced library groups?")
+          ) {
+            event.preventDefault();
+            return;
+          }
+          form.setAttribute("aria-busy", "true");
+          if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = submitButton.dataset.pendingLabel || "Completing setup...";
+          }
         });
 
         renderAdvancedGroupsState();
