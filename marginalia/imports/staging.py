@@ -152,11 +152,11 @@ def read_staged_archive(stage: ImportStage) -> bytes:
         raise ImportStageUnavailableError from exc
 
 
-def delete_applied_stage_file(storage_name: str) -> None:
+def delete_stage_file(storage_name: str) -> None:
     try:
         stage_file_path(storage_name).unlink(missing_ok=True)
     except (OSError, ImportStageStorageError):
-        logger.warning("Marginalia import apply could not delete its staged archive.")
+        logger.warning("Marginalia could not delete a staged import archive.")
 
 
 def cleanup_import_stages(*, dry_run: bool = False) -> CleanupResult:

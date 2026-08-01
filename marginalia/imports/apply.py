@@ -27,7 +27,7 @@ from marginalia.models import Annotation, ImportStage, ReadingSession
 from .staging import (
     ImportStageUnavailableError,
     claim_import_stage,
-    delete_applied_stage_file,
+    delete_stage_file,
     read_staged_archive,
 )
 
@@ -133,7 +133,7 @@ def _apply_import_once(
             "updated_at",
         ]
     )
-    transaction.on_commit(partial(delete_applied_stage_file, stage.storage_name))
+    transaction.on_commit(partial(delete_stage_file, stage.storage_name))
     return result
 
 

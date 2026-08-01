@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -77,7 +76,7 @@ class MarginaliaFoundationTests(TestCase):
                 closed_at=timezone.now(),
             )
 
-    def test_session_protects_book_and_owns_dependent_records(self):
+    def test_book_and_session_deletion_cascade_through_dependent_records(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
         annotation = Annotation.objects.create(
             session=session,
@@ -89,10 +88,8 @@ class MarginaliaFoundationTests(TestCase):
         self.assertEqual(annotation.session, session)
         self.assertEqual(annotation.user, self.user)
         self.assertEqual(annotation.book, self.book)
-        with self.assertRaises(ProtectedError):
-            self.book.delete()
-
-        session.delete()
+        self.book.delete()
+        self.assertFalse(ReadingSession.objects.filter(pk=session.pk).exists())
         self.assertFalse(Annotation.objects.filter(pk=annotation.pk).exists())
 
     def test_session_can_exist_without_saved_progress(self):

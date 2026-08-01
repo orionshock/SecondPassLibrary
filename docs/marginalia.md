@@ -14,6 +14,25 @@ The existing `reading` app and `/api/v1/reading/` routes remain the old runtime
 implementation while the new domain is built route by route; the new app does
 not depend on them.
 
+## Django admin repair surface
+
+Django admin registers Marginalia Reading Sessions, Annotations, and Import
+Stages as privileged operator repair surfaces. Operators can add, inspect,
+change, individually delete, and bulk delete these records. Session lifecycle
+and progress fields, complete Annotation location/body/deletion state, and all
+persisted Import Stage metadata are exposed; only model-generated UUID and
+automatic timestamps are read-only. The raw Import token cannot be displayed
+because only its digest is stored, and admin does not read staged archive
+contents automatically.
+
+Admin repair is not constrained by Product UI active-only mutation policy.
+Model and database integrity constraints still apply. Deleting a Session
+cascades to its Annotations, and deleting a Library Book cascades through its
+Marginalia Sessions and Annotations after Django's normal affected-object
+confirmation. Deleting an Import Stage schedules removal of that stage's one
+digest-named archive file; a file cleanup failure does not broaden deletion and
+remains recoverable through `cleanup_marginalia_import_stages`.
+
 ## Canonical archive codec
 
 `marginalia.archives` owns the strict executable contract shared by future
@@ -617,8 +636,9 @@ active Session has been closed through the explicit close workflow. Future
 metadata mutation services and API routes must reject changes to closed
 Sessions.
 
-A Book with Marginalia is protected from deletion. Deleting a user deletes that
-user's Sessions. Deleting a Session deletes its annotations.
+Deleting a Book or user deletes the associated Sessions, and deleting a Session
+deletes its Annotations. Django admin presents its normal cascade confirmation
+before an operator deletion.
 
 ## Saved progress and located records
 
