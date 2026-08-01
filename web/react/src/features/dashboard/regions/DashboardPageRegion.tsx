@@ -1,11 +1,11 @@
 import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { Link } from "react-router-dom";
 
-import { Button, ErrorPanel, Surface } from "../../../components/ui";
-import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { Button, ErrorPanel } from "../../../components/ui";
+import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { ProductPageShellComponent } from "../../../shared/layout/ProductPageShellComponent";
-import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
+import { DashboardActionTileComponent, type DashboardAction } from "../components/DashboardActionTileComponent";
+import { RecentSessionScrollerComponent } from "../components/RecentSessionScrollerComponent";
 
 export type RecentReadingState =
   | { status: "loading" }
@@ -37,87 +37,88 @@ export function DashboardPageRegion({
     title="Your reading home"
     description={description.trim() || undefined}
   >
-    {bannerText.trim() ? <aside className="dashboard-banner">{bannerText}</aside> : null}
+    {bannerText.trim() ? <aside className="dashboard-banner" aria-label="Server message">{bannerText}</aside> : null}
     <RecentReadingPageRegion state={recentReading} onRetry={onRetryRecentReading} />
-    <DashboardShortcutsPageRegion
-      showGroups={showGroups}
-      showImports={showImports}
-      showUsers={showUsers}
-      showServerSettings={showServerSettings}
-    />
+    <DashboardLaunchPadsPageRegion showGroups={showGroups} />
+    <DashboardUtilitiesComponent showImports={showImports} showUsers={showUsers} showServerSettings={showServerSettings} />
   </ProductPageShellComponent>;
 }
 
 function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState; onRetry: () => void }) {
-  return <Surface title="Recent active reading">
+  return <section className="surface dashboard-recent" aria-labelledby="dashboard-recent-title">
+    <header className="dashboard-section-header">
+      <div>
+        <h2 id="dashboard-recent-title">Recent reading activity</h2>
+        <p>Your recent reading sessions.</p>
+      </div>
+      <Link className="button button--small button--secondary" to="/marginalia">View all</Link>
+    </header>
     {state.status === "loading" ? <p className="dashboard-section-state" aria-live="polite" aria-busy="true">Loading recent reading...</p> : null}
     {state.status === "error" ? <div className="dashboard-section-state">
       <ErrorPanel>{state.error.message}</ErrorPanel>
       <Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button>
     </div> : null}
-    {state.status === "ready" && state.items.length === 0 ? <div className="dashboard-section-state">
-      <p>No active reading sessions.</p>
+    {state.status === "ready" && state.items.length === 0 ? <div className="dashboard-section-state dashboard-section-state--empty">
+      <MaterialIcon name="auto_stories" size="2rem" />
+      <div><p>No recent reading activity yet.</p><p className="muted">Start with a Book from the Library.</p></div>
       <Link className="button button--small button--secondary" to="/library">Browse Library</Link>
     </div> : null}
-    {state.status === "ready" && state.items.length > 0 ? <div className="dashboard-recent-list">
-      {state.items.map((item) => <RecentReadingCardComponent key={item.id} item={item} />)}
-    </div> : null}
-  </Surface>;
+    {state.status === "ready" && state.items.length > 0 ? <RecentSessionScrollerComponent items={state.items} /> : null}
+  </section>;
 }
 
-function RecentReadingCardComponent({ item }: { item: RecentMarginaliaSession }) {
-  const sessionName = marginaliaSessionDisplayName(item);
-  return <article className="dashboard-reading-card">
-    <Link className="dashboard-reading-card__session" to={`/marginalia/sessions/${encodeURIComponent(item.id)}`} state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: sessionName }])}>
-      <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
-      <span className="dashboard-reading-card__body">
-        <strong>{item.book.title}</strong>
-        <span>{sessionName}</span>
-        <time dateTime={item.lastActivityAt}>{formatRecentActivity(item.lastActivityAt)}</time>
-      </span>
-    </Link>
-    {item.book.canOpen ? <Link className="button button--small button--secondary dashboard-reading-card__book" to={`/library/books/${encodeURIComponent(item.book.id)}`}>View Book</Link> : null}
+const marginaliaActions: DashboardAction[] = [
+  { to: "/marginalia", label: "By Session", icon: "history" },
+  { to: "/marginalia?view=books", label: "By Book", icon: "menu_book" },
+  { to: "/marginalia/import", label: "Import", icon: "upload_file" },
+  { to: "/marginalia/export", label: "Export", icon: "download" },
+];
+
+const shelfActions: DashboardAction[] = [
+  { to: "/shelves", label: "View Shelves", icon: "shelves" },
+  { to: "/shelves/new", label: "Create Shelf", icon: "add" },
+];
+
+function DashboardLaunchPadsPageRegion({ showGroups }: { showGroups: boolean }) {
+  const libraryActions: DashboardAction[] = [
+    { to: "/library", label: "Books", icon: "book_2" },
+    { to: "/library?view=authors", label: "Authors", icon: "person" },
+    { to: "/library?view=series", label: "Series", icon: "auto_stories" },
+    ...(showGroups ? [{ to: "/groups", label: "Groups", icon: "groups" }] : []),
+  ];
+
+  return <section className="dashboard-launch-pads" aria-label="Dashboard actions">
+    <LaunchPad title="My Marginalia" description="Sessions, annotations, import, and export." actions={marginaliaActions} />
+    <LaunchPad title="My Shelves" description="Personal and shared shelves." actions={shelfActions} />
+    <LaunchPad title="Browse Library" description="Explore the collection." actions={libraryActions} />
+  </section>;
+}
+
+function LaunchPad({ title, description, actions }: { title: string; description: string; actions: DashboardAction[] }) {
+  return <article className="surface dashboard-launch-pad">
+    <header>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </header>
+    <nav className="dashboard-action-grid" aria-label={`${title} actions`}>
+      {actions.map((action) => <DashboardActionTileComponent key={action.to} action={action} />)}
+    </nav>
   </article>;
 }
 
-function DashboardShortcutsPageRegion({ showGroups, showImports, showUsers, showServerSettings }: {
-  showGroups: boolean;
+function DashboardUtilitiesComponent({ showImports, showUsers, showServerSettings }: {
   showImports: boolean;
   showUsers: boolean;
   showServerSettings: boolean;
 }) {
-  return <div className="dashboard-shortcuts" aria-label="Dashboard shortcuts">
-    <ShortcutGroup title="Library" links={[
-      { to: "/library", label: "Books" },
-      { to: "/library?view=authors", label: "Authors" },
-      { to: "/library?view=series", label: "Series" },
-      ...(showGroups ? [{ to: "/groups", label: "Groups" }] : []),
-      ...(showImports ? [{ to: "/imports", label: "Import Books" }] : []),
-    ]} />
-    <ShortcutGroup title="Shelves" links={[
-      { to: "/shelves", label: "View Shelves" },
-      { to: "/shelves/new", label: "Create Shelf" },
-    ]} />
-    {showUsers || showServerSettings ? <ShortcutGroup title="Manage" links={[
-      ...(showUsers ? [{ to: "/users", label: "Users" }] : []),
-      ...(showServerSettings ? [{ to: "/server", label: "Server Settings" }] : []),
-    ]} /> : null}
-  </div>;
-}
+  const links = [
+    ...(showImports ? [{ to: "/imports", label: "Import Books", icon: "upload_file" }] : []),
+    ...(showUsers ? [{ to: "/users", label: "Users", icon: "manage_accounts" }] : []),
+    ...(showServerSettings ? [{ to: "/server", label: "Server Settings", icon: "settings" }] : []),
+  ];
+  if (links.length === 0) return null;
 
-function ShortcutGroup({ title, links }: { title: string; links: Array<{ to: string; label: string }> }) {
-  return <Surface title={title}>
-    <nav className="dashboard-shortcut-links" aria-label={`${title} shortcuts`}>
-      {links.map((link) => <Link key={link.to} to={link.to}>{link.label}</Link>)}
-    </nav>
-  </Surface>;
-}
-
-function formatRecentActivity(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(parsed);
+  return <nav className="dashboard-utilities" aria-label="Server tools">
+    {links.map((link) => <Link key={link.to} to={link.to}><MaterialIcon name={link.icon} /><span>{link.label}</span></Link>)}
+  </nav>;
 }
