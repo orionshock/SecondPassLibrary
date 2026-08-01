@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ApiClient } from "../client";
 import { ApiError } from "../errors";
-import { applyReadingImport, listReadingSessions, listRecentReadingSessions, previewReadingImport } from "../reading";
+import { listReadingSessions, listRecentReadingSessions } from "../reading";
 
 const response = {
   count: 2,
@@ -192,90 +192,5 @@ describe("reading session list", () => {
     const error = new ApiError("Reading history is unavailable.", 503, { code: "READING_UNAVAILABLE" });
     const client: ApiClient = { request: async () => Promise.reject(error) };
     await expect(listReadingSessions({}, client)).rejects.toBe(error);
-  });
-});
-
-describe("marginalia import", () => {
-  const previewResponse = {
-    valid: true,
-    import_token: "opaque-preview-token",
-    can_apply: true,
-    summary: { books: 2, sessions: 2, annotations: 3 },
-    warnings: ["Active exported sessions will be imported as historical sessions."],
-    unmatched_entries: 1,
-    unmatched_downloadable_session_count: 0,
-    include_empty_sessions: true,
-    books: [
-      {
-        title: "Matched Book", authors: ["Author One"], source: "book:source", file_hash: "sha256:hidden",
-        session_count: 1, annotation_count: 3, match: { status: "matched", book_title: "Local Book" },
-        cover_url: "http://testserver/media/covers/matched.jpg", will_import: true, warning: "",
-        sessions: [{
-          export_session_id: "export-session-1", name: "Imported session", notes: "Notes", status: "active",
-          started_at: "2026-01-01T00:00:00Z", completed_at: null, annotation_count: 3, bookmark_count: 1,
-          highlight_count: 2, commented_highlight_count: 1, will_import: true, needs_reader: false,
-          active_will_import_as_historical: true, possible_duplicate: false, warning: "",
-        }],
-      },
-      {
-        title: "Missing Book", authors: [], source: "book:missing", file_hash: "sha256:missing",
-        session_count: 1, annotation_count: 0, match: { status: "unmatched", book_title: null },
-        cover_url: "", will_import: false, warning: "No visible local book matched.",
-        sessions: [{
-          export_session_id: "export-session-2", name: "", notes: "", status: "completed",
-          started_at: null, completed_at: null, annotation_count: 0, bookmark_count: 0,
-          highlight_count: 0, commented_highlight_count: 0, will_import: false, needs_reader: false,
-          active_will_import_as_historical: false, possible_duplicate: false, warning: "",
-        }],
-      },
-    ],
-  };
-
-  it("posts the preview file as the exact multipart contract and maps review data", async () => {
-    const calls: Array<{ path: string; init?: RequestInit }> = [];
-    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => { calls.push({ path, init }); return previewResponse as T; } };
-    const file = new File(["{}"], "marginalia.json", { type: "application/json" });
-    const preview = await previewReadingImport(
-      file,
-      { includeEmptySessions: true },
-      client,
-    );
-
-    expect(calls[0]?.path).toBe("/api/v1/reading/import/preview/");
-    expect(calls[0]?.init?.method).toBe("POST");
-    expect(Array.from((calls[0]?.init?.body as FormData).entries())).toEqual([
-      ["file", file],
-      ["include_empty_sessions", "true"],
-    ]);
-    expect(preview).toMatchObject({
-      importToken: "opaque-preview-token", canApply: true, summary: { books: 2, sessions: 2, annotations: 3 },
-      unmatchedEntries: 1, unmatchedDownloadableSessionCount: 0, includeEmptySessions: true,
-      books: [
-        { title: "Matched Book", authors: ["Author One"], matchStatus: "matched", matchedBookTitle: "Local Book", coverUrl: "/media/covers/matched.jpg", sessions: [{ exportSessionId: "export-session-1", willImport: true, activeWillImportAsHistorical: true }] },
-        { title: "Missing Book", matchStatus: "unmatched", matchedBookTitle: null, coverUrl: null, sessions: [{ exportSessionId: "export-session-2", willImport: false }] },
-      ],
-    });
-  });
-
-  it("posts the opaque token and exact selected Session edits, then maps result counts", async () => {
-    const calls: Array<{ path: string; init?: RequestInit }> = [];
-    const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
-      calls.push({ path, init });
-      return { applied: true, summary: { books_matched: 1, books_skipped: 0, sessions_created: 1, annotations_created: 3, bookmarks_created: 1, highlights_created: 2, commented_highlights_created: 1 }, warnings: [] } as T;
-    } };
-    const result = await applyReadingImport({ importToken: "opaque-preview-token", books: [{ selectionReference: { source: "book:source", fileHash: "sha256:hidden", title: "Matched Book" }, sessions: [{ exportSessionId: "export-session-1", name: "Edited name", notes: "Edited notes" }] }] }, client);
-    const entries = Array.from((calls[0]?.init?.body as FormData).entries());
-    expect(calls[0]?.path).toBe("/api/v1/reading/import/apply/");
-    expect(calls[0]?.init?.method).toBe("POST");
-    expect(entries[0]).toEqual(["import_token", "opaque-preview-token"]);
-    expect(JSON.parse(String(entries[1]?.[1]))).toEqual({ books: [{ source: "book:source", sessions: [{ export_session_id: "export-session-1", selected: true, name: "Edited name", notes: "Edited notes" }] }] });
-    expect(result.summary).toEqual({ booksMatched: 1, booksSkipped: 0, sessionsCreated: 1, annotationsCreated: 3, bookmarksCreated: 1, highlightsCreated: 2, commentedHighlightsCreated: 1 });
-  });
-
-  it("preserves preview and apply SDK errors", async () => {
-    const error = new ApiError("The server could not complete the request.", 400, { fields: { importToken: ["Import preview expired."] } });
-    const client: ApiClient = { request: async () => Promise.reject(error) };
-    await expect(previewReadingImport(new File(["{}"], "bad.json"), {}, client)).rejects.toBe(error);
-    await expect(applyReadingImport({ importToken: "expired", books: [] }, client)).rejects.toBe(error);
   });
 });
