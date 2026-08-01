@@ -103,6 +103,37 @@ class SetupMarkupTests(TestCase):
         self.assertIn("autofocus", str(form["username"]))
         self.assertFalse(form.errors)
 
+    def test_setup_fields_use_explicit_autofill_semantics(self):
+        response = self.client.get("/setup/")
+        form = response.context["form"]
+
+        expected_autocomplete = {
+            "username": "username",
+            "first_name": "given-name",
+            "last_name": "family-name",
+            "email": "email",
+            "password1": "new-password",
+            "password2": "new-password",
+            "server_name": "off",
+            "server_description": "off",
+            "public_group_name": "off",
+            "public_group_description": "off",
+            "advanced_library_groups_enabled": "off",
+        }
+        for field_name, autocomplete in expected_autocomplete.items():
+            with self.subTest(field=field_name):
+                self.assertEqual(
+                    form.fields[field_name].widget.attrs.get("autocomplete"),
+                    autocomplete,
+                )
+
+        for field_name in ("username", "email"):
+            with self.subTest(field=field_name):
+                attrs = form.fields[field_name].widget.attrs
+                self.assertEqual(attrs.get("autocapitalize"), "none")
+                self.assertEqual(attrs.get("autocorrect"), "off")
+                self.assertEqual(attrs.get("spellcheck"), "false")
+
     def test_dialog_state_reset_and_submit_pending_protection_are_wired(self):
         response = self.client.get("/setup/")
         content = response.content.decode("utf-8")
