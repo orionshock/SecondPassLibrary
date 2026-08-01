@@ -7,15 +7,9 @@ Current apps:
 - `core`: shared base models, server settings, utilities
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
-- `marginalia`: new Marginalia domain for Reading Sessions, Session progress,
-  located annotations, and the bounded owned-Marginalia Book read projection
-- `reading`: reading sessions, progress, annotations
+- `marginalia`: Reading Sessions, Session progress, located annotations,
+  archive Import/Export, and owned-Marginalia Book projections
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
-
-The existing `reading` app remains the active legacy API implementation while
-the new `marginalia` domain is rebuilt route by route. New Marginalia code does
-not import or depend on `reading`; the old app is reference material pending its
-eventual removal.
 
 Operator recovery workflows in the Django admin are documented in
 `docs/admin.md`.
@@ -72,7 +66,7 @@ Position:
 - Django `User` is the canonical local user record.
 - `accounts.UserProfile` stores the app-level global role (`manager|librarian|reader`).
 - `accounts.UserWebSession` tracks active Django web sessions to support revocation (companion tracking only; does not replace Django sessions).
-- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, `/api/v1/server/info/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
+- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, `/api/v1/server/info/`, selected library read/download endpoints, shelves with conservative write rules, and selected Marginalia endpoints).
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
 - Authenticated server-wide display context belongs to `/api/v1/server/info/`;
   current-user identity, memberships, and user-specific capabilities belong to

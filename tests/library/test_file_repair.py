@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
+from django.utils import timezone
 
 from library.cover_services import set_book_cover_from_bytes
 from library.file_repair import (
@@ -25,7 +26,7 @@ from library.models import (
     Series,
 )
 from library.groups.book_assignments import add_book_to_group
-from reading.models import Annotation, ReadingProgress, ReadingSession
+from marginalia.models import Annotation, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.library.imports.helpers import minimal_epub_bytes
 from tests.testenv.filesystem import IsolatedMediaRootMixin
@@ -190,15 +191,18 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             book=self.book,
             added_by=self.operator,
         )
-        session = ReadingSession.objects.create(user=self.operator, book=self.book)
-        progress = ReadingProgress.objects.create(
-            session=session,
-            current_location={"href": "chapter.xhtml"},
+        session = ReadingSession.objects.create(
+            user=self.operator,
+            book=self.book,
+            progress_cfi="epubcfi(/6/2)",
+            progress_location_label="Chapter 1",
+            progress_updated_at=timezone.now(),
         )
         annotation = Annotation.objects.create(
             session=session,
-            book=self.book,
-            selector_value="epubcfi(/6/2)",
+            client_id="file-repair-preservation",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/2)",
         )
         snapshot = {
             "cover": self.book.cover_file.name,
@@ -209,7 +213,9 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             "groups": list(self.book.group_assignments.values_list("id", flat=True)),
             "shelf_item": shelf_item.id,
             "session": session.id,
-            "progress": progress.id,
+            "progress_cfi": session.progress_cfi,
+            "progress_location_label": session.progress_location_label,
+            "progress_updated_at": session.progress_updated_at,
             "annotation": annotation.id,
         }
 
@@ -232,9 +238,17 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             snapshot["groups"],
         )
         self.assertTrue(self.book.shelf_items.filter(pk=snapshot["shelf_item"]).exists())
-        self.assertTrue(self.book.reading_sessions.filter(pk=snapshot["session"]).exists())
-        self.assertTrue(ReadingProgress.objects.filter(pk=snapshot["progress"]).exists())
-        self.assertTrue(self.book.annotations.filter(pk=snapshot["annotation"]).exists())
+        session.refresh_from_db()
+        self.assertTrue(
+            self.book.marginalia_sessions.filter(pk=snapshot["session"]).exists()
+        )
+        self.assertEqual(session.progress_cfi, snapshot["progress_cfi"])
+        self.assertEqual(
+            session.progress_location_label,
+            snapshot["progress_location_label"],
+        )
+        self.assertEqual(session.progress_updated_at, snapshot["progress_updated_at"])
+        self.assertTrue(session.annotations.filter(pk=snapshot["annotation"]).exists())
 
     def test_staged_file_is_cleaned_and_original_remains_on_database_failure(self):
         original_name = self.book.book_file.name

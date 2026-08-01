@@ -130,7 +130,6 @@ INSTALLED_APPS = [
     "accounts",
     "library.apps.LibraryConfig",
     "marginalia.apps.MarginaliaConfig",
-    "reading",
     "shelves",
 ]
 
@@ -265,7 +264,6 @@ LOGGING = {
             "core",
             "library",
             "marginalia",
-            "reading",
             "shelves",
             "web",
         )

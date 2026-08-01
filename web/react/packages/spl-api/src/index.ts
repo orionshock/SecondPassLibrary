@@ -81,25 +81,6 @@ export {
   type MarginaliaImportPreviewSession,
   type MarginaliaImportWarning,
 } from "./marginaliaImport";
-export {
-  getReadingProgress,
-  getReadingSession,
-  updateReadingSession,
-  listReadingAnnotations,
-  listReadingSessions,
-  listRecentReadingSessions,
-  type ReadingAnnotation,
-  type ReadingAnnotationCategory,
-  type ReadingAnnotationKind,
-  type ReadingAnnotationOrdering,
-  type ReadingAnnotationsQuery,
-  type ReadingProgress,
-  type ReadingSessionDetail,
-  type ReadingSessionStatus,
-  type ReadingSessionSummary,
-  type ReadingSessionsQuery,
-  type RecentReadingSession,
-} from "./reading";
 export type { AttachmentDownload } from "./client";
 export { buildReadingClientBookUrl } from "./readingClient";
 export {

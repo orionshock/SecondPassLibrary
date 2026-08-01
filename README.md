@@ -94,7 +94,7 @@ The canonical Marginalia interchange profile is documented in
 The export-only envelope is documented in
 [docs/specs/marginalia-export.md](docs/specs/marginalia-export.md).
 
-Importing marginalia back into the system supports SPL native marginalia exports. The product UI previews the file, stages the validated payload with a short-lived import token, and can apply selected sessions as historical reading sessions. Foreign annotation formats should be normalized by a client through the normal reading APIs or converted by an external tool into SPL native format first.
+Importing Marginalia back into the system supports canonical SPL Marginalia archives. The Product UI previews the file, stages the validated payload with a short-lived import token, and imports selected Sessions as closed Sessions. Foreign annotation formats should be normalized by a Reader client through the Marginalia API or converted externally into the canonical archive format.
 
 ## Documentation
 
@@ -106,5 +106,5 @@ Useful docs:
 - [Architecture](docs/architecture.md)
 - [API index](docs/api.md)
 - [Imports](docs/imports.md)
-- [Reading data](docs/reading.md)
+- [Marginalia](docs/marginalia.md)
 - [Permissions](docs/permissions.md)

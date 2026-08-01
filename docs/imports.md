@@ -103,39 +103,6 @@ Temporary request and batch staging lives under `userdata/imports/` and is
 cleaned according to the relevant synchronous or staged workflow. No database
 ImportJob or durable Book-import history is created.
 
-## Marginalia import
-
-Marginalia import is a separate, session-only Product UI workflow. Client API
-bearer tokens cannot call its preview or apply endpoints.
-
-Preview validates a Second Pass Library Marginalia Profile, summarizes its
-books, reading sessions, and annotations, and matches only visible local Books
-by EPUB file hash. It does not write database records. Foreign/provider-specific
-formats must first be normalized by a reader client or external conversion
-tool.
-
-A successful preview creates a short-lived staged file under
-`userdata/imports/staged/` and returns an import token. Staged files expire
-after roughly 24 hours, are deleted after successful apply, and can be cleaned
-with `python manage.py cleanup_staged_imports`.
-
-Apply revalidates the staged profile and can import all matched sessions or a
-selection of sessions. Selection uses export-local book/session identifiers;
-it may override an imported session's name and notes. Annotation-level
-selection is not supported.
-
-Apply follows these rules:
-
-- match by file hash only, never ISBN or title/author fallback;
-- import only Books visible to the requesting user;
-- skip and report unmatched Books without creating local Books;
-- accept only shallow `epubcfi(...)` locator validation server-side;
-- create new historical/inactive sessions, including exported active sessions;
-- report possible duplicates as warnings without overwriting existing data.
-
-Marginalia staging is filesystem-only. It does not create import jobs or import
-history.
-
 ## Unsupported import behavior
 
 The following are intentionally unsupported:

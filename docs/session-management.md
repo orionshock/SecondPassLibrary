@@ -10,8 +10,8 @@ identity, email, recovery, and future OIDC policy.
 
 - **Django web session**: the browser/product UI login session managed by Django's session framework (cookie + server-side session).
 - **UserWebSession**: companion model to track and revoke Django web sessions.
-- **UserClientSession**: bearer-token session for reader/API clients (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
-- **ReadingSession**: a reading/progress session through a book (in `reading` app). Not related to authentication.
+- **UserClientSession**: bearer-token session for Reader/API clients (bearer tokens are enabled for `/api/v1/accounts/me/`, selected Library read/download endpoints, Shelves with conservative write rules, and selected Marginalia endpoints).
+- **ReadingSession**: a reading/progress session through a Book in the `marginalia` app. Not related to authentication.
 
 ## Web session policy
 
@@ -93,7 +93,7 @@ requirements.
 - No email-based password reset
 - No OIDC
 - No bearer-token access to product UI/admin endpoints
-- Do not conflate `reading.ReadingSession` with auth/login sessions
+- Do not conflate `marginalia.ReadingSession` with auth/login sessions
 
 ## Future possibilities
 

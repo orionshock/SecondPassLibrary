@@ -21,7 +21,7 @@ class ApiRouteErrorTests(TestCase):
 
     def test_api_malformed_uuid_route_miss_returns_json_404(self):
         response = self.client.get(
-            "/api/v1/reading/books/not-a-uuid/active-session/"
+            "/api/v1/marginalia/books/not-a-uuid/active-session/"
         )
 
         self.assertEqual(response.status_code, 404)

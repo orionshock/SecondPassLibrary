@@ -63,7 +63,6 @@ urlpatterns = [
     path(
         "api/v1/accounts/", include(("accounts.urls", "accounts"), namespace="accounts")
     ),
-    path("api/v1/reading/", include(("reading.urls", "reading"), namespace="reading")),
     path(
         "api/v1/marginalia/",
         include(("marginalia.urls", "marginalia"), namespace="marginalia"),

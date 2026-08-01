@@ -53,7 +53,7 @@ runtime storage or a destination for generated artifacts.
 - [Architecture](architecture.md)
 - [Permissions](permissions.md)
 - [Imports](imports.md)
-- [Reading data](reading.md)
+- [Marginalia](marginalia.md)
 - [Metadata and identifiers](metadata.md)
 - [Production startup](deployment.md)
 - [React Product UI](react-ui.md)
@@ -284,7 +284,7 @@ Use markers to keep routine runs away from known slow integration areas:
 .\.venv\Scripts\python.exe -m pytest tests/library/imports/api -q
 .\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
 .\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/reading/annotations/test_views.py -q --durations=10
+.\.venv\Scripts\python.exe -m pytest tests/marginalia/test_annotation_read_api.py -q --durations=10
 ```
 
 Marker intent:
@@ -301,7 +301,7 @@ Targeted pytest examples:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/reading -q
+.\.venv\Scripts\python.exe -m pytest tests/marginalia -q
 .\.venv\Scripts\python.exe -m pytest tests/library -q
 .\.venv\Scripts\python.exe -m pytest tests/accounts -q
 ```

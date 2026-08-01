@@ -414,11 +414,11 @@ The Client API provides a pairing flow (human code + browser approval) and beare
   - bearer tokens may create/edit/delete and manage items only in the token user's own personal shelves
   - group shelves and other users' shelves are read-only via bearer tokens
   - shelf `can_edit` is computed for the current request context; group shelves report `can_edit: false` to bearer-token clients even when the same user could edit them in the product UI with session auth
-- Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
+- Selected Marginalia endpoints for owned Books, Sessions, progress, and annotations
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
-They are also not enabled for Marginalia Export or the old reading
-import/export workflows; these remain Product UI/session-authenticated.
+They are also not enabled for Marginalia Import or Export; those workflows
+remain Product UI/session-authenticated.
 
 Discovery:
 
@@ -1318,80 +1318,6 @@ See `docs/permissions.md` for the visibility/curation rules.
 Authorized Manager/Owner users may delete custom groups through the normal API
 and Product UI workflow. The designated Public group cannot be deleted.
 
-## Reading
-
-- Marginalia uses the canonical native Session, location, progress, highlight,
-  and bookmark shapes documented in
-  `docs/specs/reading-session-annotation-profile/`. The archive envelope is
-  documented separately in `docs/specs/marginalia-export.md`.
-- Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
-- Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
-- Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
-- Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
-- Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
-- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated with default page size `10`; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active Sessions only). PATCH is owner-scoped and returns the updated detail projection. Summary list/detail payloads include `book_id`, `can_open`, and compact `book`, not the legacy `book_title` field. When `?book=<book_id>` is present and the book is visible, list responses include `context.book` even if `results` is empty.
-- Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`; omits inaccessible-book sessions from continue-reading results)
-- Batch activity summary: `POST /api/v1/reading/books/activity-summary/` with `{"books": ["<book_id>"]}` returns per-visible-book current-user session counts and active/latest session ids. This endpoint is read-only in meaning but uses POST for practical batch request size.
-- Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
-- Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/` (writes require current access to the session's book)
-- Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
-  - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?kind=highlight|bookmark` (may be repeated)
-  - Product-category filter: repeat `?category=bookmark|highlight|highlight_with_note` for OR selection. `highlight` means a highlight without `comment_text`; `highlight_with_note` means a highlight with nonblank `comment_text`. This is separate from `kind=highlight`, which includes both highlight categories.
-  - Ordering: `?ordering=created|-created|modified|-modified`
-  - Annotation location/CFI ordering is not supported.
-  - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
-  - `POST /api/v1/reading/annotations/batch/` accepts Django session or Client
-    API bearer authentication and creates up to 100 annotations for one session
-    owned by the authenticated user. The Book must currently be visible for
-    writes. The request is validated before creation and commits all items or
-    none. Success returns `201` with `{"annotations": [...]}`; an optional
-    per-item `client_id` is echoed in its corresponding response item.
-- Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
-  - `GET /api/v1/reading/export/` exports all owned current-user sessions, including sessions for books the user can no longer view. Empty Sessions (no non-deleted annotations) are excluded unless `include_empty_sessions=true`.
-  - `POST /api/v1/reading/export/` exports selected owned books/sessions, including owned sessions for books the user can no longer view. JSON field `include_empty_sessions` has the same default-false behavior.
-- Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches by file hash only. Multipart field `include_empty_sessions` defaults to false; the token records that choice for Apply and unmatched download.
-  - Preview includes `unmatched_downloadable_session_count`, counting unmatched/Reader-required Sessions allowed by the staged empty-Session policy.
-  - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads `secondpass-marginalia-sessions.zip`. The ZIP has numbered Book directories and one native SPL mini-export JSON file per downloadable Session; each file contains exactly one Book and one Session. Empty Sessions follow the staged preview policy and resulting empty Book directories are omitted. A valid token with no downloadable Sessions returns `409`; downloading does not consume the token or change later apply behavior.
-- Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/apply/` requires an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not accept direct file uploads or foreign/provider formats.
-  - Optional multipart `selection` JSON limits import to selected export-local sessions and may override imported session `name`/`notes`.
-
-Reading payload notes:
-
-- Marginalia ownership, current book visibility, book-file download access, and current reading/open capability are separate. Owned sessions/annotations remain visible/exportable to their owner after book access loss; current reading/open activity and book-file downloads still require current book visibility.
-- Progress uses `current_location` (JSON) as the canonical "where am I?" session state (for EPUB, an EPUB CFI and/or href-based locator).
-- `progression` is derived/display metadata (a normalized scalar hint, `0.0 <= progression <= 1.0` when present), not canonical navigation state. It is useful for progress bars and summaries; it should not be used for resume location, annotation anchoring, CFI correctness validation, or cross-device exact positioning. If described as whole-book progress, it is relative to the whole renderable EPUB reading span from first renderable location to last renderable location (not page count, viewport count, chapter-local progress, or byte offset).
-- Session list/retrieve payloads include `progression`, `annotation_count`, `can_open`, and a compact `book` summary scoped to the caller's current book visibility. `can_open=false` means the session remains owned/readable, but the related book is not currently available for open/continue/per-book navigation.
-- Session search (`?q=<text>`) trims whitespace and searches session-owned `name`/`notes` plus currently visible book `title`, `subtitle`, authors, and series. It does not search annotation bodies, ISBNs, identifiers, marginalia export payloads, or arbitrary client blobs. User-owned session name/notes can match even when related book access is later lost; hidden/inaccessible book metadata cannot match and remains redacted.
-- Session list `?has_annotations=true|false` filters on non-deleted annotation presence. Export uses this filter for candidate selection; normal Marginalia browsing does not apply it by default.
-- `open`, `active-session`, `start-over`, progress writes, and annotation writes/deletes require current book access. Existing no-access active sessions may still be renamed/noted and closed by their owner.
-- Reading activity overlays live under `/api/v1/reading/`, not `/api/v1/library/books/`; catalog book list/detail payloads do not include user-specific session counts, progress, latest session ids, or annotation counts.
-- Annotation API payloads use `kind`, `selector`, optional `quote`,
-  `highlight_text`, `highlight_color`, and `comment_text`. Internally,
-  annotations are stored in compact columns (`selector_kind`/`selector_value`
-  plus highlight/comment fields).
-- Annotation reads are owner-scoped and remain available after book access loss; annotation writes/deletes require current access to the session's book and an open session.
-- Highlight color is a semantic token on highlights. Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on create and normalizes to `yellow`; blank highlight color is rejected on PATCH.
-- Progress/location payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version. Annotation payloads do not include `profile_version`.
-- Marginalia import apply is intentionally minimal: no stored import jobs and no annotation-level selection. The product UI supports session-level selection and session name/notes customization.
-- Server-side marginalia import is intended for SPL Marginalia Profile files
-  only. Foreign/provider-specific formats should be normalized by a client
-  through the normal reading APIs or converted by an external tool into the SPL
-  Marginalia Profile shape first.
-- Marginalia apply imports visible local books matched by file hash only, skips unmatched books, creates new historical/imported sessions, never imports exported active sessions as active local sessions, and treats duplicate findings as warnings rather than blockers. ISBN and title/author fallback matching are intentionally not used for server-side locator import.
-- Server-side apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`; the server does not resolve CFIs against EPUB content. Sessions with malformed locators are excluded from server apply and preserved for Reader-assisted import. The import unit is a session; annotation-level selection is not supported. Session selection uses export-local session ids, not SPL database ids.
-- Unmatched import download is Product UI/session-authenticated, tied to the current user's staged preview token, and intended for Second Pass Reader re-anchoring when the original book file is missing, different, or has malformed locators. It is separate from, and does not change, complete or selected Marginalia export.
-- Export JSON follows the Second Pass Library Marginalia Profile and is nested
-  as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session
-  context from nesting, annotations belong to reading sessions, and marginalia
-  belongs to the user.
-- All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
-- Selected export uses `scope.type = "selected"` with per-book `session_filter` values of `"all"` or `"selected"`.
-- Selected export request body shape is `{"books": [{"book_id": "<uuid>", "sessions": "all"}, {"book_id": "<uuid>", "sessions": ["<session_uuid>"]}]}`.
-- Exported sessions use export-local ids such as `session-1`; annotations do not include SPL database annotation ids.
-- Deleted annotations are excluded from export.
-
 ## Core
 
 - Health check: `GET /api/v1/health/`
@@ -1439,4 +1365,4 @@ Advanced library groups are off by default. Owners enable them with
 after enablement is an operator recovery action through Django admin. While
 disabled, normal non-Public group mutation endpoints return forbidden.
 
-See `docs/reading.md` for details.
+See `docs/marginalia.md` for Marginalia domain details.

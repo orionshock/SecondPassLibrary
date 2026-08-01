@@ -61,25 +61,23 @@ content. Its useful concepts were:
 - a failure to load recent activity must not make the rest of Dashboard unusable;
 - unavailable Books do not receive open/continue actions.
 
-A future React Dashboard should use the current visibility-scoped reading API
-and SDK rather than reproduce the parked page's general-list query or static
-JavaScript. Prefer the purpose-built recent/active reading contract if it still
-matches the product need when implementation begins. Do not restore
-`/dashboard/`; `/` is the Product UI landing route.
+The React Dashboard uses the canonical Marginalia recent-Session API and SDK
+rather than reproducing the parked page's general-list query or static
+JavaScript. Do not restore `/dashboard/`; `/` is the Product UI landing route.
 
 ### My Marginalia
 
 The parked reading UI remains useful historical guidance for understanding
 owner-scoped reading history, not general Library browsing. The React Product
-UI implements this area under `/marginalia`; the backend API remains under
-`/api/v1/reading/`.
+UI implements this area under `/marginalia`; the canonical backend API is
+`/api/v1/marginalia/`.
 
 #### Session and Book browse
 
 - Browse owned reading history by Session and, where useful, grouped Book.
 - Preserve status filtering, search, pagination, and a Session/Book presentation
   choice in URL state.
-- Show session identity, active/closed state, dates, progression, annotation
+- Show Session identity, active/closed state, dates, annotation
   count, and a visible Book summary when permitted.
 - Keep owned history readable when its Book is no longer visible. Use bounded
   `Book unavailable` context and omit open/continue actions.

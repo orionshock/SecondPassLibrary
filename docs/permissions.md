@@ -187,7 +187,7 @@ Client bearer tokens are reader-client credentials, not management tokens.
   user's personal shelves.
 - Group-owned and other users' shelves are read-only to bearer clients, even if
   the same user could manage a group shelf through Product UI session auth.
-- Bearer reading mutations are restricted to the token user's reading state.
+- Bearer Marginalia mutations are restricted to the token user's owned state.
 
 Pairing and the full bearer route surface are documented in
 `docs/client-api-auth.md`.

@@ -47,7 +47,7 @@ class CorsPolicyTests(TestCase):
 
     def test_api_allows_idempotency_key_header_in_preflight(self):
         response = self.client.options(
-            "/api/v1/reading/annotations/",
+            "/api/v1/marginalia/sessions/00000000-0000-0000-0000-000000000001/annotations/batch/",
             HTTP_ORIGIN="http://localhost:5173",
             HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
             HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type, idempotency-key, authorization",

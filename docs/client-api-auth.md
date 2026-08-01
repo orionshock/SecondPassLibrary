@@ -18,7 +18,7 @@ This document describes the **Client API** pairing flow (human code + browser ap
 - **ClientLoginRequest**: a short-lived server-side object representing a pending "pair this client" request, created by a reader client and authorized by a human in a browser session.
 - **UserClientSession**: a server-side record representing a bearer token granted to a reader client for a specific user.
 - **Django web session**: browser/product UI login session managed by Django sessions (cookie + server-side session rows).
-- **ReadingSession**: a reading/progress session through a book in the `reading` domain model. Not related to authentication.
+- **ReadingSession**: a reading/progress Session through a Book in the `marginalia` domain. Not related to authentication.
 
 ## Pairing flow (code + approve + poll)
 
@@ -120,7 +120,7 @@ Allowed surface is an explicit allow-list.
 | `/api/v1/library/` Books, broad book search, Authors, Series, Tags | read-only | List/detail/search endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list/search rows do not include groups. |
 | `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |
 | `/api/v1/library/groups/` and group-scoped Books/Auth/Series/Tags | read-only | Group reads require group visibility. Simple mode exposes Public/Common Room only. |
-| `/api/v1/reading/` sessions/progress/annotations | read/write for owned reading state | Bearer mutations are limited to the token owner's sessions, progress, and annotations. Writes that open/read/write a book require current book visibility. |
+| `/api/v1/marginalia/` Books/Sessions/progress/annotations | read/write for owned Marginalia | Bearer mutations are limited to the token owner's Sessions, progress, and annotations. Live writes require current Book authority. Import and Export are session-only. |
 | `/api/v1/shelves/` | read visible shelves; mutate own personal shelves only | Bearer may create/edit/delete the token user's personal shelves and add/move/remove items there. Group shelves and other users' shelves are read-only when visible. |
 
 Library details:
@@ -172,26 +172,22 @@ Exact Library routes, query parameters, and response schemas are owned by
   error. Storage names and paths are never returned. Cover URLs remain public
   display assets under `/media/covers/`.
 
-Reading details:
+Marginalia details:
 
-- Bearer clients should use normal Reading API endpoints for sync:
-  sessions, progress, annotations, `open`, `start-over`, `close`,
-  `recent`, and activity summary.
-- `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key`
-  (recommended) for safe retries.
-- `POST /api/v1/reading/annotations/batch/` accepts bearer authentication. It
-  creates up to 100 annotations for one session owned by the token user, checks
-  current Book visibility, validates the complete request before writing, and
-  succeeds atomically with `201 {"annotations": [...]}`. Optional item
-  `client_id` values are echoed for client-side correlation.
-- For "continue reading" UIs, use
-  `GET /api/v1/reading/sessions/recent/?limit=10`.
-- Marginalia import/export endpoints are **session-only** and reject Client API
-  bearer tokens:
-  - `GET/POST /api/v1/reading/export/`
-  - `POST /api/v1/reading/import/preview/`
-  - `POST /api/v1/reading/import/apply/`
-  - `GET /api/v1/reading/import/unmatched/?import_token=<token>`
+- Bearer clients may use the owner-scoped Book and Session reads, lifecycle
+  commands, progress read/write, complete Session Annotation read, and atomic
+  Annotation batch synchronization under `/api/v1/marginalia/`.
+- Annotation batch synchronization accepts 1–100 operations, validates the
+  complete request, and returns the authoritative non-deleted collection.
+- `POST /api/v1/marginalia/books/<book_id>/start-over/` requires an
+  `Idempotency-Key`; its retry protocol is owned by Marginalia.
+- For recent Sessions, use
+  `GET /api/v1/marginalia/sessions/recent/?limit=10`.
+- Archive Import and Export are **session-only** and reject bearer tokens:
+  - `GET/POST /api/v1/marginalia/export/`
+  - `POST /api/v1/marginalia/import/preview/`
+  - `POST /api/v1/marginalia/import/apply/`
+  - `GET /api/v1/marginalia/import/unmatched/?import_token=<token>`
 
 Shelves details:
 

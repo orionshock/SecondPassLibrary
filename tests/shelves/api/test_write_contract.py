@@ -15,7 +15,7 @@ from library.models import (
     CatalogTag,
     Series,
 )
-from reading.models import Annotation, ReadingSession
+from marginalia.models import Annotation, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import assert_response, response_data_dict, response_data_list
@@ -334,8 +334,9 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
         )
         annotation = Annotation.objects.create(
             session=session,
-            book=self.book_in_group,
-            selector_value="epubcfi(/6/2)",
+            client_id="shelf-preservation",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/2)",
         )
         create = assert_response(
             self.client.post(

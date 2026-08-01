@@ -8,11 +8,8 @@ records are:
 - `Annotation`: a located bookmark or highlight belonging to a Reading Session;
   highlights may also carry a user note/comment.
 
-The foundation models live in the `marginalia` Django app. The first read-only
-API slice exposes owned-Marginalia Books under `/api/v1/marginalia/books/`.
-The existing `reading` app and `/api/v1/reading/` routes remain the old runtime
-implementation while the new domain is built route by route; the new app does
-not depend on them.
+The models and complete API live in the `marginalia` Django app under
+`/api/v1/marginalia/`. Marginalia is the sole runtime domain for this data.
 
 ## Django admin repair surface
 

@@ -348,7 +348,7 @@ omit inaccessible Books.
 
 Marginalia import/export in the Product UI is session-only. Import uses preview,
 selection, and apply steps; export supports the current user's owned sessions.
-Detailed data formats and Reading API semantics belong in `docs/reading.md`,
+Detailed data formats and Marginalia API semantics belong in `docs/marginalia.md`,
 `docs/api.md`, and the marginalia profile specification.
 
 ## Server Settings
