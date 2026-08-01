@@ -25,7 +25,6 @@ function renderDashboard(
   overrides: Partial<Parameters<typeof DashboardPageRegion>[0]> = {},
 ): string {
   return renderToStaticMarkup(<MemoryRouter><DashboardPageRegion
-    description="A family server."
     bannerText="Maintenance tonight."
     recentReading={recentReading}
     showGroups
@@ -44,12 +43,21 @@ describe("Dashboard", () => {
     expect(DASHBOARD_RECENT_QUERY).not.toHaveProperty("includeClosed");
   });
 
-  it("renders server description and a nonblank Dashboard-only banner", () => {
+  it("uses the standard page title without an eyebrow or server description", () => {
     const markup = renderDashboard({ status: "loading" });
     expect(markup).toContain("Your reading home");
-    expect(markup).toContain("A family server.");
     expect(markup).toContain("Maintenance tonight.");
+    expect(markup).not.toContain('class="eyebrow"');
+    expect(markup).not.toContain("Server description");
+    expect(markup.match(/Maintenance tonight\./g)).toHaveLength(1);
     expect(renderDashboard({ status: "loading" }, { bannerText: "  \n " })).not.toContain("dashboard-banner");
+  });
+
+  it("uses the concise Recent Sessions heading without a card subtitle", () => {
+    const markup = renderDashboard({ status: "loading" });
+    expect(markup).toContain("Recent Sessions");
+    expect(markup).not.toContain("Recent reading activity");
+    expect(markup).not.toContain("Your recent reading sessions.");
   });
 
   it("keeps recent-reading loading, empty, and failure states inside the section", () => {
@@ -57,12 +65,15 @@ describe("Dashboard", () => {
     const empty = renderDashboard({ status: "ready", items: [] });
     expect(empty).toContain("No recent reading activity yet.");
     expect(empty).toContain('href="/library"');
+    expect(empty).not.toContain(">View all</a>");
 
     const failed = renderDashboard({ status: "error", error: new Error("Recent reading failed.") });
     expect(failed).toContain("Recent reading failed.");
     expect(failed).toContain("Retry");
     expect(failed).toContain("Maintenance tonight.");
-    expect(failed).toContain("View Shelves");
+    expect(failed).toContain("My Shelves");
+    expect(failed).not.toContain(">View all</a>");
+    expect(renderDashboard({ status: "loading" })).not.toContain(">View all</a>");
   });
 
   it("renders recent session facts and links to Session Detail", () => {
@@ -73,6 +84,8 @@ describe("Dashboard", () => {
     expect(markup).toContain('src="/media/cover.jpg"');
     expect(markup).toContain('href="/marginalia/sessions/session-1"');
     expect(markup).toContain('href="/library/books/book%2Fid"');
+    expect(markup).toContain('href="/marginalia"');
+    expect(markup).toContain(">View all</a>");
     expect(markup).toContain("Active");
     expect(markup).not.toContain("Open in Reader");
   });
@@ -125,16 +138,44 @@ describe("Dashboard", () => {
     for (const title of ["My Marginalia", "My Shelves", "Browse Library"]) expect(all).toContain(title);
     for (const destination of [
       '/marginalia"', '/marginalia?view=books', '/marginalia/import', '/marginalia/export',
-      '/shelves"', '/shelves/new', '/library"', '/library?view=authors', '/library?view=series', '/groups"',
+      '/shelves"', '/shelves?scope=shared', '/shelves?scope=group', '/shelves/new',
+      '/library"', '/library?view=authors', '/library?view=series', '/groups"',
     ]) expect(all).toContain(`href="${destination}`);
     expect(all).toContain('aria-label="My Marginalia actions"');
     expect(all).toContain('aria-hidden="true"');
     expect(all).toContain(">By Session</span>");
   });
 
-  it("shows only enabled mode-aware and server-tool destinations", () => {
+  it("uses authoritative Shelf scopes and adapts Shelf and Library grids to visible actions", () => {
+    const advanced = renderDashboard({ status: "ready", items: [] });
+    for (const link of [
+      'href="/shelves"',
+      'href="/shelves?scope=shared"',
+      'href="/shelves?scope=group"',
+      'href="/shelves/new"',
+    ]) expect(advanced).toContain(link);
+    expect(advanced.match(/data-action-count="4"/g)).toHaveLength(3);
+
+    const simple = renderDashboard({ status: "ready", items: [] }, { showGroups: false });
+    expect(simple).not.toContain('href="/shelves?scope=group"');
+    expect(simple).not.toContain('href="/groups"');
+    expect(simple.match(/data-action-count="3"/g)).toHaveLength(2);
+    expect(simple).toContain("dashboard-action-grid--count-3");
+    expect(simple).not.toContain("dashboard-action-placeholder");
+  });
+
+  it("renders Server Tools in a detached secondary region with independent permission gates", () => {
     const all = renderDashboard({ status: "ready", items: [] });
     for (const label of ["Groups", "Import Books", "Users", "Server Settings"]) expect(all).toContain(label);
+    expect(all).toContain('class="dashboard-server-tools"');
+    expect(all.indexOf('class="dashboard-server-tools"')).toBeGreaterThan(all.indexOf('class="dashboard-launch-pads"'));
+
+    const importsOnly = renderDashboard({ status: "ready", items: [] }, {
+      showImports: true, showUsers: false, showServerSettings: false,
+    });
+    expect(importsOnly).toContain('href="/imports"');
+    expect(importsOnly).not.toContain('href="/users"');
+    expect(importsOnly).not.toContain('href="/server"');
 
     const reader = renderDashboard({ status: "ready", items: [] }, {
       showGroups: false,
@@ -143,7 +184,7 @@ describe("Dashboard", () => {
       showServerSettings: false,
     });
     for (const label of ["Groups", "Import Books", "Users", "Server Settings", "Server tools"]) expect(reader).not.toContain(label);
-    for (const label of ["Books", "Authors", "Series", "By Session", "Import", "Export", "View Shelves", "Create Shelf"]) expect(reader).toContain(label);
+    for (const label of ["Books", "Authors", "Series", "By Session", "Import", "Export", "My Shelves", "Shared with Me", "Create Shelf"]) expect(reader).toContain(label);
   });
 
   it("calculates carousel end states and scrolls by a useful viewport increment", () => {

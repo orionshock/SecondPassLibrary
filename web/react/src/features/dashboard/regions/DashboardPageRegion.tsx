@@ -13,7 +13,6 @@ export type RecentReadingState =
   | { status: "error"; error: Error };
 
 export function DashboardPageRegion({
-  description,
   bannerText,
   recentReading,
   showGroups,
@@ -22,7 +21,6 @@ export function DashboardPageRegion({
   showServerSettings,
   onRetryRecentReading,
 }: {
-  description: string;
   bannerText: string;
   recentReading: RecentReadingState;
   showGroups: boolean;
@@ -33,9 +31,7 @@ export function DashboardPageRegion({
 }) {
   return <ProductPageShellComponent
     className="dashboard-page"
-    eyebrow="Dashboard"
     title="Your reading home"
-    description={description.trim() || undefined}
   >
     {bannerText.trim() ? <aside className="dashboard-banner" aria-label="Server message">{bannerText}</aside> : null}
     <RecentReadingPageRegion state={recentReading} onRetry={onRetryRecentReading} />
@@ -47,11 +43,10 @@ export function DashboardPageRegion({
 function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState; onRetry: () => void }) {
   return <section className="surface dashboard-recent" aria-labelledby="dashboard-recent-title">
     <header className="dashboard-section-header">
-      <div>
-        <h2 id="dashboard-recent-title">Recent reading activity</h2>
-        <p>Your recent reading sessions.</p>
-      </div>
-      <Link className="button button--small button--secondary" to="/marginalia">View all</Link>
+      <h2 id="dashboard-recent-title">Recent Sessions</h2>
+      {state.status === "ready" && state.items.length > 0
+        ? <Link className="button button--small button--secondary" to="/marginalia">View all</Link>
+        : null}
     </header>
     {state.status === "loading" ? <p className="dashboard-section-state" aria-live="polite" aria-busy="true">Loading recent reading...</p> : null}
     {state.status === "error" ? <div className="dashboard-section-state">
@@ -74,12 +69,13 @@ const marginaliaActions: DashboardAction[] = [
   { to: "/marginalia/export", label: "Export", icon: "download" },
 ];
 
-const shelfActions: DashboardAction[] = [
-  { to: "/shelves", label: "View Shelves", icon: "shelves" },
-  { to: "/shelves/new", label: "Create Shelf", icon: "add" },
-];
-
 function DashboardLaunchPadsPageRegion({ showGroups }: { showGroups: boolean }) {
+  const shelfActions: DashboardAction[] = [
+    { to: "/shelves", label: "My Shelves", icon: "shelves" },
+    { to: "/shelves?scope=shared", label: "Shared with Me", icon: "share" },
+    ...(showGroups ? [{ to: "/shelves?scope=group", label: "Group Shelves", icon: "group_work" }] : []),
+    { to: "/shelves/new", label: "Create Shelf", icon: "add" },
+  ];
   const libraryActions: DashboardAction[] = [
     { to: "/library", label: "Books", icon: "book_2" },
     { to: "/library?view=authors", label: "Authors", icon: "person" },
@@ -100,7 +96,7 @@ function LaunchPad({ title, description, actions }: { title: string; description
       <h2>{title}</h2>
       <p>{description}</p>
     </header>
-    <nav className="dashboard-action-grid" aria-label={`${title} actions`}>
+    <nav className={`dashboard-action-grid dashboard-action-grid--count-${actions.length}`} aria-label={`${title} actions`} data-action-count={actions.length}>
       {actions.map((action) => <DashboardActionTileComponent key={action.to} action={action} />)}
     </nav>
   </article>;
@@ -118,7 +114,10 @@ function DashboardUtilitiesComponent({ showImports, showUsers, showServerSetting
   ];
   if (links.length === 0) return null;
 
-  return <nav className="dashboard-utilities" aria-label="Server tools">
-    {links.map((link) => <Link key={link.to} to={link.to}><MaterialIcon name={link.icon} /><span>{link.label}</span></Link>)}
-  </nav>;
+  return <section className="dashboard-server-tools" aria-labelledby="dashboard-server-tools-title">
+    <h2 id="dashboard-server-tools-title">Server tools</h2>
+    <nav className="dashboard-server-tools__actions" aria-label="Server tools actions">
+      {links.map((link) => <Link key={link.to} to={link.to}><MaterialIcon name={link.icon} /><span>{link.label}</span></Link>)}
+    </nav>
+  </section>;
 }

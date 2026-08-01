@@ -36,7 +36,6 @@ export function DashboardOrchestrator() {
   }, [retry]);
 
   return <DashboardPageRegion
-    description={serverInfo.description}
     bannerText={serverInfo.bannerText}
     recentReading={recentReading}
     showGroups={serverInfo.advancedLibraryGroupsEnabled}
