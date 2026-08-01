@@ -3,7 +3,11 @@ from django.urls import path
 from .annotations.views import SessionAnnotationBatchView, SessionAnnotationListView
 from .books.views import MarginaliaBookDetailView, MarginaliaBookListView
 from .exports.views import MarginaliaExportView
-from .imports.views import MarginaliaImportApplyView, MarginaliaImportPreviewView
+from .imports.views import (
+    MarginaliaImportApplyView,
+    MarginaliaImportPreviewView,
+    MarginaliaImportUnmatchedView,
+)
 from .sessions.lifecycle_views import (
     MarginaliaBookActiveSessionView,
     MarginaliaBookOpenView,
@@ -22,6 +26,11 @@ from .sessions.views import (
 app_name = "marginalia"
 
 urlpatterns = [
+    path(
+        "import/unmatched/",
+        MarginaliaImportUnmatchedView.as_view(),
+        name="import-unmatched",
+    ),
     path(
         "import/apply/",
         MarginaliaImportApplyView.as_view(),

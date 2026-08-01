@@ -302,7 +302,7 @@ check produces a warning only; it does not suppress a matched Session.
 
 Empty Sessions have no non-deleted Annotations. They are omitted by default;
 `include_empty_sessions=true` includes them. The choice is stored on the stage
-and is the future authority for Apply and unmatched download. Source `active`
+and is the authority for Apply and unmatched download. Source `active`
 and `closed` Sessions are reviewable, but both report `will_import_as_status`
 as `closed`. Unmatched Sessions remain reviewable and counted for a future
 download, but cannot be selected for Apply. `can_apply` is true only when a
@@ -353,6 +353,43 @@ database transaction commits. A cleanup failure does not undo the import; it
 is logged without user data and the periodic cleanup command can remove the
 digest-named orphan later. Validation or transaction failure leaves the stage
 ready and retains its file for a corrected retry.
+
+## Unmatched Import download
+
+`GET /api/v1/marginalia/import/unmatched/?import_token=<token>` is a
+session-authenticated, read-only download of the unmatched Sessions recorded by
+one staged preview. The persisted preview controls which Books are unmatched,
+which candidates survived the staged empty-Session policy, and the expected
+download count. Download never reruns Library matching, so a later access
+change does not alter the reviewed result. It does not parse CFI or inspect an
+EPUB.
+
+The response is `application/zip` with stable filename
+`secondpass-marginalia-sessions.zip`. It contains only unmatched Books that
+still have staged downloadable candidates, using this splitter-compatible
+layout:
+
+```text
+01-book-key/01-01-book-key-reading-session-key.json
+```
+
+Numbering is one-based with a two-digit minimum width. Keys are deterministic,
+ASCII-oriented, traversal-safe, reserved-name-safe, collision-safe, and
+bounded. Book keys use the staged archive title with an ordinal fallback.
+Session keys prefer canonical `sourceReadingSessionId`, then `startedAt`, then
+an ordinal fallback; local database identities are never used.
+
+Each JSON member is a canonical mini-export with exactly one Book and one
+Reading Session. It preserves the original archive `generatedAt`, source
+active/closed status, progress, Annotations, explicit portable identities, and
+opaque location values. ZIP member order, timestamps, permissions, compression,
+and JSON rendering are fixed, so repeated downloads from the same stage are
+byte-identical. A stage with no downloadable unmatched Sessions returns `409`.
+
+Download does not consume, extend, update, or invalidate the stage. Apply may
+still use a ready stage afterward. An applied stage whose file was already
+removed is unavailable; the bounded stored Apply result is not used to
+reconstruct an archive.
 
 `python manage.py cleanup_marginalia_import_stages` removes expired stages and
 safe digest-named orphan files; `--dry-run` reports bounded counts without

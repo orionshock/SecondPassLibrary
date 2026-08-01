@@ -9,6 +9,10 @@ class MarginaliaImportPreviewSerializer(StrictSerializer):
     include_empty_sessions = serializers.BooleanField(default=False, required=False)
 
 
+class MarginaliaImportUnmatchedQuerySerializer(StrictSerializer):
+    import_token = serializers.CharField(trim_whitespace=False)
+
+
 class MarginaliaImportSelectionSerializer(StrictSerializer):
     candidate_id = serializers.CharField(max_length=64)
     name = serializers.CharField(max_length=255, allow_blank=True, required=False)

@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -21,6 +22,7 @@ from .apply import (
 from .serializers import (
     MarginaliaImportApplySerializer,
     MarginaliaImportPreviewSerializer,
+    MarginaliaImportUnmatchedQuerySerializer,
 )
 from .services import (
     DuplicateLibraryBookHashError,
@@ -29,6 +31,13 @@ from .services import (
     preview_import,
 )
 from .staging import ImportStageStorageError, ImportStageUnavailableError
+from .unmatched import (
+    ZIP_FILENAME,
+    NoDownloadableUnmatchedSessionsError,
+    UnmatchedStageIntegrityError,
+    UnmatchedZipAssemblyError,
+    unmatched_archive_zip,
+)
 
 
 class MarginaliaImportPreviewView(APIView):
@@ -104,3 +113,41 @@ class MarginaliaImportApplyView(APIView):
                 status_code=status.HTTP_409_CONFLICT,
             )
         return Response(result)
+
+
+class MarginaliaImportUnmatchedView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = MarginaliaImportUnmatchedQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        try:
+            content = unmatched_archive_zip(
+                user=request.user,
+                **serializer.validated_data,
+            )
+        except ImportStageUnavailableError:
+            return api_error_response(
+                code=ErrorCode.NOT_FOUND,
+                message="The import stage is unavailable.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        except NoDownloadableUnmatchedSessionsError:
+            return invalid_request_response(
+                message="No unmatched Reading Sessions are available to download.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        except UnmatchedStageIntegrityError:
+            return invalid_request_response(
+                message="The staged import archive is no longer usable.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        except UnmatchedZipAssemblyError:
+            return invalid_request_response(
+                message="The unmatched archive could not be assembled.",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        response = HttpResponse(content, content_type="application/zip")
+        response["Content-Disposition"] = f'attachment; filename="{ZIP_FILENAME}"'
+        return response

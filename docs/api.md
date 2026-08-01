@@ -281,7 +281,7 @@ Reading Session candidate identities. Example candidate structure:
 
 Matching is exact `fileHash` against currently accessible Library Books. No
 metadata fallback or EPUB/CFI inspection occurs. Empty Sessions are omitted
-unless explicitly included; that stored choice governs future Apply and
+unless explicitly included; that stored choice governs Apply and
 unmatched-download behavior. Multiple accessible Books with one checksum, no
 surviving Sessions, malformed archives, and staging failures return bounded
 errors without leaving a stage.
@@ -333,8 +333,38 @@ An identical request, regardless of candidate ordering, replays the result;
 changed selection or override values return `409`. The staged file is removed
 after commit. Failure before commit leaves the ready stage and file intact.
 Post-commit deletion failure does not roll back imported data and is recovered
-by the operator cleanup command. Unmatched download is not yet exposed under
-the canonical Marginalia API.
+by the operator cleanup command.
+
+`GET /api/v1/marginalia/import/unmatched/?import_token=<token>` is
+session-authenticated only. It returns `application/zip` with:
+
+```text
+Content-Disposition: attachment; filename="secondpass-marginalia-sessions.zip"
+```
+
+Only unmatched Books and Sessions persisted as downloadable by that stage are
+included. The staged `include_empty_sessions` policy remains authoritative.
+Matching is not rerun, so later Library access changes do not change the ZIP.
+No downloadable unmatched Sessions returns `409`; invalid, expired, foreign,
+missing-file, and otherwise unusable stages share the bounded no-leakage `404`.
+
+Members use the one-based, two-digit-minimum splitter layout:
+
+```text
+<book-number>-<book-key>/
+<book-number>-<reading-session-number>-<book-key>-<reading-session-key>.json
+```
+
+Every member is a canonical one-Book/one-Session Marginalia archive preserving
+the original `generatedAt`, source lifecycle state, progress, Annotations, and
+explicit `fileHash`, `sourceReadingSessionId`, and `clientAnnotationId` fields.
+Filename keys are safe, bounded, ASCII-oriented, and deterministic. ZIP member
+metadata, ordering, compression, and JSON rendering are fixed so repeated
+downloads are byte-identical.
+
+The GET is read-only: it does not update, consume, extend, or invalidate the
+stage, and Apply remains possible afterward. An applied stage cannot be
+reconstructed from its stored result after its archive file has been removed.
 
 The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
 `{"results": [...]}` without pagination. It defaults to the 10 most recently

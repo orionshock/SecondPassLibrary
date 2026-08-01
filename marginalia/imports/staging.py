@@ -102,6 +102,23 @@ def load_import_stage(*, user, token: str) -> ImportStage:
     return stage
 
 
+def read_import_stage(*, user, token: str) -> ImportStage:
+    if not isinstance(token, str) or not TOKEN_PATTERN.fullmatch(token):
+        raise ImportStageUnavailableError
+    stage = ImportStage.objects.filter(
+        user=user,
+        token_digest=_token_digest(token),
+    ).first()
+    if (
+        stage is None
+        or stage.expires_at <= timezone.now()
+        or stage.state == ImportStage.STATE_APPLYING
+        or not stage_file_path(stage.storage_name).is_file()
+    ):
+        raise ImportStageUnavailableError
+    return stage
+
+
 def claim_import_stage(*, user, token: str) -> ImportStage:
     if not isinstance(token, str) or not TOKEN_PATTERN.fullmatch(token):
         raise ImportStageUnavailableError
