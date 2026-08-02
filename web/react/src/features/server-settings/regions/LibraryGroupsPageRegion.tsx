@@ -11,7 +11,7 @@ export function LibraryGroupsPageRegion({ settings, editing, state, onEnable }: 
   onEnable: () => void;
 }) {
   const enabled = settings.advancedGroupsEnabled;
-  return <section className="server-settings-region server-settings-groups" aria-labelledby="library-groups-heading">
+  return <section className="server-settings-region server-settings-groups server-settings-region--centered" aria-labelledby="library-groups-heading">
     <h2 id="library-groups-heading">Advanced library groups</h2>
     <p className="muted">Create separate library spaces with their own members, curators, and shelves. Leave this off if the Public Library is all you need.</p>
     <span className={`server-settings-state server-settings-state--${enabled ? "enabled" : "disabled"}`}>{enabled ? "Enabled" : "Disabled"}</span>

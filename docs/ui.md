@@ -357,12 +357,14 @@ Server Settings is Owner-only and uses these tabs:
 
 1. General
 2. Public Library
-3. Library Groups
+3. External Services
+4. Advanced Library Groups
 
 General contains server name, server description, and banner text. Public
 Library manages the designated Public/Common Room name and description; normal
-Group Edit does not edit this identity. Library Groups shows advanced-group
-status and the enable action.
+Group Edit does not edit this identity. External Services contains the Reading
+Client URL; OAuth/OIDC are not implemented. Advanced Library Groups shows
+advanced-group status and the enable action in a centered content column.
 
 Enabling advanced groups requires browser confirmation. The normal Product UI
 does not provide disable/collapse after enablement. That operation is a

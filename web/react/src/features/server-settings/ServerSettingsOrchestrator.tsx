@@ -20,6 +20,7 @@ import { ActionRowComponent } from "../../shared/forms/ActionRowComponent";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
 import { TabListComponent, tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { GeneralSettingsPageRegion } from "./regions/GeneralSettingsPageRegion";
+import { ExternalServicesPageRegion } from "./regions/ExternalServicesPageRegion";
 import { LibraryGroupsPageRegion } from "./regions/LibraryGroupsPageRegion";
 import { PublicLibraryPageRegion } from "./regions/PublicLibraryPageRegion";
 import { DjangoAdminActionComponent } from "./DjangoAdminActionComponent";
@@ -173,6 +174,14 @@ export function ServerSettingsOrchestrator() {
       state={state}
       onChange={(field, value) => setPublicDraft((draft) => ({ ...draft, [field]: value }))}
       onSubmit={(event) => void savePublicLibrary(event)}
+    /> : null}
+    {tab === "external-services" ? <ExternalServicesPageRegion
+      settings={settings.general}
+      draft={generalDraft}
+      editing={editing}
+      state={state}
+      onChange={(value) => setGeneralDraft((draft) => ({ ...draft, readingClientBaseUrl: value }))}
+      onSubmit={(event) => void saveGeneral(event)}
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}
     </div>

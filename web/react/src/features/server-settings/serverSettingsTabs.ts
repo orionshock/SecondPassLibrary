@@ -1,11 +1,12 @@
 import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
 
-export type ServerSettingsTab = "general" | "public-library" | "library-groups";
+export type ServerSettingsTab = "general" | "public-library" | "external-services" | "library-groups";
 
 export const serverSettingsTabs: readonly { id: ServerSettingsTab; label: string }[] = [
   { id: "general", label: "General" },
   { id: "public-library", label: "Public Library" },
-  { id: "library-groups", label: "Library Groups" },
+  { id: "external-services", label: "External Services" },
+  { id: "library-groups", label: "Advanced Library Groups" },
 ];
 
 export function serverSettingsTabFromSearchParams(parameters: URLSearchParams): ServerSettingsTab {
@@ -22,5 +23,6 @@ export function serverSettingsSearchParams(
 export function serverSettingsFormId(tab: ServerSettingsTab): string | undefined {
   if (tab === "general") return "server-settings-general-form";
   if (tab === "public-library") return "server-settings-public-library-form";
+  if (tab === "external-services") return "server-settings-external-services-form";
   return undefined;
 }
