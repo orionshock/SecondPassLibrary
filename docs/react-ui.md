@@ -97,8 +97,9 @@ count because the Group API does not return one. Manager/Owner sessions receive
 the `/groups/new` metadata lifecycle. `GroupDetailOrchestrator` owns
 `/groups/:groupId`, role-scoped detail loading, and URL-backed Books/Members/Shelves
 tabs. Shelves lists visibility-scoped shelves owned by the Group and links to
-Shelf Detail with contextual Group breadcrumbs; it exposes no Shelf mutation
-controls. Its Manage affordance appears for any user with metadata, Book-curation,
+Shelf Detail with contextual Group breadcrumbs. Rows remain browse-only; authorized
+users create Group-owned Shelves from the tab action, and the list uses synchronized
+top and bottom pagination. Its Manage affordance appears for any user with metadata, Book-curation,
 membership-management, or deletion authority, including authorized Public
 Group managers. Books reuse the shared compact Book row with contextual Group
 breadcrumbs; Members expose only username and curator state. Custom Group

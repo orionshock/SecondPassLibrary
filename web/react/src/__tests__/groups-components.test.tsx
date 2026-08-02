@@ -59,18 +59,46 @@ describe("Groups read-only regions", () => {
     expect(markup).not.toContain("href=");
   });
 
-  it("renders the Manage destination only when authorized by its orchestrator", () => {
+  it("renders authorized Group lifecycle destinations in the shared responsive action area", () => {
     const detail = renderToStaticMarkup(<MemoryRouter><GroupHeaderPageRegion
       group={{ ...group, isPublicGroup: false }}
       loading={false}
       isCurator={false}
       editPath="/groups/group/edit"
-      activeTab="books"
+      createShelfPath="/shelves/new"
+      createShelfNavigationState={{ source: "group" }}
+      activeTab="shelves"
       onTabChange={vi.fn()}
       onRetry={vi.fn()}
     /></MemoryRouter>);
     expect(detail).toContain('href="/groups/group/edit"');
-    expect(detail).toContain(">Manage</a>");
+    expect(detail).toContain('class="group-detail-header__actions"');
+    expect(detail).toContain('class="button button--secondary group-detail-header__manage"');
+    expect(detail).toContain('href="/shelves/new"');
+    expect(detail).toContain('group-detail-header__create-shelf');
+    expect(detail).toContain('aria-hidden="true"');
+    expect(detail).toContain('>add</span>Create Shelf for Group</a>');
+
+    const unauthorized = renderToStaticMarkup(<GroupHeaderPageRegion
+      group={group}
+      loading={false}
+      isCurator={false}
+      activeTab="shelves"
+      onTabChange={vi.fn()}
+      onRetry={vi.fn()}
+    />);
+    expect(unauthorized).not.toContain('group-detail-header__actions');
+
+    const otherTab = renderToStaticMarkup(<MemoryRouter><GroupHeaderPageRegion
+      group={group}
+      loading={false}
+      isCurator={false}
+      createShelfPath="/shelves/new"
+      activeTab="books"
+      onTabChange={vi.fn()}
+      onRetry={vi.fn()}
+    /></MemoryRouter>);
+    expect(otherTab).not.toContain('href="/shelves/new"');
 
     const list = (canCreate: boolean) => renderToStaticMarkup(<MemoryRouter><GroupsListPageRegion
       page={{ items: [], count: 0, next: null, previous: null }}
@@ -164,7 +192,7 @@ describe("Groups read-only regions", () => {
     expect(list).not.toContain("email");
   });
 
-  it("renders Group-owned Shelf lifecycle links only when authorized by props and canEdit", () => {
+  it("keeps Group Shelf rows browse-only and frames them with synchronized pagination", () => {
     const shelf: ShelfSummary = {
       id: "shelf/id", name: "Favorites", description: "Shared picks", ownerType: "group",
       ownerUser: null, ownerGroup: { id: group.id, name: group.name, isPublicGroup: true },
@@ -173,34 +201,29 @@ describe("Groups read-only regions", () => {
     };
     const props = {
       groupId: group.id, groupName: group.name, groupPath: "/groups/group?tab=shelves",
-      createPath: "/shelves/new", createNavigationState: { source: "group" },
       pageNumber: 1, pageSize: 20, loading: false, onPageChange: vi.fn(),
       onPageSizeChange: vi.fn(), onRetry: vi.fn(),
     };
     const markup = renderToStaticMarkup(<MemoryRouter><GroupShelvesPageRegion
       {...props}
-      page={{ items: [shelf], count: 1, next: null, previous: null }}
+      page={{ items: [shelf], count: 21, next: "/next", previous: null }}
     /></MemoryRouter>);
     expect(markup).toContain('href="/shelves/shelf%2Fid"');
-    expect(markup).toContain('href="/shelves/new"');
-    expect(markup).toContain('href="/shelves/shelf%2Fid/edit"');
+    expect(markup).not.toContain('href="/shelves/shelf%2Fid/edit"');
+    expect(markup).toContain('aria-label="Shelves pagination, top"');
+    expect(markup).toContain('aria-label="Shelves pagination, bottom"');
+    expect(markup.match(/aria-label="Shelves per page"/g)).toHaveLength(1);
     expect(markup).toContain('aria-label="Open Visible Book"');
     expect(markup).not.toContain('aria-label="Delete');
     expect(markup).not.toContain("<form");
-
-    const readOnly = renderToStaticMarkup(<MemoryRouter><GroupShelvesPageRegion
-      {...props}
-      createPath={undefined}
-      page={{ items: [{ ...shelf, canEdit: false }], count: 1, next: null, previous: null }}
-    /></MemoryRouter>);
-    expect(readOnly).not.toContain('href="/shelves/new"');
-    expect(readOnly).not.toContain('href="/shelves/shelf%2Fid/edit"');
 
     const empty = renderToStaticMarkup(<MemoryRouter><GroupShelvesPageRegion
       {...props}
       page={{ items: [], count: 0, next: null, previous: null }}
     /></MemoryRouter>);
     expect(empty).not.toContain("shelf-summary-row-component");
+    expect(empty).toContain('aria-label="Shelves pagination, top"');
+    expect(empty).not.toContain('aria-label="Shelves pagination, bottom"');
 
     const failed = renderToStaticMarkup(<MemoryRouter><GroupShelvesPageRegion
       {...props}

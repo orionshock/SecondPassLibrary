@@ -1,6 +1,7 @@
 import type { LibraryGroup } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
+import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import { TabListComponent, type TabItem } from "../../../shared/tabs/TabListComponent";
 import type { GroupDetailTab } from "../groupsQuery";
@@ -18,6 +19,8 @@ export function GroupHeaderPageRegion({
   isCurator,
   editPath,
   editNavigationState,
+  createShelfPath,
+  createShelfNavigationState,
   activeTab,
   onTabChange,
   onRetry,
@@ -28,6 +31,8 @@ export function GroupHeaderPageRegion({
   isCurator: boolean;
   editPath?: string;
   editNavigationState?: unknown;
+  createShelfPath?: string;
+  createShelfNavigationState?: unknown;
   activeTab: GroupDetailTab;
   onTabChange: (tab: GroupDetailTab) => void;
   onRetry: () => void;
@@ -36,7 +41,9 @@ export function GroupHeaderPageRegion({
   if (!group && error) return <section className="group-detail-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
   if (!group) return null;
 
-  return <>
+  const showCreateShelf = activeTab === "shelves" && createShelfPath;
+
+  return <div className="group-detail-header">
     <PageHeader
       title={<span className="page-header__title-content">
         <span>{group.name}</span>
@@ -44,7 +51,6 @@ export function GroupHeaderPageRegion({
         {isCurator ? <Badge tone="accent">Curator</Badge> : null}
       </span>}
       description={group.description || undefined}
-      actions={editPath ? <Link className="button button--secondary" to={editPath} state={editNavigationState}>Manage</Link> : undefined}
     />
     <TabListComponent
       tabs={groupDetailTabs}
@@ -53,5 +59,13 @@ export function GroupHeaderPageRegion({
       ariaLabel="Group sections"
       idPrefix="group-detail"
     />
-  </>;
+    {editPath || showCreateShelf ? <div className="group-detail-header__actions">
+      {editPath ? <Link className="button button--secondary group-detail-header__manage" to={editPath} state={editNavigationState}>Manage</Link> : null}
+      {showCreateShelf ? <Link
+        className="button button--small button--secondary group-detail-header__create-shelf"
+        to={createShelfPath}
+        state={createShelfNavigationState}
+      ><MaterialIcon name="add" size={16} />Create Shelf for Group</Link> : null}
+    </div> : null}
+  </div>;
 }

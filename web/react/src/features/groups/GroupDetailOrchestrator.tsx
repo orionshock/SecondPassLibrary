@@ -179,6 +179,10 @@ export function GroupDetailOrchestrator() {
       editNavigationState={canManage && group
         ? groupEditNavigationState(location.state, group)
         : undefined}
+      createShelfPath={canCreateGroupShelf ? shelfNewPath() : undefined}
+      createShelfNavigationState={canCreateGroupShelf && group
+        ? shelfCreateNavigationStateForGroup(group, currentPath)
+        : undefined}
       activeTab={queryState.tab}
       onTabChange={(tab) => changeQuery({ tab })}
       onRetry={() => setDetailRetry((value) => value + 1)}
@@ -229,10 +233,6 @@ export function GroupDetailOrchestrator() {
       groupName={group.name}
       isPublicGroup={group.isPublicGroup}
       groupPath={currentPath}
-      createPath={canCreateGroupShelf ? shelfNewPath() : undefined}
-      createNavigationState={canCreateGroupShelf
-        ? shelfCreateNavigationStateForGroup(group, currentPath)
-        : undefined}
       page={shelves.page}
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}

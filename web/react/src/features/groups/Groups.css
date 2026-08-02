@@ -195,19 +195,60 @@
 
 .group-detail-page .page-description { white-space: pre-wrap; }
 
+.group-detail-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+
+.group-detail-header::after {
+  content: "";
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: end;
+  border-bottom: 1px solid var(--border);
+}
+
+.group-detail-header > .page-header {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.group-detail-header > .tab-list-component {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  z-index: 1;
+  border-bottom: 0;
+}
+
+.group-detail-header__actions { display: contents; }
+
+.group-detail-header__manage {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.group-detail-header__create-shelf {
+  display: inline-flex;
+  grid-column: 2;
+  grid-row: 2;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: end;
+  white-space: nowrap;
+  z-index: 1;
+}
+
 .group-books-region,
 .group-members-region,
 .group-shelves-region { margin-top: 0.8rem; }
 
 .group-shelf-rows { display: grid; gap: 0.45rem; }
-
-.group-shelves-region__actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.65rem;
-}
-
-.group-shelves-region > .pager-component { margin-top: 0.75rem; }
 
 .group-member-row-component {
   display: flex;
@@ -232,6 +273,34 @@
 }
 
 @media (max-width: 760px) {
+  .group-detail-header { grid-template-columns: minmax(0, 1fr); }
+
+  .group-detail-header > .page-header,
+  .group-detail-header > .tab-list-component,
+  .group-detail-header__actions {
+    grid-column: 1;
+  }
+
+  .group-detail-header > .page-header { grid-row: 1; }
+  .group-detail-header > .tab-list-component { grid-row: 2; }
+
+  .group-detail-header::after {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .group-detail-header__actions {
+    display: flex;
+    grid-row: 3;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .group-detail-header__manage,
+  .group-detail-header__create-shelf { grid-column: auto; grid-row: auto; }
+
   .groups-controls,
   .group-books-controls { align-items: stretch; flex-wrap: wrap; }
 

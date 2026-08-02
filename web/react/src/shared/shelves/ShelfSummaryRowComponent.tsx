@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Link } from "react-router";
 
 import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../books/BookCoverPreviewStripComponent";
@@ -10,7 +9,7 @@ export type ShelfOwnerBadge =
   | { kind: "group"; label: string; isPublicGroup?: boolean }
   | { kind: "user"; username: string };
 
-export function ShelfSummaryRowComponent({ name, description, itemCount, detailPath, navigationState, previewBooks, owner, actions }: {
+export function ShelfSummaryRowComponent({ name, description, itemCount, detailPath, navigationState, previewBooks, owner }: {
   name: string;
   description: string;
   itemCount: number;
@@ -18,7 +17,6 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
   navigationState?: unknown;
   previewBooks: readonly BookCoverPreviewItem[];
   owner?: ShelfOwnerBadge;
-  actions?: ReactNode;
 }) {
   const hasPreviews = previewBooks.length > 0;
   return <article className={`shelf-summary-row-component${hasPreviews ? "" : " shelf-summary-row-component--without-previews"}`}>
@@ -38,7 +36,6 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
         <span className="shelf-summary-row-component__count">
           {itemCount} {itemCount === 1 ? "book" : "books"}
         </span>
-        {actions ? <span className="shelf-summary-row-component__actions">{actions}</span> : null}
       </div>
       {description ? <p>{description}</p> : null}
     </div>
