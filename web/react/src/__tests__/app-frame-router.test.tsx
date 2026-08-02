@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
-import { AppFrame } from "../app/layout/AppFrame";
+import { AppFrame, navigationDestinationOwnsPath } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
@@ -14,8 +14,8 @@ import { MarginaliaImportOrchestrator } from "../features/marginalia/MarginaliaI
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
-function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Partial<ServerInfo> = {}): string {
-  return renderToStaticMarkup(<MemoryRouter initialEntries={["/library"]}><AppFrame user={{ ...user, ...userOverrides }} server={{ ...server, ...serverOverrides }} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
+function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Partial<ServerInfo> = {}, path = "/library"): string {
+  return renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><AppFrame user={{ ...user, ...userOverrides }} server={{ ...server, ...serverOverrides }} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
 }
 
 describe("app frame and router", () => {
@@ -34,15 +34,19 @@ describe("app frame and router", () => {
     const markup = navMarkup({}, { bannerText: "Dashboard only notice" });
     expect(markup).not.toContain("Dashboard only notice");
     expect(markup).toContain('href="/library"');
-    expect(markup).toContain('href="/profile"');
-    expect(markup).toContain('aria-label="User owner"');
+    expect(markup).toContain('aria-label="Open Dashboard for Family Library"');
+    expect(markup).toContain('aria-label="Open account menu for owner"');
     expect(markup).not.toContain("@owner");
-    expect(markup).toContain('href="/logout/"');
+    expect(markup).not.toContain('>Dashboard</span>');
+    expect(markup).not.toContain('href="/profile"');
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
     const markup = navMarkup({}, { advancedLibraryGroupsEnabled: true });
-    for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
-    expect(markup).toMatch(/aria-current="page" class="active" href="\/library"/);
+    for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server"]) expect(markup).toContain(`href="${path}"`);
+    expect(markup).toContain("Book Import");
+    expect(markup).not.toContain(">Dashboard<");
+    expect(markup).toMatch(/class="app-navigation-link app-navigation-link--primary active"[^>]*href="\/library"/);
+    expect(markup).toContain('aria-label="More navigation"');
   });
 
   it("shows Manager navigation without Server Settings and gates Groups by mode", () => {
@@ -65,9 +69,35 @@ describe("app frame and router", () => {
   it("shows only general branches to Readers and allows Groups only in advanced mode", () => {
     const reader = { isOwner: false, isReader: true };
     const markup = navMarkup(reader);
-    for (const path of ["/marginalia", "/library", "/shelves", "/profile", "/logout/"]) expect(markup).toContain(`href="${path}"`);
+    for (const path of ["/marginalia", "/library", "/shelves"]) expect(markup).toContain(`href="${path}"`);
     for (const path of ["/groups", "/imports", "/users", "/server"]) expect(markup).not.toContain(`href="${path}"`);
     expect(navMarkup(reader, { advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
+  });
+
+  it("uses the brand as the sole Dashboard link and marks it active at home", () => {
+    const markup = navMarkup({}, {}, "/");
+
+    expect(markup).toMatch(/class="app-identity active"[^>]*href="\/"/);
+    expect(markup).toContain('aria-current="page"');
+    expect((markup.match(/href="\/"/g) ?? [])).toHaveLength(1);
+    expect(markup).not.toContain(">Dashboard<");
+  });
+
+  it("matches nested routes to their owning destination without prefix collisions", () => {
+    for (const [destination, path] of [
+      ["/marginalia", "/marginalia/sessions/session-id"],
+      ["/library", "/library/books/book-id/edit"],
+      ["/shelves", "/shelves/shelf-id/edit"],
+      ["/imports", "/imports"],
+      ["/server", "/server"],
+      ["/profile", "/profile/password"],
+    ]) expect(navigationDestinationOwnsPath(destination, path)).toBe(true);
+    expect(navigationDestinationOwnsPath("/library", "/libraryish")).toBe(false);
+
+    const nestedLibrary = navMarkup({}, {}, "/library/books/book-id/edit");
+    expect(nestedLibrary).toMatch(/app-navigation-link--primary active[^>]*href="\/library"/);
+    const profile = navMarkup({}, {}, "/profile/password");
+    expect(profile).toContain("app-menu-component--active account-menu");
   });
 
   it("hides Groups in simple mode for every role", () => {

@@ -18,7 +18,8 @@ describe("app bootstrap", () => {
     const markup = renderBootstrap({ status: "ready", user, server });
     expect(markup).toContain("Family Library");
     expect(markup).not.toContain("Books for everyone.");
-    expect(markup).toContain('href="/logout/"');
+    expect(markup).toContain('aria-label="Open account menu for owner"');
+    expect(markup).not.toContain('href="/logout/"');
   });
   it("renders login for authentication failure", () => {
     const markup = renderBootstrap({ status: "failed", kind: "authentication" });

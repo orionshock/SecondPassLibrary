@@ -37,9 +37,11 @@ This is the running list of cross-page presentation and interaction rules that a
 - The Users list uses the same effective-role rule, so Owner is displayed as the user's role rather than as a second status.
 - Users surfaces display role names as `Owner`, `Manager`, `Librarian`, `Curator`, and `Reader`.
 - Primary navigation shows My Marginalia, Library, and Shelves to every
-  authenticated user; Imports to Librarian+; Users to Manager+; and Server
-  Settings to Owner. Groups is visible to every authenticated role only when
-  advanced Library Groups are enabled.
+  authenticated user, plus Groups only when advanced Library Groups are
+  enabled. Secondary navigation labels the existing `/imports` destination
+  `Book Import` for Librarian+, shows Users to Manager+, and Server Settings to
+  Owner. Responsive overflow changes presentation, never authorization or route
+  ownership.
 - Simple mode hides the Groups branch, custom-group controls, and advanced
   relationship tabs. It does not mean groups cease to exist: the designated
   Public group remains a real access and shelf-ownership scope, and Shelves may
