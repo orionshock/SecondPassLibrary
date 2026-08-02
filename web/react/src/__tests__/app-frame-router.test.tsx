@@ -41,11 +41,28 @@ describe("app frame and router", () => {
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
     const markup = navMarkup({}, { advancedLibraryGroupsEnabled: true });
-    for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server"]) expect(markup).toContain(`href="${path}"`);
+    expect(markup).toContain('class="app-header app-header--full-navigation"');
+    for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server"]) {
+      expect(markup.match(new RegExp(`href="${path}"`, "g"))).toHaveLength(1);
+    }
     expect(markup).toContain("Book Import");
     expect(markup).not.toContain(">Dashboard<");
     expect(markup).toMatch(/class="app-navigation-link app-navigation-link--primary active"[^>]*href="\/library"/);
     expect(markup).toContain('aria-label="More navigation"');
+    expect(markup).toContain('aria-label="Open account menu for owner"');
+  });
+
+  it("preserves accessible identity and account names for long crowded-header values", () => {
+    const markup = navMarkup(
+      { username: "owner-with-an-unusually-long-account-name" },
+      { name: "The Exceptionally Long Household Library Name", advancedLibraryGroupsEnabled: true },
+    );
+    expect(markup).toContain('class="app-header app-header--full-navigation"');
+    expect(markup).toContain('aria-label="Open Dashboard for The Exceptionally Long Household Library Name"');
+    expect(markup).toContain('aria-label="Open account menu for owner-with-an-unusually-long-account-name"');
+    for (const path of ["/marginalia", "/library", "/groups", "/shelves"]) {
+      expect(markup).toContain(`href="${path}"`);
+    }
   });
 
   it("shows Manager navigation without Server Settings and gates Groups by mode", () => {
@@ -55,6 +72,7 @@ describe("app frame and router", () => {
     expect(simpleMarkup).toContain('href="/users"');
     expect(simpleMarkup).not.toContain('href="/server"');
     expect(simpleMarkup).not.toContain('href="/groups"');
+    expect(simpleMarkup).not.toContain("app-header--full-navigation");
     expect(navMarkup(manager, { advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
   });
 

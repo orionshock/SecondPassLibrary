@@ -81,6 +81,8 @@ export function AppFrame({
   const breadcrumbs = breadcrumbRegistration?.pathname === location.pathname ? breadcrumbRegistration.items : [];
   const visiblePrimary = primaryNavigation.filter((item) => !item.visible || item.visible(user, server));
   const visibleSecondary = secondaryNavigation.filter((item) => !item.visible || item.visible(user, server));
+  const hasFullNavigation = visiblePrimary.length === primaryNavigation.length
+    && visibleSecondary.length === secondaryNavigation.length;
   const overflowItems: AppMenuItem[] = visibleSecondary.map((item) => ({
     key: item.to,
     label: item.label,
@@ -92,7 +94,7 @@ export function AppFrame({
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <header className={`app-header${hasFullNavigation ? " app-header--full-navigation" : ""}`}>
         <Link
           className={`app-identity ${location.pathname === "/" ? "active" : ""}`}
           to="/"

@@ -247,6 +247,27 @@
   margin: 0;
 }
 
+@container (max-width: 66rem) {
+  .app-header--full-navigation .secondary-nav .app-navigation-link__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .app-header--full-navigation .secondary-nav .app-navigation-link {
+    width: 2.2rem;
+    padding-inline: 0.45rem;
+  }
+}
+
+@container (max-width: 60rem) {
+  .app-header--full-navigation .secondary-nav { display: none; }
+  .app-header--full-navigation .navigation-overflow-menu { display: block; }
+}
+
 @container (max-width: 64rem) {
   .secondary-nav .app-navigation-link__label {
     position: absolute;
