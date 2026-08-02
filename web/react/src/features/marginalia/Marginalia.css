@@ -16,6 +16,9 @@
 }
 
 .marginalia-view-selector button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   min-width: 0;
   padding: 0.35rem 0.5rem;
   border-radius: 0.55rem;
@@ -23,6 +26,9 @@
   background: var(--surface);
   font-size: 0.8rem;
 }
+
+.marginalia-view-selector .material-icon,
+.marginalia-section-actions .material-icon { font-size: 1rem; }
 
 .marginalia-view-selector button:hover,
 .marginalia-view-selector button:focus-visible,
@@ -76,6 +82,12 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.marginalia-section-actions .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .marginalia-section-actions .button[aria-current="page"] {

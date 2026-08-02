@@ -19,6 +19,14 @@
   gap: 0.4rem;
 }
 
+.shelf-scopes-region .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.shelf-scopes-region .material-icon { font-size: 1rem; }
+
 .shelf-scopes-region [aria-current="page"] {
   border-color: rgb(125 211 252 / 72%);
   background: rgb(125 211 252 / 16%);

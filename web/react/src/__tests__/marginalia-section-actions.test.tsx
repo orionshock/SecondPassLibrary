@@ -19,6 +19,10 @@ describe("MarginaliaSectionActionsComponent", () => {
     expect(markup).toContain('href="/marginalia"');
     expect(markup).toContain('href="/marginalia/import"');
     expect(markup).toContain('href="/marginalia/export"');
+    expect(markup).toContain(">history</span><span>My Marginalia</span>");
+    expect(markup).toContain(">upload_file</span><span>Import</span>");
+    expect(markup).toContain(">download</span><span>Export</span>");
+    expect(markup.match(/aria-hidden="true"/g)).toHaveLength(3);
     expect(markup).toMatch(new RegExp(`<a(?=[^>]*aria-current="page")(?=[^>]*href="${activePath}")[^>]*>`));
     expect(markup.match(/aria-current="page"/g)).toHaveLength(1);
     expect(markup).not.toContain('role="tablist"');

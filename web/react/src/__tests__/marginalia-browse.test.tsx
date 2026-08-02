@@ -33,13 +33,14 @@ const session: MarginaliaSessionSummary = {
 };
 
 describe("Marginalia view selector", () => {
-  it("uses Library-style view buttons without tab semantics", () => {
+  it("uses labelled, decorative Dashboard-consistent icons without tab semantics", () => {
     const onViewChange = vi.fn();
     const selector = MarginaliaViewSelectorComponent({ activeView: "sessions", onViewChange }) as ReactElement<{ children: ReactNode }>;
     const markup = renderToStaticMarkup(selector);
     expect(markup).toContain('aria-label="Marginalia views"');
-    expect(markup).toMatch(/aria-current="page"[^>]*>Sessions/);
-    expect(markup).toContain(">Books</button>");
+    expect(markup).toMatch(/aria-current="page"[^>]*><span[^>]*aria-hidden="true"[^>]*>history<\/span><span>Sessions<\/span>/);
+    expect(markup).toContain(">menu_book</span><span>Books</span></button>");
+    expect(markup.match(/aria-hidden="true"/g)).toHaveLength(2);
     expect(markup).not.toContain("tablist");
 
     const buttons = Children.toArray(selector.props.children) as ReactElement<{ onClick: () => void }>[];

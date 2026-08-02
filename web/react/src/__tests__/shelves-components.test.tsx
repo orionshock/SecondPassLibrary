@@ -35,11 +35,13 @@ const item: ShelfItem = {
 };
 
 describe("Shelves read-only regions", () => {
-  it("exposes only the three Product shelf scopes", () => {
+  it("renders all labelled, decorative-icon Shelf scopes", () => {
     const markup = renderToStaticMarkup(<ShelfScopesPageRegion activeScope="personal" onScopeChange={vi.fn()} />);
-    expect(markup).toContain("Personal");
-    expect(markup).toContain("Shared by Others");
-    expect(markup).toContain("Group Shelves");
+    expect(markup).toMatch(/aria-current="page"[^>]*><span[^>]*aria-hidden="true"[^>]*>shelves<\/span><span>Personal<\/span>/);
+    expect(markup).toContain(">share</span><span>Shared by Others</span>");
+    expect(markup).toContain(">group_work</span><span>Group Shelves</span>");
+    expect(markup.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(markup.match(/aria-hidden="true"/g)).toHaveLength(3);
     expect(markup).not.toContain(">All<");
   });
 
