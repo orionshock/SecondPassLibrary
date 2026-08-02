@@ -31,7 +31,7 @@ export function DashboardPageRegion({
 }) {
   return <ProductPageShellComponent
     className="dashboard-page"
-    title="Your reading home"
+    title="Library Home"
   >
     {bannerText.trim() ? <aside className="dashboard-banner" aria-label="Server message">{bannerText}</aside> : null}
     <RecentReadingPageRegion state={recentReading} onRetry={onRetryRecentReading} />

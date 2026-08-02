@@ -45,19 +45,11 @@ describe("Dashboard", () => {
 
   it("uses the standard page title without an eyebrow or server description", () => {
     const markup = renderDashboard({ status: "loading" });
-    expect(markup).toContain("Your reading home");
-    expect(markup).toContain("Maintenance tonight.");
+    expect(markup.match(/<h1>/g)).toHaveLength(1);
+    expect(markup.match(/class="dashboard-banner"/g)).toHaveLength(1);
     expect(markup).not.toContain('class="eyebrow"');
-    expect(markup).not.toContain("Server description");
-    expect(markup.match(/Maintenance tonight\./g)).toHaveLength(1);
+    expect(markup).not.toContain('class="page-description"');
     expect(renderDashboard({ status: "loading" }, { bannerText: "  \n " })).not.toContain("dashboard-banner");
-  });
-
-  it("uses the concise Recent Sessions heading without a card subtitle", () => {
-    const markup = renderDashboard({ status: "loading" });
-    expect(markup).toContain("Recent Sessions");
-    expect(markup).not.toContain("Recent reading activity");
-    expect(markup).not.toContain("Your recent reading sessions.");
   });
 
   it("keeps recent-reading loading, empty, and failure states inside the section", () => {

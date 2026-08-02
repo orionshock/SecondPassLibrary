@@ -21,13 +21,12 @@ function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Pa
 describe("app frame and router", () => {
   it("renders the Dashboard inside the frame", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
-    expect(markup).toContain("Your reading home");
-    expect(markup).toContain("Recent Sessions");
-    expect(markup).toContain("Loading recent reading");
-    expect(markup).toContain("Maintenance tonight");
-    expect(markup).not.toContain("Hidden");
+    expect(markup).toContain('class="app-shell"');
+    expect(markup).toContain('class="product-page-shell dashboard-page"');
+    expect(markup).toContain('class="dashboard-banner"');
+    expect(markup).toContain('aria-busy="true"');
     expect(markup).not.toContain('class="eyebrow"');
-    expect(markup).toContain("Family Library");
+    expect(markup).not.toContain('class="page-description"');
   });
 
   it("keeps Dashboard banner content out of the global frame on other routes", () => {

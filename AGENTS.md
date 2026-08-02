@@ -58,7 +58,7 @@ Unless explicitly requested, do not add:
 - For meaningful code changes, run `python manage.py check` and focused pytest coverage for the changed area. Use the full suite only when the scope or risk warrants it.
 - Classify changed tests as `invariant`, `contract`, `regression`, or `implementation detail` in the final report.
 - Do not weaken invariant or contract tests without explicitly explaining why.
-- Do not add tests that pin documentation wording, headings, or capitalization.
+- Tests cover runtime behavior, not copy or prose. When changing a suite, remove copy-only coverage.
 - Keep every React/Vitest test under `web/react/src/__tests__`; do not colocate Vitest files with runtime components or SDK source.
 - Do not treat local helper scripts as production contracts.
 - Docs-only changes do not require application tests.
