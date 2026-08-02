@@ -371,8 +371,9 @@ The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
 active caller-owned Sessions; `limit` is bounded from 1 through 50 and
 `include_closed=true` includes closed Sessions. Activity ordering uses Session,
 progress, and non-deleted Annotation updates before applying the database
-limit. Rows are not deduplicated by Book and expose only Session id, name,
-status, last activity, and the bounded Book id/title/cover/`can_open` reference.
+limit. Rows are not deduplicated by Book and expose Session id, name, status,
+last activity, saved progress (or `null`), and the bounded Book
+id/title/cover/`can_open` reference.
 
 ## Accounts
 

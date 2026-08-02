@@ -163,6 +163,11 @@ describe("Marginalia recent Session SDK", () => {
           name: "Current pass",
           status: "active",
           last_activity_at: "2026-07-30T12:00:00Z",
+          progress: {
+            cfi: "epubcfi(/6/8!/4/2)",
+            location_label: "Chapter 08 · 42%",
+            updated_at: "2026-07-30T12:00:00Z",
+          },
           book: {
             id: "book-1",
             title: "Remembered Book",
@@ -181,6 +186,11 @@ describe("Marginalia recent Session SDK", () => {
       name: "Current pass",
       status: "active",
       lastActivityAt: "2026-07-30T12:00:00Z",
+      progress: {
+        cfi: "epubcfi(/6/8!/4/2)",
+        locationLabel: "Chapter 08 · 42%",
+        updatedAt: "2026-07-30T12:00:00Z",
+      },
       book: {
         id: "book-1",
         title: "Remembered Book",

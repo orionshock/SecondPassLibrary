@@ -12,7 +12,7 @@ import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { DashboardPageRegion, type RecentReadingState } from "./regions/DashboardPageRegion";
 import "./Dashboard.css";
 
-export const DASHBOARD_RECENT_READING_LIMIT = 10;
+export const DASHBOARD_RECENT_READING_LIMIT = 50;
 export const DASHBOARD_RECENT_QUERY = { limit: DASHBOARD_RECENT_READING_LIMIT } as const;
 
 export function DashboardOrchestrator() {

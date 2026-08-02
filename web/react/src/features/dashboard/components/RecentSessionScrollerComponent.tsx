@@ -44,12 +44,12 @@ export function RecentSessionScrollerComponent({ items }: { items: RecentMargina
   }, [items, updateScrollState]);
 
   return <div className={`dashboard-scroller${!scrollState.atStart ? " dashboard-scroller--more-before" : ""}${!scrollState.atEnd ? " dashboard-scroller--more-after" : ""}`}>
-    {scrollState.hasOverflow ? <div className="dashboard-scroller__controls" aria-label="Recent reading controls">
-      <IconButton type="button" aria-label="Previous reading sessions" title="Previous" disabled={scrollState.atStart} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, -1)}><MaterialIcon name="arrow_back" /></IconButton>
-      <IconButton type="button" aria-label="Next reading sessions" title="Next" disabled={scrollState.atEnd} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, 1)}><MaterialIcon name="arrow_forward" /></IconButton>
+    {scrollState.hasOverflow ? <div className="dashboard-scroller__controls" role="group" aria-label="Recent reading controls">
+      <IconButton className="dashboard-scroller__control dashboard-scroller__control--previous" type="button" aria-label="Previous reading sessions" title="Previous" disabled={scrollState.atStart} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, -1)}><MaterialIcon name="chevron_left" /></IconButton>
+      <IconButton className="dashboard-scroller__control dashboard-scroller__control--next" type="button" aria-label="Next reading sessions" title="Next" disabled={scrollState.atEnd} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, 1)}><MaterialIcon name="chevron_right" /></IconButton>
     </div> : null}
     <div ref={scrollerRef} className="dashboard-scroller__track" aria-label="Recent reading sessions" tabIndex={0} onScroll={updateScrollState}>
-      {items.map((item) => <RecentSessionCoverCardComponent key={item.id} item={item} />)}
+      {items.slice(0, 50).map((item) => <RecentSessionCoverCardComponent key={item.id} item={item} />)}
     </div>
   </div>;
 }

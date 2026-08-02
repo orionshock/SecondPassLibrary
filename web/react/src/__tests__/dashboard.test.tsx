@@ -12,6 +12,11 @@ const recentItem: RecentMarginaliaSession = {
   name: "Evening read",
   status: "active",
   lastActivityAt: "2026-07-27T18:30:00Z",
+  progress: {
+    cfi: "epubcfi(/6/8!/4/2)",
+    locationLabel: "Chapter 08 · 42%",
+    updatedAt: "2026-07-27T18:30:00Z",
+  },
   book: {
     id: "book/id",
     title: "A Book",
@@ -38,8 +43,8 @@ function renderDashboard(
 
 describe("Dashboard", () => {
   it("uses the canonical bounded active-only recent Marginalia request", () => {
-    expect(DASHBOARD_RECENT_READING_LIMIT).toBe(10);
-    expect(DASHBOARD_RECENT_QUERY).toEqual({ limit: 10 });
+    expect(DASHBOARD_RECENT_READING_LIMIT).toBe(50);
+    expect(DASHBOARD_RECENT_QUERY).toEqual({ limit: 50 });
     expect(DASHBOARD_RECENT_QUERY).not.toHaveProperty("includeClosed");
   });
 
@@ -75,10 +80,12 @@ describe("Dashboard", () => {
     expect(markup).toContain('dateTime="2026-07-27T18:30:00Z"');
     expect(markup).toContain('src="/media/cover.jpg"');
     expect(markup).toContain('href="/marginalia/sessions/session-1"');
-    expect(markup).toContain('href="/library/books/book%2Fid"');
+    expect(markup).not.toContain('href="/library/books/book%2Fid"');
     expect(markup).toContain('href="/marginalia"');
     expect(markup).toContain(">View all</a>");
     expect(markup).toContain("Active");
+    expect(markup).toContain("Chapter 08 · 42%");
+    expect(markup).not.toContain('role="progressbar"');
     expect(markup).not.toContain("Open in Reader");
   });
 
@@ -86,6 +93,14 @@ describe("Dashboard", () => {
     const markup = renderDashboard({ status: "ready", items: [{ ...recentItem, status: "closed" }] });
     expect(markup).toContain("Closed");
     expect(markup).toContain('href="/marginalia/sessions/session-1"');
+  });
+
+  it("omits progress cleanly when the Session has no saved location", () => {
+    const markup = renderDashboard({ status: "ready", items: [{ ...recentItem, progress: null }] });
+
+    expect(markup).not.toContain("dashboard-session-card__progress");
+    expect(markup.match(/href="\/marginalia\/sessions\//g)).toHaveLength(1);
+    expect(markup).not.toContain("dashboard-scroller__controls");
   });
 
   it("keeps inaccessible Book identity without a dead Library action", () => {
@@ -115,6 +130,17 @@ describe("Dashboard", () => {
     ] });
     expect(markup.indexOf("Newer pass")).toBeLessThan(markup.indexOf("Older pass"));
     expect(markup.match(/href="\/marginalia\/sessions\//g)).toHaveLength(2);
+  });
+
+  it("bounds defensive presentation to the endpoint maximum", () => {
+    const items = Array.from({ length: 52 }, (_, index) => ({
+      ...recentItem,
+      id: `session-${index}`,
+      name: `Session ${index}`,
+    }));
+    const markup = renderDashboard({ status: "ready", items });
+
+    expect(markup.match(/href="\/marginalia\/sessions\//g)).toHaveLength(50);
   });
 
   it("renders the cover fallback when a recent Book has no cover", () => {

@@ -63,6 +63,7 @@ export interface RecentMarginaliaSession {
   status: MarginaliaSessionStatus;
   lastActivityAt: string;
   book: MarginaliaBookReference;
+  progress: MarginaliaProgress | null;
 }
 
 export interface MarginaliaSessionDetail extends MarginaliaSessionSummary {
@@ -186,6 +187,7 @@ interface RecentSessionResponse {
   status: MarginaliaSessionStatus;
   last_activity_at: string;
   book: BookReferenceResponse;
+  progress: ProgressResponse | null;
 }
 
 interface RecentSessionsResponse {
@@ -299,6 +301,7 @@ export async function listRecentMarginaliaSessions(
     status: item.status,
     lastActivityAt: item.last_activity_at,
     book: mapBookReference(item.book),
+    progress: item.progress ? mapProgress(item.progress) : null,
   }));
 }
 

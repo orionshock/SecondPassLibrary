@@ -154,16 +154,28 @@ class MarginaliaRecentSessionAPITests(APITestCase):
         )
 
     def test_projection_keeps_inaccessible_book_identity_and_is_bounded(self):
+        ReadingSession.objects.filter(pk=self.active.pk).update(
+            progress_cfi="epubcfi(/6/8!/4/2)",
+            progress_location_label="Chapter 08 · 42%",
+            progress_updated_at=timezone.now(),
+        )
         row = self.client.get(self.url).json()["results"][0]
 
         self.assertEqual(
             set(row),
-            {"id", "name", "status", "last_activity_at", "book"},
+            {"id", "name", "status", "last_activity_at", "book", "progress"},
         )
         self.assertEqual(set(row["book"]), {"id", "title", "cover_url", "can_open"})
         self.assertEqual(row["book"]["title"], "Remembered Book")
         self.assertTrue(row["book"]["cover_url"].endswith("/media/covers/remembered.jpg"))
         self.assertFalse(row["book"]["can_open"])
+        self.assertEqual(row["progress"]["cfi"], "epubcfi(/6/8!/4/2)")
+        self.assertEqual(row["progress"]["location_label"], "Chapter 08 · 42%")
+
+    def test_projection_uses_null_when_session_has_no_saved_progress(self):
+        row = self.client.get(self.url).json()["results"][0]
+
+        self.assertIsNone(row["progress"])
 
     def test_session_and_bearer_authentication_match_and_anonymous_is_rejected(self):
         session_payload = self.client.get(self.url).json()

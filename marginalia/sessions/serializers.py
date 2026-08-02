@@ -75,6 +75,7 @@ class MarginaliaGlobalSessionSummarySerializer(MarginaliaSessionSummarySerialize
 class MarginaliaRecentSessionSerializer(serializers.ModelSerializer):
     last_activity_at = serializers.DateTimeField(read_only=True)
     book = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
 
     def get_book(self, session: ReadingSession) -> dict:
         return MarginaliaSessionBookReferenceSerializer(
@@ -85,9 +86,14 @@ class MarginaliaRecentSessionSerializer(serializers.ModelSerializer):
             },
         ).data
 
+    def get_progress(self, session: ReadingSession) -> dict | None:
+        if not session.progress_cfi:
+            return None
+        return MarginaliaProgressSerializer(session).data
+
     class Meta:
         model = ReadingSession
-        fields = ["id", "name", "status", "last_activity_at", "book"]
+        fields = ["id", "name", "status", "last_activity_at", "book", "progress"]
         read_only_fields = fields
 
 

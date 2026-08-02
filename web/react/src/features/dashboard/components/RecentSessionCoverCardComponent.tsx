@@ -7,6 +7,7 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 
 export function RecentSessionCoverCardComponent({ item }: { item: RecentMarginaliaSession }) {
   const sessionName = marginaliaSessionDisplayName(item);
+  const locationLabel = item.progress?.locationLabel.trim() ? item.progress.locationLabel : null;
   return <article className="dashboard-session-card">
     <Link
       className="dashboard-session-card__session"
@@ -16,13 +17,15 @@ export function RecentSessionCoverCardComponent({ item }: { item: RecentMarginal
     >
       <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
       <span className="dashboard-session-card__overlay">
-        <span className={`dashboard-session-card__status dashboard-session-card__status--${item.status}`}>{item.status === "active" ? "Active" : "Closed"}</span>
-        <strong>{sessionName}</strong>
-        <span className="dashboard-session-card__book-title">{item.book.title}</span>
-        <time dateTime={item.lastActivityAt}>{formatRecentActivity(item.lastActivityAt)}</time>
+        <span className="dashboard-session-card__details">
+          <span className="dashboard-session-card__book-title">{item.book.title}</span>
+          <span className={`dashboard-session-card__status dashboard-session-card__status--${item.status}`}>{item.status === "active" ? "Active" : "Closed"}</span>
+          <strong>{sessionName}</strong>
+          <time dateTime={item.lastActivityAt}>{formatRecentActivity(item.lastActivityAt)}</time>
+          {locationLabel ? <span className="dashboard-session-card__progress">{locationLabel}</span> : null}
+        </span>
       </span>
     </Link>
-    {item.book.canOpen ? <Link className="dashboard-session-card__book-link" to={`/library/books/${encodeURIComponent(item.book.id)}`}>View Book</Link> : null}
   </article>;
 }
 

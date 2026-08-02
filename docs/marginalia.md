@@ -423,10 +423,10 @@ Sessions. `limit` defaults to 10 and accepts values from 1 through 50.
 The ownership filter and limit are applied in the database. Results are not
 deduplicated by Book and retain the server-authoritative activity order used by
 the other Session collections: newest Session metadata, saved progress, or
-non-deleted Annotation update first. Each result contains only `id`, `name`,
-`status`, `last_activity_at`, and the bounded `id`, `title`, `cover_url`, and
-`can_open` Book reference. Inaccessible Books remain identifiable while
-`can_open=false` prevents a Library action.
+non-deleted Annotation update first. Each result contains `id`, `name`,
+`status`, `last_activity_at`, saved `progress` (or `null`), and the bounded
+`id`, `title`, `cover_url`, and `can_open` Book reference. Inaccessible Books
+remain identifiable while `can_open=false` prevents a Library action.
 
 ## Session detail and metadata
 
