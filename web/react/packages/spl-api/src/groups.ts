@@ -23,6 +23,7 @@ export interface LibraryGroupsQuery {
   bookId?: string;
   ordering?: "name" | "-name";
   includePreviewBooks?: boolean;
+  previewLimit?: number;
   page?: number;
   pageSize?: number;
 }
@@ -102,26 +103,36 @@ export async function listGroups(
   if (query.bookId) parameters.set("book", query.bookId);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.previewLimit !== undefined) parameters.set("preview_limit", String(query.previewLimit));
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
-  return toPage(
-    await client.request<ApiPage<LibraryGroupResponse>>(`/api/v1/library/groups/${suffix}`),
-    mapLibraryGroup,
-  );
+  try {
+    return toPage(
+      await client.request<ApiPage<LibraryGroupResponse>>(`/api/v1/library/groups/${suffix}`),
+      mapLibraryGroup,
+    );
+  } catch (error: unknown) {
+    throw mapPreviewLimitError(error);
+  }
 }
 
 export async function getGroup(
   groupId: string,
-  query: { includePreviewBooks?: boolean } = {},
+  query: { includePreviewBooks?: boolean; previewLimit?: number } = {},
   client: ApiClient = apiClient,
 ): Promise<LibraryGroup> {
   const parameters = new URLSearchParams();
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.previewLimit !== undefined) parameters.set("preview_limit", String(query.previewLimit));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
-  return mapLibraryGroup(await client.request<LibraryGroupResponse>(
-    `/api/v1/library/groups/${encodeURIComponent(groupId)}/${suffix}`,
-  ));
+  try {
+    return mapLibraryGroup(await client.request<LibraryGroupResponse>(
+      `/api/v1/library/groups/${encodeURIComponent(groupId)}/${suffix}`,
+    ));
+  } catch (error: unknown) {
+    throw mapPreviewLimitError(error);
+  }
 }
 
 export async function createGroup(
@@ -324,6 +335,15 @@ function mapLibraryGroup(response: LibraryGroupResponse): LibraryGroup {
       })),
     }),
   };
+}
+
+function mapPreviewLimitError(error: unknown): unknown {
+  if (!(error instanceof ApiError) || !error.fields?.preview_limit) return error;
+  const { preview_limit: previewLimit, ...fields } = error.fields;
+  return new ApiError(error.message, error.status, {
+    code: error.code,
+    fields: { ...fields, previewLimit },
+  });
 }
 
 function mapGroupMembership(response: GroupMembershipResponse): GroupMembership {

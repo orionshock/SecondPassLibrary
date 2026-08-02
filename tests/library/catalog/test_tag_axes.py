@@ -86,6 +86,27 @@ class LibraryTagAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             expected_name="Fantasy",
         )
 
+    def test_list_and_detail_ignore_preview_only_params(self):
+        urls = (
+            "/api/v1/library/tags/",
+            f"/api/v1/library/tags/{self.fantasy.id}/",
+        )
+
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.client.get(
+                    url,
+                    {
+                        "include_preview_books": "true",
+                        "preview_limit": "invalid",
+                    },
+                )
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()
+                rows = payload["results"] if "results" in payload else [payload]
+                self.assertTrue(rows)
+                self.assertTrue(all("preview_books" not in row for row in rows))
+
     def test_detail_with_no_visible_books_returns_404(self):
         hidden_only = CatalogTag.objects.create(name="Hidden Tag", normalized_name="hidden", slug="hidden")
         create_catalog_book("Hidden Tag Book", author=self.alpha, tag=hidden_only, group=self.hidden)

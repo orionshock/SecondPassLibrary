@@ -160,8 +160,10 @@ Exact Library routes, query parameters, and response schemas are owned by
 - Author, Series, Group, and Shelf list/detail payloads may opt into
   `preview_books` with `include_preview_books=true`; preview items contain only
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author
-  and Series lists also support the same opt-in. Tag endpoints do not currently
-  attach preview books.
+  and Series lists also support the same opt-in. These preview-bearing surfaces
+  share `preview_limit=0..24`: zero omits previews, positive values imply the
+  preview payload, and an omitted limit defaults to six when previews are
+  requested. Tag endpoints do not currently attach preview books.
 - Book endpoints do not need preview items because their results are already
   Books. Tag endpoints are count/filter facets and do not support
   `include_preview_books`.

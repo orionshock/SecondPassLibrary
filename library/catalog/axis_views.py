@@ -59,6 +59,7 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
     lookup_url_kwarg = "axis_id"
     search_normalized_name = False
     supports_exclude_id = False
+    supports_preview_books = False
 
     def visible_books(self):
         return visible_books_for_user(self.request.user, cached=self.use_cached_visibility)
@@ -76,6 +77,8 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
 
     @cached_property
     def preview_book_limit(self) -> int | None:
+        if not self.supports_preview_books:
+            return None
         return parse_preview_book_limit(self.request)
 
     def preview_books_queryset(self):
@@ -161,6 +164,7 @@ class AuthorAxisMixin(_BaseAxisMixin):
     serializer_class = AuthorAxisSerializer
     search_normalized_name = True
     supports_exclude_id = True
+    supports_preview_books = True
 
     def axis_queryset(self):
         if is_session_catalog_manager(self.request) and not self.has_catalog_tag_filter():
@@ -227,6 +231,7 @@ class SeriesAxisMixin(_BaseAxisMixin):
     serializer_class = SeriesAxisSerializer
     search_normalized_name = True
     supports_exclude_id = True
+    supports_preview_books = True
 
     def axis_queryset(self):
         if is_session_catalog_manager(self.request) and not self.has_catalog_tag_filter():

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import cached_property
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
@@ -8,7 +10,7 @@ from rest_framework.response import Response
 
 from accounts.roles import is_manager
 from library.api_access import LibraryBearerReadMixin
-from library.catalog.preview_books import PREVIEW_BOOK_LIMIT, include_preview_books
+from library.catalog.preview_books import parse_preview_book_limit
 from library.groups.api_access import (
     groups_available_via_api,
     require_group_creation_available,
@@ -34,19 +36,25 @@ from library.queries import visible_books_for_group, visible_groups_for_user
 from library.roles import is_curator
 
 
-def _attach_group_preview_books(*, groups, user) -> None:
+def _attach_group_preview_books(*, groups, user, limit: int) -> None:
     for group in groups:
         group._preview_books = list(
             visible_books_for_group(user, group, cached=True).order_by(
                 "sort_title", "title", "id"
-            )[:PREVIEW_BOOK_LIMIT]
+            )[:limit]
         )
 
 
 class GroupPreviewBooksMixin:
+    @cached_property
+    def preview_book_limit(self) -> int | None:
+        if self.request.method != "GET":
+            return None
+        return parse_preview_book_limit(self.request)
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = include_preview_books(self.request)
+        context["include_preview_books"] = self.preview_book_limit is not None
         return context
 
 
@@ -63,8 +71,12 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         groups = list(page) if page is not None else list(queryset)
-        if include_preview_books(request):
-            _attach_group_preview_books(groups=groups, user=request.user)
+        if self.preview_book_limit is not None:
+            _attach_group_preview_books(
+                groups=groups,
+                user=request.user,
+                limit=self.preview_book_limit,
+            )
         serializer = self.get_serializer(groups, many=True)
         if page is not None:
             return self.get_paginated_response(serializer.data)
@@ -94,8 +106,12 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
 
     def retrieve(self, request, *args, **kwargs):
         group = self.get_object()
-        if include_preview_books(request):
-            _attach_group_preview_books(groups=[group], user=request.user)
+        if self.preview_book_limit is not None:
+            _attach_group_preview_books(
+                groups=[group],
+                user=request.user,
+                limit=self.preview_book_limit,
+            )
         return Response(self.get_serializer(group).data)
 
     def patch(self, request, *args, **kwargs):

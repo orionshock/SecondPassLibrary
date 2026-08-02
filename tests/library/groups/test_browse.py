@@ -389,6 +389,21 @@ class LibraryGroupBrowseTests(TestCase):
         for tag in response.json()["results"]:
             self.assertEqual(set(tag), {"id", "name", "slug", "book_count"})
 
+    def test_group_tags_ignore_preview_only_params(self):
+        response = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/tags/",
+            {
+                "include_preview_books": "true",
+                "preview_limit": "invalid",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["results"])
+        self.assertTrue(
+            all("preview_books" not in row for row in response.json()["results"])
+        )
+
     def test_group_author_and_series_tag_filters_use_slug_without_duplicates(self):
         authors = self.client.get(
             f"/api/v1/library/groups/{self.club.id}/authors/",

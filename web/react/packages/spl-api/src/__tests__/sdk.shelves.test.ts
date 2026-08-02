@@ -153,6 +153,33 @@ describe("Shelves SDK", () => {
     expect(page.items[0]).not.toHaveProperty("preview_books");
   });
 
+  it("serializes bounded Shelf preview limits and maps validation errors", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return path.includes("shelves/shelf")
+        ? personalShelf as T
+        : { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+
+    await listShelves({ previewLimit: 0 }, client);
+    await getShelf("shelf", { includePreviewBooks: true, previewLimit: 24 }, client);
+
+    expect(calls).toEqual([
+      "/api/v1/shelves/?preview_limit=0",
+      "/api/v1/shelves/shelf/?include_preview_books=true&preview_limit=24",
+    ]);
+
+    const invalidClient: ApiClient = { request: async () => {
+      throw new ApiError("Invalid.", 400, {
+        fields: { preview_limit: ["Must be an integer from 0 to 24."] },
+      });
+    } };
+    await expect(listShelves({ previewLimit: 25 }, invalidClient)).rejects.toMatchObject({
+      fields: { previewLimit: ["Must be an integer from 0 to 24."] },
+    });
+  });
+
   it("collects only server-filtered Group Shelves containing a Book", async () => {
     const calls: string[] = [];
     const groupShelf = {

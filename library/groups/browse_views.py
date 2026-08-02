@@ -103,6 +103,7 @@ def _exclude_group_shelf_books(queryset, *, user, group, raw_shelf_id):
 
 class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
     search_normalized_name = False
+    supports_preview_books = False
 
     def axis_queryset(self):
         raise NotImplementedError
@@ -114,6 +115,8 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
 
     @cached_property
     def preview_book_limit(self) -> int | None:
+        if not self.supports_preview_books:
+            return None
         return parse_preview_book_limit(self.request)
 
     def attach_preview_books(self, parents, *, limit):
@@ -146,6 +149,7 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
 
 class GroupAuthorListView(GroupAxisListMixin):
     serializer_class = AuthorAxisSerializer
+    supports_preview_books = True
 
     def axis_queryset(self):
         visible_books = apply_catalog_tag_filter(
@@ -165,6 +169,7 @@ class GroupAuthorListView(GroupAxisListMixin):
 
 class GroupSeriesListView(GroupAxisListMixin):
     serializer_class = SeriesAxisSerializer
+    supports_preview_books = True
 
     def axis_queryset(self):
         visible_books = apply_catalog_tag_filter(

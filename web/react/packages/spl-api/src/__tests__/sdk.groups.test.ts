@@ -101,6 +101,33 @@ describe("Library Groups SDK", () => {
     expect(calls).toEqual(["/api/v1/library/groups/?include_preview_books=true"]);
   });
 
+  it("serializes bounded Group preview limits and maps validation errors", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return path.includes("groups/group")
+        ? { id: "group", name: "Group", description: "", is_public_group: false } as T
+        : { count: 0, next: null, previous: null, results: [] } as T;
+    } };
+
+    await listGroups({ previewLimit: 0 }, client);
+    await getGroup("group", { includePreviewBooks: true, previewLimit: 24 }, client);
+
+    expect(calls).toEqual([
+      "/api/v1/library/groups/?preview_limit=0",
+      "/api/v1/library/groups/group/?include_preview_books=true&preview_limit=24",
+    ]);
+
+    const invalidClient: ApiClient = { request: async () => {
+      throw new ApiError("Invalid.", 400, {
+        fields: { preview_limit: ["Must be an integer from 0 to 24."] },
+      });
+    } };
+    await expect(listGroups({ previewLimit: 25 }, invalidClient)).rejects.toMatchObject({
+      fields: { previewLimit: ["Must be an integer from 0 to 24."] },
+    });
+  });
+
   it("serializes the Book filter with existing Group list query options", async () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {

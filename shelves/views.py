@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any, NoReturn, cast
 
 from django.http import Http404
@@ -12,10 +13,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from library.catalog.preview_books import (
-    PREVIEW_BOOK_LIMIT,
-    include_preview_books,
-)
+from library.catalog.preview_books import parse_preview_book_limit
 from library.catalog.ordering import parse_ordering_param
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
@@ -57,7 +55,7 @@ from .querysets import (
 )
 
 
-def _attach_shelf_preview_books(*, shelves, user) -> None:
+def _attach_shelf_preview_books(*, shelves, user, limit: int) -> None:
     shelf_list = list(shelves)
     shelf_ids = [shelf.id for shelf in shelf_list]
     if not shelf_ids:
@@ -67,7 +65,7 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
         shelf._preview_books = [
             item.book
             for item in visible_shelf_items_for_user(user, shelf).order_by("position", "id")[
-                :PREVIEW_BOOK_LIMIT
+                :limit
             ]
         ]
 
@@ -128,8 +126,14 @@ class ShelfViewSet(
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = include_preview_books(self.request)
+        context["include_preview_books"] = self.preview_book_limit is not None
         return context
+
+    @cached_property
+    def preview_book_limit(self) -> int | None:
+        if self.action not in {"list", "retrieve"}:
+            return None
+        return parse_preview_book_limit(self.request)
 
     def _raise_drf_validation(self, exc: DjangoValidationError) -> NoReturn:
         raise serializers.ValidationError(
@@ -169,8 +173,12 @@ class ShelfViewSet(
         page = self.paginate_queryset(queryset)
         shelves = list(page) if page is not None else list(queryset)
 
-        if include_preview_books(request):
-            _attach_shelf_preview_books(shelves=shelves, user=request.user)
+        if self.preview_book_limit is not None:
+            _attach_shelf_preview_books(
+                shelves=shelves,
+                user=request.user,
+                limit=self.preview_book_limit,
+            )
 
         serializer = self.get_serializer(shelves, many=True)
         if page is not None:
@@ -179,8 +187,12 @@ class ShelfViewSet(
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if include_preview_books(request):
-            _attach_shelf_preview_books(shelves=[instance], user=request.user)
+        if self.preview_book_limit is not None:
+            _attach_shelf_preview_books(
+                shelves=[instance],
+                user=request.user,
+                limit=self.preview_book_limit,
+            )
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)

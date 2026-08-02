@@ -59,6 +59,7 @@ export interface ShelvesQuery {
   bookId?: string;
   ordering?: ShelfOrdering;
   includePreviewBooks?: boolean;
+  previewLimit?: number;
   page?: number;
   pageSize?: number;
 }
@@ -168,26 +169,36 @@ export async function listShelves(
   if (query.bookId) parameters.set("book", query.bookId);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.previewLimit !== undefined) parameters.set("preview_limit", String(query.previewLimit));
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
-  return toPage(
-    await client.request<ApiPage<ShelfSummaryResponse>>(`/api/v1/shelves/${suffix}`),
-    mapShelfSummary,
-  );
+  try {
+    return toPage(
+      await client.request<ApiPage<ShelfSummaryResponse>>(`/api/v1/shelves/${suffix}`),
+      mapShelfSummary,
+    );
+  } catch (error: unknown) {
+    throw mapPreviewLimitError(error);
+  }
 }
 
 export async function getShelf(
   shelfId: string,
-  query: { includePreviewBooks?: boolean } = {},
+  query: { includePreviewBooks?: boolean; previewLimit?: number } = {},
   client: ApiClient = apiClient,
 ): Promise<ShelfSummary> {
   const parameters = new URLSearchParams();
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.previewLimit !== undefined) parameters.set("preview_limit", String(query.previewLimit));
   const suffix = parameters.size ? `?${parameters.toString()}` : "";
-  return mapShelfSummary(await client.request<ShelfSummaryResponse>(
-    `/api/v1/shelves/${encodeURIComponent(shelfId)}/${suffix}`,
-  ));
+  try {
+    return mapShelfSummary(await client.request<ShelfSummaryResponse>(
+      `/api/v1/shelves/${encodeURIComponent(shelfId)}/${suffix}`,
+    ));
+  } catch (error: unknown) {
+    throw mapPreviewLimitError(error);
+  }
 }
 
 export async function listShelfItems(
@@ -396,6 +407,15 @@ function mapShelfSummary(response: ShelfSummaryResponse): ShelfSummary {
       })),
     }),
   };
+}
+
+function mapPreviewLimitError(error: unknown): unknown {
+  if (!(error instanceof ApiError) || !error.fields?.preview_limit) return error;
+  const { preview_limit: previewLimit, ...fields } = error.fields;
+  return new ApiError(error.message, error.status, {
+    code: error.code,
+    fields: { ...fields, previewLimit },
+  });
 }
 
 function mapShelfItem(response: ShelfItemResponse): ShelfItem {
