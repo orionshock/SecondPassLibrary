@@ -10,6 +10,7 @@ from library.models import (
     Author,
     BookAuthor,
     BookGroupAssignment,
+    BookIdentifier,
     CatalogTag,
     LibraryGroup,
     LibraryGroupMembership,
@@ -177,6 +178,34 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Club Alpha"])
         self.assertIsNone(response.json()["next"])
+
+    def test_group_books_q_matches_broad_search_fields_within_group(self):
+        self.club_alpha.subtitle = "Private subtitle"
+        self.club_alpha.save(update_fields=["subtitle", "updated_at"])
+        BookIdentifier.objects.create(
+            book=self.club_alpha,
+            scheme=BookIdentifier.SCHEME_OTHER,
+            value="CLUB-IDENTIFIER-42",
+            normalized_value="club-identifier-42",
+        )
+        cases = {
+            "private subtitle": ["Club Alpha"],
+            "beta author": ["Club Beta"],
+            "first series": ["Club Alpha", "Club Beta"],
+            "club-identifier-42": ["Club Alpha"],
+            "fantasy": ["Club Alpha", "Shared Book"],
+            "alpha house": ["Club Alpha"],
+            "dresden file": ["Club Alpha"],
+            "hidden dresden": [],
+        }
+
+        for term, expected in cases.items():
+            with self.subTest(term=term):
+                response = self.client.get(
+                    f"/api/v1/library/groups/{self.club.id}/books/", {"q": term}
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response_titles(response), expected)
 
     def test_group_books_exclude_shelf_composes_with_filters_order_and_pagination(self):
         shelf = Shelf.objects.create(

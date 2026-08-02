@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q
 from django.http import Http404
 from rest_framework.generics import ListAPIView
 
 from library.api_access import LibraryBearerReadMixin
+from library.catalog.filters import apply_broad_book_search
 from library.catalog.ordering import apply_book_ordering, parse_ordering_param
 from library.catalog.serializers import BookListSerializer
 from library.catalog.views import book_row_queryset
@@ -30,17 +30,7 @@ class UserBookVerseSearchView(LibraryBearerReadMixin, ListAPIView):
         if not term:
             queryset = queryset.none()
         else:
-            queryset = queryset.filter(
-                Q(title__icontains=term)
-                | Q(sort_title__icontains=term)
-                | Q(subtitle__icontains=term)
-                | Q(book_authors__author__name__icontains=term)
-                | Q(book_series__series__name__icontains=term)
-                | Q(identifiers__value__icontains=term)
-                | Q(book_catalog_tags__catalog_tag__name__icontains=term)
-                | Q(publisher__icontains=term)
-                | Q(description__icontains=term)
-            ).distinct()
+            queryset = apply_broad_book_search(queryset, term)
 
         queryset = _exclude_shelf_books(
             queryset,

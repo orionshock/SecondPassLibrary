@@ -863,7 +863,10 @@ candidate discovery. The Shelf must be readable and owned by the path Group.
 Malformed ids return a structured `400`; missing or inaccessible Shelves return
 `404`; a readable Shelf owned by another Group (or a user) returns a structured
 `exclude_shelf` field error. The exclusion composes with normal Group Book
-search, tag/author/series/publisher filters, ordering, and pagination.
+search, tag/author/series/publisher filters, ordering, and pagination. Group
+Book `q` uses the broad search fields: title, sort title, subtitle, Author name,
+Series name, identifier value, Catalog Tag name, publisher, and description,
+while retaining the exact Group-assignment scope.
 
 Client API bearer token support (read-only allow-list):
 
@@ -1012,7 +1015,7 @@ the stable `slug` returned by tag payloads.
 
 Book list ordering:
 
-- Book `q` search matches only `title` and the internal `sort_title` value.
+- General Book-axis `q` search matches only `title` and the internal `sort_title` value.
   Authors, Series, identifiers, tags, publisher, subtitle, and description do
   not participate in Book-axis text search; use their dedicated axes or filters.
 

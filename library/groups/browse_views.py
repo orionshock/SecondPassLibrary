@@ -69,7 +69,9 @@ class GroupBookListView(GroupBrowseMixin, ListAPIView):
             group=group,
             raw_shelf_id=self.request.query_params.get("exclude_shelf"),
         )
-        queryset = apply_book_filters(queryset, self.request.query_params)
+        queryset = apply_book_filters(
+            queryset, self.request.query_params, broad_search=True
+        )
         return apply_book_ordering(queryset, parse_book_ordering(self.request))
 
 
