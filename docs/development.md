@@ -214,17 +214,14 @@ session auth with CSRF.
 
 ## Product UI
 
-The active Product UI is the Vite React workspace under `web/react`. Django
-serves the authenticated React shell at `/`; ordinary development should use
-the Vite server on port 5174. Retired Django
-Product UI code is parked under `reference/legacy_product_ui` and is outside the
-Django application. It is not imported, discovered, routed, or tested.
+The Product UI is the Vite React workspace under `web/react`. Django serves the
+authenticated React shell at `/`; ordinary development should use the Vite
+server on port 5174.
 
 Django continues to render `/setup/`, `/login/`, `/logout/`, and the optional
 `/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client
 authorization webpage is retired pending a React replacement.
-There are no `/app/` or `/legacy/` mounts and no compatibility routes for the
-retired Django Product UI.
+There are no alternate Product UI mounts or compatibility routes.
 
 ## Error-handling checks
 

@@ -22,7 +22,7 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 ## Product and security boundaries
 
 - Keep REST/JSON APIs under `/api/v1/`. Never expose filesystem paths, storage identities, secrets, or authentication internals.
-- The Product UI is React under `web/react`. Retired Django Product UI source is parked under `reference/legacy_product_ui` and must never be imported, discovered, routed, or tested as runtime code.
+- The Product UI is React under `web/react`.
 - Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
 - React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
 - Keep React layered: the app orchestrator owns bootstrap and the global frame; branch orchestrators own page assembly; regions own only their local operations; shared components stay server-blind. Communicate through explicit props, callbacks, outlet context, or stable contracts. Only `@second-pass/spl-api` may know server URLs or perform server communication.
@@ -71,4 +71,4 @@ Unless explicitly requested, do not add:
 - `docs/permissions.md`
 - `docs/development.md`
 - `docs/deployment.md`
-- `docs/ui.md`
+- `docs/react-ui.md`

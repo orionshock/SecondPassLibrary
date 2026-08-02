@@ -2,7 +2,7 @@
 
 This document defines current role authority and visibility rules. Exact HTTP
 routes and payloads belong in `docs/api.md`; shelf lifecycle and scope behavior
-belong in `docs/shelves.md`; Product UI structure belongs in `docs/ui.md`.
+belong in `docs/shelves.md`; Product UI structure belongs in `docs/react-ui.md`.
 
 ## Identity concepts
 
@@ -110,7 +110,7 @@ default name.
   membership-management, and shelf operations, subject to Public protections.
 
 Group Edit therefore presents Public Details as read-only and points Owner to
-Server Settings. Product UI layout details remain in `docs/ui.md`.
+Server Settings. Product UI layout details remain in `docs/react-ui.md`.
 
 ## Simple and advanced group modes
 

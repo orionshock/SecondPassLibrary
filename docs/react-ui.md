@@ -1,8 +1,8 @@
 # React Product UI
 
-> **Document purpose:** This is the running record of the current React Product UI: implemented surfaces, active behavior, architecture, and deferred work. Historical migration guidance belongs in `docs/react-implementation-spec.md`; durable cross-page rules belong in `docs/react-ui-rules.md`.
+> **Document purpose:** This is the running record of the current React Product UI: implemented surfaces, active behavior, architecture, and deferred work. Durable cross-page rules belong in `docs/react-ui-rules.md`.
 
-The Product UI lives in `web/react`. Retired Django Product UI templates, static assets, views, and routes are isolated under `reference/legacy_product_ui` for reference only. They are outside the Django application and must not be imported, discovered, or mounted. Old Product UI tests are not maintained as executable tests.
+The Product UI lives in `web/react`.
 
 ## Development
 
@@ -10,7 +10,7 @@ Node.js 22.22.0 or newer is required. Run Django on port 8000 and the Product UI
 
 Vite is the primary development surface. Django serves the authenticated React shell at `/` and intended Product UI deep links when a local build exists. Before bootstrap, these routes redirect to `/setup/`; afterward unauthenticated requests redirect to `/login/`.
 
-There are no `/app/` or `/legacy/` mounts. Retired paths are not redirected or otherwise special-cased.
+There are no alternate Product UI mounts or compatibility routes.
 
 The React shell concurrently bootstraps authenticated user context through `getCurrentUser()` and server-wide Product UI context through `getServerInfo()` from `@second-pass/spl-api`. Authenticated bootstrap does not call public `/.well-known/secondpass` discovery. Components do not make raw `fetch()` calls. The server brand is the sole Dashboard/home link. Primary navigation keeps My Marginalia, Library, Shelves, and optional advanced-mode Groups prominent; role-gated Book Import, Users, and Server Settings are secondary, collapse to labelled icons, and move into a keyboard-accessible overflow menu as header space contracts. The username-and-chevron account menu owns Profile settings and the existing Django Log out destination. Route guards and backend authorization remain authoritative, and `/logout/` remains a Django endpoint. The configured banner is Dashboard page content rather than global navigation chrome.
 
@@ -154,9 +154,15 @@ Group Books endpoint with the same broad metadata matching, both with
 `exclude_shelf`. Deleting a Shelf removes its
 ShelfItems but never Books or files. Shelf Edit supports immediate Move up, Move down, and one-based Move To positioning through the stored zero-based ShelfItem order; direct positioning is unavailable when retained inaccessible items prevent a safe absolute move. Drag/drop remains deferred.
 
-The parked UI under `reference/legacy_product_ui` may inform palette, spacing, and interaction tone only. It is not an implementation dependency or active contract.
-
 Cross-page product semantics that are not API shapes are tracked in [React Product UI Rules](react-ui-rules.md).
+
+## Product backlog
+
+- Local cover preview before upload.
+- Marginalia sort controls.
+- Group-scoped Author, Series, and Tag browsing.
+- Vite chunk-size and code-splitting cleanup.
+- Module and file naming cleanup when affected code is next touched.
 
 ## Contextual breadcrumbs
 

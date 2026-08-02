@@ -44,7 +44,6 @@
       "requirements.txt",
       "**/tools/**",
       "web/static/web/favicon.png",
-      "**/reference/**",
     ],
     "sqltools.connections": [
       {

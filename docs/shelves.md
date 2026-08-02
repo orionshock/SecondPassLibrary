@@ -2,8 +2,8 @@
 
 Shelves are ordered presentation/organization collections. They never grant
 access to a Book. Role authority is defined in `docs/permissions.md`; exact API
-routes and payload fields are defined in `docs/api.md`; detailed page layout is
-defined in `docs/ui.md`.
+routes and payload fields are defined in `docs/api.md`; current Product UI
+behavior is defined in `docs/react-ui.md`.
 
 ## Concepts and owner types
 
@@ -180,7 +180,7 @@ Book metadata. Reorder UI for this locked-placeholder model remains deferred.
 Book Detail/Edit may surface shelves containing the Book, and Group View/Edit
 may surface group-owned shelves. Those relationships do not change shelf or
 Book visibility. Pager, row, icon, and responsive details remain in
-`docs/ui.md`.
+`docs/react-ui.md`.
 
 ## `cleanup_shelves` maintenance policy
 
