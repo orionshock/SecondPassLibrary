@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -52,6 +53,25 @@ class LibraryModelShapeTests(TestCase):
 
 
 class LibraryModelConstraintTests(TestCase):
+    def test_series_index_accepts_only_positive_values_with_at_most_two_decimal_places(self):
+        book = Book.objects.create(title="Book")
+        series = Series.objects.create(name="Series", sort_name="Series")
+
+        for value in (Decimal("1"), Decimal("1.0"), Decimal("1.25"), Decimal("12.75"), None):
+            with self.subTest(value=value):
+                BookSeries(book=book, series=series, series_index=value).full_clean()
+
+        for value in (Decimal("0"), Decimal("-1"), Decimal("1.255")):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                BookSeries(book=book, series=series, series_index=value).full_clean()
+
+    def test_series_index_database_constraint_rejects_nonpositive_values(self):
+        book = Book.objects.create(title="Book")
+        series = Series.objects.create(name="Series", sort_name="Series")
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            BookSeries.objects.create(book=book, series=series, series_index=Decimal("0"))
+
     def test_checksum_is_unique_when_present(self):
         Book.objects.create(title="One", checksum="abc123")
 

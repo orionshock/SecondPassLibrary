@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -10,8 +12,10 @@ from accounts.bootstrap import (
 )
 from accounts.models import UserProfile
 from core import server_settings
+from core.models import ServerSetting
+from library.groups import memberships
 from library.groups.public_group import get_public_group
-from library.models import LibraryGroupMembership
+from library.models import LibraryGroup, LibraryGroupMembership
 
 
 User = get_user_model()
@@ -99,6 +103,60 @@ class FirstOwnerBootstrapServiceTests(TestCase):
         self.assertTrue(server_settings.get_advanced_library_groups_enabled())
         self.assertEqual(public.name, "Reading Room")
         self.assertEqual(public.description, "Books for everyone.")
+
+    def test_late_membership_failure_restores_settings_cache_before_retry(self):
+        server_settings.set_server_name("Existing Library")
+        server_settings.set_server_description("Existing description.")
+        self.assertEqual(server_settings.get_server_name(), "Existing Library")
+
+        ensure_membership = memberships._ensure_user_public_membership_locked
+
+        def fail_after_membership(*args, **kwargs):
+            ensure_membership(*args, **kwargs)
+            raise RuntimeError("late setup failure")
+
+        with patch(
+            "library.groups.memberships._ensure_user_public_membership_locked",
+            side_effect=fail_after_membership,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "late setup failure"):
+                create_first_owner(
+                    username="owner",
+                    password="Correct-Horse-Battery-47",
+                    server_name="Rolled Back Library",
+                    server_description="Rolled back description.",
+                )
+
+        self.assertFalse(User.objects.filter(is_superuser=True).exists())
+        self.assertFalse(LibraryGroup.objects.exists())
+        self.assertFalse(LibraryGroupMembership.objects.exists())
+        self.assertEqual(
+            ServerSetting.objects.get(key="server_name").value,
+            "Existing Library",
+        )
+        self.assertEqual(
+            ServerSetting.objects.get(key="server_description").value,
+            "Existing description.",
+        )
+        self.assertEqual(server_settings.get_server_name(), "Existing Library")
+        self.assertEqual(
+            server_settings.get_server_description(),
+            "Existing description.",
+        )
+
+        owner = create_first_owner(
+            username="owner",
+            password="Correct-Horse-Battery-47",
+            server_name="Committed Library",
+            server_description="Committed description.",
+        )
+
+        self.assertTrue(User.objects.filter(pk=owner.pk, is_superuser=True).exists())
+        self.assertEqual(server_settings.get_server_name(), "Committed Library")
+        self.assertEqual(
+            server_settings.get_server_description(),
+            "Committed description.",
+        )
 
     def test_second_create_is_rejected(self):
         create_first_owner(

@@ -25,6 +25,19 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
         self.assertEqual(description.json()["description"], "Curated")
         self.assertEqual(rename.status_code, 403)
 
+    def test_librarian_can_submit_normalized_unchanged_name_with_changed_description(self):
+        self.assertTrue(self.client.login(username="librarian", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "  Club  ", "description": "Curated"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "Club")
+        self.assertEqual(response.json()["description"], "Curated")
+
     def test_reader_curator_can_patch_exact_group_description_only(self):
         LibraryGroupMembership.objects.filter(
             user=self.reader, group=self.club
@@ -46,6 +59,53 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
         self.assertEqual(exact.status_code, 200)
         self.assertEqual(exact.json()["description"], "Reader curated")
         self.assertEqual(other.status_code, 403)
+
+    def test_exact_curator_can_submit_unchanged_name_with_changed_description(self):
+        LibraryGroupMembership.objects.filter(
+            user=self.reader, group=self.club
+        ).update(is_curator=True)
+        self.assertTrue(self.client.login(username="reader", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "Club", "description": "Reader curated"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "Club")
+        self.assertEqual(response.json()["description"], "Reader curated")
+
+    def test_librarian_changed_name_rejects_entire_patch(self):
+        self.assertTrue(self.client.login(username="librarian", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "Renamed", "description": "Not persisted"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.name, "Club")
+        self.assertEqual(self.club.description, "Readers")
+
+    def test_exact_curator_changed_name_rejects_entire_patch(self):
+        LibraryGroupMembership.objects.filter(
+            user=self.reader, group=self.club
+        ).update(is_curator=True)
+        self.assertTrue(self.client.login(username="reader", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "Renamed", "description": "Not persisted"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.name, "Club")
+        self.assertEqual(self.club.description, "Readers")
 
     def test_normal_group_patch_rejects_public_name_and_description_for_all_roles(self):
         attempts = [
@@ -124,3 +184,57 @@ class LibraryGroupPatchApiTests(LibraryGroupMutationApiTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("name", response.json())
+
+    def test_patch_rejects_name_over_model_limit_without_persisting_description(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "x" * 256, "description": "Not persisted"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.json())
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.name, "Club")
+        self.assertEqual(self.club.description, "Readers")
+
+    def test_patch_rejects_unknown_fields(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"description": "Not persisted", "books": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("books", response.json())
+        self.club.refresh_from_db()
+        self.assertEqual(self.club.description, "Readers")
+
+    def test_put_is_not_supported(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.put(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": "Replacement"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_patch_allows_duplicate_names(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        duplicate = self.hidden.name
+
+        response = self.client.patch(
+            f"/api/v1/library/groups/{self.club.id}/",
+            json.dumps({"name": duplicate}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], duplicate)
+        self.assertEqual(self.club.__class__.objects.filter(name=duplicate).count(), 2)

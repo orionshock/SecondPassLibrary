@@ -25,11 +25,30 @@ Series membership is represented by `BookSeries`, which links a Book to a
 Series and stores its `series_index`. Author biographies and Series summaries
 are optional descriptive metadata.
 
+A Series index is null when its position is unknown, or a positive decimal with
+at most two fractional digits. It is stored exactly in `DecimalField(max_digits=8,
+decimal_places=2)` and compared numerically; `1`, `1.0`, and `1.00` are the same
+position. Values that are zero, negative, malformed, or require more than two
+fractional digits are invalid and are never rounded into the catalog.
+
+`BookAuthor.position` is the canonical Author order for a Book. The row with
+the lowest position, then through-row id, is the primary Author. Library,
+search, Group browse, and Shelf Author sorting compare only that Author's
+`sort_name` (falling back to `name`); secondary Authors do not affect sorting.
+
 Author and Series names also maintain indexed, non-unique `normalized_name`
 values. Normalization applies Unicode NFKC, trims and collapses whitespace, and
-case-folds while preserving punctuation. These values support duplicate
-advisories; they are not identity constraints and do not prevent same-name
-records.
+case-folds while preserving punctuation. Author and Series UUIDs are their
+identities; names and normalized names are descriptive matching/search aids,
+not identity constraints. Explicit creation may therefore create another
+same-name record. Renaming preserves the UUID and every Book relationship.
+
+Name-based import and inline Series assignment reuse an entity only when one
+normalized match exists. No match creates an entity where that workflow already
+allows creation. Multiple matches are ambiguous and are rejected through the
+workflow's bounded conflict or field-validation result instead of selecting an
+arbitrary record. Matching never merges, renames, reassigns, or deletes catalog
+entities automatically.
 
 ## Dates and identifiers
 
@@ -57,11 +76,9 @@ collapsed whitespace, and casefolding. `BookCatalogTag` explicitly relates a
 tag to a Book, and an unused tag is removed when its final relationship is
 deleted.
 
-The API deliberately uses different names by context:
-
-- compact Book rows expose `tags`
-- Book Detail and Book metadata writes use `catalog_tags`
-- `tag=<slug>` is the compact query parameter for filtering by Catalog Tag slug
+The API uses `catalog_tags` for compact Book rows, Book Detail, and Book
+metadata writes. `tag=<slug>` is the compact query parameter for filtering by
+Catalog Tag slug.
 
 Book PATCH treats `catalog_tags` as a complete replacement when supplied.
 Omitting it preserves current relationships; `[]` clears them. Tag list and

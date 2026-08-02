@@ -7,6 +7,7 @@ SERVER_SETTING_DISPLAY_NAMES = {
     "advanced_library_groups_enabled": _("Advanced Library Groups"),
     "application_log_level": _("Application Log Level"),
     "public_group_id": _("Public/Common Room Group"),
+    "reading_client_base_url": _("Reading Client URL"),
     "server_banner_message": _("Server Banner Message"),
     "server_description": _("Server Description"),
     "server_name": _("Server Name"),

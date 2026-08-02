@@ -4,11 +4,13 @@ Practical local development workflow (Windows/PowerShell).
 
 ## Setup
 
+Use Python 3.12 through 3.14. The React workspace requires Node.js 22.22.0
+or newer.
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
-npm install
 ```
 
 Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
@@ -20,8 +22,8 @@ sidecar cover takes precedence over an embedded cover; arbitrary sidecar assets
 are not imported. See [Imports](imports.md) and
 [Metadata and identifiers](metadata.md) for the current precedence rules.
 
-`npm install` installs the pinned local Pyright dev tool. There is no frontend
-build step.
+The React Product UI has its npm workspace under `web/react`; see
+[React Product UI](react-ui.md). There is no repository-root npm project.
 
 ## Pre-release migration reset
 
@@ -46,89 +48,7 @@ renamed modules. Update callers to the current module boundary instead.
 
 Runtime files belong under `userdata/` or a test-isolated temporary root.
 Committed files under `TestFiles/` or `tests/fixtures/` are fixtures only, not
-runtime storage or a destination for generated artifacts. Browser artifacts
-belong under the ignored `test-artifacts/` directory.
-
-## Optional browser diagnostics and E2E tests
-
-The development requirements include the Python `pytest-playwright` plugin for
-rendered-state inspection, JavaScript interaction diagnosis, console and
-network inspection, screenshots, and a small number of focused browser
-regressions. It is development-only. Service, API, Product UI template, and
-JavaScript static-contract tests remain the default for ordinary work.
-
-After installing or updating development dependencies, install Chromium
-separately for the active virtual environment:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m playwright install chromium
-```
-
-Browser binaries are managed outside the repository. Normal application
-startup does not install or update them. Firefox and WebKit are not part of the
-initial setup.
-
-Every browser test lives under `tests/e2e/` and must use the `e2e` marker.
-`pytest.ini` excludes that marker by default, including from an otherwise full
-pytest run. Run browser tests explicitly:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -q
-```
-
-Use the plugin's headed mode when the rendered browser needs inspection:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -q --headed
-```
-
-For the Playwright Inspector, use its documented `PWDEBUG=1` mode:
-
-```powershell
-$env:PWDEBUG='1'
-.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -s
-Remove-Item Env:PWDEBUG
-```
-
-Generated screenshots, traces, and videos belong under the ignored
-`test-artifacts/playwright/` directory. Opt into failure diagnostics with:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -m e2e tests/e2e -q --output=test-artifacts/playwright --tracing=retain-on-failure --screenshot=only-on-failure
-```
-
-Do not use `userdata/`, `var/`, or `TestFiles/` for browser output. Never retain
-real credentials, tokens, cookies, browser profiles, or authenticated storage
-state in artifacts. Browser tests should use Django live-server fixtures and
-isolated test data where practical instead of persistent local data, developer
-accounts, or a manually started server.
-
-The shared `e2e_install` fixture completes the real first-run setup form in the
-browser, logs in with an isolated test-only Owner, and runs the deterministic
-Lorem/demo seeder. Browser tests therefore start from a moderately populated
-installation with users, memberships, and shelves rather than an empty or
-persistent developer database.
-
-The `e2e_fixture_files` fixture exposes the committed small Calibre fixture for
-focused import scenarios:
-
-- `tests/fixtures/library/small_calibre_library.zip`
-- `tests/fixtures/library/small_calibre_library_metadata.md`
-
-It also exposes these optional local inputs:
-
-- `TestFiles/FullCalibreLibrary.zip`
-- `TestFiles/SPL-Marginalia-Verified-Good.json`
-- `TestFiles/SPL-Marginalia-Mixed-Unmatched-Broken-CFI-Test.json`
-- `TestFiles/second-pass-unmatched-marginalia.json`
-
-`TestFiles/` remains ignored and is input-only. Tests that use one of those
-local files must skip clearly when it is absent. Prefer the committed small
-Calibre archive for focused browser scenarios. Its Markdown inventory records
-the expected parsed metadata. The full archive should be imported only by a test
-that specifically needs the larger catalog, not by every E2E test. Browser artifacts still belong only under
-`test-artifacts/playwright/`.
+runtime storage or a destination for generated artifacts.
 
 ## Related docs
 
@@ -136,9 +56,10 @@ that specifically needs the larger catalog, not by every E2E test. Browser artif
 - [Architecture](architecture.md)
 - [Permissions](permissions.md)
 - [Imports](imports.md)
-- [Reading data](reading.md)
+- [Marginalia](marginalia.md)
 - [Metadata and identifiers](metadata.md)
 - [Production startup](deployment.md)
+- [React Product UI](react-ui.md)
 
 ## Application logging
 
@@ -207,15 +128,18 @@ PowerShell helpers define their own environment in the script files.
 ```
 
 The script sets `DJANGO_DEBUG=1`, disables WhiteNoise runtime caching for faster
-template/static iteration, runs `python manage.py migrate --noinput`, and only
-then starts Django's development server. Its Python executable and application
-environment are defined in the script and do not inherit configuration choices
-from the calling shell. Edit the values near the top of the script when local
-settings need to change. Additional arguments are passed through to
-`runserver`, for example:
+template/static iteration, runs `python manage.py migrate --noinput`, and then
+starts Django on port 8000 and the Product UI Vite server on port 5174. Run `npm.cmd install` from
+`web/react` before using it for the first time. Vite uses the proxy configuration
+documented in [React Product UI](react-ui.md) and is stopped when the Django
+process exits. The script's Python executable and application environment are
+defined in the script and do not inherit configuration choices from the calling
+shell. Edit the values near the top of the script when local settings need to
+change. Additional arguments are passed through to Django's `runserver`, for
+example:
 
 ```powershell
-.\scripts\start-dev.ps1 127.0.0.1:8080 --noreload
+.\scripts\start-dev.ps1 --noreload
 ```
 
 Raw `python manage.py runserver` uses the normal settings defaults. Because
@@ -224,8 +148,10 @@ development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
 running raw `runserver`.
 
 For production-likeness, use `.\scripts\start-local-production.ps1`; it keeps
-`DJANGO_DEBUG=0`, runs `collectstatic`, and uses WhiteNoise in manifest-backed
-mode. It runs one direct Uvicorn worker against
+`DJANGO_DEBUG=0`, builds the React workspace, runs `collectstatic`, and uses
+WhiteNoise in manifest-backed mode. It requires `npm.cmd install` to have been
+run from `web/react`, but it does not run a Vite or Node server. It runs one
+direct Uvicorn worker against
 `secondpass.asgi:application`, matching the Docker application target and
 runtime path. Access logs are disabled in both deployment-like paths. Static
 and media routing is unchanged: covers remain public display assets, while
@@ -261,7 +187,7 @@ separate curator-managed rooms as a first-class UI feature and enables normal
 non-Public group mutation workflows. Product UI does not provide a disable
 control after enablement; disabling is a Django admin recovery flow that
 consolidates custom group state into Public/Common Room. Once an active Owner
-exists, `/setup/` is disabled and normal login at `/api-auth/login/` is used.
+exists, `/setup/` is disabled and normal Product UI login at `/login/` is used.
 
 Raw `python manage.py runserver` remains available, but it does not create or
 migrate the database schema. If using raw `runserver`, set `DJANGO_DEBUG=1` for
@@ -286,41 +212,29 @@ cookie credentials are not enabled; clients must use `Authorization: Bearer ...`
 tokens for protected API calls. The Product UI remains same-origin and uses
 session auth with CSRF.
 
-## Product UI (current)
+## Product UI
 
-- Dashboard: `/dashboard/`
-- Owner server settings: `/server/` (Owner only; includes Django Admin / Service Hatch link)
-- Library browse: `/library/`
-- Book detail: `/library/books/<book_id>/`
-- Edit book metadata: `/library/books/<book_id>/edit/`
-- Imports: `/imports/`
-- Groups: `/groups/`
-- Users: `/users/` (Manager/Owner)
-- Create user: `/users/new/` (Manager/Owner; temporary password shown once)
-- Edit user: `/users/<profile_id>/edit/` (Manager/Owner)
+The Product UI is the Vite React workspace under `web/react`. Django serves the
+authenticated React shell at `/`; ordinary development should use the Vite
+server on port 5174.
 
-Before first-run setup is complete, unauthenticated Product UI routes direct to
-`/setup/`. After setup, unauthenticated pages redirect to
-`/api-auth/login/?next=...` as usual.
-
-Logout is POST-based via `/api-auth/logout/` (no GET logout links in the product UI).
-
-The product UI code lives in the Django app `web`.
+Django continues to render `/setup/`, `/login/`, `/logout/`, and the optional
+`/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client
+authorization webpage is retired pending a React replacement.
+There are no alternate Product UI mounts or compatibility routes.
 
 ## Error-handling checks
 
-Product UI and API missing-route behavior intentionally differ:
+HTML and API missing-route behavior intentionally differs:
 
-- Product UI missing pages return styled HTML error pages.
+- Non-API missing pages return styled HTML error pages.
 - `/api/` missing routes return JSON 404 responses shaped as `{"detail": "Not found."}`.
-- Product UI error-page tests should run with `DEBUG=False`.
 - API route-level 404 tests should assert JSON content type and response body.
 
 Useful focused checks:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/core/test_api_route_errors.py -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/contracts/test_error_pages.py -q
 .\.venv\Scripts\python.exe tools\static_hygiene.py
 .\.venv\Scripts\python.exe -m ruff check .
 ```
@@ -329,14 +243,13 @@ Useful focused checks:
 
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
 
-- **Django session authentication** (browser-based development and the DRF browsable API)
+- **Django session authentication** for the React Product UI
 - **Client API bearer token authentication** on selected reader-client endpoints
-- **DRF browsable API login/logout** at `/api-auth/login/` and `/api-auth/logout/`
 - **Django admin authentication** at `/admin/` (a service hatch; not the product UI)
 
 Practical notes:
 
-- Use `/api-auth/login/` to authenticate in the browsable API.
+- Use `/login/` for Product UI session authentication. APIs return JSON rather than DRF browsable pages.
 - Use `/admin/` to access the Django admin only when
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is set. The local production helper sets
   this for operator testing only when the variable is unset and respects an
@@ -370,8 +283,8 @@ Use markers to keep routine runs away from known slow integration areas:
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/library/imports/api -q
 .\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
-.\.venv\Scripts\python.exe -m pytest -m static_contract tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/reading/annotations/test_views.py -q --durations=10
+.\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
+.\.venv\Scripts\python.exe -m pytest tests/marginalia/test_annotation_read_api.py -q --durations=10
 ```
 
 Marker intent:
@@ -379,19 +292,16 @@ Marker intent:
 - `unit`: no database, pure logic/static parsing.
 - `db`: database-backed tests.
 - `filesystem`: writes generated files or temp paths.
-- `product_ui`: Product UI route/static/template tests.
-- `static_contract`: source/static/template contract tests that avoid runtime flows.
+- `product_ui`: retained setup/auth and React route-boundary tests.
+- `static_contract`: source/static contract tests that avoid runtime flows.
 - `integration`: broad cross-app or API flow tests.
 - `slow`: tests known to be slow enough to avoid in routine focused runs.
-- `e2e`: opt-in Playwright browser tests; excluded by default.
 
 Targeted pytest examples:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/reading -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui/contracts -q
-.\.venv\Scripts\python.exe -m pytest tests/reading -q
+.\.venv\Scripts\python.exe -m pytest tests/marginalia -q
 .\.venv\Scripts\python.exe -m pytest tests/library -q
 .\.venv\Scripts\python.exe -m pytest tests/accounts -q
 ```
@@ -494,6 +404,20 @@ Docker deployments may schedule the apply command nightly from host cron. Use
 the exact Compose service name shown above; see `docs/deployment.md` for the
 sample cron entry and operational logging expectations. A future Celery-based
 scheduler is optional architecture, not a current dependency.
+
+Inspect or remove expired canonical Marginalia import stages:
+
+```powershell
+python manage.py cleanup_marginalia_import_stages --dry-run
+python manage.py cleanup_marginalia_import_stages
+```
+
+Stages live under `userdata/imports/staged/marginalia/`. Runtime token access
+expires after exactly two hours; this command only reclaims abandoned files
+and records. Successful Apply deletes its staged file after database commit;
+if that deletion fails, the applied database result remains authoritative and
+this command removes the safe digest-named leftover. It is repeat-safe and may
+be scheduled weekly by the host.
 
 Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):

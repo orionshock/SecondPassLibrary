@@ -45,10 +45,20 @@ class _RejectUnknownFieldsMixin:
 
 
 class LibraryGroupCreateSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
-    name = serializers.CharField(allow_blank=False, trim_whitespace=True)
+    name = serializers.CharField(max_length=255, allow_blank=False, trim_whitespace=True)
     description = serializers.CharField(required=False, allow_blank=True)
 
 
 class LibraryGroupPatchSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
-    name = serializers.CharField(required=False, allow_blank=False, trim_whitespace=True)
+    name = serializers.CharField(
+        required=False,
+        max_length=255,
+        allow_blank=False,
+        trim_whitespace=True,
+    )
     description = serializers.CharField(required=False, allow_blank=True)
+
+    def changes_field(self, field: str) -> bool:
+        if field not in self.validated_data:
+            return False
+        return self.validated_data[field] != getattr(self.instance, field)

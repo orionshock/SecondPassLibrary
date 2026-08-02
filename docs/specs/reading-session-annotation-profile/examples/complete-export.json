@@ -1,0 +1,62 @@
+{
+  "type": "SecondPassMarginaliaExport",
+  "schemaVersion": "0.1.0",
+  "profile": "https://secondpasslibrary.local/specs/marginalia/0.1.0",
+  "generatedAt": "2026-07-29T12:00:00Z",
+  "generator": "Second Pass Library",
+  "books": [
+    {
+      "fileHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "title": "The Example Book",
+      "authors": [
+        "Example Author"
+      ],
+      "readingSessions": [
+        {
+          "sourceReadingSessionId": "source-reading-session-000001",
+          "name": "Current pass",
+          "notes": "",
+          "status": "active",
+          "startedAt": "2026-07-20T12:00:00Z",
+          "closedAt": null,
+          "createdAt": "2026-07-20T12:00:00Z",
+          "updatedAt": "2026-07-29T12:00:00Z",
+          "progress": {
+            "cfi": "epubcfi(/6/8!/4/2)",
+            "locationLabel": "Chapter 08 · 42%",
+            "updatedAt": "2026-07-29T12:00:00Z"
+          },
+          "annotations": [
+            {
+              "clientAnnotationId": "reader-highlight-42",
+              "kind": "highlight",
+              "location": {
+                "cfi": "epubcfi(/6/8!/4/4)",
+                "locationLabel": "Chapter 08 · 43% · The Blackstaff"
+              },
+              "body": {
+                "text": "The selected passage",
+                "prefix": "Text immediately before ",
+                "suffix": " text immediately after.",
+                "color": "yellow",
+                "note": "A note on this highlight."
+              },
+              "createdAt": "2026-07-28T12:00:00Z",
+              "updatedAt": "2026-07-28T12:00:00Z"
+            },
+            {
+              "clientAnnotationId": "reader-bookmark-17",
+              "kind": "bookmark",
+              "location": {
+                "cfi": "epubcfi(/6/10!/4/2)",
+                "locationLabel": "Chapter 09 · 47%"
+              },
+              "createdAt": "2026-07-29T11:00:00Z",
+              "updatedAt": "2026-07-29T11:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

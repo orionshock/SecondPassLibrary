@@ -34,7 +34,7 @@ def apply_book_ordering(queryset: QuerySet, ordering: str) -> QuerySet:
     if axis == "title":
         return _with_title_sort(queryset).order_by(_ordered("_title_sort", descending), "title", "id")
     if axis == "author":
-        return _with_primary_author_sort(queryset).order_by(
+        return with_primary_author_sort(_with_title_sort(queryset)).order_by(
             _ordered("_primary_author_sort", descending),
             _ordered("_title_sort", descending),
             "title",
@@ -76,23 +76,18 @@ def _with_title_sort(queryset: QuerySet) -> QuerySet:
     return queryset.annotate(_title_sort=Coalesce(NullIf("sort_title", Value("")), F("title")))
 
 
-def _with_primary_author_sort(queryset: QuerySet) -> QuerySet:
-    primary_author = (
-        BookAuthor.objects.filter(book=OuterRef("pk"))
+def with_primary_author_sort(
+    queryset: QuerySet, *, book_id_field: str = "pk"
+) -> QuerySet:
+    primary_authors = (
+        BookAuthor.objects.filter(book_id=OuterRef(book_id_field))
         .order_by("position", "id")
-        .values("author__sort_name")[:1]
     )
-    primary_author_name = (
-        BookAuthor.objects.filter(book=OuterRef("pk"))
-        .order_by("position", "id")
-        .values("author__name")[:1]
-    )
-    return _with_title_sort(queryset).annotate(
+    return queryset.annotate(
         _primary_author_sort=Coalesce(
-            NullIf(Subquery(primary_author), Value("")),
-            Subquery(primary_author_name),
+            NullIf(Subquery(primary_authors.values("author__sort_name")[:1]), Value("")),
+            Subquery(primary_authors.values("author__name")[:1]),
         ),
-        _primary_author_name=Subquery(primary_author_name),
     )
 
 

@@ -54,12 +54,12 @@ class CurrentUserMePatchAPITest(APITestCase):
             "email",
             "profile_id",
             "role",
-            "is_owner",
-            "advanced_library_groups_enabled",
-            "banner_text",
             "groups",
         ):
             self.assertIn(key, data)
+        self.assertNotIn("is_owner", data)
+        self.assertNotIn("advanced_library_groups_enabled", data)
+        self.assertNotIn("banner_text", data)
         self.assertNotIn("capabilities", data)
         self.assertNotIn("curated_group_ids", data)
 

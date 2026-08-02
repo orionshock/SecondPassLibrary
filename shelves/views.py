@@ -7,12 +7,11 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import mixins, status, viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
-from library.models import Book, LibraryGroup
 from library.catalog.preview_books import (
     PREVIEW_BOOK_LIMIT,
     include_preview_books,
@@ -20,32 +19,40 @@ from library.catalog.preview_books import (
 from library.catalog.ordering import parse_ordering_param
 from accounts.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
+from library.queries import visible_groups_for_user
 
 from .models import Shelf, ShelfItem
 from .serializers import (
     ShelfCreateSerializer,
+    ShelfEditorItemSerializer,
     ShelfItemCreateSerializer,
     ShelfItemPatchSerializer,
     ShelfItemSerializer,
     ShelfPatchSerializer,
     ShelfSerializer,
 )
-from .services import (
+from .item_queries import (
+    editor_shelf_items,
+    visible_shelf_item_ids,
+    visible_shelf_items_for_user,
+)
+from .item_services import (
     add_book_to_shelf,
-    create_shelf,
-    delete_shelf,
     move_shelf_item,
     remove_book_from_shelf,
     set_shelf_item_position,
+)
+from .policies import books_available_to_shelf_editor, request_can_edit_shelf
+from .services import (
+    create_shelf,
+    delete_shelf,
     update_shelf,
-    visible_shelf_items_for_user,
-    can_edit_shelf,
 )
 from .querysets import (
     apply_shelf_item_ordering,
     apply_shelf_ordering,
     build_visible_shelf_list_queryset,
-    visible_shelf_filter,
+    filter_readable_shelves,
     with_visible_item_count,
 )
 
@@ -63,17 +70,6 @@ def _attach_shelf_preview_books(*, shelves, user) -> None:
                 :PREVIEW_BOOK_LIMIT
             ]
         ]
-
-
-def _request_can_edit_shelf(*, request, shelf: Shelf) -> bool:
-    user = getattr(request, "user", None)
-    if user is None:
-        return False
-    if isinstance(getattr(request, "auth", None), UserClientSession):
-        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
-            return False
-        return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
-    return can_edit_shelf(user=user, shelf=shelf)
 
 
 class ShelfViewSet(
@@ -114,7 +110,7 @@ class ShelfViewSet(
                 raise PermissionDenied("Client API tokens are not allowed for this endpoint/action.")
 
     def _request_write_allowed_for_shelf(self, *, request, shelf: Shelf) -> bool:
-        return _request_can_edit_shelf(request=request, shelf=shelf)
+        return request_can_edit_shelf(request=request, shelf=shelf)
 
     def _write_denied_message(self, *, request, items: bool = False) -> str:
         if isinstance(getattr(request, "auth", None), UserClientSession):
@@ -157,12 +153,12 @@ class ShelfViewSet(
             )
             ordering = parse_ordering_param(
                 self.request,
-                allowed={"name", "-item_count"},
+                allowed={"name", "-name", "item_count", "-item_count"},
                 default="name",
             )
             return apply_shelf_ordering(visible_qs, ordering)
 
-        visible_qs = qs.filter(visible_shelf_filter(user)).distinct()
+        visible_qs = filter_readable_shelves(qs, user=user)
         return visible_qs.order_by("name", "id")
 
     def get_object(self):
@@ -202,12 +198,9 @@ class ShelfViewSet(
         owner_group = None
         if owner_type == Shelf.OWNER_TYPE_GROUP:
             group_id = data.get("owner_group")
-            if not group_id:
-                raise PermissionDenied("Missing owner_group.")
-            try:
-                owner_group = LibraryGroup.objects.get(pk=group_id)
-            except LibraryGroup.DoesNotExist as exc:
-                raise Http404() from exc
+            owner_group = visible_groups_for_user(request.user).filter(pk=group_id).first()
+            if owner_group is None:
+                raise Http404()
 
         try:
             shelf = create_shelf(
@@ -221,12 +214,12 @@ class ShelfViewSet(
             )
         except DjangoValidationError as exc:
             self._raise_drf_validation(exc)
+        shelf = self.get_queryset().get(pk=shelf.pk)
         out = ShelfSerializer(shelf, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        # Treat PUT the same as PATCH for this API (partial updates only).
-        return self.partial_update(request, *args, **kwargs)
+        raise MethodNotAllowed("PUT")
 
     def partial_update(self, request, *args, **kwargs):
         shelf = self.get_object()
@@ -250,10 +243,52 @@ class ShelfViewSet(
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _items_get(self, request, shelf: Shelf) -> Response:
+        item_view = str(request.query_params.get("view") or "").strip().lower()
+        if item_view not in {"", "edit"}:
+            raise serializers.ValidationError(
+                {"view": "Must be edit when supplied."}
+            )
+
+        if item_view == "edit":
+            if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
+                raise PermissionDenied(self._write_denied_message(request=request, items=True))
+            parse_ordering_param(
+                request,
+                allowed={"position"},
+                default="position",
+            )
+            qs = editor_shelf_items(shelf=shelf)
+            visible_ids = visible_shelf_item_ids(user=request.user, shelf=shelf)
+            total_count = qs.count()
+            visible_count = len(visible_ids)
+            page = self.paginate_queryset(qs)
+            items = list(page) if page is not None else list(qs)
+            out = ShelfEditorItemSerializer(
+                items,
+                many=True,
+                context={
+                    "request": request,
+                    "visible_item_ids": visible_ids,
+                },
+            )
+            if page is not None:
+                response = self.get_paginated_response(out.data)
+                response.data["visible_item_count"] = visible_count
+                response.data["unavailable_item_count"] = total_count - visible_count
+                return response
+            return Response(
+                {
+                    "count": total_count,
+                    "visible_item_count": visible_count,
+                    "unavailable_item_count": total_count - visible_count,
+                    "results": out.data,
+                }
+            )
+
         qs = visible_shelf_items_for_user(request.user, shelf)
         ordering = parse_ordering_param(
             request,
-            allowed={"position", "title", "author"},
+            allowed={"position", "-position", "title", "-title", "author", "-author"},
             default="position",
         )
         qs = apply_shelf_item_ordering(qs, ordering)
@@ -271,10 +306,11 @@ class ShelfViewSet(
         serializer = cast(Any, ShelfItemCreateSerializer(data=request.data or {}))
         serializer.is_valid(raise_exception=True)
         data = cast(dict[str, Any], serializer.validated_data)
-        try:
-            book = Book.objects.get(pk=data["book"])
-        except Book.DoesNotExist as exc:
-            raise Http404() from exc
+        book = books_available_to_shelf_editor(user=request.user, shelf=shelf).filter(
+            pk=data["book"]
+        ).first()
+        if book is None:
+            raise Http404()
 
         try:
             item = add_book_to_shelf(
@@ -306,12 +342,7 @@ class ShelfViewSet(
     def _item_patch(self, request, shelf: Shelf, item: ShelfItem) -> Response:
         if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
             raise PermissionDenied(self._write_denied_message(request=request, items=True))
-        if (
-            shelf.owner_type == Shelf.OWNER_TYPE_USER
-            and not visible_shelf_items_for_user(request.user, shelf)
-            .filter(pk=item.pk)
-            .exists()
-        ):
+        if item.pk not in visible_shelf_item_ids(user=request.user, shelf=shelf):
             raise Http404()
 
         serializer = cast(Any, ShelfItemPatchSerializer(data=request.data or {}))
@@ -345,7 +376,7 @@ class ShelfViewSet(
 
         try:
             item = ShelfItem.objects.select_related("book").get(pk=item_id, shelf=shelf)
-        except ShelfItem.DoesNotExist as exc:
+        except (ShelfItem.DoesNotExist, DjangoValidationError, ValueError) as exc:
             raise Http404() from exc
 
         if request.method == "DELETE":

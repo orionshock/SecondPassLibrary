@@ -12,7 +12,6 @@ from django.db import IntegrityError, transaction
 
 from accounts.operational_logging import logger, user_log_label, user_uuid
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
-from core import server_settings
 from library.groups.memberships import ensure_user_public_membership
 from library.models import LibraryGroupMembership
 from library.groups.public_group import is_public_group
@@ -462,27 +461,29 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
     for membership in memberships:
         group = membership.group
         public = is_public_group(group)
-        groups.append(
-            {
-                "id": group.id,
-                "name": group.name,
-                "is_public_group": public,
-                "is_curator": bool(membership.is_curator),
-            }
-        )
+        group_payload: dict[str, Any] = {
+            "id": group.id,
+            "name": group.name,
+            "is_public_group": public,
+        }
+        if membership.is_curator:
+            group_payload["is_curator"] = True
+        groups.append(group_payload)
 
-    return {
+    payload: dict[str, Any] = {
         "username": user.get_username(),
         "email": user.email or "",
         "first_name": user.first_name or "",
         "last_name": user.last_name or "",
         "profile_id": profile.id,
         "role": profile.role,
-        "must_change_password": bool(profile.must_change_password),
-        "is_owner": is_owner(user),
-        "advanced_library_groups_enabled": (
-            server_settings.get_advanced_library_groups_enabled()
-        ),
-        "banner_text": server_settings.get_server_banner_message(),
         "groups": groups,
     }
+    owner = is_owner(user)
+    if profile.must_change_password:
+        payload["must_change_password"] = True
+    if owner:
+        payload["is_owner"] = True
+    if owner and settings.SECOND_PASS_ENABLE_DJANGO_ADMIN:
+        payload["can_access_django_admin"] = True
+    return payload

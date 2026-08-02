@@ -4,6 +4,7 @@ from django.db.models import Count, F, Q, QuerySet, Value
 from django.db.models.functions import Coalesce, NullIf
 from rest_framework.exceptions import ValidationError
 
+from library.catalog.names import normalize_catalog_entity_name
 from library.models import Author, Book, CatalogTag, Series
 
 
@@ -41,7 +42,9 @@ def apply_axis_search(queryset: QuerySet, query_params, *, include_normalized: b
         return queryset
     condition = Q(name__icontains=term) | Q(sort_name__icontains=term)
     if include_normalized:
-        condition |= Q(normalized_name__icontains=term)
+        condition |= Q(
+            normalized_name__icontains=normalize_catalog_entity_name(term)
+        )
     return queryset.filter(condition)
 
 

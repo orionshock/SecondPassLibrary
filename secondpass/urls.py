@@ -50,9 +50,10 @@ urlpatterns = [
         favicon,
         name="favicon",
     ),
-    # Product UI (Django templates; capability-driven client-side nav)
+    # Retained Django-rendered setup/bootstrap and session-auth routes.
     path("", include(("web.urls", "web"), namespace="web")),
-    path("api-auth/login/", web_views.login, name="login"),
+    path("login/", web_views.login, name="login"),
+    path("logout/", web_views.logout, name="logout"),
     # API v1 (versioned, REST/JSON)
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),
     path(
@@ -62,10 +63,12 @@ urlpatterns = [
     path(
         "api/v1/accounts/", include(("accounts.urls", "accounts"), namespace="accounts")
     ),
-    path("api/v1/reading/", include(("reading.urls", "reading"), namespace="reading")),
+    path(
+        "api/v1/marginalia/",
+        include(("marginalia.urls", "marginalia"), namespace="marginalia"),
+    ),
     path("api/v1/shelves/", include(("shelves.urls", "shelves"), namespace="shelves")),
     path("api/v1/", include(("core.urls", "core"), namespace="core")),
-    path("api-auth/", include("rest_framework.urls")),
 ]
 
 if settings.SECOND_PASS_ENABLE_DJANGO_ADMIN:
@@ -95,4 +98,11 @@ def _cover_media(request, path: str):
 urlpatterns += [
     # Keep cover URLs stable in direct-server mode without exposing all media.
     re_path(r"^media/covers/(?P<path>.*)$", _cover_media),
+    # Authenticated React Product UI routes. Add new top-level UI sections explicitly.
+    path("", web_views.react_app, name="react_app"),
+    re_path(
+        r"^(?P<react_path>(?:dashboard|marginalia|library|groups|shelves|users|imports|server|settings|profile)(?:/.*)?)/?$",
+        web_views.react_app,
+        name="react_app_deep_link",
+    ),
 ]

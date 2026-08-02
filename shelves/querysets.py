@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Count, F, Min, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
 from rest_framework.exceptions import ValidationError
 
 from accounts.roles import is_librarian
 from library.queries import visible_books_for_user
+from library.catalog.ordering import with_primary_author_sort
 
 from .models import Shelf, ShelfItem
 
@@ -78,6 +79,24 @@ def parse_shelf_list_filters(query_params) -> ShelfListFilters:
     )
 
 
+def filter_readable_shelves(
+    queryset: QuerySet[Shelf], *, user: Any
+) -> QuerySet[Shelf]:
+    """Apply the common list/detail Shelf read policy.
+
+    The queryset must already have the viewer-scoped ``item_count`` annotation.
+    """
+    return (
+        queryset.filter(visible_shelf_filter(user))
+        .filter(
+            Q(owner_type=Shelf.OWNER_TYPE_GROUP)
+            | Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
+            | Q(item_count__gt=0)
+        )
+        .distinct()
+    )
+
+
 def build_visible_shelf_list_queryset(
     *,
     queryset: QuerySet[Shelf],
@@ -85,7 +104,7 @@ def build_visible_shelf_list_queryset(
     query_params,
 ) -> QuerySet[Shelf]:
     filters = parse_shelf_list_filters(query_params)
-    visible_qs = queryset.filter(visible_shelf_filter(user)).distinct()
+    visible_qs = filter_readable_shelves(queryset, user=user)
 
     if filters.scope == "personal":
         visible_qs = visible_qs.filter(
@@ -137,15 +156,6 @@ def build_visible_shelf_list_queryset(
             )
         )
 
-    # Listed shelves owned by somebody else are useful only when they contain
-    # at least one book visible to this viewer. Personal and group shelf rows
-    # remain visible even when their scoped item count is zero.
-    visible_qs = visible_qs.filter(
-        Q(owner_type=Shelf.OWNER_TYPE_GROUP)
-        | Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
-        | Q(item_count__gt=0)
-    )
-
     return visible_qs
 
 
@@ -166,6 +176,10 @@ def with_visible_item_count(queryset: QuerySet[Shelf], *, user: Any) -> QuerySet
 def apply_shelf_ordering(queryset: QuerySet[Shelf], ordering: str) -> QuerySet[Shelf]:
     if ordering == "name":
         return queryset.order_by("name", "id")
+    if ordering == "-name":
+        return queryset.order_by("-name", "id")
+    if ordering == "item_count":
+        return queryset.order_by("item_count", "name", "id")
     if ordering == "-item_count":
         return queryset.order_by("-item_count", "name", "id")
     raise ValidationError({"ordering": "Invalid ordering."})
@@ -174,11 +188,22 @@ def apply_shelf_ordering(queryset: QuerySet[Shelf], ordering: str) -> QuerySet[S
 def apply_shelf_item_ordering(queryset: QuerySet[ShelfItem], ordering: str) -> QuerySet[ShelfItem]:
     if ordering == "position":
         return queryset.order_by("position", "id", "book_id")
+    if ordering == "-position":
+        return queryset.order_by("-position", "id", "book_id")
     if ordering == "title":
         return queryset.order_by("book__title", "id", "book_id")
-    if ordering == "author":
+    if ordering == "-title":
+        return queryset.order_by("-book__title", "id", "book_id")
+    if ordering in {"author", "-author"}:
+        descending = ordering.startswith("-")
+        author_order = (
+            F("_primary_author_sort").desc(nulls_last=True)
+            if descending
+            else F("_primary_author_sort").asc(nulls_last=True)
+        )
+        title_order = "-book__title" if descending else "book__title"
         return (
-            queryset.annotate(_primary_author_name=Min("book__authors__sort_name"))
-            .order_by(F("_primary_author_name").asc(nulls_last=True), "book__title", "id")
+            with_primary_author_sort(queryset, book_id_field="book_id")
+            .order_by(author_order, title_order, "id")
         )
     raise ValidationError({"ordering": "Invalid ordering."})

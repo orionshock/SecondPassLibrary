@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from core import server_settings
 
@@ -43,6 +43,8 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(data["server_banner_message"], "")
         self.assertEqual(data["public_group_name"], "Common Room")
         self.assertFalse(data["advanced_library_groups_enabled"])
+        self.assertEqual(data["reading_client_base_url"], "")
+        self.assertFalse(data["reading_client_base_url_locked"])
 
         resp = self.client.patch(
             "/api/v1/server/settings/",
@@ -71,6 +73,53 @@ class ServerIdentitySettingsTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["server_banner_message"], "")
+
+    def test_reading_client_setting_validates_and_reports_environment_lock(self):
+        owner = User.objects.create_user(
+            username="owner",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        response = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"reading_client_base_url": " http://localhost:5173/ "},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["reading_client_base_url"], "http://localhost:5173"
+        )
+        self.assertFalse(response.json()["reading_client_base_url_locked"])
+
+        response = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"reading_client_base_url": "https://reader.example.com/app"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("reading_client_base_url", response.json())
+
+        with override_settings(
+            SECOND_PASS_READING_CLIENT_BASE_URL="https://env-reader.example.com/"
+        ):
+            response = self.client.get("/api/v1/server/settings/")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.json()["reading_client_base_url"],
+                "https://env-reader.example.com",
+            )
+            self.assertTrue(response.json()["reading_client_base_url_locked"])
+
+            response = self.client.patch(
+                "/api/v1/server/settings/",
+                data={"reading_client_base_url": ""},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("reading_client_base_url", response.json())
 
     def test_advanced_library_groups_enable_endpoint_is_one_way(self):
         owner = User.objects.create_user(
@@ -176,12 +225,12 @@ class ServerIdentitySettingsTests(TestCase):
                 "server_name": "Second Pass Library",
                 "server_description": "",
                 "server_version": "0.1.0-dev",
-                "server_release": "pre-release",
                 "server_release_date": "2026-07-19",
                 "api_base_url": "http://testserver/api/v1/",
             },
         )
         payload = response.json()
+        self.assertNotIn("server_release", payload)
         self.assertNotIn("banner_text", payload)
         self.assertNotIn("advanced_library_groups_enabled", payload)
         self.assertNotIn("capabilities", payload)
@@ -212,7 +261,6 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(payload["server_name"], "My Library")
         self.assertEqual(payload["server_description"], "Private.")
         self.assertEqual(payload["server_version"], "0.1.0-dev")
-        self.assertEqual(payload["server_release"], "pre-release")
         self.assertEqual(payload["server_release_date"], "2026-07-19")
         self.assertEqual(payload["api_base_url"], "http://testserver/api/v1/")
         self.assertNotIn("banner_text", payload)
@@ -230,7 +278,6 @@ class ServerIdentitySettingsTests(TestCase):
                 "server_name",
                 "server_description",
                 "server_version",
-                "server_release",
                 "server_release_date",
                 "api_base_url",
             },

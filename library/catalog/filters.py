@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, QuerySet
 from rest_framework.exceptions import ValidationError
 
 from library.models import Author, Book, Series
 
 
-def apply_book_filters(queryset: QuerySet[Book], query_params) -> QuerySet[Book]:
-    queryset = _apply_search(queryset, query_params.get("q", "").strip())
+def apply_book_filters(
+    queryset: QuerySet[Book], query_params, *, broad_search: bool = False
+) -> QuerySet[Book]:
+    term = query_params.get("q", "").strip()
+    queryset = (
+        apply_broad_book_search(queryset, term)
+        if broad_search
+        else _apply_title_search(queryset, term)
+    )
 
     author_id = _pk_param(query_params, "author", Author)
     if author_id:
@@ -33,7 +41,23 @@ def apply_catalog_tag_filter(queryset: QuerySet[Book], query_params) -> QuerySet
     return queryset.filter(book_catalog_tags__catalog_tag__slug=slug).distinct()
 
 
-def _apply_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
+def apply_broad_book_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
+    if not term:
+        return queryset
+    return queryset.filter(
+        Q(title__icontains=term)
+        | Q(sort_title__icontains=term)
+        | Q(subtitle__icontains=term)
+        | Q(book_authors__author__name__icontains=term)
+        | Q(book_series__series__name__icontains=term)
+        | Q(identifiers__value__icontains=term)
+        | Q(book_catalog_tags__catalog_tag__name__icontains=term)
+        | Q(publisher__icontains=term)
+        | Q(description__icontains=term)
+    ).distinct()
+
+
+def _apply_title_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
     if not term:
         return queryset
     return queryset.filter(
@@ -48,5 +72,5 @@ def _pk_param(query_params, name: str, model) -> object | None:
         return None
     try:
         return model._meta.pk.to_python(raw)
-    except ValueError as exc:
+    except (DjangoValidationError, ValueError) as exc:
         raise ValidationError({name: "Invalid id."}) from exc

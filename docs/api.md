@@ -8,9 +8,9 @@ All `/api/v1/` endpoints require authentication unless a specific endpoint expli
 
 Current supported authentication methods:
 
-- Django session authentication (browser-based development + DRF browsable API)
+- Django session authentication for the React Product UI
 - Explicit Client API bearer tokens on selected reader-client endpoints
-- DRF browsable API login/logout via `/api-auth/`
+- Session login/logout is provided by `/login/` and `/logout/`; API responses are JSON-only.
 - Optional Django admin authentication via `/admin/` when
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` (service hatch; not the product UI)
 
@@ -76,7 +76,10 @@ List endpoints are paginated by default using page-number pagination.
 Query params:
 
 - `page` (1-based)
-- `page_size` (optional; default `50`, max `200`)
+- `page_size` (optional; default `20`, max `200`)
+
+Endpoint-specific defaults may be smaller. Reading Session lists default to
+`10`; explicit positive page sizes remain supported up to the normal maximum.
 
 Response shape:
 
@@ -88,6 +91,288 @@ Response shape:
   "results": []
 }
 ```
+
+## Marginalia Books
+
+The new Marginalia API currently exposes one bounded historical Book
+projection:
+
+- `GET /api/v1/marginalia/books/`
+- `GET /api/v1/marginalia/books/<book_id>/`
+- `GET /api/v1/marginalia/books/<book_id>/sessions/`
+- `POST /api/v1/marginalia/books/<book_id>/open/`
+- `GET /api/v1/marginalia/books/<book_id>/active-session/`
+- `POST /api/v1/marginalia/books/<book_id>/start-over/`
+- `GET /api/v1/marginalia/sessions/`
+- `GET /api/v1/marginalia/sessions/recent/`
+- `GET/PATCH /api/v1/marginalia/sessions/<session_id>/`
+- `GET/PUT /api/v1/marginalia/sessions/<session_id>/progress/`
+- `POST /api/v1/marginalia/sessions/<session_id>/close/`
+- `GET /api/v1/marginalia/sessions/<session_id>/annotations/`
+- `POST /api/v1/marginalia/sessions/<session_id>/annotations/batch/`
+- `GET /api/v1/marginalia/export/`
+- `POST /api/v1/marginalia/export/`
+- `POST /api/v1/marginalia/import/preview/`
+
+Marginalia read and lifecycle routes accept Django session or Client API
+bearer authentication. Export is session-authenticated only. The caller must
+own at least one Marginalia Reading Session for a Book; current Library
+visibility is not required. The projection contains only `id`, `title`, ordered
+`authors`, optional `series` (including `series_index`), public `cover_url`,
+`can_open`, caller-scoped `session_count` and `active_session_count`, and
+`last_activity_at`. `can_open` independently reflects current Library
+visibility. A historical projection with `can_open=false` can still include the
+public cover display URL, but never includes EPUB/file data or download access.
+
+The list uses normal `page`/`page_size` pagination and accepts `q` over title,
+author names, and Series name. Default ordering is newest caller-owned
+Marginalia activity first. Books without caller-owned Sessions and missing
+Books use the same no-leakage `404` detail behavior. See `docs/marginalia.md`
+for the full field and ownership contract.
+
+The Book lifecycle routes share a bootstrap response containing canonical Book
+context, active Session detail and progress, the complete active-Session
+Annotation collection, and the first normal page of closed Sessions. `open/`
+accepts optional `name` and `notes` creation defaults and returns `201` when it
+creates or `200` when it reuses. `active-session/` is read-only and returns a
+null Session when none is active. `start-over/` requires `Idempotency-Key`,
+accepts optional final `name`, `notes`, and complete `{cfi, location_label}`
+progress, and returns `201`; identical retries replay the stored response while
+key reuse with different input returns `409`. All require current Library
+authority but return no asset or file data. Library owns asset acquisition and
+failure behavior.
+
+The nested Sessions route returns a normally paginated `results` collection
+and the canonical selected Book summary in `context.book`. Omitted `status`
+means all caller-owned Sessions; `status=active` and `status=closed` select the
+two lifecycle states. `q` searches only Session name and notes. Results use
+newest Session/progress/non-deleted-annotation activity ordering. Empty filtered
+pages retain the Book context, while missing and unowned parent Books return
+the normal no-leakage `404`.
+
+The new Marginalia lifecycle has only `active` and `closed`. Opening a Book's
+Session returns the existing active Session when present and never closes it
+automatically. Creating a later Session requires a prior explicit close; having
+only closed Sessions and no active Session is valid.
+
+Saved progress is held atomically on its Reading Session as an opaque CFI,
+optional Reader-generated location label, and update timestamp. There is no
+numeric progression field or separate progress record. Current list responses
+use the progress timestamp for activity ordering but do not expose progress.
+Detail and progress responses use `progress: null` or a bounded
+`{cfi, location_label, updated_at}` object.
+
+Session detail returns the canonical Marginalia Book summary in `context.book`
+and the bounded detail projection in `session`. Only the owner may read it;
+current Library visibility is not required. `PATCH` accepts only `name` and
+`notes`, only for active Sessions, and returns the same envelope. Closed
+Sessions are immutable, and foreign or missing Sessions use the same
+no-leakage `404` response.
+
+Progress `GET` is owner-readable for active and closed Sessions without a
+current Library-access requirement and never creates state. Progress `PUT`
+atomically replaces the complete `{cfi, location_label}` location and assigns
+its timestamp on the server. Writes require an active Session plus current
+Library authority for the Book. Unknown fields are rejected; progress has no
+`PATCH` or `DELETE` route.
+
+Close accepts optional final `name`, `notes`, and complete `progress`, commits
+them with the lifecycle change under one row lock, and returns the normal
+Session detail envelope. Close without final progress remains available after
+Library access loss; final progress requires current Library authority.
+Marginalia checks that Library policy but never serves or diagnoses the Book
+asset. Empty or identical retries are idempotent, while attempts to alter an
+already closed Session return a bounded `SESSION_CLOSED` conflict. Live
+timestamps are server-assigned; canonical import may later preserve validated
+source timestamps.
+
+Session Annotation GET returns all current non-deleted Annotations without
+pagination in `{"annotations": [...]}`. It is owner-readable for active and
+closed Sessions without current Library access. Canonical rows use
+`id`, Session-scoped `client_id`, `kind`, opaque `{cfi, location_label}`
+location, timestamps, and a highlight-only body containing `text`, `prefix`,
+`suffix`, `color`, and `note`. Bookmarks have no body. Results order nonblank
+location labels lexically, then use CFI, creation time, and id as stable
+fallbacks for blank labels.
+
+The Session-scoped batch route accepts one to 100 strict `upsert` or `delete`
+operations. Upsert creates, updates, or restores by `client_id`; delete
+soft-deletes by `client_id`. Session/client-id uniqueness and a transaction
+make retries duplicate-safe. The complete batch validates before mutation,
+requires an active owned Session and current Library Book authority, and
+returns the complete authoritative non-deleted collection in reading order.
+Duplicate client ids within one request are rejected. Marginalia consults
+Library authority but never inspects or serves the Book asset.
+
+The flat Sessions route returns caller-owned Sessions across all Books with
+normal Session-level pagination. It supports `status=active|closed` and `q`
+over Session name/notes plus Book title, author names, and Series name. Each row
+contains only a bounded Book reference: `id`, `title`, public `cover_url`, and
+independently computed `can_open`. It does not repeat the canonical full
+Marginalia Book summary or expose Library file/download data.
+
+It also accepts `has_annotations=true|false`. `true` means at least one
+non-deleted Annotation; `false` means none; omission does not filter. Filtering
+occurs before pagination/counting, and soft-deleted rows do not count.
+
+Complete `GET /api/v1/marginalia/export/` and selective
+`POST /api/v1/marginalia/export/` return canonical JSON attachments. GET
+accepts optional `include_empty_sessions`; POST accepts:
+
+```json
+{
+  "reading_session_ids": ["<session-uuid>"],
+  "include_empty_sessions": false
+}
+```
+
+Selected IDs must be nonempty, unique, and caller-owned. Missing or foreign
+IDs return no-leakage `404` without partial output. Empty Sessions are excluded
+by default; explicit inclusion applies identically to complete and selective
+exports. No surviving Sessions, a missing Book checksum, or conflicting Book
+hashes returns bounded `409`. Current Library access is not required.
+
+Successful responses use `application/json; charset=utf-8` and attachment
+filename `YYYYMMDD-second-pass-marginalia.json`, with the server-local date.
+Archive `generatedAt` remains precise. The canonical archive has no scope field
+and contains no file/download projection.
+
+`POST /api/v1/marginalia/import/preview/` is session-authenticated only and
+accepts multipart `file` plus optional `include_empty_sessions` (default
+`false`). Uploads are bounded at 25 MiB and validated by the canonical runtime
+archive codec. A successful response is not an import; it creates no Marginalia
+records and returns an opaque two-hour `import_token`, the staged policy,
+summary and matched/unmatched counts, bounded warnings, and explicit Book and
+Reading Session candidate identities. Example candidate structure:
+
+```json
+{
+  "import_token": "<opaque-token>",
+  "include_empty_sessions": false,
+  "can_apply": true,
+  "summary": {
+    "book_count": 1,
+    "reading_session_count": 1,
+    "annotation_count": 12
+  },
+  "matched_book_count": 1,
+  "unmatched_book_count": 0,
+  "unmatched_reading_session_count": 0,
+  "unmatched_downloadable_reading_session_count": 0,
+  "warnings": [],
+  "books": [{
+    "candidate_id": "book-000001",
+    "file_hash": "sha256:<checksum>",
+    "title": "Book title",
+    "authors": ["Author"],
+    "match": {"status": "matched", "book_id": "<local-book-uuid>"},
+    "reading_sessions": [{
+      "candidate_id": "reading-session-000001",
+      "source_reading_session_id": "source-session-1",
+      "source_status": "active",
+      "will_import_as_status": "closed",
+      "annotation_count": 12,
+      "will_import": true,
+      "possible_duplicate": false
+    }]
+  }]
+}
+```
+
+Matching is exact `fileHash` against currently accessible Library Books. No
+metadata fallback or EPUB/CFI inspection occurs. Empty Sessions are omitted
+unless explicitly included; that stored choice governs Apply and
+unmatched-download behavior. Multiple accessible Books with one checksum, no
+surviving Sessions, malformed archives, and staging failures return bounded
+errors without leaving a stage.
+
+`POST /api/v1/marginalia/import/apply/` is session-authenticated only and
+accepts JSON:
+
+```json
+{
+  "import_token": "<opaque-token>",
+  "reading_sessions": [{
+    "candidate_id": "reading-session-000001",
+    "name": "Optional override",
+    "notes": "Optional override"
+  }]
+}
+```
+
+The selection is required, nonempty, unique by `candidate_id`, and limited to
+matched importable candidates persisted in that exact preview. Unknown,
+unmatched, or policy-hidden candidates are rejected before writes. Invalid,
+expired, foreign, and missing-file stages share the same no-leakage `404`.
+
+All selected Sessions, progress, and Annotations are imported atomically.
+Imported Sessions always have status `closed`; source closed Sessions preserve
+`closedAt`, while source active Sessions use source `updatedAt` as their
+deterministic close timestamp. Import preserves other canonical timestamps and
+opaque location/content fields and never changes an active local Session.
+
+Success returns a bounded result without echoing the token:
+
+```json
+{
+  "imported_reading_session_count": 1,
+  "imported_annotation_count": 12,
+  "reading_sessions": [{
+    "candidate_id": "reading-session-000001",
+    "reading_session_id": "<new-local-uuid>",
+    "status": "closed",
+    "name": "Optional override",
+    "annotation_count": 12
+  }],
+  "warnings": []
+}
+```
+
+The applied stage stores a cryptographic fingerprint and this bounded result.
+An identical request, regardless of candidate ordering, replays the result;
+changed selection or override values return `409`. The staged file is removed
+after commit. Failure before commit leaves the ready stage and file intact.
+Post-commit deletion failure does not roll back imported data and is recovered
+by the operator cleanup command.
+
+`GET /api/v1/marginalia/import/unmatched/?import_token=<token>` is
+session-authenticated only. It returns `application/zip` with:
+
+```text
+Content-Disposition: attachment; filename="secondpass-marginalia-sessions.zip"
+```
+
+Only unmatched Books and Sessions persisted as downloadable by that stage are
+included. The staged `include_empty_sessions` policy remains authoritative.
+Matching is not rerun, so later Library access changes do not change the ZIP.
+No downloadable unmatched Sessions returns `409`; invalid, expired, foreign,
+missing-file, and otherwise unusable stages share the bounded no-leakage `404`.
+
+Members use the one-based, two-digit-minimum splitter layout:
+
+```text
+<book-number>-<book-key>/
+<book-number>-<reading-session-number>-<book-key>-<reading-session-key>.json
+```
+
+Every member is a canonical one-Book/one-Session Marginalia archive preserving
+the original `generatedAt`, source lifecycle state, progress, Annotations, and
+explicit `fileHash`, `sourceReadingSessionId`, and `clientAnnotationId` fields.
+Filename keys are safe, bounded, ASCII-oriented, and deterministic. ZIP member
+metadata, ordering, compression, and JSON rendering are fixed so repeated
+downloads are byte-identical.
+
+The GET is read-only: it does not update, consume, extend, or invalidate the
+stage, and Apply remains possible afterward. An applied stage cannot be
+reconstructed from its stored result after its archive file has been removed.
+
+The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
+`{"results": [...]}` without pagination. It defaults to the 10 most recently
+active caller-owned Sessions; `limit` is bounded from 1 through 50 and
+`include_closed=true` includes closed Sessions. Activity ordering uses Session,
+progress, and non-deleted Annotation updates before applying the database
+limit. Rows are not deduplicated by Book and expose only Session id, name,
+status, last activity, and the bounded Book id/title/cover/`can_open` reference.
 
 ## Accounts
 
@@ -129,12 +414,11 @@ The Client API provides a pairing flow (human code + browser approval) and beare
   - bearer tokens may create/edit/delete and manage items only in the token user's own personal shelves
   - group shelves and other users' shelves are read-only via bearer tokens
   - shelf `can_edit` is computed for the current request context; group shelves report `can_edit: false` to bearer-token clients even when the same user could edit them in the product UI with session auth
-- Reading user-data endpoints (sessions/progress/annotations), strictly scoped to the token owner
+- Selected Marginalia endpoints for owned Books, Sessions, progress, and annotations
 
 Client API bearer tokens are intentionally **not** enabled for imports, library mutation endpoints, group membership mutation, or product UI/admin endpoints.
-They are also not enabled for marginalia import/export endpoints; reading
-import/export remains product UI/session-authenticated only in the current
-slice.
+They are also not enabled for Marginalia Import or Export; those workflows
+remain Product UI/session-authenticated.
 
 Discovery:
 
@@ -144,19 +428,21 @@ Discovery:
 - `GET /api/v1/client-api/discovery/` returns the detailed Client API pairing
   discovery document.
 - Authenticated clients should refresh `GET /api/v1/accounts/me/` for current
-  user context plus small server context such as `advanced_library_groups_enabled`
-  and `banner_text`.
+  user context and `GET /api/v1/server/info/` for server-wide display context.
 
 Client API route conventions under `api_base_url`:
 
 - `{api_base_url}client-api/discovery/`
 - `{api_base_url}client-api/login-requests/`
 - `{api_base_url}client-api/login-requests/{id}/poll/`
+- `{api_base_url}client-api/pairing/lookup/` (authenticated Product UI session)
+- `{api_base_url}client-api/pairing/decision/` (authenticated Product UI session)
 
 Login request / authorization:
 
 - `POST /api/v1/client-api/login-requests/` (anonymous allowed)
-- `GET/POST /client-api/authorize/` (browser; requires Django login)
+- Login-request creation returns `authorize_url` rooted at `/profile/client-pairing` with the human code prefilled.
+- React pairing approval looks up and approves/denies a code through the authenticated pairing endpoints. Client API discovery and login-request responses do not advertise a separate browser authorization page.
 - `GET /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is an unguessable UUID)
   - `status=approved` always includes `access_token`; after the token is delivered once, polling returns `status=consumed`.
   - Login request creation returns `interval`, the recommended poll interval in seconds.
@@ -204,21 +490,20 @@ Response shape:
 
 Notes:
 
+- Owner may create `manager`, `librarian`, or `reader`. Manager may create only `librarian` or `reader`; other callers are denied. Owner is not a creatable managed role.
 - The temporary password is never stored except via Django's normal password hash.
 - The password is not emailed and is not shown by any list/detail endpoint after creation.
 - Newly-created managed users are marked `must_change_password=true` (force change on first login).
 
 ### `GET /api/v1/accounts/me/` response
 
-`/accounts/me/` is intended to be the UI bootstrap endpoint for authenticated clients:
+`/accounts/me/` is the current-user context endpoint for authenticated clients:
 
 - Who am I?
 - What global role do I have?
 - Am I an Owner?
 - Which LibraryGroups am I a member of?
 - Which group memberships are marked as curator/steward relationships?
-- Are advanced library groups currently enabled?
-- What single server banner text should be shown, if any?
 
 It includes a `groups` array listing the caller's `LibraryGroupMembership`s.
 
@@ -226,7 +511,7 @@ Each `groups[]` item includes:
 
 - `id`, `name`
 - `is_public_group`
-- `is_curator`
+- `is_curator: true` only for curator memberships; omitted otherwise
 
 Example `groups[]` item:
 
@@ -239,19 +524,14 @@ Example `groups[]` item:
 }
 ```
 
-`/accounts/me/` global `role` and `is_owner` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list.
+`/accounts/me/` uses sparse true-only capability flags. `is_owner`, `must_change_password`, `can_access_django_admin`, and `groups[].is_curator` are present only when true and omitted otherwise. First-party SDKs normalize missing flags to stable `false` booleans for application code.
+
+Global `role` and `is_owner` describe broad account authority. `groups[].is_curator` describes explicit stewardship on that exact membership. It is not a global role and there is no derived group-id bootstrap list. `can_access_django_admin` is included only for an Owner when Django Admin is enabled; it exposes neither raw settings nor an admin route manifest.
 
 Additional identity fields:
 
 - `first_name`, `last_name`
 - `must_change_password` (force change via product UI redirect)
-
-Refreshable server context:
-
-- `advanced_library_groups_enabled` (boolean): reader clients can use this to
-  show or hide group browsing UI.
-- `banner_text` (string): the current server banner text, or an empty string
-  when unset.
 
 Broad Product UI affordances should be derived from `role` and `is_owner`.
 Group-scoped curator affordances should use the matching `groups[]` membership
@@ -268,10 +548,6 @@ Example response:
   "last_name": "Incididunt",
   "profile_id": "59ebfe48-3a75-4650-a4cd-5db1d32f5598",
   "role": "reader",
-  "must_change_password": false,
-  "is_owner": false,
-  "advanced_library_groups_enabled": false,
-  "banner_text": "",
   "groups": [
     {
       "id": "631947a3-ffe9-45b4-9373-b48c81a4fdd4",
@@ -321,13 +597,14 @@ Shelves are presentation/organization and **do not** grant book access. LibraryG
 Endpoints:
 
 - `GET /api/v1/shelves/` (paginated; visible shelves)
-- `POST /api/v1/shelves/` (create; user-owned or group-owned depending on permissions)
+- `POST /api/v1/shelves/` (create; user-owned or group-owned depending on permissions; `name` is required and limited to 255 characters)
 - `GET /api/v1/shelves/<id>/`
 - `PATCH /api/v1/shelves/<id>/` (partial update; name/description/visibility only)
-- `PUT /api/v1/shelves/<id>/` (treated the same as `PATCH` for compatibility; partial update)
+- `PUT /api/v1/shelves/<id>/` (unsupported; returns `405`)
 - `DELETE /api/v1/shelves/<id>/`
 - Items:
   - `GET /api/v1/shelves/<id>/items/` (paginated; books are filtered through access policy)
+  - `GET /api/v1/shelves/<id>/items/?view=edit` (editor inventory; all stored slots with safe unavailable placeholders)
   - `POST /api/v1/shelves/<id>/items/` (add book)
   - `PATCH /api/v1/shelves/<id>/items/<item_id>/` (`{"move": "up|down"}` or `{"position": 0}`)
   - `DELETE /api/v1/shelves/<id>/items/<item_id>/`
@@ -345,6 +622,8 @@ List filters:
   - When `?book=<book_id>` is provided, shelf rows include `matched_item_id` (the `ShelfItem.id` for that book on that shelf) to support UI removal without extra item lookups.
 - Ordering:
   - `GET /api/v1/shelves/?ordering=name` orders by shelf name A-Z, then stable id fallback.
+  - `GET /api/v1/shelves/?ordering=-name` orders by shelf name Z-A, then stable id fallback.
+  - `GET /api/v1/shelves/?ordering=item_count` orders by lowest viewer-visible item count first, then name/id fallback.
   - `GET /api/v1/shelves/?ordering=-item_count` orders by highest item count first, then name/id fallback.
   - Missing/blank `ordering` defaults to `name`.
   - Invalid ordering values return `400`.
@@ -359,21 +638,87 @@ Shelf payload notes:
 - Shelves include a read-only `can_edit` boolean computed for the current request context. This is a UI hint; API authorization remains authoritative. Product UI/session-auth requests use normal shelf edit authorization, including allowed group shelf edits. Client API bearer-token requests report `can_edit: true` only for the token user's own user-owned shelves.
 - Shelves include a read-only integer `item_count` on list/detail payloads. It
   counts only shelf books visible to the current viewer. Other users' listed
-  shelves are omitted from list responses when this viewer-scoped count is
-  zero; owners still see their own empty shelves, and visible group-owned
-  shelves remain visible when empty.
+  shelves are omitted from list responses and return `404` from direct detail
+  when this viewer-scoped count is zero. Shelf owners still see their own empty
+  shelves. Librarian+ roles do not bypass this user-owned shelf rule. Visible
+  group-owned shelves remain readable when empty because their visibility is
+  determined by group scope rather than item count. Session and bearer reads
+  use the same policy.
+- Shelf create returns the same complete Shelf summary shape as list/detail,
+  including `item_count: 0` for the new empty shelf.
 - User-owned shelves include `owner_user` as a compact user object with `profile_id` and `username`; group-owned shelves have `owner_user: null`.
 - Shelves include `created_by` as the same compact user object when known. Shelf item `added_by` uses this shape too. These compact user objects do not include Django auth user database ids, email addresses, or profile/admin metadata.
 - Shelf item payloads include a compact `book` object that includes `cover_url` (or `null`) when a cover is available.
-- Shelf item positions are stored as contiguous zero-based integers. If multiple items are requested at the same position during add/import-style writes, that cluster is canonicalized by book title, then stable IDs, and later items are bumped.
-- Patching an existing item with `position` is a move-to operation: the item is removed from its current list position, inserted at the requested zero-based target (clamped to the list bounds), and all shelf items are renumbered contiguously.
+- The nested Shelf item `book` uses the same compact Book shape as Library browse
+  and Group Book lists: `id`, title/sort title/subtitle, ordered Authors,
+  Series with `series_index`, `catalog_tags`, language, publisher, precision-aware
+  publication components, `cover_url`, and `file_format`. It excludes Groups,
+  identifiers, description, detailed file/download metadata, checksum, and
+  storage/source/provenance fields. Shelf item id, shelf id, position, and
+  `added_by` remain fields of the Shelf item rather than the nested Book.
+- Normal Shelf item reads return only viewer-visible Books. Their pagination
+  `count` is the visible item count and every result has a compact `book`.
+- `view=edit` is available only when the request context can edit the Shelf.
+  Readable but non-editable Shelves return `403`; unreadable Shelves remain
+  `404`. Its pagination operates over every stored ShelfItem slot, so `count`
+  is the total stored count. The envelope also includes
+  `visible_item_count` and `unavailable_item_count`. Results remain in stored
+  position order; any supplied ordering other than `position` returns `400` in
+  this representation. Unknown `view` values return `400`.
+- Visible `view=edit` rows include the ordinary compact `book` and
+  `unavailable: false`. Retained hidden rows contain only ShelfItem identity,
+  shelf identity, zero-based position, `unavailable: true`, `book: null`, and
+  the bounded compact `added_by` value. They expose no hidden Book identity,
+  title, authors, series, cover, tags, identifiers, file, Group, storage,
+  source, or provenance data.
+- Shelf create, Shelf PATCH, item add, and item PATCH reject unknown fields with
+  structured `400` field errors. Shelf PATCH accepts only `name`, `description`,
+  and `visibility`; `name`, when supplied, is limited to 255 characters.
+- Group-owned Shelf creation requires `owner_group`; omission returns a
+  structured `owner_group` field error. Malformed group ids return `400`, while
+  missing or inaccessible groups return `404`. A visible group for which the
+  caller lacks creation authority remains a permission error. User-owned Shelf
+  creation rejects a supplied `owner_group` with a structured field error.
+- Shelf item add requires `book` as a UUID. Malformed values return `400`.
+  Valid missing Books and Books outside the Shelf editor's eligible Book scope
+  both return `404`; lack of authority over the Shelf itself remains `403`.
+  Adding a Book already on the Shelf returns `400` under the `book` field.
+- Malformed Shelf item ids on PATCH/DELETE return the same bounded `404` as
+  missing or unavailable item ids.
+- Public/Common Room group shelves use the ordinary group-shelf contract in
+  simple and advanced modes. In simple mode they remain manageable by
+  Librarian, Manager, and Owner sessions; Public has no Reader curators.
+- Deleting a Shelf returns `204` and cascades only its ShelfItem rows. It does
+  not delete Books, EPUB/cover assets, reading sessions, annotations, or Book
+  group assignments.
+- Shelf item positions are stored as contiguous zero-based integers. Item
+  mutations lock the Shelf and its stored item rows before calculating or
+  changing positions. If multiple items are requested at the same position
+  during add/import-style writes, that cluster is canonicalized by book title,
+  then stable IDs, and later items are bumped.
+- `move=up|down` moves a visible item to the nearest visible slot in that
+  direction. Retained unavailable placeholders are locked: the move skips them
+  and leaves their stored positions unchanged. A boundary move remains a
+  successful no-op. PATCH on an unavailable item returns bounded `404`.
+- Patching an existing item with `position` remains a zero-based move-to
+  operation when every stored item is available. When unavailable retained
+  items exist, direct positioning returns `400` under `position` instead of
+  ambiguously moving through locked slots.
+- POST with a non-null `position` is likewise rejected under `position` when
+  unavailable retained items exist. Omitting `position` appends after all
+  stored slots, including unavailable placeholders.
 - Shelf item list ordering:
   - `GET /api/v1/shelves/<id>/items/?ordering=position` orders by stored shelf position and is the default.
+  - `GET /api/v1/shelves/<id>/items/?ordering=-position` orders by stored shelf position in reverse.
   - `GET /api/v1/shelves/<id>/items/?ordering=title` orders the response by contained book title.
-  - `GET /api/v1/shelves/<id>/items/?ordering=author` orders the response by contained book primary author name using the same author-name ordering convention as book display.
+  - `GET /api/v1/shelves/<id>/items/?ordering=-title` orders the response by contained book title descending.
+  - `GET /api/v1/shelves/<id>/items/?ordering=author` orders by the contained Book's lowest-positioned `BookAuthor` only, using that Author's sort name/name fallback and then Book title/item id. Secondary Authors do not affect ordering; Books without Authors sort last.
+  - `GET /api/v1/shelves/<id>/items/?ordering=-author` reverses the author ordering.
   - Invalid ordering values return `400`.
   - Title/author ordering is response/view ordering only and does not mutate stored `ShelfItem.position`; move/reorder endpoints continue to operate on stored positions.
-- Product/UI displays may show one-based labels such as `#1`, `#2`, etc.; the current shelf edit UI reorders with `Move up` / `Move down` buttons plus a one-based `Move to` dropdown and has no drag/drop or per-row numeric position input.
+- Product/UI displays may show one-based labels such as `#1`, `#2`, etc. React
+  reorder controls remain deferred; the editor representation supplies the
+  locked placeholder contract needed for a later safe implementation.
 - Client API bearer tokens:
   - may read any shelf the token user can view
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
@@ -452,20 +797,19 @@ Book list, broad-search, and group-scoped Book results share one compact row
 shape:
 
 - `id`, `title`, `sort_title`, and `subtitle`
-- `authors`, `series`, and compact Catalog Tag field `tags`
+- `authors`, `series`, and `catalog_tags`
 - `language` and `publisher`
 - `published_year`, `published_month`, `published_day`, and
   `published_date_precision`
 - `cover_url` and top-level `file_format`
 
-Compact rows do not include `catalog_tags`, `file`, `groups`, `identifiers`,
-checksums, download URLs, or storage/source fields.
+Compact rows do not include `file`, `groups`, `identifiers`, descriptions,
+checksums, file sizes, download URLs, or storage/source fields.
 
 Book detail, Book metadata PATCH/PUT responses, and cover replacement/clear
 responses share the detail shape. It includes normal Book metadata plus
-`identifiers`, detail/write Catalog Tag field `catalog_tags`, visibility-scoped
-`groups`, and `file`. It does not repeat compact-row `tags` or top-level
-`file_format`.
+`identifiers`, `catalog_tags`, visibility-scoped `groups`, and `file`. It does
+not include top-level `file_format`.
 
 `file` is `null` when no stored file is available. Otherwise it contains only:
 
@@ -514,6 +858,16 @@ Book-to-group assignment endpoints (used by Groups UI and Book Edit UI):
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 
+The Group Books GET endpoint accepts `exclude_shelf=<shelf_id>` for Add Books
+candidate discovery. The Shelf must be readable and owned by the path Group.
+Malformed ids return a structured `400`; missing or inaccessible Shelves return
+`404`; a readable Shelf owned by another Group (or a user) returns a structured
+`exclude_shelf` field error. The exclusion composes with normal Group Book
+search, tag/author/series/publisher filters, ordering, and pagination. Group
+Book `q` uses the broad search fields: title, sort title, subtitle, Author name,
+Series name, identifier value, Catalog Tag name, publisher, and description,
+while retaining the exact Group-assignment scope.
+
 Client API bearer token support (read-only allow-list):
 
 - `GET /api/v1/library/books/`
@@ -555,50 +909,69 @@ session or bearer authentication. The attachment filename is generated from
 the sanitized, bounded Book title; it never uses the content-addressed storage
 name. Fileless or unsupported-format Books return bounded `409
 BOOK_FILE_UNAVAILABLE`; missing or unreadable storage returns the same bounded
-code with `503` and no storage detail.
+code with `503` and no storage detail when the failure occurs before streaming
+starts. A storage read failure after response streaming has begun terminates the
+stream and is recorded in the bounded operator log; HTTP status cannot be
+replaced after headers have been sent.
 
 The download endpoint currently returns the complete file with `200`; byte
 Range requests are not implemented. `cover_url` continues to use the public
-display-only `/media/covers/` namespace; cover mutation remains session-only.
+display-only `/media/covers/` namespace; a Book detail response returns
+`cover_url: null` when its configured cover cannot be found or resolved so the
+client can use its normal cover placeholder. Cover mutation remains
+session-only.
 
 Author/Series payload notes:
 
 - Author and Series POST/PATCH/DELETE are Django-session-only Librarian+ catalog
-  management operations. POST accepts required `name`; Author accepts optional
-  `sort_name` and `biography`, while Series accepts optional `sort_name` and
-  `summary`. PATCH accepts the same entity fields. Blank sort names default to
-  the display name. Client bearer credentials remain read-only.
-- Management Product UI reads add `management=true`. For a Librarian+ session,
-  this returns catalog-global Authors/Series including unattached entities and
-  total Book counts. Reader sessions, bearer clients, and ordinary reads remain
-  visibility-scoped; `management=true` does not broaden them.
+  operations. Author writes accept exactly `name`, `sort_name`, and `biography`;
+  Series writes accept exactly `name`, `sort_name`, and `summary`. POST requires
+  `name`; PATCH is partial and preserves omitted fields. Unknown fields return a
+  structured `400` keyed by the rejected field. PUT is unsupported and returns
+  `405`. Client bearer credentials remain read-only.
+- Author and Series reads are role-scoped without a special query mode.
+  Reader sessions and bearer clients receive entities derived from Books visible
+  to that caller, so unattached entities are excluded and `book_count` counts
+  visible matching Books. Librarian+ sessions receive the full catalog by
+  default, including unattached and hidden-only entities, with total attached
+  Book counts. Catalog Tag filtering narrows the caller's Book scope before
+  deriving entities and counts.
 - Names maintain an indexed, non-unique normalized value using Unicode NFKC,
   collapsed whitespace, trim, and case-folding while preserving punctuation.
-  Normalized matches are advisory and do not block duplicate creation.
+  Author and Series UUIDs remain the identities. Normalized matches are
+  advisory and do not block explicit duplicate creation.
+- Author and Series lists accept `q`, normal pagination, and optional
+  `exclude_id=<uuid>`. The exclusion is applied after normalized search and is
+  intended for bounded edit-time duplicate advisories; malformed or repeated
+  values return a keyed `400`.
+- `sort_name` is writable and drives `ordering=name` when nonblank, with `name`
+  as the fallback. Submitting a blank sort name stores the current display name;
+  omitting it from PATCH preserves the existing value.
 - DELETE returns `204` for an unattached entity. Attached Authors and Series are
-  not detached automatically and return bounded `409 AUTHOR_IN_USE` or
-  `409 SERIES_IN_USE` errors.
-- Author POST accepts required `name` and optional `sort_name`/`biography`;
-  blank or overlong values return normal structured validation errors. When
-  `sort_name` is omitted or blank, it defaults to `name`.
-- Author display names are not unique in the current catalog model, so POST
-  deliberately creates a new Author when the same display name already exists.
-  The response uses the normal Author axis shape (`id`, `name`, `sort_name`,
-  `biography`, and `book_count`, initially zero). Creation does not assign a
-  Book. Client bearer credentials are rejected even for privileged accounts.
-- Author payloads include optional `biography`; Series payloads include optional `summary`. Librarian+ may PATCH `name` and the respective prose field on the detail endpoint; readers remain read-only.
-- Author and Series payloads include `book_count` (read-only). `book_count` is scoped to books visible to the current caller (readers and bearer tokens do not learn about inaccessible books).
+  not detached automatically and return bounded `409 author_has_books` or
+  `409 series_has_books` errors. The canonical error envelope includes a clear
+  message and `error.details.book_count`; it never embeds attached Book payloads.
+  The mutation rechecks inside its transaction and translates late database
+  protection failures to the same conflict contract.
+- Author and Series display names are not unique, so POST deliberately creates
+  a new entity even when the normalized name already exists. The response uses
+  the normal axis shape with `book_count` initially zero. Creation does not
+  assign a Book, and no automatic merge occurs. Client bearer credentials are
+  rejected even for privileged accounts.
+- Author and Series payloads include role-scoped `book_count` (read-only):
+  total attached Books for Librarian+ sessions and visible matching Books for
+  Reader sessions and bearer clients.
 - Author and Series list/detail payloads may opt into `preview_books` with
   `include_preview_books=true`; preview items are visibility-scoped and use
   the reusable preview shape described below. Tags do not currently attach
   preview books.
 - Author list ordering:
-  - `GET /api/v1/library/authors/?ordering=name` orders by author name A-Z and is the default.
-  - `GET /api/v1/library/authors/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
+  - `name` (default), `-name`, `book_count`, and `-book_count` are supported.
+  - Book-count ordering uses the role-scoped `book_count`, then name/id fallback.
   - Invalid ordering values return `400`.
 - Series list ordering:
-  - `GET /api/v1/library/series/?ordering=name` orders by series name A-Z and is the default.
-  - `GET /api/v1/library/series/?ordering=-book_count` orders by highest visible `book_count` first, then name/id fallback.
+  - `name` (default), `-name`, `book_count`, and `-book_count` are supported.
+  - Book-count ordering uses the role-scoped `book_count`, then name/id fallback.
   - Invalid ordering values return `400`.
 
 Catalog Tag browse endpoints:
@@ -632,6 +1005,8 @@ relationships are mutated only through Book PATCH `catalog_tags`.
 
 Tag endpoints are count/filter facets. They do not accept
 `include_preview_books` and do not return `preview_books`.
+Clients that need every Catalog Tag for a facet rail should request a large
+numeric `page_size` (up to `200`) and follow `next` until it is `null`.
 
 Book, Author, and Series list endpoints accept the compact query parameter
 `tag=<slug>`, which filters by Catalog Tag slug. Books are
@@ -645,15 +1020,23 @@ the stable `slug` returned by tag payloads.
 
 Book list ordering:
 
-- Book `q` search matches only `title` and the internal `sort_title` value.
+- General Book-axis `q` search matches only `title` and the internal `sort_title` value.
   Authors, Series, identifiers, tags, publisher, subtitle, and description do
   not participate in Book-axis text search; use their dedicated axes or filters.
 
+- Book lists accept `author=<author_uuid>` and `series=<series_uuid>`. Malformed
+  UUIDs return `400`. A well-formed UUID that is missing, deleted, or has no
+  caller-visible matching Books returns the normal empty paginated response;
+  the response does not reveal whether the catalog entity exists. These filters
+  compose with `tag`, `q`, `ordering`, `page`, and `page_size`.
+
 - `GET /api/v1/library/books/?ordering=title` orders by title A-Z and is the default for general book browsing and author-filtered book browsing.
-- `GET /api/v1/library/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
+- `GET /api/v1/library/books/?ordering=author` selects the lowest-positioned `BookAuthor` (through-row id breaks position ties), orders by only that Author's sort name/name fallback, then Book sort title/title/id. Secondary Authors do not affect ordering; Books without Authors sort last.
 - `GET /api/v1/library/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
 - `GET /api/v1/library/books/?series=<series_id>` defaults to `series_index` ordering.
 - `GET /api/v1/library/books/?series=<series_id>&ordering=series_index` orders by `series_index` ascending, nulls last, then title/id fallback.
+- Book list ordering accepts `title`, `author`, `series`, `series_index`, and
+  `publisher`, plus the descending `-` form of each value.
 - Invalid ordering values return `400`.
 - Time-based book ordering is intentionally not part of the public sorting contract in this pass.
 
@@ -680,6 +1063,15 @@ Request behavior:
 
 - `include_preview_books` accepts truthy values `1`, `true`, `yes`, `y`, and `on`, case-insensitive after trimming.
 - Absent or false-like values omit `preview_books`; default payloads remain unchanged.
+- Author and Series list/detail endpoints, including Group-scoped Author and
+  Series lists, also accept `preview_limit`. Values `1` through `24` request
+  that bounded number of previews and imply previews when
+  `include_preview_books` is omitted. `preview_limit=0` omits the preview
+  payload. `include_preview_books=true` without a limit uses 6.
+- A positive `preview_limit` combined with an explicit false-like
+  `include_preview_books` is contradictory and returns `400`. Negative,
+  malformed, repeated, or above-24 limits also return a bounded
+  `preview_limit` field error; values are never clamped.
 - The option can be combined with normal parent endpoint pagination (`page`, `page_size`) and normal endpoint filters.
 - Parent endpoint pagination shape does not change. `preview_books` is attached to each parent row on the current page and is capped independently of parent `page_size`.
 
@@ -705,7 +1097,8 @@ Preview item rules:
 - `cover_url` is an absolute URL when a cover exists, otherwise `null`.
 - Preview items are context hints, not full Book objects.
 - Preview items never include file/download URLs, reading data, marginalia, permission internals, groups, shelves, authors, or series payloads.
-- At most 6 preview books are returned per parent item.
+- Author and Series previews return at most the requested limit, with a default
+  of 6 and maximum of 24. Other preview-bearing endpoints remain capped at 6.
 
 Visibility and auth:
 
@@ -737,19 +1130,54 @@ Book write and media notes:
 
 - Books include a singular `file` object (or `null`) rather than `files[]`.
 - Books include `cover_url` (string URL) or `null` when no cover is available. `cover_url` points under `/media/covers/` and is part of the normal product/API contract. Cover files are public display assets; EPUB content is delivered through authenticated app/API endpoints.
-- Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
-- `series_index` accepts integers or one decimal place (e.g. `5` or `5.1`).
+- Book PATCH/PUT accepts only `title`, `sort_title`, `subtitle`, `description`,
+  `publisher`, `language`, `published_year`, `published_month`,
+  `published_day`, `published_date_precision`, `authors`, `series`,
+  `series_index`, `identifiers`, and `catalog_tags`. Unknown or read-only fields
+  return structured `400` field errors instead of being ignored. In particular,
+  cover, file, checksum, group, storage/source, and timestamp fields are not
+  writable through this endpoint.
+- `sort_title` is writable and may be blank. PATCH and PUT both retain partial
+  update semantics: omitted writable fields preserve their current values.
+- Book write shape: `authors` is a list of Author ids; `series` is an existing
+  Series id, `null`, or `{ "name": "New series" }` for normalized-name
+  resolution and atomic assignment. The object form creates when there is no
+  match, reuses exactly one match, and returns a `series` field error when
+  multiple matches make the name ambiguous. It never chooses an arbitrary
+  duplicate.
+- Duplicate Author ids are deduplicated server-side while preserving the first
+  occurrence order. An empty list clears all Author relationships.
+- `series_index` accepts only positive decimal values with at most two
+  fractional digits (for example `5`, `5.1`, or `5.25`). Book list/detail
+  responses serialize a present index as an exact fixed two-decimal JSON string
+  (`5.00`, `5.10`, `5.25`), never a binary floating-point number. Null clears the index;
+  omission preserves it. A non-null index without a target Series is a field
+  validation error. Clearing `series` removes the BookSeries relationship.
 - `subtitle` may be patched to an empty string.
+- Publication dates are validated against their declared precision. Year
+  precision requires only a year; month precision requires year/month and no
+  day; day precision requires all components. Month/day values must form a real
+  Python calendar date, so impossible dates such as `2025-02-31` are rejected.
+  Blank precision retains the established no-precision behavior.
 - `identifiers[]` response items include `id`, `scheme`, and `value`.
-- Items in compact `tags[]` and detail `catalog_tags[]` contain `id`, `name`,
-  and generated `slug`; see the canonical response shapes above.
+- Items in compact and detail `catalog_tags[]` contain `id`, `name`, and
+  generated `slug`; see the canonical response shapes above.
 - Book PATCH accepts `identifiers` as a complete replacement list of
   `{"scheme": "...", "value": "..."}` objects. Omitting `identifiers`
-  preserves existing rows; `identifiers: []` clears them.
+  preserves existing rows; `identifiers: []` clears them. Identifier row ids
+  are response-only and are not accepted in write objects. Unknown nested
+  identifier fields are rejected rather than ignored.
+- Identifier PATCH schemes are the canonical values `isbn_10`, `isbn_13`,
+  `asin`, `doi`, `oclc`, `lccn`, `openlibrary`, `calibre`, `epub_uid`,
+  `publisher`, `uri`, `uuid`, and `other`. Scheme aliases recognized while
+  importing EPUB metadata are normalization inputs for import only; they are
+  not Book PATCH values.
 - Book PATCH accepts `catalog_tags` as a complete replacement list of names.
   Omitting it preserves current tags; `catalog_tags: []` clears them.
-- Metadata, authors, BookSeries relationship data, identifiers, and Catalog Tags are updated
-  transactionally through the single Book detail PATCH endpoint.
+- Scalar metadata, Authors, BookSeries relationship data, identifiers, and
+  Catalog Tags are updated atomically through the single Book detail PATCH/PUT
+  endpoint. Validation failure in any supplied field rolls back the complete
+  update.
 
 Book cover mutation is deliberately separate from metadata PATCH:
 
@@ -765,6 +1193,11 @@ Book cover mutation is deliberately separate from metadata PATCH:
   for validation.
 - Cover mutation does not change EPUB files, checksums, bibliographic metadata,
   identifiers, groups, shelves, or reading data.
+- A primary cover storage failure returns bounded `503
+  BOOK_COVER_UNAVAILABLE` without exposing storage paths or backend exception
+  text. Failure to delete an old cover after a successful replace or clear is
+  best-effort operator cleanup: the mutation remains successful and the
+  cleanup failure is logged.
 
 ## Imports
 
@@ -774,6 +1207,18 @@ Library imports are synchronous and session-authenticated for Librarian+ users.
 `POST` returns a transient import result with source labels, counts, and safe
 per-item results. Import history is not stored and there are no list/detail
 import-history endpoints. Client API bearer tokens are rejected.
+
+Each item contains `status`, `source_label`, and bounded `safe_message`. When
+an item is associated with a Book (including imported, duplicate, and conflict
+results), it also contains the existing `book_id`, `title`, an ordered `authors`
+array of display-name strings, and optional `series` and decimal-string
+`series_index` fields. Failed or skipped items without a Book omit those Book
+summary fields. These summaries do not include checksums, storage identities,
+filesystem paths, or archive internals.
+
+Author and Series names are matched through the catalog normalization rule.
+Zero matches create a new entity, exactly one match is reused, and multiple
+matches return a conflict item without creating the Book or choosing a duplicate.
 
 See `docs/imports.md` for details.
 
@@ -802,27 +1247,41 @@ feature-state change does not delete or rewrite existing custom-group data.
 - `POST /api/v1/library/groups/<group_id>/books/` body: `{"book_id": "<book_id>"}`
 - `DELETE /api/v1/library/groups/<group_id>/books/<book_id>/`
 
+Group creation and metadata updates accept only `name` and `description`.
+Create requires `name`; PATCH is partial. Supplied names are trimmed, must be
+nonblank, and may contain at most 255 characters. Descriptions may be blank,
+and duplicate group names are allowed. Unknown fields return structured `400`
+errors. Group metadata uses PATCH; PUT is unsupported and returns `405`.
+
 Group list ordering:
 
 - `GET /api/v1/library/groups/?ordering=name` orders by group name A-Z and is the default.
+- `GET /api/v1/library/groups/?ordering=-name` orders by group name Z-A.
 - Invalid ordering values return `400`.
 - Public/Common Room is not forced to the top by this endpoint.
 
 Group book ordering:
 
 Group book list responses use the normal `{count, next, previous, results}`
-pagination envelope. Product UI Group View and Group Edit URLs retain the
-current `page` and supported book filters while paging.
+pagination envelope. React owns any UI paging state built on this API.
 
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=title` orders by title A-Z and is the default.
-- `GET /api/v1/library/groups/<group_id>/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
+- `GET /api/v1/library/groups/<group_id>/books/?ordering=author` uses the same lowest-positioned primary-Author rule and deterministic fallback as the Library Book list.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
+- Group Book ordering accepts the normal Book-list values: `title`, `author`,
+  `series`, `series_index`, and `publisher`, plus the descending `-` form of
+  each value.
 - Invalid ordering values return `400`.
 - Memberships (Manager/Owner only):
   - `GET /api/v1/library/groups/<group_id>/memberships/` (paginated; readable by group members and by Owner/Manager/Librarian)
   - `POST /api/v1/library/groups/<group_id>/memberships/` body: `{"user_id": "<profile_id>", "is_curator": true}`
   - `PATCH /api/v1/library/groups/<group_id>/memberships/<user_id>/` body: `{"is_curator": false}`
   - `DELETE /api/v1/library/groups/<group_id>/memberships/<user_id>/`
+
+Membership POST accepts only `user_id` and `is_curator`; membership PATCH
+accepts only `is_curator`. These endpoints do not accept or change global user
+roles. Global role changes belong to the managed Users API. Unknown membership
+fields, including `role`, return structured `400` errors.
 
 Membership payloads use the generic username-only compact user identity and do
 not expose Django auth user database ids:
@@ -864,9 +1323,19 @@ list; Readers may manage shelves only for matching non-Public memberships with
 
 Group list/detail payloads support the reusable `include_preview_books=true` opt-in described under [Preview books](#preview-books).
 
+`GET /api/v1/library/groups/?book=<book_uuid>` filters the paginated Group
+list to caller-visible Groups containing that Book. The filter composes with
+`q`, `ordering`, pagination, and `include_preview_books=true`; response rows
+retain the normal Group-list shape. A malformed UUID returns structured `400`
+under `book`. A well-formed missing or caller-inaccessible Book, or a Book with
+no caller-visible matching Groups, returns an empty paginated page so the
+collection filter does not disclose Book existence. Simple mode continues to
+restrict the Group API to Public/Common Room.
+
 Public restrictions:
 
-- Public cannot have curator assignments (`is_curator=true` is invalid).
+- Public cannot have curator assignments. Membership POST/PATCH with
+  `is_curator=true` returns `400` with an `is_curator` field error.
 - Public is default/fallback, not mandatory: membership may be removed when another group remains; removing a user's final membership restores Public.
 - Public is not universal access; Public group visibility follows normal
   LibraryGroup membership rules.
@@ -879,83 +1348,26 @@ See `docs/permissions.md` for the visibility/curation rules.
 Authorized Manager/Owner users may delete custom groups through the normal API
 and Product UI workflow. The designated Public group cannot be deleted.
 
-## Reading
-
-- Reading annotation APIs use compact SPL-native payload fields. The canonical
-  portable exchange format is the session-centered Second Pass Library
-  Marginalia Profile documented in `docs/specs/marginalia-export.md`.
-- Practical current REST examples for reader clients: `docs/reading-rest-examples.md`
-- Client API bearer tokens are allowed for reading endpoints (user-owned data; strictly scoped to the token owner).
-- Open book bootstrap: `POST /api/v1/reading/books/<book_id>/open/` (returns active session + progress + first page of annotations)
-- Active session: `GET /api/v1/reading/books/<book_id>/active-session/`
-- Start over: `POST /api/v1/reading/books/<book_id>/start-over/` (returns the same bootstrap shape as `/open/`)
-- Sessions (read + limited metadata edits): `GET /api/v1/reading/sessions/` (paginated; supports `?book=<book_id>`, `?status=active|completed|archived`, `?is_active=true|false`, `?q=<text>`), `GET /api/v1/reading/sessions/<id>/`, `PATCH /api/v1/reading/sessions/<id>/` (only `name`, `notes`; active sessions only). Summary list/detail payloads include `book_id`, `can_open`, and compact `book`, not the legacy `book_title` field. When `?book=<book_id>` is present and the book is visible, list responses include `context.book` even if `results` is empty.
-- Recent active sessions (compact): `GET /api/v1/reading/sessions/recent/` (default `limit=10`, max `50`; includes `session.name` and `session.progression`; omits inaccessible-book sessions from continue-reading results)
-- Batch activity summary: `POST /api/v1/reading/books/activity-summary/` with `{"books": ["<book_id>"]}` returns per-visible-book current-user session counts and active/latest session ids. This endpoint is read-only in meaning but uses POST for practical batch request size.
-- Close session: `POST /api/v1/reading/sessions/<session_id>/close/` (marks the session completed/inactive; idempotent)
-- Progress: `GET/PUT/PATCH /api/v1/reading/sessions/<session_id>/progress/` (writes require current access to the session's book)
-- Annotations: `GET /api/v1/reading/annotations/` (paginated; soft-deleted items are hidden by default; pass `?include_deleted=true` to include them)
-  - Filters: `?book_id=<book_id>`, `?session_id=<session_id>`, `?kind=highlight|bookmark` (may be repeated)
-  - Ordering: `?ordering=created|-created|modified|-modified`
-  - `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key` for safe retries (recommended).
-  - `POST /api/v1/reading/annotations/batch/` accepts Django session or Client
-    API bearer authentication and creates up to 100 annotations for one session
-    owned by the authenticated user. The Book must currently be visible for
-    writes. The request is validated before creation and commits all items or
-    none. Success returns `201` with `{"annotations": [...]}`; an optional
-    per-item `client_id` is echoed in its corresponding response item.
-- Marginalia export (Django session-authenticated only; Client API bearer tokens rejected):
-  - `GET /api/v1/reading/export/` exports all owned current-user sessions, including sessions for books the user can no longer view.
-  - `POST /api/v1/reading/export/` exports selected owned books/sessions, including owned sessions for books the user can no longer view.
-- Marginalia import preview (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/preview/` accepts one uploaded SPL native marginalia JSON export file, validates it, stages the validated payload in `userdata/imports/staged/`, returns an `import_token`, summarizes contents, and reports visible local book matches by file hash only.
-  - `GET /api/v1/reading/import/unmatched/?import_token=<token>` downloads a native SPL JSON subset containing staged preview books that could not be matched to visible local books plus malformed-locator sessions from matched books.
-- Minimal marginalia import apply (Django session-authenticated only; Client API bearer tokens rejected):
-  - `POST /api/v1/reading/import/apply/` requires an `import_token` from preview, re-validates the staged payload, imports matched sessions for visible local books as historical sessions, skips unmatched books, deletes the staged file after success, and does not accept direct file uploads or foreign/provider formats.
-  - Optional multipart `selection` JSON limits import to selected export-local sessions and may override imported session `name`/`notes`.
-
-Reading payload notes:
-
-- Marginalia ownership, current book visibility, book-file download access, and current reading/open capability are separate. Owned sessions/annotations remain visible/exportable to their owner after book access loss; current reading/open activity and book-file downloads still require current book visibility.
-- Progress uses `current_location` (JSON) as the canonical "where am I?" session state (for EPUB, an EPUB CFI and/or href-based locator).
-- `progression` is derived/display metadata (a normalized scalar hint, `0.0 <= progression <= 1.0` when present), not canonical navigation state. It is useful for progress bars and summaries; it should not be used for resume location, annotation anchoring, CFI correctness validation, or cross-device exact positioning. If described as whole-book progress, it is relative to the whole renderable EPUB reading span from first renderable location to last renderable location (not page count, viewport count, chapter-local progress, or byte offset).
-- Session list/retrieve payloads include `progression`, `annotation_count`, `can_open`, and a compact `book` summary scoped to the caller's current book visibility. `can_open=false` means the session remains owned/readable, but the related book is not currently available for open/continue/per-book navigation.
-- Session search (`?q=<text>`) trims whitespace and searches session-owned `name`/`notes` plus currently visible book `title`, `subtitle`, authors, and series. It does not search annotation bodies, ISBNs, identifiers, marginalia export payloads, or arbitrary client blobs. User-owned session name/notes can match even when related book access is later lost; hidden/inaccessible book metadata cannot match and remains redacted.
-- `open`, `active-session`, `start-over`, progress writes, and annotation writes/deletes require current book access. Existing no-access active sessions may still be renamed/noted and closed by their owner.
-- Reading activity overlays live under `/api/v1/reading/`, not `/api/v1/library/books/`; catalog book list/detail payloads do not include user-specific session counts, progress, latest session ids, or annotation counts.
-- Annotation API payloads use `kind`, `selector`, optional `quote`,
-  `highlight_text`, `highlight_color`, and `comment_text`. Internally,
-  annotations are stored in compact columns (`selector_kind`/`selector_value`
-  plus highlight/comment fields).
-- Annotation reads are owner-scoped and remain available after book access loss; annotation writes/deletes require current access to the session's book and an open session.
-- Highlight color is a semantic token on highlights. Allowed: `yellow`, `green`, `blue`, `pink`, `purple`, `orange`. Missing/blank highlight color is accepted on create and normalizes to `yellow`; blank highlight color is rejected on PATCH.
-- Progress/location payloads are versioned via `profile_version` (current: `0.1.0`). If provided on write, it must match the current server-supported version. Annotation payloads do not include `profile_version`.
-- Marginalia import apply is intentionally minimal: no stored import jobs and no annotation-level selection. The product UI supports session-level selection and session name/notes customization.
-- Server-side marginalia import is intended for SPL Marginalia Profile files
-  only. Foreign/provider-specific formats should be normalized by a client
-  through the normal reading APIs or converted by an external tool into the SPL
-  Marginalia Profile shape first.
-- Marginalia apply imports visible local books matched by file hash only, skips unmatched books, creates new historical/imported sessions, never imports exported active sessions as active local sessions, and treats duplicate findings as warnings rather than blockers. ISBN and title/author fallback matching are intentionally not used for server-side locator import.
-- Server-side apply performs shallow CFI-shaped validation only: EPUB CFI values must look like `epubcfi(...)`; the server does not resolve CFIs against EPUB content. Sessions with malformed locators are excluded from server apply and preserved for Reader-assisted import. The import unit is a session; annotation-level selection is not supported. Session selection uses export-local session ids, not SPL database ids.
-- Unmatched import download is Product UI/session-authenticated, tied to the current user's staged preview token, and intended for Reader-assisted re-anchoring when the original book file is missing, different, or has malformed locators.
-- Export JSON follows the Second Pass Library Marginalia Profile and is nested
-  as `books[] -> sessions[] -> annotations[]`; annotations inherit book/session
-  context from nesting, annotations belong to reading sessions, and marginalia
-  belongs to the user.
-- All-scope export uses `scope.type = "all"` and omits books with no exported sessions.
-- Selected export uses `scope.type = "selected"` with per-book `session_filter` values of `"all"` or `"selected"`.
-- Selected export request body shape is `{"books": [{"book_id": "<uuid>", "sessions": "all"}, {"book_id": "<uuid>", "sessions": ["<session_uuid>"]}]}`.
-- Exported sessions use export-local ids such as `session-1`; annotations do not include SPL database annotation ids.
-- Deleted annotations are excluded from export.
-
 ## Core
 
 - Health check: `GET /api/v1/health/`
+- Authenticated server context: `GET /api/v1/server/info/`
+  - accepts session or Client API bearer authentication
+  - `server_name`
+  - `server_description`
+  - `server_banner_message`
+  - `advanced_library_groups_enabled`
+  - `reading_client_base_url` (normalized root URL or `null` when disabled)
+  - `marginalia_profile_uri` (canonical supported Marginalia interchange profile)
+  - `public_group` (`id`, `name`, `description`)
+  - `server_version`
+  - `server_release_date`
+  - read-only; contains no user identity, membership, capability, API-base, or
+    operator-only configuration fields
 - Public discovery: `GET /.well-known/secondpass`
   - `server_name`
   - `server_description`
   - `server_version`
-  - `server_release`
   - `server_release_date`
   - `api_base_url`
   - does not include banner text, advanced library group state, capabilities,
@@ -963,9 +1375,19 @@ Reading payload notes:
 - Owner server settings: `GET/PATCH /api/v1/server/settings/`
   - `server_name`
   - `server_description`
+  - `server_banner_message`
   - `public_group_name`
   - `public_group_description`
   - `advanced_library_groups_enabled`
+  - `reading_client_base_url` (effective normalized value, blank when disabled)
+  - `reading_client_base_url_locked` (true when the environment override owns it)
+
+`reading_client_base_url` accepts only an HTTP(S) origin/root URL: a hostname is
+required, localhost and explicit ports are allowed, and paths, queries,
+fragments, user information, and placeholders are rejected. The nonblank
+`SECOND_PASS_READING_CLIENT_BASE_URL` environment setting overrides the stored
+value and makes the Owner setting read-only. Public discovery and `/me` do not
+include this value.
 
 Advanced library groups are off by default. Owners enable them with
 `POST /api/v1/server/settings/advanced-library-groups/enable/`. Normal
@@ -973,4 +1395,4 @@ Advanced library groups are off by default. Owners enable them with
 after enablement is an operator recovery action through Django admin. While
 disabled, normal non-Public group mutation endpoints return forbidden.
 
-See `docs/reading.md` for details.
+See `docs/marginalia.md` for Marginalia domain details.

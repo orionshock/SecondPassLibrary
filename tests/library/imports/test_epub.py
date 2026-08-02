@@ -117,7 +117,7 @@ class SingleEpubImportServiceTests(
           <dc:subject>Fantasy</dc:subject>
           <meta name="calibre:title_sort" content="Test Book, The"/>
           <meta name="calibre:series" content="Example Series"/>
-          <meta name="calibre:series_index" content="2.5"/>
+          <meta name="calibre:series_index" content="2.75"/>
           <meta name="calibre:tags" content="Fantasy, Space Opera"/>
         </metadata>
         """
@@ -130,7 +130,7 @@ class SingleEpubImportServiceTests(
         self.assertEqual(result.book.sort_title, "Test Book, The")
         self.assertEqual(BookAuthor.objects.get(book=result.book).author.sort_name, "Writer, Example")
         self.assertEqual(BookSeries.objects.get(book=result.book).series.name, "Example Series")
-        self.assertEqual(str(BookSeries.objects.get(book=result.book).series_index), "2.50")
+        self.assertEqual(str(BookSeries.objects.get(book=result.book).series_index), "2.75")
         self.assertEqual(
             set(
                 BookCatalogTag.objects.filter(book=result.book)

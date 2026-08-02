@@ -1,0 +1,843 @@
+.marginalia-page,
+.marginalia-results {
+  min-width: 0;
+}
+
+.marginalia-browser {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.marginalia-view-selector {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+}
+
+.marginalia-view-selector button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.55rem;
+  color: #c5d0dd;
+  background: var(--surface);
+  font-size: 0.8rem;
+}
+
+.marginalia-view-selector .material-icon,
+.marginalia-section-actions .material-icon { font-size: 1rem; }
+
+.marginalia-view-selector button:hover,
+.marginalia-view-selector button:focus-visible,
+.marginalia-view-selector button.active {
+  border-color: color-mix(in srgb, var(--focus), transparent 55%);
+  color: var(--text);
+  background: var(--surface-raised);
+}
+
+.marginalia-session-title-editor {
+  max-width: min(42rem, 75vw);
+}
+
+.marginalia-session-title-editor__input {
+  min-width: min(26rem, 55vw);
+  font: inherit;
+  font-weight: inherit;
+}
+
+.marginalia-inline-edit-button {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+  opacity: 0.72;
+}
+
+.marginalia-inline-edit-button:hover,
+.marginalia-inline-edit-button:focus-visible {
+  border-color: var(--border);
+  color: var(--text);
+  background: rgb(255 255 255 / 5%);
+  opacity: 1;
+}
+
+.marginalia-inline-edit-button .material-symbols-outlined { font-size: 16px; }
+
+.marginalia-inline-editor-feedback {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.marginalia-inline-editor-feedback > * { margin: 0; }
+
+.marginalia-section-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.marginalia-section-actions .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.marginalia-section-actions .button[aria-current="page"] {
+  border-color: rgb(125 211 252 / 72%);
+  background: rgb(125 211 252 / 16%);
+  box-shadow: inset 0 -2px 0 rgb(125 211 252 / 75%);
+}
+
+.marginalia-controls {
+  display: flex;
+  align-items: end;
+  gap: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+.marginalia-controls form {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1 1 34rem;
+}
+
+.marginalia-controls input { min-width: 0; }
+
+.marginalia-status-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.marginalia-status-filter select { min-width: 8.5rem; }
+
+.marginalia-session-rows {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.marginalia-book-rows {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.marginalia-book-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.marginalia-selected-book,
+.marginalia-selected-book__fallback {
+  margin-bottom: 0.8rem;
+}
+
+.marginalia-selected-book__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.marginalia-session-row {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.marginalia-session-row__body {
+  display: grid;
+  min-width: 0;
+  gap: 0.45rem;
+}
+
+.marginalia-session-row__cover .book-cover-component {
+  width: 3.25rem;
+  aspect-ratio: 2 / 3;
+}
+
+.marginalia-session-row__heading,
+.marginalia-session-row__facts {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.marginalia-session-row__content {
+  display: grid;
+  grid-template-columns: fit-content(28rem) minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.marginalia-session-row__identity {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.marginalia-session-row__note { grid-column: 2; }
+.marginalia-session-row__book-link { grid-column: 3; }
+
+.marginalia-session-row__heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.marginalia-session-row__book {
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+
+.marginalia-session-row__facts {
+  color: var(--muted);
+}
+
+.marginalia-session-row__facts { font-size: 0.85rem; }
+
+.marginalia-session-row__note {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-left: 3px solid rgb(148 163 184 / 55%);
+  border-radius: 0.45rem;
+  color: var(--muted);
+  background: none;
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.marginalia-state,
+.marginalia-empty {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.marginalia-state p,
+.marginalia-empty p { margin: 0; }
+
+.marginalia-state .button,
+.marginalia-inline-error .button { margin-top: 0.55rem; }
+
+.marginalia-inline-error { margin-bottom: 0.7rem; }
+.marginalia-results--loading { opacity: 0.65; }
+
+@media (max-width: 900px) {
+  .marginalia-session-row__content { grid-template-columns: minmax(0, 1fr) max-content; }
+  .marginalia-session-row__note { grid-column: 1 / 3; }
+  .marginalia-session-row__book-link { grid-column: 2; grid-row: 1; }
+}
+
+@media (max-width: 700px) {
+  .marginalia-controls { align-items: stretch; flex-direction: column; }
+  .marginalia-controls form { flex: none; grid-template-columns: 1fr auto; }
+  .marginalia-controls form label { grid-column: 1 / -1; }
+  .marginalia-status-filter { justify-content: space-between; }
+  .marginalia-session-row { grid-template-columns: 2.75rem minmax(0, 1fr); }
+  .marginalia-session-row__cover .book-cover-component { width: 2.75rem; }
+}
+
+.marginalia-import-page,
+.marginalia-import-upload,
+.marginalia-import-books,
+.marginalia-import-sessions {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.marginalia-import-page { min-width: 0; }
+
+.marginalia-import-page > .surface:first-child {
+  padding: 0.75rem 1rem;
+}
+
+.marginalia-import-page > .surface:first-child .surface-title {
+  margin-bottom: 0.55rem;
+}
+
+.marginalia-import-upload { gap: 0.4rem; }
+
+.marginalia-import-upload .form-action-row {
+  min-height: 2.5rem;
+  padding-top: 0;
+}
+
+.marginalia-import-upload__file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.marginalia-empty-sessions-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.marginalia-export-empty-sessions {
+  justify-self: end;
+}
+
+.marginalia-import-upload__file-row .form-action-row {
+  grid-template-columns: auto auto;
+}
+
+.marginalia-import-upload input[type="file"] {
+  min-width: 0;
+  color: var(--muted);
+}
+
+.marginalia-import-upload > p { margin: 0; }
+
+.marginalia-import-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+
+.marginalia-import-warning {
+  color: var(--warning, #facc15);
+}
+
+.marginalia-import-summary__warnings {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.55rem;
+}
+
+.marginalia-import-summary__warning {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--warning, #facc15);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marginalia-import-review__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.marginalia-import-review__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.marginalia-import-review__header .marginalia-import-summary {
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.marginalia-import-book {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: start;
+  gap: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.marginalia-import-book__content {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.marginalia-import-book__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-height: 1.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.marginalia-import-book__match {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.marginalia-import-book__cover .book-cover-component {
+  width: 2.75rem;
+  aspect-ratio: 2 / 3;
+}
+
+.marginalia-import-book__identity {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.marginalia-import-book__identity > input[type="checkbox"] {
+  flex: none;
+  margin: 0;
+}
+
+.marginalia-import-book__identity h2,
+.marginalia-import-warning { margin: 0; }
+
+.marginalia-import-book__identity h2 {
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.marginalia-import-book__authors {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.marginalia-import-warning { margin-bottom: 0.55rem; font-size: 0.85rem; }
+
+.marginalia-import-session {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: rgb(255 255 255 / 3%);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.marginalia-import-session:hover,
+.marginalia-import-session:focus-within {
+  border-color: rgb(125 211 252 / 45%);
+  background: rgb(125 211 252 / 7%);
+}
+
+.marginalia-import-session__select,
+.marginalia-import-session__facts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.marginalia-import-session__summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.marginalia-import-session__select { font-weight: 700; }
+.marginalia-import-session__select > label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.marginalia-import-session__facts { color: var(--muted); font-size: 0.85rem; }
+.marginalia-import-session__annotation-count { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
+
+.marginalia-import-session__note {
+  display: -webkit-box;
+  margin: 0.35rem 0 0 1.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.marginalia-import-session__edits {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(16rem, 1.2fr);
+  gap: 0.75rem;
+}
+
+.marginalia-import-session__edits textarea { min-height: 4.5rem; }
+
+.marginalia-import-review > .form-action-row {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.marginalia-import-download-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.marginalia-import-download-action .action-feedback:empty { display: none; }
+
+.marginalia-import-result-actions { margin-top: 1rem; }
+
+.marginalia-export-page,
+.marginalia-export-selective,
+.marginalia-export-session-rows {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.marginalia-export-complete > p,
+.marginalia-export-selective__header p,
+.marginalia-export-session-row__body p {
+  margin: 0;
+}
+
+.marginalia-export-action-row,
+.marginalia-export-submit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+.marginalia-export-selective {
+  padding-top: 0.4rem;
+}
+
+.marginalia-export-selective__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.marginalia-export-selective__header h2 { margin: 0 0 0.2rem; }
+
+.marginalia-export-selection-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.marginalia-export-selection-summary strong { color: var(--text); }
+
+.marginalia-export-page-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.marginalia-export-session-row {
+  display: grid;
+  grid-template-columns: 1rem 3.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.marginalia-export-session-row:hover,
+.marginalia-export-session-row:focus-within {
+  border-color: rgb(125 211 252 / 45%);
+  background: rgb(125 211 252 / 7%);
+}
+
+.marginalia-export-session-row__selection input { margin: 0; }
+
+.marginalia-export-session-row__cover .book-cover-component {
+  width: 3.25rem;
+  aspect-ratio: 2 / 3;
+}
+
+.marginalia-export-session-row__body {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.marginalia-export-session-row__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.marginalia-export-submit {
+  margin-top: 0.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.marginalia-session-detail {
+  display: grid;
+  gap: 1rem;
+}
+
+.marginalia-session-detail__annotations > header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.marginalia-session-summary {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.marginalia-session-summary__cover .book-cover-component {
+  width: 7.5rem;
+  aspect-ratio: 2 / 3;
+}
+
+.marginalia-session-summary__main {
+  display: grid;
+  min-width: 0;
+}
+
+.marginalia-session-summary__book-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.marginalia-session-summary__book-header {
+  min-height: 6rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.marginalia-session-summary__book-header .eyebrow {
+  margin: 0 0 0.25rem;
+}
+
+.marginalia-session-summary__book-header h2 {
+  margin: 0;
+}
+
+.marginalia-session-summary__book-header h2 { font-size: 1.2rem; }
+
+.marginalia-session-summary__book-meta,
+.marginalia-session-summary__unavailable {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+}
+
+.marginalia-session-summary__unavailable {
+  max-width: 38rem;
+  line-height: 1.45;
+}
+
+.marginalia-session-summary__session {
+  padding-top: 0.85rem;
+}
+
+.marginalia-session-summary__status-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.marginalia-session-summary__stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.marginalia-session-summary__stats > span + span::before {
+  display: inline-block;
+  width: 0.22rem;
+  height: 0.22rem;
+  margin-right: 0.55rem;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+  vertical-align: middle;
+}
+
+.marginalia-session-detail__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.5rem;
+  margin: 0.75rem 0 0;
+}
+
+.marginalia-session-detail__facts > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.marginalia-session-detail__facts dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.marginalia-session-detail__facts dd,
+.marginalia-session-detail__notes p {
+  margin: 0;
+}
+
+.marginalia-session-detail__notes {
+  grid-column: 1 / -1;
+  margin-top: 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  white-space: pre-wrap;
+}
+
+.marginalia-session-detail__notes-heading,
+.marginalia-inline-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.marginalia-session-detail__notes-heading {
+  min-height: 1.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.marginalia-session-detail__notes-heading strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.marginalia-session-detail__notes textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+}
+
+
+.marginalia-session-detail__annotations {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.marginalia-session-detail__annotations > header {
+  justify-content: space-between;
+}
+
+.marginalia-session-detail__annotations h2 { margin: 0; }
+
+.marginalia-annotation-rows {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.marginalia-annotation-row {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: rgb(255 255 255 / 3%);
+}
+
+.marginalia-annotation-row__marker {
+  padding-top: 0.05rem;
+  color: var(--muted);
+}
+
+.marginalia-annotation-row__content {
+  display: grid;
+  min-width: 0;
+  gap: 0.6rem;
+}
+
+.marginalia-annotation-row__content > strong {
+  line-height: 1.2;
+}
+
+.marginalia-annotation-row__content time {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.marginalia-annotation-row__content blockquote,
+.marginalia-annotation-row__content p {
+  margin: 0;
+}
+
+.marginalia-annotation-row__location {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.marginalia-annotation-row__quote {
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid rgb(250 204 21 / 60%);
+  border-radius: 0.45rem;
+  background: rgb(250 204 21 / 8%);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.marginalia-annotation-row__quote--green { border-left-color: rgb(74 222 128 / 60%); background: rgb(74 222 128 / 8%); }
+.marginalia-annotation-row__quote--blue { border-left-color: rgb(96 165 250 / 60%); background: rgb(96 165 250 / 8%); }
+.marginalia-annotation-row__quote--pink { border-left-color: rgb(244 114 182 / 60%); background: rgb(244 114 182 / 8%); }
+.marginalia-annotation-row__quote--purple { border-left-color: rgb(167 139 250 / 60%); background: rgb(167 139 250 / 8%); }
+.marginalia-annotation-row__quote--orange { border-left-color: rgb(251 146 60 / 60%); background: rgb(251 146 60 / 8%); }
+.marginalia-annotation-row__quote-context { color: var(--muted); }
+.marginalia-annotation-row__quote-text { color: var(--text); }
+.marginalia-annotation-row__comment { color: var(--muted); font-style: italic; white-space: pre-wrap; }
+
+@media (max-width: 700px) {
+  .marginalia-import-session__edits { grid-template-columns: 1fr; }
+  .marginalia-import-book { grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem; gap: 0.55rem; }
+  .marginalia-import-book__cover .book-cover-component { width: 2.25rem; }
+  .marginalia-import-book__identity { flex-wrap: wrap; }
+  .marginalia-import-upload__file-row { grid-template-columns: 1fr; }
+  .marginalia-export-selective__header { align-items: flex-start; flex-direction: column; }
+  .marginalia-export-selection-summary { white-space: normal; }
+  .marginalia-export-action-row,
+  .marginalia-export-submit { grid-template-columns: 1fr; justify-items: start; }
+  .marginalia-export-session-row { grid-template-columns: 1rem 2.75rem minmax(0, 1fr); }
+  .marginalia-export-session-row__cover .book-cover-component { width: 2.75rem; }
+  .marginalia-session-summary { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.85rem; }
+  .marginalia-session-summary__cover .book-cover-component { width: 5rem; }
+  .marginalia-session-detail__annotations > header { align-items: flex-start; flex-direction: column; }
+}

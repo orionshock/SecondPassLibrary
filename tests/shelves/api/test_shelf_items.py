@@ -4,7 +4,7 @@ import pytest
 from rest_framework import status
 
 from library.cover_services import set_book_cover_from_bytes
-from library.models import Author
+from library.models import Author, BookAuthor
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.books import create_file_backed_book
@@ -47,7 +47,7 @@ class ShelfItemTests(BaseShelvesAPITest):
                 format="json",
             )
         )
-        self.assertEqual(add_denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(add_denied.status_code, status.HTTP_404_NOT_FOUND)
 
         items = assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/items/"))
         self.assertEqual(items.status_code, status.HTTP_200_OK)
@@ -185,6 +185,15 @@ class ShelfItemTests(BaseShelvesAPITest):
             [("Zulu", 0), ("Alpha", 1)],
         )
 
+        reverse = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf_id}/items/?ordering=-position")
+        )
+        self.assertEqual(reverse.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(reverse)],
+            [("Alpha", 1), ("Zulu", 0)],
+        )
+
         invalid = assert_response(
             self.client.get(f"/api/v1/shelves/{shelf_id}/items/?ordering=created_at")
         )
@@ -220,6 +229,14 @@ class ShelfItemTests(BaseShelvesAPITest):
             [("Alpha", 1), ("Zulu", 0)],
         )
 
+        reverse = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/items/?ordering=-title")
+        )
+        self.assertEqual(
+            [(row["book"]["title"], row["position"]) for row in response_data_list(reverse)],
+            [("Zulu", 0), ("Alpha", 1)],
+        )
+
         stored = list(ShelfItem.objects.filter(shelf=shelf).order_by("position"))
         self.assertEqual([(item.book.title, item.position) for item in stored], [("Zulu", 0), ("Alpha", 1)])
 
@@ -240,6 +257,7 @@ class ShelfItemTests(BaseShelvesAPITest):
 
         zulu = create_file_backed_book(title="Zulu", assign_public=False).book
         zulu.authors.add(author_z)
+        BookAuthor.objects.create(book=zulu, author=author_a, position=1)
         alpha = create_file_backed_book(title="Alpha", assign_public=False).book
         alpha.authors.add(author_a)
         beta = create_file_backed_book(title="Beta", assign_public=False).book
@@ -262,6 +280,14 @@ class ShelfItemTests(BaseShelvesAPITest):
         self.assertEqual(
             [row["book"]["title"] for row in payload["results"]],
             ["Alpha", "Beta"],
+        )
+
+        reverse = assert_response(
+            self.client.get(f"/api/v1/shelves/{shelf.id}/items/?ordering=-author")
+        )
+        self.assertEqual(
+            [row["book"]["title"] for row in response_data_list(reverse)],
+            ["Zulu", "Beta", "Alpha"],
         )
 
     def test_item_patch_position_moves_item_down_and_shifts_intervening_items(self):

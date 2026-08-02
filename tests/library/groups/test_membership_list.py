@@ -80,6 +80,30 @@ class LibraryGroupMembershipListTests(LibraryGroupMembershipApiTestCase):
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(deleted.status_code, 204)
 
+    def test_post_rejects_role_without_creating_membership_or_changing_global_role(self):
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        original_role = self.other.profile.role
+
+        response = self.client.post(
+            self.membership_list_url(),
+            json.dumps(
+                {
+                    "user_id": str(self.other.profile.id),
+                    "is_curator": True,
+                    "role": "librarian",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("role", response.json())
+        self.other.profile.refresh_from_db()
+        self.assertEqual(self.other.profile.role, original_role)
+        self.assertFalse(
+            self.other.library_group_memberships.filter(group=self.club).exists()
+        )
+
     def test_hidden_group_returns_404_before_payload_validation(self):
         self.assertTrue(self.client.login(username="reader", password="pw"))
 

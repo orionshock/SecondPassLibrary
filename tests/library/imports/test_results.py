@@ -16,6 +16,7 @@ from library.imports.errors import (
     operator_import_detail,
     safe_import_message,
 )
+from library.imports.serializers import import_batch_payload
 
 
 class ImportResultTests(TestCase):
@@ -63,6 +64,25 @@ class ImportResultTests(TestCase):
 
         self.assertEqual(result.total_found, 3)
         self.assertEqual(len(result.items), 2)
+
+    def test_batch_payload_preserves_every_result_item(self):
+        result = ImportBatchResult(
+            source_type="zip",
+            source_label="collection.zip",
+            items=[
+                ImportItemResult(
+                    status=IMPORT_STATUS_SKIPPED,
+                    source_label=f"book-{index}.epub",
+                    safe_message="Skipped.",
+                )
+                for index in range(55)
+            ],
+        )
+
+        payload = import_batch_payload(result)
+
+        self.assertEqual(len(payload["items"]), 55)
+        self.assertEqual(payload["items"][-1]["source_label"], "book-54.epub")
 
     def test_unexpected_operator_detail_exposes_exception_class_only(self):
         detail = operator_import_detail(Exception(r"C:\secret\path.epub"))

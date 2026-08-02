@@ -49,7 +49,12 @@ DJANGO_SECRET_KEY=<generated-secret>
 DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
 SECOND_PASS_USERDATA_DIR=/app/userdata
 SECOND_PASS_ENABLE_DJANGO_ADMIN=0
+SECOND_PASS_READING_CLIENT_BASE_URL=
 ```
+
+Set `SECOND_PASS_READING_CLIENT_BASE_URL` to an HTTP(S) Reading Client root URL
+only when deployment configuration should override and lock the editable Server
+Settings value. Leave it blank to use the stored setting.
 
 The image runs as the non-root `secondpass` user. Its default UID/GID is
 `1000:1000`; set `APP_UID` and `APP_GID` before building if the host requires
@@ -175,6 +180,23 @@ Replace the directory with the repository directory containing
 `docker/compose.yml`.
 The scheduler account must be allowed to use Docker. Windows deployments can
 invoke the equivalent command from Task Scheduler.
+
+## Marginalia import-stage cleanup
+
+Canonical Marginalia import previews store protected temporary archives under
+`userdata/imports/staged/marginalia/`. Runtime access expires after exactly two
+hours. Cleanup controls only how long abandoned files remain on disk.
+
+```bash
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_marginalia_import_stages --dry-run
+docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_marginalia_import_stages
+```
+
+The command is repeat-safe and prints counts only. It also removes safe
+digest-named leftovers from a successful Apply whose post-commit file cleanup
+failed; the applied database result remains authoritative. A weekly host cron
+entry is adequate and may run alongside Shelf cleanup. Django does not include
+a job runner; schedule this through the host cron or Windows Task Scheduler.
 
 ## Windows local production-mode helper
 

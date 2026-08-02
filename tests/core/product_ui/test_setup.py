@@ -146,7 +146,7 @@ class FirstRunProductUiTests(TestCase):
         response = self.client.post("/setup/", self.setup_data, follow=False)
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "/api-auth/login/")
+        self.assertEqual(response["Location"], "/login/")
         self.assertFalse(server_settings.get_advanced_library_groups_enabled())
 
     def test_setup_submit_with_advanced_groups_on_enables_feature(self):
@@ -160,7 +160,7 @@ class FirstRunProductUiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "/api-auth/login/")
+        self.assertEqual(response["Location"], "/login/")
         self.assertTrue(server_settings.get_advanced_library_groups_enabled())
 
     @override_settings(DEBUG=False)
@@ -171,7 +171,7 @@ class FirstRunProductUiTests(TestCase):
         self.assertContains(response, "Set up your library")
 
     def test_root_app_and_login_direct_to_setup_without_active_owner(self):
-        for path in ("/", "/dashboard/", "/api-auth/login/"):
+        for path in ("/", "/login/"):
             with self.subTest(path=path):
                 response = self.client.get(path, follow=False)
                 self.assertEqual(response.status_code, 302)
@@ -180,7 +180,7 @@ class FirstRunProductUiTests(TestCase):
     def test_successful_setup_redirects_to_login_and_login_works(self):
         response = self.client.post("/setup/", self.setup_data, follow=False)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "/api-auth/login/")
+        self.assertEqual(response["Location"], "/login/")
 
         owner = User.objects.get(username="owner")
         profile = UserProfile.objects.get(user=owner)
@@ -206,16 +206,16 @@ class FirstRunProductUiTests(TestCase):
         )
 
         login_response = self.client.post(
-            "/api-auth/login/",
+            "/login/",
             {
                 "username": "owner",
                 "password": "Correct-Horse-Battery-47",
-                "next": "/dashboard/",
+                "next": "/",
             },
             follow=False,
         )
         self.assertEqual(login_response.status_code, 302)
-        self.assertEqual(login_response["Location"], "/dashboard/")
+        self.assertEqual(login_response["Location"], "/")
 
     def test_setup_redirects_to_login_after_completion(self):
         User.objects.create_superuser(
@@ -223,7 +223,7 @@ class FirstRunProductUiTests(TestCase):
         )
         response = self.client.get("/setup/", follow=False)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], "/api-auth/login/")
+        self.assertEqual(response["Location"], "/login/")
 
     def test_second_setup_post_does_not_create_another_owner(self):
         first = self.client.post("/setup/", self.setup_data, follow=False)
@@ -238,5 +238,5 @@ class FirstRunProductUiTests(TestCase):
         second = self.client.post("/setup/", second_data, follow=False)
 
         self.assertEqual(second.status_code, 302)
-        self.assertEqual(second["Location"], "/api-auth/login/")
+        self.assertEqual(second["Location"], "/login/")
         self.assertEqual(User.objects.filter(is_superuser=True).count(), 1)

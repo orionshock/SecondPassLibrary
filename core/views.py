@@ -20,7 +20,6 @@ def secondpass_well_known(request):
             "server_name": server_settings.get_server_name(),
             "server_description": server_settings.get_server_description(),
             "server_version": settings.SECOND_PASS_SERVER_VERSION,
-            "server_release": settings.SECOND_PASS_SERVER_RELEASE,
             "server_release_date": settings.SECOND_PASS_SERVER_RELEASE_DATE,
             "api_base_url": api_base,
         }

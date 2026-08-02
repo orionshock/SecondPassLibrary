@@ -14,7 +14,12 @@ from library.cover_services import (
     replace_book_cover,
     validate_book_cover_upload,
 )
-from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
+from library.models import (
+    Book,
+    BookGroupAssignment,
+    LibraryGroup,
+    LibraryGroupMembership,
+)
 from tests.library.imports.helpers import image_bytes
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.users import set_user_role
@@ -45,7 +50,9 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
         self.client.logout()
         self.assertTrue(self.client.login(username=username, password="pw"))
 
-    def _upload(self, data, *, name="cover.bin", content_type="application/octet-stream"):
+    def _upload(
+        self, data, *, name="cover.bin", content_type="application/octet-stream"
+    ):
         return self.client.post(
             self.url,
             {"cover": SimpleUploadedFile(name, data, content_type=content_type)},
@@ -116,7 +123,9 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(visible.status_code, 403)
         self.assertEqual(invisible.status_code, 404)
 
-    def test_successful_replace_changes_only_cover_and_failed_replace_preserves_it(self):
+    def test_successful_replace_changes_only_cover_and_failed_replace_preserves_it(
+        self,
+    ):
         self._login("manager")
         before = {
             "title": self.book.title,
@@ -165,6 +174,137 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
         self.assertIsNone(second.json()["cover_url"])
         self.assertFalse(self.book.cover_file)
 
+    def test_missing_stored_cover_is_a_null_detail_projection_with_safe_log(self):
+        self._login("manager")
+        self._upload(image_bytes("PNG"))
+        self.book.refresh_from_db()
+        old_name = self.book.cover_file.name
+        self.book.cover_file.storage.delete(old_name)
+
+        with self.assertLogs(
+            "library.catalog.serializers",
+            level="WARNING",
+        ) as captured:
+            response = self.client.get(f"/api/v1/library/books/{self.book.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["cover_url"])
+        warning = " ".join(captured.output)
+        self.assertIn("action=book_cover_url", warning)
+        self.assertIn(f"book_id={self.book.pk}", warning)
+        self.assertIn(f"actor_profile_id={self.manager.profile.pk}", warning)
+        self.assertNotIn(old_name, warning)
+        self.assertNotIn("covers/", warning)
+
+    def test_primary_cover_storage_failures_return_bounded_503(self):
+        self._login("manager")
+        self._upload(image_bytes("PNG"))
+        self.book.refresh_from_db()
+        old_name = self.book.cover_file.name
+
+        cases = (
+            (
+                "replace",
+                "library.catalog.cover_views.replace_book_cover",
+                lambda: self._upload(image_bytes("JPEG")),
+            ),
+            (
+                "clear",
+                "library.catalog.cover_views.clear_book_cover",
+                lambda: self.client.delete(self.url),
+            ),
+        )
+        for operation, target, request in cases:
+            with self.subTest(operation=operation):
+                with (
+                    patch(target, side_effect=OSError("C:/private/cover.jpg")),
+                    self.assertLogs(
+                        "library.catalog.cover_views",
+                        level="WARNING",
+                    ) as captured,
+                ):
+                    response = request()
+
+                self.book.refresh_from_db()
+                self.assertEqual(response.status_code, 503)
+                self.assertEqual(
+                    response.json()["error"]["code"],
+                    "BOOK_COVER_UNAVAILABLE",
+                )
+                self.assertEqual(self.book.cover_file.name, old_name)
+                self.assertNotIn("private", str(response.json()).casefold())
+                warning = " ".join(captured.output)
+                self.assertIn(f"action=book_cover_{operation}", warning)
+                self.assertIn(f"book_id={self.book.pk}", warning)
+                self.assertIn(
+                    f"actor_profile_id={self.manager.profile.pk}",
+                    warning,
+                )
+                self.assertNotIn("C:/private", warning)
+
+    def test_replace_succeeds_when_old_cover_cleanup_fails(self):
+        self._login("manager")
+        self._upload(image_bytes("PNG"))
+        self.book.refresh_from_db()
+        old_name = self.book.cover_file.name
+        storage = self.book.cover_file.storage
+
+        with (
+            patch.object(
+                storage,
+                "delete",
+                side_effect=OSError(13, "Permission denied", old_name),
+            ),
+            self.assertLogs("library.cover_services", level="WARNING") as captured,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self._upload(image_bytes("JPEG"))
+
+        self.book.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(self.book.cover_file.name, old_name)
+        self.assertTrue(response.json()["cover_url"].endswith(self.book.cover_file.url))
+        warning = " ".join(captured.output)
+        self.assertIn(f"book_id={self.book.pk}", warning)
+        self.assertIn("action=old_cover_cleanup", warning)
+        self.assertIn("operation=replace", warning)
+        self.assertIn(f"actor_profile_id={self.manager.profile.pk}", warning)
+        self.assertIn("error=PermissionError", warning)
+        self.assertIn("message=Permission denied", warning)
+        self.assertNotIn(old_name, warning)
+        self.assertNotIn("covers/", warning)
+
+    def test_clear_succeeds_when_old_cover_cleanup_fails(self):
+        self._login("manager")
+        self._upload(image_bytes("PNG"))
+        self.book.refresh_from_db()
+        old_name = self.book.cover_file.name
+        storage = self.book.cover_file.storage
+
+        with (
+            patch.object(
+                storage,
+                "delete",
+                side_effect=OSError(13, "Permission denied", old_name),
+            ),
+            self.assertLogs("library.cover_services", level="WARNING") as captured,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.delete(self.url)
+
+        self.book.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["cover_url"])
+        self.assertFalse(self.book.cover_file)
+        warning = " ".join(captured.output)
+        self.assertIn(f"book_id={self.book.pk}", warning)
+        self.assertIn("action=old_cover_cleanup", warning)
+        self.assertIn("operation=clear", warning)
+        self.assertIn(f"actor_profile_id={self.manager.profile.pk}", warning)
+        self.assertIn("error=PermissionError", warning)
+        self.assertNotIn(old_name, warning)
+        self.assertNotIn("covers/", warning)
+
     def test_bearer_authentication_is_not_accepted(self):
         self.client.logout()
         response = self.client.post(
@@ -178,7 +318,9 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
 
 class BookCoverServiceTests(IsolatedMediaRootMixin, TestCase):
     def setUp(self):
-        self.actor = get_user_model().objects.create_user(username="coveradmin", password="pw")
+        self.actor = get_user_model().objects.create_user(
+            username="coveradmin", password="pw"
+        )
         self.book = Book.objects.create(title="Service Book")
 
     def _cover(self, image_format="PNG"):
@@ -191,7 +333,9 @@ class BookCoverServiceTests(IsolatedMediaRootMixin, TestCase):
         storage = self.book.cover_file.storage
 
         with self.captureOnCommitCallbacks(execute=False) as callbacks:
-            replace_book_cover(book=self.book, cover=self._cover("JPEG"), actor=self.actor)
+            replace_book_cover(
+                book=self.book, cover=self._cover("JPEG"), actor=self.actor
+            )
             self.assertTrue(storage.exists(old_name))
 
         for callback in callbacks:
@@ -204,12 +348,15 @@ class BookCoverServiceTests(IsolatedMediaRootMixin, TestCase):
         other = Book.objects.create(title="Other", cover_file=shared_name)
         storage = self.book.cover_file.storage
 
-        with self.captureOnCommitCallbacks(execute=True):
-            self.client.force_login(self.actor)
-            set_user_role(self.actor, UserProfile.ROLE_LIBRARIAN)
-            group = LibraryGroup.objects.create(name="Service Group")
-            BookGroupAssignment.objects.create(book=self.book, group=group)
-            response = self.client.delete(f"/api/v1/library/books/{self.book.id}/cover/")
+        with self.assertNoLogs("library.cover_services", level="WARNING"):
+            with self.captureOnCommitCallbacks(execute=True):
+                self.client.force_login(self.actor)
+                set_user_role(self.actor, UserProfile.ROLE_LIBRARIAN)
+                group = LibraryGroup.objects.create(name="Service Group")
+                BookGroupAssignment.objects.create(book=self.book, group=group)
+                response = self.client.delete(
+                    f"/api/v1/library/books/{self.book.id}/cover/"
+                )
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(storage.exists(shared_name))
@@ -221,11 +368,14 @@ class BookCoverServiceTests(IsolatedMediaRootMixin, TestCase):
         old_name = self.book.cover_file.name
         storage = self.book.cover_file.storage
 
-        with patch.object(storage, "exists", return_value=False), patch.object(
-            storage, "save", side_effect=OSError("storage unavailable")
+        with (
+            patch.object(storage, "exists", return_value=False),
+            patch.object(storage, "save", side_effect=OSError("storage unavailable")),
         ):
             with self.assertRaises(OSError):
-                replace_book_cover(book=self.book, cover=self._cover("JPEG"), actor=self.actor)
+                replace_book_cover(
+                    book=self.book, cover=self._cover("JPEG"), actor=self.actor
+                )
 
         self.book.refresh_from_db()
         self.assertEqual(self.book.cover_file.name, old_name)
@@ -233,15 +383,19 @@ class BookCoverServiceTests(IsolatedMediaRootMixin, TestCase):
     def test_success_logs_readable_values_without_sensitive_data(self):
         with self.assertLogs("library.cover_services", level="INFO") as captured:
             with self.captureOnCommitCallbacks(execute=True):
-                replace_book_cover(book=self.book, cover=self._cover(), actor=self.actor)
+                replace_book_cover(
+                    book=self.book, cover=self._cover(), actor=self.actor
+                )
             with self.captureOnCommitCallbacks(execute=True):
                 clear_book_cover(book=self.book, actor=self.actor)
 
         output = " ".join(captured.output)
         self.assertIn("Service Book", output)
         self.assertIn("coveradmin", output)
-        self.assertIn("replaced", output)
-        self.assertIn("cleared", output)
+        self.assertIn("action=book_cover_replace", output)
+        self.assertIn("action=book_cover_clear", output)
+        self.assertIn(f"book_id={self.book.pk}", output)
+        self.assertIn(f"actor_profile_id={self.actor.profile.pk}", output)
         for sensitive in ("ignored.bin", "covers/", "sha256", "image/png", "payload"):
             self.assertNotIn(sensitive, output)
 
@@ -249,5 +403,7 @@ class BookCoverServiceTests(IsolatedMediaRootMixin, TestCase):
         with self.assertNoLogs("library.cover_services", level="INFO"):
             with self.assertRaises(RuntimeError):
                 with transaction.atomic():
-                    replace_book_cover(book=self.book, cover=self._cover(), actor=self.actor)
+                    replace_book_cover(
+                        book=self.book, cover=self._cover(), actor=self.actor
+                    )
                     raise RuntimeError("roll back")

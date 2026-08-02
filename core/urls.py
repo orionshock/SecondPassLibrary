@@ -1,12 +1,13 @@
 from django.urls import path
 
 from .views import health_check
-from .api_views import AdvancedLibraryGroupsEnableView, ServerSettingsView
+from .api_views import AdvancedLibraryGroupsEnableView, ServerInfoView, ServerSettingsView
 
 app_name = "core"
 
 urlpatterns = [
     path("health/", health_check, name="health_check"),
+    path("server/info/", ServerInfoView.as_view(), name="server_info"),
     path("server/settings/", ServerSettingsView.as_view(), name="server_settings"),
     path(
         "server/settings/advanced-library-groups/enable/",

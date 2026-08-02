@@ -1,0 +1,17 @@
+{
+  "clientAnnotationId": "reader-bookmark-invalid",
+  "kind": "bookmark",
+  "location": {
+    "cfi": "epubcfi(/6/10!/4/2)",
+    "locationLabel": "Chapter 09 · 47%"
+  },
+  "body": {
+    "text": "Bookmarks cannot contain selected text.",
+    "prefix": "Invalid ",
+    "suffix": " content.",
+    "color": "yellow",
+    "note": "Bookmarks cannot contain notes."
+  },
+  "createdAt": "2026-07-29T11:00:00Z",
+  "updatedAt": "2026-07-29T11:00:00Z"
+}

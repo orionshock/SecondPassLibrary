@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from rest_framework import status
 
+from shelves.models import ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import (
     assert_response,
@@ -48,6 +49,11 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
         )
         self.assertEqual(created2.status_code, status.HTTP_201_CREATED)
         shelf2_id = response_data_dict(created2)["id"]
+        ShelfItem.objects.create(
+            shelf_id=shelf2_id,
+            book=self.book_public,
+            added_by=self.reader,
+        )
 
         self.client.logout()
         self.client.login(username="other", password="pw")
@@ -55,7 +61,7 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
         self.assertEqual(detail3.status_code, status.HTTP_200_OK)
         self.assertEqual(response_data_dict(detail3)["can_edit"], False)
 
-    def test_put_shelf_behaves_like_partial_update(self):
+    def test_put_shelf_is_not_supported(self):
         self.client.login(username="reader", password="pw")
         created = assert_response(
             self.client.post(
@@ -79,10 +85,12 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
                 format="json",
             ),
         )
-        self.assertEqual(put.status_code, status.HTTP_200_OK)
-        payload = response_data_dict(put)
-        self.assertEqual(payload["name"], "After")
-        # PUT behaves like PATCH here: omitted fields are preserved.
+        self.assertEqual(put.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        payload = response_data_dict(
+            assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/"))
+        )
+        self.assertEqual(payload["name"], "Before")
         self.assertEqual(payload["description"], "Desc")
         self.assertEqual(payload["visibility"], "listed")
 
@@ -206,7 +214,7 @@ class ShelvesPermissionTests(BaseShelvesAPITest):
                 format="json",
             ),
         )
-        self.assertEqual(unrelated.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(unrelated.status_code, status.HTTP_404_NOT_FOUND)
 
         public = assert_response(
             self.client.post(

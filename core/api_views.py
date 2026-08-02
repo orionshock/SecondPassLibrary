@@ -4,13 +4,16 @@ from typing import Any, cast
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.roles import is_owner
+from accounts.authentication import ClientBearerAuthentication
 from core import server_settings
+from core.server_info import server_info_payload
 from library.groups.public_services import configure_public_group
 from library.groups.public_group import get_public_group
 
@@ -26,7 +29,19 @@ def _server_settings_payload() -> dict[str, Any]:
         "advanced_library_groups_enabled": (
             server_settings.get_advanced_library_groups_enabled()
         ),
+        "reading_client_base_url": server_settings.get_reading_client_base_url(),
+        "reading_client_base_url_locked": (
+            server_settings.reading_client_base_url_locked()
+        ),
     }
+
+
+class ServerInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
+
+    def get(self, request):
+        return Response(server_info_payload(), status=status.HTTP_200_OK)
 
 
 class ServerSettingsView(APIView):
@@ -48,6 +63,7 @@ class ServerSettingsView(APIView):
             "server_name",
             "server_description",
             "server_banner_message",
+            "reading_client_base_url",
             "public_group_name",
             "public_group_description",
         }
@@ -78,6 +94,14 @@ class ServerSettingsView(APIView):
                 )
             except ValueError as exc:
                 errors.setdefault("server_banner_message", []).append(str(exc))
+
+        if "reading_client_base_url" in data:
+            try:
+                server_settings.set_reading_client_base_url(
+                    str(data.get("reading_client_base_url") or "")
+                )
+            except ValueError as exc:
+                errors.setdefault("reading_client_base_url", []).append(str(exc))
 
         public_name = data.get("public_group_name", None)
         public_description = data.get("public_group_description", None)

@@ -29,9 +29,7 @@ class ClientApiRegistrationTests(ClientApiTestCase):
             body.get("login_request_endpoint"),
             "http://testserver/api/v1/client-api/login-requests/",
         )
-        self.assertEqual(
-            body.get("authorize_url"), "http://testserver/client-api/authorize/"
-        )
+        self.assertNotIn("authorize_url", body)
         self.assertEqual(
             body.get("poll_endpoint_template"),
             "http://testserver/api/v1/client-api/login-requests/%7Bid%7D/poll/",
@@ -48,7 +46,10 @@ class ClientApiRegistrationTests(ClientApiTestCase):
         code = body.get("code")
         self.assertTrue(req_id)
         self.assertTrue(code)
-        self.assertIn("authorize_url", body)
+        self.assertEqual(
+            body.get("authorize_url"),
+            f"http://testserver/profile/client-pairing?code={code}",
+        )
         self.assertIn("poll_url", body)
 
         obj = ClientLoginRequest.objects.get(pk=req_id)
@@ -58,22 +59,7 @@ class ClientApiRegistrationTests(ClientApiTestCase):
             obj.code_hash, hash_client_secret(normalize_human_code(str(code)))
         )
 
-    def test_authorize_page_requires_login(self):
-        response = self.client.get("/client-api/authorize/", follow=False)
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/api-auth/login/", response["Location"])
-
-    def test_authorize_page_preserves_code_through_login_redirect(self):
-        response = self.client.get(
-            "/client-api/authorize/?code=ABCD-1234", follow=False
-        )
-        self.assertEqual(response.status_code, 302)
-        loc = str(response["Location"])
-        self.assertIn("/api-auth/login/", loc)
-        # Django should preserve the full URL (including query string) via `next=`.
-        self.assertIn("next=/client-api/authorize/%3Fcode%3DABCD-1234", loc)
-
-    def test_authorize_page_allows_editing_client_name_before_approval(self):
+    def test_pairing_api_allows_editing_client_name_before_approval(self):
         user = User.objects.create_user(
             username="u", password="pw", email="u@example.com"
         )
@@ -85,16 +71,10 @@ class ClientApiRegistrationTests(ClientApiTestCase):
 
         self.client.force_login(user)
 
-        page = self.client.get(f"/client-api/authorize/?code={code}")
-        self.assertEqual(page.status_code, 200)
-        self.assertContains(page, 'name="client_name"')
-        self.assertContains(page, "Second Pass Reader")
-        self.assertContains(page, "reader")
-
         approve = self.client.post(
-            "/client-api/authorize/",
+            "/api/v1/client-api/pairing/decision/",
             data={"code": code, "action": "approve", "client_name": "My Phone Reader"},
-            follow=True,
+            format="json",
         )
         self.assertEqual(approve.status_code, 200)
 
@@ -122,11 +102,11 @@ class ClientApiRegistrationTests(ClientApiTestCase):
 
         self.client.force_login(user)
         approve = self.client.post(
-            "/client-api/authorize/",
+            "/api/v1/client-api/pairing/decision/",
             data={"code": code, "action": "approve", "client_name": "   "},
-            follow=True,
+            format="json",
         )
-        self.assertEqual(approve.status_code, 200)
+        self.assertEqual(approve.status_code, status.HTTP_400_BAD_REQUEST)
 
         obj = ClientLoginRequest.objects.get(pk=req_id)
         self.assertEqual(obj.status, ClientLoginRequest.STATUS_PENDING)
@@ -145,9 +125,11 @@ class ClientApiRegistrationTests(ClientApiTestCase):
 
         self.client.force_login(user)
         r = self.client.post(
-            "/client-api/authorize/", data={"code": "CODE", "action": "approve"}
+            "/api/v1/client-api/pairing/decision/",
+            data={"code": "CODE", "action": "approve", "client_name": "Reader"},
+            format="json",
         )
-        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
 
         # Pylance/Django stubs sometimes mis-type the optional `from_queryset` arg;
         # be explicit to avoid type-checker noise.

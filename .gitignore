@@ -29,7 +29,6 @@ htmlcov/
 .hypothesis/
 .tox/
 .nox/
-test-artifacts/
 
 # Django/local database and logs
 *.log
@@ -47,6 +46,10 @@ dmypy.json
 
 # Node/local JS tooling
 node_modules/
+web/react/node_modules/
+web/react/dist/
+web/react/coverage/
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

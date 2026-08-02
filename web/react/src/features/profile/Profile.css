@@ -1,0 +1,149 @@
+.profile-details-form {
+  margin-top: 1rem;
+}
+
+.profile-user-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.profile-row-label {
+  color: var(--muted);
+}
+
+.profile-user-summary,
+.profile-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.profile-edit-actions {
+  justify-content: flex-end;
+}
+
+.region-stack,
+.item-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.section-actions .surface-title {
+  margin: 0;
+}
+
+.session-management-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+.session-management-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-divider {
+  height: 1px;
+  margin: 0.25rem 0;
+  background: var(--border);
+}
+
+.session-table-wrap {
+  overflow-x: auto;
+}
+
+.session-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.session-table th,
+.session-table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.session-table th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.session-table th:first-child,
+.session-table td:first-child {
+  width: 2.75rem;
+  padding-left: 0;
+}
+
+.session-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.item-row,
+.section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.item-row p,
+.section-actions p {
+  margin: 0.15rem 0 0;
+}
+
+.item-badges {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.profile-group-memberships {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  align-items: center;
+  column-gap: 0.75rem;
+}
+
+.profile-group-membership-row {
+  display: contents;
+}
+
+.profile-group-membership-identity {
+  justify-self: end;
+}
+
+.profile-group-membership-status {
+  justify-self: start;
+}
+
+@media (max-width: 42rem) {
+  .profile-user-row,
+  .session-management-row {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .item-row,
+  .section-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-group-memberships {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    width: 100%;
+  }
+}

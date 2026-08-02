@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-from accounts.models import UserProfile
 from library.models import LibraryGroupMembership
 from tests.library.groups.membership_helpers import (
     LibraryGroupMembershipApiTestCase,
@@ -37,7 +36,6 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
             json.dumps(
                 {
                     "user_id": str(self.other.profile.id),
-                    "role": UserProfile.ROLE_LIBRARIAN,
                     "is_curator": True,
                 }
             ),
@@ -53,8 +51,6 @@ class LibraryGroupMembershipCreateTests(LibraryGroupMembershipApiTestCase):
         self.assertTrue(payload["is_curator"])
         self.assertIn("created_at", payload)
         self.assertIn("updated_at", payload)
-        self.other.profile.refresh_from_db()
-        self.assertEqual(self.other.profile.role, UserProfile.ROLE_LIBRARIAN)
 
     def test_post_is_idempotent_and_returns_existing_membership(self):
         self.assertTrue(self.client.login(username="manager", password="pw"))

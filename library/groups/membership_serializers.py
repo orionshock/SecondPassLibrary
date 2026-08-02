@@ -33,7 +33,6 @@ class _RejectUnknownFieldsMixin:
 
 class MembershipCreateSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
     user_id = serializers.UUIDField(required=True)
-    role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
     is_curator = serializers.BooleanField(required=False, default=False)
 
     def validate_user_id(self, value):
@@ -48,5 +47,4 @@ class MembershipCreateSerializer(_RejectUnknownFieldsMixin, serializers.Serializ
 
 
 class MembershipPatchSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
-    role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
     is_curator = serializers.BooleanField(required=False)

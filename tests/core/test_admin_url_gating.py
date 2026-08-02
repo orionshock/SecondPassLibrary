@@ -44,8 +44,8 @@ class DjangoAdminUrlGatingTests(SimpleTestCase):
     def test_product_ui_and_api_routes_remain_registered_when_admin_disabled(self):
         _reload_project_urls()
 
-        product_match = resolve("/dashboard/")
+        product_match = resolve("/")
         api_match = resolve("/api/v1/health/")
 
-        self.assertEqual(product_match.namespace, "web")
+        self.assertEqual(product_match.url_name, "react_app")
         self.assertEqual(api_match.namespace, "core")

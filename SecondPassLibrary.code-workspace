@@ -16,17 +16,24 @@
       "*.png",
       "**/__init__.py",
       "**/__pycache__/**",
+      "**/__tests__/**",
+      "**/.pytest_cache/**",
       "**/TestFiles/**",
       "**/.ruff_cache/**",
       "**/.venv/**",
       "**/.vscode/**",
+      "**/coverage/**",
+      "**/dist/**",
       "**/migrations/*.py",
       "**/node_modules/**",
       "**/out/**",
+      "**/package-lock.json",
       "**/test/**",
       "**/tests/**",
+      "**/*.tsbuildinfo",
       "**/userdata/**",
       "**/var/**",
+      ".coverage",
       "**/.env.example",
       ".gitattributes",
       ".git",
@@ -36,7 +43,7 @@
       "pyrightconfig.json",
       "requirements.txt",
       "**/tools/**",
-      "web/static/web/favicon.png"
+      "web/static/web/favicon.png",
     ],
     "sqltools.connections": [
       {
@@ -54,7 +61,8 @@
       "ms-python.vscode-pylance",
       "ms-python.debugpy",
       "ms-python.vscode-python-envs",
-      "charliermarsh.ruff"
+      "charliermarsh.ruff",
+      "vitest.explorer"
     ]
   }
 }

@@ -1,9 +1,13 @@
 $ErrorActionPreference = "Stop"
 
 $PythonExecutable = "python"
+$NpmExecutable = "npm.cmd"
 $UvicornHost = "127.0.0.1"
 $UvicornPort = 8000
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ReactRoot = Join-Path $ProjectRoot "web\react"
+$ReactPackage = Join-Path $ReactRoot "package.json"
+$ReactVitePackage = Join-Path $ReactRoot "node_modules\vite\package.json"
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "0"
@@ -21,6 +25,24 @@ $env:SECOND_PASS_USERDATA_DIR = Join-Path $ProjectRoot "userdata"
 
 Push-Location $ProjectRoot
 try {
+    if (-not (Test-Path -LiteralPath $ReactPackage -PathType Leaf)) {
+        Write-Error "React workspace is missing at '$ReactRoot'."
+    }
+
+    if (-not (Test-Path -LiteralPath $ReactVitePackage -PathType Leaf)) {
+        Write-Error "React dependencies are missing. Run 'npm.cmd install' from '$ReactRoot'."
+    }
+
+    Push-Location $ReactRoot
+    try {
+        & $NpmExecutable run build
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+    } finally {
+        Pop-Location
+    }
+
     & $PythonExecutable manage.py check --deploy
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
@@ -40,7 +62,7 @@ try {
         "secondpass.asgi:application",
         "--host", $UvicornHost,
         "--port", $UvicornPort,
-        "--workers", "1",
+        "--workers", "4",
         "--no-access-log"
     )
 

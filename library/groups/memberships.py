@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from core.operational_logging import info_on_commit, safe_log_label, user_log_label
-from library.groups.public_group import get_public_group
+from library.groups.public_group import get_public_group, is_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
 from library.queries import invalidate_visible_books_cache_on_commit
 
@@ -20,6 +20,7 @@ def add_user_to_group(
 ) -> LibraryGroupMembership:
     if group is None:
         raise ValidationError("Group is required.")
+    _validate_curator_assignment(group=group, is_curator=is_curator)
     with transaction.atomic():
         user = _lock_user_for_group_mutation(user)
         membership, created = LibraryGroupMembership.objects.get_or_create(
@@ -59,6 +60,10 @@ def add_user_to_group(
 def set_group_membership_curator(
     *, membership: LibraryGroupMembership, is_curator: bool, actor=None
 ) -> LibraryGroupMembership:
+    _validate_curator_assignment(
+        group=membership.group,
+        is_curator=is_curator,
+    )
     with transaction.atomic():
         _lock_user_for_group_mutation(membership.user)
         value = bool(is_curator)
@@ -170,3 +175,10 @@ def restore_selected_users_without_groups(
 
 def _lock_user_for_group_mutation(user):
     return get_user_model().objects.select_for_update().get(pk=user.pk)
+
+
+def _validate_curator_assignment(*, group: LibraryGroup, is_curator: bool) -> None:
+    if is_curator and is_public_group(group):
+        raise ValidationError(
+            {"is_curator": ["Public Group does not use curator assignments."]}
+        )

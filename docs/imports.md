@@ -38,10 +38,22 @@ replacement, not a field-by-field merge or a later synchronization mechanism.
 Missing, malformed, oversized, or non-qualifying sidecars fall back to embedded
 EPUB metadata.
 
+Calibre/OPF Series indexes are whitespace-trimmed and parsed as exact decimals.
+Positive values with at most two fractional digits are preserved through
+preview, persistence, and result output. Blank, malformed, zero, negative, or
+over-precision values are treated as an unknown Series position; the Book and
+Series metadata remain importable, and the value is never rounded.
+
 Checksum duplicate detection takes precedence over metadata refresh. A
 duplicate returns the existing Book without changing metadata, identifiers,
 Catalog Tags, EPUB bytes, or cover. A new candidate whose identifiers conflict
 with an existing Book is reported as a conflict rather than partially applied.
+
+Author and Series matching applies Unicode NFKC, trim, collapsed whitespace,
+and case-folding while preserving punctuation. No normalized match creates a
+new entity; one match reuses it. Multiple matches are ambiguous, so the item is
+reported as a conflict and no Book is created. Imports never select the first
+duplicate, merge identities, or rewrite existing Book relationships.
 
 ### Cover import behavior
 
@@ -102,39 +114,6 @@ produce a nonzero exit.
 Temporary request and batch staging lives under `userdata/imports/` and is
 cleaned according to the relevant synchronous or staged workflow. No database
 ImportJob or durable Book-import history is created.
-
-## Marginalia import
-
-Marginalia import is a separate, session-only Product UI workflow. Client API
-bearer tokens cannot call its preview or apply endpoints.
-
-Preview validates a Second Pass Library Marginalia Profile, summarizes its
-books, reading sessions, and annotations, and matches only visible local Books
-by EPUB file hash. It does not write database records. Foreign/provider-specific
-formats must first be normalized by a reader client or external conversion
-tool.
-
-A successful preview creates a short-lived staged file under
-`userdata/imports/staged/` and returns an import token. Staged files expire
-after roughly 24 hours, are deleted after successful apply, and can be cleaned
-with `python manage.py cleanup_staged_imports`.
-
-Apply revalidates the staged profile and can import all matched sessions or a
-selection of sessions. Selection uses export-local book/session identifiers;
-it may override an imported session's name and notes. Annotation-level
-selection is not supported.
-
-Apply follows these rules:
-
-- match by file hash only, never ISBN or title/author fallback;
-- import only Books visible to the requesting user;
-- skip and report unmatched Books without creating local Books;
-- accept only shallow `epubcfi(...)` locator validation server-side;
-- create new historical/inactive sessions, including exported active sessions;
-- report possible duplicates as warnings without overwriting existing data.
-
-Marginalia staging is filesystem-only. It does not create import jobs or import
-history.
 
 ## Unsupported import behavior
 

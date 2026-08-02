@@ -1,33 +1,62 @@
 from __future__ import annotations
 
+from datetime import date
+import logging
+
 from django.urls import reverse
 from rest_framework import serializers
 
 from library.groups.public_group import is_public_group
 from library.models import Author, Book, BookIdentifier, CatalogTag, LibraryGroup, Series
+from library.series_indexes import (
+    SERIES_INDEX_DECIMAL_PLACES,
+    SERIES_INDEX_MAX_DIGITS,
+    SERIES_INDEX_MIN_VALUE,
+)
+from library.storage_diagnostics import log_storage_issue
 
 
-def book_cover_url(obj: Book, request=None) -> str | None:
+logger = logging.getLogger(__name__)
+
+
+def book_cover_url(
+    obj: Book,
+    request=None,
+) -> str | None:
     cover = getattr(obj, "cover_file", None)
     if not cover:
         return None
+    storage_name = str(cover.name or "")
     try:
         url = cover.url
-    except Exception:
+    except Exception as exc:
+        log_storage_issue(
+            logger,
+            action="book_cover_url",
+            book_id=obj.pk,
+            actor=getattr(request, "user", None),
+            reason="storage-error",
+            exc=exc,
+            storage_name=storage_name,
+        )
         return None
     return request.build_absolute_uri(url) if request is not None else url
+
+
+class RejectUnknownFieldsMixin:
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            unknown = set(data) - set(self.fields)
+            if unknown:
+                raise serializers.ValidationError(
+                    {field: ["Unknown field."] for field in sorted(unknown)}
+                )
+        return super().to_internal_value(data)
 
 
 class AuthorSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Author
-        fields = ["id", "name"]
-        read_only_fields = fields
-
-
-class SeriesSummarySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Series
         fields = ["id", "name"]
         read_only_fields = fields
 
@@ -83,25 +112,25 @@ class SeriesAxisSerializer(PreviewBooksAxisMixin, serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AuthorAxisUpdateSerializer(serializers.Serializer):
+class AuthorAxisUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     biography = serializers.CharField(required=False, allow_blank=True)
 
 
-class AuthorCreateSerializer(serializers.Serializer):
+class AuthorCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     biography = serializers.CharField(required=False, allow_blank=True)
 
 
-class SeriesAxisUpdateSerializer(serializers.Serializer):
+class SeriesAxisUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     summary = serializers.CharField(required=False, allow_blank=True)
 
 
-class SeriesCreateSerializer(serializers.Serializer):
+class SeriesCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     summary = serializers.CharField(required=False, allow_blank=True)
@@ -120,7 +149,11 @@ class BookSeriesSummarySerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series.id")
     name = serializers.CharField(source="series.name")
     sort_name = serializers.CharField(source="series.sort_name")
-    series_index = serializers.DecimalField(max_digits=8, decimal_places=2, allow_null=True)
+    series_index = serializers.DecimalField(
+        max_digits=SERIES_INDEX_MAX_DIGITS,
+        decimal_places=SERIES_INDEX_DECIMAL_PLACES,
+        allow_null=True,
+    )
 
 
 class BookIdentifierSerializer(serializers.ModelSerializer):
@@ -130,7 +163,7 @@ class BookIdentifierSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class BookIdentifierWriteSerializer(serializers.Serializer):
+class BookIdentifierWriteSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     scheme = serializers.ChoiceField(choices=BookIdentifier.SCHEME_CHOICES)
     value = serializers.CharField(max_length=512)
 
@@ -184,9 +217,9 @@ class BookPreviewSerializer(serializers.ModelSerializer):
 
 class BookListSerializer(serializers.ModelSerializer):
     authors = serializers.SerializerMethodField(read_only=True)
+    catalog_tags = serializers.SerializerMethodField(read_only=True)
     cover_url = serializers.SerializerMethodField(read_only=True)
     series = serializers.SerializerMethodField(read_only=True)
-    tags = serializers.SerializerMethodField(read_only=True)
 
     def get_authors(self, obj: Book) -> list[dict]:
         authors = [link.author for link in obj.book_authors.all()]
@@ -201,7 +234,7 @@ class BookListSerializer(serializers.ModelSerializer):
             return None
         return BookSeriesSummarySerializer(link).data
 
-    def get_tags(self, obj: Book) -> list[dict]:
+    def get_catalog_tags(self, obj: Book) -> list[dict]:
         tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]
         return CatalogTagSummarySerializer(tags, many=True).data
 
@@ -214,7 +247,7 @@ class BookListSerializer(serializers.ModelSerializer):
             "subtitle",
             "authors",
             "series",
-            "tags",
+            "catalog_tags",
             "language",
             "publisher",
             "published_year",
@@ -229,18 +262,50 @@ class BookListSerializer(serializers.ModelSerializer):
 
 class BookDetailSerializer(BookListSerializer):
     identifiers = BookIdentifierSerializer(many=True, read_only=True)
-    catalog_tags = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
     groups = serializers.SerializerMethodField(read_only=True)
 
+    def get_cover_url(self, obj: Book) -> str | None:
+        request = self.context.get("request")
+        cover = getattr(obj, "cover_file", None)
+        if cover:
+            storage_name = str(cover.name or "")
+            try:
+                exists = cover.storage.exists(storage_name)
+            except Exception as exc:
+                log_storage_issue(
+                    logger,
+                    action="book_cover_url",
+                    book_id=obj.pk,
+                    actor=getattr(request, "user", None),
+                    reason="storage-error",
+                    exc=exc,
+                    storage_name=storage_name,
+                )
+                return None
+            if not exists:
+                log_storage_issue(
+                    logger,
+                    action="book_cover_url",
+                    book_id=obj.pk,
+                    actor=getattr(request, "user", None),
+                    reason="missing-storage-object",
+                )
+                return None
+        return book_cover_url(obj, request=request)
+
     def get_file(self, obj: Book) -> dict | None:
         if not obj.book_file:
+            request = self.context.get("request")
+            log_storage_issue(
+                logger,
+                action="book_file_projection",
+                book_id=obj.pk,
+                actor=getattr(request, "user", None),
+                reason="missing-file-field",
+            )
             return None
         return BookFileSerializer(obj, context=self.context).data
-
-    def get_catalog_tags(self, obj: Book) -> list[dict]:
-        tags = [link.catalog_tag for link in obj.book_catalog_tags.all()]
-        return CatalogTagSummarySerializer(tags, many=True).data
 
     def get_groups(self, obj: Book) -> list[dict]:
         return BookGroupSummarySerializer(
@@ -272,8 +337,9 @@ class BookDetailSerializer(BookListSerializer):
         read_only_fields = fields
 
 
-class BookUpdateSerializer(serializers.Serializer):
+class BookUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     title = serializers.CharField(max_length=512, required=False)
+    sort_title = serializers.CharField(max_length=512, required=False, allow_blank=True)
     subtitle = serializers.CharField(max_length=512, required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
     publisher = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -288,10 +354,11 @@ class BookUpdateSerializer(serializers.Serializer):
     authors = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), many=True, required=False)
     series = SeriesReferenceField(required=False, allow_null=True)
     series_index = serializers.DecimalField(
-        max_digits=8,
-        decimal_places=2,
+        max_digits=SERIES_INDEX_MAX_DIGITS,
+        decimal_places=SERIES_INDEX_DECIMAL_PLACES,
         required=False,
         allow_null=True,
+        min_value=SERIES_INDEX_MIN_VALUE,
     )
     identifiers = BookIdentifierWriteSerializer(many=True, required=False)
     catalog_tags = serializers.ListField(
@@ -299,3 +366,82 @@ class BookUpdateSerializer(serializers.Serializer):
         required=False,
         allow_empty=True,
     )
+
+    def validate_authors(self, authors):
+        seen = set()
+        unique = []
+        for author in authors:
+            if author.pk in seen:
+                continue
+            seen.add(author.pk)
+            unique.append(author)
+        return unique
+
+    def validate(self, attrs):
+        self._validate_series_index(attrs)
+        self._validate_publication_date(attrs)
+        return attrs
+
+    def _validate_series_index(self, attrs) -> None:
+        if attrs.get("series_index") is None:
+            return
+        book = self.context.get("book")
+        existing_link = getattr(book, "book_series", None) if book is not None else None
+        target_series = (
+            attrs["series"]
+            if "series" in attrs
+            else (existing_link.series if existing_link is not None else None)
+        )
+        if target_series is None:
+            raise serializers.ValidationError(
+                {"series_index": "Series index requires an assigned series."}
+            )
+
+    def _validate_publication_date(self, attrs) -> None:
+        book = self.context.get("book")
+
+        def target(field):
+            if field in attrs:
+                return attrs[field]
+            return getattr(book, field, None) if book is not None else None
+
+        precision = target("published_date_precision") or ""
+        year = target("published_year")
+        month = target("published_month")
+        day = target("published_day")
+        errors = {}
+
+        if precision == Book.DATE_PRECISION_YEAR:
+            if year is None:
+                errors["published_year"] = "Year precision requires a year."
+            if month is not None:
+                errors["published_month"] = "Year precision does not allow a month."
+            if day is not None:
+                errors["published_day"] = "Year precision does not allow a day."
+        elif precision == Book.DATE_PRECISION_MONTH:
+            if year is None:
+                errors["published_year"] = "Month precision requires a year."
+            if month is None:
+                errors["published_month"] = "Month precision requires a month."
+            if day is not None:
+                errors["published_day"] = "Month precision does not allow a day."
+            if not errors:
+                try:
+                    date(year, month, 1)
+                except ValueError:
+                    errors["published_month"] = "Enter a valid calendar month."
+        elif precision == Book.DATE_PRECISION_DAY:
+            if year is None:
+                errors["published_year"] = "Day precision requires a year."
+            if month is None:
+                errors["published_month"] = "Day precision requires a month."
+            if day is None:
+                errors["published_day"] = "Day precision requires a day."
+            if not errors:
+                try:
+                    date(year, month, day)
+                except ValueError:
+                    errors["published_day"] = "Enter a valid calendar date."
+
+        if errors:
+            raise serializers.ValidationError(errors)

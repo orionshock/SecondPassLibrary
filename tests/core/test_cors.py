@@ -20,9 +20,9 @@ class CorsPolicyTests(TestCase):
         self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "*")
         self.assertNotEqual(response.headers.get("Access-Control-Allow-Credentials"), "true")
 
-    def test_product_ui_authorize_is_not_cors_open(self):
+    def test_user_login_is_not_cors_open(self):
         response = self.client.get(
-            "/client-api/authorize/",
+            "/login/",
             HTTP_ORIGIN="http://evil.example",
         )
         # Redirect to login is fine; but it must not be CORS-open.
@@ -37,9 +37,9 @@ class CorsPolicyTests(TestCase):
         self.assertIn(response.status_code, (200, 302, 404))
         self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
 
-    def test_product_ui_dashboard_is_not_cors_open(self):
+    def test_react_shell_is_not_cors_open(self):
         response = self.client.get(
-            "/dashboard/",
+            "/",
             HTTP_ORIGIN="http://evil.example",
         )
         self.assertIn(response.status_code, (200, 302))
@@ -47,7 +47,7 @@ class CorsPolicyTests(TestCase):
 
     def test_api_allows_idempotency_key_header_in_preflight(self):
         response = self.client.options(
-            "/api/v1/reading/annotations/",
+            "/api/v1/marginalia/sessions/00000000-0000-0000-0000-000000000001/annotations/batch/",
             HTTP_ORIGIN="http://localhost:5173",
             HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
             HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type, idempotency-key, authorization",

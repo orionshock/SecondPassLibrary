@@ -1,5 +1,13 @@
 # Agent Instructions
 
+## EXTREMELY HIGH IMPORTANCE: THIS PROJECT IS PRE-RELEASE
+
+- The project is pre-release. There is no user base to preserve compatibility for.
+- Do not add compatibility shims, transitional wrappers, legacy aliases, compatibility migrations, or other compatibility machinery.
+- Database migrations are a development convenience. Use them when useful, but expect them to be periodically collapsed; do not treat migration history as a permanent compatibility contract.
+- Churn is highly permitted when it produces a real, desirable effect.
+- Do not block a good change merely because it creates legitimate downstream cleanup. Make the correct change and update affected callers and boundaries directly.
+
 Read `PROJECT.md` before editing. Use the focused documents under `docs/` for domain and operational detail; this file contains only repository-wide guardrails.
 
 ## Code and architecture
@@ -14,7 +22,13 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 ## Product and security boundaries
 
 - Keep REST/JSON APIs under `/api/v1/`. Never expose filesystem paths, storage identities, secrets, or authentication internals.
-- The Product UI uses server-rendered Django templates and JavaScript with session authentication and CSRF. Do not introduce React or another frontend framework unless asked.
+- The Product UI is React under `web/react`.
+- Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
+- React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
+- Keep React layered: the app orchestrator owns bootstrap and the global frame; branch orchestrators own page assembly; regions own only their local operations; shared components stay server-blind. Communicate through explicit props, callbacks, outlet context, or stable contracts. Only `@second-pass/spl-api` may know server URLs or perform server communication.
+- Name feature route controllers `*Orchestrator`, major page sections `*PageRegion`, and reusable presentational pieces `*Component` (`*SubComponent` only when clearly subordinate). Promote genuinely cross-feature behavior to focused modules under `web/react/src/shared`; do not bury shared behavior in Profile or promote feature-only rules merely to reduce file count.
+- Vite is the primary Product UI development surface and proxies same-origin-style requests to Django. Production and Docker React integration are deferred.
+- React owns `/` and intended Product UI deep links after setup and login. Only first-time setup, `/login/`, `/logout/`, and Django Admin remain Django-rendered application surfaces. Do not add separate Product UI mounts, DRF browsable pages, or Django-rendered Reader Client authorization pages.
 - Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
 - Django Admin is a technical service hatch, not the Product UI.
 - Preserve user ownership and scoping for reading data.
@@ -26,6 +40,7 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 - Add operational logging when it materially helps diagnosis or operation. Never log secrets, tokens, passwords, raw uploads, unsafe archive paths, marginalia, request payloads, filesystem paths, hashes, or routine request success.
 - Files under `scripts/` are self-contained local/operator conveniences, not production contracts. Do not use script-behavior tests as production guarantees.
 - Docker deployment behavior and support files belong under `docker/` and `docs/deployment.md`. Docker runs direct Uvicorn against the ASGI application, and WhiteNoise is mandatory in Docker rather than an operator `.env` option.
+- Do not restore retired Product UI routes or preserve their layout/static tests. Keep tests only for retained Django surfaces and backend/API invariants; add React tests with new React behavior.
 - Release version, label, and date belong in checked-in source, not environment files or scripts.
 
 ## Scope guardrails
@@ -33,7 +48,6 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 Unless explicitly requested, do not add:
 
 - PDF support
-- React or another frontend framework
 - a sync protocol
 - background jobs
 - OIDC
@@ -44,11 +58,11 @@ Unless explicitly requested, do not add:
 - For meaningful code changes, run `python manage.py check` and focused pytest coverage for the changed area. Use the full suite only when the scope or risk warrants it.
 - Classify changed tests as `invariant`, `contract`, `regression`, or `implementation detail` in the final report.
 - Do not weaken invariant or contract tests without explicitly explaining why.
-- Do not add tests that pin documentation wording, headings, or capitalization.
+- Tests cover runtime behavior, not copy or prose. When changing a suite, remove copy-only coverage.
+- Keep every React/Vitest test under `web/react/src/__tests__`; do not colocate Vitest files with runtime components or SDK source.
 - Do not treat local helper scripts as production contracts.
 - Docs-only changes do not require application tests.
 - Do not claim the full suite passed unless it was actually run; report focused and skipped verification accurately.
-- Playwright is optional and should be limited to focused rendered-UI or interaction diagnosis. Keep artifacts under ignored `test-artifacts/`.
 
 ## Use focused docs for details
 
@@ -57,4 +71,4 @@ Unless explicitly requested, do not add:
 - `docs/permissions.md`
 - `docs/development.md`
 - `docs/deployment.md`
-- `docs/ui.md`
+- `docs/react-ui.md`

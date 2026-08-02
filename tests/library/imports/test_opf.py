@@ -95,7 +95,7 @@ class OpfImportMetadataTests(TestCase):
                 <dc:title>Book</dc:title>
                 <meta name="calibre:series" content="Earthsea"/>
                 <meta name="calibre:series_sort" content="Earthsea"/>
-                <meta name="calibre:series_index" content="2.5"/>
+                <meta name="calibre:series_index" content=" 2.75 "/>
                 """
             )
         )
@@ -103,7 +103,7 @@ class OpfImportMetadataTests(TestCase):
         self.assertIsNotNone(metadata.series)
         self.assertEqual(metadata.series.name, "Earthsea")
         self.assertEqual(metadata.series.sort_name, "Earthsea")
-        self.assertEqual(metadata.series.series_index, Decimal("2.5"))
+        self.assertEqual(metadata.series.series_index, Decimal("2.75"))
 
     def test_subjects_and_calibre_tags_collapse_to_one_tag_axis(self):
         metadata = parse_opf_metadata(
@@ -152,18 +152,20 @@ class OpfImportMetadataTests(TestCase):
         self.assertEqual(len(metadata.identifiers), 1)
         self.assertEqual(metadata.identifiers[0].scheme, "isbn_13")
 
-    def test_invalid_series_index_is_blank(self):
-        metadata = parse_opf_metadata(
-            opf_metadata(
-                """
-                <dc:title>Book</dc:title>
-                <meta name="calibre:series" content="Earthsea"/>
-                <meta name="calibre:series_index" content="not-a-number"/>
-                """
-            )
-        )
+    def test_invalid_series_indexes_are_treated_as_unknown_without_rounding(self):
+        for value in ("not-a-number", "0", "-1.25", "1.255"):
+            with self.subTest(value=value):
+                metadata = parse_opf_metadata(
+                    opf_metadata(
+                        f"""
+                        <dc:title>Book</dc:title>
+                        <meta name="calibre:series" content="Earthsea"/>
+                        <meta name="calibre:series_index" content="{value}"/>
+                        """
+                    )
+                )
 
-        self.assertIsNone(metadata.series.series_index)
+                self.assertIsNone(metadata.series.series_index)
 
     def test_opf_without_calibre_metadata_uses_boring_defaults(self):
         metadata = parse_opf_metadata(

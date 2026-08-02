@@ -1,0 +1,116 @@
+.server-settings-page {
+  min-width: 0;
+}
+
+.server-settings-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.server-settings-tabs .tab-list-component { flex: 1 1 auto; }
+
+.server-settings-tab-actions {
+  margin-left: auto;
+}
+
+.server-settings-tab-actions .form-action-row {
+  width: min(32rem, 100%);
+  padding: 0;
+}
+
+.server-settings-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.server-settings-region {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.server-settings-region h2,
+.server-settings-region p {
+  margin: 0;
+}
+
+.server-settings-region h2 {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.server-settings-help {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.server-settings-region .form-grid,
+.server-settings-region .key-value-list {
+  width: min(100%, 46rem);
+}
+
+.server-settings-region--centered {
+  width: min(100%, 56rem);
+  margin-inline: auto;
+}
+
+.server-settings-groups {
+  justify-items: center;
+  text-align: center;
+}
+
+.server-settings-state {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.server-settings-state--enabled {
+  border-color: rgb(74 222 128 / 65%);
+  color: #bbf7d0;
+  background: rgb(74 222 128 / 10%);
+}
+
+.server-settings-state--disabled {
+  border-color: rgb(251 113 133 / 65%);
+  color: #fecdd3;
+  background: rgb(251 113 133 / 10%);
+}
+
+.server-settings-groups .form-action-row {
+  width: min(100%, 48rem);
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.server-settings-groups .action-feedback,
+.server-settings-groups .form-actions {
+  justify-self: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.server-settings-state-page {
+  display: grid;
+  width: min(100%, 44rem);
+  min-height: 12rem;
+  align-content: center;
+  justify-items: start;
+  gap: 0.75rem;
+}
+
+@media (max-width: 42rem) {
+  .server-settings-tab-actions,
+  .server-settings-tab-actions .form-action-row {
+    width: 100%;
+  }
+}

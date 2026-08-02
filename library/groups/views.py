@@ -17,6 +17,7 @@ from library.groups.public_group import is_public_group
 from library.groups.querysets import (
     apply_group_ordering,
     apply_group_search,
+    filter_groups_by_book,
     parse_group_ordering,
 )
 from library.groups.serializers import (
@@ -54,6 +55,7 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
 
     def get_queryset(self):
         queryset = groups_available_via_api(visible_groups_for_user(self.request.user))
+        queryset = filter_groups_by_book(queryset, self.request.query_params)
         queryset = apply_group_search(queryset, self.request.query_params)
         return apply_group_ordering(queryset, parse_group_ordering(self.request))
 
@@ -75,7 +77,10 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
 
         serializer = LibraryGroupCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
-        group = create_library_group(actor=request.user, **serializer.validated_data)
+        try:
+            group = create_library_group(actor=request.user, **serializer.validated_data)
+        except DjangoValidationError as exc:
+            raise _drf_validation_error(exc) from exc
         out = self.get_serializer(group)
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -99,11 +104,15 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
             raise PermissionDenied(
                 "Public group identity is managed through Server Settings."
             )
-        serializer = LibraryGroupPatchSerializer(data=request.data or {}, partial=True)
+        serializer = LibraryGroupPatchSerializer(
+            group,
+            data=request.data or {},
+            partial=True,
+        )
         serializer.is_valid(raise_exception=True)
-        if "name" in serializer.validated_data and not is_manager(request.user):
+        if serializer.changes_field("name") and not is_manager(request.user):
             raise PermissionDenied("Not allowed to rename this library group.")
-        if "description" in serializer.validated_data and not is_curator(
+        if serializer.changes_field("description") and not is_curator(
             request.user, group
         ):
             raise PermissionDenied("Not allowed to update this library group description.")

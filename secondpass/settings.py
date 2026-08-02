@@ -17,7 +17,7 @@ from corsheaders.defaults import default_headers
 from django.core.exceptions import ImproperlyConfigured
 import environ
 
-from secondpass.version import SERVER_RELEASE, SERVER_RELEASE_DATE, SERVER_VERSION
+from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION
 
 try:
     import django_stubs_ext
@@ -80,8 +80,10 @@ RUNNING_TESTS = "test" in sys.argv or any(
 ) or "pytest" in sys.modules
 
 SECOND_PASS_SERVER_VERSION = SERVER_VERSION
-SECOND_PASS_SERVER_RELEASE = SERVER_RELEASE
 SECOND_PASS_SERVER_RELEASE_DATE = SERVER_RELEASE_DATE
+SECOND_PASS_READING_CLIENT_BASE_URL = (
+    env.str("SECOND_PASS_READING_CLIENT_BASE_URL", default="") or ""
+).strip()
 
 # Ensure required directories exist
 (USERDATA_DIR / "db").mkdir(parents=True, exist_ok=True)
@@ -127,7 +129,7 @@ INSTALLED_APPS = [
     "core.apps.CoreConfig",
     "accounts",
     "library.apps.LibraryConfig",
-    "reading",
+    "marginalia.apps.MarginaliaConfig",
     "shelves",
 ]
 
@@ -139,7 +141,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "accounts.middleware.UserWebSessionMiddleware",
-    "web.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -220,6 +221,9 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = USERDATA_DIR / "media"
 
 REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
@@ -255,7 +259,14 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         }
-        for logger_name in ("accounts", "core", "library", "reading", "shelves", "web")
+        for logger_name in (
+            "accounts",
+            "core",
+            "library",
+            "marginalia",
+            "shelves",
+            "web",
+        )
     },
 }
 
@@ -264,6 +275,10 @@ LOGGING = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "var" / "static"
+REACT_UI_DIST_DIR = BASE_DIR / "web" / "react" / "dist"
+STATICFILES_DIRS = (
+    [("react", REACT_UI_DIST_DIR)] if REACT_UI_DIST_DIR.is_dir() else []
+)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -281,13 +296,13 @@ CSRF_COOKIE_SECURE = _SECURE_COOKIES
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True
-# Product UI JavaScript reads the CSRF cookie to send X-CSRFToken.
+# Same-origin React code reads the CSRF cookie to send X-CSRFToken.
 CSRF_COOKIE_HTTPONLY = False
 
-# Product UI pages reuse DRF's built-in login views.
-LOGIN_URL = "/api-auth/login/"
-LOGIN_REDIRECT_URL = "/dashboard/"
-LOGOUT_REDIRECT_URL = "/"
+# Retained Django session-auth pages.
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 # CORS
 #

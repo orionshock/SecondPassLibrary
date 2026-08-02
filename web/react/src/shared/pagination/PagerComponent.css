@@ -1,0 +1,32 @@
+.pager-component {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pager-component--compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 2.25rem;
+  font-size: 0.8rem;
+}
+
+.pager-component__size,
+.pager-component__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+@media (max-width: 42rem) {
+  .pager-component {
+    grid-template-columns: 1fr;
+  }
+
+  .pager-component__actions {
+    justify-content: flex-end;
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://secondpasslibrary.local/specs/marginalia/0.1.0/archive-schema.json",
+  "title": "Second Pass Library Marginalia Archive",
+  "type": "object",
+  "required": [
+    "type",
+    "schemaVersion",
+    "profile",
+    "generatedAt",
+    "generator",
+    "books"
+  ],
+  "properties": {
+    "type": { "const": "SecondPassMarginaliaExport" },
+    "schemaVersion": { "const": "0.1.0" },
+    "profile": {
+      "const": "https://secondpasslibrary.local/specs/marginalia/0.1.0"
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "generator": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "books": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "#/$defs/book" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "location": {
+      "type": "object",
+      "required": ["cfi"],
+      "properties": {
+        "cfi": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "locationLabel": { "type": "string", "maxLength": 255 }
+      },
+      "additionalProperties": false
+    },
+    "progress": {
+      "type": "object",
+      "required": ["cfi", "updatedAt"],
+      "properties": {
+        "cfi": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "locationLabel": { "type": "string", "maxLength": 255 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "highlightBody": {
+      "type": "object",
+      "required": ["text", "color"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 65536 },
+        "prefix": { "type": "string", "maxLength": 500 },
+        "suffix": { "type": "string", "maxLength": 500 },
+        "color": {
+          "enum": ["yellow", "green", "blue", "pink", "purple", "orange"]
+        },
+        "note": { "type": "string", "maxLength": 65536 }
+      },
+      "additionalProperties": false
+    },
+    "highlight": {
+      "type": "object",
+      "required": [
+        "clientAnnotationId",
+        "kind",
+        "location",
+        "body",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "clientAnnotationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "kind": { "const": "highlight" },
+        "location": { "$ref": "#/$defs/location" },
+        "body": { "$ref": "#/$defs/highlightBody" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "bookmark": {
+      "type": "object",
+      "required": [
+        "clientAnnotationId",
+        "kind",
+        "location",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "clientAnnotationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "kind": { "const": "bookmark" },
+        "location": { "$ref": "#/$defs/location" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "annotation": {
+      "oneOf": [
+        { "$ref": "#/$defs/highlight" },
+        { "$ref": "#/$defs/bookmark" }
+      ]
+    },
+    "readingSession": {
+      "type": "object",
+      "required": [
+        "sourceReadingSessionId",
+        "name",
+        "notes",
+        "status",
+        "startedAt",
+        "closedAt",
+        "createdAt",
+        "updatedAt",
+        "progress",
+        "annotations"
+      ],
+      "properties": {
+        "sourceReadingSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "name": { "type": "string", "maxLength": 255 },
+        "notes": { "type": "string", "maxLength": 65536 },
+        "status": { "enum": ["active", "closed"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "closedAt": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "progress": {
+          "oneOf": [
+            { "$ref": "#/$defs/progress" },
+            { "type": "null" }
+          ]
+        },
+        "annotations": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": { "$ref": "#/$defs/annotation" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "active" } },
+            "required": ["status"]
+          },
+          "then": { "properties": { "closedAt": { "type": "null" } } }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "closed" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "closedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "book": {
+      "type": "object",
+      "required": ["fileHash", "title", "authors", "readingSessions"],
+      "properties": {
+        "fileHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "title": { "type": "string", "maxLength": 512 },
+        "authors": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "type": "string", "maxLength": 255 }
+        },
+        "readingSessions": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": { "$ref": "#/$defs/readingSession" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

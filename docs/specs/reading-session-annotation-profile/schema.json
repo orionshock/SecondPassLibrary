@@ -1,488 +1,164 @@
 {
-  "$id": "https://secondpasslibrary.local/specs/reading-session-annotations/schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Reading Session Annotation Collection",
-  "description": "Draft W3C Web Annotation JSON-LD profile for EPUB reading sessions (future export/import). Note: the current Second Pass Library reading REST APIs are stricter and reject unknown fields; this schema is for JSON-LD portability work and may evolve.",
-  "type": "object",
-  "required": [
-    "@context",
-    "id",
-    "type",
-    "profile",
-    "schemaVersion",
-    "generated",
-    "generator",
-    "book",
-    "session",
-    "items"
+  "$id": "https://secondpasslibrary.local/specs/marginalia/0.1.0/schema.json",
+  "title": "Second Pass Library Marginalia Interchange Profile",
+  "oneOf": [
+    { "$ref": "#/$defs/readingSession" },
+    { "$ref": "#/$defs/progress" },
+    { "$ref": "#/$defs/highlight" },
+    { "$ref": "#/$defs/bookmark" }
   ],
-  "properties": {
-    "@context": {},
-    "id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "type": {
-      "const": "AnnotationCollection"
-    },
-    "profile": {
-      "type": "string",
-      "minLength": 1
-    },
-    "schemaVersion": {
-      "type": "integer",
-      "minimum": 1
-    },
-    "label": {
-      "type": "string"
-    },
-    "generated": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "generator": {
-      "type": "object",
-      "required": [
-        "type",
-        "name"
-      ],
-      "properties": {
-        "type": {
-          "enum": [
-            "Software",
-            "SoftwareApplication"
-          ]
-        },
-        "name": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": true
-    },
-    "book": {
-      "$ref": "#/$defs/book"
-    },
-    "session": {
-      "$ref": "#/$defs/session"
-    },
-    "total": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "items": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/annotation"
-      }
-    }
-  },
-  "additionalProperties": true,
   "$defs": {
-    "book": {
+    "location": {
       "type": "object",
-      "required": [
-        "id",
-        "fileHash"
-      ],
+      "required": ["cfi"],
       "properties": {
-        "id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "type": {
-          "enum": [
-            "Book",
-            "Text"
-          ]
-        },
-        "title": {
-          "type": "string"
-        },
-        "subtitle": {
-          "type": "string"
-        },
-        "author": {
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            }
-          ]
-        },
-        "publisher": {
-          "type": "string"
-        },
-        "publishedDate": {
-          "type": "string"
-        },
-        "language": {
-          "type": "string"
-        },
-        "isbn": {
-          "type": "string"
-        },
-        "fileHash": {
-          "type": "string",
-          "pattern": "^sha256:[A-Fa-f0-9]{64}$"
-        },
-        "epubUniqueIdentifier": {
-          "type": "string"
-        },
-        "epubMetadata": {
-          "type": "object"
-        },
-        "displayMetadata": {
-          "type": "object"
-        }
+        "cfi": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "locationLabel": { "type": "string", "maxLength": 255 }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
-    "session": {
+    "progress": {
+      "type": "object",
+      "required": ["cfi", "updatedAt"],
+      "properties": {
+        "cfi": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "locationLabel": { "type": "string", "maxLength": 255 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "highlightBody": {
+      "type": "object",
+      "required": ["text", "color"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 65536 },
+        "prefix": { "type": "string", "maxLength": 500 },
+        "suffix": { "type": "string", "maxLength": 500 },
+        "color": {
+          "enum": ["yellow", "green", "blue", "pink", "purple", "orange"]
+        },
+        "note": { "type": "string", "maxLength": 65536 }
+      },
+      "additionalProperties": false
+    },
+    "highlight": {
       "type": "object",
       "required": [
-        "id",
-        "type",
-        "sessionStatus",
-        "startedAt"
+        "clientAnnotationId",
+        "kind",
+        "location",
+        "body",
+        "createdAt",
+        "updatedAt"
       ],
       "properties": {
-        "id": {
+        "clientAnnotationId": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 255
         },
-        "type": {
-          "const": "ReadingSession"
-        },
-        "sessionStatus": {
-          "enum": [
-            "active",
-            "closed"
-          ]
-        },
-        "startedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "closedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "currentLocation": {
-          "$ref": "#/$defs/epubCfiSelector"
-        },
-        "layeredSession": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
+        "kind": { "const": "highlight" },
+        "location": { "$ref": "#/$defs/location" },
+        "body": { "$ref": "#/$defs/highlightBody" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "bookmark": {
+      "type": "object",
+      "required": [
+        "clientAnnotationId",
+        "kind",
+        "location",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "clientAnnotationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "kind": { "const": "bookmark" },
+        "location": { "$ref": "#/$defs/location" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
     },
     "annotation": {
-      "type": "object",
-      "required": [
-        "id",
-        "type",
-        "motivation",
-        "target"
-      ],
-      "properties": {
-        "@context": {},
-        "id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "type": {
-          "const": "Annotation"
-        },
-        "motivation": {
-          "oneOf": [
-            {
-              "enum": [
-                "highlighting",
-                "commenting",
-                "bookmarking"
-              ]
-            },
-            {
-              "type": "array",
-              "items": {
-                "enum": [
-                  "highlighting",
-                  "commenting",
-                  "bookmarking"
-                ]
-              }
-            }
-          ]
-        },
-        "created": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "modified": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "creator": {
-          "type": [
-            "object",
-            "string"
-          ]
-        },
-        "body": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/body"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/body"
-              }
-            }
-          ]
-        },
-        "target": {
-          "$ref": "#/$defs/target"
-        },
-        "sessionId": {
-          "type": "string"
-        },
-        "sourceImport": {
-          "type": "object",
-          "required": [
-            "provider"
-          ],
-          "properties": {
-            "provider": {
-              "type": "string",
-              "minLength": 1
-            },
-            "location": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "date": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "title": {
-              "type": "string"
-            },
-            "author": {
-              "type": "string"
-            },
-            "url": {
-              "type": "string"
-            },
-            "match": {
-              "type": "object",
-              "properties": {
-                "method": {
-                  "type": "string"
-                },
-                "confidence": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 1
-                }
-              },
-              "additionalProperties": true
-            },
-            "unmatched": {
-              "type": "boolean"
-            }
-          },
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
+      "oneOf": [
+        { "$ref": "#/$defs/highlight" },
+        { "$ref": "#/$defs/bookmark" }
+      ]
     },
-    "body": {
+    "readingSession": {
       "type": "object",
       "required": [
-        "type"
+        "sourceReadingSessionId",
+        "name",
+        "notes",
+        "status",
+        "startedAt",
+        "closedAt",
+        "createdAt",
+        "updatedAt",
+        "progress",
+        "annotations"
       ],
-      "description": "TextualBody payload. Second Pass Library semantics: `color` is highlight/quote-only metadata and applies only when `purpose` is `describing` (selected text). Note/comment bodies and bookmark-only annotations do not use `color`.",
       "properties": {
-        "type": {
-          "const": "TextualBody"
+        "sourceReadingSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
         },
-        "purpose": {
-          "enum": [
-            "commenting",
-            "describing",
-            "highlighting",
-            "tagging",
-            "bookmarking"
+        "name": { "type": "string", "maxLength": 255 },
+        "notes": { "type": "string", "maxLength": 65536 },
+        "status": { "enum": ["active", "closed"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "closedAt": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
           ]
         },
-        "value": {
-          "type": "string"
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "progress": {
+          "oneOf": [
+            { "$ref": "#/$defs/progress" },
+            { "type": "null" }
+          ]
         },
-        "format": {
-          "type": "string"
-        },
-        "language": {
-          "type": "string"
-        },
-        "color": {
-          "type": "string",
-          "enum": [
-            "yellow",
-            "green",
-            "blue",
-            "pink",
-            "purple",
-            "orange"
-          ],
-          "description": "Highlight/quote color token. Only valid when `purpose` is `describing`."
+        "annotations": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": { "$ref": "#/$defs/annotation" }
         }
       },
       "allOf": [
         {
           "if": {
-            "properties": {
-              "purpose": {
-                "const": "describing"
-              }
-            },
-            "required": [
-              "purpose"
-            ]
+            "properties": { "status": { "const": "active" } },
+            "required": ["status"]
           },
-          "then": {},
-          "else": {
-            "not": {
-              "required": [
-                "color"
-              ]
+          "then": { "properties": { "closedAt": { "type": "null" } } }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "closed" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "closedAt": { "type": "string", "format": "date-time" }
             }
           }
         }
       ],
-      "additionalProperties": true
-    },
-    "target": {
-      "type": "object",
-      "required": [
-        "source",
-        "selector"
-      ],
-      "properties": {
-        "source": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "required": [
-                "id"
-              ],
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "type": {
-                  "enum": [
-                    "Text",
-                    "Book"
-                  ]
-                }
-              },
-              "additionalProperties": true
-            }
-          ]
-        },
-        "selector": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/epubCfiSelector"
-            },
-            {
-              "$ref": "#/$defs/epubSelectorList"
-            }
-          ]
-        }
-      },
-      "additionalProperties": true
-    },
-    "epubSelectorList": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 2,
-      "prefixItems": [
-        {
-          "$ref": "#/$defs/epubCfiSelector"
-        },
-        {
-          "$ref": "#/$defs/textQuoteSelector"
-        }
-      ],
-      "items": false
-    },
-    "textQuoteSelector": {
-      "type": "object",
-      "required": [
-        "type",
-        "exact"
-      ],
-      "properties": {
-        "type": {
-          "const": "TextQuoteSelector"
-        },
-        "exact": {
-          "type": "string"
-        },
-        "prefix": {
-          "type": "string",
-          "maxLength": 500
-        },
-        "suffix": {
-          "type": "string",
-          "maxLength": 500
-        }
-      },
-      "additionalProperties": true
-    },
-    "epubCfiSelector": {
-      "type": "object",
-      "required": [
-        "type",
-        "conformsTo",
-        "value"
-      ],
-      "properties": {
-        "type": {
-          "const": "FragmentSelector"
-        },
-        "conformsTo": {
-          "const": "http://www.idpf.org/epub/linking/cfi/epub-cfi.html"
-        },
-        "value": {
-          "type": "string",
-          "pattern": "^epubcfi\\("
-        },
-        "updated": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "additionalProperties": true
+      "additionalProperties": false
     }
   }
 }

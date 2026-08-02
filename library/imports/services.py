@@ -6,11 +6,15 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import File
 from django.db import transaction
 
-from library.imports.dto import ImportMetadata
-from library.catalog.names import normalize_catalog_entity_name
+from library.catalog.names import (
+    AmbiguousCatalogEntityName,
+    find_single_normalized_name_match,
+    normalize_catalog_entity_name,
+)
 from library.catalog.tag_services import resolve_catalog_tag
 from library.groups.book_assignments import add_book_to_group
 from library.groups.public_group import get_public_group
+from library.imports.dto import ImportMetadata
 from library.models import (
     Author,
     Book,
@@ -20,6 +24,7 @@ from library.models import (
     BookSeries,
     Series,
 )
+from library.series_indexes import normalize_series_index
 
 
 IMPORT_STATUS_IMPORTED = "imported"
@@ -30,7 +35,7 @@ IMPORT_STATUS_CONFLICT = "conflict"
 @dataclass(frozen=True)
 class ImportPersistenceResult:
     status: str
-    book: Book
+    book: Book | None
     message: str = ""
 
 
@@ -58,6 +63,34 @@ def persist_imported_book(
             message="An identifier from this import already belongs to another book.",
         )
 
+    try:
+        existing_authors = [
+            find_single_normalized_name_match(
+                model=Author,
+                name=author.name,
+                kind="Author",
+            )
+            for author in metadata.authors
+        ]
+        existing_series = (
+            find_single_normalized_name_match(
+                model=Series,
+                name=metadata.series.name,
+                kind="Series",
+            )
+            if metadata.series is not None
+            else None
+        )
+    except AmbiguousCatalogEntityName as exc:
+        return ImportPersistenceResult(
+            status=IMPORT_STATUS_CONFLICT,
+            book=None,
+            message=(
+                f"A {exc.kind} name matches multiple catalog records; "
+                "the import was not applied."
+            ),
+        )
+
     with transaction.atomic():
         book = Book.objects.create(
             title=metadata.title,
@@ -76,8 +109,16 @@ def persist_imported_book(
         )
         if book_file is not None:
             _attach_book_file(book=book, book_file=book_file)
-        _persist_authors(book=book, metadata=metadata)
-        _persist_series(book=book, metadata=metadata)
+        _persist_authors(
+            book=book,
+            metadata=metadata,
+            existing_authors=existing_authors,
+        )
+        _persist_series(
+            book=book,
+            metadata=metadata,
+            existing_series=existing_series,
+        )
         _persist_tags(book=book, metadata=metadata)
         _persist_identifiers(book=book, metadata=metadata)
         add_book_to_group(book=book, group=get_public_group(), actor=actor)
@@ -116,11 +157,19 @@ def _find_identifier_conflict(metadata: ImportMetadata) -> BookIdentifier | None
     return None
 
 
-def _persist_authors(*, book: Book, metadata: ImportMetadata) -> None:
-    for author_metadata in metadata.authors:
+def _persist_authors(
+    *,
+    book: Book,
+    metadata: ImportMetadata,
+    existing_authors: list[Author | None],
+) -> None:
+    for author_metadata, existing in zip(
+        metadata.authors, existing_authors, strict=True
+    ):
         author = _get_or_create_author(
             name=author_metadata.name,
             sort_name=author_metadata.sort_name,
+            existing=existing,
         )
         BookAuthor.objects.create(
             book=book,
@@ -129,8 +178,9 @@ def _persist_authors(*, book: Book, metadata: ImportMetadata) -> None:
         )
 
 
-def _get_or_create_author(*, name: str, sort_name: str) -> Author:
-    existing = Author.objects.filter(name__iexact=name).order_by("id").first()
+def _get_or_create_author(
+    *, name: str, sort_name: str, existing: Author | None
+) -> Author:
     if existing is not None:
         _fill_blank_sort_name(existing, sort_name=sort_name)
         return existing
@@ -141,22 +191,29 @@ def _get_or_create_author(*, name: str, sort_name: str) -> Author:
     )
 
 
-def _persist_series(*, book: Book, metadata: ImportMetadata) -> None:
+def _persist_series(
+    *,
+    book: Book,
+    metadata: ImportMetadata,
+    existing_series: Series | None,
+) -> None:
     if metadata.series is None:
         return
     series = _get_or_create_series(
         name=metadata.series.name,
         sort_name=metadata.series.sort_name,
+        existing=existing_series,
     )
     BookSeries.objects.create(
         book=book,
         series=series,
-        series_index=metadata.series.series_index,
+        series_index=normalize_series_index(metadata.series.series_index),
     )
 
 
-def _get_or_create_series(*, name: str, sort_name: str) -> Series:
-    existing = Series.objects.filter(name__iexact=name).order_by("id").first()
+def _get_or_create_series(
+    *, name: str, sort_name: str, existing: Series | None
+) -> Series:
     if existing is not None:
         _fill_blank_sort_name(existing, sort_name=sort_name)
         return existing

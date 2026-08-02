@@ -201,7 +201,7 @@ class UserBookVerseSearchApiTests(LibraryCatalogApiFixtureMixin, TestCase):
                 "subtitle",
                 "authors",
                 "series",
-                "tags",
+                "catalog_tags",
                 "language",
                 "publisher",
                 "published_year",
@@ -213,10 +213,15 @@ class UserBookVerseSearchApiTests(LibraryCatalogApiFixtureMixin, TestCase):
             },
         )
         for forbidden in (
+            "tags",
+            "description",
+            "identifiers",
             "file",
             "download_url",
+            "file_size",
             "checksum",
             "book_file",
+            "storage_path",
             "source_filename",
             "groups",
         ):

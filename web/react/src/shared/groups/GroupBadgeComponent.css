@@ -1,0 +1,6 @@
+.group-badge-component { display: inline-flex; }
+
+.group-badge-component--medium .badge {
+  padding: 0.28rem 0.7rem;
+  font-size: 0.9rem;
+}

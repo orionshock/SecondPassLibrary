@@ -4,29 +4,16 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from accounts.models import UserClientSession
 from accounts.user_payloads import compact_user_payload
-from library.models import Book
 from library.groups.public_group import is_public_group
 from library.catalog.serializers import (
-    AuthorSummarySerializer,
+    BookListSerializer,
     BookPreviewSerializer,
-    SeriesSummarySerializer,
+    RejectUnknownFieldsMixin,
 )
 
 from .models import Shelf, ShelfItem
-from .services import can_edit_shelf
-
-
-def _request_can_edit_shelf(*, request, shelf: Shelf) -> bool:
-    user = getattr(request, "user", None)
-    if user is None:
-        return False
-    if isinstance(getattr(request, "auth", None), UserClientSession):
-        if shelf.owner_type != Shelf.OWNER_TYPE_USER:
-            return False
-        return getattr(shelf, "owner_user_id", None) == getattr(user, "id", None)
-    return can_edit_shelf(user=user, shelf=shelf)
+from .policies import request_can_edit_shelf
 
 
 class ShelfSerializer(serializers.ModelSerializer):
@@ -60,7 +47,7 @@ class ShelfSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request is None:
             return False
-        return _request_can_edit_shelf(request=request, shelf=obj)
+        return request_can_edit_shelf(request=request, shelf=obj)
 
     def get_preview_books(self, obj: Shelf) -> list[dict[str, Any]]:
         books = getattr(obj, "_preview_books", [])
@@ -100,8 +87,8 @@ class ShelfSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class ShelfCreateSerializer(serializers.Serializer):
-    name = serializers.CharField()
+class ShelfCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
+    name = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True)
     owner_type = serializers.ChoiceField(choices=[Shelf.OWNER_TYPE_USER, Shelf.OWNER_TYPE_GROUP])
     owner_group = serializers.UUIDField(required=False, allow_null=True)
@@ -111,9 +98,23 @@ class ShelfCreateSerializer(serializers.Serializer):
         default=Shelf.VISIBILITY_PRIVATE,
     )
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        owner_type = attrs.get("owner_type")
+        owner_group = attrs.get("owner_group")
+        if owner_type == Shelf.OWNER_TYPE_USER and owner_group is not None:
+            raise serializers.ValidationError(
+                {"owner_group": "This field is not valid for user-owned shelves."}
+            )
+        if owner_type == Shelf.OWNER_TYPE_GROUP and not owner_group:
+            raise serializers.ValidationError(
+                {"owner_group": "This field is required for group-owned shelves."}
+            )
+        return attrs
 
-class ShelfPatchSerializer(serializers.Serializer):
-    name = serializers.CharField(required=False)
+
+class ShelfPatchSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     visibility = serializers.ChoiceField(
         choices=[Shelf.VISIBILITY_PRIVATE, Shelf.VISIBILITY_LISTED],
@@ -121,43 +122,8 @@ class ShelfPatchSerializer(serializers.Serializer):
     )
 
 
-class BookSummarySerializer(serializers.ModelSerializer):
-    authors = AuthorSummarySerializer(many=True, read_only=True)
-    series = serializers.SerializerMethodField(read_only=True)
-    has_file = serializers.SerializerMethodField(read_only=True)
-    cover_url = serializers.SerializerMethodField(read_only=True)
-
-    def get_series(self, obj: Book) -> dict[str, Any] | None:
-        link = getattr(obj, "book_series", None)
-        if link is None:
-            return None
-        return cast(dict[str, Any], SeriesSummarySerializer(link.series).data)
-
-    def get_has_file(self, obj: Book) -> bool:
-        return bool(getattr(obj, "book_file", None))
-
-    def get_cover_url(self, obj: Book) -> str | None:
-        cover = getattr(obj, "cover_file", None)
-        if not cover:
-            return None
-        try:
-            url = cover.url
-        except Exception:
-            return None
-
-        request = self.context.get("request")
-        if request is not None:
-            return request.build_absolute_uri(url)
-        return url
-
-    class Meta:
-        model = Book
-        fields = ["id", "title", "authors", "series", "has_file", "cover_url"]
-        read_only_fields = fields
-
-
 class ShelfItemSerializer(serializers.ModelSerializer):
-    book = BookSummarySerializer(read_only=True)
+    book = BookListSerializer(read_only=True)
     added_by = serializers.SerializerMethodField(read_only=True)
 
     def get_added_by(self, obj: ShelfItem) -> dict[str, Any] | None:
@@ -180,12 +146,48 @@ class ShelfItemSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class ShelfItemCreateSerializer(serializers.Serializer):
+class ShelfEditorItemSerializer(serializers.ModelSerializer):
+    book = serializers.SerializerMethodField(read_only=True)
+    unavailable = serializers.SerializerMethodField(read_only=True)
+    added_by = serializers.SerializerMethodField(read_only=True)
+
+    def _is_visible(self, obj: ShelfItem) -> bool:
+        return obj.id in self.context.get("visible_item_ids", set())
+
+    def get_book(self, obj: ShelfItem) -> dict[str, Any] | None:
+        if not self._is_visible(obj):
+            return None
+        return cast(
+            dict[str, Any],
+            BookListSerializer(obj.book, context=self.context).data,
+        )
+
+    def get_unavailable(self, obj: ShelfItem) -> bool:
+        return not self._is_visible(obj)
+
+    def get_added_by(self, obj: ShelfItem) -> dict[str, Any] | None:
+        user = obj.added_by
+        return compact_user_payload(user) if user is not None else None
+
+    class Meta:
+        model = ShelfItem
+        fields = [
+            "id",
+            "shelf",
+            "book",
+            "position",
+            "unavailable",
+            "added_by",
+        ]
+        read_only_fields = fields
+
+
+class ShelfItemCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     book = serializers.UUIDField()
     position = serializers.IntegerField(required=False, allow_null=True)
 
 
-class ShelfItemPatchSerializer(serializers.Serializer):
+class ShelfItemPatchSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     position = serializers.IntegerField(required=False)
     move = serializers.ChoiceField(choices=["up", "down"], required=False)
 

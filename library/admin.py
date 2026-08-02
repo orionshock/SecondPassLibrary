@@ -587,12 +587,12 @@ class LibraryGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    search_fields = ["name", "sort_name"]
+    search_fields = ["name", "sort_name", "normalized_name"]
 
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
-    search_fields = ["name", "sort_name"]
+    search_fields = ["name", "sort_name", "normalized_name"]
 
 
 class CatalogTagAdminForm(forms.ModelForm):

@@ -30,14 +30,26 @@ class LibraryCatalogBookViewTests(LibraryCatalogApiFixtureMixin, TestCase):
             ["Multi Group", "Visible One", "Visible Three", "Visible Two"],
         )
 
-    def test_book_list_rows_use_compact_tag_and_file_format_shape(self):
+    def test_book_list_rows_use_compact_catalog_tag_and_file_format_shape(self):
         response = self.client.get("/api/v1/library/books/", {"q": "Visible One"})
 
         self.assertEqual(response.status_code, 200)
         row = response.json()["results"][0]
-        self.assertEqual([tag["name"] for tag in row["tags"]], ["Fantasy"])
+        self.assertEqual([tag["name"] for tag in row["catalog_tags"]], ["Fantasy"])
+        self.assertNotIn("tags", row)
         self.assertEqual(row["file_format"], "epub")
-        for detail_field in ("catalog_tags", "file", "groups", "identifiers"):
+        for detail_field in (
+            "description",
+            "identifiers",
+            "groups",
+            "file",
+            "download_url",
+            "file_size",
+            "checksum",
+            "book_file",
+            "storage_path",
+            "source_filename",
+        ):
             self.assertNotIn(detail_field, row)
 
     def test_broad_role_can_list_all_books(self):

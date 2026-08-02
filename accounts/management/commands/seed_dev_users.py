@@ -19,7 +19,8 @@ from library.groups.memberships import add_user_to_group, remove_user_from_group
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
 from shelves.models import Shelf, ShelfItem
-from shelves.services import add_book_to_shelf, create_shelf, update_shelf
+from shelves.item_services import add_book_to_shelf
+from shelves.services import create_shelf, update_shelf
 
 
 User = get_user_model()

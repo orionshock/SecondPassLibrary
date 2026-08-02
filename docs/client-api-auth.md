@@ -18,7 +18,7 @@ This document describes the **Client API** pairing flow (human code + browser ap
 - **ClientLoginRequest**: a short-lived server-side object representing a pending "pair this client" request, created by a reader client and authorized by a human in a browser session.
 - **UserClientSession**: a server-side record representing a bearer token granted to a reader client for a specific user.
 - **Django web session**: browser/product UI login session managed by Django sessions (cookie + server-side session rows).
-- **ReadingSession**: a reading/progress session through a book in the `reading` domain model. Not related to authentication.
+- **ReadingSession**: a reading/progress Session through a Book in the `marginalia` domain. Not related to authentication.
 
 ## Pairing flow (code + approve + poll)
 
@@ -39,7 +39,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
 
 ### Human / browser
 
-1. User opens `authorize_url` in a browser.
+1. User opens `authorize_url` in a browser. The server returns this URL at `/profile/client-pairing?code=...` on the current origin.
 2. If needed, user logs in through any supported flow that establishes a
    normal authenticated Django browser session. This is local password login
    today and may include optional external login in the future.
@@ -90,18 +90,22 @@ Client API (JSON):
 - `{api_base_url}client-api/discovery/`
 - `{api_base_url}client-api/login-requests/`
 - `{api_base_url}client-api/login-requests/{id}/poll/`
+- `{api_base_url}client-api/pairing/lookup/` (session authenticated)
+- `{api_base_url}client-api/pairing/decision/` (session authenticated)
 
 `/.well-known/secondpass` is public server identity/discovery only. It includes
 `server_description`, but not banner text, advanced library group state,
-capabilities, or route manifests. Reader clients should use authenticated
-`GET /api/v1/accounts/me/` as refreshable context after pairing; `/me` includes
-`advanced_library_groups_enabled` for group browsing UI and `banner_text` for
-the single server banner.
+capabilities, route manifests, or the removed `server_release` field. Reader
+clients should use authenticated `GET /api/v1/server/info/` for refreshable
+server display context after pairing. It accepts bearer authentication and
+includes banner text, advanced-library-group mode, Public group identity,
+server version, and release date. `/me` remains limited to current-user identity,
+role, membership, and user-specific capability facts. Capability flags in `/me`
+are sparse and appear only when true; clients must treat omitted flags as false.
 
-Product UI (Django templates):
+Product UI (React):
 
-- `GET /client-api/authorize/` (code entry / confirmation UI; may accept `?code=...`)
-- `POST /client-api/authorize/` (approve or deny)
+- Code-entry and pairing approval UI is React-only at `/profile/client-pairing`. Its authenticated lookup/decision endpoints and the external client create/poll workflow remain under `/api/v1/client-api/`; there is no separate browser authorization-page URL.
 
 ## Permissions / API surface
 
@@ -111,11 +115,12 @@ Allowed surface is an explicit allow-list.
 
 | Domain | Bearer access | Notes |
 | --- | --- | --- |
-| `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, banner text, and advanced-groups state. Bearer `PATCH` is rejected. |
+| `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, and user-specific capabilities. Bearer `PATCH` is rejected. |
+| `GET /api/v1/server/info/` | read-only | Refreshes authenticated server-wide display context and Public group identity; it grants no membership or mutation authority. |
 | `/api/v1/library/` Books, broad book search, Authors, Series, Tags | read-only | List/detail/search endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list/search rows do not include groups. |
 | `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |
 | `/api/v1/library/groups/` and group-scoped Books/Auth/Series/Tags | read-only | Group reads require group visibility. Simple mode exposes Public/Common Room only. |
-| `/api/v1/reading/` sessions/progress/annotations | read/write for owned reading state | Bearer mutations are limited to the token owner's sessions, progress, and annotations. Writes that open/read/write a book require current book visibility. |
+| `/api/v1/marginalia/` Books/Sessions/progress/annotations | read/write for owned Marginalia | Bearer mutations are limited to the token owner's Sessions, progress, and annotations. Live writes require current Book authority. Import and Export are session-only. |
 | `/api/v1/shelves/` | read visible shelves; mutate own personal shelves only | Bearer may create/edit/delete the token user's personal shelves and add/move/remove items there. Group shelves and other users' shelves are read-only when visible. |
 
 Library details:
@@ -146,12 +151,12 @@ Exact Library routes, query parameters, and response schemas are owned by
   `is_public_group`). It contains no membership or user data. In simple mode,
   only Public/Common Room can appear. Reader clients may use that API context;
   the Product UI itself hides the Book Detail Groups tab in simple mode.
-- Book list, broad-search, and group-scoped Book rows use compact `tags` and
-  top-level `file_format`; they omit `catalog_tags`, `identifiers`, `groups`,
-  and the detail `file` object.
+- Book list, broad-search, and group-scoped Book rows use `catalog_tags` and
+  top-level `file_format`; they omit `identifiers`, `groups`, and the detail
+  `file` object.
 - Book detail uses `catalog_tags`, `identifiers`, visibility-scoped `groups`,
-  and the singular `file` object. It does not repeat compact-row `tags` or
-  top-level `file_format`. When no stored file exists, `file` is `null`.
+  and the singular `file` object. It does not include top-level `file_format`.
+  When no stored file exists, `file` is `null`.
 - Author, Series, Group, and Shelf list/detail payloads may opt into
   `preview_books` with `include_preview_books=true`; preview items contain only
   `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author
@@ -167,26 +172,22 @@ Exact Library routes, query parameters, and response schemas are owned by
   error. Storage names and paths are never returned. Cover URLs remain public
   display assets under `/media/covers/`.
 
-Reading details:
+Marginalia details:
 
-- Bearer clients should use normal Reading API endpoints for sync:
-  sessions, progress, annotations, `open`, `start-over`, `close`,
-  `recent`, and activity summary.
-- `POST /api/v1/reading/annotations/` supports optional `Idempotency-Key`
-  (recommended) for safe retries.
-- `POST /api/v1/reading/annotations/batch/` accepts bearer authentication. It
-  creates up to 100 annotations for one session owned by the token user, checks
-  current Book visibility, validates the complete request before writing, and
-  succeeds atomically with `201 {"annotations": [...]}`. Optional item
-  `client_id` values are echoed for client-side correlation.
-- For "continue reading" UIs, use
-  `GET /api/v1/reading/sessions/recent/?limit=10`.
-- Marginalia import/export endpoints are **session-only** and reject Client API
-  bearer tokens:
-  - `GET/POST /api/v1/reading/export/`
-  - `POST /api/v1/reading/import/preview/`
-  - `POST /api/v1/reading/import/apply/`
-  - `GET /api/v1/reading/import/unmatched/?import_token=<token>`
+- Bearer clients may use the owner-scoped Book and Session reads, lifecycle
+  commands, progress read/write, complete Session Annotation read, and atomic
+  Annotation batch synchronization under `/api/v1/marginalia/`.
+- Annotation batch synchronization accepts 1–100 operations, validates the
+  complete request, and returns the authoritative non-deleted collection.
+- `POST /api/v1/marginalia/books/<book_id>/start-over/` requires an
+  `Idempotency-Key`; its retry protocol is owned by Marginalia.
+- For recent Sessions, use
+  `GET /api/v1/marginalia/sessions/recent/?limit=10`.
+- Archive Import and Export are **session-only** and reject bearer tokens:
+  - `GET/POST /api/v1/marginalia/export/`
+  - `POST /api/v1/marginalia/import/preview/`
+  - `POST /api/v1/marginalia/import/apply/`
+  - `GET /api/v1/marginalia/import/unmatched/?import_token=<token>`
 
 Shelves details:
 
@@ -225,7 +226,7 @@ Management endpoints reject Client API tokens unless explicitly allowed.
 ## Product UI integration
 
 - `/profile/` lists active Device/API sessions (Client API sessions) for the current user and allows revoking them.
-- `/profile/` links to `/client-api/authorize/` to begin the human side of pairing.
+- The retired Django profile/authorization pages no longer provide the human side of pairing; `/profile/client-pairing` provides it in React.
 
 ## Non-goals
 

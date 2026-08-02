@@ -6,15 +6,15 @@ from django.test import TestCase
 
 from library.models import Book, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
-from shelves.services import (
+from shelves.item_queries import visible_shelf_items_for_user
+from shelves.item_services import (
     add_book_to_shelf,
     canonicalize_shelf_positions,
-    create_shelf,
     move_shelf_item,
     remove_book_from_shelf,
     set_shelf_item_position,
-    visible_shelf_items_for_user,
 )
+from shelves.services import create_shelf
 from tests.shelves.service_helpers import ShelfServiceFixtureMixin
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book

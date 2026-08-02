@@ -7,7 +7,8 @@ Current apps:
 - `core`: shared base models, server settings, utilities
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
-- `reading`: reading sessions, progress, annotations
+- `marginalia`: Reading Sessions, Session progress, located annotations,
+  archive Import/Export, and owned-Marginalia Book projections
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
 
 Operator recovery workflows in the Django admin are documented in
@@ -27,6 +28,11 @@ Notes:
   and disables normal group mutation endpoints while off. Disabling after
   enablement is an operator recovery action through Django admin.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
+- The optional Reading Client root URL uses
+  `ServerSetting(reading_client_base_url)` unless the nonblank
+  `SECOND_PASS_READING_CLIENT_BASE_URL` environment hard override is present.
+  The effective non-secret value is authenticated server context; it is not
+  current-user identity or anonymous discovery data.
 
 ## Shelves
 
@@ -49,9 +55,9 @@ Avoid putting workflows in serializers, viewsets, `Model.save()`, admin classes,
 
 Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
 
-- Django **session authentication** (supports browser-based development and the DRF browsable API)
+- Django **session authentication** for the React Product UI
 - Explicit **Client API bearer token authentication** on selected reader-client endpoints
-- DRF browsable API login/logout at `/api-auth/`
+- Session login/logout at `/login/` and `/logout/`
 - Optional Django admin at `/admin/` when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`
   (service hatch; not the product UI)
 
@@ -60,8 +66,12 @@ Position:
 - Django `User` is the canonical local user record.
 - `accounts.UserProfile` stores the app-level global role (`manager|librarian|reader`).
 - `accounts.UserWebSession` tracks active Django web sessions to support revocation (companion tracking only; does not replace Django sessions).
-- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, selected library read/download endpoints, shelves with conservative write rules, and reading user-data endpoints).
+- Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, `/api/v1/server/info/`, selected library read/download endpoints, shelves with conservative write rules, and selected Marginalia endpoints).
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
+- Authenticated server-wide display context belongs to `/api/v1/server/info/`;
+  current-user identity, memberships, and user-specific capabilities belong to
+  `/api/v1/accounts/me/`. Public `/.well-known/secondpass` remains a smaller
+  anonymous discovery contract.
 - CORS is open for API/discovery endpoints only, with credentials disabled, so
   independent browser reader clients can use bearer tokens from another origin.
   Product UI session-auth routes are intentionally not CORS-open.
@@ -175,6 +185,14 @@ If an existing Book loses its `book_file` or points to a missing physical EPUB
 on disk, treat that as an operator repair state. Do not delete and re-import the
 Book merely to restore the EPUB, because Book deletion can destroy related user
 reading data.
+
+File and cover diagnostics use bounded structured operational logs. Storage
+failures identify the action, Book id, and authenticated profile id when
+available, plus the exception class and a sanitized message. They must not log
+storage keys, filesystem paths, checksums, uploads, or response payloads.
+Missing EPUB downloads and primary cover-storage failures return stable bounded
+API errors. Old-cover deletion remains best-effort post-commit cleanup and must
+not turn a successful cover replacement or clear into an API failure.
 
 ## Library import services (current)
 

@@ -18,6 +18,28 @@ class LibraryBearerGroupReadTests(LibraryBearerApiTestCase):
         self.assertEqual(visible.status_code, 200)
         self.assertEqual(hidden.status_code, 404)
 
+    def test_book_filter_and_previews_preserve_bearer_group_visibility(self):
+        visible = self.bearer_get(
+            "/api/v1/library/groups/",
+            {
+                "book": str(self.multi_group.id),
+                "include_preview_books": "true",
+            },
+        )
+        hidden = self.bearer_get(
+            "/api/v1/library/groups/",
+            {"book": str(self.hidden_book.id)},
+        )
+
+        self.assertEqual(visible.status_code, 200)
+        self.assertEqual(
+            [row["id"] for row in visible.json()["results"]],
+            [str(self.public.id)],
+        )
+        self.assertIn("preview_books", visible.json()["results"][0])
+        self.assertEqual(hidden.status_code, 200)
+        self.assertEqual(hidden.json()["results"], [])
+
     def test_group_scoped_catalog_axes_are_bearer_readable(self):
         base = f"/api/v1/library/groups/{self.public.id}/"
         for axis in ["books", "authors", "series", "tags"]:

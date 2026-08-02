@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from library.models import Book, BookIdentifier
+from library.models import Author, Book, BookIdentifier
 from tests.library.imports.helpers import metadata_xml, minimal_epub_bytes, zip_bytes
 from tests.library.imports.upload_api_helpers import (
     LibraryImportUploadApiTestCase,
@@ -28,6 +28,32 @@ class LibraryImportUploadResultTests(
         self.assertEqual(payload["items"][0]["status"], "imported")
         self.assertEqual(payload["items"][0]["source_label"], "sample.epub")
         self.assertTrue(payload["items"][0]["book_id"])
+        self.assertEqual(payload["items"][0]["title"], "Sample EPUB")
+        self.assertEqual(payload["items"][0]["authors"], ["Sample Author"])
+        self.assertNotIn("series", payload["items"][0])
+        self.assertNotIn("series_index", payload["items"][0])
+
+    def test_imported_result_includes_ordered_authors_and_series(self):
+        self.login_librarian()
+        epub = minimal_epub_bytes(metadata_xml="""
+            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+              <dc:title>The Butlerian Jihad</dc:title>
+              <dc:creator>Brian Herbert</dc:creator>
+              <dc:creator>Kevin J. Anderson</dc:creator>
+              <dc:language>en</dc:language>
+              <meta name="calibre:series" content="Legends of Dune"/>
+              <meta name="calibre:series_index" content="1.25"/>
+            </metadata>
+        """)
+
+        response = self.client.post(self.url, {"file": upload_file("book.epub", epub)})
+
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["items"][0]
+        self.assertEqual(item["title"], "The Butlerian Jihad")
+        self.assertEqual(item["authors"], ["Brian Herbert", "Kevin J. Anderson"])
+        self.assertEqual(item["series"], "Legends of Dune")
+        self.assertEqual(item["series_index"], "1.25")
 
     def test_zip_upload_returns_batch_result(self):
         self.login_librarian()
@@ -73,6 +99,8 @@ class LibraryImportUploadResultTests(
         payload = response.json()
         self.assertEqual(payload["counts"]["duplicate"], 1)
         self.assertEqual(payload["items"][0]["status"], "duplicate")
+        self.assertEqual(payload["items"][0]["title"], "Sample EPUB")
+        self.assertEqual(payload["items"][0]["authors"], ["Sample Author"])
 
     def test_zip_partial_failure_returns_item_level_failure(self):
         self.login_librarian()
@@ -96,6 +124,8 @@ class LibraryImportUploadResultTests(
         self.assertEqual(payload["counts"]["imported"], 1)
         self.assertEqual([item["status"] for item in payload["items"]], ["failed", "imported"])
         self.assertNotIn("book_id", payload["items"][0])
+        self.assertNotIn("title", payload["items"][0])
+        self.assertNotIn("authors", payload["items"][0])
         self.assertTrue(payload["items"][1]["book_id"])
 
     def test_identifier_conflict_returns_conflict_item(self):
@@ -126,3 +156,31 @@ class LibraryImportUploadResultTests(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(payload["counts"]["conflict"], 1)
         self.assertEqual(payload["items"][0]["status"], "conflict")
+        self.assertEqual(payload["items"][0]["source_label"], "conflict.epub")
+        self.assertEqual(
+            payload["items"][0]["safe_message"],
+            "An identifier from this import already belongs to another book.",
+        )
+        self.assertEqual(payload["items"][0]["title"], "Existing")
+        self.assertNotIn("checksum", payload["items"][0])
+
+    def test_ambiguous_author_identity_returns_bounded_conflict_without_a_book(self):
+        self.login_librarian()
+        for name in ("Sample Author", "Ｓample Author"):
+            Author.objects.create(
+                name=name,
+                sort_name=name,
+                normalized_name="sample author",
+            )
+
+        response = self.client.post(
+            self.url,
+            {"file": upload_file("ambiguous.epub", minimal_epub_bytes())},
+        )
+
+        payload = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["counts"]["conflict"], 1)
+        self.assertEqual(payload["items"][0]["status"], "conflict")
+        self.assertNotIn("book_id", payload["items"][0])
+        self.assertFalse(Book.objects.filter(title="Sample EPUB").exists())
