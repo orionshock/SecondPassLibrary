@@ -3,15 +3,27 @@ import { useRef, useState, type FormEvent } from "react";
 import { useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
+import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import type { ImportResultBookNavigation } from "./components/ImportResultItemComponent";
 import { ImportResultPageRegion } from "./regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "./regions/ImportUploadPageRegion";
 import "./Imports.css";
 
 export const importsBreadcrumbFallback = [] as const;
+
+export function importResultBookNavigation(bookId: string, title: string): ImportResultBookNavigation {
+  return {
+    to: `/library/books/${encodeURIComponent(bookId)}`,
+    state: breadcrumbNavigationState([
+      { label: "Book Import", to: "/imports", resetTrail: true, icon: "import" },
+      { label: title, icon: "book" },
+    ]),
+  };
+}
 
 export function ImportsOrchestrator() {
   usePageBreadcrumbs(importsBreadcrumbFallback);
@@ -39,7 +51,7 @@ export function ImportsOrchestrator() {
 
   return <ProductPageShellComponent className="imports-page" title="Imports">
     <ImportUploadPageRegion state={state} inputRef={inputRef} onFileChange={(value) => { setFile(value); setState(idleMutationState); }} onSubmit={(event) => void submit(event)} />
-    <ImportResultPageRegion result={result} />
+    <ImportResultPageRegion result={result} bookNavigation={importResultBookNavigation} />
   </ProductPageShellComponent>;
 }
 

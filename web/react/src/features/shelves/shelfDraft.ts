@@ -23,6 +23,10 @@ export const emptyShelfDraft: ShelfDraft = {
   visibility: "private",
 };
 
+export function shelfDraftForGroupOwner(groupId: string): ShelfDraft {
+  return { ...emptyShelfDraft, ownerType: "group", ownerGroupId: groupId };
+}
+
 export function shelfDraftFromSummary(shelf: ShelfSummary): ShelfDraft {
   return {
     name: shelf.name,

@@ -10,7 +10,8 @@ import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellC
 import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "./regions/ShelfItemsPageRegion";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
-import { shelfEditNavigationState, shelfEditPath } from "./shelfLifecycle";
+import { shelfEditPath } from "../../shared/shelves/shelfNavigation";
+import { shelfEditNavigationState } from "./shelfLifecycle";
 import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "./shelfScopes";
 import {
   shelfDetailPath,

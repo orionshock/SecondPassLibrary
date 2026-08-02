@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError, type LibraryGroupsQuery, type Page } from "@second-pass/spl-api";
 import { loadPageWithRecovery } from "../app/routing/pageRecovery";
-import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback, groupShelfBookBreadcrumbs, groupShelfBreadcrumbs, groupsListBreadcrumbFallback } from "../features/groups/groupsBreadcrumbs";
+import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback, groupShelfBookBreadcrumbs, groupShelfBreadcrumbs, groupShelfEditBreadcrumbs, groupsListBreadcrumbFallback } from "../features/groups/groupsBreadcrumbs";
 
 describe("Groups orchestrator contracts", () => {
   it("uses no base breadcrumb and a canonical detail and Book trail", () => {
@@ -30,6 +30,12 @@ describe("Groups orchestrator contracts", () => {
       { label: "Shelves", to: "/groups/group%2Fid?tab=shelves", icon: "shelf" },
       { label: "Favorites", to: "/shelves/shelf%2Fid", icon: "shelf" },
       { label: "Book", icon: "book" },
+    ]);
+    expect(groupShelfEditBreadcrumbs(
+      "group/id", "Readers", "shelf/id", "Favorites", "/groups/group%2Fid?tab=shelves",
+    ).slice(-2)).toEqual([
+      { label: "Favorites", to: "/shelves/shelf%2Fid", icon: "shelf" },
+      { label: "Edit" },
     ]);
     expect(groupDetailBreadcrumbFallback("Common Room", true)[1]).toEqual({ label: "Common Room", icon: "public-group" });
   });

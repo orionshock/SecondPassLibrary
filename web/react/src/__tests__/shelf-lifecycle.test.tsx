@@ -5,8 +5,16 @@ import { describe, expect, it, vi } from "vitest";
 import type { CurrentUser, LibraryGroup, ShelfEditorItemsPage, ShelfSummary } from "@second-pass/spl-api";
 import { breadcrumbNavigationState, readIncomingBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
+  authorizedShelfCreateGroupContext,
+  canCreateShelfForGroup,
+  readShelfCreateGroupContext,
+  shelfCreateGroupReturnNavigationState,
+  shelfCreateNavigationStateForGroup,
+} from "../shared/shelves/shelfNavigation";
+import {
   createShelfInputFromDraft,
   emptyShelfDraft,
+  shelfDraftForGroupOwner,
   shelfDraftFromSummary,
   shelfDraftsEqual,
   updateShelfInputFromDraft,
@@ -108,6 +116,56 @@ describe("Shelf lifecycle contracts", () => {
     };
     expect(localManageableShelfGroups(simpleLibrarian, false).map(({ id }) => id)).toEqual(["public"]);
     expect(shouldLoadAllShelfGroups(simpleLibrarian, true)).toBe(true);
+
+    expect(canCreateShelfForGroup(simpleLibrarian, publicGroup)).toBe(true);
+    expect(canCreateShelfForGroup(curator, publicGroup)).toBe(false);
+    expect(canCreateShelfForGroup(curator, { ...publicGroup, id: "group", isPublicGroup: false })).toBe(true);
+    expect(canCreateShelfForGroup(baseUser, { ...publicGroup, id: "group", isPublicGroup: false })).toBe(false);
+  });
+
+  it("carries exact Group ownership through Shelf create navigation", () => {
+    const librarian = {
+      ...baseUser,
+      role: "librarian",
+      isReader: false,
+      isLibrarian: true,
+    };
+    const state = shelfCreateNavigationStateForGroup(publicGroup, "/groups/public?tab=shelves&page=2");
+    const context = authorizedShelfCreateGroupContext(librarian, state)!;
+    expect(readShelfCreateGroupContext(state)).toEqual(context);
+    expect(context.groupId).toBe("public");
+    expect(shelfDraftForGroupOwner(context.groupId)).toMatchObject({
+      ownerType: "group",
+      ownerGroupId: "public",
+    });
+    expect(createShelfInputFromDraft({
+      ...shelfDraftForGroupOwner(context.groupId),
+      name: "Group picks",
+    })).toMatchObject({ ownerType: "group", ownerGroupId: "public" });
+    expect(emptyShelfDraft).toMatchObject({ ownerType: "user", ownerGroupId: "" });
+
+    const returnTrail = readIncomingBreadcrumbTrail(shelfCreateGroupReturnNavigationState(context))!;
+    expect(context.returnTo).toBe("/groups/public?tab=shelves&page=2");
+    expect(returnTrail.map(({ icon }) => icon)).toEqual(["group", "public-group"]);
+
+    const successTrail = readIncomingBreadcrumbTrail(shelfEditNavigationState(state, groupShelf))!;
+    expect(successTrail.map(({ icon }) => icon)).toEqual(["group", "public-group", "shelf", undefined]);
+    expect(successTrail[1]?.to).toBe("/groups/public?tab=shelves&page=2");
+  });
+
+  it("rejects unauthorized or malformed Group Shelf create context", () => {
+    const customGroup = { ...publicGroup, id: "custom", isPublicGroup: false };
+    const state = shelfCreateNavigationStateForGroup(customGroup, "/groups/custom?tab=shelves");
+    expect(authorizedShelfCreateGroupContext(baseUser, state)).toBeUndefined();
+    expect(readShelfCreateGroupContext({
+      ...state,
+      shelfCreateGroupContext: {
+        groupId: "custom",
+        groupName: "Custom",
+        isPublicGroup: false,
+        returnTo: "/server",
+      },
+    })).toBeUndefined();
   });
 
   it("uses explicit lifecycle breadcrumbs and confirmation", () => {

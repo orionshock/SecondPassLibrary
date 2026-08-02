@@ -7,8 +7,9 @@ import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPrevie
 import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
+import { shelfNewPath } from "../../../shared/shelves/shelfNavigation";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
-import { shelfNewBreadcrumbs, shelfNewPath } from "../shelfLifecycle";
+import { shelfNewBreadcrumbs } from "../shelfLifecycle";
 import { ShelfScopesPageRegion } from "./ShelfScopesPageRegion";
 
 const shelfOrderingOptions: readonly OrderMenuOption<ShelfOrdering>[] = [

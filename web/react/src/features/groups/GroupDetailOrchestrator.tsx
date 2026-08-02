@@ -19,6 +19,11 @@ import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import {
+  canCreateShelfForGroup,
+  shelfCreateNavigationStateForGroup,
+  shelfNewPath,
+} from "../../shared/shelves/shelfNavigation";
 import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
 import { groupEditNavigationState, groupEditPath } from "./groupsBreadcrumbs";
@@ -161,6 +166,7 @@ export function GroupDetailOrchestrator() {
     (membership) => membership.id === group.id && membership.isCurator,
   ));
   const canManage = Boolean(group && canManageGroup(currentUser, group, serverInfo.advancedLibraryGroupsEnabled));
+  const canCreateGroupShelf = Boolean(group && canCreateShelfForGroup(currentUser, group));
   const currentPath = groupDetailPath(groupId, queryState);
 
   return <ProductPageShellComponent className="groups-page group-detail-page">
@@ -223,6 +229,10 @@ export function GroupDetailOrchestrator() {
       groupName={group.name}
       isPublicGroup={group.isPublicGroup}
       groupPath={currentPath}
+      createPath={canCreateGroupShelf ? shelfNewPath() : undefined}
+      createNavigationState={canCreateGroupShelf
+        ? shelfCreateNavigationStateForGroup(group, currentPath)
+        : undefined}
       page={shelves.page}
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}

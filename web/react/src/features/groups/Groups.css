@@ -201,6 +201,12 @@
 
 .group-shelf-rows { display: grid; gap: 0.45rem; }
 
+.group-shelves-region__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.65rem;
+}
+
 .group-shelves-region > .pager-component { margin-top: 0.75rem; }
 
 .group-member-row-component {

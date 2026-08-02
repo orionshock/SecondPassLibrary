@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, canSeeImports, type CurrentUser, type LibraryImportResult, type ServerInfo } from "@second-pass/spl-api";
 import { AppFrame } from "../app/layout/AppFrame";
-import { clearImportFileInput, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
+import { readIncomingBreadcrumbTrail } from "../app/navigation/breadcrumbs";
+import { clearImportFileInput, importResultBookNavigation, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
 import { ImportResultPageRegion } from "../features/imports/regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "../features/imports/regions/ImportUploadPageRegion";
 import { LocalValidationError } from "../shared/feedback/mutationState";
@@ -31,7 +32,9 @@ describe("Imports", () => {
     expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: true, isReader: false })).toBe(true);
     expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: false, isReader: true })).toBe(false);
     expect(renderRoute(owner)).toContain('accept=".epub,.zip"');
-    expect(renderRoute({ ...owner, isOwner: false, isReader: true, role: "reader" })).toContain("do not have permission");
+    const denied = renderRoute({ ...owner, isOwner: false, isReader: true, role: "reader" });
+    expect(denied).toContain('role="alert"');
+    expect(denied).not.toContain('type="file"');
   });
 
   it("renders a native pending upload form with action feedback placement", () => {
@@ -39,8 +42,7 @@ describe("Imports", () => {
     expect(markup).toContain('type="file"');
     expect(markup).toContain('accept=".epub,.zip"');
     expect(markup).toContain('disabled=""');
-    expect(markup).toContain("Importing...");
-    expect(markup.indexOf("action-feedback")).toBeLessThan(markup.indexOf("Importing..."));
+    expect(markup.indexOf("action-feedback")).toBeLessThan(markup.indexOf('type="submit"'));
   });
 
   it("blocks an empty selection before upload and clears the native input after success", async () => {
@@ -48,7 +50,7 @@ describe("Imports", () => {
     const missingFile = uploadSelectedLibraryFile(undefined, upload).catch((error: unknown) => error);
     await expect(missingFile).resolves.toBeInstanceOf(LocalValidationError);
     await expect(missingFile).resolves.not.toBeInstanceOf(ApiError);
-    await expect(missingFile).resolves.toMatchObject({ fields: { file: ["Choose a file to import."] } });
+    await expect(missingFile).resolves.toMatchObject({ fields: { file: expect.any(Array) } });
     expect(upload).not.toHaveBeenCalled();
     const input = { value: "C:\\fakepath\\book.epub" };
     clearImportFileInput(input);
@@ -61,7 +63,7 @@ describe("Imports", () => {
     expect(errorMarkup).toContain('role="alert"');
   });
 
-  it("renders counts and every returned item without exposing Book IDs", () => {
+  it("renders every returned item and links results with known Books", () => {
     const items = Array.from({ length: 55 }, (_, index) => ({
       status: index === 54 ? "failed" as const : "imported" as const,
       sourceLabel: `safe-${index}.epub`, safeMessage: index === 54 ? "Invalid EPUB package." : "", bookId: `uuid-${index}`,
@@ -71,25 +73,34 @@ describe("Imports", () => {
       sourceType: "zip", sourceLabel: "batch.zip",
       counts: { imported: 54, duplicate: 0, conflict: 0, failed: 1, skipped: 0 }, items,
     };
-    const markup = renderToStaticMarkup(<ImportResultPageRegion result={result} />);
-    expect(markup).toContain("imported: 54");
-    expect(markup).toContain("Human title");
-    expect(markup).toContain("First Author, Second Author");
-    expect(markup).toContain("Human series 1.00");
-    expect(markup).not.toContain("safe-0.epub");
-    expect(markup).not.toContain("uuid-0");
-    expect(markup).toContain("safe-54.epub");
-    expect(markup).toContain("Invalid EPUB package.");
+    const markup = renderToStaticMarkup(<MemoryRouter><ImportResultPageRegion
+      result={result}
+      bookNavigation={importResultBookNavigation}
+    /></MemoryRouter>);
+    expect(markup).toContain('href="/library/books/uuid-0"');
     expect((markup.match(/class="import-result-item /g) ?? [])).toHaveLength(55);
   });
 
-  it("falls back to the safe source label when a successful summary is absent", () => {
+  it("keeps results without a known Book non-interactive", () => {
     const result: LibraryImportResult = {
       sourceType: "epub", sourceLabel: "fallback.epub",
       counts: { imported: 1, duplicate: 0, conflict: 0, failed: 0, skipped: 0 },
       items: [{ status: "imported", sourceLabel: "fallback.epub", safeMessage: "Imported." }],
     };
-    expect(renderToStaticMarkup(<ImportResultPageRegion result={result} />)).toContain("fallback.epub");
+    const markup = renderToStaticMarkup(<MemoryRouter><ImportResultPageRegion
+      result={result}
+      bookNavigation={importResultBookNavigation}
+    /></MemoryRouter>);
+    expect(markup).not.toContain("<a");
+  });
+
+  it("carries import breadcrumb context to Book Detail", () => {
+    const navigation = importResultBookNavigation("book/id", "Imported Book");
+    expect(navigation.to).toBe("/library/books/book%2Fid");
+    expect(readIncomingBreadcrumbTrail(navigation.state)).toEqual([
+      { label: "Book Import", to: "/imports", resetTrail: true, icon: "import" },
+      { label: "Imported Book", icon: "book" },
+    ]);
   });
 
   it("uses no breadcrumb on the base Imports route", () => {

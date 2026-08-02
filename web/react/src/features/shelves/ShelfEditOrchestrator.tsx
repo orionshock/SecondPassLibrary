@@ -28,6 +28,7 @@ import {
 } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { shelfDetailPathForId } from "../../shared/shelves/shelfNavigation";
 import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
 import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
@@ -46,7 +47,6 @@ import {
   confirmUnavailableShelfItemRemoval,
   readShelfLifecycleSuccessMessage,
   shelfDetailNavigationStateFromEdit,
-  shelfDetailPathForId,
   shelfEditBreadcrumbs,
 } from "./shelfLifecycle";
 import {

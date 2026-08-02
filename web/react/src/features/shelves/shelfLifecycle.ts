@@ -12,22 +12,11 @@ import {
   type BreadcrumbItem,
 } from "../../app/navigation/breadcrumbs";
 import { confirmDangerousAction } from "../../shared/confirmations/confirmDangerousAction";
+import { shelfDetailPathForId } from "../../shared/shelves/shelfNavigation";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
 import { shelfScopeBreadcrumb, shelfScopeFromSummary } from "./shelfScopes";
 
 export type ShelfLifecycleMode = "new" | "edit";
-
-export function shelfNewPath(): string {
-  return "/shelves/new";
-}
-
-export function shelfEditPath(shelfId: string): string {
-  return `/shelves/${encodeURIComponent(shelfId)}/edit`;
-}
-
-export function shelfDetailPathForId(shelfId: string): string {
-  return `/shelves/${encodeURIComponent(shelfId)}`;
-}
 
 export function shelfNewBreadcrumbs(scope: ShelfScope = "personal"): BreadcrumbItem[] {
   return [

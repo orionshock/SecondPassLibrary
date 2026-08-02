@@ -14,10 +14,16 @@ import {
   type MutationState,
 } from "../../shared/feedback/mutationState";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import {
+  authorizedShelfCreateGroupContext,
+  shelfCreateGroupReturnNavigationState,
+  shelfEditPath,
+} from "../../shared/shelves/shelfNavigation";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
 import {
   createShelfInputFromDraft,
   emptyShelfDraft,
+  shelfDraftForGroupOwner,
   shelfDraftFromSummary,
   shelfDraftsEqual,
   validateShelfDraft,
@@ -28,7 +34,7 @@ import {
   localManageableShelfGroups,
   readShelfLifecycleSuccessMessage,
   shelfEditBreadcrumbs,
-  shelfEditPath,
+  shelfEditNavigationState,
   shelfLifecycleNavigationState,
   shelfNewBreadcrumbs,
   shouldLoadAllShelfGroups,
@@ -46,12 +52,31 @@ export function ShelfCreateOrchestrator() {
   const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
+  const groupContext = useMemo(
+    () => authorizedShelfCreateGroupContext(currentUser, location.state),
+    [currentUser, location.state],
+  );
+  const contextGroupChoice = useMemo<LibraryGroup | undefined>(() => (groupContext
+    ? {
+      id: groupContext.groupId,
+      name: groupContext.groupName,
+      description: "",
+      isPublicGroup: groupContext.isPublicGroup,
+    }
+    : undefined), [groupContext]);
+  const initialLocalGroups = localManageableShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled);
+  const initialGroups = contextGroupChoice
+    ? withGroupChoice(initialLocalGroups, contextGroupChoice)
+    : initialLocalGroups;
+  const initialDraft = groupContext
+    ? shelfDraftForGroupOwner(groupContext.groupId)
+    : { ...emptyShelfDraft };
   const [groups, setGroups] = useState<GroupChoicesLoad>(() => ({
     loading: shouldLoadAllShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled),
-    items: localManageableShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled),
+    items: initialGroups,
   }));
-  const [draft, setDraft] = useState<ShelfDraft>({ ...emptyShelfDraft });
-  const [baseline, setBaseline] = useState<ShelfDraft>({ ...emptyShelfDraft });
+  const [draft, setDraft] = useState<ShelfDraft>(initialDraft);
+  const [baseline, setBaseline] = useState<ShelfDraft>(initialDraft);
   const [mutation, setMutation] = useState<MutationState>(() => ({
     ...idleMutationState,
     ...(readShelfLifecycleSuccessMessage(location.state)
@@ -84,18 +109,23 @@ export function ShelfCreateOrchestrator() {
 
   useEffect(() => {
     if (!shouldLoadAllShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled)) {
-      setGroups({ loading: false, items: localManageableShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled) });
+      const local = localManageableShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled);
+      setGroups({ loading: false, items: contextGroupChoice ? withGroupChoice(local, contextGroupChoice) : local });
       return;
     }
     let active = true;
-    setGroups({ loading: true, items: [] });
+    setGroups({ loading: true, items: contextGroupChoice ? [contextGroupChoice] : [] });
     listAllLibraryGroups()
       .then((items) => { if (active) setGroups({ loading: false, items }); })
       .catch((error: unknown) => {
-        if (active) setGroups({ loading: false, items: [], error: normalizeMutationError(error) });
+        if (active) setGroups({
+          loading: false,
+          items: contextGroupChoice ? [contextGroupChoice] : [],
+          error: normalizeMutationError(error),
+        });
       });
     return () => { active = false; };
-  }, [currentUser, serverInfo.advancedLibraryGroupsEnabled]);
+  }, [contextGroupChoice, currentUser, serverInfo.advancedLibraryGroupsEnabled]);
 
   function change<K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -125,10 +155,15 @@ export function ShelfCreateOrchestrator() {
       allowNavigation.current = true;
       navigate(shelfEditPath(saved.id), {
         replace: true,
-        state: shelfLifecycleNavigationState(
-          shelfEditBreadcrumbs(saved.id, saved.name, shelfScopeFromSummary(saved)),
-          "Shelf saved.",
-        ),
+        state: groupContext
+          ? {
+            ...shelfEditNavigationState(location.state, saved),
+            shelfLifecycleSuccessMessage: "Shelf saved.",
+          }
+          : shelfLifecycleNavigationState(
+            shelfEditBreadcrumbs(saved.id, saved.name, shelfScopeFromSummary(saved)),
+            "Shelf saved.",
+          ),
       });
     } catch (error: unknown) {
       setMutation({ pending: false, error: normalizeMutationError(error) });
@@ -138,6 +173,10 @@ export function ShelfCreateOrchestrator() {
   function cancel() {
     if (dirty && !window.confirm("Discard unsaved Shelf changes?")) return;
     allowNavigation.current = true;
+    if (groupContext) {
+      navigate(groupContext.returnTo, { state: shelfCreateGroupReturnNavigationState(groupContext) });
+      return;
+    }
     navigate(shelfScopePath(originatingScope), { state: null });
   }
 
@@ -158,4 +197,8 @@ export function ShelfCreateOrchestrator() {
       onDelete={() => undefined}
     />
   </ProductPageShellComponent>;
+}
+
+function withGroupChoice(groups: readonly LibraryGroup[], group: LibraryGroup): LibraryGroup[] {
+  return groups.some(({ id }) => id === group.id) ? [...groups] : [...groups, group];
 }

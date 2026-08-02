@@ -124,6 +124,23 @@ export function groupShelfBookBreadcrumbs(
   return [...trail, { label: bookTitle, icon: "book" }];
 }
 
+export function groupShelfEditBreadcrumbs(
+  groupId: string,
+  groupName: string,
+  shelfId: string,
+  shelfName: string,
+  shelvesPath: string,
+  isPublicGroup = false,
+): BreadcrumbItem[] {
+  const trail = groupShelfBreadcrumbs(groupId, groupName, shelfName, shelvesPath, isPublicGroup);
+  trail[trail.length - 1] = {
+    label: shelfName,
+    to: `/shelves/${encodeURIComponent(shelfId)}`,
+    icon: "shelf",
+  };
+  return [...trail, { label: "Edit" }];
+}
+
 function groupBreadcrumbIcon(isPublicGroup: boolean): "group" | "public-group" {
   return isPublicGroup ? "public-group" : "group";
 }
