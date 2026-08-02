@@ -37,6 +37,7 @@ export interface LibraryAxisQuery {
   tag?: string;
   ordering?: LibraryAxisOrdering;
   includePreviewBooks?: boolean;
+  previewLimit?: number;
   page?: number;
   pageSize?: number;
 }
@@ -347,7 +348,7 @@ export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient
 
 export async function getAuthor(authorId: string, client: ApiClient = apiClient): Promise<LibraryAuthor> {
   return mapLibraryAuthor(await client.request<LibraryAuthorResponse>(
-    `/api/v1/library/authors/${encodeURIComponent(authorId)}/?include_preview_books=true`,
+    `/api/v1/library/authors/${encodeURIComponent(authorId)}/`,
   ));
 }
 
@@ -379,7 +380,7 @@ export async function deleteAuthor(authorId: string, client: ApiClient = apiClie
 
 export async function getSeries(seriesId: string, client: ApiClient = apiClient): Promise<LibrarySeries> {
   return mapLibrarySeries(await client.request<LibrarySeriesResponse>(
-    `/api/v1/library/series/${encodeURIComponent(seriesId)}/?include_preview_books=true`,
+    `/api/v1/library/series/${encodeURIComponent(seriesId)}/`,
   ));
 }
 
@@ -456,9 +457,19 @@ async function listLibraryAxis<Response, Item>(
   if (query.tag) parameters.set("tag", query.tag);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.previewLimit !== undefined) parameters.set("preview_limit", String(query.previewLimit));
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
-  return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
+  try {
+    return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || !error.fields?.preview_limit) throw error;
+    const { preview_limit: previewLimit, ...fields } = error.fields;
+    throw new ApiError(error.message, error.status, {
+      code: error.code,
+      fields: { ...fields, previewLimit },
+    });
+  }
 }
 
 async function listAllLibraryAxis<Response, Item>(

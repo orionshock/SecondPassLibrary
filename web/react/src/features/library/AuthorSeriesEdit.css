@@ -95,11 +95,33 @@
   font-size: 0.85rem;
 }
 
-.author-series-attached-books .book-cover-preview-strip-component {
-  gap: 0.55rem;
+.author-series-attached-books__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.75rem, 5.75rem));
+  gap: 0.7rem;
+  justify-content: start;
+  min-width: 0;
 }
 
-.author-series-attached-books .book-cover-component { width: 4rem; }
+.author-series-attached-books__grid a {
+  min-width: 0;
+  border-radius: 0.4rem;
+}
+
+.author-series-attached-books__grid a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.author-series-attached-books__grid .book-cover-component { width: 100%; }
+
+.author-series-attached-books__status:empty { display: none; }
+
+.author-series-attached-books__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 
 @media (max-width: 38rem) {
   .author-series-edit-form .form-field {

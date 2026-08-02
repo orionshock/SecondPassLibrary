@@ -6,10 +6,12 @@ import {
   deleteSeries,
   getAuthor,
   getSeries,
+  listBooks,
   updateAuthor,
   updateSeries,
   type LibraryAuthor,
   type LibrarySeries,
+  type BookPreview,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -31,6 +33,11 @@ import {
 } from "./authorSeriesEditDraft";
 import { confirmAuthorSeriesDelete, isAttachedBookConflict } from "./authorSeriesDelete";
 import {
+  AttachedBooksRequestGate,
+  appendAttachedBooks,
+  attachedBooksQuery,
+} from "./authorSeriesAttachedBooks";
+import {
   libraryEntityAxisPath,
   libraryEntityBreadcrumbs,
   libraryEntityEditPath,
@@ -50,6 +57,20 @@ import "./AuthorSeriesEdit.css";
 
 type Entity = LibraryAuthor | LibrarySeries;
 type LoadState = { status: "loading" } | { status: "ready"; entity?: Entity } | { status: "not-found" } | { status: "error"; error: Error };
+type AttachedBooksState = {
+  books: BookPreview[];
+  total: number;
+  nextPage: number | null;
+  pending: boolean;
+  error?: Error;
+};
+
+const emptyAttachedBooksState: AttachedBooksState = {
+  books: [],
+  total: 0,
+  nextPage: 1,
+  pending: false,
+};
 
 export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   kind: LibraryEntityKind;
@@ -68,6 +89,9 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     ...(readLibraryEntitySuccessMessage(location.state) ? { message: readLibraryEntitySuccessMessage(location.state) } : {}),
   }));
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
+  const [attachedBooks, setAttachedBooks] = useState<AttachedBooksState>(emptyAttachedBooksState);
+  const [attachedBooksReload, setAttachedBooksReload] = useState(0);
+  const attachedBooksRequests = useRef(new AttachedBooksRequestGate());
   const deletePending = useRef(false);
   const allowNavigation = useRef(false);
   const entity = load.status === "ready" ? load.entity : undefined;
@@ -130,6 +154,44 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     return () => { active = false; };
   }, [entityId, kind, mode, retry]);
 
+  useEffect(() => {
+    const key = mode === "edit" && entityId ? `${kind}:${entityId}:${attachedBooksReload}` : "";
+    attachedBooksRequests.current.reset(key);
+    setAttachedBooks(emptyAttachedBooksState);
+    if (!key || !entityId) return;
+    void loadAttachedBooksPage(1, true, key, kind, entityId);
+  }, [attachedBooksReload, entityId, kind, mode]);
+
+  async function loadAttachedBooksPage(
+    pageNumber: number,
+    replace: boolean,
+    requestKey = mode === "edit" && entityId ? `${kind}:${entityId}:${attachedBooksReload}` : "",
+    requestKind = kind,
+    requestEntityId = entityId,
+  ) {
+    if (!requestEntityId || !attachedBooksRequests.current.start(requestKey)) return;
+    setAttachedBooks((current) => ({ ...current, pending: true, error: undefined }));
+    try {
+      const page = await listBooks(attachedBooksQuery(requestKind, requestEntityId, pageNumber));
+      if (!attachedBooksRequests.current.isCurrent(requestKey)) return;
+      setAttachedBooks((current) => ({
+        books: appendAttachedBooks(replace ? [] : current.books, page.items),
+        total: page.count,
+        nextPage: page.next ? pageNumber + 1 : null,
+        pending: false,
+      }));
+    } catch (error: unknown) {
+      if (!attachedBooksRequests.current.isCurrent(requestKey)) return;
+      setAttachedBooks((current) => ({
+        ...current,
+        pending: false,
+        error: normalizeMutationError(error),
+      }));
+    } finally {
+      attachedBooksRequests.current.finish(requestKey);
+    }
+  }
+
   function change<K extends keyof AuthorSeriesEditDraft>(field: K, value: AuthorSeriesEditDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
     setMutation(idleMutationState);
@@ -149,10 +211,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
       const next = kind === "author"
         ? authorEditDraft(saved as LibraryAuthor)
         : seriesEditDraft(saved as LibrarySeries);
-      const entityWithPreview = entity?.previewBooks && !saved.previewBooks
-        ? { ...saved, previewBooks: entity.previewBooks }
-        : saved;
-      setLoad({ status: "ready", entity: entityWithPreview });
+      setLoad({ status: "ready", entity: saved });
       setDraft(next);
       setBaseline(next);
       const message = `${titleKind(kind)} saved.`;
@@ -219,6 +278,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         try {
           const refreshed = kind === "author" ? await getAuthor(entityId) : await getSeries(entityId);
           setLoad({ status: "ready", entity: refreshed });
+          setAttachedBooksReload((value) => value + 1);
         } catch {
           // Keep the deletion error and last authoritative detail on screen.
         }
@@ -257,7 +317,17 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         kind={kind}
         entityId={entityId}
         bookCount={entity.bookCount}
-        books={entity.previewBooks ?? []}
+        books={attachedBooks.books}
+        loadedTotal={attachedBooks.total}
+        pending={attachedBooks.pending}
+        error={attachedBooks.error}
+        hasMore={attachedBooks.nextPage !== null}
+        onLoadMore={() => {
+          if (attachedBooks.nextPage !== null) void loadAttachedBooksPage(attachedBooks.nextPage, false);
+        }}
+        onRetry={() => {
+          if (attachedBooks.nextPage !== null) void loadAttachedBooksPage(attachedBooks.nextPage, attachedBooks.books.length === 0);
+        }}
         breadcrumbTrail={resolvedBreadcrumbs}
         editPath={`${location.pathname}${location.search}`}
       />

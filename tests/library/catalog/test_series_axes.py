@@ -302,6 +302,57 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(detail_response.status_code, 200)
         self.assertEqual(preview_titles(detail_response.json()), preview_titles(first))
 
+    def test_preview_limit_preserves_exact_series_order_and_total_count(self):
+        limited = Series.objects.create(name="Limited Preview Series")
+        indexes = ["1.01", "1.10", "1.25", "2.00", *[f"{value}.00" for value in range(3, 24)]]
+        for offset, series_index in enumerate(indexes):
+            create_catalog_book(
+                f"Indexed Preview {offset:02d}",
+                author=self.alpha,
+                series=limited,
+                series_index=series_index,
+                group=self.public,
+            )
+
+        for limit in (1, 6, 12, 24):
+            with self.subTest(limit=limit):
+                response = self.client.get(
+                    "/api/v1/library/series/", {"preview_limit": str(limit)}
+                )
+                row = next(
+                    item for item in response.json()["results"] if item["id"] == str(limited.id)
+                )
+                self.assertEqual(row["book_count"], 25)
+                self.assertEqual(
+                    preview_titles(row),
+                    [f"Indexed Preview {offset:02d}" for offset in range(limit)],
+                )
+
+        default_response = self.client.get(
+            "/api/v1/library/series/", {"include_preview_books": "true"}
+        )
+        default_row = next(
+            row for row in default_response.json()["results"] if row["id"] == str(limited.id)
+        )
+        self.assertEqual(len(default_row["preview_books"]), 6)
+
+        disabled = self.client.get(
+            "/api/v1/library/series/", {"preview_limit": "0"}
+        )
+        disabled_row = next(
+            row for row in disabled.json()["results"] if row["id"] == str(limited.id)
+        )
+        self.assertNotIn("preview_books", disabled_row)
+        self.assertEqual(disabled_row["book_count"], 25)
+
+        for value in ("25", "-1", "invalid", "1.5"):
+            with self.subTest(value=value):
+                response = self.client.get(
+                    "/api/v1/library/series/", {"preview_limit": value}
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(set(response.json()), {"preview_limit"})
+
     def test_q_searches_name_and_sort_name(self):
         self.second_series.sort_name = "Storm Sequence"
         self.second_series.save(update_fields=["sort_name", "updated_at"])

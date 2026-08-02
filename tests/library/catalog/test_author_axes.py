@@ -384,6 +384,63 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             [f"Alpha Preview {index:02d}" for index in range(6)],
         )
 
+    def test_preview_limit_is_bounded_explicit_and_does_not_change_book_count(self):
+        limited = Author.objects.create(name="Limited Preview Author")
+        for index in range(25):
+            create_catalog_book(
+                f"Limited Preview {index:02d}",
+                author=limited,
+                group=self.public,
+            )
+
+        default_response = self.client.get(
+            "/api/v1/library/authors/", {"include_preview_books": "true"}
+        )
+        default_row = next(
+            row for row in default_response.json()["results"] if row["id"] == str(limited.id)
+        )
+        self.assertEqual(len(default_row["preview_books"]), 6)
+        self.assertEqual(default_row["book_count"], 25)
+
+        for limit in (1, 6, 12, 24):
+            with self.subTest(limit=limit):
+                response = self.client.get(
+                    "/api/v1/library/authors/", {"preview_limit": str(limit)}
+                )
+                row = next(
+                    item for item in response.json()["results"] if item["id"] == str(limited.id)
+                )
+                self.assertEqual(len(row["preview_books"]), limit)
+                self.assertEqual(row["book_count"], 25)
+                self.assertEqual(
+                    preview_titles(row),
+                    [f"Limited Preview {index:02d}" for index in range(limit)],
+                )
+
+        disabled = self.client.get(
+            "/api/v1/library/authors/",
+            {"include_preview_books": "true", "preview_limit": "0"},
+        )
+        disabled_row = next(
+            row for row in disabled.json()["results"] if row["id"] == str(limited.id)
+        )
+        self.assertNotIn("preview_books", disabled_row)
+        self.assertEqual(disabled_row["book_count"], 25)
+
+        invalid_queries = (
+            "preview_limit=25",
+            "preview_limit=-1",
+            "preview_limit=not-a-number",
+            "preview_limit=1.5",
+            "preview_limit=1&preview_limit=2",
+            "include_preview_books=false&preview_limit=1",
+        )
+        for query in invalid_queries:
+            with self.subTest(query=query):
+                response = self.client.get(f"/api/v1/library/authors/?{query}")
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(set(response.json()), {"preview_limit"})
+
     def test_q_searches_name_and_sort_name(self):
         self.beta.sort_name = "Storm Writer"
         self.beta.save(update_fields=["sort_name", "updated_at"])

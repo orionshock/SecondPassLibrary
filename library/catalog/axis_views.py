@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import cached_property
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count
 from rest_framework import serializers, status
@@ -41,7 +43,7 @@ from library.catalog.filters import apply_catalog_tag_filter
 from library.catalog.preview_books import (
     attach_author_preview_books,
     attach_series_preview_books,
-    include_preview_books,
+    parse_preview_book_limit,
 )
 from library.models import Author, Series
 from library.queries import visible_books_for_user
@@ -68,13 +70,17 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = include_preview_books(self.request)
+        context["include_preview_books"] = self.preview_book_limit is not None
         return context
+
+    @cached_property
+    def preview_book_limit(self) -> int | None:
+        return parse_preview_book_limit(self.request)
 
     def preview_books_queryset(self):
         return apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
 
-    def attach_preview_books(self, parents):
+    def attach_preview_books(self, parents, *, limit):
         return None
 
 
@@ -94,14 +100,14 @@ class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
-            if include_preview_books(request):
-                self.attach_preview_books(page)
+            if self.preview_book_limit is not None:
+                self.attach_preview_books(page, limit=self.preview_book_limit)
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
         rows = list(queryset)
-        if include_preview_books(request):
-            self.attach_preview_books(rows)
+        if self.preview_book_limit is not None:
+            self.attach_preview_books(rows, limit=self.preview_book_limit)
         serializer = self.get_serializer(rows, many=True)
         return Response(serializer.data)
 
@@ -114,8 +120,8 @@ class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if include_preview_books(request):
-            self.attach_preview_books([instance])
+        if self.preview_book_limit is not None:
+            self.attach_preview_books([instance], limit=self.preview_book_limit)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
@@ -145,10 +151,11 @@ class AuthorAxisMixin(_BaseAxisMixin):
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_authors_from_books(visible_books)
 
-    def attach_preview_books(self, parents):
+    def attach_preview_books(self, parents, *, limit):
         attach_author_preview_books(
             authors=parents,
             visible_books=self.preview_books_queryset(),
+            limit=limit,
         )
 
 
@@ -209,10 +216,11 @@ class SeriesAxisMixin(_BaseAxisMixin):
         visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
         return visible_series_from_books(visible_books)
 
-    def attach_preview_books(self, parents):
+    def attach_preview_books(self, parents, *, limit):
         attach_series_preview_books(
             series=parents,
             visible_books=self.preview_books_queryset(),
+            limit=limit,
         )
 
 

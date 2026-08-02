@@ -61,6 +61,35 @@ class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Visible Two", "Visible One"])
 
+    def test_author_and_series_context_pagination_is_stable_without_duplicates(self):
+        author_pages = [
+            self.client.get(
+                "/api/v1/library/books/",
+                {"author": self.alpha.id, "ordering": "title", "page_size": 1, "page": page},
+            )
+            for page in (1, 2)
+        ]
+        series_pages = [
+            self.client.get(
+                "/api/v1/library/books/",
+                {
+                    "series": self.first_series.id,
+                    "ordering": "series_index",
+                    "page_size": 1,
+                    "page": page,
+                },
+            )
+            for page in (1, 2)
+        ]
+
+        self.assertEqual([response.json()["count"] for response in author_pages], [2, 2])
+        self.assertEqual([response_titles(response) for response in author_pages], [["Multi Group"], ["Visible Two"]])
+        self.assertEqual([response.json()["count"] for response in series_pages], [2, 2])
+        self.assertEqual([response_titles(response) for response in series_pages], [["Visible Two"], ["Visible One"]])
+        for pages in (author_pages, series_pages):
+            ids = [response.json()["results"][0]["id"] for response in pages]
+            self.assertEqual(len(ids), len(set(ids)))
+
     def test_malformed_author_id_returns_validation_error(self):
         response = self.client.get("/api/v1/library/books/", {"author": "not-a-uuid"})
 

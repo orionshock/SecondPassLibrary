@@ -323,6 +323,34 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(tags.status_code, 200)
         self.assertNotIn("preview_books", tags.json()["results"][0])
 
+    def test_group_author_and_series_previews_honor_the_bounded_limit(self):
+        for endpoint in ("authors", "series"):
+            with self.subTest(endpoint=endpoint):
+                limited = self.client.get(
+                    f"/api/v1/library/groups/{self.club.id}/{endpoint}/",
+                    {"preview_limit": "1"},
+                )
+                self.assertEqual(limited.status_code, 200)
+                self.assertTrue(
+                    all(len(row["preview_books"]) == 1 for row in limited.json()["results"])
+                )
+
+                disabled = self.client.get(
+                    f"/api/v1/library/groups/{self.club.id}/{endpoint}/",
+                    {"preview_limit": "0"},
+                )
+                self.assertEqual(disabled.status_code, 200)
+                self.assertTrue(
+                    all("preview_books" not in row for row in disabled.json()["results"])
+                )
+
+                invalid = self.client.get(
+                    f"/api/v1/library/groups/{self.club.id}/{endpoint}/",
+                    {"preview_limit": "25"},
+                )
+                self.assertEqual(invalid.status_code, 400)
+                self.assertEqual(set(invalid.json()), {"preview_limit"})
+
     def test_group_tags_include_only_group_tags_and_count_group_books(self):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/tags/")
 

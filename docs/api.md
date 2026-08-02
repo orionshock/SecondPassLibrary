@@ -1055,6 +1055,15 @@ Request behavior:
 
 - `include_preview_books` accepts truthy values `1`, `true`, `yes`, `y`, and `on`, case-insensitive after trimming.
 - Absent or false-like values omit `preview_books`; default payloads remain unchanged.
+- Author and Series list/detail endpoints, including Group-scoped Author and
+  Series lists, also accept `preview_limit`. Values `1` through `24` request
+  that bounded number of previews and imply previews when
+  `include_preview_books` is omitted. `preview_limit=0` omits the preview
+  payload. `include_preview_books=true` without a limit uses 6.
+- A positive `preview_limit` combined with an explicit false-like
+  `include_preview_books` is contradictory and returns `400`. Negative,
+  malformed, repeated, or above-24 limits also return a bounded
+  `preview_limit` field error; values are never clamped.
 - The option can be combined with normal parent endpoint pagination (`page`, `page_size`) and normal endpoint filters.
 - Parent endpoint pagination shape does not change. `preview_books` is attached to each parent row on the current page and is capped independently of parent `page_size`.
 
@@ -1080,7 +1089,8 @@ Preview item rules:
 - `cover_url` is an absolute URL when a cover exists, otherwise `null`.
 - Preview items are context hints, not full Book objects.
 - Preview items never include file/download URLs, reading data, marginalia, permission internals, groups, shelves, authors, or series payloads.
-- At most 6 preview books are returned per parent item.
+- Author and Series previews return at most the requested limit, with a default
+  of 6 and maximum of 24. Other preview-bearing endpoints remain capped at 6.
 
 Visibility and auth:
 

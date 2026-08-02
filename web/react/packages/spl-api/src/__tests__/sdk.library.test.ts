@@ -50,7 +50,7 @@ describe("Library SDK", () => {
     await deleteAuthor("author/id", client);
 
     expect(calls.map(({ path }) => path)).toEqual([
-      "/api/v1/library/authors/author%2Fid/?include_preview_books=true",
+      "/api/v1/library/authors/author%2Fid/",
       "/api/v1/library/authors/",
       "/api/v1/library/authors/author%2Fid/",
       "/api/v1/library/authors/author%2Fid/",
@@ -75,7 +75,7 @@ describe("Library SDK", () => {
     await updateSeries("series/id", input, client);
     await deleteSeries("series/id", client);
     expect(calls.map(({ path }) => path)).toEqual([
-      "/api/v1/library/series/series%2Fid/?include_preview_books=true",
+      "/api/v1/library/series/series%2Fid/",
       "/api/v1/library/series/",
       "/api/v1/library/series/series%2Fid/",
       "/api/v1/library/series/series%2Fid/",
@@ -336,11 +336,29 @@ describe("Library SDK", () => {
     for (const ordering of ["name", "-name", "book_count", "-book_count"] as const) {
       await listAuthors({ q: " Ada ", tag: "history", ordering, includePreviewBooks: true, page: 2, pageSize: 30 }, client);
     }
-    await listSeries({ q: " Saga ", tag: "fantasy", ordering: "-book_count", includePreviewBooks: true, page: 3, pageSize: 40 }, client);
+    await listAuthors({}, client);
+    await listAuthors({ previewLimit: 0 }, client);
+    await listAuthors({ includePreviewBooks: true, previewLimit: 24 }, client);
+    await listSeries({ q: " Saga ", tag: "fantasy", ordering: "-book_count", previewLimit: 12, page: 3, pageSize: 40 }, client);
     expect(calls).toEqual([
       ...["name", "-name", "book_count", "-book_count"].map((ordering) => `/api/v1/library/authors/?q=Ada&tag=history&ordering=${ordering}&include_preview_books=true&page=2&page_size=30`),
-      "/api/v1/library/series/?q=Saga&tag=fantasy&ordering=-book_count&include_preview_books=true&page=3&page_size=40",
+      "/api/v1/library/authors/",
+      "/api/v1/library/authors/?preview_limit=0",
+      "/api/v1/library/authors/?include_preview_books=true&preview_limit=24",
+      "/api/v1/library/series/?q=Saga&tag=fantasy&ordering=-book_count&preview_limit=12&page=3&page_size=40",
     ]);
+  });
+
+  it("normalizes preview-limit validation fields from the server", async () => {
+    const error = new ApiError("Invalid preview limit.", 400, {
+      fields: { preview_limit: ["Must be an integer from 0 to 24."] },
+    });
+    const client: ApiClient = { request: async () => { throw error; } };
+
+    await expect(listSeries({ previewLimit: 25 }, client)).rejects.toMatchObject({
+      status: 400,
+      fields: { previewLimit: ["Must be an integer from 0 to 24."] },
+    });
   });
 
   it("maps axis summaries and keeps absent previews absent", async () => {

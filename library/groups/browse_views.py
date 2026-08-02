@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from uuid import UUID
 
 from django.http import Http404
@@ -22,7 +23,7 @@ from library.catalog.ordering import apply_book_ordering, parse_book_ordering
 from library.catalog.preview_books import (
     attach_author_preview_books,
     attach_series_preview_books,
-    include_preview_books,
+    parse_preview_book_limit,
 )
 from library.catalog.serializers import (
     AuthorAxisSerializer,
@@ -106,10 +107,14 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["include_preview_books"] = include_preview_books(self.request)
+        context["include_preview_books"] = self.preview_book_limit is not None
         return context
 
-    def attach_preview_books(self, parents):
+    @cached_property
+    def preview_book_limit(self) -> int | None:
+        return parse_preview_book_limit(self.request)
+
+    def attach_preview_books(self, parents, *, limit):
         return None
 
     def get_queryset(self):
@@ -125,14 +130,14 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
-            if include_preview_books(request):
-                self.attach_preview_books(page)
+            if self.preview_book_limit is not None:
+                self.attach_preview_books(page, limit=self.preview_book_limit)
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
         rows = list(queryset)
-        if include_preview_books(request):
-            self.attach_preview_books(rows)
+        if self.preview_book_limit is not None:
+            self.attach_preview_books(rows, limit=self.preview_book_limit)
         serializer = self.get_serializer(rows, many=True)
         return Response(serializer.data)
 
@@ -146,12 +151,13 @@ class GroupAuthorListView(GroupAxisListMixin):
         )
         return visible_authors_from_books(visible_books)
 
-    def attach_preview_books(self, parents):
+    def attach_preview_books(self, parents, *, limit):
         attach_author_preview_books(
             authors=parents,
             visible_books=apply_catalog_tag_filter(
                 self.visible_group_books(), self.request.query_params
             ),
+            limit=limit,
         )
 
 
@@ -164,12 +170,13 @@ class GroupSeriesListView(GroupAxisListMixin):
         )
         return visible_series_from_books(visible_books)
 
-    def attach_preview_books(self, parents):
+    def attach_preview_books(self, parents, *, limit):
         attach_series_preview_books(
             series=parents,
             visible_books=apply_catalog_tag_filter(
                 self.visible_group_books(), self.request.query_params
             ),
+            limit=limit,
         )
 
 
