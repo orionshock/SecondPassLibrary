@@ -938,7 +938,8 @@ Author/Series payload notes:
   deriving entities and counts.
 - Names maintain an indexed, non-unique normalized value using Unicode NFKC,
   collapsed whitespace, trim, and case-folding while preserving punctuation.
-  Normalized matches are advisory and do not block duplicate creation.
+  Author and Series UUIDs remain the identities. Normalized matches are
+  advisory and do not block explicit duplicate creation.
 - `sort_name` is writable and drives `ordering=name` when nonblank, with `name`
   as the fallback. Submitting a blank sort name stores the current display name;
   omitting it from PATCH preserves the existing value.
@@ -948,11 +949,11 @@ Author/Series payload notes:
   message and `error.details.book_count`; it never embeds attached Book payloads.
   The mutation rechecks inside its transaction and translates late database
   protection failures to the same conflict contract.
-- Author display names are not unique in the current catalog model, so POST
-  deliberately creates a new Author when the same display name already exists.
-  The response uses the normal Author axis shape (`id`, `name`, `sort_name`,
-  `biography`, and `book_count`, initially zero). Creation does not assign a
-  Book. Client bearer credentials are rejected even for privileged accounts.
+- Author and Series display names are not unique, so POST deliberately creates
+  a new entity even when the normalized name already exists. The response uses
+  the normal axis shape with `book_count` initially zero. Creation does not
+  assign a Book, and no automatic merge occurs. Client bearer credentials are
+  rejected even for privileged accounts.
 - Author and Series payloads include role-scoped `book_count` (read-only):
   total attached Books for Librarian+ sessions and visible matching Books for
   Reader sessions and bearer clients.
@@ -1134,7 +1135,12 @@ Book write and media notes:
   writable through this endpoint.
 - `sort_title` is writable and may be blank. PATCH and PUT both retain partial
   update semantics: omitted writable fields preserve their current values.
-- Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
+- Book write shape: `authors` is a list of Author ids; `series` is an existing
+  Series id, `null`, or `{ "name": "New series" }` for normalized-name
+  resolution and atomic assignment. The object form creates when there is no
+  match, reuses exactly one match, and returns a `series` field error when
+  multiple matches make the name ambiguous. It never chooses an arbitrary
+  duplicate.
 - Duplicate Author ids are deduplicated server-side while preserving the first
   occurrence order. An empty list clears all Author relationships.
 - `series_index` accepts only positive decimal values with at most two
@@ -1205,6 +1211,10 @@ array of display-name strings, and optional `series` and decimal-string
 `series_index` fields. Failed or skipped items without a Book omit those Book
 summary fields. These summaries do not include checksums, storage identities,
 filesystem paths, or archive internals.
+
+Author and Series names are matched through the catalog normalization rule.
+Zero matches create a new entity, exactly one match is reused, and multiple
+matches return a conflict item without creating the Book or choosing a duplicate.
 
 See `docs/imports.md` for details.
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from library.models import Book, BookIdentifier
+from library.models import Author, Book, BookIdentifier
 from tests.library.imports.helpers import metadata_xml, minimal_epub_bytes, zip_bytes
 from tests.library.imports.upload_api_helpers import (
     LibraryImportUploadApiTestCase,
@@ -163,3 +163,24 @@ class LibraryImportUploadResultTests(
         )
         self.assertEqual(payload["items"][0]["title"], "Existing")
         self.assertNotIn("checksum", payload["items"][0])
+
+    def test_ambiguous_author_identity_returns_bounded_conflict_without_a_book(self):
+        self.login_librarian()
+        for name in ("Sample Author", "Ｓample Author"):
+            Author.objects.create(
+                name=name,
+                sort_name=name,
+                normalized_name="sample author",
+            )
+
+        response = self.client.post(
+            self.url,
+            {"file": upload_file("ambiguous.epub", minimal_epub_bytes())},
+        )
+
+        payload = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["counts"]["conflict"], 1)
+        self.assertEqual(payload["items"][0]["status"], "conflict")
+        self.assertNotIn("book_id", payload["items"][0])
+        self.assertFalse(Book.objects.filter(title="Sample EPUB").exists())

@@ -451,6 +451,16 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_names(by_name), ["Alpha Author"])
         self.assertEqual(response_names(by_sort_name), ["Beta Author"])
 
+    def test_q_normalizes_the_normalized_name_search_term(self):
+        self.beta.normalized_name = "normalized author"
+        self.beta.save(update_fields=["normalized_name", "updated_at"])
+
+        response = self.client.get(
+            "/api/v1/library/authors/", {"q": "  ＮORMALIZED   AUTHOR "}
+        )
+
+        self.assertEqual(response_names(response), ["Beta Author"])
+
     def test_tag_slug_filters_authors_and_counts_tagged_visible_books(self):
         response = self.client.get(
             "/api/v1/library/authors/", {"tag": self.fantasy.slug}
@@ -495,6 +505,10 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_librarian_can_patch_biography(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
+        author_id = self.alpha.id
+        related_book_ids = set(
+            BookAuthor.objects.filter(author=self.alpha).values_list("book_id", flat=True)
+        )
 
         response = self.client.patch(
             f"/api/v1/library/authors/{self.alpha.id}/",
@@ -504,6 +518,15 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.id, author_id)
+        self.assertEqual(
+            set(
+                BookAuthor.objects.filter(author=self.alpha).values_list(
+                    "book_id", flat=True
+                )
+            ),
+            related_book_ids,
+        )
         self.assertEqual(self.alpha.name, "Updated Author Name")
         self.assertEqual(self.alpha.biography, "Updated biography.")
         self.assertEqual(self.alpha.normalized_name, "updated author name")

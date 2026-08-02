@@ -412,6 +412,52 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(link.series, created)
         self.assertEqual(response.json()["series"]["id"], str(created.id))
 
+    def test_inline_series_name_reuses_one_normalized_match(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        existing = Series.objects.create(
+            name="Example Series",
+            sort_name="Example Series",
+            normalized_name="example series",
+        )
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"series": {"name": "  Ｅxample\tSERIES "}},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BookSeries.objects.get(book=self.visible_one).series, existing)
+        self.assertEqual(Series.objects.filter(normalized_name="example series").count(), 1)
+
+    def test_inline_series_name_rejects_ambiguous_match_atomically(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        for name in ("Shared Series", "Ｓhared Series"):
+            Series.objects.create(
+                name=name,
+                sort_name=name,
+                normalized_name="shared series",
+            )
+        original_series = BookSeries.objects.get(book=self.visible_one).series
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={
+                "title": "Must roll back",
+                "series": {"name": " shared   SERIES "},
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(set(response.json()), {"series"})
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.title, "Visible One")
+        self.assertEqual(BookSeries.objects.get(book=self.visible_one).series, original_series)
+        self.assertEqual(Series.objects.filter(normalized_name="shared series").count(), 2)
+
     def test_patch_replaces_identifiers_when_supplied(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))

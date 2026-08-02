@@ -363,6 +363,16 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response_names(by_name), ["First Series"])
         self.assertEqual(response_names(by_sort_name), ["Second Series"])
 
+    def test_q_normalizes_the_normalized_name_search_term(self):
+        self.second_series.normalized_name = "normalized series"
+        self.second_series.save(update_fields=["normalized_name", "updated_at"])
+
+        response = self.client.get(
+            "/api/v1/library/series/", {"q": "  ＮORMALIZED   SERIES "}
+        )
+
+        self.assertEqual(response_names(response), ["Second Series"])
+
     def test_tag_slug_filters_series_and_counts_tagged_visible_books(self):
         response = self.client.get(
             "/api/v1/library/series/", {"tag": self.fantasy.slug}
@@ -407,6 +417,12 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
     def test_librarian_can_patch_summary(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
+        series_id = self.first_series.id
+        related_books = dict(
+            BookSeries.objects.filter(series=self.first_series).values_list(
+                "book_id", "series_index"
+            )
+        )
 
         response = self.client.patch(
             f"/api/v1/library/series/{self.first_series.id}/",
@@ -416,6 +432,15 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.id, series_id)
+        self.assertEqual(
+            dict(
+                BookSeries.objects.filter(series=self.first_series).values_list(
+                    "book_id", "series_index"
+                )
+            ),
+            related_books,
+        )
         self.assertEqual(self.first_series.name, "Updated Series Name")
         self.assertEqual(self.first_series.summary, "Updated series summary.")
         self.assertEqual(self.first_series.normalized_name, "updated series name")

@@ -49,6 +49,12 @@ duplicate returns the existing Book without changing metadata, identifiers,
 Catalog Tags, EPUB bytes, or cover. A new candidate whose identifiers conflict
 with an existing Book is reported as a conflict rather than partially applied.
 
+Author and Series matching applies Unicode NFKC, trim, collapsed whitespace,
+and case-folding while preserving punctuation. No normalized match creates a
+new entity; one match reuses it. Multiple matches are ambiguous, so the item is
+reported as a conflict and no Book is created. Imports never select the first
+duplicate, merge identities, or rewrite existing Book relationships.
+
 ### Cover import behavior
 
 Embedded EPUB cover extraction is best-effort. A selected sidecar may reference

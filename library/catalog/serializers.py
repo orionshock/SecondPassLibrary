@@ -61,13 +61,6 @@ class AuthorSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class SeriesSummarySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Series
-        fields = ["id", "name"]
-        read_only_fields = fields
-
-
 class CatalogTagSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = CatalogTag

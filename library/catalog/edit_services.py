@@ -3,9 +3,13 @@ from __future__ import annotations
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from library.imports.normalization import normalize_identifier
+from library.catalog.names import (
+    AmbiguousCatalogEntityName,
+    find_single_normalized_name_match,
+    normalize_catalog_entity_name,
+)
 from library.catalog.tag_services import replace_book_catalog_tags
-from library.catalog.names import normalize_catalog_entity_name
+from library.imports.normalization import normalize_identifier
 from library.models import Author, Book, BookAuthor, BookIdentifier, BookSeries, Series
 from library.series_indexes import normalize_series_index
 
@@ -37,7 +41,21 @@ def update_book_metadata(
 
     if isinstance(series, dict):
         series_name = series["name"]
-        series = Series.objects.filter(name__iexact=series_name).order_by("id").first()
+        try:
+            series = find_single_normalized_name_match(
+                model=Series,
+                name=series_name,
+                kind="Series",
+            )
+        except AmbiguousCatalogEntityName as exc:
+            raise ValidationError(
+                {
+                    "series": (
+                        "Multiple Series match this name. Choose an existing "
+                        "Series by id."
+                    )
+                }
+            ) from exc
         if series is None:
             series = Series.objects.create(
                 name=series_name,
