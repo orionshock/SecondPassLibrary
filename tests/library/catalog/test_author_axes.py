@@ -461,6 +461,21 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response_names(response), ["Beta Author"])
 
+    def test_search_can_exclude_one_author_id(self):
+        response = self.client.get(
+            "/api/v1/library/authors/",
+            {"q": "author", "exclude_id": self.alpha.id, "page_size": 10},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(str(self.alpha.id), [row["id"] for row in response.json()["results"]])
+
+        for query in ("exclude_id=invalid", f"exclude_id={self.alpha.id}&exclude_id={self.beta.id}"):
+            with self.subTest(query=query):
+                invalid = self.client.get(f"/api/v1/library/authors/?{query}")
+                self.assertEqual(invalid.status_code, 400)
+                self.assertEqual(set(invalid.json()), {"exclude_id"})
+
     def test_tag_slug_filters_authors_and_counts_tagged_visible_books(self):
         response = self.client.get(
             "/api/v1/library/authors/", {"tag": self.fantasy.slug}

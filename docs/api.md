@@ -940,6 +940,10 @@ Author/Series payload notes:
   collapsed whitespace, trim, and case-folding while preserving punctuation.
   Author and Series UUIDs remain the identities. Normalized matches are
   advisory and do not block explicit duplicate creation.
+- Author and Series lists accept `q`, normal pagination, and optional
+  `exclude_id=<uuid>`. The exclusion is applied after normalized search and is
+  intended for bounded edit-time duplicate advisories; malformed or repeated
+  values return a keyed `400`.
 - `sort_name` is writable and drives `ordering=name` when nonblank, with `name`
   as the fallback. Submitting a blank sort name stores the current display name;
   omitting it from PATCH preserves the existing value.

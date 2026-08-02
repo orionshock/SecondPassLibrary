@@ -34,6 +34,7 @@ export type LibraryAxisOrdering = "name" | "-name" | "book_count" | "-book_count
 
 export interface LibraryAxisQuery {
   q?: string;
+  excludeId?: string;
   tag?: string;
   ordering?: LibraryAxisOrdering;
   includePreviewBooks?: boolean;
@@ -454,6 +455,7 @@ async function listLibraryAxis<Response, Item>(
   const parameters = new URLSearchParams();
   const search = query.q?.trim();
   if (search) parameters.set("q", search);
+  if (query.excludeId) parameters.set("exclude_id", query.excludeId);
   if (query.tag) parameters.set("tag", query.tag);
   if (query.ordering) parameters.set("ordering", query.ordering);
   if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
@@ -463,11 +465,15 @@ async function listLibraryAxis<Response, Item>(
   try {
     return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
   } catch (error: unknown) {
-    if (!(error instanceof ApiError) || !error.fields?.preview_limit) throw error;
-    const { preview_limit: previewLimit, ...fields } = error.fields;
+    if (!(error instanceof ApiError) || (!error.fields?.preview_limit && !error.fields?.exclude_id)) throw error;
+    const { preview_limit: previewLimit, exclude_id: excludeId, ...fields } = error.fields;
     throw new ApiError(error.message, error.status, {
       code: error.code,
-      fields: { ...fields, previewLimit },
+      fields: {
+        ...fields,
+        ...(previewLimit ? { previewLimit } : {}),
+        ...(excludeId ? { excludeId } : {}),
+      },
     });
   }
 }

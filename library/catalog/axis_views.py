@@ -58,6 +58,7 @@ def is_session_catalog_manager(request) -> bool:
 class _BaseAxisMixin(LibraryBearerReadMixin):
     lookup_url_kwarg = "axis_id"
     search_normalized_name = False
+    supports_exclude_id = False
 
     def visible_books(self):
         return visible_books_for_user(self.request.user, cached=self.use_cached_visibility)
@@ -94,7 +95,22 @@ class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
             self.request.query_params,
             include_normalized=self.search_normalized_name,
         )
+        if self.supports_exclude_id:
+            queryset = self.exclude_axis_id(queryset)
         return apply_axis_ordering(queryset, parse_axis_ordering(self.request))
+
+    def exclude_axis_id(self, queryset):
+        values = self.request.query_params.getlist("exclude_id")
+        if not values:
+            return queryset
+        raw = values[0].strip() if len(values) == 1 else ""
+        if not raw:
+            raise serializers.ValidationError({"exclude_id": "Invalid id."})
+        try:
+            axis_id = queryset.model._meta.pk.to_python(raw)
+        except (DjangoValidationError, TypeError, ValueError) as exc:
+            raise serializers.ValidationError({"exclude_id": "Invalid id."}) from exc
+        return queryset.exclude(pk=axis_id)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -144,6 +160,7 @@ class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
 class AuthorAxisMixin(_BaseAxisMixin):
     serializer_class = AuthorAxisSerializer
     search_normalized_name = True
+    supports_exclude_id = True
 
     def axis_queryset(self):
         if is_session_catalog_manager(self.request) and not self.has_catalog_tag_filter():
@@ -209,6 +226,7 @@ class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):
 class SeriesAxisMixin(_BaseAxisMixin):
     serializer_class = SeriesAxisSerializer
     search_normalized_name = True
+    supports_exclude_id = True
 
     def axis_queryset(self):
         if is_session_catalog_manager(self.request) and not self.has_catalog_tag_filter():

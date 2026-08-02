@@ -339,13 +339,17 @@ describe("Library SDK", () => {
     await listAuthors({}, client);
     await listAuthors({ previewLimit: 0 }, client);
     await listAuthors({ includePreviewBooks: true, previewLimit: 24 }, client);
+    await listAuthors({ q: " Ada ", excludeId: "author/id", ordering: "name", page: 1, pageSize: 10 }, client);
     await listSeries({ q: " Saga ", tag: "fantasy", ordering: "-book_count", previewLimit: 12, page: 3, pageSize: 40 }, client);
+    await listSeries({ q: " Saga ", excludeId: "series/id", ordering: "name", page: 1, pageSize: 10 }, client);
     expect(calls).toEqual([
       ...["name", "-name", "book_count", "-book_count"].map((ordering) => `/api/v1/library/authors/?q=Ada&tag=history&ordering=${ordering}&include_preview_books=true&page=2&page_size=30`),
       "/api/v1/library/authors/",
       "/api/v1/library/authors/?preview_limit=0",
       "/api/v1/library/authors/?include_preview_books=true&preview_limit=24",
+      "/api/v1/library/authors/?q=Ada&exclude_id=author%2Fid&ordering=name&page=1&page_size=10",
       "/api/v1/library/series/?q=Saga&tag=fantasy&ordering=-book_count&preview_limit=12&page=3&page_size=40",
+      "/api/v1/library/series/?q=Saga&exclude_id=series%2Fid&ordering=name&page=1&page_size=10",
     ]);
   });
 
@@ -358,6 +362,15 @@ describe("Library SDK", () => {
     await expect(listSeries({ previewLimit: 25 }, client)).rejects.toMatchObject({
       status: 400,
       fields: { previewLimit: ["Must be an integer from 0 to 24."] },
+    });
+
+    const excludeError = new ApiError("Invalid id.", 400, {
+      fields: { exclude_id: ["Invalid id."] },
+    });
+    const excludeClient: ApiClient = { request: async () => { throw excludeError; } };
+    await expect(listAuthors({ q: "Ada", excludeId: "invalid" }, excludeClient)).rejects.toMatchObject({
+      status: 400,
+      fields: { excludeId: ["Invalid id."] },
     });
   });
 

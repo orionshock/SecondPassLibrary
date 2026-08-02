@@ -20,6 +20,7 @@ describe("Author and Series deletion presentation", () => {
       kind="author"
       draft={{ name: "Ada", sortName: "Author, Ada", prose: "Biography" }}
       state={{ pending: false }}
+      advisory={{ enabled: false, candidates: [], pending: false, onSelectCandidate: vi.fn() }}
       onChange={vi.fn()}
       onSubmit={vi.fn()}
       onCancel={vi.fn()}
@@ -27,6 +28,7 @@ describe("Author and Series deletion presentation", () => {
 
     expect(markup).toContain("Save Author");
     expect(markup).toContain("Biography");
+    expect(markup.match(/autoComplete="off"/g)).toHaveLength(4);
     expect(markup).not.toContain("Delete Author");
   });
 

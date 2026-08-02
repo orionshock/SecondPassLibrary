@@ -373,6 +373,18 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response_names(response), ["Second Series"])
 
+    def test_search_can_exclude_one_series_id(self):
+        response = self.client.get(
+            "/api/v1/library/series/",
+            {"q": "series", "exclude_id": self.first_series.id, "page_size": 10},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(
+            str(self.first_series.id),
+            [row["id"] for row in response.json()["results"]],
+        )
+
     def test_tag_slug_filters_series_and_counts_tagged_visible_books(self):
         response = self.client.get(
             "/api/v1/library/series/", {"tag": self.fantasy.slug}

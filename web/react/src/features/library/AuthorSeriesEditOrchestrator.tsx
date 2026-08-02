@@ -6,7 +6,9 @@ import {
   deleteSeries,
   getAuthor,
   getSeries,
+  listAuthors,
   listBooks,
+  listSeries,
   updateAuthor,
   updateSeries,
   type LibraryAuthor,
@@ -32,6 +34,14 @@ import {
   type AuthorSeriesEditDraft,
 } from "./authorSeriesEditDraft";
 import { confirmAuthorSeriesDelete, isAttachedBookConflict } from "./authorSeriesDelete";
+import {
+  DuplicateAdvisoryRequestGate,
+  duplicateCandidateEditNavigation,
+  duplicateAdvisoryResultLimit,
+  duplicateAdvisorySearchTerm,
+  scheduleDuplicateAdvisorySearch,
+  type DuplicateAdvisoryCandidate,
+} from "./authorSeriesDuplicateAdvisory";
 import {
   AttachedBooksRequestGate,
   appendAttachedBooks,
@@ -64,6 +74,12 @@ type AttachedBooksState = {
   pending: boolean;
   error?: Error;
 };
+type DuplicateAdvisoryState = {
+  term?: string;
+  candidates: DuplicateAdvisoryCandidate[];
+  pending: boolean;
+  error?: Error;
+};
 
 const emptyAttachedBooksState: AttachedBooksState = {
   books: [],
@@ -90,8 +106,13 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   }));
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
   const [attachedBooks, setAttachedBooks] = useState<AttachedBooksState>(emptyAttachedBooksState);
+  const [duplicateAdvisory, setDuplicateAdvisory] = useState<DuplicateAdvisoryState>({
+    candidates: [],
+    pending: false,
+  });
   const [attachedBooksReload, setAttachedBooksReload] = useState(0);
   const attachedBooksRequests = useRef(new AttachedBooksRequestGate());
+  const duplicateAdvisoryRequests = useRef(new DuplicateAdvisoryRequestGate());
   const deletePending = useRef(false);
   const allowNavigation = useRef(false);
   const entity = load.status === "ready" ? load.entity : undefined;
@@ -161,6 +182,47 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     if (!key || !entityId) return;
     void loadAttachedBooksPage(1, true, key, kind, entityId);
   }, [attachedBooksReload, entityId, kind, mode]);
+
+  useEffect(() => {
+    const term = duplicateAdvisorySearchTerm(draft.name, mode, entity?.name);
+    const generation = duplicateAdvisoryRequests.current.next();
+    if (!term) {
+      setDuplicateAdvisory({ candidates: [], pending: false });
+      return () => duplicateAdvisoryRequests.current.invalidate();
+    }
+
+    setDuplicateAdvisory({ term, candidates: [], pending: true });
+    const cancel = scheduleDuplicateAdvisorySearch(() => {
+      const query = {
+        q: term,
+        excludeId: mode === "edit" ? entityId : undefined,
+        ordering: "name" as const,
+        page: 1,
+        pageSize: duplicateAdvisoryResultLimit,
+      };
+      const request = kind === "author" ? listAuthors(query) : listSeries(query);
+      void request.then((page) => {
+        if (!duplicateAdvisoryRequests.current.isCurrent(generation)) return;
+        setDuplicateAdvisory({
+          term,
+          candidates: page.items.filter((candidate) => candidate.id !== entityId),
+          pending: false,
+        });
+      }).catch((error: unknown) => {
+        if (!duplicateAdvisoryRequests.current.isCurrent(generation)) return;
+        setDuplicateAdvisory({
+          term,
+          candidates: [],
+          pending: false,
+          error: normalizeMutationError(error),
+        });
+      });
+    });
+    return () => {
+      cancel();
+      duplicateAdvisoryRequests.current.invalidate();
+    };
+  }, [draft.name, entity?.name, entityId, kind, mode]);
 
   async function loadAttachedBooksPage(
     pageNumber: number,
@@ -260,6 +322,16 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     navigate(returnTo, { state: breadcrumbNavigationState(parentBreadcrumbs) });
   }
 
+  function selectDuplicateCandidate(candidate: DuplicateAdvisoryCandidate) {
+    allowNavigation.current = true;
+    const target = duplicateCandidateEditNavigation(
+      kind,
+      candidate,
+      readLibraryEntityReturnTo(location.state),
+    );
+    navigate(target.to, { state: target.state });
+  }
+
   async function removeEntity() {
     if (mode !== "edit" || !entityId || !entity || entity.bookCount > 0 || deletePending.current) return;
     if (!confirmAuthorSeriesDelete(kind, entity.name)) return;
@@ -300,6 +372,13 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
       kind={kind}
       draft={draft}
       state={mutation}
+      advisory={{
+        enabled: Boolean(duplicateAdvisory.term),
+        candidates: duplicateAdvisory.candidates,
+        pending: duplicateAdvisory.pending,
+        error: duplicateAdvisory.error,
+        onSelectCandidate: selectDuplicateCandidate,
+      }}
       onChange={change}
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
