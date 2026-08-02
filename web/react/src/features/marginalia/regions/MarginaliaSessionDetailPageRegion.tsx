@@ -1,11 +1,38 @@
 import type { MarginaliaAnnotation, MarginaliaSessionEnvelope } from "@second-pass/spl-api";
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
+
+export type MarginaliaAnnotationOrdering = "reading" | "newest" | "oldest";
+
+export const marginaliaAnnotationOrderingOptions: readonly OrderMenuOption<MarginaliaAnnotationOrdering>[] = [
+  { value: "reading", label: "Reading order", icon: "format_list_numbered" },
+  { value: "newest", label: "Newest first", icon: "arrow_downward" },
+  { value: "oldest", label: "Oldest first", icon: "arrow_upward" },
+];
+
+export function orderMarginaliaAnnotations(
+  annotations: readonly MarginaliaAnnotation[],
+  ordering: MarginaliaAnnotationOrdering,
+): MarginaliaAnnotation[] {
+  if (ordering === "reading") return [...annotations];
+  return annotations
+    .map((annotation, readingPosition) => ({ annotation, readingPosition }))
+    .sort((left, right) => {
+      const leftTimestamp = Date.parse(left.annotation.createdAt);
+      const rightTimestamp = Date.parse(right.annotation.createdAt);
+      const timestampDifference = ordering === "newest"
+        ? rightTimestamp - leftTimestamp
+        : leftTimestamp - rightTimestamp;
+      return timestampDifference || left.readingPosition - right.readingPosition;
+    })
+    .map(({ annotation }) => annotation);
+}
 
 export interface MarginaliaAnnotationsLoadState {
   items?: MarginaliaAnnotation[];
@@ -82,13 +109,28 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, onClose }: {
 }
 
 function AnnotationsRegion({ state, onRetry }: { state: MarginaliaAnnotationsLoadState; onRetry: () => void }) {
+  const [ordering, setOrdering] = useState<MarginaliaAnnotationOrdering>("reading");
+  const orderedItems = useMemo(
+    () => state.items ? orderMarginaliaAnnotations(state.items, ordering) : undefined,
+    [ordering, state.items],
+  );
   return <section className="marginalia-session-detail__annotations" aria-labelledby="marginalia-session-annotations-heading">
-    <header><h2 id="marginalia-session-annotations-heading">Marginalia</h2></header>
+    <header>
+      <h2 id="marginalia-session-annotations-heading">Marginalia</h2>
+      {orderedItems && orderedItems.length > 1 ? <OrderMenuComponent
+        label="Order"
+        ariaLabel="Order marginalia"
+        size="small"
+        value={ordering}
+        options={marginaliaAnnotationOrderingOptions}
+        onChange={setOrdering}
+      /> : null}
+    </header>
     {!state.items && state.loading ? <p aria-live="polite" aria-busy="true">Loading marginalia...</p> : null}
     {!state.items && state.error ? <div><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
     {state.items ? <div aria-busy={state.loading}>
       {state.error ? <div className="marginalia-inline-error"><ErrorPanel>{state.error.message}</ErrorPanel><Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
-      {state.items.length ? <div className="marginalia-annotation-rows">{state.items.map((annotation) => <AnnotationRowComponent key={annotation.id} annotation={annotation} />)}</div> : <p className="marginalia-empty">No marginalia found.</p>}
+      {orderedItems?.length ? <div className="marginalia-annotation-rows">{orderedItems.map((annotation) => <AnnotationRowComponent key={annotation.id} annotation={annotation} />)}</div> : <p className="marginalia-empty">No marginalia found.</p>}
     </div> : null}
   </section>;
 }

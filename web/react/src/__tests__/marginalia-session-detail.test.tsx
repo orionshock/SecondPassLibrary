@@ -13,7 +13,11 @@ import {
 } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
 import { MarginaliaSessionNoteEditorComponent } from "../features/marginalia/components/MarginaliaSessionNoteEditorComponent";
 import { MarginaliaSessionTitleEditorComponent } from "../features/marginalia/components/MarginaliaSessionTitleEditorComponent";
-import { MarginaliaSessionDetailPageRegion } from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
+import {
+  marginaliaAnnotationOrderingOptions,
+  MarginaliaSessionDetailPageRegion,
+  orderMarginaliaAnnotations,
+} from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
 import { idleMutationState } from "../shared/feedback/mutationState";
 import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 
@@ -96,6 +100,37 @@ function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDeta
 }
 
 describe("My Marginalia Session Detail", () => {
+  it("sorts the complete annotation collection without disturbing canonical reading-order ties", () => {
+    const completeCollection = Array.from({ length: 250 }, (_, index): MarginaliaAnnotation => ({
+      ...annotations[index % annotations.length]!,
+      id: `annotation-${index.toString().padStart(3, "0")}`,
+      createdAt: new Date(Date.UTC(2026, 0, 1, 0, index % 5)).toISOString(),
+    }));
+    const equalTimestampIds = completeCollection
+      .filter((annotation) => annotation.createdAt === completeCollection[0]!.createdAt)
+      .map((annotation) => annotation.id);
+
+    expect(orderMarginaliaAnnotations(completeCollection, "reading").map(({ id }) => id))
+      .toEqual(completeCollection.map(({ id }) => id));
+    const newest = orderMarginaliaAnnotations(completeCollection, "newest");
+    const oldest = orderMarginaliaAnnotations(completeCollection, "oldest");
+    expect(newest).toHaveLength(250);
+    expect(oldest).toHaveLength(250);
+    expect(Date.parse(newest[0]!.createdAt)).toBeGreaterThan(Date.parse(newest.at(-1)!.createdAt));
+    expect(Date.parse(oldest[0]!.createdAt)).toBeLessThan(Date.parse(oldest.at(-1)!.createdAt));
+    expect(newest.filter(({ createdAt }) => createdAt === completeCollection[0]!.createdAt).map(({ id }) => id))
+      .toEqual(equalTimestampIds);
+    expect(oldest.filter(({ createdAt }) => createdAt === completeCollection[0]!.createdAt).map(({ id }) => id))
+      .toEqual(equalTimestampIds);
+  });
+
+  it("offers the three local annotation orderings only for sortable collections", () => {
+    expect(marginaliaAnnotationOrderingOptions.map(({ value }) => value)).toEqual(["reading", "newest", "oldest"]);
+    expect(renderDetail()).toContain('aria-label="Order marginalia, current: Reading order"');
+    expect(renderDetail({ annotations: { loading: false, items: annotations.slice(0, 1) } })).not.toContain("Order marginalia");
+    expect(renderDetail({ annotations: { loading: false, items: [] } })).not.toContain("Order marginalia");
+  });
+
   it("keeps the detail route and consistent named or display-only fallback breadcrumbs", async () => {
     const children = appRoutes[0]?.children ?? [];
     expect(children.some((route) => "path" in route && route.path === "marginalia/sessions/:sessionId")).toBe(true);
