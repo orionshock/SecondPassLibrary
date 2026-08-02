@@ -158,7 +158,6 @@ Cross-page product semantics that are not API shapes are tracked in [React Produ
 
 ## Product backlog
 
-- Local cover preview before upload.
 - Marginalia sort controls.
 - Group-scoped Author, Series, and Tag browsing.
 - Vite chunk-size and code-splitting cleanup.

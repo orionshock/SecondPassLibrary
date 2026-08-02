@@ -184,7 +184,7 @@ export function BookEditOrchestrator() {
   }
 
   async function replaceCover(file: File) {
-    if (!bookId || mutation.pending || coverMutation.pending) return;
+    if (!bookId || mutation.pending || coverMutation.pending) return false;
     setCoverPendingAction("replace");
     setCoverMutation({ pending: true });
     try {
@@ -195,15 +195,17 @@ export function BookEditOrchestrator() {
       setSelectedCoverFile(undefined);
       setCoverInputResetKey((value) => value + 1);
       setCoverMutation({ pending: false, message: "Cover replaced." });
+      return true;
     } catch (error: unknown) {
       setCoverMutation({ pending: false, error: normalizeMutationError(error) });
+      return false;
     } finally {
       setCoverPendingAction(undefined);
     }
   }
 
   async function clearCover() {
-    if (!bookId || mutation.pending || coverMutation.pending) return;
+    if (!bookId || mutation.pending || coverMutation.pending) return false;
     setCoverPendingAction("clear");
     setCoverMutation({ pending: true });
     try {
@@ -214,8 +216,10 @@ export function BookEditOrchestrator() {
       setSelectedCoverFile(undefined);
       setCoverInputResetKey((value) => value + 1);
       setCoverMutation({ pending: false, message: "Cover cleared." });
+      return true;
     } catch (error: unknown) {
       setCoverMutation({ pending: false, error: normalizeMutationError(error) });
+      return false;
     } finally {
       setCoverPendingAction(undefined);
     }

@@ -22,9 +22,14 @@
 .book-cover-editor__file input { width: 100%; min-width: 0; color: var(--muted); font-size: 0.72rem; }
 .book-cover-editor__file input::file-selector-button { margin-right: 0.4rem; padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 0.45rem; color: var(--text); background: rgb(255 255 255 / 6%); cursor: pointer; }
 .book-cover-editor__file input:disabled::file-selector-button { cursor: not-allowed; }
+.book-cover-editor__selection-row { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
 .book-cover-editor__selection { min-height: 1rem; margin: 0; overflow: hidden; color: var(--muted); font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+.book-cover-editor__selection-row .book-cover-editor__selection { flex: 1 1 auto; min-width: 0; }
+.book-cover-editor__selection-row .button { flex: 0 0 auto; }
 .book-cover-editor__actions { display: flex; justify-content: flex-end; gap: 0.4rem; flex-wrap: wrap; }
 .book-cover-editor__actions .button { flex: 1 1 auto; }
+.book-cover-editor__accept.button { border-color: rgb(74 222 128 / 72%); color: #bbf7d0; background: rgb(74 222 128 / 7%); }
+.book-cover-editor__accept.button:hover:not(:disabled), .book-cover-editor__accept.button:focus-visible:not(:disabled) { border-color: #4ade80; color: #dcfce7; background: rgb(74 222 128 / 14%); }
 .book-cover-dialog-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / 72%); }
 .book-cover-dialog { width: min(100%, 35rem); max-height: calc(100vh - 2rem); overflow: auto; padding: 1rem; border: 1px solid var(--border); border-radius: 0.8rem; background: var(--surface-raised); box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%); }
 .book-cover-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
@@ -32,10 +37,13 @@
 .book-cover-dialog__body { display: grid; grid-template-columns: 8rem minmax(0, 1fr); align-items: start; gap: 1rem; }
 .book-cover-dialog__preview { padding: 0.35rem; border: 1px solid var(--border); border-radius: 0.6rem; background: rgb(255 255 255 / 2%); }
 .book-cover-dialog__preview .book-cover-component { width: 100%; border: 0; }
-.book-cover-dialog__controls { display: grid; gap: 0.55rem; min-width: 0; }
+.book-cover-dialog__preview-status { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.72rem; line-height: 1.25; text-align: center; }
+.book-cover-dialog__controls { display: grid; align-self: stretch; align-content: center; gap: 0.55rem; min-width: 0; }
+.book-cover-dialog__menu { display: grid; justify-items: center; gap: 0.55rem; align-content: center; width: 100%; }
+.book-cover-dialog__menu .button { width: min(100%, 14rem); }
 .book-cover-dialog__error { margin: 0; color: #fecdd3; font-size: 0.82rem; }
 .book-cover-dialog__success { margin: 0; color: var(--success); font-size: 0.82rem; }
-.book-cover-dialog__confirmation { display: flex; align-items: center; justify-content: flex-end; gap: 0.45rem; flex-wrap: wrap; padding-top: 0.55rem; border-top: 1px solid var(--border); }
+.book-cover-dialog__confirmation { display: flex; align-items: center; justify-content: flex-end; gap: 0.45rem; flex-wrap: wrap; }
 .book-cover-dialog__confirmation > span { flex: 1 0 100%; color: var(--muted); font-size: 0.82rem; }
 .book-edit-content { min-width: 0; }
 .book-edit-content > .eyebrow { margin: 0 0 0.35rem; }
